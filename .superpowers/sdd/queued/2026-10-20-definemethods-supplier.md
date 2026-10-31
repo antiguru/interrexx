@@ -1,4 +1,4 @@
-**OPEN: found by the Phase 9d Task 6.12 re-review, not yet ruled.** `Class~defineMethods` does not send a collection subclass's `supplier`.
+**OPEN: accepted for the Phase 9d close by Moritz 2026-10-31 ("fix now.").** `Class~defineMethods` does not send a collection subclass's `supplier`.
 
 # `defineMethods` and a collection subclass's `supplier`
 

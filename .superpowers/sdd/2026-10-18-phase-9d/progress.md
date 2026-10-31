@@ -481,3 +481,19 @@ Task 9 is complete with source changes from `f2dcbd70f` through `561bcc3ff`, ret
 All nine final gates exited zero at source `561bcc3ff`: formatting, preflight, touched-crate Clippy, core and unsafe-site checks, policy checks, native-owner checks, release build, gated corpus and the full suite. The corpus matched 1,242 programs, and the full suite passed 402 groups with 24,523 keys and zero changed, added or removed rows against Task 8.8. The aggregate gate duration was 703.794 seconds under the recorded ruling, with each command inside its original bound and no live commands left. The initial inaccessible sandbox memcap launcher and overwritten first policy log are disclosed in the report, with the latter explicitly reconstructed rather than presented as retained raw evidence.
 
 Task 9: complete (commits `f2dcbd70f..561bcc3ff`, review clean). Task 10 remains unstarted and outside this request. The user-requested push preceded Task 9 and reached `f2dcbd70f`; Task 9 commits have not been pushed. The untracked instruction inventory ZIP remains untouched.
+
+
+## Task 10 started: Full Phase 9d goal
+
+The active user goal, "Finish phase 9d", authorizes the remaining Task 10 close and requirement-by-requirement completion audit. Root verified current HEAD `82e10bb92`, with only the untouched user ZIP untracked, and resumed after completed Task 9 rather than replaying its work. `/root/task10_runner` owns close-runner preparation and its explicit Git changes, while `/root/task10_audit` independently maps required evidence without source or index mutations. All prior accepted deviations, performance dispositions and the stderr follow-up remain in force.
+
+Ruling: Task 10's explicit 2,400-second release-workspace and 3,000-second debug-workspace deadlines take precedence over the generic per-task foreground estimate. These commands remain in foreground sessions with bounded polling and their original deadlines, preserving the specified whole-workspace execution. Cost if wrong: longer uninterrupted validation rather than omitted tests or an invented narrower gate.
+
+Ruling: place fresh Task 10 build targets on the repository filesystem under this plan's ignored scratch directory, which has over 700 GB free, instead of the memory-backed /tmp with 16 GB free. The directories remain separate per build mode and clippy freshness is preserved. Cost if wrong: slower disk I/O, with no change to test inputs or retention of prior raw profiles and caches.
+
+
+## Close audit corrections before source freeze
+
+The independent audit found six queued filenames missing from the inventory. Five carry existing written dispositions and are reconciled without changing those rulings; the sixth, `2026-10-20-definemethods-supplier.md`, explicitly had no ruling. Moritz answered "fix now." on 2026-10-31, accepting its collection-subclass SUPPLIER contract for the close correction wave. The parent Task 10 text and inventory now carry that ruling so the implementation and reviewer consume the same requirements.
+
+The whole-phase source review also produced bounded paired evidence for cleanup skipped by failed constant TRACE rendering and for unwanted non-SYNTAX ADDITIONAL array-element conversion. Both are correctness findings, with their original pin/oracle channels retained under `close/review-probes/`. One consolidated source correction wave and scoped review will precede the fresh close freeze. The prepared runner at `d18219237` has not executed any gate or started a freeze.
