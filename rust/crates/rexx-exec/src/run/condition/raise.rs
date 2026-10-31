@@ -112,8 +112,8 @@ impl Interp {
             // (.environment)` substitutes `INPUTOUTPUTSTREAM` -- the first
             // entry of the array the directory converts to -- and `raise user
             // zork additional (.array)` under a trap is rc 0 on both sides.
-            // **The array is split for every condition, but only `SYNTAX`
-            // refuses a value that is not one.** The C++ calls `requestArray`
+            // The array is retained for every condition, but only `SYNTAX`
+            // splits it into substitutions and refuses a value that is not one. The C++ calls `requestArray`
             // inside its `SYNTAX` branch alone, and that governs the
             // *substitution list* a catalogue message renders from -- which
             // only a `SYNTAX` condition has. The condition object's
@@ -206,8 +206,7 @@ impl Interp {
                 // (.environment)` and `array (.array, 'b')` are all rc 216
                 // and byte-identical here. A check on this arm refused all
                 // three.
-                if self.traced_mode().results {
-                    let rendered = self.traced_string_value_text(value)?;
+                if let Some(rendered) = self.intermediate_text(value)? {
                     self.trace_argument(indent, &rendered);
                     self.trace_argument(indent, &rendered);
                 }
