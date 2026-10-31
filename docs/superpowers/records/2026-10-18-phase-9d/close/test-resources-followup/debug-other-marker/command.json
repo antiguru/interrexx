@@ -1,0 +1,38 @@
+{
+  "argv": [
+    "timeout",
+    "--kill-after=15",
+    "300",
+    "memcap",
+    "8G",
+    "cargo",
+    "test",
+    "-j",
+    "4",
+    "-p",
+    "rexx-exec",
+    "--lib",
+    "tests::resources::"
+  ],
+  "cwd": "/home/moritz/dev/repos/ooRexx-rust-rewrite/rust",
+  "environment": {
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_BUILD_JOBS": "4",
+    "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace",
+    "RUSTFLAGS": null,
+    "REXX_TEST_THREAD_SANITIZER": "0",
+    "TSAN_OPTIONS": null
+  },
+  "source_sha256": {
+    "rust/crates/rexx-exec/src/tests.rs": "9a9c12c0f40bbd20894ded69665ada657150537f2dfbebb766811d2e2d8ac1aa",
+    "rust/crates/rexx-exec/src/tests/resources.rs": "e1205fca361fac8f83d4f25f871080f63a34947a4c0414862de0d3a2c94ac827",
+    "rust/crates/rexx-exec/src/test_process.rs": "7d53edc3aa50467cbc3a5621d4160f2a8e440f99c9d479e55099f9f7c864ec59",
+    "rust/crates/rexx-exec/src/lib.rs": "1765a2592341da19431a619389a7949e5a219ffffd2f5ee196aac23fbf9a615a",
+    "rust/tsan.supp": "1306f8ec977a8fa903ee9eb375904e6feb1ed67363651491d67ba65bd662bad0",
+    "docs/superpowers/records/2026-10-18-phase-9d/close/tsan.sh": "884c511a90d4ffca8c10e0c00ac8848fa602a5ca4708e1806df836a32d28500b"
+  },
+  "revision": "0e1c10551e3e68fb482d9eaf11b44deefbe14c26",
+  "started": "2026-10-31T17:38:15.927954+00:00",
+  "resident_cap": "8G",
+  "bound_seconds": 300
+}

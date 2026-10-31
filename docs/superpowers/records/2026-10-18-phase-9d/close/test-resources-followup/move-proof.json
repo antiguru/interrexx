@@ -1,0 +1,16 @@
+[
+  {
+    "old": "tests::a_long_chain_of_stem_subclass_instances_is_walked_once",
+    "new": "tests::resources::a_long_chain_of_stem_subclass_instances_is_walked_once",
+    "moved_block_sha256": "6a9a354dadf478d3b0d5ed9b14b87384b7a5407600d6582f26f14d312e6e1018",
+    "bytes": 1413,
+    "byte_identical": true
+  },
+  {
+    "old": "tests::a_join_rendering_itself_through_defaultname_runs_out_of_stack",
+    "new": "tests::resources::a_join_rendering_itself_through_defaultname_runs_out_of_stack",
+    "moved_block_sha256": "accf702626e14b2f92386abbc905ad00d59f0daebe1e9bd91b08d43ceba02a83",
+    "bytes": 892,
+    "byte_identical": true
+  }
+]

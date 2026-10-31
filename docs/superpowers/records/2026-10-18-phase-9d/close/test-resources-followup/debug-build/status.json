@@ -1,0 +1,10 @@
+{
+  "actual_exit": 0,
+  "elapsed_seconds": 71.2349493749789,
+  "finished": "2026-10-31T17:38:11.645596+00:00",
+  "binary_sha256": {
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/debug/deps/rexx_exec-aaedc271dbf1a724": "19bf1add34d0c50c1c1f6b226a0def97873353dc8dfdfbfe9953a18ceb19d40d",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/debug/deps/rexx_exec-c22898fa0f2252be": "36f6edbb320d82e943e2369af3b4d616e5dd55a823ee594c0cee180f27a2a4f5",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/release/deps/rexx_exec-fbbbc7206a85b7cd": "70dcee9fe107e74e11e3800eacf29bb1f0709c5e53c4229e144aae7789e1a4de"
+  }
+}

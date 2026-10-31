@@ -1,0 +1,7 @@
+{
+  "capture": "after focused test, before full helper",
+  "binary_sha256": {
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d": "babbcab2275012eb3eb159520771371e600b0e47b143bc7d2b00085714bbed4d"
+  },
+  "report_files": []
+}
