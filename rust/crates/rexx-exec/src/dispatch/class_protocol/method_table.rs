@@ -73,7 +73,17 @@ pub(super) fn method_table_pairs(
 ) -> Result<Vec<(Box<[u8]>, ObjRef)>, Failure> {
     // A user SUPPLIER can send protected methods or install methods
     // recursively. Run that method under the normal dispatch context.
-    if string_keyed_table(interp, table) && !interp.answers_by_method(table, b"SUPPLIER") {
+    // Native directories have no hash store for the primitive supplier to
+    // walk. Keep their existing walk only for an unrestricted primitive.
+    let native_table = matches!(
+        interp.heap.get(table).map(|object| &object.body),
+        Some(Body::Native(_))
+    ) && string_keyed_table(interp, table);
+    let plain_supplier = native_table && interp.lookup(table, b"SUPPLIER", None).is_some_and(|found| {
+        interp.object_model().natives.get(found.method).is_some()
+            && interp.access_scope_of(found.method).is_none()
+    });
+    if plain_supplier {
         // **Asked before the walk**, because the walk cannot see the
         // difference: a collection whose entries this crate answers per name
         // rather than storing looks empty to `native_keys`, and a mutation
