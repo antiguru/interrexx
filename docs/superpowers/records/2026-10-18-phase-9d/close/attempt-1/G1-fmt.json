@@ -1,0 +1,38 @@
+{
+  "action": {
+    "name": "G1-fmt",
+    "argv": [
+      "cargo",
+      "fmt",
+      "--all",
+      "--check"
+    ],
+    "cap": "8G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/1ef21db99b90d55f02e6d12d2e473cee56b6a747/workspace"
+    }
+  },
+  "argv": [
+    "timeout",
+    "--kill-after=15",
+    "600",
+    "memcap",
+    "8G",
+    "cargo",
+    "fmt",
+    "--all",
+    "--check"
+  ],
+  "status": 0,
+  "started": "2026-10-31T11:51:06.176164+00:00",
+  "finished": "2026-10-31T11:51:08.594679+00:00",
+  "interrupted": false,
+  "pid": 2895267,
+  "surviving_group": false,
+  "orphaned_children": false,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

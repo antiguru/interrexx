@@ -1,0 +1,674 @@
+{
+  "frozen_head": "1ef21db99b90d55f02e6d12d2e473cee56b6a747",
+  "verdict": "complete negative release workspace; remaining close gates unexecuted",
+  "all_children_stopped": true,
+  "entries": {
+    "provenance-oodocs.json": {
+      "kind": "file",
+      "bytes": 650,
+      "sha256": "afa43ba55998420a1ec7fc3916efc3e92673b606b89e1130b3d074800d53656d"
+    },
+    "preflight.pid.json": {
+      "kind": "file",
+      "bytes": 70,
+      "sha256": "3e2de7a55a3986716322477090a6a5b8b8c5b5b7dd72026e2bf2b9e9e4711b57"
+    },
+    "G1-fmt.json": {
+      "kind": "file",
+      "bytes": 946,
+      "sha256": "e18c772e086fe9872b90e05b41eaab5d77ba53f394e7b4037fa9d65870201a9b"
+    },
+    "G4-test-release.json": {
+      "kind": "file",
+      "bytes": 1709,
+      "sha256": "3257c2f00460bb1449a496e57f692b6f27fea103e0521bc225cd54f47928b65d"
+    },
+    "negative-attempt-release.json": {
+      "kind": "file",
+      "bytes": 779,
+      "sha256": "57b9c0977e58961c0c74a38ca4fb4064550f2a29e91e7c880698ae123ce57ab9"
+    },
+    "provenance-rustc.json": {
+      "kind": "file",
+      "bytes": 293,
+      "sha256": "4fb676ed3de94d9dca418ef7a6ac348684659adadff8727345303c268ec35a74"
+    },
+    "G4-test-release.stderr": {
+      "kind": "file",
+      "bytes": 112346,
+      "sha256": "c8bc2a100471542f47cbcc75cd90ff76a698850c2caa4148d1b7d9465c193d0d"
+    },
+    "provenance-toolchains.json": {
+      "kind": "file",
+      "bytes": 225,
+      "sha256": "3b489e0f53e904365eb04b87587f5b255da0fdfe486ef8a94d96b9094b3c4952"
+    },
+    "G4-timer-table.txt": {
+      "kind": "file",
+      "bytes": 4142,
+      "sha256": "2c15d77b0fe5419a509265f463642e90e39663a15b07529ba36d4b54a8a23d63"
+    },
+    "environment.json": {
+      "kind": "file",
+      "bytes": 339,
+      "sha256": "f9fbc50e98fcb3b6e395ed734bb5ca7938b9d5061b08bc5c80f312497db6e2a2"
+    },
+    "G4-criterion-one-table.txt": {
+      "kind": "file",
+      "bytes": 9591,
+      "sha256": "42d04412d602f7b83f2c7aa4a1b679c81a5dccf5d5f02dea33b99d204a914f36"
+    },
+    "G3-build-release-continuation-1.stderr": {
+      "kind": "file",
+      "bytes": 36846,
+      "sha256": "52e1afc557041faf5df5e32923b7d78c0c30e8d3777cc33cbdcbfe0a415068ea"
+    },
+    "build-continuation-ruling.json": {
+      "kind": "file",
+      "bytes": 824,
+      "sha256": "04b7ef3032564cdba4ccede34134a7a57a20914db559f6609b363218c1895601"
+    },
+    "G2-clippy.stderr": {
+      "kind": "file",
+      "bytes": 3649,
+      "sha256": "24b7b1998d39bc8a7453190f097be368f6db67b7e58f41bb65aff83c5862c062"
+    },
+    "provenance-cargo.json": {
+      "kind": "file",
+      "bytes": 431,
+      "sha256": "3b0ef329c78dcce588566893fda52d7ce3f9fb72c91197bf9001ea516cd33440"
+    },
+    "G2-clippy.stdout": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "provenance-components.json": {
+      "kind": "file",
+      "bytes": 503,
+      "sha256": "d5a6c7a2d6698719b40e7fdb7650297364493cae1a4a32bc7cc5b67116e05d78"
+    },
+    "G3-build-release.pid.json": {
+      "kind": "file",
+      "bytes": 70,
+      "sha256": "d78481d085c6ac87500987c2c485d37e1e5843e1a9d1e3cd735c213811cf05c5"
+    },
+    "G4-test-release.stdout": {
+      "kind": "file",
+      "bytes": 331664,
+      "sha256": "087235cdf1fb8f76b9f9df318333c3d0b8265929cd7997d936ac01d6f532ba24"
+    },
+    "preflight.json": {
+      "kind": "file",
+      "bytes": 937,
+      "sha256": "463c38c584d709120c947e7f52bc3ebba76b05bed8dff42fc914ba8b7ae40529"
+    },
+    "G3-build-release-continuation-1.stdout": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "G2-clippy.pid.json": {
+      "kind": "file",
+      "bytes": 70,
+      "sha256": "50b03bd16f1e123e1ffe5bc357306aebd58501141a0df2b6ff25d48f1174b413"
+    },
+    "G3-build-release-continuation-1.pid.json": {
+      "kind": "file",
+      "bytes": 70,
+      "sha256": "7e80caeb4a3c8d36d9c5ba6b7cb86a14df0201a428a7a7bff37e1be180bc9653"
+    },
+    "status.txt": {
+      "kind": "file",
+      "bytes": 1023,
+      "sha256": "c4c4bd8919d9eeb73ecb64a99b10b4679b4180ef68e23d215867c8caa4796bca"
+    },
+    "freeze.json": {
+      "kind": "file",
+      "bytes": 397136,
+      "sha256": "b7ae7d85ec5ea186a76122ff46b095996aa03e34f5b035b8095768a5ef266f52"
+    },
+    "finished.json": {
+      "kind": "file",
+      "bytes": 779,
+      "sha256": "57b9c0977e58961c0c74a38ca4fb4064550f2a29e91e7c880698ae123ce57ab9"
+    },
+    "negative-attempt-release.py": {
+      "kind": "file",
+      "bytes": 1804,
+      "sha256": "b9d0a4aa3d9e7dea1b98d8fb9d3940c53f071523175b8f6ef0d0a9bfc940907e"
+    },
+    "commands.json": {
+      "kind": "file",
+      "bytes": 10211,
+      "sha256": "6a6e86a97bc16ab0c20275df20b6cc2362f71e5778b43dddc81f288f5afd8146"
+    },
+    "preflight.stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "G2-clippy.json": {
+      "kind": "file",
+      "bytes": 1098,
+      "sha256": "706e9c2a3b58ab4ac69394165367f7fd5cd307b55ee4391b4f5c977b7e22da46"
+    },
+    "suite": {
+      "kind": "directory"
+    },
+    "G1-fmt.stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "build-continuation.py": {
+      "kind": "file",
+      "bytes": 1933,
+      "sha256": "edfc7c5db1fbb98efe0aed8ecf14c2597a1e052570c021d57eded2b562264ebf"
+    },
+    "G1-fmt.stdout": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "provenance-ootest.json": {
+      "kind": "file",
+      "bytes": 613,
+      "sha256": "6835cdf2f5506efd1c1526867827d1912e7cb2c3b61a48799d2857138765ac3c"
+    },
+    "release-diagnostics": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-12-crate-AddressSpace": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-2-crate-Hangs": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-13-crate-ChildRefuses": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-7-oracle-base__bif__STREAM": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-6-oracle-Enumerated": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-1-crate-RefusedAfterFirst": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-5-crate-HangsEverywhere": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-0-crate-RefusedProlog": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-10-crate-base__rexxutil__SysFileTree": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-11-oracle-base__class__Stream": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-3-crate-RefusedCall": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-9-oracle-base__rexxutil__SysFileTree": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-4-oracle-Inherits": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-8-crate-AddressSpace": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-12-crate-AddressSpace/crate-1": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-2-crate-Hangs/crate-1": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-2-crate-Hangs/crate-2": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-13-crate-ChildRefuses/crate-1": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-7-oracle-base__bif__STREAM/oracle-1": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-6-oracle-Enumerated/oracle-1": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-1-crate-RefusedAfterFirst/crate-1": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-1-crate-RefusedAfterFirst/crate-2": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-5-crate-HangsEverywhere/crate-1": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-5-crate-HangsEverywhere/crate-2": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-0-crate-RefusedProlog/crate-1": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-10-crate-base__rexxutil__SysFileTree/crate-1": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-11-oracle-base__class__Stream/oracle-1": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-3-crate-RefusedCall/crate-1": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-3-crate-RefusedCall/crate-2": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-9-oracle-base__rexxutil__SysFileTree/oracle-1": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-4-oracle-Inherits/oracle-1": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-8-crate-AddressSpace/crate-1": {
+      "kind": "directory"
+    },
+    "release-diagnostics/suite-3171159-8-crate-AddressSpace/crate-1/stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-8-crate-AddressSpace/crate-1/started.txt": {
+      "kind": "file",
+      "bytes": 19,
+      "sha256": "b0202e420dd1673ba78c51edcdce6ad7f27d807ee84f0c797295f83a12c80aa0"
+    },
+    "release-diagnostics/suite-3171159-8-crate-AddressSpace/crate-1/context.txt": {
+      "kind": "file",
+      "bytes": 3494,
+      "sha256": "0f30f5fe36aee0afcf6e5bcaf571ee6d42c453e53cc616682b2667a10336df61"
+    },
+    "release-diagnostics/suite-3171159-8-crate-AddressSpace/crate-1/stdout": {
+      "kind": "file",
+      "bytes": 495,
+      "sha256": "e2d34c702a389adc04d0421e0aeb0ad84d05c5c9f123f50d0f3d9ad75bc934bb"
+    },
+    "release-diagnostics/suite-3171159-4-oracle-Inherits/oracle-1/stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-4-oracle-Inherits/oracle-1/started.txt": {
+      "kind": "file",
+      "bytes": 165,
+      "sha256": "ee1621a848515919db49e46fea05301794e2750b7c4099abf36a260606f6a78e"
+    },
+    "release-diagnostics/suite-3171159-4-oracle-Inherits/oracle-1/context.txt": {
+      "kind": "file",
+      "bytes": 3628,
+      "sha256": "18b34a856854a20301b5b222fd32944e87fce4d659d174bff0acf499aca1574b"
+    },
+    "release-diagnostics/suite-3171159-4-oracle-Inherits/oracle-1/stdout": {
+      "kind": "file",
+      "bytes": 495,
+      "sha256": "37c5afe01076c18802874ac911fa9ece2146b87d0e9e29fa93e49087b5eff210"
+    },
+    "release-diagnostics/suite-3171159-9-oracle-base__rexxutil__SysFileTree/oracle-1/stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-9-oracle-base__rexxutil__SysFileTree/oracle-1/started.txt": {
+      "kind": "file",
+      "bytes": 33,
+      "sha256": "75c2353ebef7f8cc64e82aeee812e6bce039aba2bedf5d3d82255e34a47f6b84"
+    },
+    "release-diagnostics/suite-3171159-9-oracle-base__rexxutil__SysFileTree/oracle-1/context.txt": {
+      "kind": "file",
+      "bytes": 3962,
+      "sha256": "0455ed9d9943665ee5e96ae9acb9bb37364a2916b3f0ef63e80a0ef31c5a9e8c"
+    },
+    "release-diagnostics/suite-3171159-9-oracle-base__rexxutil__SysFileTree/oracle-1/stdout": {
+      "kind": "file",
+      "bytes": 496,
+      "sha256": "43ba389bdf96689fee543eead16073af4c7b08c8444deac556a6727029517f79"
+    },
+    "release-diagnostics/suite-3171159-3-crate-RefusedCall/crate-1/stderr": {
+      "kind": "file",
+      "bytes": 75,
+      "sha256": "5405c1e924c4f6b433c640c4d817c65cb314745fcc615e0aba503a0bbaa2b979"
+    },
+    "release-diagnostics/suite-3171159-3-crate-RefusedCall/crate-1/started.txt": {
+      "kind": "file",
+      "bytes": 30,
+      "sha256": "19e3250eb00d46b37e78dfb5e02156b279570da76c18a0242e7019a13217d867"
+    },
+    "release-diagnostics/suite-3171159-3-crate-RefusedCall/crate-1/context.txt": {
+      "kind": "file",
+      "bytes": 3550,
+      "sha256": "7278ae12453aaa695a388a5ee5d4363aa6133e54c3e66b4490e54989ecda73eb"
+    },
+    "release-diagnostics/suite-3171159-3-crate-RefusedCall/crate-1/stdout": {
+      "kind": "file",
+      "bytes": 61,
+      "sha256": "8ecf1bb791c8e6303169e283f01d2c8fefee726c9e5eccc4a1a31832a7ca6c7e"
+    },
+    "release-diagnostics/suite-3171159-3-crate-RefusedCall/crate-2/stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-3-crate-RefusedCall/crate-2/started.txt": {
+      "kind": "file",
+      "bytes": 45,
+      "sha256": "64078eb0aba309f4dd6d0041fc50fa6d6c7e1a27f92165cd1d9552babec8274e"
+    },
+    "release-diagnostics/suite-3171159-3-crate-RefusedCall/crate-2/context.txt": {
+      "kind": "file",
+      "bytes": 3666,
+      "sha256": "d47593d28b60c73990894ec84bd5580645d2837f97b24d0a96acdc62b6c88bcc"
+    },
+    "release-diagnostics/suite-3171159-3-crate-RefusedCall/crate-2/stdout": {
+      "kind": "file",
+      "bytes": 689,
+      "sha256": "6c7da79a0c471ed9d1c807c030ba074eafc47a0e188a36b24f346ee7d103781e"
+    },
+    "release-diagnostics/suite-3171159-11-oracle-base__class__Stream/oracle-1/stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-11-oracle-base__class__Stream/oracle-1/started.txt": {
+      "kind": "file",
+      "bytes": 3168,
+      "sha256": "d024a5eb39a1bb8f59c211431fa7f660cad3b2999f5c26b8da9fbf13caecfb5c"
+    },
+    "release-diagnostics/suite-3171159-11-oracle-base__class__Stream/oracle-1/context.txt": {
+      "kind": "file",
+      "bytes": 10520,
+      "sha256": "d2475f06849d8510e095b326f1e20ffe5204660aad49090907771b9cf3edd71f"
+    },
+    "release-diagnostics/suite-3171159-11-oracle-base__class__Stream/oracle-1/stdout": {
+      "kind": "file",
+      "bytes": 501,
+      "sha256": "0f0352160bca3d2847255efab97edd64b74f16f8216fd8b2d18ce5291a8194af"
+    },
+    "release-diagnostics/suite-3171159-10-crate-base__rexxutil__SysFileTree/crate-1/stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-10-crate-base__rexxutil__SysFileTree/crate-1/started.txt": {
+      "kind": "file",
+      "bytes": 33,
+      "sha256": "75c2353ebef7f8cc64e82aeee812e6bce039aba2bedf5d3d82255e34a47f6b84"
+    },
+    "release-diagnostics/suite-3171159-10-crate-base__rexxutil__SysFileTree/crate-1/context.txt": {
+      "kind": "file",
+      "bytes": 3956,
+      "sha256": "58cfeed5c8da681a272d030ab1d07251c5febc46d25279511dd2b607749e4522"
+    },
+    "release-diagnostics/suite-3171159-10-crate-base__rexxutil__SysFileTree/crate-1/stdout": {
+      "kind": "file",
+      "bytes": 496,
+      "sha256": "4c27701153156c528a76f15d5badbb8767fd96f8145ef4c8b60aa9250f3ea40f"
+    },
+    "release-diagnostics/suite-3171159-0-crate-RefusedProlog/crate-1/stderr": {
+      "kind": "file",
+      "bytes": 75,
+      "sha256": "5405c1e924c4f6b433c640c4d817c65cb314745fcc615e0aba503a0bbaa2b979"
+    },
+    "release-diagnostics/suite-3171159-0-crate-RefusedProlog/crate-1/context.txt": {
+      "kind": "file",
+      "bytes": 3146,
+      "sha256": "5c7ee699faa0ac767d38894d10f78c4422c802968d508a0669388b0991193ba3"
+    },
+    "release-diagnostics/suite-3171159-0-crate-RefusedProlog/crate-1/stdout": {
+      "kind": "file",
+      "bytes": 30,
+      "sha256": "3818a968900f74946726e82b9b31fe8d0d4a0176ce6d9f70ddf13d8239373238"
+    },
+    "release-diagnostics/suite-3171159-5-crate-HangsEverywhere/crate-1/stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-5-crate-HangsEverywhere/crate-1/started.txt": {
+      "kind": "file",
+      "bytes": 15,
+      "sha256": "30f3a9e80f6685f339a5ff3387f78af55923b84af8867247e4678f5ae7bca170"
+    },
+    "release-diagnostics/suite-3171159-5-crate-HangsEverywhere/crate-1/context.txt": {
+      "kind": "file",
+      "bytes": 3519,
+      "sha256": "2ca4baeb43b546b4733b95ea7f4398fdb948164ddce35b24d2af27bee6f5307e"
+    },
+    "release-diagnostics/suite-3171159-5-crate-HangsEverywhere/crate-1/stdout": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-5-crate-HangsEverywhere/crate-2/stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-5-crate-HangsEverywhere/crate-2/started.txt": {
+      "kind": "file",
+      "bytes": 15,
+      "sha256": "664c489f4b24368b95cecdc1ccb6003fa8a71484c8da75fb53eec68a06cdaba7"
+    },
+    "release-diagnostics/suite-3171159-5-crate-HangsEverywhere/crate-2/context.txt": {
+      "kind": "file",
+      "bytes": 3577,
+      "sha256": "1a7874140dab4fa868b5cab122e142a5fd966b46224c879a4d98ddd9ebb6134e"
+    },
+    "release-diagnostics/suite-3171159-5-crate-HangsEverywhere/crate-2/stdout": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-1-crate-RefusedAfterFirst/crate-1/stderr": {
+      "kind": "file",
+      "bytes": 75,
+      "sha256": "5405c1e924c4f6b433c640c4d817c65cb314745fcc615e0aba503a0bbaa2b979"
+    },
+    "release-diagnostics/suite-3171159-1-crate-RefusedAfterFirst/crate-1/started.txt": {
+      "kind": "file",
+      "bytes": 15,
+      "sha256": "30f3a9e80f6685f339a5ff3387f78af55923b84af8867247e4678f5ae7bca170"
+    },
+    "release-diagnostics/suite-3171159-1-crate-RefusedAfterFirst/crate-1/context.txt": {
+      "kind": "file",
+      "bytes": 3598,
+      "sha256": "e0d3e8b834dc5b0df8c34fa721c0b71778e628421e90b5ead1c78e2e17341461"
+    },
+    "release-diagnostics/suite-3171159-1-crate-RefusedAfterFirst/crate-1/stdout": {
+      "kind": "file",
+      "bytes": 61,
+      "sha256": "8ecf1bb791c8e6303169e283f01d2c8fefee726c9e5eccc4a1a31832a7ca6c7e"
+    },
+    "release-diagnostics/suite-3171159-1-crate-RefusedAfterFirst/crate-2/stderr": {
+      "kind": "file",
+      "bytes": 75,
+      "sha256": "5405c1e924c4f6b433c640c4d817c65cb314745fcc615e0aba503a0bbaa2b979"
+    },
+    "release-diagnostics/suite-3171159-1-crate-RefusedAfterFirst/crate-2/context.txt": {
+      "kind": "file",
+      "bytes": 3311,
+      "sha256": "f03c5b95b22275f04a1dd5f814348d4b1b9ca9fa922579f052c12ffdbc7fbc30"
+    },
+    "release-diagnostics/suite-3171159-1-crate-RefusedAfterFirst/crate-2/stdout": {
+      "kind": "file",
+      "bytes": 30,
+      "sha256": "3818a968900f74946726e82b9b31fe8d0d4a0176ce6d9f70ddf13d8239373238"
+    },
+    "release-diagnostics/suite-3171159-6-oracle-Enumerated/oracle-1/stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-6-oracle-Enumerated/oracle-1/started.txt": {
+      "kind": "file",
+      "bytes": 121,
+      "sha256": "9180322cf4db3877bc6966ecbb20925524a24c60b2e9d7294d518a3bc704d24d"
+    },
+    "release-diagnostics/suite-3171159-6-oracle-Enumerated/oracle-1/context.txt": {
+      "kind": "file",
+      "bytes": 3707,
+      "sha256": "1e23fee17538fe2e6403cd11388a0f2425c1da33f347f239b3ee0034421a745d"
+    },
+    "release-diagnostics/suite-3171159-6-oracle-Enumerated/oracle-1/stdout": {
+      "kind": "file",
+      "bytes": 495,
+      "sha256": "66aeae372e3a3ee2b841eb7d12d92b784dba363853978c2c963ecbe312e07c14"
+    },
+    "release-diagnostics/suite-3171159-7-oracle-base__bif__STREAM/oracle-1/stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-7-oracle-base__bif__STREAM/oracle-1/started.txt": {
+      "kind": "file",
+      "bytes": 1309,
+      "sha256": "94474eae528ed86e7c27a849ea84d6b995908fde51abb634e504978b88ea0d23"
+    },
+    "release-diagnostics/suite-3171159-7-oracle-base__bif__STREAM/oracle-1/context.txt": {
+      "kind": "file",
+      "bytes": 6368,
+      "sha256": "41c452f92c0e833eb957dcac56ea0d8a2f71c18ba773783de6a5feabd4ee5986"
+    },
+    "release-diagnostics/suite-3171159-7-oracle-base__bif__STREAM/oracle-1/stdout": {
+      "kind": "file",
+      "bytes": 498,
+      "sha256": "5a467d856b1027c113e7011be3b0cbbd22ed84d53106c1d34ae53791e85c89e9"
+    },
+    "release-diagnostics/suite-3171159-13-crate-ChildRefuses/crate-1/stderr": {
+      "kind": "file",
+      "bytes": 75,
+      "sha256": "5405c1e924c4f6b433c640c4d817c65cb314745fcc615e0aba503a0bbaa2b979"
+    },
+    "release-diagnostics/suite-3171159-13-crate-ChildRefuses/crate-1/started.txt": {
+      "kind": "file",
+      "bytes": 15,
+      "sha256": "30f3a9e80f6685f339a5ff3387f78af55923b84af8867247e4678f5ae7bca170"
+    },
+    "release-diagnostics/suite-3171159-13-crate-ChildRefuses/crate-1/child.rex": {
+      "kind": "file",
+      "bytes": 67,
+      "sha256": "b69d1ea79a7dfef586c4083d1a899c207655e5b24231f634e0a0d9bb3b0abeff"
+    },
+    "release-diagnostics/suite-3171159-13-crate-ChildRefuses/crate-1/context.txt": {
+      "kind": "file",
+      "bytes": 3867,
+      "sha256": "258fe69fdd414733b31c038f911e200c39bf4a45ccd241a6fb35aaf048994737"
+    },
+    "release-diagnostics/suite-3171159-13-crate-ChildRefuses/crate-1/stdout": {
+      "kind": "file",
+      "bytes": 495,
+      "sha256": "7d83b443a9a895dd8d20d8ad506ba1be70d2f9f264e33fccfa724147362c6f54"
+    },
+    "release-diagnostics/suite-3171159-2-crate-Hangs/crate-1/stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-2-crate-Hangs/crate-1/started.txt": {
+      "kind": "file",
+      "bytes": 30,
+      "sha256": "19e3250eb00d46b37e78dfb5e02156b279570da76c18a0242e7019a13217d867"
+    },
+    "release-diagnostics/suite-3171159-2-crate-Hangs/crate-1/context.txt": {
+      "kind": "file",
+      "bytes": 3427,
+      "sha256": "a8f99cbf2b91f7e3615ab5bbcb9a182fb70f6c250c278549ab3a912ff57696ef"
+    },
+    "release-diagnostics/suite-3171159-2-crate-Hangs/crate-1/stdout": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-2-crate-Hangs/crate-2/stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-2-crate-Hangs/crate-2/started.txt": {
+      "kind": "file",
+      "bytes": 30,
+      "sha256": "582b17379e4ef9466d527bf6e7b464c03d34fd08b03f4811a487251ddc023a2c"
+    },
+    "release-diagnostics/suite-3171159-2-crate-Hangs/crate-2/context.txt": {
+      "kind": "file",
+      "bytes": 3500,
+      "sha256": "140b33eac24dbc900d0de32200d19c97124899ad0baee853f8edeb8f2e311457"
+    },
+    "release-diagnostics/suite-3171159-2-crate-Hangs/crate-2/stdout": {
+      "kind": "file",
+      "bytes": 495,
+      "sha256": "4fc69923e993d10e3e4c9c5bf2cd89b015cdab29139b8fa7c6cf99204028a056"
+    },
+    "release-diagnostics/suite-3171159-12-crate-AddressSpace/crate-1/stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "release-diagnostics/suite-3171159-12-crate-AddressSpace/crate-1/started.txt": {
+      "kind": "file",
+      "bytes": 19,
+      "sha256": "b0202e420dd1673ba78c51edcdce6ad7f27d807ee84f0c797295f83a12c80aa0"
+    },
+    "release-diagnostics/suite-3171159-12-crate-AddressSpace/crate-1/context.txt": {
+      "kind": "file",
+      "bytes": 3494,
+      "sha256": "6e4ab449cba2e7a6dfc1227cabefda973f70310d221b57d54ea049a5f5f7d4a2"
+    },
+    "release-diagnostics/suite-3171159-12-crate-AddressSpace/crate-1/stdout": {
+      "kind": "file",
+      "bytes": 712,
+      "sha256": "00b82c8b8c5f27aae4dc153122f8334f39b40aa2bb7b42184999f2f0c724e3b3"
+    },
+    "G3-build-release.stdout": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "G4-test-release.pid.json": {
+      "kind": "file",
+      "bytes": 70,
+      "sha256": "7465d7cd783eb0f4313a75d23b9aacded42521a2af687ee4a39849f28235cedd"
+    },
+    "G1-fmt.pid.json": {
+      "kind": "file",
+      "bytes": 70,
+      "sha256": "f6bf856026227f9a92bfe1314ce1237f633d3ca95b2b6f8074746973e4be4d9f"
+    },
+    "G3-build-release.json": {
+      "kind": "file",
+      "bytes": 1085,
+      "sha256": "0c63abcbbe545cf4a1f534c4afe11f32bf8e28ea8fa3cd96ef83ef4f5b09f78c"
+    },
+    "G4-criterion-one-s3-table.txt": {
+      "kind": "file",
+      "bytes": 4136,
+      "sha256": "9be25500d8f0ad4580468f9f93288f2c894a5262ebd2fc9066e1312b4bd5717e"
+    },
+    "G3-build-release.stderr": {
+      "kind": "file",
+      "bytes": 3576,
+      "sha256": "499cb0db84546b0194742b45bfa67fe898c02da59a371219b1b6e42d935a7b96"
+    },
+    "preflight.stdout": {
+      "kind": "file",
+      "bytes": 78,
+      "sha256": "ee42912b6fe260e95da1c14ae041b65fdaf9d4cc0aad23ef0de0a43ad532c62f"
+    },
+    "G3-build-release-continuation-1.json": {
+      "kind": "file",
+      "bytes": 1098,
+      "sha256": "c1e3dca87d4cd0009f0a4db65b9a874bde2f9c89a9f887d71867280ffee85960"
+    }
+  }
+}

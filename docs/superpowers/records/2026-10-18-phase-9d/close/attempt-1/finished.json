@@ -1,0 +1,33 @@
+{
+  "head": "1ef21db99b90d55f02e6d12d2e473cee56b6a747",
+  "source_tree": "783b7378c80b0fba36f14912e0179dbe7c70cfe2",
+  "verdict": "aborted after complete negative release workspace",
+  "statuses": {
+    "preflight": 0,
+    "G1-fmt": 0,
+    "G2-clippy": 0,
+    "G3-build-release": 124,
+    "G4-test-release": 101
+  },
+  "failed": {
+    "G3-build-release": 124,
+    "G4-test-release": 101
+  },
+  "pending": [
+    "whole-suite",
+    "G5-build-debug",
+    "G6-test-debug",
+    "G7-clippy-pinning",
+    "G8-build-pinning",
+    "G8-test-pinning",
+    "G9-build-loom",
+    "G9-loom",
+    "TSan",
+    "performance-build",
+    "performance-copy",
+    "callgrind"
+  ],
+  "all_actions_executed": false,
+  "all_child_groups_stopped": true,
+  "finished": "2026-10-31T12:33:13.312523+00:00"
+}

@@ -1,0 +1,48 @@
+{
+  "action": {
+    "name": "G2-clippy",
+    "argv": [
+      "cargo",
+      "clippy",
+      "-j",
+      "4",
+      "--workspace",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "cap": "16G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/1ef21db99b90d55f02e6d12d2e473cee56b6a747/clippy"
+    }
+  },
+  "argv": [
+    "timeout",
+    "--kill-after=15",
+    "600",
+    "memcap",
+    "16G",
+    "cargo",
+    "clippy",
+    "-j",
+    "4",
+    "--workspace",
+    "--all-targets",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "status": 0,
+  "started": "2026-10-31T11:51:20.056767+00:00",
+  "finished": "2026-10-31T11:51:36.106846+00:00",
+  "interrupted": false,
+  "pid": 2895654,
+  "surviving_group": false,
+  "orphaned_children": false,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "24b7b1998d39bc8a7453190f097be368f6db67b7e58f41bb65aff83c5862c062"
+}
