@@ -1,0 +1,9 @@
+{
+  "command": [
+    "python3",
+    "/tmp/codex-p9d-t9-delta.py"
+  ],
+  "observed_shell_exit_status": 0,
+  "provenance": "Tool execution output, after suite completed",
+  "script": "suite-delta.py"
+}

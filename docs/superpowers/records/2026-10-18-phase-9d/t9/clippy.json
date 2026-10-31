@@ -1,0 +1,20 @@
+{
+  "command": [
+    "cargo",
+    "clippy",
+    "-j4",
+    "-p",
+    "rexx-core",
+    "-p",
+    "rexx-exec",
+    "--all-targets",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "cwd": "/home/moritz/dev/repos/ooRexx-rust-rewrite/rust",
+  "status": 0,
+  "elapsed_seconds": 10.938171595975291,
+  "bound_seconds": 525,
+  "revision": "561bcc3ffe9614da8108aa58ba44bcef8d885b3f"
+}

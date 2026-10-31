@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rg",
+    "-n",
+    "Owner::Phase9|^    Phase9,",
+    "rust/crates"
+  ],
+  "status": 1,
+  "stdout": "",
+  "stderr": ""
+}

@@ -1,0 +1,35 @@
+run=/tmp/codex-p9d-t88-target/tmp/suite-2828582-248-crate-base__rexxutil__SysDumpVariables/run
+TZ=None
+status=Some(0) ended=Exited(0) took=93.3082ms
+GroupRun {
+    group: "base/rexxutil/SysDumpVariables",
+    expected: {},
+    started: {
+        "TEST_LONG",
+        "TEST_NONE",
+        "TEST_NO_ARGS_TOO_MANY",
+        "TEST_SIMPLE_AND_STEM",
+    },
+    passed: {
+        "TEST_LONG",
+        "TEST_NONE",
+        "TEST_NO_ARGS_TOO_MANY",
+        "TEST_SIMPLE_AND_STEM",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: Memcap,
+    tests_ran: Some(
+        "4",
+    ),
+    took: 93.3082ms,
+}
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-248-crate-base__rexxutil__SysDumpVariables/started.txt canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-248-crate-base__rexxutil__SysDumpVariables/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 95, modified: SystemTime { tv_sec: 1793444495, tv_nsec: 347448662 }, accessed: SystemTime { tv_sec: 1793444495, tv_nsec: 376554784 }, created: SystemTime { tv_sec: 1793444495, tv_nsec: 345137147 }, .. })
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-248-crate-base__rexxutil__SysDumpVariables/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-248-crate-base__rexxutil__SysDumpVariables/bin-rexx/rexx canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-248-crate-base__rexxutil__SysDumpVariables/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67512872, modified: SystemTime { tv_sec: 1793444293, tv_nsec: 590400181 }, accessed: SystemTime { tv_sec: 1793444495, tv_nsec: 346568177 }, created: SystemTime { tv_sec: 1793444293, tv_nsec: 574400644 }, .. })
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-248-crate-base__rexxutil__SysDumpVariables/run/ooRexx/base/rexxutil/SysDumpVariables.testGroup canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-248-crate-base__rexxutil__SysDumpVariables/run/ooRexx/base/rexxutil/SysDumpVariables.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 4622, modified: SystemTime { tv_sec: 1793444495, tv_nsec: 285941523 }, accessed: SystemTime { tv_sec: 1793444495, tv_nsec: 341897118 }, created: SystemTime { tv_sec: 1793444495, tv_nsec: 283841721 }, .. })

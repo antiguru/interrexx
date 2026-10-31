@@ -1,0 +1,4 @@
+   Compiling rexx-core v0.1.0 (/home/moritz/dev/repos/ooRexx-rust-rewrite/rust/crates/rexx-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 1.22s
+     Running unittests src/lib.rs (/tmp/codex-p9d-t88-target/debug/deps/rexx_core-b2e181bbd2faee03)
+     Running tests/unsafe_sites.rs (/tmp/codex-p9d-t88-target/debug/deps/unsafe_sites-7ce8b0aed2e3f315)

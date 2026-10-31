@@ -1,0 +1,39 @@
+run=/tmp/codex-p9d-t88-target/tmp/suite-2828582-758-oracle-base__class__Alarm/run
+TZ=None
+status=Some(0) ended=Exited(0) took=15.813971172s
+GroupRun {
+    group: "base/class/Alarm",
+    expected: {},
+    started: {
+        "TEST_ALARM_BAD_TARGET",
+        "TEST_ALARM_BAD_TIME",
+        "TEST_ALARM_NEGATIVE_TIME",
+        "TEST_ALARM_NO_TARGET",
+        "TEST_ALARM_NO_TIME",
+        "TEST_BASE_ALARM",
+    },
+    passed: {
+        "TEST_ALARM_BAD_TARGET",
+        "TEST_ALARM_BAD_TIME",
+        "TEST_ALARM_NEGATIVE_TIME",
+        "TEST_ALARM_NO_TARGET",
+        "TEST_ALARM_NO_TIME",
+        "TEST_BASE_ALARM",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: OracleUlimit,
+    tests_ran: Some(
+        "6",
+    ),
+    took: 15.813971172s,
+}
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-758-oracle-base__class__Alarm/started.txt canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-758-oracle-base__class__Alarm/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 171, modified: SystemTime { tv_sec: 1793444513, tv_nsec: 223889840 }, accessed: SystemTime { tv_sec: 1793444529, tv_nsec: 3580669 }, created: SystemTime { tv_sec: 1793444513, tv_nsec: 216038006 }, .. })
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-758-oracle-base__class__Alarm/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-758-oracle-base__class__Alarm/bin-rexx/rexx canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-758-oracle-base__class__Alarm/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67512872, modified: SystemTime { tv_sec: 1793444293, tv_nsec: 590400181 }, accessed: SystemTime { tv_sec: 1793444528, tv_nsec: 455596543 }, created: SystemTime { tv_sec: 1793444293, tv_nsec: 574400644 }, .. })
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-758-oracle-base__class__Alarm/run/ooRexx/base/class/Alarm.testGroup canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-758-oracle-base__class__Alarm/run/ooRexx/base/class/Alarm.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 10541, modified: SystemTime { tv_sec: 1793444513, tv_nsec: 193996957 }, accessed: SystemTime { tv_sec: 1793444513, tv_nsec: 216038006 }, created: SystemTime { tv_sec: 1793444513, tv_nsec: 193077372 }, .. })

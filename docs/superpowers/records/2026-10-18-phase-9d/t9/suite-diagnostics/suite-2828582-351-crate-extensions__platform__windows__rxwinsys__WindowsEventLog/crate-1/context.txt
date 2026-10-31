@@ -1,0 +1,26 @@
+run=/tmp/codex-p9d-t88-target/tmp/suite-2828582-351-crate-extensions__platform__windows__rxwinsys__WindowsEventLog/run
+TZ=None
+status=Some(0) ended=Exited(0) took=66.038703ms
+GroupRun {
+    group: "extensions/platform/windows/rxwinsys/WindowsEventLog",
+    expected: {},
+    started: {},
+    passed: {},
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: Memcap,
+    tests_ran: Some(
+        "0",
+    ),
+    took: 66.038703ms,
+}
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-351-crate-extensions__platform__windows__rxwinsys__WindowsEventLog/started.txt canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-351-crate-extensions__platform__windows__rxwinsys__WindowsEventLog/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-351-crate-extensions__platform__windows__rxwinsys__WindowsEventLog/bin-rexx/rexx canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-351-crate-extensions__platform__windows__rxwinsys__WindowsEventLog/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67512872, modified: SystemTime { tv_sec: 1793444293, tv_nsec: 590400181 }, accessed: SystemTime { tv_sec: 1793444496, tv_nsec: 992513843 }, created: SystemTime { tv_sec: 1793444293, tv_nsec: 574400644 }, .. })
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-351-crate-extensions__platform__windows__rxwinsys__WindowsEventLog/run/ooRexx/extensions/platform/windows/rxwinsys/WindowsEventLog.testGroup canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-351-crate-extensions__platform__windows__rxwinsys__WindowsEventLog/run/ooRexx/extensions/platform/windows/rxwinsys/WindowsEventLog.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 15901, modified: SystemTime { tv_sec: 1793444496, tv_nsec: 966749813 }, accessed: SystemTime { tv_sec: 1793444497, tv_nsec: 4507625 }, created: SystemTime { tv_sec: 1793444496, tv_nsec: 966305856 }, .. })

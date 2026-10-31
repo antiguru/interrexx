@@ -1,0 +1,29 @@
+run=/tmp/codex-p9d-t88-target/tmp/suite-2828582-438-crate-base__class__String__upper/run
+TZ=None
+status=Some(0) ended=Exited(0) took=86.440402ms
+GroupRun {
+    group: "base/class/String/upper",
+    expected: {},
+    started: {
+        "TEST_UPPER",
+    },
+    passed: {
+        "TEST_UPPER",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: Memcap,
+    tests_ran: Some(
+        "1",
+    ),
+    took: 86.440402ms,
+}
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-438-crate-base__class__String__upper/started.txt canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-438-crate-base__class__String__upper/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 19, modified: SystemTime { tv_sec: 1793444499, tv_nsec: 87378113 }, accessed: SystemTime { tv_sec: 1793444499, tv_nsec: 105810688 }, created: SystemTime { tv_sec: 1793444499, tv_nsec: 84447373 }, .. })
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-438-crate-base__class__String__upper/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-438-crate-base__class__String__upper/bin-rexx/rexx canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-438-crate-base__class__String__upper/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67512872, modified: SystemTime { tv_sec: 1793444293, tv_nsec: 590400181 }, accessed: SystemTime { tv_sec: 1793444499, tv_nsec: 53218918 }, created: SystemTime { tv_sec: 1793444293, tv_nsec: 574400644 }, .. })
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-438-crate-base__class__String__upper/run/ooRexx/base/class/String/upper.testGroup canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-438-crate-base__class__String__upper/run/ooRexx/base/class/String/upper.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 3550, modified: SystemTime { tv_sec: 1793444499, tv_nsec: 20031527 }, accessed: SystemTime { tv_sec: 1793444499, tv_nsec: 80447489 }, created: SystemTime { tv_sec: 1793444499, tv_nsec: 18647935 }, .. })

@@ -1,0 +1,28 @@
+{
+  "revision": "561bcc3ffe9614da8108aa58ba44bcef8d885b3f",
+  "changed_files": [
+    "docs/superpowers/plans/2026-07-27-rust-rewrite.md",
+    "docs/superpowers/plans/phase-4-exclusions.txt",
+    "rust/crates/rexx-core/src/owner.rs",
+    "rust/crates/rexx-exec/src/dispatch/native/tests.rs",
+    "rust/crates/rexx-exec/tests/closed_phases.rs",
+    "rust/crates/rexx-exec/tests/concurrency_tests.rs",
+    "rust/crates/rexx-exec/tests/group_runs/whole_groups.rs",
+    "rust/crates/rexx-exec/tests/internal_routines.rs",
+    "rust/crates/rexx-exec/tests/refusal_dispositions.rs",
+    "rust/crates/rexx-exec/tests/support/literals.rs"
+  ],
+  "sha256": {
+    "docs/superpowers/plans/2026-07-27-rust-rewrite.md": "0ac6c60fd9990159d50e4a4d0c966633ad0657a8f88ca41bd7d7be8007199a49",
+    "docs/superpowers/plans/phase-4-exclusions.txt": "e6f7cfa99caaa589961f7b6e278f31618937ee76b4ad0022ee0e7b00ebf92a97",
+    "rust/crates/rexx-core/src/owner.rs": "9812a2245f7c273d74fbd758f886af1fcb02fd67e55eca8032543a34cd35de7b",
+    "rust/crates/rexx-exec/src/dispatch/native/tests.rs": "2915c219f695de6d24b47774af7e10550b6dbd7180c20cf409aa04cd45444013",
+    "rust/crates/rexx-exec/tests/closed_phases.rs": "6ec5bc95b05ec4a08042586db78aa02d7208dee102767391934b0ccc2dcadc87",
+    "rust/crates/rexx-exec/tests/concurrency_tests.rs": "0397222af49038b05b55341219346da903e38343037c20a8dc5d9ae502b3d421",
+    "rust/crates/rexx-exec/tests/group_runs/whole_groups.rs": "d3f6ca9e0e412b4958ba4624dd48dbfb8948e0addc5705d33775b654c8bbc846",
+    "rust/crates/rexx-exec/tests/internal_routines.rs": "ef69e818d641415248a5ddd3348a56b2188a4eef9d4d85f8c4fe460ee087b1cd",
+    "rust/crates/rexx-exec/tests/refusal_dispositions.rs": "ac10661d5784118608929cb8777fd9db5e2225d233a0966a538a518aafcd70d5",
+    "rust/crates/rexx-exec/tests/support/literals.rs": "7371c9ed3ad4f34aec7f6af52f6238b45d20b56d270b78a38599be2fd299025f"
+  },
+  "policy_tables_unchanged": true
+}

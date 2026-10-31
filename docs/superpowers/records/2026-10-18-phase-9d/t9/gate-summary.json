@@ -1,0 +1,18 @@
+{
+  "gate_names": [
+    "preflight",
+    "fmt",
+    "clippy",
+    "core",
+    "policy",
+    "native",
+    "release-build",
+    "corpus",
+    "suite"
+  ],
+  "all_statuses_zero": true,
+  "aggregate_elapsed_seconds": 703.7940745119704,
+  "aggregate_scope": "Named retained gates only, excluding regression red executions and the overwritten initial policy attempt",
+  "max_single_gate_seconds": 280.32416551199276,
+  "source_revision": "561bcc3ffe9614da8108aa58ba44bcef8d885b3f"
+}

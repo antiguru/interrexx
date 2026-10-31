@@ -1,0 +1,7 @@
+{
+  "expected_base": "f2dcbd70f",
+  "actual_merge_base": "f2dcbd70f92a46c110b1d7d0d7f46e875383dfc0",
+  "branch": "plan/rust-rewrite",
+  "worktrees": "worktree /home/moritz/dev/repos/ooRexx\nHEAD 2e9a8470cf58680c56e8117ea097f0c76f5a0d7e\nbranch refs/heads/master\n\nworktree /home/moritz/dev/repos/ooRexx-rust-rewrite\nHEAD 561bcc3ffe9614da8108aa58ba44bcef8d885b3f\nbranch refs/heads/plan/rust-rewrite\n\nworktree /home/moritz/dev/reviews/ooRexx-rust-rewrite/2026-10-29-call-frame-spike/worktree\nHEAD e1795621b0e62ecfc6fced48c379e4d1bbebbbc7\nbranch refs/heads/codex/call-frame-spike-20261029\n\nworktree /tmp/codex-p9d-t88-perf-a\nHEAD b300b9c2541cc70c40c62b861438efe415e3c526\nbranch refs/heads/codex/p9d-t88-perf-a\n\nworktree /tmp/codex-p9d-t88-perf-base\nHEAD 0c2ff21ae1844e86c1937b58fc82f080fc43b5ab\nbranch refs/heads/codex/p9d-t88-perf-base\n\nworktree /tmp/codex-p9d-t88-prereq\nHEAD 87357a519cdac3cbfc79810dc58026d525c0c6d9\nbranch refs/heads/codex/p9d-t88-prereq\n\n",
+  "source_commit": "561bcc3ffe9614da8108aa58ba44bcef8d885b3f"
+}

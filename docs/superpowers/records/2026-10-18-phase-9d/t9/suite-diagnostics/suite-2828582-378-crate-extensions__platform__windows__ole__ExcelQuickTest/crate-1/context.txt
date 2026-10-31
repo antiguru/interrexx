@@ -1,0 +1,26 @@
+run=/tmp/codex-p9d-t88-target/tmp/suite-2828582-378-crate-extensions__platform__windows__ole__ExcelQuickTest/run
+TZ=None
+status=Some(0) ended=Exited(0) took=111.796823ms
+GroupRun {
+    group: "extensions/platform/windows/ole/ExcelQuickTest",
+    expected: {},
+    started: {},
+    passed: {},
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: Memcap,
+    tests_ran: Some(
+        "0",
+    ),
+    took: 111.796823ms,
+}
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-378-crate-extensions__platform__windows__ole__ExcelQuickTest/started.txt canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-378-crate-extensions__platform__windows__ole__ExcelQuickTest/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-378-crate-extensions__platform__windows__ole__ExcelQuickTest/bin-rexx/rexx canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-378-crate-extensions__platform__windows__ole__ExcelQuickTest/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67512872, modified: SystemTime { tv_sec: 1793444293, tv_nsec: 590400181 }, accessed: SystemTime { tv_sec: 1793444497, tv_nsec: 537609268 }, created: SystemTime { tv_sec: 1793444293, tv_nsec: 574400644 }, .. })
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-378-crate-extensions__platform__windows__ole__ExcelQuickTest/run/ooRexx/extensions/platform/windows/ole/ExcelQuickTest.testGroup canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-378-crate-extensions__platform__windows__ole__ExcelQuickTest/run/ooRexx/extensions/platform/windows/ole/ExcelQuickTest.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 4560, modified: SystemTime { tv_sec: 1793444497, tv_nsec: 437331632 }, accessed: SystemTime { tv_sec: 1793444497, tv_nsec: 518811383 }, created: SystemTime { tv_sec: 1793444497, tv_nsec: 436655941 }, .. })

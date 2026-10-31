@@ -1,0 +1,41 @@
+run=/tmp/codex-p9d-t88-target/tmp/suite-2828582-179-crate-base__special.variables__RESULT_RC_SIGL/run
+TZ=None
+status=Some(0) ended=Exited(0) took=123.112076ms
+GroupRun {
+    group: "base/special.variables/RESULT_RC_SIGL",
+    expected: {},
+    started: {
+        "TEST_RESULT_WITH_EXIT",
+        "TEST_RESULT_WITH_EXIT_ADDRESSING_EXTERNALFILE",
+        "TEST_RESULT_WITH_EXIT_EXTERNALFILE",
+        "TEST_RESULT_WITH_REPLY",
+        "TEST_RESULT_WITH_RETURN",
+        "TEST_RESULT_WITH_RETURN_EXTERNALFILE",
+        "TEST_SIGL",
+    },
+    passed: {
+        "TEST_RESULT_WITH_EXIT",
+        "TEST_RESULT_WITH_EXIT_ADDRESSING_EXTERNALFILE",
+        "TEST_RESULT_WITH_EXIT_EXTERNALFILE",
+        "TEST_RESULT_WITH_REPLY",
+        "TEST_RESULT_WITH_RETURN",
+        "TEST_RESULT_WITH_RETURN_EXTERNALFILE",
+        "TEST_SIGL",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: Memcap,
+    tests_ran: Some(
+        "7",
+    ),
+    took: 123.112076ms,
+}
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-179-crate-base__special.variables__RESULT_RC_SIGL/started.txt canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-179-crate-base__special.variables__RESULT_RC_SIGL/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 253, modified: SystemTime { tv_sec: 1793444494, tv_nsec: 228610624 }, accessed: SystemTime { tv_sec: 1793444494, tv_nsec: 260587112 }, created: SystemTime { tv_sec: 1793444494, tv_nsec: 189355562 }, .. })
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-179-crate-base__special.variables__RESULT_RC_SIGL/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-179-crate-base__special.variables__RESULT_RC_SIGL/bin-rexx/rexx canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-179-crate-base__special.variables__RESULT_RC_SIGL/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67512872, modified: SystemTime { tv_sec: 1793444293, tv_nsec: 590400181 }, accessed: SystemTime { tv_sec: 1793444494, tv_nsec: 253524457 }, created: SystemTime { tv_sec: 1793444293, tv_nsec: 574400644 }, .. })
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-179-crate-base__special.variables__RESULT_RC_SIGL/run/ooRexx/base/special.variables/RESULT_RC_SIGL.testGroup canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-179-crate-base__special.variables__RESULT_RC_SIGL/run/ooRexx/base/special.variables/RESULT_RC_SIGL.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 10801, modified: SystemTime { tv_sec: 1793444494, tv_nsec: 141272317 }, accessed: SystemTime { tv_sec: 1793444494, tv_nsec: 188316311 }, created: SystemTime { tv_sec: 1793444494, tv_nsec: 140883908 }, .. })

@@ -1,0 +1,50 @@
+run=/tmp/codex-p9d-t88-target/tmp/suite-2828582-565-crate-base__directives__ROUTINE/run
+TZ=None
+status=Some(120) ended=Exited(120) took=86.337575ms
+GroupRun {
+    group: "base/directives/ROUTINE",
+    expected: {},
+    started: {
+        "TESTARGCOUNT",
+        "TESTARGUMENTPASSING",
+        "TESTBADNAME",
+        "TESTCALLTYPE",
+        "TESTCONTEXTNAME",
+        "TESTDOTROUTINES",
+        "TESTDUPLICATE",
+        "TESTDUPLICATE2",
+        "TESTEXECUTABLE",
+        "TESTEXTERNALCODEBODY",
+        "TESTEXTERNALLIBRARY",
+        "TESTEXTERNALLIBRARYBADLIBRARYNAME",
+        "TESTEXTERNALLIBRARYBADNAME",
+        "TESTEXTERNALLIBRARYBADROUTINETYPE",
+        "TESTEXTERNALLIBRARYBADSPECTYPE",
+        "TESTEXTERNALLIBRARYEXTRATOKEN",
+        "TESTEXTERNALLIBRARYMISSINGLIBRARYNAME",
+        "TESTEXTERNALLIBRARYMISSINGREGISTEREDNAME",
+        "TESTEXTERNALLIBRARYMISSINGSPEC",
+        "TESTEXTERNALLIBRARYNOTROUTINE",
+        "TESTEXTERNALNULLSTRING",
+        "TESTEXTERNALREGISTEREDBADLIBRARYNAME",
+        "TESTEXTERNALREGISTEREDBADNAME",
+    },
+    passed: {},
+    failed: {},
+    blocked: {
+        "TESTEXTERNALREGISTEREDBADLIBRARYNAME": "rexx-exec: ::ROUTINE EXTERNAL naming REGISTERED is not implemented (Phase 10 Rxapi)",
+        "TESTEXTERNALREGISTEREDBADNAME": "rexx-exec: ::ROUTINE EXTERNAL naming REGISTERED is not implemented (Phase 10 Rxapi)",
+    },
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 2,
+    ended_normally: false,
+    cap: Memcap,
+    tests_ran: None,
+    took: 198.119348ms,
+}
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-565-crate-base__directives__ROUTINE/started.txt canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-565-crate-base__directives__ROUTINE/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 700, modified: SystemTime { tv_sec: 1793444505, tv_nsec: 862723259 }, accessed: SystemTime { tv_sec: 1793444505, tv_nsec: 896250048 }, created: SystemTime { tv_sec: 1793444505, tv_nsec: 858348001 }, .. })
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-565-crate-base__directives__ROUTINE/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-565-crate-base__directives__ROUTINE/bin-rexx/rexx canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-565-crate-base__directives__ROUTINE/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67512872, modified: SystemTime { tv_sec: 1793444293, tv_nsec: 590400181 }, accessed: SystemTime { tv_sec: 1793444505, tv_nsec: 896250048 }, created: SystemTime { tv_sec: 1793444293, tv_nsec: 574400644 }, .. })
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-565-crate-base__directives__ROUTINE/run/ooRexx/base/directives/ROUTINE.testGroup canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-565-crate-base__directives__ROUTINE/run/ooRexx/base/directives/ROUTINE.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 8402, modified: SystemTime { tv_sec: 1793444505, tv_nsec: 812853784 }, accessed: SystemTime { tv_sec: 1793444505, tv_nsec: 852251322 }, created: SystemTime { tv_sec: 1793444505, tv_nsec: 812112654 }, .. })

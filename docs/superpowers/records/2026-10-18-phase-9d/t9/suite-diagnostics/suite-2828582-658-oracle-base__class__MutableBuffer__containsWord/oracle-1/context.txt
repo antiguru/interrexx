@@ -1,0 +1,71 @@
+run=/tmp/codex-p9d-t88-target/tmp/suite-2828582-658-oracle-base__class__MutableBuffer__containsWord/run
+TZ=None
+status=Some(0) ended=Exited(0) took=48.058056ms
+GroupRun {
+    group: "base/class/MutableBuffer/containsWord",
+    expected: {},
+    started: {
+        "TEST001",
+        "TEST002",
+        "TEST003",
+        "TEST004",
+        "TEST005",
+        "TEST006",
+        "TEST007",
+        "TEST008",
+        "TEST009",
+        "TEST010",
+        "TEST011",
+        "TEST012",
+        "TEST013",
+        "TEST014",
+        "TEST015",
+        "TEST016",
+        "TEST017",
+        "TEST018",
+        "TEST019",
+        "TEST020",
+        "TEST021",
+        "TEST022",
+    },
+    passed: {
+        "TEST001",
+        "TEST002",
+        "TEST003",
+        "TEST004",
+        "TEST005",
+        "TEST006",
+        "TEST007",
+        "TEST008",
+        "TEST009",
+        "TEST010",
+        "TEST011",
+        "TEST012",
+        "TEST013",
+        "TEST014",
+        "TEST015",
+        "TEST016",
+        "TEST017",
+        "TEST018",
+        "TEST019",
+        "TEST020",
+        "TEST021",
+        "TEST022",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: OracleUlimit,
+    tests_ran: Some(
+        "22",
+    ),
+    took: 48.058056ms,
+}
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-658-oracle-base__class__MutableBuffer__containsWord/started.txt canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-658-oracle-base__class__MutableBuffer__containsWord/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 352, modified: SystemTime { tv_sec: 1793444509, tv_nsec: 317692340 }, accessed: SystemTime { tv_sec: 1793444509, tv_nsec: 330143192 }, created: SystemTime { tv_sec: 1793444509, tv_nsec: 316417335 }, .. })
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-658-oracle-base__class__MutableBuffer__containsWord/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-658-oracle-base__class__MutableBuffer__containsWord/bin-rexx/rexx canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-658-oracle-base__class__MutableBuffer__containsWord/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67512872, modified: SystemTime { tv_sec: 1793444293, tv_nsec: 590400181 }, accessed: SystemTime { tv_sec: 1793444509, tv_nsec: 272152253 }, created: SystemTime { tv_sec: 1793444293, tv_nsec: 574400644 }, .. })
+path=/tmp/codex-p9d-t88-target/tmp/suite-2828582-658-oracle-base__class__MutableBuffer__containsWord/run/ooRexx/base/class/MutableBuffer/containsWord.testGroup canonical=Ok("/tmp/codex-p9d-t88-target/tmp/suite-2828582-658-oracle-base__class__MutableBuffer__containsWord/run/ooRexx/base/class/MutableBuffer/containsWord.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 6185, modified: SystemTime { tv_sec: 1793444509, tv_nsec: 281589500 }, accessed: SystemTime { tv_sec: 1793444509, tv_nsec: 312151095 }, created: SystemTime { tv_sec: 1793444509, tv_nsec: 280900749 }, .. })
