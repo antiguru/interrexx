@@ -4,13 +4,13 @@
     "destination": "install/constant_expression.rs",
     "bytes": 5712,
     "sha256": "0177ed7897f22996bd9c55ef994b8cf230bf125b506d62b95931bfdcb43c6c3a",
-    "identity": "exact after visibility widening needed by child module"
+    "identity": "exact after visibility widening and parent-relative collection path relocation needed by child module"
   },
   {
     "source": "dispatch/class_protocol.rs",
     "destination": "dispatch/class_protocol/method_table.rs",
     "bytes": 3736,
     "sha256": "2cd10b6eb7746a94b5370d92dc4f6957385bdfc0a1f2d8ebddc4cb086b36b8d8",
-    "identity": "exact after visibility widening needed by child module"
+    "identity": "exact after visibility widening and parent-relative collection path relocation needed by child module"
   }
 ]

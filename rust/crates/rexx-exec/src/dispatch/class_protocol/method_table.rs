@@ -94,7 +94,7 @@ pub(super) fn method_table_pairs(
         .unwrap_or(ObjRef::NIL);
     interp.roots.activity_mut().push_temp(supplier);
     let mut pairs = Vec::new();
-    for (index, item) in super::collection::supplier::drain_supplier(interp, supplier)? {
+    for (index, item) in crate::dispatch::collection::supplier::drain_supplier(interp, supplier)? {
         let name = interp.string_value_text(index)?.into_boxed_slice();
         pairs.push((name, item));
     }
