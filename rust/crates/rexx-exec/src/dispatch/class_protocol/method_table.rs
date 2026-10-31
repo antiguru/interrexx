@@ -79,10 +79,13 @@ pub(super) fn method_table_pairs(
         interp.heap.get(table).map(|object| &object.body),
         Some(Body::Native(_))
     ) && string_keyed_table(interp, table);
-    let plain_supplier = native_table && interp.lookup(table, b"SUPPLIER", None).is_some_and(|found| {
-        interp.object_model().natives.get(found.method).is_some()
-            && interp.access_scope_of(found.method).is_none()
-    });
+    let plain_supplier = native_table
+        && interp
+            .lookup(table, b"SUPPLIER", None)
+            .is_some_and(|found| {
+                interp.object_model().natives.get(found.method).is_some()
+                    && interp.access_scope_of(found.method).is_none()
+            });
     if plain_supplier {
         // **Asked before the walk**, because the walk cannot see the
         // difference: a collection whose entries this crate answers per name
@@ -112,4 +115,3 @@ pub(super) fn method_table_pairs(
     }
     Ok(pairs)
 }
-

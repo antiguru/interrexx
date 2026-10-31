@@ -122,21 +122,23 @@ impl Interp {
         // writes it, `.nil` for the topmost scope.
         let super_scope = self.super_scope_of(receiver, class);
         self.set_variable(frame, super_slot, super_scope.unwrap_or(ObjRef::NIL));
-        let result = reserved.and_then(|()| {
-            self.trace_clause(line, 0, &text);
-            let code = Code {
-                body: &empty_body,
-                symbols: &program.symbols,
-                slots: &[],
-                plan: None,
-            };
-            self.eval(&code, expr)
-        }).and_then(|value| {
-            if let Some(rendered) = self.result_text(value)? {
-                self.trace_result(0, &rendered);
-            }
-            Ok(value)
-        });
+        let result = reserved
+            .and_then(|()| {
+                self.trace_clause(line, 0, &text);
+                let code = Code {
+                    body: &empty_body,
+                    symbols: &program.symbols,
+                    slots: &[],
+                    plan: None,
+                };
+                self.eval(&code, expr)
+            })
+            .and_then(|value| {
+                if let Some(rendered) = self.result_text(value)? {
+                    self.trace_result(0, &rendered);
+                }
+                Ok(value)
+            });
         self.trace_invocation_exit(|| result.as_ref().ok().copied());
         self.guard_off_at_end();
         self.activity.call_context = saved_context;
@@ -149,5 +151,4 @@ impl Interp {
         self.restore_clause_state(saved_clause);
         result
     }
-
 }

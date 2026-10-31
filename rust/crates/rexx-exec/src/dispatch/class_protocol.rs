@@ -20,8 +20,8 @@ use super::{
 
 mod method_table;
 
-pub(super) use method_table::native_define_methods;
 use method_table::method_table_pairs;
+pub(super) use method_table::native_define_methods;
 
 /// `Class~baseClass`: `RexxClass::getBaseClass`, bound as a method of
 /// `.Class` by `Setup.cpp:455`.
