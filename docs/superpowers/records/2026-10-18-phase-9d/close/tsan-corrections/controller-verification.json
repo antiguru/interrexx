@@ -1,0 +1,25 @@
+{
+  "source_commit": "088fe938957ce5197ccc0587137700d97313e68f",
+  "rust_tree": "d0ffe4ddf33aae12cd43f3657029d8da5e0170c7",
+  "preserved_paths_verified": [
+    "rust/crates/rexx-exec/src/install/constant_expression.rs",
+    "rust/crates/rexx-exec/src/run/condition/raise.rs",
+    "rust/crates/rexx-exec/src/dispatch/class_protocol/method_table.rs",
+    "rust/crates/rexx-exec/src/eval/tests.rs",
+    "rust/tsan.supp",
+    "rust/corpus/lang/constant_result_cleanup.rex",
+    "rust/corpus/lang/raise_additional_items.rex",
+    "rust/corpus/lang/raise_additional_modes.rex",
+    "rust/corpus/lang/raise_additional_return_mutation.rex",
+    "rust/corpus/lang/define_methods_supplier_override.rex",
+    "rust/corpus/lang/define_methods_protected_supplier.rex",
+    "rust/corpus/lang/method_table_supplier_boundaries.rex"
+  ],
+  "normal_library_passed": 1241,
+  "integration_passed": 150,
+  "focused_tsan_cases": 14,
+  "after_reader_cases_independently_verified": 3,
+  "scope_review_spec": "approved",
+  "scope_review_quality": "approved",
+  "full_closing_gates_pending": true
+}
