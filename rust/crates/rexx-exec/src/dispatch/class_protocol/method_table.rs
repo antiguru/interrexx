@@ -64,13 +64,22 @@ fn string_keyed_table(interp: &mut Interp, value: ObjRef) -> bool {
 }
 
 /// The (name, value) pairs `createMethodDictionary`
-/// (`classes/ClassClass.cpp:1242`) walks `table` for: a string-keyed table's
-/// own entries, sorted, and otherwise the pairs its `SUPPLIER` answers, each
-/// index as its string value, in supplier order.
+/// (`classes/ClassClass.cpp:1242`) obtains from `table`'s `SUPPLIER`, each
+/// index as its string value, in supplier order. Native directories using
+/// the compatibility path return their own entries sorted by name.
 pub(super) fn method_table_pairs(
     interp: &mut Interp,
     table: ObjRef,
 ) -> Result<Vec<(Box<[u8]>, ObjRef)>, Failure> {
+    if string_keyed_table(interp, table) {
+        // **Asked before the walk**, because the walk cannot see the
+        // difference: a collection whose entries this crate answers per name
+        // rather than storing looks empty to `native_keys`, and a mutation
+        // over an empty walk is a mutation that silently does nothing.
+        if let Some(owner) = interp.unbuilt_collection_owner(table) {
+            return Err(Loud::unreadable_collection(owner).into());
+        }
+    }
     // A user SUPPLIER can send protected methods or install methods
     // recursively. Run that method under the normal dispatch context.
     // Native directories have no hash store for the primitive supplier to
@@ -87,13 +96,6 @@ pub(super) fn method_table_pairs(
                     && interp.access_scope_of(found.method).is_none()
             });
     if plain_supplier {
-        // **Asked before the walk**, because the walk cannot see the
-        // difference: a collection whose entries this crate answers per name
-        // rather than storing looks empty to `native_keys`, and a mutation
-        // over an empty walk is a mutation that silently does nothing.
-        if let Some(owner) = interp.unbuilt_collection_owner(table) {
-            return Err(Loud::unreadable_collection(owner).into());
-        }
         let mut names = interp.native_keys(table);
         names.sort();
         let mut pairs = Vec::with_capacity(names.len());

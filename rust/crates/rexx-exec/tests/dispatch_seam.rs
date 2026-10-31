@@ -223,6 +223,7 @@ const CLEARANCE_CONSUMERS: &[&str] = &[
     "src/dispatch/buffer.rs",
     "src/dispatch/construct.rs",
     "src/dispatch/class_protocol.rs",
+    "src/dispatch/class_protocol/method_table.rs",
     "src/dispatch/object_protocol.rs",
     "src/dispatch/time_support.rs",
     "src/dispatch/semaphore.rs",
@@ -241,6 +242,7 @@ fn the_seam_token_is_named_only_by_the_dispatch_module() {
         "/synthetic/src/dispatch/unlisted.rs:1",
         "/synthetic/src/dispatch/hash/unlisted.rs:1",
         "/synthetic/src/dispatch/stream/unlisted.rs:1",
+        "/synthetic/src/dispatch/class_protocol/unlisted.rs:1",
     ] {
         assert!(
             !is_allowed(site),
