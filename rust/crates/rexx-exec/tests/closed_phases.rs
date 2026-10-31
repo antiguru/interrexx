@@ -318,6 +318,8 @@ let r = r#"raw "q" Phase 8"#; let u = "Phase 80";
         .map(|(line, _)| line)
         .collect();
     assert_eq!(named, [4, 5, 7]);
+    let later_phase = literals(r#"let phase = "not implemented (Phase 9.1)";"#);
+    assert!(!names(&later_phase[0].1, "Phase 9"));
     let found = mentions("rexx-api")
         .into_iter()
         .filter(|site| site.starts_with("src/ffi.rs:"))
