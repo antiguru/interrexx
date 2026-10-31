@@ -131,12 +131,12 @@ impl Interp {
                 plan: None,
             };
             self.eval(&code, expr)
+        }).and_then(|value| {
+            if let Some(rendered) = self.result_text(value)? {
+                self.trace_result(0, &rendered);
+            }
+            Ok(value)
         });
-        if let Ok(value) = result
-            && let Some(rendered) = self.result_text(value)?
-        {
-            self.trace_result(0, &rendered);
-        }
         self.trace_invocation_exit(|| result.as_ref().ok().copied());
         self.guard_off_at_end();
         self.activity.call_context = saved_context;

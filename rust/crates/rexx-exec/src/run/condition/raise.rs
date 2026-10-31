@@ -146,16 +146,18 @@ impl Interp {
             // catalogue message renders from, and only a `SYNTAX` condition
             // has one.
             self.activity.pending_additional = Some(value);
-            match slots {
-                Some(slots) => {
-                    for slot in slots {
-                        additional.push(match slot {
-                            Some(item) => self.string_value_text(item)?,
-                            None => Vec::new(),
-                        });
+            if converted {
+                match slots {
+                    Some(slots) => {
+                        for slot in slots {
+                            additional.push(match slot {
+                                Some(item) => self.string_value_text(item)?,
+                                None => Vec::new(),
+                            });
+                        }
                     }
+                    None => additional.push(self.to_text(value).to_vec()),
                 }
-                None => additional.push(self.to_text(value).to_vec()),
             }
         }
         if let Some(items) = &raise.array {
@@ -204,10 +206,14 @@ impl Interp {
                 // (.environment)` and `array (.array, 'b')` are all rc 216
                 // and byte-identical here. A check on this arm refused all
                 // three.
-                let rendered = self.string_value_text(value)?;
-                self.trace_argument(indent, &rendered);
-                self.trace_argument(indent, &rendered);
-                additional.push(rendered);
+                if self.traced_mode().results {
+                    let rendered = self.traced_string_value_text(value)?;
+                    self.trace_argument(indent, &rendered);
+                    self.trace_argument(indent, &rendered);
+                }
+                if raise.condition.eq_ignore_ascii_case(b"SYNTAX") {
+                    additional.push(self.string_value_text(value)?);
+                }
             }
             // The condition object's `ADDITIONAL` is the array of the items
             // themselves, as `ADDITIONAL`'s own value is.

@@ -71,7 +71,9 @@ pub(super) fn method_table_pairs(
     interp: &mut Interp,
     table: ObjRef,
 ) -> Result<Vec<(Box<[u8]>, ObjRef)>, Failure> {
-    if string_keyed_table(interp, table) {
+    // A user SUPPLIER can send protected methods or install methods
+    // recursively. Run that method under the normal dispatch context.
+    if string_keyed_table(interp, table) && !interp.answers_by_method(table, b"SUPPLIER") {
         // **Asked before the walk**, because the walk cannot see the
         // difference: a collection whose entries this crate answers per name
         // rather than storing looks empty to `native_keys`, and a mutation
