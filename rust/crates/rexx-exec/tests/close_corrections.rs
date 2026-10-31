@@ -13,14 +13,20 @@
 
 use rexx_exec::{Invocation, run_program, run_program_collect_every_alloc};
 
-fn check(source: &[u8], expected: &[u8]) {
+fn check(source: &[u8], expected: &[u8]) -> Vec<u8> {
+    let mut trace = None;
     for result in [
         run_program("probe.rex", source.to_vec(), Invocation::none()),
         run_program_collect_every_alloc("probe.rex", source.to_vec(), Invocation::none()),
     ] {
         assert_eq!(result.exit_code, 0, "{:?}", result.stderr);
         assert_eq!(result.stdout, expected);
+        if let Some(previous) = &trace {
+            assert_eq!(&result.stderr, previous);
+        }
+        trace = Some(result.stderr);
     }
+    trace.unwrap()
 }
 
 #[test]
@@ -77,8 +83,9 @@ fn raise_substitutions_and_intermediate_trace_rendering_stay_separate() {
             }
         }
     }
-    check(
+    let trace = check(
         include_bytes!("../../../corpus/lang/raise_additional_modes.rex"),
         &expected,
     );
+    assert_eq!(trace, include_bytes!("close_corrections/raise-modes.stderr"));
 }
