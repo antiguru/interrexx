@@ -459,3 +459,5 @@ lang/constant_result_cleanup.rex
 lang/raise_additional_items.rex
 lang/define_methods_supplier_override.rex
 lang/define_methods_protected_supplier.rex
+lang/raise_additional_modes.rex
+lang/method_table_supplier_boundaries.rex

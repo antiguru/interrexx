@@ -42,3 +42,22 @@ fn method_collections_send_supplier_and_allow_reentrant_installation() {
 fn a_copied_protected_supplier_uses_normal_security_dispatch() {
     check(include_bytes!("../../../corpus/lang/define_methods_protected_supplier.rex"), b"supplier checkpoint\ninstalled 9\n");
 }
+
+#[test]
+fn supplier_validation_stays_atomic_and_shared_callers_send_supplier() {
+    check(include_bytes!("../../../corpus/lang/method_table_supplier_boundaries.rex"), b"bad supplier\natomic 0 8\ngood supplier\nclass method 7\ngood supplier\nenhanced 7\nplain 4\n");
+}
+
+#[test]
+fn raise_substitutions_and_intermediate_trace_rendering_stay_separate() {
+    let mut expected = Vec::new();
+    for condition in ["user zz", "syntax 40.4"] {
+        for operand in ["additional (.array~of(bad))", "array (bad)"] {
+            for mode in ["off", "r", "i"] {
+                let value = if condition == "user zz" && mode != "i" { "raised" } else { "98.900" };
+                expected.extend_from_slice(format!("{condition} {operand} {mode} {value}\n").as_bytes());
+            }
+        }
+    }
+    check(include_bytes!("../../../corpus/lang/raise_additional_modes.rex"), &expected);
+}
