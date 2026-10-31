@@ -11,7 +11,7 @@ env=dict(os.environ,CARGO_INCREMENTAL='0',CARGO_BUILD_JOBS='4',CARGO_TARGET_DIR=
 assert env.get('REXX_TEST_THREAD_SANITIZER') != '1'
 cases=[('normal',['cargo','test','-p','rexx-exec','--lib','--test','rexx_command','--test','signals','--test','stdin_contention','--test','program_end','--test','concurrency_tests','--test','close_corrections','--test','dispatch_seam','--test','environment_seam','--test','refusal_sites','--test','refusal_dispositions','--test','closed_phases','-j4']),('depth-release',['cargo','test','-p','rexx-exec','--release','--lib','eval::tests::a_parse_pattern_and_an_expression_share_the_eval_depth_limit','-j4','--','--exact']),('unsafe',['cargo','test','-p','rexx-core','--test','unsafe_sites','-j4']),('fmt',['cargo','fmt','--all','--check']),('clippy',['cargo','clippy','-p','rexx-exec','--all-targets','-j4','--','-D','warnings'])]
 for name,args in cases:
- path=OUT/name;assert not path.with_suffix('.status').exists()
+ path=OUT/(name+os.environ.get('NORMAL_SUFFIX',''));assert not path.with_suffix('.status').exists()
  command=['timeout','-k','5','580',*args]
  with path.with_suffix('.stdout').open('wb') as stdout,path.with_suffix('.stderr').open('wb') as stderr:
   result=subprocess.run(command,cwd=ROOT/'rust',env=env,stdin=subprocess.DEVNULL,stdout=stdout,stderr=stderr)
