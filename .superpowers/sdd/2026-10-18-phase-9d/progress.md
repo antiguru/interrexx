@@ -497,3 +497,19 @@ Ruling: place fresh Task 10 build targets on the repository filesystem under thi
 The independent audit found six queued filenames missing from the inventory. Five carry existing written dispositions and are reconciled without changing those rulings; the sixth, `2026-10-20-definemethods-supplier.md`, explicitly had no ruling. Moritz answered "fix now." on 2026-10-31, accepting its collection-subclass SUPPLIER contract for the close correction wave. The parent Task 10 text and inventory now carry that ruling so the implementation and reviewer consume the same requirements.
 
 The whole-phase source review also produced bounded paired evidence for cleanup skipped by failed constant TRACE rendering and for unwanted non-SYNTAX ADDITIONAL array-element conversion. Both are correctness findings, with their original pin/oracle channels retained under `close/review-probes/`. One consolidated source correction wave and scoped review will precede the fresh close freeze. The prepared runner at `d18219237` has not executed any gate or started a freeze.
+
+
+## Consolidated source correction wave approved
+
+The final whole-phase review found two Important issues and no Critical issue, and Moritz separately accepted the omitted SUPPLIER divergence with "fix now.". One implementer addressed all three in source `ad0741664719bf6b01c063079c2c61a715999dff`, preserving the early responsibility moves and every original comment. Focused probes also exposed TRACE R rendering and live ADDITIONAL mutation cases within the same RAISE correction, with their failed attempts retained before the corresponding fixes. The final scoped review approves F1, F2 and SUPPLIER, with no remaining Critical or Important findings, in `task-10-corrections-review.md`.
+
+Root verified the actual Git status and commit log after the handoff at `b976887d1`, then independently compared all fourteen retained stdout, stderr and status pairs, their current corpus source hashes and six final zero-status check records. Seven new regression programs and source-line sidecars are registered, their ordinary and forced-GC executions pass, and no child remains active. The SUPPLIER queue and both inventory disposition columns now close at the proven source revision. The full workspace, corpus, suite, TSan and performance close gates remain unexecuted and are not substituted by this focused proof.
+
+Task 10: consolidated correction wave complete (commits `5a3d5a52d..ad0741664`, scoped review clean). The independent runner readiness review requires hashing all consumed oracle packages, binaries and samples and writing the copied TSan status after validation. The original runner owner is applying those two changes before any source freeze begins.
+
+
+## Close runner approved: Freeze next
+
+Runner readiness corrections at `2a758bf67` add content, membership and symlink-target manifests for all consumed oracle bin and samples inputs. The copied TSan status is written after legacy child validation and the post-run freeze guard, matching the primary record. Independent scoped re-review approves both findings with no new breakage, and its fixture controls distinguish child failure, freeze drift, clean execution and sanitizer diagnostics. Root verified the runner commit and current Rust-tree equality with `ad0741664`, and no close gate or freeze has started.
+
+The next commit records these approvals and will become the frozen closing HEAD. Root will invoke the prepared `close/run.sh start --head <that commit>` and execute every recorded step sequentially, retaining the original command bounds and all outputs. Metadata, source and index remain fixed until the runner records finished and all child process groups are stopped. Final suite derivations, accepted budget interpretation, the two gate documents and the completion audit follow that release.

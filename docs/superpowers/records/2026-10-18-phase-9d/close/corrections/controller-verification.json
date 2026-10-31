@@ -1,0 +1,13 @@
+{
+  "source_commit": "ad0741664719bf6b01c063079c2c61a715999dff",
+  "evidence_commit": "b976887d1",
+  "paired_programs": 14,
+  "independent_raw_stdout_stderr_status_equal": true,
+  "witness_source_sha256_verified": true,
+  "final_focused_statuses_verified_zero": true,
+  "rust_tree_matches_current_head": true,
+  "review_spec": "approved",
+  "review_quality": "approved",
+  "open_critical_or_important": 0,
+  "close_gates_executed": false
+}

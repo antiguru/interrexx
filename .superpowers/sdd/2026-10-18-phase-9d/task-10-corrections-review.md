@@ -1,0 +1,29 @@
+# Task 10 scoped correction review
+
+## Verdict and scope
+
+Spec verdict: Approved for the requested correction scope. Quality verdict: Approved, with no remaining Critical or Important finding in the correction diff. This review covers `5a3d5a52d..ad0741664719bf6b01c063079c2c61a715999dff`, whose Rust tree is `783b7378c80b0fba36f14912e0179dbe7c70cfe2`. The scope is original findings F1 and F2, the user-authorized SUPPLIER gap, and breakage introduced while correcting them. Approval permits the controller to proceed to fresh closure gates and does not establish that those gates have passed.
+
+The binding requirements are the correction brief, the original whole-phase review, the Phase 9d design and retained parent-plan constraints. Review passes covered the pure moves, constant activation cleanup, RAISE conversion and trace timing, SUPPLIER dispatch and installation atomicity, and focused regression evidence. The original whole-phase review remains unchanged, and the earlier Task 8.8 review remains evidence for its narrower scope. No new broad phase review, build, test execution, source edit, index change or HEAD change was performed in this scoped review.
+
+## Required corrections
+
+**F1: ADDRESSED.** In `rust/crates/rexx-exec/src/install/constant_expression.rs:136`, fallible result rendering now feeds the local result before the common cleanup path. The error therefore reaches guard release, call-context restoration, activation and slot pops, and saved-clause restoration at lines 142 through 151. The retained regression catches the DEFAULTNAME failure in the caller and continues, while paired existing programs preserve traced and untraced successful constants. The extracted constant evaluator also preserves the original implementation outside the requested correction.
+
+**F2: ADDRESSED.** In `rust/crates/rexx-exec/src/run/condition/raise.rs:150`, non-SYNTAX ADDITIONAL values retain their objects without preparing catalogue strings, and ARRAY uses `intermediate_text` at line 205 for actual intermediate trace output. SYNTAX substitution follows RESULT evaluation and uses a separately rooted array at lines 231 through 251, preserving the original array-validation point and approved Deviation 83 DESCRIPTION timing. During this review, deferred conversion exposed a stale-slot snapshot: a RETURN expression replacing `old` with `new` still produced `old.`, as confirmed by `mutation-red-2.stdout`. Commit `ad0741664` fixes that breakage by retaining the array identity and reading its live slots, and the ordinary, forced-GC and paired mutation witnesses now produce `new.`.
+
+**SUPPLIER: ADDRESSED.** In `rust/crates/rexx-exec/src/dispatch/class_protocol/method_table.rs:106`, actual hash collections now use the normal SUPPLIER send with the caller context, including subclass overrides and copied protected primitive methods. The shared method-table callers preserve validation before installation, with tests covering atomic failure, reentrant installation, security checkpoints, enhanced objects, class methods, plain collections and protocol objects. The compatibility walk at lines 78 through 104 remains limited to native directories resolving an unrestricted primitive, because these directories have no hash store for the existing supplier implementation. The proposed object-specific primitive override cannot reach that branch through current mutation APIs: `dispatch.rs:2385` restricts own-method writes to Instance and Class receivers, while primitive classes remain locked.
+
+## Verification evidence
+
+The implementation report is `.superpowers/sdd/2026-10-18-phase-9d/task-10-corrections-report.md`, and retained evidence is under `docs/superpowers/records/2026-10-18-phase-9d/close/corrections/`. The reviewer independently checked the move identity, inspected the regression helper's ordinary and collection-on-every-allocation paths, and read `final-green-2.stdout`: seven correction tests, five semantic-boundary tests and eight refusal tests passed. Final formatting, touched-crate Clippy, CLI build, refusal verification and sourceline verification statuses are all 0, while earlier collection-policy, refusal-disposition and closed-label coverage is retained in `focused-green`. The reviewer independently compared the raw stdout, stderr and status files for all fourteen `paired-final` programs, and every channel matched. Those invocation records identify source `ad0741664` and the debug CLI SHA-256 `dbf73f30724018918625539592f974ca8d5ca5ba1a078dc105081fc29216f513`.
+
+Meaningful failures remain retained alongside their corrections. `protected-red` demonstrates the bypassed security interception, `adjacent-red` demonstrates unwanted TRACE R rendering, and `trace-order-red` demonstrates premature SYNTAX substitution relative to RESULT tracing. `mutation-red-2` establishes the live-array failure, whereas the earlier `mutation-red` is only a rejected witness syntax and is not counted as semantic proof. The final paired evidence includes successful existing native-method-table and constant programs as well as all seven new witnesses.
+
+## Considered behaviors declined to judge
+
+* Fresh full-workspace, corpus, suite, TSan and performance closure outcomes remain the controller's separate gates.
+* Extending native-directory per-object mutation beyond its existing refusal boundary is outside these corrections and is not required to resolve the SUPPLIER gap.
+* Previously ruled performance residuals, historical stderr-queue followup and Deviations 82, 83 and 84 retain their recorded dispositions.
+
+No remaining Critical or Important fix-induced breakage was found within this scope. The correction wave satisfies the original findings and the accepted SUPPLIER requirement on the inspected source and focused evidence. Existing compatibility boundaries are explicit rather than silently expanded. Final Phase 9d acceptance still depends on the controller's fresh closure evidence.
