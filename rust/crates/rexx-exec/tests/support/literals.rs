@@ -163,9 +163,12 @@ fn starts_word(chars: &[char], at: usize) -> bool {
 /// `Phase 10`, and `Phase 9` is not in `Phase 9.1`.
 pub fn names(text: &str, phase: &str) -> bool {
     text.match_indices(phase).any(|(at, _)| {
-        !text[at + phase.len()..]
-            .chars()
-            .next()
-            .is_some_and(|c| c.is_ascii_digit() || c == '.')
+        let tail = &text[at + phase.len()..];
+        let mut chars = tail.chars();
+        match chars.next() {
+            Some(c) if c.is_ascii_digit() => false,
+            Some('.') => !chars.next().is_some_and(|c| c.is_ascii_digit()),
+            _ => true,
+        }
     })
 }
