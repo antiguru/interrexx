@@ -89,3 +89,8 @@ fn raise_substitutions_and_intermediate_trace_rendering_stay_separate() {
     );
     assert_eq!(trace, include_bytes!("close_corrections/raise-modes.stderr"));
 }
+
+#[test]
+fn syntax_substitution_reads_additional_after_the_return_expression() {
+    check(include_bytes!("../../../corpus/lang/raise_additional_return_mutation.rex"), b"new.\n");
+}
