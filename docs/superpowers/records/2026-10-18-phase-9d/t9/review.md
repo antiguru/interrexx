@@ -2,7 +2,7 @@
 
 ## Spec compliance
 
-Verdict: Source compliant for Task 9 at `561bcc3ffe9614da8108aa58ba44bcef8d885b3f`, compared with `f2dcbd70f`. Final evidence verdict is pending the corpus and suite results. This review covers Task 9 only, and the phase gate documents belong to unstarted Task 10. No missing, extra, or misunderstood source requirement was found.
+Verdict: Spec compliant for Task 9 at `561bcc3ffe9614da8108aa58ba44bcef8d885b3f`, compared with `f2dcbd70f`. Task 9 evidence is complete. This review covers Task 9 only, and the phase gate documents belong to unstarted Task 10. No missing, extra, or misunderstood source requirement was found.
 
 * `rust/crates/rexx-core/src/owner.rs:56` removes `Owner::Phase9`, its label and parsing arms, and obsolete assertions. `rust/crates/rexx-exec/src/dispatch/native/tests.rs:150` and `rust/crates/rexx-exec/tests/internal_routines.rs:107` remove the corresponding open phase and exhaustive-match arms.
 * `rust/crates/rexx-exec/tests/closed_phases.rs:37` closes Phase 9. Its regression at `:322` and `rust/crates/rexx-exec/tests/support/literals.rs:164` distinguish dotted numeric phases while retaining sentence punctuation.
@@ -13,7 +13,7 @@ Verdict: Source compliant for Task 9 at `561bcc3ffe9614da8108aa58ba44bcef8d885b3
 
 ## Code quality
 
-Verdict: Approved for the reviewed source. No Critical, Important, or Minor correctness or maintainability findings. The scanner change is local, preserves punctuation behavior, and adds regression coverage for the distinguishing boundary. The extension change reuses the existing canonical directory set, while the only production change removes obsolete refusal ownership without adding dependencies or unsafe code.
+Verdict: Approved. No Critical, Important, or Minor correctness or maintainability findings. The scanner change is local, preserves punctuation behavior, and adds regression coverage for the distinguishing boundary. The extension change reuses the existing canonical directory set, while the only production change removes obsolete refusal ownership without adding dependencies or unsafe code.
 
 ## Evidence and limitations
 
@@ -21,4 +21,4 @@ The supplied diff was read once, with the output-truncated central portion rerea
 
 Retained gate metadata for the reviewed revision records status 0 for preflight, formatting, clippy, core, policy, native tests and release build. Their retained stdout and stderr contain no warning, error or FAILED lines. The two regression failures retain status 101, while the first sandboxed memcap attempt records launcher failure separately. The original failed policy output was overwritten, and `policy-attempt-1-reconstructed.txt` is explicitly a transcript reconstruction rather than raw evidence.
 
-Corpus and suite gates, exact suite-row delta, and final aggregate elapsed time remain pending in the implementer report read for this review. Final evidence-complete approval is withheld until those records are updated. No per-task performance run is required by the run-path condition because the diff removes only obsolete owner metadata from production. This task review makes no claim that Task 10 or the phase-wide close gates have completed.
+The finalized implementer report and retained corpus and suite metadata record status 0 at the reviewed source revision. Corpus output records 1,242 of 1,242 matching, with 34 tests passed and one ignored. Suite output records 402 groups and zero red verdicts. `suite/delta-summary.json` records 24,523 old and new keys with zero changed, added or removed rows, and `suite/delta-vs-t8.8.tsv` contains only its header. The retained named gate elapsed times sum to 703.794 seconds, matching the report and its stated exclusions. Neither corpus nor suite output contains warning, error or FAILED diagnostic lines. No per-task performance run is required by the run-path condition because the diff removes only obsolete owner metadata from production. This task review makes no claim that Task 10 or the phase-wide close gates have completed.
