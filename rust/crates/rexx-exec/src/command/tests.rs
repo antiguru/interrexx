@@ -168,3 +168,48 @@ fn unused_command_worker_returns_after_drop_unwind_and_exec_failure() {
     assert_eq!(interp.pool.threads(), 1);
     worker.run(Box::new(|| {}));
 }
+
+#[test]
+fn a_reader_panic_preserves_the_other_reader_and_child_status() {
+    for panicking in [Piece::Out, Piece::Err] {
+        let observed = std::sync::Mutex::new(Vec::new());
+        let written = |piece, bytes: Vec<u8>| {
+            assert_ne!(piece, panicking, "reader callback panic");
+            observed.lock().unwrap().extend(bytes);
+        };
+        let running = std::process::Command::new("sh")
+            .args(["-c", "printf output; printf error >&2"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("child");
+        let waited = collect(
+            running,
+            None,
+            None,
+            [false, false],
+            Some((&written, Piece::Out, Some(Piece::Err))),
+        );
+        assert_eq!(waited.rc, 0);
+        assert!(waited.out.is_empty() && waited.err.is_empty());
+        let expected: &[u8] = if panicking == Piece::Out { b"error" } else { b"output" };
+        assert_eq!(*observed.lock().unwrap(), expected);
+    }
+}
+
+#[test]
+fn a_real_reader_eof_preserves_the_other_pipes_large_output() {
+    for first in [1, 2] {
+        let running = std::process::Command::new("python3")
+            .args(["-c", "import os,sys; first=int(sys.argv[1]); os.write(first,b'first'); os.close(first); other=3-first; data=b'x'*200000; stream=os.fdopen(other,'wb'); stream.write(data); stream.close()", &first.to_string()])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("child");
+        let waited = collect(running, None, None, [false, false], None);
+        assert_eq!(waited.rc, 0);
+        let (early, late) = if first == 1 { (&waited.out, &waited.err) } else { (&waited.err, &waited.out) };
+        assert_eq!(early, b"first");
+        assert_eq!(late, &vec![b'x'; 200000]);
+    }
+}
