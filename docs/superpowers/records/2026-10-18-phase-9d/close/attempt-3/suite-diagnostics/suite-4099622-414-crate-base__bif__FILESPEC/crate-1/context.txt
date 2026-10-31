@@ -1,0 +1,51 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-414-crate-base__bif__FILESPEC/run
+TZ=None
+status=Some(0) ended=Exited(0) took=65.954168ms
+GroupRun {
+    group: "base/bif/FILESPEC",
+    expected: {},
+    started: {
+        "TESTDRIVE01",
+        "TESTEXTENSION01",
+        "TESTLOCATION01",
+        "TESTNAME01",
+        "TESTPATH01",
+        "TESTSYNTAX01",
+        "TESTSYNTAX02",
+        "TESTSYNTAX03",
+        "TESTSYNTAX04",
+        "TESTSYNTAX05",
+        "TESTSYNTAX06",
+        "TESTSYNTAX07",
+    },
+    passed: {
+        "TESTDRIVE01",
+        "TESTEXTENSION01",
+        "TESTLOCATION01",
+        "TESTNAME01",
+        "TESTPATH01",
+        "TESTSYNTAX01",
+        "TESTSYNTAX02",
+        "TESTSYNTAX03",
+        "TESTSYNTAX04",
+        "TESTSYNTAX05",
+        "TESTSYNTAX06",
+        "TESTSYNTAX07",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: Memcap,
+    tests_ran: Some(
+        "12",
+    ),
+    took: 65.954168ms,
+}
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-414-crate-base__bif__FILESPEC/started.txt canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-414-crate-base__bif__FILESPEC/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 252, modified: SystemTime { tv_sec: 1793460720, tv_nsec: 312577089 }, accessed: SystemTime { tv_sec: 1793460720, tv_nsec: 308526618 }, created: SystemTime { tv_sec: 1793460720, tv_nsec: 308526618 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-414-crate-base__bif__FILESPEC/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-414-crate-base__bif__FILESPEC/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-414-crate-base__bif__FILESPEC/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67503680, modified: SystemTime { tv_sec: 1793460710, tv_nsec: 776802238 }, accessed: SystemTime { tv_sec: 1793460710, tv_nsec: 752802932 }, created: SystemTime { tv_sec: 1793460710, tv_nsec: 752802932 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-414-crate-base__bif__FILESPEC/run/ooRexx/base/bif/FILESPEC.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-414-crate-base__bif__FILESPEC/run/ooRexx/base/bif/FILESPEC.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 8561, modified: SystemTime { tv_sec: 1793460720, tv_nsec: 270124554 }, accessed: SystemTime { tv_sec: 1793460720, tv_nsec: 268693564 }, created: SystemTime { tv_sec: 1793460720, tv_nsec: 268693564 }, .. })

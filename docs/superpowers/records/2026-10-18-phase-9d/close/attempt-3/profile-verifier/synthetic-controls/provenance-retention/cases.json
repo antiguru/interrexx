@@ -1,0 +1,318 @@
+{
+  "kind": "synthetic verifier controls, not interpreter profiles",
+  "original_results_file": "/tmp/p9d-profile-verifier-controls-x9tj7462/results.json",
+  "harness_copy_sha256": "0692b275690715d6e6a47aa11f3591ce323e914a47c659dccefc495ae6dfa8b7",
+  "verifier_sha256": "c3187bad9f1daa8ef25447e896686af6e3c56e04ccf23264d6ad745b1c8cdafc",
+  "verifier_hash_matches_original_input_manifest": true,
+  "cases": [
+    {
+      "case": "valid-over",
+      "argv_reconstructed_from_retained_harness": [
+        "python3",
+        "-B",
+        "/tmp/p9d-close-verify-profiles.py",
+        "--root",
+        "/home/moritz/dev/repos/ooRexx-rust-rewrite",
+        "--profiles",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/profiles",
+        "--pin-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/pin",
+        "--pin-sha256",
+        "1c3cb6e13c698dcec4f1fc626bed652e44aa79f184e8be4fd68b036368655c7d",
+        "--head-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/head",
+        "--head-sha256",
+        "1d0201dcdbdb45f8314dbb51bb82cc65a076f76ed48031b65b58e41e7c23a6c0",
+        "--output",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/valid-over"
+      ],
+      "argv_was_not_recorded_at_execution": true,
+      "recorded_actual_returncode": null,
+      "actual_returncode_missing_reason": "Original harness asserted CompletedProcess.returncode but did not persist its numeric value. No raw status is reconstructed.",
+      "expected_returncode_assertion": 0,
+      "stdout": {
+        "path": "/tmp/p9d-profile-verifier-controls-x9tj7462/valid-over.stdout",
+        "bytes": 103,
+        "sha256": "0074a8a8b8568c88536e0adffe822f412c6181d9556261f6785b8f34210cb736",
+        "origin": "Saved raw CompletedProcess channel from original synthetic run"
+      },
+      "stderr": {
+        "path": "/tmp/p9d-profile-verifier-controls-x9tj7462/valid-over.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "origin": "Saved raw CompletedProcess channel from original synthetic run"
+      }
+    },
+    {
+      "case": "stdout-invalid",
+      "argv_reconstructed_from_retained_harness": [
+        "python3",
+        "-B",
+        "/tmp/p9d-close-verify-profiles.py",
+        "--root",
+        "/home/moritz/dev/repos/ooRexx-rust-rewrite",
+        "--profiles",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/profiles",
+        "--pin-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/pin",
+        "--pin-sha256",
+        "1c3cb6e13c698dcec4f1fc626bed652e44aa79f184e8be4fd68b036368655c7d",
+        "--head-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/head",
+        "--head-sha256",
+        "1d0201dcdbdb45f8314dbb51bb82cc65a076f76ed48031b65b58e41e7c23a6c0",
+        "--output",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/stdout-invalid"
+      ],
+      "argv_was_not_recorded_at_execution": true,
+      "recorded_actual_returncode": null,
+      "actual_returncode_missing_reason": "Original harness asserted CompletedProcess.returncode but did not persist its numeric value. No raw status is reconstructed.",
+      "expected_returncode_assertion": 2,
+      "stdout": {
+        "path": "/tmp/p9d-profile-verifier-controls-x9tj7462/stdout-invalid.stdout",
+        "bytes": 108,
+        "sha256": "3b08667f2d1b9fb4867e0a7956aeb2f768b7a2666045db86c791fb29c494039e",
+        "origin": "Saved raw CompletedProcess channel from original synthetic run"
+      },
+      "stderr": {
+        "path": "/tmp/p9d-profile-verifier-controls-x9tj7462/stdout-invalid.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "origin": "Saved raw CompletedProcess channel from original synthetic run"
+      }
+    },
+    {
+      "case": "truncated-invalid",
+      "argv_reconstructed_from_retained_harness": [
+        "python3",
+        "-B",
+        "/tmp/p9d-close-verify-profiles.py",
+        "--root",
+        "/home/moritz/dev/repos/ooRexx-rust-rewrite",
+        "--profiles",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/profiles",
+        "--pin-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/pin",
+        "--pin-sha256",
+        "1c3cb6e13c698dcec4f1fc626bed652e44aa79f184e8be4fd68b036368655c7d",
+        "--head-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/head",
+        "--head-sha256",
+        "1d0201dcdbdb45f8314dbb51bb82cc65a076f76ed48031b65b58e41e7c23a6c0",
+        "--output",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/truncated-invalid"
+      ],
+      "argv_was_not_recorded_at_execution": true,
+      "recorded_actual_returncode": null,
+      "actual_returncode_missing_reason": "Original harness asserted CompletedProcess.returncode but did not persist its numeric value. No raw status is reconstructed.",
+      "expected_returncode_assertion": 2,
+      "stdout": {
+        "path": "/tmp/p9d-profile-verifier-controls-x9tj7462/truncated-invalid.stdout",
+        "bytes": 111,
+        "sha256": "418f6fa38b1f80538151a563d713cd37613cea7061acf84f8cba170445358dcf",
+        "origin": "Saved raw CompletedProcess channel from original synthetic run"
+      },
+      "stderr": {
+        "path": "/tmp/p9d-profile-verifier-controls-x9tj7462/truncated-invalid.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "origin": "Saved raw CompletedProcess channel from original synthetic run"
+      }
+    },
+    {
+      "case": "status-invalid",
+      "argv_reconstructed_from_retained_harness": [
+        "python3",
+        "-B",
+        "/tmp/p9d-close-verify-profiles.py",
+        "--root",
+        "/home/moritz/dev/repos/ooRexx-rust-rewrite",
+        "--profiles",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/profiles",
+        "--pin-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/pin",
+        "--pin-sha256",
+        "1c3cb6e13c698dcec4f1fc626bed652e44aa79f184e8be4fd68b036368655c7d",
+        "--head-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/head",
+        "--head-sha256",
+        "1d0201dcdbdb45f8314dbb51bb82cc65a076f76ed48031b65b58e41e7c23a6c0",
+        "--output",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/status-invalid"
+      ],
+      "argv_was_not_recorded_at_execution": true,
+      "recorded_actual_returncode": null,
+      "actual_returncode_missing_reason": "Original harness asserted CompletedProcess.returncode but did not persist its numeric value. No raw status is reconstructed.",
+      "expected_returncode_assertion": 2,
+      "stdout": {
+        "path": "/tmp/p9d-profile-verifier-controls-x9tj7462/status-invalid.stdout",
+        "bytes": 108,
+        "sha256": "9db067fbe5a2780c2c9e2f5b81242bf21fc5a24deda90a9e8557efb439d839fe",
+        "origin": "Saved raw CompletedProcess channel from original synthetic run"
+      },
+      "stderr": {
+        "path": "/tmp/p9d-profile-verifier-controls-x9tj7462/status-invalid.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "origin": "Saved raw CompletedProcess channel from original synthetic run"
+      }
+    },
+    {
+      "case": "stderr-invalid",
+      "argv_reconstructed_from_retained_harness": [
+        "python3",
+        "-B",
+        "/tmp/p9d-close-verify-profiles.py",
+        "--root",
+        "/home/moritz/dev/repos/ooRexx-rust-rewrite",
+        "--profiles",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/profiles",
+        "--pin-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/pin",
+        "--pin-sha256",
+        "1c3cb6e13c698dcec4f1fc626bed652e44aa79f184e8be4fd68b036368655c7d",
+        "--head-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/head",
+        "--head-sha256",
+        "1d0201dcdbdb45f8314dbb51bb82cc65a076f76ed48031b65b58e41e7c23a6c0",
+        "--output",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/stderr-invalid"
+      ],
+      "argv_was_not_recorded_at_execution": true,
+      "recorded_actual_returncode": null,
+      "actual_returncode_missing_reason": "Original harness asserted CompletedProcess.returncode but did not persist its numeric value. No raw status is reconstructed.",
+      "expected_returncode_assertion": 2,
+      "stdout": {
+        "path": "/tmp/p9d-profile-verifier-controls-x9tj7462/stderr-invalid.stdout",
+        "bytes": 108,
+        "sha256": "c621c3bf762a4f44d6d82fef841347f4b7d9569680f9421f16fc6dfda78ba138",
+        "origin": "Saved raw CompletedProcess channel from original synthetic run"
+      },
+      "stderr": {
+        "path": "/tmp/p9d-profile-verifier-controls-x9tj7462/stderr-invalid.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "origin": "Saved raw CompletedProcess channel from original synthetic run"
+      }
+    },
+    {
+      "case": "existing-output-refused",
+      "argv_reconstructed_from_retained_harness": [
+        "python3",
+        "-B",
+        "/tmp/p9d-close-verify-profiles.py",
+        "--root",
+        "/home/moritz/dev/repos/ooRexx-rust-rewrite",
+        "--profiles",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/profiles",
+        "--pin-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/pin",
+        "--pin-sha256",
+        "1c3cb6e13c698dcec4f1fc626bed652e44aa79f184e8be4fd68b036368655c7d",
+        "--head-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/head",
+        "--head-sha256",
+        "1d0201dcdbdb45f8314dbb51bb82cc65a076f76ed48031b65b58e41e7c23a6c0",
+        "--output",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/valid-over"
+      ],
+      "argv_was_not_recorded_at_execution": true,
+      "recorded_actual_returncode": null,
+      "actual_returncode_missing_reason": "Original harness asserted CompletedProcess.returncode but did not persist its numeric value. No raw status is reconstructed.",
+      "expected_returncode_assertion": "nonzero",
+      "stdout": {
+        "path": null,
+        "sha256": null,
+        "missing_reason": "Existing-output control kept captured channels only in a process-local CompletedProcess, which was not saved."
+      },
+      "stderr": {
+        "path": null,
+        "sha256": null,
+        "missing_reason": "Existing-output control kept captured channels only in a process-local CompletedProcess, which was not saved."
+      }
+    },
+    {
+      "case": "spread-invalid",
+      "argv_reconstructed_from_retained_harness": [
+        "python3",
+        "-B",
+        "/tmp/p9d-close-verify-profiles.py",
+        "--root",
+        "/home/moritz/dev/repos/ooRexx-rust-rewrite",
+        "--profiles",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/profiles",
+        "--pin-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/pin",
+        "--pin-sha256",
+        "1c3cb6e13c698dcec4f1fc626bed652e44aa79f184e8be4fd68b036368655c7d",
+        "--head-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/head",
+        "--head-sha256",
+        "1d0201dcdbdb45f8314dbb51bb82cc65a076f76ed48031b65b58e41e7c23a6c0",
+        "--output",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/spread-invalid"
+      ],
+      "argv_was_not_recorded_at_execution": true,
+      "recorded_actual_returncode": null,
+      "actual_returncode_missing_reason": "Original harness asserted CompletedProcess.returncode but did not persist its numeric value. No raw status is reconstructed.",
+      "expected_returncode_assertion": 2,
+      "stdout": {
+        "path": "/tmp/p9d-profile-verifier-controls-x9tj7462/spread-invalid.stdout",
+        "bytes": 108,
+        "sha256": "c8578b5867819b1c93f053f6bff828247057eef8268099562125ce7370a70aee",
+        "origin": "Saved raw CompletedProcess channel from original synthetic run"
+      },
+      "stderr": {
+        "path": "/tmp/p9d-profile-verifier-controls-x9tj7462/spread-invalid.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "origin": "Saved raw CompletedProcess channel from original synthetic run"
+      }
+    },
+    {
+      "case": "tuple-invalid",
+      "argv_reconstructed_from_retained_harness": [
+        "python3",
+        "-B",
+        "/tmp/p9d-close-verify-profiles.py",
+        "--root",
+        "/home/moritz/dev/repos/ooRexx-rust-rewrite",
+        "--profiles",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/profiles",
+        "--pin-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/pin",
+        "--pin-sha256",
+        "1c3cb6e13c698dcec4f1fc626bed652e44aa79f184e8be4fd68b036368655c7d",
+        "--head-binary",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/head",
+        "--head-sha256",
+        "1d0201dcdbdb45f8314dbb51bb82cc65a076f76ed48031b65b58e41e7c23a6c0",
+        "--output",
+        "/tmp/p9d-profile-verifier-controls-x9tj7462/tuple-invalid"
+      ],
+      "argv_was_not_recorded_at_execution": true,
+      "recorded_actual_returncode": null,
+      "actual_returncode_missing_reason": "Original harness asserted CompletedProcess.returncode but did not persist its numeric value. No raw status is reconstructed.",
+      "expected_returncode_assertion": 2,
+      "stdout": {
+        "path": "/tmp/p9d-profile-verifier-controls-x9tj7462/tuple-invalid.stdout",
+        "bytes": 107,
+        "sha256": "2b38f70846ef33cd56ca2796d9a639887a3703ce15139bc977afebd7d3618cd2",
+        "origin": "Saved raw CompletedProcess channel from original synthetic run"
+      },
+      "stderr": {
+        "path": "/tmp/p9d-profile-verifier-controls-x9tj7462/tuple-invalid.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "origin": "Saved raw CompletedProcess channel from original synthetic run"
+      }
+    }
+  ],
+  "limitations": [
+    "Numeric actual returncodes were not persisted and cannot be recovered as raw records.",
+    "Expected statuses are original harness assertions, not retroactively created execution records.",
+    "Per-case argv is reconstructed from the retained harness and synthetic input paths, not a contemporaneous argv log.",
+    "The original inherited process environment was not recorded.",
+    "No profiles or synthetic controls were rerun for this retention step."
+  ]
+}

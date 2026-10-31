@@ -1,0 +1,11 @@
+
+running 21 tests
+test tests::sized_arrays_are_collected_on_their_bytes ... ok
+test tests::grown_buffers_are_collected_on_their_bytes ... ok
+test tests::large_dead_strings_are_collected_on_their_bytes ... ok
+test tests::bytes_a_body_stops_holding_leave_the_live_figure ... ok
+test tests::pending_uninits_run_as_a_native_method_returns ... ok
+test tests::pending_uninits_run_as_a_method_returns ... ok
+test tests::pending_uninits_run_as_say_writes ... ok
+test tests::pending_uninits_run_as_a_label_returns ... ok
+test tests::pending_uninits_run_as_an_interpret_ends ... ok

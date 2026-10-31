@@ -1,0 +1,18 @@
+{
+  "purpose": "Read-only check of recorded completed diagnostic process IDs, before further ordinary test selection",
+  "checked_pids": [
+    221639,
+    221640,
+    222808,
+    222809,
+    228954,
+    228955,
+    231660,
+    231661,
+    236055,
+    237228,
+    237247,
+    237258
+  ],
+  "alive": []
+}

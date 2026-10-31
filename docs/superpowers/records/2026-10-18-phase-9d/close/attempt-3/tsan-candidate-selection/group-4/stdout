@@ -1,0 +1,18 @@
+
+running 1 test
+test tests::a_long_chain_of_stem_subclass_instances_is_walked_once ... FAILED
+
+failures:
+
+---- tests::a_long_chain_of_stem_subclass_instances_is_walked_once stdout ----
+
+thread 'tests::a_long_chain_of_stem_subclass_instances_is_walked_once' (261853) panicked at crates/rexx-exec/src/tests.rs:1753:29:
+the chain did not end
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    tests::a_long_chain_of_stem_subclass_instances_is_walked_once
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1240 filtered out; finished in 20.00s
+

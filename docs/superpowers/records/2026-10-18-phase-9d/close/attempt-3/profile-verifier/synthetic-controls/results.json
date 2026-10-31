@@ -1,0 +1,10 @@
+[
+  "valid OVER stays exit 0 and is not accepted",
+  "semantic mismatch rejected",
+  "truncated profile rejected",
+  "nonzero status rejected",
+  "semantic stderr retained and rejected",
+  "existing output refused",
+  "SPREAD rejected from coherent raw counts",
+  "missing tuple artifact rejected"
+]

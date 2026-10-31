@@ -1,0 +1,53 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-286-oracle-base__bif__CHARIN/run
+TZ=None
+status=Some(0) ended=Exited(0) took=36.501401ms
+GroupRun {
+    group: "base/bif/CHARIN",
+    expected: {},
+    started: {
+        "TEST_CHARIN_0_LENGTH",
+        "TEST_CHARIN_0_START",
+        "TEST_CHARIN_ALOT",
+        "TEST_CHARIN_DEFAULTS_01",
+        "TEST_CHARIN_NEGATIVE_LENGTH",
+        "TEST_CHARIN_NEGATIVE_LENGTH2",
+        "TEST_CHARIN_NEGATIVE_START",
+        "TEST_CHARIN_NOERR_1",
+        "TEST_CHARIN_NOERR_2",
+        "TEST_CHARIN_SIMPLE",
+        "TEST_CHARIN_SYNTAX_1",
+        "TEST_CHARIN_TOO_FAR",
+        "TEST_CHARIN_TOO_MUCH",
+    },
+    passed: {
+        "TEST_CHARIN_0_LENGTH",
+        "TEST_CHARIN_0_START",
+        "TEST_CHARIN_ALOT",
+        "TEST_CHARIN_DEFAULTS_01",
+        "TEST_CHARIN_NEGATIVE_LENGTH",
+        "TEST_CHARIN_NEGATIVE_LENGTH2",
+        "TEST_CHARIN_NEGATIVE_START",
+        "TEST_CHARIN_NOERR_1",
+        "TEST_CHARIN_NOERR_2",
+        "TEST_CHARIN_SIMPLE",
+        "TEST_CHARIN_SYNTAX_1",
+        "TEST_CHARIN_TOO_FAR",
+        "TEST_CHARIN_TOO_MUCH",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: OracleUlimit,
+    tests_ran: Some(
+        "13",
+    ),
+    took: 36.501401ms,
+}
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-286-oracle-base__bif__CHARIN/started.txt canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-286-oracle-base__bif__CHARIN/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 391, modified: SystemTime { tv_sec: 1793460717, tv_nsec: 413338754 }, accessed: SystemTime { tv_sec: 1793460717, tv_nsec: 409155730 }, created: SystemTime { tv_sec: 1793460717, tv_nsec: 409155730 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-286-oracle-base__bif__CHARIN/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-286-oracle-base__bif__CHARIN/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-286-oracle-base__bif__CHARIN/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67503680, modified: SystemTime { tv_sec: 1793460710, tv_nsec: 776802238 }, accessed: SystemTime { tv_sec: 1793460710, tv_nsec: 752802932 }, created: SystemTime { tv_sec: 1793460710, tv_nsec: 752802932 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-286-oracle-base__bif__CHARIN/run/ooRexx/base/bif/CHARIN.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-286-oracle-base__bif__CHARIN/run/ooRexx/base/bif/CHARIN.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 9464, modified: SystemTime { tv_sec: 1793460717, tv_nsec: 383362780 }, accessed: SystemTime { tv_sec: 1793460717, tv_nsec: 382115765 }, created: SystemTime { tv_sec: 1793460717, tv_nsec: 382115765 }, .. })

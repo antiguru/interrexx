@@ -1,0 +1,19 @@
+{
+  "raw_report": "tsan.231661",
+  "fault_address": "0x7f4be636d000",
+  "access": "READ",
+  "absolute_pc": "0x55b2f22e1380",
+  "reported_tsan_thread": "234421",
+  "load_bias": "0x55b2f1e7a000",
+  "load_bias_basis": "Main executable zero-file-offset mapping, and ELF first PT_LOAD virtual address zero",
+  "elf_pc": "0x467380",
+  "symbol": "__sanitizer::StackDepotBase<__sanitizer::StackDepotNode, 1, 20>::Put",
+  "instruction": "mov (%rsi,%r8,8),%r10",
+  "main_executable_mappings": [
+    "55b2f1e7a000-55b2f2252000 r--p 00000000 fe:01 100152085                  /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d",
+    "55b2f2252000-55b2f2ccc000 r-xp 003d7000 fe:01 100152085                  /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d",
+    "55b2f2ccc000-55b2f2d8b000 r--p 00e50000 fe:01 100152085                  /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d",
+    "55b2f2d8b000-55b2f2d93000 rw-p 00f0e000 fe:01 100152085                  /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d"
+  ],
+  "original_write_segv_same_instruction_proven": false
+}

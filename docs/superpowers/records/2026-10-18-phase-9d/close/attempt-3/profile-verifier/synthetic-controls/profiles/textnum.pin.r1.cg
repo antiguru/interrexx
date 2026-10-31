@@ -1,0 +1,18 @@
+# callgrind format
+creator: callgrind-3.27.1
+cmd: /tmp/p9d-profile-verifier-controls-x9tj7462/pin /home/moritz/dev/repos/ooRexx-rust-rewrite/rust/bench-programs/textnum.rex
+desc: Trigger: Program termination
+positions: line
+events: Ir
+summary: 100
+ob=/tmp/p9d-profile-verifier-controls-x9tj7462/pin
+fl=synthetic
+fn=synthetic
+1 85
+calls=1 1
+* 999
+ob=/usr/lib/libc.so.6
+2 10
+ob=/usr/lib/ld-linux-x86-64.so.2
+3 5
+totals: 100

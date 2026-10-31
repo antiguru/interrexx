@@ -1,0 +1,39 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-157-oracle-base__keyword__ShortCircuitAnd/run
+TZ=None
+status=Some(0) ended=Exited(0) took=22.164051ms
+GroupRun {
+    group: "base/keyword/ShortCircuitAnd",
+    expected: {},
+    started: {
+        "TEST_DO_UNTIL",
+        "TEST_DO_WHILE",
+        "TEST_IF",
+        "TEST_LOOP_UNTIL",
+        "TEST_LOOP_WHILE",
+        "TEST_WHEN",
+    },
+    passed: {
+        "TEST_DO_UNTIL",
+        "TEST_DO_WHILE",
+        "TEST_IF",
+        "TEST_LOOP_UNTIL",
+        "TEST_LOOP_WHILE",
+        "TEST_WHEN",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: OracleUlimit,
+    tests_ran: Some(
+        "6",
+    ),
+    took: 22.164051ms,
+}
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-157-oracle-base__keyword__ShortCircuitAnd/started.txt canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-157-oracle-base__keyword__ShortCircuitAnd/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 126, modified: SystemTime { tv_sec: 1793460715, tv_nsec: 633325314 }, accessed: SystemTime { tv_sec: 1793460715, tv_nsec: 628661941 }, created: SystemTime { tv_sec: 1793460715, tv_nsec: 628661941 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-157-oracle-base__keyword__ShortCircuitAnd/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-157-oracle-base__keyword__ShortCircuitAnd/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-157-oracle-base__keyword__ShortCircuitAnd/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67503680, modified: SystemTime { tv_sec: 1793460710, tv_nsec: 776802238 }, accessed: SystemTime { tv_sec: 1793460710, tv_nsec: 752802932 }, created: SystemTime { tv_sec: 1793460710, tv_nsec: 752802932 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-157-oracle-base__keyword__ShortCircuitAnd/run/ooRexx/base/keyword/ShortCircuitAnd.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-157-oracle-base__keyword__ShortCircuitAnd/run/ooRexx/base/keyword/ShortCircuitAnd.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 4169, modified: SystemTime { tv_sec: 1793460715, tv_nsec: 615129552 }, accessed: SystemTime { tv_sec: 1793460715, tv_nsec: 614268966 }, created: SystemTime { tv_sec: 1793460715, tv_nsec: 614268966 }, .. })

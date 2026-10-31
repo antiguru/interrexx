@@ -1,0 +1,79 @@
+[New LWP 84576 (id 2)]
+[New LWP 84575 (id 3)]
+[New LWP 84574 (id 4)]
+[New LWP 84571 (id 5)]
+[New LWP 64948 (id 6)]
+[New LWP 64947 (id 7)]
+[New LWP 64946 (id 8)]
+[New LWP 64945 (id 9)]
+[New LWP 64944 (id 10)]
+[New LWP 64943 (id 11)]
+[New LWP 64904 (id 12)]
+[New LWP 64903 (id 13)]
+[New LWP 64902 (id 14)]
+[New LWP 64901 (id 15)]
+[New LWP 64900 (id 16)]
+[New LWP 64899 (id 17)]
+[New LWP 64898 (id 18)]
+[New LWP 64897 (id 19)]
+[New LWP 64896 (id 20)]
+[New LWP 64895 (id 21)]
+[New LWP 64894 (id 22)]
+[New LWP 64893 (id 23)]
+[New LWP 64892 (id 24)]
+[New LWP 64891 (id 25)]
+[New LWP 64890 (id 26)]
+[New LWP 64880 (id 27)]
+[New LWP 64878 (id 28)]
+[New LWP 55312 (id 29)]
+[New LWP 55310 (id 30)]
+[New LWP 55309 (id 31)]
+[New LWP 55308 (id 32)]
+[New LWP 55306 (id 33)]
+[New LWP 55305 (id 34)]
+[New LWP 55303 (id 35)]
+[New LWP 55301 (id 36)]
+[New LWP 55298 (id 37)]
+[New LWP 55297 (id 38)]
+[New LWP 55296 (id 39)]
+[New LWP 55295 (id 40)]
+[New LWP 18479 (id 41)]
+[New LWP 18474 (id 42)]
+[New LWP 18472 (id 43)]
+[New LWP 18470 (id 44)]
+[New LWP 18468 (id 45)]
+[New LWP 18467 (id 46)]
+[New LWP 18466 (id 47)]
+[New LWP 18464 (id 48)]
+[New LWP 18463 (id 49)]
+[New LWP 18459 (id 50)]
+[New LWP 18458 (id 51)]
+[New LWP 18456 (id 52)]
+
+This GDB supports auto-downloading debuginfo from the following URLs:
+  <https://debuginfod.debian.net>
+Enable debuginfod for this session? (y or [n]) [answered N; input not from terminal]
+Debuginfod has been disabled.
+To make this setting permanent, add 'set debuginfod enabled off' to .gdbinit.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/x86_64-linux-gnu/libthread_db.so.1".
+[Switching to thread 1 (Thread 0x7fde0e07bd40 (LWP 18450))]
+syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+
+warning: 38	../sysdeps/unix/sysv/linux/x86_64/syscall.S: No such file or directory
+warning: Missing auto-load script at offset 0 in section .debug_gdb_scripts
+of file /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/debug/deps/concurrency_tests-740260b2b2a0d457.
+Use `info auto-load python-scripts [REGEXP]' to list them.
+[Switching to thread 2 (Thread 0x7fdbcbffe6c0 (LWP 84576))]
+#0  syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+38	in ../sysdeps/unix/sysv/linux/x86_64/syscall.S
+#9  0x00005577c4388a0e in rexx_exec::Interp::idle_for_good (self=0x7fdbcbffaea0) at crates/rexx-exec/src/scheduler.rs:1782
+1782	            self.idle_until(self.now() + TIMER_DAY)?;
+$1 = 0
+$2 = 0
+$3 = true
+$4 = core::option::Option<rexx_exec::clause::Deadline>::Some(rexx_exec::clause::Deadline {at: std::time::Instant (std::sys::time::unix::Instant {t: std::sys::pal::unix::time::Timespec {tv_sec: 458728, tv_nsec: core::num::niche_types::Nanoseconds (895699209)}}), expired: false})
+Python Exception <class 'ValueError'>: embedded null character
+Error occurred in Python: embedded null character
+CAPTURED_STDOUT=b'Searching for test containers\nExecuting automated test suite\n\nooTest Framework - Automated Test of the ooRexx Interpreter\n\nInterpreter:        REXX-ooRexx_5.3.0(MT)_64-bit 6.06 30 Jul 2026\nOS Name:            LINUX\nSysVersion:         Linux 7.2.11+deb14-amd64\n\nTests ran:          8\nAssertions:         41\nFailures:           0\nErrors:             0\n\nFile search:        00:00:00.001917\nSuite construction: 00:00:00.001234\nTest execution:     00:00:00.102793\nTotal time:         00:00:00.107975\n\n'
+[Inferior 1 (process 18450) detached]

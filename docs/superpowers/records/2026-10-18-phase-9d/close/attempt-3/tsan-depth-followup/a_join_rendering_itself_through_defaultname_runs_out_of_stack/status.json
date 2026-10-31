@@ -1,0 +1,21 @@
+{
+  "command": [
+    "timeout",
+    "--kill-after=5",
+    "90",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d",
+    "--exact",
+    "tests::a_join_rendering_itself_through_defaultname_runs_out_of_stack",
+    "--nocapture"
+  ],
+  "test": "tests::a_join_rendering_itself_through_defaultname_runs_out_of_stack",
+  "binary_sha256": "41f28573de7801742030326d33eae0ded0dd9d134a84cc4d9f13cde90f720a16",
+  "tsan_options": "log_path=/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan-depth-followup/a_join_rendering_itself_through_defaultname_runs_out_of_stack/tsan suppressions=/home/moritz/dev/repos/ooRexx-rust-rewrite/rust/tsan.supp allocator_may_return_null=1 second_deadlock_stack=1",
+  "rexx_test_thread_sanitizer": "1",
+  "started": "2026-10-31T16:40:03.567044+00:00",
+  "timeout_pid": 221639,
+  "binary_pid": 221640,
+  "status": 124,
+  "finished": "2026-10-31T16:41:33.628876+00:00",
+  "reports": []
+}

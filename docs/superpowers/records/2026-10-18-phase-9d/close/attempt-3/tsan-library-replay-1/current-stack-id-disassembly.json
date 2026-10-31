@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "objdump",
+    "-d",
+    "-C",
+    "--start-address=0x43de40",
+    "--stop-address=0x43de90",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d"
+  ],
+  "status": 0,
+  "stdout": "\n/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d:     file format elf64-x86-64\n\n\nDisassembly of section .text:\n\n000000000043de40 <__tsan::CurrentStackId(__tsan::ThreadState*, unsigned long)>:\n  43de40:\t31 c0                \txor    %eax,%eax\n  43de42:\t80 bf 11 03 00 00 01 \tcmpb   $0x1,0x311(%rdi)\n  43de49:\t75 44                \tjne    43de8f <__tsan::CurrentStackId(__tsan::ThreadState*, unsigned long)+0x4f>\n  43de4b:\t41 56                \tpush   %r14\n  43de4d:\t53                   \tpush   %rbx\n  43de4e:\t50                   \tpush   %rax\n  43de4f:\t49 89 f6             \tmov    %rsi,%r14\n  43de52:\t48 89 fb             \tmov    %rdi,%rbx\n  43de55:\t48 8b 47 10          \tmov    0x10(%rdi),%rax\n  43de59:\t48 85 f6             \ttest   %rsi,%rsi\n  43de5c:\t74 0b                \tje     43de69 <__tsan::CurrentStackId(__tsan::ThreadState*, unsigned long)+0x29>\n  43de5e:\t4c 89 30             \tmov    %r14,(%rax)\n  43de61:\t48 83 c0 08          \tadd    $0x8,%rax\n  43de65:\t48 89 43 10          \tmov    %rax,0x10(%rbx)\n  43de69:\t48 8b bb d8 02 00 00 \tmov    0x2d8(%rbx),%rdi\n  43de70:\t48 29 f8             \tsub    %rdi,%rax\n  43de73:\t48 c1 e8 03          \tshr    $0x3,%rax\n  43de77:\t89 c6                \tmov    %eax,%esi\n  43de79:\te8 62 94 02 00       \tcall   4672e0 <__sanitizer::StackDepotPut(__sanitizer::StackTrace)>\n  43de7e:\t4d 85 f6             \ttest   %r14,%r14\n  43de81:\t74 05                \tje     43de88 <__tsan::CurrentStackId(__tsan::ThreadState*, unsigned long)+0x48>\n  43de83:\t48 83 43 10 f8       \taddq   $0xfffffffffffffff8,0x10(%rbx)\n  43de88:\t48 83 c4 08          \tadd    $0x8,%rsp\n  43de8c:\t5b                   \tpop    %rbx\n  43de8d:\t41 5e                \tpop    %r14\n  43de8f:\tc3                   \tret\n",
+  "stderr": ""
+}

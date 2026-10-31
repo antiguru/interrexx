@@ -1,0 +1,37 @@
+{
+  "purpose": "One distinct explicitly authorized fault-capture diagnostic, never acceptance evidence.",
+  "argv": [
+    "timeout",
+    "--kill-after=5",
+    "90",
+    "gdb",
+    "-nx",
+    "-batch",
+    "-x",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan-cyclic-reference-fault/capture.gdb",
+    "--args",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d",
+    "--exact",
+    "tests::a_cyclic_reference_is_insufficient_stack_in_every_conversion",
+    "--nocapture"
+  ],
+  "cwd": "/home/moritz/dev/repos/ooRexx-rust-rewrite/rust/crates/rexx-exec",
+  "started": "2026-10-31T16:54:31.172731+00:00",
+  "memory_cap": "8G",
+  "timeout_seconds": 90,
+  "sha256": {
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d": "41f28573de7801742030326d33eae0ded0dd9d134a84cc4d9f13cde90f720a16",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan-cyclic-reference-fault/capture.gdb": "3ae3944dca07723a7bca0a631341543dae30a3f85c28789e3195d1a7c696448b",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan-cyclic-reference-fault/run.py": "55c4d03aa5fd3e97398619dada407e2bdd5370d5e91f557b42abcf836e8b0407"
+  },
+  "relevant_environment": {
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_BUILD_JOBS": "4",
+    "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan",
+    "RUSTFLAGS": "-Zsanitizer=thread",
+    "REXX_TEST_THREAD_SANITIZER": "1",
+    "TSAN_OPTIONS": "log_path=/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan-cyclic-reference-fault/tsan suppressions=/home/moritz/dev/repos/ooRexx-rust-rewrite/rust/tsan.supp allocator_may_return_null=1 second_deadlock_stack=1"
+  },
+  "perturbation": "Debugger launches inferior with ASLR enabled and intercepts SIGSEGV. Reads only registers/memory, then kills any still-stopped inferior for cleanup.",
+  "timeout_pid": 236055
+}

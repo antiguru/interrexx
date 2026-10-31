@@ -1,0 +1,29 @@
+{
+  "argv": [
+    "timeout",
+    "--kill-after=3",
+    "15",
+    "gdb",
+    "-nx",
+    "-batch",
+    "-ex",
+    "set pagination off",
+    "-ex",
+    "set debuginfod enabled off",
+    "-ex",
+    "set print thread-events off",
+    "-ex",
+    "info threads",
+    "-ex",
+    "thread apply all bt 12",
+    "-ex",
+    "detach",
+    "-p",
+    "228955"
+  ],
+  "started": "2026-10-31T16:45:22.363903+00:00",
+  "perturbation": "Read-only ptrace snapshot pauses target scheduling. No target function calls or memory writes.",
+  "status": 0,
+  "finished": "2026-10-31T16:45:24.214978+00:00",
+  "detach_confirmed": true
+}

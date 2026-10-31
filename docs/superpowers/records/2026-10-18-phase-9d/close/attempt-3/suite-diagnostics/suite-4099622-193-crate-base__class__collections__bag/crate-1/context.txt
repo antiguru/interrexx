@@ -1,0 +1,49 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-193-crate-base__class__collections__bag/run
+TZ=None
+status=Some(0) ended=Exited(0) took=86.394658ms
+GroupRun {
+    group: "base/class/collections/bag",
+    expected: {},
+    started: {
+        "TEST_1",
+        "TEST_10",
+        "TEST_11",
+        "TEST_2",
+        "TEST_3",
+        "TEST_4",
+        "TEST_5",
+        "TEST_6",
+        "TEST_7",
+        "TEST_8",
+        "TEST_9",
+    },
+    passed: {
+        "TEST_1",
+        "TEST_10",
+        "TEST_11",
+        "TEST_2",
+        "TEST_3",
+        "TEST_4",
+        "TEST_5",
+        "TEST_6",
+        "TEST_7",
+        "TEST_8",
+        "TEST_9",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: Memcap,
+    tests_ran: Some(
+        "11",
+    ),
+    took: 86.394658ms,
+}
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-193-crate-base__class__collections__bag/started.txt canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-193-crate-base__class__collections__bag/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 167, modified: SystemTime { tv_sec: 1793460716, tv_nsec: 223070661 }, accessed: SystemTime { tv_sec: 1793460716, tv_nsec: 220135473 }, created: SystemTime { tv_sec: 1793460716, tv_nsec: 220135473 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-193-crate-base__class__collections__bag/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-193-crate-base__class__collections__bag/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-193-crate-base__class__collections__bag/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67503680, modified: SystemTime { tv_sec: 1793460710, tv_nsec: 776802238 }, accessed: SystemTime { tv_sec: 1793460710, tv_nsec: 752802932 }, created: SystemTime { tv_sec: 1793460710, tv_nsec: 752802932 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-193-crate-base__class__collections__bag/run/ooRexx/base/class/collections/bag.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-193-crate-base__class__collections__bag/run/ooRexx/base/class/collections/bag.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 7453, modified: SystemTime { tv_sec: 1793460716, tv_nsec: 166939108 }, accessed: SystemTime { tv_sec: 1793460716, tv_nsec: 165624745 }, created: SystemTime { tv_sec: 1793460716, tv_nsec: 165624745 }, .. })

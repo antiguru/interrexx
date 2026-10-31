@@ -1,0 +1,10 @@
+{
+  "valid": "accepted",
+  "missing-ruling": "rejected: FileNotFoundError: [Errno 2] No such file or directory: '/tmp/p9d-close-build-proof-controls-0vo700ai/missing-ruling/build-continuation-ruling.json'",
+  "changed-timeout": "rejected: AssertionError: Continuation command, environment, cap or bound changed",
+  "raw-log-tamper": "rejected: AssertionError: Build raw log hash differs: G3-build-release-continuation-1/stderr",
+  "early-g4": "rejected: AssertionError: G4 began before the successful no-run compilation completed",
+  "compile-not-complete": "rejected: AssertionError: No-run compilation has not completed successfully",
+  "interrupted-original": "rejected: AssertionError: Interrupted or drifted build is not a continuation candidate",
+  "semantic-test-retry": "rejected: AssertionError: Continuation command, environment, cap or bound changed"
+}

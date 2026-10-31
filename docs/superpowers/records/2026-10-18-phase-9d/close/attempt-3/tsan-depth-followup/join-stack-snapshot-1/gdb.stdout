@@ -1,0 +1,83 @@
+[New LWP 228959 (id 2)]
+[New LWP 228958 (id 3)]
+[New LWP 228957 (id 4)]
+[New LWP 228956 (id 5)]
+
+This GDB supports auto-downloading debuginfo from the following URLs:
+  <https://debuginfod.debian.net>
+Enable debuginfod for this session? (y or [n]) [answered N; input not from terminal]
+Debuginfod has been disabled.
+To make this setting permanent, add 'set debuginfod enabled off' to .gdbinit.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/x86_64-linux-gnu/libthread_db.so.1".
+[Switching to thread 1 (Thread 0x7faf402ab280 (LWP 228955))]
+syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+  Id   Target Id                                            Frame 
+* 1    Thread 0x7faf402ab280 (LWP 228955) "rexx_exec-6c80e" syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+  2    Thread 0x7faf1c7fc6c0 (LWP 228959) "rexx-timer"      0x000055f81ff63bdb in rustix::backend::arch::asm::syscall5 () at /home/moritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rustix-1.1.4/src/backend/linux_raw/arch/x86_64.rs:202
+  3    Thread 0x7faf3c7fd6c0 (LWP 228958) "rexx-interp"     0x000055f81faa4388 in __sanitizer::StackDepotBase<__sanitizer::StackDepotNode, 1, 20>::Put(__sanitizer::StackTrace, bool*) ()
+  4    Thread 0x7faf3c9fe6c0 (LWP 228957) "tests::a_join_r" __syscall_cancel_arch () at ../sysdeps/unix/sysv/linux/x86_64/syscall_cancel.S:56
+  5    Thread 0x7faf3d1ff6c0 (LWP 228956) "rexx_exec-6c80e" 0x000055f81fa9883e in __sanitizer::internal_usleep(unsigned long long) ()
+
+Thread 5 (Thread 0x7faf3d1ff6c0 (LWP 228956) "rexx_exec-6c80e"):
+#0  0x000055f81fa9883e in __sanitizer::internal_usleep(unsigned long long) ()
+#1  0x000055f81fa7bf2b in __tsan::BackgroundThread(void*) ()
+#2  0x00007faf40343db8 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:454
+#3  0x00007faf403c1f98 in __GI___clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 4 (Thread 0x7faf3c9fe6c0 (LWP 228957) "tests::a_join_r"):
+#0  __syscall_cancel_arch () at ../sysdeps/unix/sysv/linux/x86_64/syscall_cancel.S:56
+#1  0x00007faf403409d4 in __internal_syscall_cancel (a1=<optimized out>, a2=<optimized out>, a3=<optimized out>, a4=<optimized out>, a5=a5@entry=0, a6=a6@entry=4294967295, nr=202) at ./nptl/cancellation.c:49
+#2  0x00007faf40340c8c in __futex_abstimed_wait_common64 (private=<optimized out>, futex_word=<optimized out>, expected=<optimized out>, op=<optimized out>, abstime=<optimized out>, cancel=true) at ./nptl/futex-internal.c:57
+#3  __futex_abstimed_wait_common (futex_word=<optimized out>, expected=<optimized out>, clockid=<optimized out>, abstime=<optimized out>, private=<optimized out>, cancel=cancel@entry=true) at ./nptl/futex-internal.c:87
+#4  0x00007faf40340ceb in __GI___futex_abstimed_wait_cancelable64 (futex_word=<optimized out>, expected=<optimized out>, clockid=<optimized out>, abstime=<optimized out>, private=<optimized out>) at ./nptl/futex-internal.c:139
+#5  0x00007faf40345aa5 in __pthread_clockjoin_ex (threadid=140390611015360, thread_return=0x0, clockid=0, abstime=0x0, cancel=true) at ./nptl/pthread_join_common.c:67
+#6  0x000055f81fa1d4ad in __interceptor_pthread_join ()
+#7  0x000055f82044121f in std::sys::thread::unix::Thread::join (self=...) at src/sys/thread/unix.rs:135
+#8  0x000055f82002638c in std::thread::lifecycle::JoinInner<rexx_exec::Outcome>::join<rexx_exec::Outcome> (self=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:224
+#9  0x000055f81fad2e6c in std::thread::join_handle::JoinHandle<rexx_exec::Outcome>::join<rexx_exec::Outcome> () at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/join_handle.rs:150
+#10 rexx_exec::on_thread_of<rexx_exec::run_program_named::{closure_env#0}> (stack=536870912, body=...) at crates/rexx-exec/src/lib.rs:4057
+#11 rexx_exec::on_interpreter_thread<rexx_exec::run_program_named::{closure_env#0}> (body=...) at crates/rexx-exec/src/lib.rs:4044
+
+Thread 3 (Thread 0x7faf3c7fd6c0 (LWP 228958) "rexx-interp"):
+#0  0x000055f81faa4388 in __sanitizer::StackDepotBase<__sanitizer::StackDepotNode, 1, 20>::Put(__sanitizer::StackTrace, bool*) ()
+#1  0x000055f81fa7ae7e in __tsan::CurrentStackId(__tsan::ThreadState*, unsigned long) ()
+#2  0x000055f81fa8c43c in __tsan::MetaMap::AllocBlock(__tsan::ThreadState*, unsigned long, unsigned long, unsigned long) ()
+#3  0x000055f81fa70da9 in __tsan::user_alloc_internal(__tsan::ThreadState*, unsigned long, unsigned long, unsigned long, bool) ()
+#4  0x000055f81fa718e1 in __tsan::user_alloc(__tsan::ThreadState*, unsigned long, unsigned long) ()
+#5  0x000055f81fa1af5f in __interceptor_malloc ()
+#6  0x000055f82043fb89 in std::sys::alloc::unix::alloc (layout=...) at src/sys/alloc/unix.rs:31
+#7  std::alloc::__default_lib_allocator::__rdl_alloc (size=16, align=8) at src/alloc.rs:479
+#8  0x000055f8200c071c in alloc::alloc::alloc (layout=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:158
+#9  alloc::alloc::Global::alloc_impl_runtime (layout=..., zeroed=false) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:335
+#10 alloc::alloc::Global::alloc_impl (self=<optimized out>, layout=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:457
+#11 alloc::alloc::{impl#3}::allocate (self=<optimized out>, layout=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/alloc.rs:575
+
+Thread 2 (Thread 0x7faf1c7fc6c0 (LWP 228959) "rexx-timer"):
+#0  0x000055f81ff63bdb in rustix::backend::arch::asm::syscall5 () at /home/moritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rustix-1.1.4/src/backend/linux_raw/arch/x86_64.rs:202
+#1  rustix::backend::event::syscalls::poll (fds=..., timeout=...) at /home/moritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rustix-1.1.4/src/backend/linux_raw/arch/mod.rs:117
+#2  rustix::event::poll::poll (fds=...) at /home/moritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rustix-1.1.4/src/event/poll.rs:46
+#3  rexx_exec::sync::Wake::wait (self=0x55f8205552f0 <rexx_exec::timer::registry::REGISTRY+48>, timeout=...) at crates/rexx-exec/src/sync.rs:112
+#4  0x000055f81fc9a368 in rexx_exec::timer::run_timer () at crates/rexx-exec/src/timer.rs:461
+#5  0x000055f81ffee200 in core::ops::function::FnOnce::call_once<fn(), ()> () at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250
+#6  std::sys::backtrace::__rust_begin_short_backtrace<fn(), ()> (f=<optimized out>) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166
+#7  0x000055f8200013c0 in std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure#0}<fn(), ()> () at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:70
+#8  core::panic::unwind_safe::{impl#23}::call_once<(), std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<fn(), ()>> (self=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275
+#9  std::panicking::catch_unwind::do_call<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<fn(), ()>>, ()> (data=0x7faf1c7fb208) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573
+#10 0x000055f8200540a0 in __rust_try ()
+#11 0x000055f82000d8b6 in std::panicking::catch_unwind<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<fn(), ()>>> (f=<error reading variable: Cannot access memory at address 0x18>) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541
+
+Thread 1 (Thread 0x7faf402ab280 (LWP 228955) "rexx_exec-6c80e"):
+#0  syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+#1  0x000055f82040769b in std::sys::sync::futex::unix::futex_wait (futex=0x721000000138, expected=4294967295, timeout=...) at src/sys/sync/futex/unix.rs:63
+#2  0x000055f82041cecd in std::sys::sync::thread_parking::futex::Parker::park_timeout (self=..., timeout=...) at src/sys/sync/thread_parking/futex.rs:75
+#3  std::thread::thread::Thread::park_timeout (self=<optimized out>, dur=...) at src/thread/thread.rs:164
+#4  0x000055f820226fe8 in std::sync::mpmc::context::Context::wait_until (deadline=..., self=<optimized out>) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sync/mpmc/context.rs:133
+#5  std::sync::mpmc::list::{impl#3}::recv::{closure#1}<test::event::CompletedTest> (cx=<optimized out>) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sync/mpmc/list.rs:453
+#6  0x000055f820227d48 in std::sync::mpmc::context::{impl#0}::with::{closure#0}<std::sync::mpmc::list::{impl#3}::recv::{closure_env#1}<test::event::CompletedTest>, ()> (cx=0x7ffd3f5f8bc0) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sync/mpmc/context.rs:49
+#7  std::sync::mpmc::context::{impl#0}::with::{closure#1}<std::sync::mpmc::list::{impl#3}::recv::{closure_env#1}<test::event::CompletedTest>, ()> (cell=0x7faf402ab250) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sync/mpmc/context.rs:57
+#8  std::thread::local::LocalKey<core::cell::Cell<core::option::Option<std::sync::mpmc::context::Context>>>::try_with<core::cell::Cell<core::option::Option<std::sync::mpmc::context::Context>>, std::sync::mpmc::context::{impl#0}::with::{closure_env#1}<std::sync::mpmc::list::{impl#3}::recv::{closure_env#1}<test::event::CompletedTest>, ()>, ()> (self=<optimized out>, f=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/local.rs:463
+#9  std::sync::mpmc::context::Context::with<std::sync::mpmc::list::{impl#3}::recv::{closure_env#1}<test::event::CompletedTest>, ()> (f=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sync/mpmc/context.rs:53
+#10 std::sync::mpmc::list::Channel<test::event::CompletedTest>::recv<test::event::CompletedTest> (self=0x725000000000, deadline=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sync/mpmc/list.rs:442
+#11 0x000055f820255aa2 in std::sync::mpmc::Receiver<test::event::CompletedTest>::recv_deadline<test::event::CompletedTest> (deadline=..., self=<error reading variable: Cannot access memory at address 0x0>) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sync/mpmc/mod.rs:1160
+[Inferior 1 (process 228955) detached]

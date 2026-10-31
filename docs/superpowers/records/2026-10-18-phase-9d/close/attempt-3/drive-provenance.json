@@ -1,0 +1,7 @@
+{
+  "source": "/tmp/p9d-close-drive-remaining.py",
+  "sha256": "378b4d35b1d45711d70b27a9628f96b0114636a1274470d56cd3365a63357ef6",
+  "frozen_head": "ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe",
+  "created_utc": "2026-10-31T15:30:06.173830+00:00",
+  "purpose": "Sequential committed runner steps after verified G4 zero; stop on any nonzero; no automatic finish"
+}

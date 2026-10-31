@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "timeout",
+    "--kill-after=10",
+    "110",
+    "memcap",
+    "8G",
+    "python3",
+    "docs/superpowers/records/2026-10-18-phase-9d/close/tsan-cyclic-reference-fault/run.py"
+  ],
+  "actual_outer_exit_status": 0,
+  "batch_debugger_timeout_status": 0,
+  "inferior_natural_exit_status": 0,
+  "fault_intercepted": false
+}

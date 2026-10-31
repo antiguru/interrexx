@@ -1,0 +1,47 @@
+{
+  "snapshots": [
+    {
+      "file": "gdb-18450-details.txt",
+      "output_file_created": "2026-10-31T17:08:17.033602+01:00",
+      "last_debugger_output": "2026-10-31T17:08:18.689554+01:00",
+      "output_window_seconds": 1.655952,
+      "debugger_exit_status": 0,
+      "detach_confirmed": true
+    },
+    {
+      "file": "gdb-18450-exact-group.txt",
+      "output_file_created": "2026-10-31T17:09:42.291138+01:00",
+      "last_debugger_output": "2026-10-31T17:09:43.835094+01:00",
+      "output_window_seconds": 1.543956,
+      "debugger_exit_status": 0,
+      "detach_confirmed": true
+    },
+    {
+      "file": "gdb-18450-identification.txt",
+      "output_file_created": "2026-10-31T17:10:28.225811+01:00",
+      "last_debugger_output": "2026-10-31T17:10:29.737767+01:00",
+      "output_window_seconds": 1.511956,
+      "debugger_exit_status": 0,
+      "detach_confirmed": true
+    },
+    {
+      "file": "gdb-18450-row.txt",
+      "output_file_created": "2026-10-31T17:09:00.748339+01:00",
+      "last_debugger_output": "2026-10-31T17:09:02.708282+01:00",
+      "output_window_seconds": 1.959943,
+      "debugger_exit_status": 0,
+      "detach_confirmed": true
+    },
+    {
+      "file": "gdb-18450.txt",
+      "output_file_created": "2026-10-31T17:07:15.859370+01:00",
+      "last_debugger_output": "2026-10-31T17:07:18.399297+01:00",
+      "output_window_seconds": 2.539927,
+      "debugger_exit_status": 0,
+      "detach_confirmed": true
+    }
+  ],
+  "timing_basis": "Filesystem birth and last-modification times of newly created debugger output files. These are output windows, not directly measured ptrace-stop intervals. Actual all-thread pause duration was not instrumented.",
+  "perturbation": "Each gdb attach briefly pauses target scheduling. All commands read registers/memory only, make no target function calls, and end with explicit detach. All five bounded gdb commands exited zero.",
+  "total_output_window_seconds": 9.211734
+}

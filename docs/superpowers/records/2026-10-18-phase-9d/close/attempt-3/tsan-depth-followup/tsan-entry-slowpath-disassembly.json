@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "objdump",
+    "-d",
+    "-C",
+    "--start-address=0x440090",
+    "--stop-address=0x4400d8",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d"
+  ],
+  "status": 0,
+  "stdout": "\n/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d:     file format elf64-x86-64\n\n\nDisassembly of section .text:\n\n0000000000440090 <__tsan::TraceRestartFuncEntry(__tsan::ThreadState*, unsigned long)>:\n  440090:\t41 56                \tpush   %r14\n  440092:\t53                   \tpush   %rbx\n  440093:\t50                   \tpush   %rax\n  440094:\t49 89 f6             \tmov    %rsi,%r14\n  440097:\t48 89 fb             \tmov    %rdi,%rbx\n  44009a:\t48 89 df             \tmov    %rbx,%rdi\n  44009d:\te8 ee dd ff ff       \tcall   43de90 <__tsan::TraceSwitchPart(__tsan::ThreadState*)>\n  4400a2:\t48 8b 43 18          \tmov    0x18(%rbx),%rax\n  4400a6:\t48 8d 48 08          \tlea    0x8(%rax),%rcx\n  4400aa:\tf7 c1 f0 0f 00 00    \ttest   $0xff0,%ecx\n  4400b0:\t74 e8                \tje     44009a <__tsan::TraceRestartFuncEntry(__tsan::ThreadState*, unsigned long)+0xa>\n  4400b2:\t4a 8d 14 b5 02 00 00 \tlea    0x2(,%r14,4),%rdx\n  4400b9:\t00 \n  4400ba:\t48 89 10             \tmov    %rdx,(%rax)\n  4400bd:\t48 89 4b 18          \tmov    %rcx,0x18(%rbx)\n  4400c1:\t48 8b 43 10          \tmov    0x10(%rbx),%rax\n  4400c5:\t4c 89 30             \tmov    %r14,(%rax)\n  4400c8:\t48 83 c0 08          \tadd    $0x8,%rax\n  4400cc:\t48 89 43 10          \tmov    %rax,0x10(%rbx)\n  4400d0:\t48 83 c4 08          \tadd    $0x8,%rsp\n  4400d4:\t5b                   \tpop    %rbx\n  4400d5:\t41 5e                \tpop    %r14\n  4400d7:\tc3                   \tret\n",
+  "stderr": ""
+}

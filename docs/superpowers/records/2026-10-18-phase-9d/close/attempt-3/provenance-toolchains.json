@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "rustup",
+    "toolchain",
+    "list"
+  ],
+  "status": 0,
+  "stdout": "stable-x86_64-unknown-linux-gnu (active, default)\nnightly-x86_64-unknown-linux-gnu\n1.98-x86_64-unknown-linux-gnu\n",
+  "stderr": ""
+}

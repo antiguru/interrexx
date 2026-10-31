@@ -1,0 +1,4 @@
+# synthetic rounds=3 REXX_LIB_DIR=synthetic
+# valgrind-3.27.1
+# pin /tmp/p9d-profile-verifier-controls-x9tj7462/pin 1c3cb6e13c698dcec4f1fc626bed652e44aa79f184e8be4fd68b036368655c7d
+# head /tmp/p9d-profile-verifier-controls-x9tj7462/head 1d0201dcdbdb45f8314dbb51bb82cc65a076f76ed48031b65b58e41e7c23a6c0

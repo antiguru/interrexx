@@ -1,0 +1,29 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-232-crate-extensions__hostemu__hostemu/run
+TZ=None
+status=Some(120) ended=Exited(120) took=98.88422ms
+GroupRun {
+    group: "extensions/hostemu/hostemu",
+    expected: {},
+    started: {
+        "TEST_EXECIO_DISKR_DEFAULT",
+        "TEST_EXECIO_DISKR_FIFO",
+    },
+    passed: {},
+    failed: {},
+    blocked: {
+        "TEST_EXECIO_DISKR_DEFAULT": "rexx-exec: the LIBRARY REXX entry point \"rexx_clear_queue\" is not implemented (Phase 10 Rxapi)",
+        "TEST_EXECIO_DISKR_FIFO": "rexx-exec: the LIBRARY REXX entry point \"rexx_clear_queue\" is not implemented (Phase 10 Rxapi)",
+    },
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 2,
+    ended_normally: false,
+    cap: Memcap,
+    tests_ran: None,
+    took: 175.388474ms,
+}
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-232-crate-extensions__hostemu__hostemu/started.txt canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-232-crate-extensions__hostemu__hostemu/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 31, modified: SystemTime { tv_sec: 1793460716, tv_nsec: 753974060 }, accessed: SystemTime { tv_sec: 1793460716, tv_nsec: 750757000 }, created: SystemTime { tv_sec: 1793460716, tv_nsec: 750757000 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-232-crate-extensions__hostemu__hostemu/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-232-crate-extensions__hostemu__hostemu/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-232-crate-extensions__hostemu__hostemu/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67503680, modified: SystemTime { tv_sec: 1793460710, tv_nsec: 776802238 }, accessed: SystemTime { tv_sec: 1793460710, tv_nsec: 752802932 }, created: SystemTime { tv_sec: 1793460710, tv_nsec: 752802932 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-232-crate-extensions__hostemu__hostemu/run/ooRexx/extensions/hostemu/hostemu.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-232-crate-extensions__hostemu__hostemu/run/ooRexx/extensions/hostemu/hostemu.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 9417, modified: SystemTime { tv_sec: 1793460716, tv_nsec: 698899958 }, accessed: SystemTime { tv_sec: 1793460716, tv_nsec: 698157529 }, created: SystemTime { tv_sec: 1793460716, tv_nsec: 698157529 }, .. })

@@ -1,0 +1,27 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4089007-6-crate-RefusedAfterFirst/run
+TZ=None
+status=Some(120) ended=Exited(120) took=107.77673ms
+GroupRun {
+    group: "RefusedAfterFirst",
+    expected: {},
+    started: {
+        "TEST_A",
+    },
+    passed: {},
+    failed: {},
+    blocked: {
+        "TEST_A": "rexx-exec: routine \"SYSQUERYREXXMACRO\" is not implemented (Phase 10 Rxapi)",
+    },
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: false,
+    cap: Memcap,
+    tests_ran: None,
+    took: 107.77673ms,
+}
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4089007-6-crate-RefusedAfterFirst/started.txt canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4089007-6-crate-RefusedAfterFirst/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 15, modified: SystemTime { tv_sec: 1793460535, tv_nsec: 784318175 }, accessed: SystemTime { tv_sec: 1793460535, tv_nsec: 782940183 }, created: SystemTime { tv_sec: 1793460535, tv_nsec: 782940183 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4089007-6-crate-RefusedAfterFirst/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4089007-6-crate-RefusedAfterFirst/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4089007-6-crate-RefusedAfterFirst/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67505088, modified: SystemTime { tv_sec: 1793459269, tv_nsec: 818647227 }, accessed: SystemTime { tv_sec: 1793459269, tv_nsec: 802647697 }, created: SystemTime { tv_sec: 1793459269, tv_nsec: 802647697 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4089007-6-crate-RefusedAfterFirst/run/ooRexx/RefusedAfterFirst.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4089007-6-crate-RefusedAfterFirst/run/ooRexx/RefusedAfterFirst.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 774, modified: SystemTime { tv_sec: 1793460535, tv_nsec: 698628728 }, accessed: SystemTime { tv_sec: 1793460535, tv_nsec: 695939543 }, created: SystemTime { tv_sec: 1793460535, tv_nsec: 695939543 }, .. })

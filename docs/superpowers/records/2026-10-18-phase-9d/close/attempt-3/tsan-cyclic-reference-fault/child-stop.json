@@ -1,0 +1,10 @@
+{
+  "observed_utc": "2026-10-31T16:55:11Z",
+  "pids": [
+    236055,
+    236066
+  ],
+  "requested_processes_present": false,
+  "matching_gdb_processes_present": false,
+  "scope": "Elevated read-only ps by recorded PIDs and exact gdb command-name filter. Inferior exited normally and debugger command finished0."
+}

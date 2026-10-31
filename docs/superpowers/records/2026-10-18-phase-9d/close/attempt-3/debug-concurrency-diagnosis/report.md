@@ -1,0 +1,29 @@
+# Debug concurrency gate diagnosis
+
+The quiet G6 interval is currently explained by a known bounded MutexSemaphore termination wait rather than a command reader deadlock. The exact active run is `whole-groups-18450-19/run/e00/testOORexx.rex`, whose copied group is `base/class/MutexSemaphore.testGroup`. Whole-group rows enumerate whole and derived parts consecutively, making row 19 the derived part, and the invocation uses `EveryOpportunity`. Captured stderr ends with `started TEST_RELEASE_ONE_ARG`, matching the existing `DIFFERING` key for this group, part, mode, and termination shape.
+
+## Live state and blocking chain
+
+The interpreter has finished its main program and is waiting for a remaining started activity. Its stack is `run_started_to_end -> run_started_activities -> idle_for_good -> idle_until -> Inbox::idle`, with `main_finished=true`, `in_flight=0`, `runs_below=0`, and no ready activities or sleepers. Captured stdout already contains the complete suite summary with eight tests, 41 assertions, zero failures, zero errors, and about 0.103 seconds of test execution. The active wait therefore concerns activity termination after the test suite body, not an unfinished assertion or OS command collector.
+
+The whole-group run holds a quiet row turn while it waits. Six pooled row workers and numerous other quiet rows are blocked in `RowTurn::take`, with their callers waiting on pool latches or scoped joins. The process has no other child process in the gate's process group, and the snapshot contains no command reader or pool worker blocked in collection. This shared admission gate turns one slow quiet row into an apparently global pause across otherwise independent integration tests.
+
+The run's interpreter deadline is 1209.194899620 seconds, with a watchdog abandonment limit of 1239.194899620 seconds. Whole-group calibration sets the interpreter limit to four times the slowest oracle run, with a 60-second floor, so this value implies an oracle observation of approximately 302.299 seconds. The oracle's own bound is 300 seconds, making a bounded oracle timeout a strong explanation for the enlarged allowance, although the snapshot does not retain the oracle's individual result. The live absolute interpreter deadline is monotonic `458728.895699209`, corresponding to approximately `2026-10-31T16:12:48.643Z`, and that existing deadline was left unchanged.
+
+## Evidence-ranked interpretation
+
+The leading explanation is the existing `TEST_EXCLUSION` scheduling race reaching its expected deadline outcome. `tests/group_runs/whole_groups.rs` already contains an exact `DIFFERING` entry for MutexSemaphore, derived, every, ending at `TEST_RELEASE_ONE_ARG`, whose documented reason identifies the exclusion race under P46. The copied test replies into a second activity, coordinates through `step`, sets `step = 6`, then reacquires the semaphore before ending, while the primary test also tries to acquire it. The snapshot establishes the same termination shape and exact existing key, without introducing a new exception or proving that every possible internal interleaving has been reconstructed.
+
+A newly introduced command collector deadlock is weakly supported by the observed state. The recent changes alter scoped command reader handles, while this run has no in-flight operation, collector stack, or command child remaining. The scheduler, timer, watchdog, row admission, and whole-group calibration sources have no diff between the previous frozen `9922e56f3` and current frozen `ee52ea5e6`. That comparison lowers the likelihood of a direct regression in the waiting mechanism, but does not by itself prove the eventual G6 result.
+
+The next minimal diagnostic is to observe whether the existing interpreter deadline releases the quiet turn at approximately 16:12:48.643 UTC. Normal row progress afterward would confirm that the long quiet interval was bounded as designed, while a wait persisting beyond the recorded watchdog limit would require a new narrow timer or watchdog investigation. The gate retains its original 3000-second outer bound, with no retries, signals, deadline changes, or source fixes. No claim that G6 passes follows from this diagnosis alone.
+
+## Natural recovery observation
+
+At 16:13:20 UTC, 32.2 seconds after the recorded interpreter deadline, the original gate had resumed normal row progress. Guard outcomes, S3 rows, and Message outcomes had each completed successfully, while new watchdog and interpreter threads had ages between one and seven seconds. Process CPU time had increased from 181 seconds at the first snapshot to 196 seconds, distinguishing the recovery from the earlier static wait. This observation confirms that the quiet turn was released without intervention and supports the existing bounded MutexSemaphore outcome, while the full G6 gate remains active and unadjudicated.
+
+## Snapshot provenance and scope
+
+Five debugger snapshots read process registers and memory without invoking functions or writing target memory. Every command ran under a separate 45-second timeout, exited zero, and ended with an explicit detach line for process 18450. Attaching a debugger pauses target scheduling, so this diagnostic is a disclosed perturbation of the running gate. The exact output-file creation and final-write timestamps are retained in `snapshot-provenance.json`, with combined output windows of 9.211734 seconds, while the actual ptrace stop intervals were not instrumented and are shorter than their surrounding debugger output windows.
+
+The frozen revision remains `ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe`. This task made no tracked source, index, or HEAD changes, performed no build or test probe, and did not alter or restart the running gate. Raw stacks, detailed state, captured output, and timing provenance are retained beside this report. All debugger sessions have detached and terminated.

@@ -1,0 +1,14 @@
+{
+  "input-sha256.json": {
+    "bytes": 223849,
+    "sha256": "9a04c200911249cb4c9727ab58caf8df5168da428e33ce2466a85f0b7b45ea45"
+  },
+  "metrics.tsv": {
+    "bytes": 2063,
+    "sha256": "7c9afa8dcb60777c2243faf3b7bf32e43f16faef0bf0c1210d514222f9af3ebf"
+  },
+  "validation.json": {
+    "bytes": 70642,
+    "sha256": "bacf5ab1538f657b0afaa48e2cc34dd1da8d9a92a9de1b5481fbab06e88a721e"
+  }
+}

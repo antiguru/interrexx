@@ -1,0 +1,49 @@
+{
+  "action": {
+    "name": "G4-test-release",
+    "argv": [
+      "cargo",
+      "test",
+      "-j",
+      "4",
+      "--workspace",
+      "--release",
+      "--no-fail-fast"
+    ],
+    "cap": "8G",
+    "seconds": 2400,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace",
+      "REXX_CORPUS_GATE": "1",
+      "REXX_TIMER_TABLE": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/G4-timer-table.txt",
+      "REXX_CRITERION_ONE_TABLE": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/G4-criterion-one-table.txt",
+      "REXX_CRITERION_ONE_S3_TABLE": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/G4-criterion-one-s3-table.txt",
+      "REXX_SUITE_DIAGNOSTICS": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/release-diagnostics"
+    }
+  },
+  "argv": [
+    "timeout",
+    "--kill-after=15",
+    "2400",
+    "memcap",
+    "8G",
+    "cargo",
+    "test",
+    "-j",
+    "4",
+    "--workspace",
+    "--release",
+    "--no-fail-fast"
+  ],
+  "status": 0,
+  "started": "2026-10-31T15:08:40.873728+00:00",
+  "finished": "2026-10-31T15:29:59.862895+00:00",
+  "interrupted": false,
+  "pid": 3772464,
+  "surviving_group": false,
+  "orphaned_children": false,
+  "stdout_sha256": "4d345595aebaab8b435d35862d5cd3068802a39bb6fb2115872558213f504b83",
+  "stderr_sha256": "b4c2a8554ce7310da4b11d3dff715739d79a346c6642e1c69e61dd97ce5c12b2"
+}

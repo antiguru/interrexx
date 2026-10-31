@@ -1,0 +1,12 @@
+{
+  "observed_utc": "2026-10-31T16:45:54Z",
+  "binary_pid": 228955,
+  "elapsed_seconds": 37,
+  "cpu_seconds": 35,
+  "cpu_percent": 95.3,
+  "interpreter_lwp": 228958,
+  "interpreter_state": "Rl",
+  "interpreter_wait_channel": "-",
+  "other_threads": "Test caller waits pthread_join, main harness waits futex, sanitizer background sleeps, Rexx timer polls",
+  "scope": "Read-only process and per-thread counters, no extra stack snapshot"
+}

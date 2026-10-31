@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "timeout",
+    "--kill-after=15",
+    "625",
+    "memcap",
+    "8G",
+    "python3",
+    "docs/superpowers/records/2026-10-18-phase-9d/close/tsan-library-fault-capture-1/launch.py"
+  ],
+  "actual_outer_exit_status": 0,
+  "cargo_status": 0,
+  "target_runner_status": 0,
+  "inferior_stop_signal": "SIG37",
+  "inferior_termination": "Killed by debugger cleanup after unexpected non-SEGV stop",
+  "acceptance_result": "No result, diagnostic setup interrupted the test run",
+  "actual_segv_captured": false,
+  "unexpected_compile": false
+}

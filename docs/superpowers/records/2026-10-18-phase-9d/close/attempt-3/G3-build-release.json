@@ -1,0 +1,45 @@
+{
+  "action": {
+    "name": "G3-build-release",
+    "argv": [
+      "cargo",
+      "test",
+      "-j",
+      "4",
+      "--workspace",
+      "--release",
+      "--no-run"
+    ],
+    "cap": "16G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace",
+      "REXX_CORPUS_GATE": "1"
+    }
+  },
+  "argv": [
+    "timeout",
+    "--kill-after=15",
+    "600",
+    "memcap",
+    "16G",
+    "cargo",
+    "test",
+    "-j",
+    "4",
+    "--workspace",
+    "--release",
+    "--no-run"
+  ],
+  "status": 124,
+  "started": "2026-10-31T14:52:44.652525+00:00",
+  "finished": "2026-10-31T15:02:44.678378+00:00",
+  "interrupted": false,
+  "pid": 3754821,
+  "surviving_group": false,
+  "orphaned_children": false,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "51c883bac3532904bcfabb3068371d51e697044e964aec53e269e25e7868c2ad"
+}
