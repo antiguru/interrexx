@@ -1,0 +1,16 @@
+{
+  "base": "da3f1ab71",
+  "source": "rust/crates/rexx-exec/src/command.rs",
+  "destination": "rust/crates/rexx-exec/src/command/collector.rs",
+  "blocks": [
+    {
+      "bytes": 2751,
+      "sha256": "8be2265c21682ef9e496322a3bcb8a5b930b0790b95f2c523f1de1be96b3c13c"
+    },
+    {
+      "bytes": 3005,
+      "sha256": "57984f9f9aed27de2156e2162829a7a3546cc58fe6e930602d22a7d52fb1e6ce"
+    }
+  ],
+  "identity": "Exact after collect visibility adjustment, with Read and AsFd imports relocated."
+}
