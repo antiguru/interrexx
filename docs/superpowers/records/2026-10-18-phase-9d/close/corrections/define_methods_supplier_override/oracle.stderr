@@ -1,0 +1,6 @@
+       *-* Compiled method "DEFINEMETHODS" with scope "Class".
+    28 *-* .local~target~defineMethods(self~nestedMethods)
+       *-* Compiled method "DEFINEMETHODS" with scope "Class".
+    16 *-* target~defineMethods(methods)
+Error 97 running /tmp/p9d-correction-oracle-z02uugpw/probe.rex line 28:  Object method not found.
+Error 97.1:  Object "RESULT" does not understand message "SUPPLIER".

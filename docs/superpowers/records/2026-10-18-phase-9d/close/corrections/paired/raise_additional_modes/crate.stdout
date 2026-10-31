@@ -1,0 +1,12 @@
+user zz additional (.array~of(bad)) off raised
+user zz additional (.array~of(bad)) r raised
+user zz additional (.array~of(bad)) i 98.900
+user zz array (bad) off raised
+user zz array (bad) r raised
+user zz array (bad) i 98.900
+syntax 40.4 additional (.array~of(bad)) off 98.900
+syntax 40.4 additional (.array~of(bad)) r 98.900
+syntax 40.4 additional (.array~of(bad)) i 98.900
+syntax 40.4 array (bad) off 98.900
+syntax 40.4 array (bad) r 98.900
+syntax 40.4 array (bad) i 98.900

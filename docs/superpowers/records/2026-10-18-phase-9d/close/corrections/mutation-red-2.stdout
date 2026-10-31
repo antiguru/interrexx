@@ -1,0 +1,20 @@
+
+running 1 test
+test syntax_substitution_reads_additional_after_the_return_expression ... FAILED
+
+failures:
+
+---- syntax_substitution_reads_additional_after_the_return_expression stdout ----
+
+thread 'syntax_substitution_reads_additional_after_the_return_expression' (2883481) panicked at crates/rexx-exec/tests/close_corrections.rs:23:9:
+assertion `left == right` failed
+  left: [111, 108, 100, 46, 10]
+ right: [110, 101, 119, 46, 10]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    syntax_substitution_reads_additional_after_the_return_expression
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.07s
+

@@ -1,0 +1,17 @@
+{
+  "command": [
+    "timeout",
+    "-k",
+    "5",
+    "30",
+    "/home/moritz/dev/repos/ooRexx/build/bin/rexx",
+    "/tmp/p9d-correction-pair-p883_aug/probe.rex"
+  ],
+  "cwd": "/tmp/p9d-correction-pair-p883_aug",
+  "status": 0,
+  "source_head": "ad0741664719bf6b01c063079c2c61a715999dff",
+  "source_sha256": "0b02933f1be8aa139fd43b3fb06e8570b11c79e2ae62ec7a1b1900148793ec4a",
+  "binary_sha256": "bb5bb8ccbb96c376e329b91aafdad891f975ba06c941dbceba82c3848fa13019",
+  "outer_memory_cap": "2G",
+  "oracle_address_space_bytes": 1073741824
+}

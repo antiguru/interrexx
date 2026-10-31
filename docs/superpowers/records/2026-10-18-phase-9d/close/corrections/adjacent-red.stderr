@@ -1,0 +1,4 @@
+   Compiling rexx-exec v0.1.0 (/home/moritz/dev/repos/ooRexx-rust-rewrite/rust/crates/rexx-exec)
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.25s
+     Running tests/close_corrections.rs (/tmp/codex-p9d-t88-target/debug/deps/close_corrections-3fe84608f1c05af0)
+error: test failed, to rerun pass `-p rexx-exec --test close_corrections`

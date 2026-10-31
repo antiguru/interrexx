@@ -1,0 +1,24 @@
+new.
+%SRCG%COUNT 22
+%SRCG%L/*----------------------------------------------------------------------------*/
+%SRCG%L/*                                                                            */
+%SRCG%L/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
+%SRCG%L/*                                                                            */
+%SRCG%L/* This program and the accompanying materials are made available under       */
+%SRCG%L/* the terms of the Common Public License v1.0 which accompanies this         */
+%SRCG%L/* distribution. A copy is also available at the following address:           */
+%SRCG%L/* https://www.oorexx.org/license.html                                        */
+%SRCG%L/*                                                                            */
+%SRCG%L/*----------------------------------------------------------------------------*/
+%SRCG%L
+%SRCG%Lsignal on syntax name caught
+%SRCG%La = .array~of('old')
+%SRCG%Lraise syntax 98.900 additional (a) return (mutate(a))
+%SRCG%Lexit
+%SRCG%Lcaught:
+%SRCG%Lsay condition('o')~message
+%SRCG%Lexit
+%SRCG%Lmutate:
+%SRCG%Luse arg a
+%SRCG%La[1] = 'new'
+%SRCG%Lreturn 1

@@ -1,0 +1,37 @@
+{
+  "review_head": "82e10bb92",
+  "crate_binary": "/tmp/codex-p9d-t88-pins/8.8-corpus-registration-rexx",
+  "crate_binary_sha256": "d9210f4b9f17498ff59da85b6226a532aebaf0765bd8e3fb482025d54ff02145",
+  "crate_argv": [
+    "timeout",
+    "-k",
+    "5",
+    "20",
+    "memcap",
+    "2G",
+    "/tmp/codex-p9d-t88-pins/8.8-corpus-registration-rexx",
+    "docs/superpowers/records/2026-10-18-phase-9d/close/review-probes/raise-additional/probe.rex"
+  ],
+  "crate_cwd": "/home/moritz/dev/repos/ooRexx-rust-rewrite",
+  "oracle_argv": [
+    "timeout",
+    "-k",
+    "5",
+    "20",
+    "/home/moritz/dev/repos/ooRexx/build/bin/rexx",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/review-probes/raise-additional/probe.rex"
+  ],
+  "oracle_cwd": "/tmp/phase9d-review-additional-oracle-20261031",
+  "oracle_environment": {
+    "LD_LIBRARY_PATH": "/home/moritz/dev/repos/ooRexx/build/lib"
+  },
+  "oracle_virtual_memory_kib": 1048576,
+  "channels": [
+    "crate.stdout",
+    "crate.stderr",
+    "crate.status",
+    "oracle.stdout",
+    "oracle.stderr",
+    "oracle.status"
+  ]
+}

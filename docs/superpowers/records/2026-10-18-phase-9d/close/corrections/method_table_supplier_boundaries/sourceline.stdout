@@ -1,0 +1,45 @@
+bad supplier
+atomic 0 8
+good supplier
+class method 7
+good supplier
+enhanced 7
+plain 4
+%SRCG%COUNT 37
+%SRCG%L/*----------------------------------------------------------------------------*/
+%SRCG%L/*                                                                            */
+%SRCG%L/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
+%SRCG%L/*                                                                            */
+%SRCG%L/* This program and the accompanying materials are made available under       */
+%SRCG%L/* the terms of the Common Public License v1.0 which accompanies this         */
+%SRCG%L/* distribution. A copy is also available at the following address:           */
+%SRCG%L/* https://www.oorexx.org/license.html                                        */
+%SRCG%L/*                                                                            */
+%SRCG%L/*----------------------------------------------------------------------------*/
+%SRCG%L
+%SRCG%Lsignal on syntax name caught
+%SRCG%L.Target~defineMethods(.BadCollection~new)
+%SRCG%Lsay 'unexpected'
+%SRCG%Lexit
+%SRCG%Lcaught:
+%SRCG%Lsay 'atomic' .Target~new~hasMethod('fresh') .Target~new~old
+%SRCG%Lchild = .object~subclass('Child', .class, .GoodCollection~new)
+%SRCG%Lsay 'class method' child~m
+%SRCG%Lobject = .object~enhanced(.GoodCollection~new)
+%SRCG%Lsay 'enhanced' object~m
+%SRCG%Lplain = .stringTable~new
+%SRCG%Lplain['plain'] = 'return 4'
+%SRCG%L.Target~defineMethods(plain)
+%SRCG%Lsay 'plain' .Target~new~plain
+%SRCG%Lexit
+%SRCG%L::class Target
+%SRCG%L::method old
+%SRCG%Lreturn 8
+%SRCG%L::class BadCollection subclass Directory
+%SRCG%L::method supplier
+%SRCG%Lsay 'bad supplier'
+%SRCG%Lreturn .supplier~new(.array~of('return 1', 'if'), .array~of('fresh', 'bad'))
+%SRCG%L::class GoodCollection subclass Directory
+%SRCG%L::method supplier
+%SRCG%Lsay 'good supplier'
+%SRCG%Lreturn .supplier~new(.array~of('return 7'), .array~of('m'))

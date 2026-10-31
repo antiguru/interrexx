@@ -1,4 +1,4 @@
-**OPEN: accepted for the Phase 9d close by Moritz 2026-10-31 ("fix now.").** `Class~defineMethods` does not send a collection subclass's `supplier`.
+**CLOSED: Implemented at `ad0741664` for the Phase 9d close on 2026-10-31.** Moritz authorized the correction with "fix now.". Collection subclasses now receive `SUPPLIER` through normal dispatch, including protected sends and recursive installation inside that method. Fourteen paired witnesses match on stdout, stderr and exit status, with focused ordinary and forced-collection regressions passing. The evidence and retained native-directory boundary are recorded in `../2026-10-18-phase-9d/task-10-corrections-report.md`.
 
 # `defineMethods` and a collection subclass's `supplier`
 

@@ -1,0 +1,36 @@
+supplier checkpoint
+installed 9
+%SRCG%COUNT 33
+%SRCG%L/*----------------------------------------------------------------------------*/
+%SRCG%L/*                                                                            */
+%SRCG%L/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
+%SRCG%L/*                                                                            */
+%SRCG%L/* This program and the accompanying materials are made available under       */
+%SRCG%L/* the terms of the Common Public License v1.0 which accompanies this         */
+%SRCG%L/* distribution. A copy is also available at the following address:           */
+%SRCG%L/* https://www.oorexx.org/license.html                                        */
+%SRCG%L/*                                                                            */
+%SRCG%L/*----------------------------------------------------------------------------*/
+%SRCG%L
+%SRCG%Lsupplier = .directory~method('SUPPLIER')~copy
+%SRCG%Lsupplier~setProtected
+%SRCG%L.ProtectedCollection~define('SUPPLIER', supplier)
+%SRCG%Lmanager = .Manager~new
+%SRCG%L.context~package~setSecurityManager(manager)
+%SRCG%Lcall install .ProtectedCollection~new
+%SRCG%Lsay 'installed' .Target~new~m
+%SRCG%Lexit
+%SRCG%L::routine install
+%SRCG%Luse arg methods
+%SRCG%L.Target~defineMethods(methods)
+%SRCG%L::class Target
+%SRCG%L::class ProtectedCollection subclass Directory
+%SRCG%L::class Manager
+%SRCG%L::method unknown
+%SRCG%Luse arg name, args
+%SRCG%Lif name == 'METHOD', args[1]~name == 'SUPPLIER' then do
+%SRCG%L  say 'supplier checkpoint'
+%SRCG%L  args[1]~result = .supplier~new(.array~of('return 9'), .array~of('m'))
+%SRCG%L  return 1
+%SRCG%Lend
+%SRCG%Lreturn 0

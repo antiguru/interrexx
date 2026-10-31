@@ -1,0 +1,17 @@
+{
+  "command": [
+    "timeout",
+    "-k",
+    "5",
+    "30",
+    "/tmp/codex-p9d-t88-target/debug/rexx",
+    "/tmp/p9d-correction-pair-3kf_sxe8/probe.rex"
+  ],
+  "cwd": "/home/moritz/dev/repos/ooRexx-rust-rewrite/rust",
+  "status": 0,
+  "source_head": "0758ce1aa538ec2b5e20197d24c8c397782b722b",
+  "source_sha256": "c3599b2c48912103baff037fd0d1d877ff615f444515e046d79844feb31be5ef",
+  "binary_sha256": "192ea49035eb7b0b8e5f1bbda8539c306795a66a1d39d253da8090d098c951bd",
+  "outer_memory_cap": "2G",
+  "oracle_address_space_bytes": null
+}

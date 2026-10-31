@@ -1,0 +1,49 @@
+
+running 6 tests
+test user_raise_keeps_additional_and_array_items_without_rendering ... ok
+test a_copied_protected_supplier_uses_normal_security_dispatch ... ok
+test constant_result_failure_restores_the_callers_activation ... ok
+test method_collections_send_supplier_and_allow_reentrant_installation ... ok
+test supplier_validation_stays_atomic_and_shared_callers_send_supplier ... ok
+test raise_substitutions_and_intermediate_trace_rendering_stay_separate ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+
+running 8 tests
+test the_row_check_reads_only_a_resolution_that_opens_a_clause ... ok
+test the_row_check_reads_owners_in_any_case_and_no_negated_resolution ... ok
+test the_row_check_tells_an_open_owner_from_a_resolved_one ... ok
+test no_owner_table_names_a_closed_phase ... ok
+test no_open_exclusions_row_names_a_closed_phase ... ok
+test the_literal_scan_finds_a_phase_inside_a_longer_text ... ok
+test the_scan_finds_an_open_phase_it_is_not_asked_about ... ok
+test no_refusal_names_a_closed_phase ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+
+running 2 tests
+test a_dead_transients_slots_are_reused_before_the_collector_runs_again ... ok
+test a_live_set_that_does_not_die_still_collects_as_it_grows ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s
+
+
+running 3 tests
+test the_check_finds_each_kind_of_disagreement ... ok
+test the_scanner_reads_each_owner_form ... ok
+test every_ownerless_refusal_has_a_disposition ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+
+running 5 tests
+test buffered_invocations_do_not_query_the_hosts_stdout ... ok
+test owned_stdout_position_is_empty_before_open_and_after_close ... ok
+test owned_stdout_queries_observe_the_redirected_file ... ok
+test owned_stdout_aliases_keep_their_buffered_positions ... ok
+test conversion_and_trace_boundaries ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.67s
+

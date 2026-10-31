@@ -1,0 +1,12 @@
+{
+  "command": [
+    "timeout",
+    "-k",
+    "5",
+    "30",
+    "/home/moritz/dev/repos/ooRexx/build/bin/rexx",
+    "/tmp/p9d-correction-oracle-gtcp9kz3/probe.rex"
+  ],
+  "cwd": "/tmp/p9d-correction-oracle-gtcp9kz3",
+  "status": 221
+}

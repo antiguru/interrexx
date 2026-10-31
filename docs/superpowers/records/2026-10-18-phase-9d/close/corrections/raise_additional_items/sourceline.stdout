@@ -1,0 +1,30 @@
+after additional
+after array
+%SRCG%COUNT 27
+%SRCG%L/*----------------------------------------------------------------------------*/
+%SRCG%L/*                                                                            */
+%SRCG%L/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
+%SRCG%L/*                                                                            */
+%SRCG%L/* This program and the accompanying materials are made available under       */
+%SRCG%L/* the terms of the Common Public License v1.0 which accompanies this         */
+%SRCG%L/* distribution. A copy is also available at the following address:           */
+%SRCG%L/* https://www.oorexx.org/license.html                                        */
+%SRCG%L/*                                                                            */
+%SRCG%L/*----------------------------------------------------------------------------*/
+%SRCG%L
+%SRCG%Lsignal on syntax name caught
+%SRCG%Lcall raiser
+%SRCG%Lsay 'after additional'
+%SRCG%Lcall arrayraiser
+%SRCG%Lsay 'after array'
+%SRCG%Lexit
+%SRCG%Lcaught:
+%SRCG%Lsay 'caught' condition('o')~code
+%SRCG%Lexit
+%SRCG%Lraiser:
+%SRCG%Lraise user zz additional (.array~of(.bad~new)) return
+%SRCG%Larrayraiser:
+%SRCG%Lraise user zz array (.bad~new) return
+%SRCG%L::class bad
+%SRCG%L::method defaultname
+%SRCG%Lraise syntax 98.900 array('unwanted rendering')

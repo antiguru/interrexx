@@ -1,0 +1,8 @@
+       >I> Method "::CONSTANT" with scope "C" in package "bad".
+     3 *-* ::constant k (self)
+       >I> Method "DEFAULTNAME" with scope "C" in package "bad".
+     5 *-* raise syntax 98.900 array("boom")
+       >K>   "SYNTAX" => "98.900"
+       >K>   "ARRAY" => "an Array"
+       <I< Method "DEFAULTNAME" with scope "C" in package "bad".
+       <I< Method "::CONSTANT" with scope "C" in package "bad".

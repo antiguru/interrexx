@@ -1,0 +1,8 @@
+
+running 3 tests
+test user_raise_keeps_additional_and_array_items_without_rendering ... ok
+test constant_result_failure_restores_the_callers_activation ... ok
+test method_collections_send_supplier_and_allow_reentrant_installation ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+

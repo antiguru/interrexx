@@ -1,0 +1,24 @@
+caught 98.900
+after
+%SRCG%COUNT 21
+%SRCG%L/*----------------------------------------------------------------------------*/
+%SRCG%L/*                                                                            */
+%SRCG%L/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
+%SRCG%L/*                                                                            */
+%SRCG%L/* This program and the accompanying materials are made available under       */
+%SRCG%L/* the terms of the Common Public License v1.0 which accompanies this         */
+%SRCG%L/* distribution. A copy is also available at the following address:           */
+%SRCG%L/* https://www.oorexx.org/license.html                                        */
+%SRCG%L/*                                                                            */
+%SRCG%L/*----------------------------------------------------------------------------*/
+%SRCG%L
+%SRCG%Lsignal on syntax name caught
+%SRCG%Lsrc = .array~of('say "prologue"', '::class c', '::constant k (self)', '::method defaultname class', 'raise syntax 98.900 array("boom")', '::options trace r')
+%SRCG%Lp = .package~new('bad', src)
+%SRCG%Lsay 'unexpected'
+%SRCG%Lexit
+%SRCG%Lcaught:
+%SRCG%Ltrace off
+%SRCG%Lsay 'caught' condition('o')~code
+%SRCG%Lsay 'after'
+%SRCG%Lexit

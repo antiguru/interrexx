@@ -1,0 +1,19 @@
+
+running 4 tests
+test a_copied_protected_supplier_uses_normal_security_dispatch ... ok
+test method_collections_send_supplier_and_allow_reentrant_installation ... ok
+test constant_result_failure_restores_the_callers_activation ... ok
+test user_raise_keeps_additional_and_array_items_without_rendering ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+
+running 5 tests
+test buffered_invocations_do_not_query_the_hosts_stdout ... ok
+test owned_stdout_queries_observe_the_redirected_file ... ok
+test owned_stdout_position_is_empty_before_open_and_after_close ... ok
+test owned_stdout_aliases_keep_their_buffered_positions ... ok
+test conversion_and_trace_boundaries ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.69s
+

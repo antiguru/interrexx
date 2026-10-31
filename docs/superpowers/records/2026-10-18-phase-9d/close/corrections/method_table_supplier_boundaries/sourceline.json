@@ -1,0 +1,13 @@
+{
+  "command": [
+    "timeout",
+    "-k",
+    "5",
+    "30",
+    "/home/moritz/dev/repos/ooRexx/build/bin/rexx",
+    "/tmp/p9d-correction-oracle-1xom9kbd/source.rex",
+    "/tmp/p9d-correction-oracle-1xom9kbd/probe.rex"
+  ],
+  "cwd": "/tmp/p9d-correction-oracle-1xom9kbd",
+  "status": 0
+}
