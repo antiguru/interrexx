@@ -109,7 +109,9 @@ pub(super) fn collect(
             rustix::process::pidfd_open(pid, rustix::process::PidfdFlags::empty()).ok()
         });
     let ended_reader = ended.as_ref();
-    let (out, err) = std::thread::scope(|scope| {
+    let mut out = Vec::new();
+    let mut err = Vec::new();
+    std::thread::scope(|scope| {
         if let (Some(mut stdin), Some(bytes)) = (stdin, input.as_deref()) {
             // A write error is dropped: a child exiting before it reads its
             // input gives `EPIPE`, which the oracle's own writer ignores.
@@ -118,39 +120,44 @@ pub(super) fn collect(
                 let _ = stdin.write_all(bytes);
             });
         }
-        let errors = scope.spawn(|| {
-            let mut bytes = Vec::new();
-            if let Some(stderr) = stderr {
-                read_all(
-                    stderr,
-                    ended_reader.filter(|_| ends[1]),
-                    &mut bytes,
-                    err_route,
-                );
-            }
-            bytes
-        });
-        let output = scope.spawn(|| {
-            let mut bytes = Vec::new();
-            match merged {
-                Some(merged) => read_all(merged, None, &mut bytes, out_route),
-                None => {
-                    if let Some(stdout) = stdout {
-                        read_all(
-                            stdout,
-                            ended_reader.filter(|_| ends[0]),
-                            &mut bytes,
-                            out_route,
-                        );
+        // Releasing each native handle immediately also releases a finished
+        // reader when HALT abandons the collector while its peer is blocked.
+        // The scope still waits for both exclusive result borrows.
+        drop(scope.spawn(|| {
+            err = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let mut bytes = Vec::new();
+                if let Some(stderr) = stderr {
+                    read_all(
+                        stderr,
+                        ended_reader.filter(|_| ends[1]),
+                        &mut bytes,
+                        err_route,
+                    );
+                }
+                bytes
+            }))
+            .unwrap_or_default();
+        }));
+        drop(scope.spawn(|| {
+            out = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let mut bytes = Vec::new();
+                match merged {
+                    Some(merged) => read_all(merged, None, &mut bytes, out_route),
+                    None => {
+                        if let Some(stdout) = stdout {
+                            read_all(
+                                stdout,
+                                ended_reader.filter(|_| ends[0]),
+                                &mut bytes,
+                                out_route,
+                            );
+                        }
                     }
                 }
-            }
-            bytes
-        });
-        (
-            output.join().unwrap_or_default(),
-            errors.join().unwrap_or_default(),
-        )
+                bytes
+            }))
+            .unwrap_or_default();
+        }));
     });
     let rc = match running.wait() {
         Ok(status) => exit_code(status),
@@ -158,4 +165,3 @@ pub(super) fn collect(
     };
     Waited { rc, out, err }
 }
-

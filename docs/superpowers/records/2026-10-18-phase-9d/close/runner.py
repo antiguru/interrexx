@@ -23,7 +23,7 @@ ORACLE = Path('/home/moritz/dev/repos/ooRexx/build')
 PIN_ROOT = Path('/home/moritz/dev/repos/ooRexx-p9-pin')
 PIN = PIN_ROOT / 'rexx-run'
 PIN_HASH = 'c4b4e8c4ce7f1f12e4a73fa37cb15eca262717092c2c1aed727febf437523c67'
-TSAN = ROOT / '.superpowers/sdd/2026-10-07-phase-6-1/p61-gates/tsan.sh'
+TSAN = HERE / 'tsan.sh'
 
 
 def now():

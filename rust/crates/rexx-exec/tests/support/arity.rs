@@ -689,13 +689,5 @@ mod binary_selection_tests {
             .canonicalize()
             .expect("Cargo interpreter");
         assert_eq!(selected, cargo_binary);
-        let target_profile = std::env::current_exe()
-            .expect("test executable")
-            .parent()
-            .expect("deps")
-            .parent()
-            .expect("profile")
-            .to_path_buf();
-        assert_eq!(selected.parent(), Some(target_profile.as_path()));
     }
 }

@@ -192,7 +192,11 @@ fn a_reader_panic_preserves_the_other_reader_and_child_status() {
         );
         assert_eq!(waited.rc, 0);
         assert!(waited.out.is_empty() && waited.err.is_empty());
-        let expected: &[u8] = if panicking == Piece::Out { b"error" } else { b"output" };
+        let expected: &[u8] = if panicking == Piece::Out {
+            b"error"
+        } else {
+            b"output"
+        };
         assert_eq!(*observed.lock().unwrap(), expected);
     }
 }
@@ -208,7 +212,11 @@ fn a_real_reader_eof_preserves_the_other_pipes_large_output() {
             .expect("child");
         let waited = collect(running, None, None, [false, false], None);
         assert_eq!(waited.rc, 0);
-        let (early, late) = if first == 1 { (&waited.out, &waited.err) } else { (&waited.err, &waited.out) };
+        let (early, late) = if first == 1 {
+            (&waited.out, &waited.err)
+        } else {
+            (&waited.err, &waited.out)
+        };
         assert_eq!(early, b"first");
         assert_eq!(late, &vec![b'x'; 200000]);
     }
