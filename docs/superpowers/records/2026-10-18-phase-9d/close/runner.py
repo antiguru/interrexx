@@ -19,6 +19,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[4]
 RUST = ROOT / 'rust'
 TARGETS = ROOT / '.superpowers/sdd/2026-10-18-phase-9d/task10-targets'
+ORACLE = Path('/home/moritz/dev/repos/ooRexx/build')
 PIN_ROOT = Path('/home/moritz/dev/repos/ooRexx-p9-pin')
 PIN = PIN_ROOT / 'rexx-run'
 PIN_HASH = 'c4b4e8c4ce7f1f12e4a73fa37cb15eca262717092c2c1aed727febf437523c67'
@@ -59,15 +60,44 @@ def clean(head):
     assert not git('ls-files', '--others', '--exclude-standard', '--', 'rust'), 'Untracked Rust inputs'
 
 
+def tree_inputs(base):
+    """Record tree membership, file content and resolved symlink targets."""
+    entries = {}
+
+    def visit(path, ancestors):
+        row = {}
+        if path.is_symlink():
+            row.update(symlink_target=os.readlink(path), resolved=str(path.resolve(strict=True)))
+        if path.is_dir():
+            identity = (path.stat().st_dev, path.stat().st_ino)
+            assert identity not in ancestors, f'External input directory cycle: {path}'
+            row['kind'] = 'directory'
+            entries[str(path)] = row
+            for child in sorted(path.iterdir()):
+                visit(child, ancestors | {identity})
+        else:
+            assert path.is_file(), f'Missing or non-file external input: {path}'
+            row.update(kind='file', sha256=digest(path))
+            entries[str(path)] = row
+
+    assert base.is_dir(), f'Missing external input tree: {base}'
+    visit(base, set())
+    return entries
+
+
 def static_inputs():
     # Hash the external runtime inputs without changing the read-only checkouts.
     paths = [PIN, TSAN, HERE / 'runner.py', HERE / 'run.sh']
-    for base in [ROOT / 'build/lib', Path('/home/moritz/dev/repos/ooRexx/build/lib')]:
+    for base in [ROOT / 'build/lib', ORACLE / 'lib']:
         paths.extend(path for path in base.glob('*') if path.is_file())
-    paths.append(Path('/home/moritz/dev/repos/ooRexx/build/bin/rexx'))
     for base in [ROOT / 'ootest', ROOT / 'oodocs/rexxref']:
         paths.extend(path for path in base.rglob('*') if path.is_file() and '.svn' not in path.parts)
-    return {str(path): digest(path) for path in sorted(set(paths))}
+    inputs = {str(path): digest(path) for path in sorted(set(paths))}
+    # group_runner.rs uses oracle bin on PATH and links oracle samples into both layouts.
+    # suite/launch/mod.rs uses oracle bin on REXX_PATH, and rexxc.rs executes bin/rexxc.
+    for base in [ORACLE / 'bin', ORACLE / 'samples']:
+        inputs.update(tree_inputs(base))
+    return inputs
 
 
 def guard(state):
@@ -206,7 +236,6 @@ def run_action(action, state):
         children = re.findall(r'^(api|lib|int) exit (\d+)$', output, re.M)
         diagnostics = sorted(str(p) for p in (HERE / 'tsan').glob('tsan.*'))
         record.update(children=children, diagnostics=diagnostics)
-        write(HERE / 'tsan-status.json', record)
         # The historical script prints each child exit but returns its final ls/grep status.
         record['validated_status'] = 0 if status == 0 and [c[0] for c in children] == ['api', 'lib', 'int'] and all(c[1] == '0' for c in children) and not diagnostics else 1
     if name == 'callgrind':
@@ -218,6 +247,8 @@ def run_action(action, state):
         record['freeze_error'] = str(error)
         record['validated_status'] = 1
     write(prefix.with_suffix('.json'), record)
+    if name == 'TSan':
+        write(HERE / 'tsan-status.json', record)
     append(f'{name} exit {status} validated {record.get("validated_status", status)}')
     return record.get('validated_status', status) or int(leaked)
 
