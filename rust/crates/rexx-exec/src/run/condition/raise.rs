@@ -149,7 +149,10 @@ impl Interp {
             self.activity.pending_additional = Some(value);
             if converted {
                 match slots {
-                    Some(slots) => substitutions = Some(slots),
+                    Some(_) => {
+                        self.roots.activity_mut().push_temp(value);
+                        substitutions = Some(value);
+                    }
                     None => additional.push(self.to_text(value).to_vec()),
                 }
             }
@@ -206,9 +209,11 @@ impl Interp {
             }
             // The condition object's `ADDITIONAL` is the array of the items
             // themselves, as `ADDITIONAL`'s own value is.
-            self.activity.pending_additional = Some(self.security_arguments_array(&held));
+            let array = self.security_arguments_array(&held);
+            self.activity.pending_additional = Some(array);
             if raise.condition.eq_ignore_ascii_case(b"SYNTAX") {
-                substitutions = Some(held);
+                self.roots.activity_mut().push_temp(array);
+                substitutions = Some(array);
             }
             // **`an Array`, verbatim and regardless of the elements** --
             // it is the Array class's own default string form, which is
@@ -229,8 +234,17 @@ impl Interp {
         if raise.condition.as_ref() == b"SYNTAX" {
             // Catalogue substitution happens when the condition is raised,
             // after all operands and their trace lines have been evaluated.
-            if let Some(slots) = substitutions {
-                for slot in slots {
+            if let Some(array) = substitutions {
+                self.activity.pending_additional = Some(array);
+                let count = self.array_slots(array).map_or(0, <[_]>::len);
+                for at in 0..count {
+                    // Operand evaluation and earlier string conversions can
+                    // mutate this array. Read each live slot when it is used.
+                    let slot = self
+                        .array_slots(array)
+                        .and_then(|slots| slots.get(at))
+                        .copied()
+                        .flatten();
                     additional.push(match slot {
                         Some(item) => self.string_value_text(item)?,
                         None => Vec::new(),
