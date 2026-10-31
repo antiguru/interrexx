@@ -160,12 +160,12 @@ fn starts_word(chars: &[char], at: usize) -> bool {
 }
 
 /// Whether `text` names `phase` as a whole word: `Phase 1` is not in
-/// `Phase 10`.
+/// `Phase 10`, and `Phase 9` is not in `Phase 9.1`.
 pub fn names(text: &str, phase: &str) -> bool {
     text.match_indices(phase).any(|(at, _)| {
         !text[at + phase.len()..]
             .chars()
             .next()
-            .is_some_and(|c| c.is_ascii_digit())
+            .is_some_and(|c| c.is_ascii_digit() || c == '.')
     })
 }

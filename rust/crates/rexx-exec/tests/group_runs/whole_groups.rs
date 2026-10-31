@@ -2292,9 +2292,9 @@ mod sim_gate {
             [(Kind::Abort, "no ooTest summary".to_string())]
         );
         let listed = "rexx-exec: method \"OBJECTNAME=\" of class \"Object\" is not \
-                              implemented (Phase 9)";
+                              implemented (Phase 10 Extension)";
         let other = "rexx-exec: method \"COPY\" of class \"Object\" is not implemented \
-                             (Phase 9)";
+                             (Phase 10 Extension)";
         let key = format!("{listed}, rc 120, last started T, failing []");
         let differing = [key.as_str()];
         let early = |line: &str, status: i32, policy: &str| {
@@ -2320,7 +2320,7 @@ mod sim_gate {
         );
         // A strict prefix of the listed refusal, and the listed refusal
         // at another status, are not the listed outcome.
-        let prefix = listed.trim_end_matches(" (Phase 9)");
+        let prefix = listed.trim_end_matches(" (Phase 10 Extension)");
         for (line, status) in [(prefix, 120), (listed, 1)] {
             assert_eq!(early(line, status, "pre:1,k=1"), unlisted(line, status));
         }

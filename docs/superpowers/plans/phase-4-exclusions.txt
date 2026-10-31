@@ -7150,8 +7150,18 @@ programs at cb13f0033 on both sides and on 9ff11e465: every transcript held.
     other trap does. This looks like state the oracle's trap leaves behind,
     a candidate for the upstream-accident licence.
 
-  OWNER: Phase 9 (core conformance: condition objects, stack frames and
-  traceback under INTERPRET are core-suite behaviour, not native API).
+  CLOSED 2026-10-31. DELIVERED by Phase 9d for g3.rex, l6.rex,
+  ri1.rex and if1.rex. The propagated report is witnessed by
+  corpus/lang/raise_propagate_traceback.rex (Task 8.2, t8.2/probes/propagate/).
+  The fragment indentation is witnessed by
+  corpus/lang/interpret_frame_invocation_indent.rex (Task 8.7b).
+  The RAISE RETURN sender is witnessed by
+  corpus/lang/raise_result_and_sender.rex (Task 6.9).
+  Routine~call's METHOD CALL level and name are witnessed by
+  corpus/lang/routine_call_frame_names.rex (Task 8.3).
+  pf1.rex is Deviation 66, ruled by Moritz 2026-10-21, witnessed by
+  run::tests::conditions::a_missing_signal_label_inside_interpret_keeps_the_programs_name.
+  OWNER: none.
 
 PHASE 8 CLOSES, 2026-09-28: WHAT ITS CLOSE FOUND. Each measured against the
 oracle at 2ae06085c, or where an entry says it was closed, again after the

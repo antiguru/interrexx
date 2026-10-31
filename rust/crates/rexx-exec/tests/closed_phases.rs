@@ -34,7 +34,7 @@ mod source_literals;
 use source_literals::{literals, names, shown, source_files};
 
 /// The phases whose work is finished and which this assertion covers.
-const CLOSED: &[&str] = &["Phase 5", "Phase 6", "Phase 7", "Phase 8"];
+const CLOSED: &[&str] = &["Phase 5", "Phase 6", "Phase 7", "Phase 8", "Phase 9"];
 
 /// This crate's test files holding owner tables: the instruction and
 /// expression tags, the assertion harnesses' exempt rows and the phase

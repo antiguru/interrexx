@@ -57,7 +57,7 @@ const COMPUTED_OWNERS: &[(&str, &str)] = &[
 ];
 
 /// The phases a REHOME row may name: the ones still open.
-const OPEN_PHASES: &[&str] = &["Phase 9", "Phase 10", "Phase 11"];
+const OPEN_PHASES: &[&str] = &["Phase 10", "Phase 11"];
 
 /// The four dispositions.
 const KINDS: &[&str] = &["GUARD", "DEVIATION", "LIMIT", "REHOME"];
@@ -477,15 +477,11 @@ fn message_owner(field: &str, body: &str, params: &str) -> Owner {
 /// for a spelling that is not one.
 fn owner_label(value: &str) -> Option<String> {
     let value = value.strip_prefix("rexx_core::").unwrap_or(value);
-    let owner = if value == "Owner::Phase9" {
-        rexx_core::Owner::Phase9
-    } else {
-        let reason = value.strip_prefix("Owner::Phase10(")?.strip_suffix(')')?;
-        let reason = reason.strip_prefix("rexx_core::").unwrap_or(reason);
-        rexx_core::Owner::Phase10(rexx_core::Deferral::named(
-            reason.strip_prefix("Deferral::")?,
-        )?)
-    };
+    let reason = value.strip_prefix("Owner::Phase10(")?.strip_suffix(')')?;
+    let reason = reason.strip_prefix("rexx_core::").unwrap_or(reason);
+    let owner = rexx_core::Owner::Phase10(rexx_core::Deferral::named(
+        reason.strip_prefix("Deferral::")?,
+    )?);
     Some(owner.label().to_string())
 }
 
@@ -781,12 +777,12 @@ fn every_ownerless_refusal_has_a_disposition() {
 /// a measurement and not a scan of nothing.
 #[test]
 fn the_scanner_reads_each_owner_form() {
-    // The `Owner::Phase9` form, read from a fixture.
+    // The `Owner::Phase10(Deferral::Extension)` form, read from a fixture.
     let fixture = "\
 impl Loud {
-    fn nine() -> Loud {
+    fn extension() -> Loud {
         Loud {
-            message: owned_message(\"y\", Some(Owner::Phase9)),
+            message: owned_message(\"y\", Some(Owner::Phase10(Deferral::Extension))),
         }
     }
 }
@@ -796,8 +792,8 @@ impl Loud {
         code_lines(fixture),
     )]));
     assert_eq!(
-        fixture_owners.get("nine").map(|(owner, _)| owner),
-        Some(&Owner::Phase("Phase 9".to_string()))
+        fixture_owners.get("extension").map(|(owner, _)| owner),
+        Some(&Owner::Phase("Phase 10 Extension".to_string()))
     );
     let constructors = constructors(&sources());
     let owners = owners(&constructors);
@@ -857,9 +853,9 @@ impl Loud {
             message: owned_message(what, None),
         }
     }
-    fn nine() -> Loud {
+    fn extension() -> Loud {
         Loud {
-            message: owned_message(\"y\", Some(Owner::Phase9)),
+            message: owned_message(\"y\", Some(Owner::Phase10(Deferral::Extension))),
         }
     }
     fn given(owner: Owner) -> Loud {
@@ -880,7 +876,7 @@ impl Loud {
     fn mixed(what: &str, early: bool) -> Loud {
         if early {
             return Loud {
-                message: owned_message(what, Some(Owner::Phase9)),
+                message: owned_message(what, Some(Owner::Phase10(Deferral::Extension))),
             };
         }
         Loud {
@@ -960,8 +956,8 @@ rxapi\tREHOME\tPhase 10\t\"the row's text\"
 plain\tGUARD\t-\tprobe p1
 none\tDEVIATION\t-\toracle-crashes.txt entry 7
 gone\tGUARD\t-\tprobe p2
-nine\tREHOME\tPhase 10\t\"the row's text\"
-hostemu\tREHOME\tPhase 9\t\"the row's text\"
+extension\tREHOME\tPhase 11\t\"the row's text\"
+hostemu\tREHOME\tPhase 11\t\"the row's text\"
 given\tGUARD\t-\tprobe p3
 ";
     let found = problems(&owners, &literals, &parse_table(wrong), &documents);
@@ -972,8 +968,8 @@ given\tGUARD\t-\tprobe p3
         "mixed (src/lib.rs:32): no owner and no disposition row",
         "none: cites oracle-crashes.txt entry 7",
         "gone: a row with no constructor",
-        "nine: REHOME to Phase 10, but the constructor",
-        "hostemu: REHOME to Phase 9, but the constructor",
+        "extension: REHOME to Phase 11, but the constructor",
+        "hostemu: REHOME to Phase 11, but the constructor",
         "given: a GUARD row for a constructor",
         "optional (src/lib.rs:22): no owner and no disposition row",
         "unknown (src/lib.rs:68): no owner and no disposition row",

@@ -388,7 +388,12 @@ fn derive(root: &Path) -> (Vec<Derived>, Vec<(Derived, &'static str)>) {
         let text = String::from_utf8_lossy(&bytes);
         let dir_reason = EXCLUDED_DIRS
             .iter()
-            .find(|(prefix, _)| group.starts_with(prefix))
+            .find(|(prefix, _)| {
+                group.starts_with(prefix)
+                    && !suite_rows::PHASE_9_EXTENSION_DIRS
+                        .iter()
+                        .any(|dir| group.starts_with(dir))
+            })
             .map(|(_, reason)| *reason);
         for (test, features, rxapi) in derive_group(&text) {
             if features.is_empty() {

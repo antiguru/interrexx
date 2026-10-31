@@ -54,7 +54,6 @@ impl Deferral {
 /// The open phase that owes a refusal's work.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Owner {
-    Phase9,
     Phase10(Deferral),
 }
 
@@ -64,7 +63,6 @@ impl Owner {
     #[must_use]
     pub const fn label(self) -> &'static str {
         match self {
-            Owner::Phase9 => "Phase 9",
             Owner::Phase10(Deferral::Rxapi) => "Phase 10 Rxapi",
             Owner::Phase10(Deferral::Extension) => "Phase 10 Extension",
             Owner::Phase10(Deferral::Row10NativeApi) => "Phase 10 Row10NativeApi",
@@ -77,7 +75,6 @@ impl Owner {
     #[must_use]
     pub fn named(phase: &str, reason: Option<&str>) -> Option<Owner> {
         match (phase, reason) {
-            ("Phase 9", None) => Some(Owner::Phase9),
             ("Phase 10", Some(reason)) => Deferral::named(reason).map(Owner::Phase10),
             _ => None,
         }
@@ -95,10 +92,7 @@ mod tests {
             assert_eq!(owner.label(), format!("Phase 10 {}", reason.name()));
             assert_eq!(Owner::named("Phase 10", Some(reason.name())), Some(owner));
         }
-        assert_eq!(Owner::Phase9.label(), "Phase 9");
-        assert_eq!(Owner::named("Phase 9", None), Some(Owner::Phase9));
         assert_eq!(Owner::named("Phase 10", None), None);
         assert_eq!(Owner::named("Phase 10", Some("Queue")), None);
-        assert_eq!(Owner::named("Phase 9", Some("Rxapi")), None);
     }
 }
