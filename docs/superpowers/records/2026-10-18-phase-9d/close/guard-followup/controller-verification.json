@@ -1,0 +1,25 @@
+{
+  "source_commit": "988026178ba00de5f2fa7c737114e68743333b55",
+  "unchanged_paths_independently_verified": [
+    "rust/crates/rexx-exec/src/install/constant_expression.rs",
+    "rust/crates/rexx-exec/src/run/condition/raise.rs",
+    "rust/corpus/lang/constant_result_cleanup.rex",
+    "rust/corpus/lang/raise_additional_items.rex",
+    "rust/corpus/lang/raise_additional_modes.rex",
+    "rust/corpus/lang/raise_additional_return_mutation.rex",
+    "rust/corpus/lang/define_methods_supplier_override.rex",
+    "rust/corpus/lang/define_methods_protected_supplier.rex",
+    "rust/corpus/lang/method_table_supplier_boundaries.rex",
+    "rust/crates/rexx-exec/src/run/tests/directives.rs"
+  ],
+  "whole_library_passed": 1239,
+  "integration_passed": 37,
+  "final_statuses_verified_zero": {
+    "tests": 0,
+    "fmt": 0,
+    "clippy": 0
+  },
+  "spec_review": "approved",
+  "quality_review": "approved",
+  "remaining_critical_or_important": 0
+}
