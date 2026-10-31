@@ -37,3 +37,8 @@ fn user_raise_keeps_additional_and_array_items_without_rendering() {
 fn method_collections_send_supplier_and_allow_reentrant_installation() {
     check(include_bytes!("../../../corpus/lang/define_methods_supplier_override.rex"), b"supplier\nevents DEFINE|DEFINEMETHODS\ninstalled 1 2 3\nadjacent 4 5\n");
 }
+
+#[test]
+fn a_copied_protected_supplier_uses_normal_security_dispatch() {
+    check(include_bytes!("../../../corpus/lang/define_methods_protected_supplier.rex"), b"supplier checkpoint\ninstalled 9\n");
+}

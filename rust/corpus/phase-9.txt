@@ -458,3 +458,4 @@ lang/raise_additional_untraced.rex
 lang/constant_result_cleanup.rex
 lang/raise_additional_items.rex
 lang/define_methods_supplier_override.rex
+lang/define_methods_protected_supplier.rex
