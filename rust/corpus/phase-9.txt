@@ -455,3 +455,6 @@ lang/executing_method_after_redefinition.rex
 lang/enhanced_metaclass_method_identity.rex
 lang/required_string_boundaries.rex
 lang/raise_additional_untraced.rex
+constant_result_cleanup
+raise_additional_items
+define_methods_supplier

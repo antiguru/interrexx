@@ -1,0 +1,20 @@
+/* Untraced ADDITIONAL renders nothing for a trace line. DESCRIPTION takes
+   its required string at RAISE under Deviation 83. A SYNTAX code uses the
+   RC value's string value. */
+
+signal on syntax name caught
+call raiser
+say 'after additional'
+call arrayraiser
+say 'after array'
+exit
+caught:
+say 'caught' condition('o')~code
+exit
+raiser:
+raise user zz additional (.array~of(.bad~new)) return
+arrayraiser:
+raise user zz array (.bad~new) return
+::class bad
+::method defaultname
+raise syntax 98.900 array('unwanted rendering')
