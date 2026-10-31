@@ -1,7 +1,7 @@
 #!/bin/bash
 # The criterion 3 ThreadSanitizer run, from rust/: Phase 6's
-# .superpowers/sdd/2026-10-01-phase-6-s2-s5/s4-close-evidence/tsan.sh with one
-# more skip. Usage:
+# .superpowers/sdd/2026-10-01-phase-6-s2-s5/s4-close-evidence/tsan.sh with current
+# close compatibility adjustments. Usage:
 #   bash tsan.sh TARGET_DIR LOG_DIR
 # Clean means every command exits 0 and LOG_DIR holds no tsan.* file.
 export CARGO_TARGET_DIR=$1
