@@ -1,0 +1,29 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-115-oracle-base__class__String__logicalOperators/run
+TZ=None
+status=Some(0) ended=Exited(0) took=16.259357ms
+GroupRun {
+    group: "base/class/String/logicalOperators",
+    expected: {},
+    started: {
+        "TEST_LOGICAL_OPERATORS",
+    },
+    passed: {
+        "TEST_LOGICAL_OPERATORS",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: OracleUlimit,
+    tests_ran: Some(
+        "1",
+    ),
+    took: 16.259357ms,
+}
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-115-oracle-base__class__String__logicalOperators/started.txt canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-115-oracle-base__class__String__logicalOperators/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 31, modified: SystemTime { tv_sec: 1793452696, tv_nsec: 76273941 }, accessed: SystemTime { tv_sec: 1793452696, tv_nsec: 74622637 }, created: SystemTime { tv_sec: 1793452696, tv_nsec: 74622637 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-115-oracle-base__class__String__logicalOperators/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-115-oracle-base__class__String__logicalOperators/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-115-oracle-base__class__String__logicalOperators/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67526080, modified: SystemTime { tv_sec: 1793452693, tv_nsec: 76304603 }, accessed: SystemTime { tv_sec: 1793452693, tv_nsec: 56305180 }, created: SystemTime { tv_sec: 1793452693, tv_nsec: 56305180 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-115-oracle-base__class__String__logicalOperators/run/ooRexx/base/class/String/logicalOperators.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-115-oracle-base__class__String__logicalOperators/run/ooRexx/base/class/String/logicalOperators.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 3742, modified: SystemTime { tv_sec: 1793452696, tv_nsec: 61946030 }, accessed: SystemTime { tv_sec: 1793452696, tv_nsec: 60082652 }, created: SystemTime { tv_sec: 1793452696, tv_nsec: 60082652 }, .. })

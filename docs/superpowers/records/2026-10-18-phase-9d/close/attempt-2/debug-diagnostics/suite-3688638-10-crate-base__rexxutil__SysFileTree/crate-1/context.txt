@@ -1,0 +1,31 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3688638-10-crate-base__rexxutil__SysFileTree/run
+TZ=None
+status=Some(0) ended=Exited(0) took=101.927274ms
+GroupRun {
+    group: "base/rexxutil/SysFileTree",
+    expected: {},
+    started: {
+        "TEST_TEMPORARY_DIRECTORY",
+    },
+    passed: {
+        "TEST_TEMPORARY_DIRECTORY",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: Memcap,
+    tests_ran: Some(
+        "1",
+    ),
+    took: 101.927274ms,
+}
+TMPDIR=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3688638-10-crate-base__rexxutil__SysFileTree/run/sysfiletree-tmp
+TMPDIR seeds=stable-file.txt stable-directory
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3688638-10-crate-base__rexxutil__SysFileTree/started.txt canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3688638-10-crate-base__rexxutil__SysFileTree/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 33, modified: SystemTime { tv_sec: 1793454509, tv_nsec: 788256361 }, accessed: SystemTime { tv_sec: 1793454509, tv_nsec: 784286892 }, created: SystemTime { tv_sec: 1793454509, tv_nsec: 784286892 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3688638-10-crate-base__rexxutil__SysFileTree/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3688638-10-crate-base__rexxutil__SysFileTree/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3688638-10-crate-base__rexxutil__SysFileTree/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 90671208, modified: SystemTime { tv_sec: 1793453115, tv_nsec: 380173296 }, accessed: SystemTime { tv_sec: 1793453115, tv_nsec: 344174315 }, created: SystemTime { tv_sec: 1793453115, tv_nsec: 344174315 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3688638-10-crate-base__rexxutil__SysFileTree/run/ooRexx/base/rexxutil/SysFileTree.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3688638-10-crate-base__rexxutil__SysFileTree/run/ooRexx/base/rexxutil/SysFileTree.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 2256, modified: SystemTime { tv_sec: 1793454509, tv_nsec: 721807263 }, accessed: SystemTime { tv_sec: 1793454509, tv_nsec: 721143741 }, created: SystemTime { tv_sec: 1793454509, tv_nsec: 721143741 }, .. })

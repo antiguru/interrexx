@@ -1,0 +1,14 @@
+{
+  "command": [
+    "timeout",
+    "--kill-after=5s",
+    "90s",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d",
+    "--exact",
+    "eval::tests::a_parse_pattern_and_an_expression_share_the_eval_depth_limit",
+    "--nocapture"
+  ],
+  "TSAN_OPTIONS": "log_path=/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan-limits-diagnosis/01-a_parse_pattern_and_an_expression_share_the_eval_depth_limit/tsan suppressions=/home/moritz/dev/repos/ooRexx-rust-rewrite/rust/tsan.supp allocator_may_return_null=1 second_deadlock_stack=1",
+  "start": 1793455666.4982646,
+  "timeout_seconds": 90
+}

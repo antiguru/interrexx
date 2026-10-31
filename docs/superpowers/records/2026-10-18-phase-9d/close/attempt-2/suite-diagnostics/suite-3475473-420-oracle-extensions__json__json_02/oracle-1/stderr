@@ -1,0 +1,3 @@
+  1816 *-* address system "xsltproc" xslFile xsdFile -    with output using (outXsd) error using (errXsd)
+       >>>   "xsltproc /home/moritz/dev/repos/ooRexx/build/bin/xmlToJson.xsl /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-420-oracle-extensions__json__json_02/run/ooRexx/extensions/json/test_xslt_xsd_tmp.xml"
+       +++   "RC(127)"

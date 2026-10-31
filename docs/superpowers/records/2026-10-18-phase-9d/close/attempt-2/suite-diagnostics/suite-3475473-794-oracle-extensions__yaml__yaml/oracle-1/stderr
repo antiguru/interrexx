@@ -1,0 +1,3 @@
+  1933 *-* address system "xsltproc" xslFile xsdFile -    with output using (outXsd) error using (errXsd)
+       >>>   "xsltproc /home/moritz/dev/repos/ooRexx/build/bin/xmlToYaml.xsl /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-794-oracle-extensions__yaml__yaml/run/ooRexx/extensions/yaml/test33_xsd.xml"
+       +++   "RC(127)"

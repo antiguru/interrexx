@@ -1,0 +1,233 @@
+{
+  "kind": "mocked readiness controls, not actual gates",
+  "source": "/tmp/p9d-task10-runner-readiness-qgxg_jv3",
+  "script_sha256": "fd0e05e261c370867bf4cde7cb1c202ce05ce1700cf913ffe60fe23c06d6e697",
+  "synthetic_pid": 99999999,
+  "mock_tsan_controls": [
+    "child-failed",
+    "freeze-failed",
+    "diagnostic",
+    "passing-control"
+  ],
+  "manifest_mutation_assertion_stdout_separately_retained": false,
+  "limitation": "The original assertion PASS output exists only in the preparation tool transcript. No selfcheck was rerun during retention.",
+  "entries": {
+    "retained-link-a": {
+      "kind": "symlink",
+      "target": "/tmp/p9d-task10-runner-readiness-qgxg_jv3/targets/a.cls"
+    },
+    "retained-new.cls": {
+      "kind": "file",
+      "bytes": 7,
+      "sha256": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+    },
+    "tsan.sh": {
+      "kind": "file",
+      "bytes": 7,
+      "sha256": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+    },
+    "pin": {
+      "kind": "file",
+      "bytes": 7,
+      "sha256": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+    },
+    "passing-control/tsan-status.json": {
+      "kind": "file",
+      "bytes": 801,
+      "sha256": "69e813f47a941b9c5d8db45f28744d58f623d9b32dd7fb44b08a3667b5d7914d"
+    },
+    "passing-control/TSan.json": {
+      "kind": "file",
+      "bytes": 801,
+      "sha256": "69e813f47a941b9c5d8db45f28744d58f623d9b32dd7fb44b08a3667b5d7914d"
+    },
+    "passing-control/TSan.pid.json": {
+      "kind": "file",
+      "bytes": 71,
+      "sha256": "3bed04a502e5eb2b342048b19ac40636cac2b75fc14e02c24444464ecfb3f4b0"
+    },
+    "passing-control/TSan.stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "passing-control/TSan.stdout": {
+      "kind": "file",
+      "bytes": 33,
+      "sha256": "494137401c4caf12a70a18164a8518c1f5ed8339040328114c230067d3e4094d"
+    },
+    "passing-control/status.txt": {
+      "kind": "file",
+      "bytes": 109,
+      "sha256": "04e10766310b706bd78a7a7c4bd070e9c58187d3d1eca30c7735aadfc06f8a8e"
+    },
+    "diagnostic/tsan-status.json": {
+      "kind": "file",
+      "bytes": 877,
+      "sha256": "02b33f51a5940612935829a4af2f3b7ef26886817abb9c242d56b61fddc2c763"
+    },
+    "diagnostic/TSan.json": {
+      "kind": "file",
+      "bytes": 877,
+      "sha256": "02b33f51a5940612935829a4af2f3b7ef26886817abb9c242d56b61fddc2c763"
+    },
+    "diagnostic/TSan.pid.json": {
+      "kind": "file",
+      "bytes": 71,
+      "sha256": "af034a73183e3bfd99a59bdc222f2d983e8e8edf536242336d2e0db9924bffe2"
+    },
+    "diagnostic/TSan.stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "diagnostic/TSan.stdout": {
+      "kind": "file",
+      "bytes": 33,
+      "sha256": "494137401c4caf12a70a18164a8518c1f5ed8339040328114c230067d3e4094d"
+    },
+    "diagnostic/status.txt": {
+      "kind": "file",
+      "bytes": 109,
+      "sha256": "fc3daca56b1a74ea331e057032c39b0776d767126495979d4ec6fd3271e3d325"
+    },
+    "freeze-failed/tsan-status.json": {
+      "kind": "file",
+      "bytes": 843,
+      "sha256": "192f39c3545c21ae2092468f3c939f30fe657764d7ae9808b167087332b5d7d5"
+    },
+    "freeze-failed/TSan.json": {
+      "kind": "file",
+      "bytes": 843,
+      "sha256": "192f39c3545c21ae2092468f3c939f30fe657764d7ae9808b167087332b5d7d5"
+    },
+    "freeze-failed/TSan.pid.json": {
+      "kind": "file",
+      "bytes": 71,
+      "sha256": "d0ba55f59fdb7276b28cfc81b026a34bdd8c920aa86c6188596b1d3d3dc2bc77"
+    },
+    "freeze-failed/TSan.stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "freeze-failed/TSan.stdout": {
+      "kind": "file",
+      "bytes": 33,
+      "sha256": "494137401c4caf12a70a18164a8518c1f5ed8339040328114c230067d3e4094d"
+    },
+    "freeze-failed/status.txt": {
+      "kind": "file",
+      "bytes": 109,
+      "sha256": "7f3711dcf0dad9acd9f6a3eb52321c2c69287ee5e40e91899509f87fab657b55"
+    },
+    "child-failed/tsan-status.json": {
+      "kind": "file",
+      "bytes": 801,
+      "sha256": "6f87d34ad401f2131aaa6f27415f317f844cf884ad1aaeb349f2fcdfdbf043b7"
+    },
+    "child-failed/TSan.json": {
+      "kind": "file",
+      "bytes": 801,
+      "sha256": "6f87d34ad401f2131aaa6f27415f317f844cf884ad1aaeb349f2fcdfdbf043b7"
+    },
+    "child-failed/TSan.pid.json": {
+      "kind": "file",
+      "bytes": 71,
+      "sha256": "07f076485e44e177134e2bc0f2e405f0027e663a0e26c0465094a7ff8800745d"
+    },
+    "child-failed/TSan.stderr": {
+      "kind": "file",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "child-failed/TSan.stdout": {
+      "kind": "file",
+      "bytes": 33,
+      "sha256": "9ed260b25c9c1c9d49fe761d036a16a48d6ce9c4edb1faea8e70481f81ae364f"
+    },
+    "child-failed/status.txt": {
+      "kind": "file",
+      "bytes": 109,
+      "sha256": "965055b38198f6c49225a513f6d0f5a747930d50a76cd2e53b08382de9b944d9"
+    },
+    "linked-directory/nested.rex": {
+      "kind": "file",
+      "bytes": 14,
+      "sha256": "0180744623b588437ef4f127b8c61abb8ff710853d3914f59a98d717d3bcb3f0"
+    },
+    "targets/b.cls": {
+      "kind": "file",
+      "bytes": 4,
+      "sha256": "0967115f2813a3541eaef77de9d9d5773f1c0c04314b0bbfe4ff3b3b1c55b5d5"
+    },
+    "targets/a.cls": {
+      "kind": "file",
+      "bytes": 4,
+      "sha256": "0967115f2813a3541eaef77de9d9d5773f1c0c04314b0bbfe4ff3b3b1c55b5d5"
+    },
+    "close/run.sh": {
+      "kind": "file",
+      "bytes": 7,
+      "sha256": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+    },
+    "close/runner.py": {
+      "kind": "file",
+      "bytes": 7,
+      "sha256": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+    },
+    "repo/ootest/worker.rex": {
+      "kind": "file",
+      "bytes": 7,
+      "sha256": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+    },
+    "repo/build/lib/local.so": {
+      "kind": "file",
+      "bytes": 7,
+      "sha256": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+    },
+    "repo/oodocs/rexxref/provide.xml": {
+      "kind": "file",
+      "bytes": 7,
+      "sha256": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+    },
+    "oracle/samples/linked": {
+      "kind": "symlink",
+      "target": "/tmp/p9d-task10-runner-readiness-qgxg_jv3/linked-directory"
+    },
+    "oracle/samples/factor.rex": {
+      "kind": "file",
+      "bytes": 7,
+      "sha256": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+    },
+    "oracle/bin/link.cls": {
+      "kind": "symlink",
+      "target": "/tmp/p9d-task10-runner-readiness-qgxg_jv3/targets/b.cls"
+    },
+    "oracle/bin/yaml.cls": {
+      "kind": "file",
+      "bytes": 7,
+      "sha256": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+    },
+    "oracle/bin/rexxc": {
+      "kind": "file",
+      "bytes": 7,
+      "sha256": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+    },
+    "oracle/bin/rexx": {
+      "kind": "file",
+      "bytes": 7,
+      "sha256": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+    },
+    "oracle/lib/librexx.so": {
+      "kind": "file",
+      "bytes": 7,
+      "sha256": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+    },
+    "diagnostic/tsan/tsan.123": {
+      "kind": "file",
+      "bytes": 7,
+      "sha256": "f16d05ec6b29248d2c61adb1e9263f78e4f7bace1b955014a2d17872cfe4064d"
+    }
+  }
+}

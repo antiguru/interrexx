@@ -1,0 +1,49 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-294-oracle-base__bif__CHARS/run
+TZ=None
+status=Some(0) ended=Exited(0) took=52.141167ms
+GroupRun {
+    group: "base/bif/CHARS",
+    expected: {},
+    started: {
+        "TEST_1",
+        "TEST_2",
+        "TEST_CHARS_MULTIPLE_MOVES",
+        "TEST_CHARS_NOTREADY_DIRECTORY",
+        "TEST_CHARS_NOTREADY_INVALID",
+        "TEST_CHARS_NOTREADY_NONEXISTING",
+        "TEST_FILE_WRONG_SYNTAX",
+        "TEST_MANYCHARS",
+        "TEST_MANYCHARS_BIN",
+        "TEST_MANYCHARS_NB",
+        "TEST_STDIN_WRONG_SYNATX",
+    },
+    passed: {
+        "TEST_1",
+        "TEST_2",
+        "TEST_CHARS_MULTIPLE_MOVES",
+        "TEST_CHARS_NOTREADY_DIRECTORY",
+        "TEST_CHARS_NOTREADY_INVALID",
+        "TEST_CHARS_NOTREADY_NONEXISTING",
+        "TEST_FILE_WRONG_SYNTAX",
+        "TEST_MANYCHARS",
+        "TEST_MANYCHARS_BIN",
+        "TEST_MANYCHARS_NB",
+        "TEST_STDIN_WRONG_SYNATX",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: OracleUlimit,
+    tests_ran: Some(
+        "11",
+    ),
+    took: 52.141167ms,
+}
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-294-oracle-base__bif__CHARS/started.txt canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-294-oracle-base__bif__CHARS/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 317, modified: SystemTime { tv_sec: 1793452698, tv_nsec: 531705856 }, accessed: SystemTime { tv_sec: 1793452698, tv_nsec: 507771023 }, created: SystemTime { tv_sec: 1793452698, tv_nsec: 507771023 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-294-oracle-base__bif__CHARS/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-294-oracle-base__bif__CHARS/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-294-oracle-base__bif__CHARS/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67526080, modified: SystemTime { tv_sec: 1793452693, tv_nsec: 76304603 }, accessed: SystemTime { tv_sec: 1793452693, tv_nsec: 56305180 }, created: SystemTime { tv_sec: 1793452693, tv_nsec: 56305180 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-294-oracle-base__bif__CHARS/run/ooRexx/base/bif/CHARS.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-294-oracle-base__bif__CHARS/run/ooRexx/base/bif/CHARS.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 9014, modified: SystemTime { tv_sec: 1793452698, tv_nsec: 490903133 }, accessed: SystemTime { tv_sec: 1793452698, tv_nsec: 489543171 }, created: SystemTime { tv_sec: 1793452698, tv_nsec: 489543171 }, .. })

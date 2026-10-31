@@ -1,0 +1,28 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3465150-8-crate-Hangs/run
+TZ=None
+status=Some(137) ended=Exited(137) took=5.046153422s
+GroupRun {
+    group: "Hangs",
+    expected: {},
+    started: {
+        "TEST_A",
+        "TEST_B",
+    },
+    passed: {},
+    failed: {},
+    blocked: {
+        "TEST_B": "timeout after 5 s",
+    },
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: false,
+    cap: Memcap,
+    tests_ran: None,
+    took: 5.046153422s,
+}
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3465150-8-crate-Hangs/started.txt canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3465150-8-crate-Hangs/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 30, modified: SystemTime { tv_sec: 1793452513, tv_nsec: 62655927 }, accessed: SystemTime { tv_sec: 1793452513, tv_nsec: 57502555 }, created: SystemTime { tv_sec: 1793452513, tv_nsec: 57502555 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3465150-8-crate-Hangs/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3465150-8-crate-Hangs/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3465150-8-crate-Hangs/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67527488, modified: SystemTime { tv_sec: 1793451401, tv_nsec: 905662291 }, accessed: SystemTime { tv_sec: 1793451401, tv_nsec: 885662872 }, created: SystemTime { tv_sec: 1793451401, tv_nsec: 885662872 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3465150-8-crate-Hangs/run/ooRexx/Hangs.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3465150-8-crate-Hangs/run/ooRexx/Hangs.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 426, modified: SystemTime { tv_sec: 1793452512, tv_nsec: 993905544 }, accessed: SystemTime { tv_sec: 1793452512, tv_nsec: 988839745 }, created: SystemTime { tv_sec: 1793452512, tv_nsec: 988839745 }, .. })

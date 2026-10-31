@@ -1,0 +1,7 @@
+==3717545==WARNING: Program is run with limited virtual address space, which wouldn't work with ThreadSanitizer.
+==3717545==Re-execing with unlimited virtual address space.
+==3717545==ERROR: ThreadSanitizer setrlimit() failed 22
+
+thread 'input::tests::stdin_recovers_with_a_pooled_worker_after_spawn_failure' (3717544) panicked at crates/rexx-exec/src/test_process.rs:50:5:
+isolated test failed: exit status: 66
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

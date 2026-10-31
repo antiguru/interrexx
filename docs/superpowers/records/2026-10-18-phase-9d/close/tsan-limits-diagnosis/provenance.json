@@ -1,0 +1,16 @@
+{
+  "head": "9922e56f3bf6c72442d796f8a43f631a86621abd",
+  "binary": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d",
+  "binary_sha256": "482bb36f1303d21c6bff4258679922dd303482c9384e00d519f0000186c98a29",
+  "rlimit_as": [
+    -1,
+    -1
+  ],
+  "rlimit_stack": [
+    8388608,
+    -1
+  ],
+  "cgroup": "0::/user.slice/user-1000.slice/user@1000.service/memcap-3717466\n",
+  "start": 1793455666.4979296,
+  "cwd": "/home/moritz/dev/repos/ooRexx-rust-rewrite/rust"
+}

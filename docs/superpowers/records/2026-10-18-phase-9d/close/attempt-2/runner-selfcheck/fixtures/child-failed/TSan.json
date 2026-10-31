@@ -1,0 +1,44 @@
+{
+  "action": {
+    "name": "TSan",
+    "argv": [
+      "mock-only"
+    ],
+    "seconds": 600,
+    "cap": "8G",
+    "env": {}
+  },
+  "argv": [
+    "timeout",
+    "--kill-after=15",
+    "600",
+    "memcap",
+    "8G",
+    "mock-only"
+  ],
+  "status": 0,
+  "started": "2026-10-31T11:48:29.829212+00:00",
+  "finished": "2026-10-31T11:48:29.829442+00:00",
+  "interrupted": false,
+  "pid": 99999999,
+  "surviving_group": false,
+  "orphaned_children": false,
+  "stdout_sha256": "9ed260b25c9c1c9d49fe761d036a16a48d6ce9c4edb1faea8e70481f81ae364f",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "children": [
+    [
+      "api",
+      "0"
+    ],
+    [
+      "lib",
+      "1"
+    ],
+    [
+      "int",
+      "0"
+    ]
+  ],
+  "diagnostics": [],
+  "validated_status": 1
+}

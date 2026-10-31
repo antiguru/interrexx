@@ -1,0 +1,57 @@
+{
+  "action": {
+    "name": "whole-suite",
+    "argv": [
+      "cargo",
+      "test",
+      "-j",
+      "4",
+      "--release",
+      "-p",
+      "rexx-exec",
+      "--test",
+      "suite",
+      "l3_core_suite",
+      "--",
+      "--nocapture"
+    ],
+    "cap": "8G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace",
+      "REXX_SUITE_GATE": "1",
+      "REXX_SUITE_TABLE": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/suite/table.tsv",
+      "REXX_SUITE_DIAGNOSTICS": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/suite-diagnostics"
+    }
+  },
+  "argv": [
+    "timeout",
+    "--kill-after=15",
+    "600",
+    "memcap",
+    "8G",
+    "cargo",
+    "test",
+    "-j",
+    "4",
+    "--release",
+    "-p",
+    "rexx-exec",
+    "--test",
+    "suite",
+    "l3_core_suite",
+    "--",
+    "--nocapture"
+  ],
+  "status": 0,
+  "started": "2026-10-31T13:16:31.973321+00:00",
+  "finished": "2026-10-31T13:22:26.261932+00:00",
+  "interrupted": false,
+  "pid": 3474856,
+  "surviving_group": false,
+  "orphaned_children": false,
+  "stdout_sha256": "12620fdc849a7f06f0f23110a6863231ed694fb3f8b6007e7dab8a38885267a6",
+  "stderr_sha256": "1a9e982784f933a42e1603a87639f4893b95476162ffdde34389fb7a2c3ca05c"
+}

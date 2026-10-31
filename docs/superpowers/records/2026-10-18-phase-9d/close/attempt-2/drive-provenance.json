@@ -1,0 +1,6 @@
+{
+  "script_sha256": "378b4d35b1d45711d70b27a9628f96b0114636a1274470d56cd3365a63357ef6",
+  "source_script": "/tmp/p9d-close-drive-remaining.py",
+  "frozen_head": "9922e56f3bf6c72442d796f8a43f631a86621abd",
+  "behavior": "Sequentially invoke committed run.sh step and stop at any nonzero status. No action is retried, changed or adopted. Controller must inspect all results and run finish separately."
+}

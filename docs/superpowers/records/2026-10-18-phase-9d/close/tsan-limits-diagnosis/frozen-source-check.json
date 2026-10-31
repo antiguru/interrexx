@@ -1,0 +1,54 @@
+[
+  {
+    "command": [
+      "git",
+      "rev-parse",
+      "HEAD"
+    ],
+    "status": 0,
+    "stdout": "9922e56f3bf6c72442d796f8a43f631a86621abd\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "git",
+      "status",
+      "--porcelain",
+      "--untracked-files=no"
+    ],
+    "status": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "git",
+      "diff",
+      "--quiet"
+    ],
+    "status": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "git",
+      "diff",
+      "--cached",
+      "--quiet"
+    ],
+    "status": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "git",
+      "check-ignore",
+      ".superpowers/sdd/2026-10-18-phase-9d/task-10-tsan-limits-diagnosis.md"
+    ],
+    "status": 0,
+    "stdout": ".superpowers/sdd/2026-10-18-phase-9d/task-10-tsan-limits-diagnosis.md\n",
+    "stderr": ""
+  }
+]

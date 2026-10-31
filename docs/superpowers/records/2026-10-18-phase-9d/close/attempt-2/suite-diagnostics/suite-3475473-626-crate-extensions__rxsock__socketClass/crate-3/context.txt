@@ -1,0 +1,35 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-626-crate-extensions__rxsock__socketClass/run
+TZ=None
+status=Some(137) ended=Exited(137) took=60.052044894s
+GroupRun {
+    group: "extensions/rxsock/socketClass",
+    expected: {},
+    started: {
+        "TEST_001",
+        "TEST_002",
+        "TEST_003",
+        "TEST_004",
+        "TEST_005",
+        "TEST_006",
+        "TEST_007",
+    },
+    passed: {},
+    failed: {},
+    blocked: {
+        "TEST_005": "timeout after 60 s",
+        "TEST_006": "timeout after 60 s",
+        "TEST_007": "timeout after 60 s",
+    },
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 3,
+    ended_normally: false,
+    cap: Memcap,
+    tests_ran: None,
+    took: 180.152236343s,
+}
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-626-crate-extensions__rxsock__socketClass/started.txt canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-626-crate-extensions__rxsock__socketClass/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 85, modified: SystemTime { tv_sec: 1793452830, tv_nsec: 201181252 }, accessed: SystemTime { tv_sec: 1793452830, tv_nsec: 196346103 }, created: SystemTime { tv_sec: 1793452830, tv_nsec: 196346103 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-626-crate-extensions__rxsock__socketClass/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-626-crate-extensions__rxsock__socketClass/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-626-crate-extensions__rxsock__socketClass/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67526080, modified: SystemTime { tv_sec: 1793452693, tv_nsec: 76304603 }, accessed: SystemTime { tv_sec: 1793452693, tv_nsec: 56305180 }, created: SystemTime { tv_sec: 1793452693, tv_nsec: 56305180 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-626-crate-extensions__rxsock__socketClass/run/ooRexx/extensions/rxsock/socketClass.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/workspace/tmp/suite-3475473-626-crate-extensions__rxsock__socketClass/run/ooRexx/extensions/rxsock/socketClass.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 13028, modified: SystemTime { tv_sec: 1793452830, tv_nsec: 125716685 }, accessed: SystemTime { tv_sec: 1793452830, tv_nsec: 125279928 }, created: SystemTime { tv_sec: 1793452830, tv_nsec: 125279928 }, .. })

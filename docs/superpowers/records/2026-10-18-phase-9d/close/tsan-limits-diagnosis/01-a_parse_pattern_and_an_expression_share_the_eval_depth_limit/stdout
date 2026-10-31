@@ -1,0 +1,6 @@
+
+running 1 test
+test eval::tests::a_parse_pattern_and_an_expression_share_the_eval_depth_limit ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1238 filtered out; finished in 2.56s
+

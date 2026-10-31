@@ -1,0 +1,45 @@
+{
+  "action": {
+    "name": "TSan",
+    "argv": [
+      "mock-only"
+    ],
+    "seconds": 600,
+    "cap": "8G",
+    "env": {}
+  },
+  "argv": [
+    "timeout",
+    "--kill-after=15",
+    "600",
+    "memcap",
+    "8G",
+    "mock-only"
+  ],
+  "status": 0,
+  "started": "2026-10-31T11:48:29.830132+00:00",
+  "finished": "2026-10-31T11:48:29.830262+00:00",
+  "interrupted": false,
+  "pid": 99999999,
+  "surviving_group": false,
+  "orphaned_children": false,
+  "stdout_sha256": "494137401c4caf12a70a18164a8518c1f5ed8339040328114c230067d3e4094d",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "children": [
+    [
+      "api",
+      "0"
+    ],
+    [
+      "lib",
+      "0"
+    ],
+    [
+      "int",
+      "0"
+    ]
+  ],
+  "diagnostics": [],
+  "validated_status": 1,
+  "freeze_error": "fixture freeze drift"
+}
