@@ -1,0 +1,19 @@
+{
+  "command": [
+    "timeout",
+    "-k",
+    "5",
+    "120",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/9922e56f3bf6c72442d796f8a43f631a86621abd/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/6c80e238cfcc855d/out/rexx_exec-6c80e238cfcc855d",
+    "--exact",
+    "scheduler::tests::spawn_failure::guarded_native_spawn_failure_releases_receiver_for_progress",
+    "--nocapture"
+  ],
+  "status": 0,
+  "source_commit": "088fe938957ce5197ccc0587137700d97313e68f",
+  "outer_cap": "8G",
+  "marker": "1",
+  "child_marker": null,
+  "TSAN_OPTIONS": "log_path=/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan-corrections/tsan-lib-6-logs/tsan suppressions=/home/moritz/dev/repos/ooRexx-rust-rewrite/rust/tsan.supp allocator_may_return_null=1 second_deadlock_stack=1",
+  "reports": []
+}

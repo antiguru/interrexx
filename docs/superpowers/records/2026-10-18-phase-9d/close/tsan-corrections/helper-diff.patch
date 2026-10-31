@@ -1,0 +1,27 @@
+--- /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-07-phase-6-1/p61-gates/tsan.sh
++++ /home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan.sh
+@@ -1,19 +1,21 @@
+ #!/bin/bash
+ # The criterion 3 ThreadSanitizer run, from rust/: Phase 6's
+-# .superpowers/sdd/2026-10-01-phase-6-s2-s5/s4-close-evidence/tsan.sh with one
+-# more skip. Usage:
++# .superpowers/sdd/2026-10-01-phase-6-s2-s5/s4-close-evidence/tsan.sh with current
++# close compatibility adjustments. Usage:
+ #   bash tsan.sh TARGET_DIR LOG_DIR
+ # Clean means every command exits 0 and LOG_DIR holds no tsan.* file.
+ export CARGO_TARGET_DIR=$1
+ L=$2
+ mkdir -p "$L"
+ export RUSTFLAGS="-Zsanitizer=thread"
++export REXX_TEST_THREAD_SANITIZER=1
+ export TSAN_OPTIONS="log_path=$L/tsan suppressions=$PWD/tsan.supp allocator_may_return_null=1 second_deadlock_stack=1"
+ T="cargo +nightly test -Zbuild-std --target x86_64-unknown-linux-gnu"
+ $T -p rexx-api --lib > "$L/api.txt" 2>&1; echo "api exit $?"
+ # Tests that measure recursion against the native stack: TSan enlarges every
+ # frame, and its shadow call stack holds 65536 frames.
+-DEPTH="eval::tests::a_native_chain_past_the_eval_limit_runs
++DEPTH="eval::tests::a_parse_pattern_and_an_expression_share_the_eval_depth_limit
++eval::tests::a_native_chain_past_the_eval_limit_runs
+ eval::tests::eval_raises_11_1_exactly_one_term_past_max_eval_depth
+ eval::tests::eval_survives_exactly_max_eval_depth_terms_and_prints_the_oracles_own_answer
+ ir::drive::tests::recursion_by_function_call_keeps_the_native_stack_flat

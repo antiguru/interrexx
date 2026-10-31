@@ -1,0 +1,12 @@
+
+running 1 test
+
+running 1 test
+test input::tests::stdin_recovers_in_configured_inline_mode_after_spawn_failure ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1240 filtered out; finished in 0.00s
+
+test input::tests::stdin_recovers_in_configured_inline_mode_after_spawn_failure ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1240 filtered out; finished in 0.02s
+

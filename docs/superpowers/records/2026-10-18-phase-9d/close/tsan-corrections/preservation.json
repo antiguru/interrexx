@@ -1,0 +1,20 @@
+{
+  "source_commit": "088fe938957ce5197ccc0587137700d97313e68f",
+  "unchanged_against": "988026178",
+  "unchanged_paths": [
+    "rust/crates/rexx-exec/src/install/constant_expression.rs",
+    "rust/crates/rexx-exec/src/run/condition/raise.rs",
+    "rust/crates/rexx-exec/src/dispatch/class_protocol/method_table.rs",
+    "rust/crates/rexx-exec/src/eval/tests.rs",
+    "rust/tsan.supp",
+    "rust/corpus/lang/constant_result_cleanup.rex",
+    "rust/corpus/lang/raise_additional_items.rex",
+    "rust/corpus/lang/raise_additional_modes.rex",
+    "rust/corpus/lang/raise_additional_return_mutation.rex",
+    "rust/corpus/lang/define_methods_supplier_override.rex",
+    "rust/corpus/lang/define_methods_protected_supplier.rex",
+    "rust/corpus/lang/method_table_supplier_boundaries.rex"
+  ],
+  "huge_stack_failure_preflight_exact_identity": true,
+  "historical_helper_hash_unchanged": true
+}
