@@ -97,6 +97,7 @@ impl Interp {
         // measured: `additional 'JUSTONE'` fills `&1` and leaves `&2` as the
         // literal `&2`.
         let mut additional: Vec<Vec<u8>> = Vec::new();
+        let mut substitutions = None;
         if let Some(expr) = &raise.additional {
             let mut value = self.eval(code, expr)?;
             self.roots.activity_mut().push_temp(value);
@@ -148,14 +149,7 @@ impl Interp {
             self.activity.pending_additional = Some(value);
             if converted {
                 match slots {
-                    Some(slots) => {
-                        for slot in slots {
-                            additional.push(match slot {
-                                Some(item) => self.string_value_text(item)?,
-                                None => Vec::new(),
-                            });
-                        }
-                    }
+                    Some(slots) => substitutions = Some(slots),
                     None => additional.push(self.to_text(value).to_vec()),
                 }
             }
@@ -189,7 +183,6 @@ impl Interp {
                     // the hole) where closing up reported "maximum expected
                     // is X." here.
                     self.trace_argument(indent, b"");
-                    additional.push(Vec::new());
                     held.push(None);
                     continue;
                 };
@@ -210,13 +203,13 @@ impl Interp {
                     self.trace_argument(indent, &rendered);
                     self.trace_argument(indent, &rendered);
                 }
-                if raise.condition.eq_ignore_ascii_case(b"SYNTAX") {
-                    additional.push(self.string_value_text(value)?);
-                }
             }
             // The condition object's `ADDITIONAL` is the array of the items
             // themselves, as `ADDITIONAL`'s own value is.
             self.activity.pending_additional = Some(self.security_arguments_array(&held));
+            if raise.condition.eq_ignore_ascii_case(b"SYNTAX") {
+                substitutions = Some(held);
+            }
             // **`an Array`, verbatim and regardless of the elements** --
             // it is the Array class's own default string form, which is
             // what the oracle traces here (measured for `array
@@ -234,6 +227,16 @@ impl Interp {
         let returns = raise.result.as_ref().is_some_and(|result| !result.exit);
 
         if raise.condition.as_ref() == b"SYNTAX" {
+            // Catalogue substitution happens when the condition is raised,
+            // after all operands and their trace lines have been evaluated.
+            if let Some(slots) = substitutions {
+                for slot in slots {
+                    additional.push(match slot {
+                        Some(item) => self.string_value_text(item)?,
+                        None => Vec::new(),
+                    });
+                }
+            }
             let mut raised = raise_syntax_condition(rc_text.as_deref().unwrap_or(b""), additional);
             raised.description = description;
             // **The delivery rule follows the tail even when the argument was
