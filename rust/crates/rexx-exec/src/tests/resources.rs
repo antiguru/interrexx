@@ -15,8 +15,14 @@ fn a_long_chain_of_stem_subclass_instances_is_walked_once() {
         let outcome = run_program("/w/l.rex", source, crate::Invocation::none());
         let _ = sender.send(outcome);
     });
+    // Instrumentation gets a bounded wait without weakening the ordinary complexity guard.
+    let timeout = if crate::test_process::thread_sanitizer() {
+        180
+    } else {
+        20
+    };
     let outcome = receiver
-        .recv_timeout(std::time::Duration::from_secs(20))
+        .recv_timeout(std::time::Duration::from_secs(timeout))
         .unwrap_or_else(|_| panic!("the chain did not end"));
     assert_eq!(
         outcome.exit_code,
@@ -40,6 +46,28 @@ fn a_long_chain_of_stem_subclass_instances_is_walked_once() {
 /// rc 245, as on the oracle (t87c-review-scratch/c1r/r4.rex).
 #[test]
 fn a_join_rendering_itself_through_defaultname_runs_out_of_stack() {
+    let instrumented = crate::test_process::thread_sanitizer();
+    let run_program = |path, source, invocation| {
+        if instrumented {
+            // Leave 1 MiB above the unchanged 32 MiB control-stack reserve.
+            crate::run_program_on_stack(path, source, invocation, 33 * 1024 * 1024)
+        } else {
+            run_program(path, source, invocation)
+        }
+    };
+    if instrumented {
+        // Prove rendering and continued execution fit before testing recursive exhaustion.
+        let preflight = run_program(
+            "/w/r.rex",
+            b"o = .rec~new\nsay .array~of(o)~makestring\nsay 'after'\nexit\n\
+              ::class rec\n::method defaultname\n  return 'rendered'\n"
+                .to_vec(),
+            crate::Invocation::none(),
+        );
+        assert_eq!(preflight.exit_code, 0);
+        assert_eq!(preflight.stdout, b"rendered\nafter\n");
+        assert!(preflight.stderr.is_empty());
+    }
     let outcome = run_program(
         "/w/r.rex",
         b"o = .rec~new\nsay .array~of(o)~makestring\nsay 'after'\nexit\n\

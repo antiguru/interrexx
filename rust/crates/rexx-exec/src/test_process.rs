@@ -1,6 +1,11 @@
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
+/// Whether the test driver explicitly selected ThreadSanitizer resources.
+pub(crate) fn thread_sanitizer() -> bool {
+    std::env::var("REXX_TEST_THREAD_SANITIZER").as_deref() == Ok("1")
+}
+
 /// Runs the named unit test alone with bounded virtual address space and an
 /// open, empty stdin pipe. An explicitly instrumented test driver omits the
 /// virtual-address limit. The resident cap is inherited from the test driver.
@@ -29,7 +34,7 @@ pub(crate) fn isolated_with_input(name: &str, input: Option<&[u8]>) -> bool {
     let executable = std::env::current_exe().expect("test executable");
     // The sanitizer reserves its shadow mappings before the test body runs.
     // Only the explicit instrumented test driver may omit the address cap.
-    let launch = if std::env::var("REXX_TEST_THREAD_SANITIZER").as_deref() == Ok("1") {
+    let launch = if thread_sanitizer() {
         "import os,sys; os.execv(sys.argv[1],sys.argv[1:])"
     } else {
         "import os,resource,sys; resource.setrlimit(resource.RLIMIT_AS,(8<<30,8<<30)); os.execv(sys.argv[1],sys.argv[1:])"
