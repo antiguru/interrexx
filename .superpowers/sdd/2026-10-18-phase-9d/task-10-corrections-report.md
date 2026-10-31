@@ -65,3 +65,19 @@ Raw channels retain every failed attempt under exclusive names. The first SUPPLI
 The tested crate binary SHA-256 is `dbf73f30724018918625539592f974ca8d5ca5ba1a078dc105081fc29216f513`. The oracle binary SHA-256 is `bb5bb8ccbb96c376e329b91aafdad891f975ba06c941dbceba82c3848fa13019`. The accepted SUPPLIER queue entry and inventory row now point to the verified correction source, while all other dispositions and allowed sets remain unchanged. All foreground children exited, and `remaining-processes.txt` records no remaining Cargo, rustc or rexx process at handoff.
 
 The final whole-phase review and its original review probes are retained alongside the correction evidence. The user's ZIP and previous caches and profiles were untouched. The native-directory protocol boundary above remains a pre-existing limitation rather than a newly approved departure. Fresh full closure evidence and the scoped review verdict remain the controller's responsibility after this source handoff.
+
+## Guard and seam follow-up
+
+The fresh release close at `1ef21db99` exposed two fix-induced failures, retained in `close/attempt-1/G4-test-release.stdout` with status 101. The `.local` refusal assertion failed because the correction confined `unbuilt_collection_owner` to the Body::Native compatibility branch, while `.local` and `.environment` are hash-backed Body::Instance directories. The seam assertion failed because the pure move introduced a clearance consumer in a file missing from its exact allowlist. The controller released the source freeze and authorized this narrow second round after archiving the negative attempt at `4bd2e0d70`.
+
+Source commit `988026178ba00de5f2fa7c737114e68743333b55` restores the existing whole-collection guard before either supplier path and preserves its original reason comment and exact refusal assertion. `unbuilt_collection_owner` recognizes only the actual environment and local directory identities, so collection subclasses and protected suppliers retain normal dispatch. The helper contract now distinguishes supplier order from the native compatibility path's sorted entries. The seam allowlist adds only `src/dispatch/class_protocol/method_table.rs`, with an unlisted sibling-path negative control and no broader prefix allowance.
+
+The follow-up verification ran from `rust/` under `memcap 8G`, with `CARGO_INCREMENTAL=0`, `CARGO_TARGET_DIR=/tmp/codex-p9d-t88-target`, four Cargo jobs and a 580-second timeout per command. The whole library passed all 1,239 tests, and the six requested integration targets passed another 37 tests. Formatting and touched-crate Clippy both returned 0. Separate raw channels, exact invocation metadata and the replay driver are retained under `close/guard-followup/`.
+
+| Evidence prefix under `close/guard-followup/` | Exact command | Status |
+| --- | --- | --- |
+| `tests` | `cargo test -p rexx-exec --lib --test dispatch_seam --test close_corrections --test semantic_boundaries --test refusal_sites --test refusal_dispositions --test closed_phases -j4` | 0 |
+| `fmt` | `cargo fmt --all --check` | 0 |
+| `clippy` | `cargo clippy -p rexx-exec --all-targets -j4 -- -D warnings` | 0 |
+
+`preservation.json` confirms the F1 constant-evaluation file, F2 RAISE runtime file, seven original corpus fixtures and existing exact refusal assertion file are byte-unchanged from `4bd2e0d70`. Only the method-table helper and dispatch-seam test changed in this follow-up's Rust diff. Every verification command finished in the foreground, and no child remains from this work. The controller retains the scoped follow-up review and fresh full closing gates.
