@@ -11,12 +11,12 @@
 
 signal on syntax name caught
 a = .array~of('old')
-raise syntax 98.900 additional (a) return replace(a)
+raise syntax 98.900 additional (a) return (mutate(a))
 exit
 caught:
 say condition('o')~message
 exit
-replace:
+mutate:
 use arg a
 a[1] = 'new'
 return 1
