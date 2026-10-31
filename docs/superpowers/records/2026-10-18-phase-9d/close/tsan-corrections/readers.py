@@ -40,4 +40,8 @@ for name,command,error in cases:
  print(label,name,status,reports,flush=True)
  if label=='after':assert status==0 and not reports and row['stdout_expected'] and row['stderr_expected']
 (OUT/(label+'-readers.json')).write_text(json.dumps(rows,indent=2)+'\n')
-if label=='before':assert all(row['reports'] for row in rows),rows
+if label=='before':
+ for row in rows:
+  if row['name']=='real-stdout-eof':assert row['status']==0 and not row['reports'],row
+  else:assert row['status']==66 and row['reports'],row
+  assert row['stdout_expected'] and row['stderr_expected'],row
