@@ -9,11 +9,14 @@
 /*                                                                            */
 /*----------------------------------------------------------------------------*/
 
+manager = .Manager~new
+.context~package~setSecurityManager(manager)
 target = .object~subclass('Target')
 .local~target = target
 methods = .Coll~new
 methods['outer'] = 'return 1'
 target~defineMethods(methods)
+say 'events' manager~events~makeString(, '|')
 say 'installed' target~new~outer target~new~inner target~new~nested
 plain = .directory~new
 plain['plain'] = 'return 4'
@@ -28,9 +31,19 @@ say 'supplier'
 .local~target~defineMethods(self~nestedMethods)
 return self~supplier:super
 ::method nestedMethods
-result = .directory~new
-result['nested'] = 'return 3'
-return result
+methods = .directory~new
+methods['nested'] = 'return 3'
+return methods
 ::class Protocol
 ::method supplier
 return .supplier~new(.array~of('return 5'), .array~of('protocol'))
+::class Manager
+::method init
+expose events
+events = .array~new
+::attribute events get
+::method unknown
+expose events
+use arg name, args
+if name == 'METHOD' then events~append(args[1]~name)
+return 0

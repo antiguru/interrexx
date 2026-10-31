@@ -35,5 +35,5 @@ fn user_raise_keeps_additional_and_array_items_without_rendering() {
 
 #[test]
 fn method_collections_send_supplier_and_allow_reentrant_installation() {
-    check(include_bytes!("../../../corpus/lang/define_methods_supplier_override.rex"), b"supplier\ninstalled 1 2 3\nadjacent 4 5\n");
+    check(include_bytes!("../../../corpus/lang/define_methods_supplier_override.rex"), b"supplier\nevents DEFINE|DEFINEMETHODS\ninstalled 1 2 3\nadjacent 4 5\n");
 }
