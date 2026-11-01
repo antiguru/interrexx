@@ -40,6 +40,10 @@ fn sleeper_checks_only_its_fixture_directory() {
         grandchild_sleeps(&owned),
         "the live owned sleeper must be detected"
     );
+    assert!(
+        !grandchild_ends_within(&owned, Duration::from_millis(50)),
+        "a sleeper still alive at the bound has not ended"
+    );
     drop(owned_child);
     assert!(!grandchild_sleeps(&owned), "the owned sleeper was reaped");
     drop(unrelated_child);
