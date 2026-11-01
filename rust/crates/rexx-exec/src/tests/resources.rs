@@ -6,10 +6,19 @@ use super::run_program;
 /// link would not.
 #[test]
 fn a_long_chain_of_stem_subclass_instances_is_walked_once() {
-    let source = b"first = .stem~subclass('m')~new\nt = first\ndo 49999\n  u = .stem~subclass('m')~new\n  t[] = u\n  t = u\nend\nt[] = 'leaf'\n\
-                   say length(first) first~string first\nsay (first || 'x') (first = 'leaf') first~length\n\
-                   trace r\nx = first\ntrace o\nsay 'end'\n"
-        .to_vec();
+    // Forwarding recurses per link, and ThreadSanitizer's 65536-entry shadow stack has no end check.
+    let links = if crate::test_process::thread_sanitizer() {
+        5000
+    } else {
+        50000
+    };
+    let source = format!(
+        "first = .stem~subclass('m')~new\nt = first\ndo {}\n  u = .stem~subclass('m')~new\n  t[] = u\n  t = u\nend\nt[] = 'leaf'\n\
+         say length(first) first~string first\nsay (first || 'x') (first = 'leaf') first~length\n\
+         trace r\nx = first\ntrace o\nsay 'end'\n",
+        links - 1
+    )
+    .into_bytes();
     let (sender, receiver) = std::sync::mpsc::channel();
     std::thread::spawn(move || {
         let outcome = run_program("/w/l.rex", source, crate::Invocation::none());
