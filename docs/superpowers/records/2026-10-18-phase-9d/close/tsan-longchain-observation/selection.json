@@ -1,0 +1,7 @@
+{
+  "purpose": "One observed existing test to locate remaining sanitizer failure, not gate acceptance.",
+  "selected": [
+    "tests::resources::a_long_chain_of_stem_subclass_instances_is_walked_once"
+  ],
+  "input_script_sha256": "a41efa1fffc00749686ef6f34eb59dd83cd62377e54ba951fa76c6758f963f71"
+}

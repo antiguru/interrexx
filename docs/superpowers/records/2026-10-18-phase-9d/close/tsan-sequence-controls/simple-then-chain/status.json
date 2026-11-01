@@ -1,0 +1,55 @@
+{
+  "source_head": "b8bb53daaa22c0d50182bed958f7dfdd8c40c70d",
+  "source_rust_tree": "08daea7415f2ca9af1cd81fad78a00a38c8ddb14",
+  "purpose": "Diagnostic only, not a gate retry or acceptance.",
+  "argv": [
+    "timeout",
+    "--kill-after=15",
+    "300",
+    "cargo",
+    "+nightly",
+    "test",
+    "-Zbuild-std",
+    "--target",
+    "x86_64-unknown-linux-gnu",
+    "-p",
+    "rexx-exec",
+    "--lib",
+    "--",
+    "--exact",
+    "--test-threads=1",
+    "signal::tests::running_a_program_installs_no_handler",
+    "tests::resources::a_long_chain_of_stem_subclass_instances_is_walked_once"
+  ],
+  "cwd": "/home/moritz/dev/repos/ooRexx-rust-rewrite/rust",
+  "selected": [
+    "signal::tests::running_a_program_installs_no_handler",
+    "tests::resources::a_long_chain_of_stem_subclass_instances_is_walked_once"
+  ],
+  "environment": {
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_BUILD_JOBS": "4",
+    "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan",
+    "RUSTFLAGS": "-Zsanitizer=thread",
+    "REXX_TEST_THREAD_SANITIZER": "1",
+    "TSAN_OPTIONS": "log_path=/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan-sequence-controls/simple-then-chain/tsan suppressions=/home/moritz/dev/repos/ooRexx-rust-rewrite/rust/tsan.supp allocator_may_return_null=1 second_deadlock_stack=1"
+  },
+  "binary_sha256_before": "babbcab2275012eb3eb159520771371e600b0e47b143bc7d2b00085714bbed4d",
+  "suppression_sha256": "1306f8ec977a8fa903ee9eb375904e6feb1ed67363651491d67ba65bd662bad0",
+  "started": "2026-11-01T09:44:59.645941+00:00",
+  "resident_cap": "8G",
+  "pid": 1917,
+  "status": -9,
+  "elapsed_seconds": 0.30373951100045815,
+  "finished": "2026-11-01T09:44:59.949966+00:00",
+  "unexpected_compilation": true,
+  "reports": [],
+  "binary_sha256_after": "babbcab2275012eb3eb159520771371e600b0e47b143bc7d2b00085714bbed4d",
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "81d0ad8521672b713b5df2efa7405b7300e527f6ff291dbb75601129cf74f93a",
+  "completed": [],
+  "unfinished": [
+    "signal::tests::running_a_program_installs_no_handler",
+    "tests::resources::a_long_chain_of_stem_subclass_instances_is_walked_once"
+  ]
+}

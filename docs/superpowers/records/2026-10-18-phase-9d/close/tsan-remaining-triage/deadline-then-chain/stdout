@@ -1,0 +1,4 @@
+
+running 2 tests
+test scheduler::tests::a_deadline_ends_the_programs_wait_on_a_started_sleeper ... ok
+test tests::resources::a_long_chain_of_stem_subclass_instances_is_walked_once ... 

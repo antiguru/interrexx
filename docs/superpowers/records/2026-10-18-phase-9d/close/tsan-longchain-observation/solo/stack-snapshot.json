@@ -1,0 +1,30 @@
+{
+  "purpose": "Read-only bounded native-stack sample of the owned long-chain diagnostic, not acceptance evidence.",
+  "started": "2026-10-31T18:31:02.502230+00:00",
+  "perturbation": "Debugger pauses native execution briefly; actual pause is not separately measured. No target function calls or memory writes; frame argument values hidden.",
+  "argv": [
+    "timeout",
+    "--kill-after=5",
+    "25",
+    "gdb",
+    "-nx",
+    "-batch",
+    "-ex",
+    "set pagination off",
+    "-ex",
+    "set debuginfod enabled off",
+    "-ex",
+    "set print frame-arguments none",
+    "-ex",
+    "thread apply all bt 128",
+    "-ex",
+    "detach",
+    "-p",
+    "316703"
+  ],
+  "pid": 316703,
+  "owned_pgid": 316685,
+  "actual_exit": 0,
+  "finished": "2026-10-31T18:31:04.514245+00:00",
+  "detach_seen": true
+}

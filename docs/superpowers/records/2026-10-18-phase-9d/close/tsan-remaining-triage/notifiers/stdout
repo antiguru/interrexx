@@ -1,0 +1,6 @@
+
+running 1 test
+test scheduler::tests::notifier_failures_too_many_to_nest_are_each_reported ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1240 filtered out; finished in 34.73s
+

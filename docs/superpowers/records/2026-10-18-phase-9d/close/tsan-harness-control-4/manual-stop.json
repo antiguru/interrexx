@@ -1,0 +1,10 @@
+{
+  "purpose": "Stop only the conclusively failed diagnostic after its fatal sanitizer report and read-only detached stack snapshot. This is a manual diagnostic stop, not natural timeout or acceptance.",
+  "pgid": 300897,
+  "started": "2026-10-31T18:21:25.379667+00:00",
+  "signals": [
+    "SIGTERM"
+  ],
+  "finished": "2026-10-31T18:21:25.980322+00:00",
+  "group_still_visible": false
+}

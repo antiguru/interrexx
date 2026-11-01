@@ -1,0 +1,9 @@
+{
+  "purpose": "Controlled predecessor changes before the unchanged long-chain victim, diagnostic only.",
+  "selected": [
+    "scheduler::tests::a_deadline_ends_a_wait_on_a_later_sleeper",
+    "signal::tests::running_a_program_installs_no_handler",
+    "tests::resources::a_long_chain_of_stem_subclass_instances_is_walked_once"
+  ],
+  "source_script_sha256": "3311eabcae173c911d76e99bd805ca832613174b50ed02b7c71596defee1387e"
+}

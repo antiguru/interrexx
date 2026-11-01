@@ -1,0 +1,86 @@
+[New LWP 303800 (id 2)]
+[New LWP 303057 (id 3)]
+[New LWP 301015 (id 4)]
+
+This GDB supports auto-downloading debuginfo from the following URLs:
+  <https://debuginfod.debian.net>
+Enable debuginfod for this session? (y or [n]) [answered N; input not from terminal]
+Debuginfod has been disabled.
+To make this setting permanent, add 'set debuginfod enabled off' to .gdbinit.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/x86_64-linux-gnu/libthread_db.so.1".
+[Switching to thread 1 (Thread 0x7f642afa1280 (LWP 301014))]
+0x0000562d2e52a66a in __sanitizer::FutexWait(__sanitizer::atomic_uint32_t*, unsigned int) ()
+
+Thread 4 (Thread 0x7f6427dff6c0 (LWP 301015) "rexx_exec-6c80e"):
+#0  0x0000562d2e52a07e in __sanitizer::internal_usleep(unsigned long long) ()
+#1  0x0000562d2e50d76b in __tsan::BackgroundThread(void*) ()
+#2  0x00007f642b039db8 in start_thread (arg=...) at ./nptl/pthread_create.c:454
+#3  0x00007f642b0b7f98 in __GI___clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 3 (Thread 0x7f64269286c0 (LWP 303057) "rexx-timer"):
+#0  0x0000562d2e72490b in rustix::backend::arch::asm::syscall5 () at /home/moritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rustix-1.1.4/src/backend/linux_raw/arch/x86_64.rs:202
+#1  rustix::backend::event::syscalls::poll (fds=..., timeout=...) at /home/moritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rustix-1.1.4/src/backend/linux_raw/arch/mod.rs:117
+#2  rustix::event::poll::poll (fds=...) at /home/moritz/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rustix-1.1.4/src/event/poll.rs:46
+#3  rexx_exec::sync::Wake::wait (self=..., timeout=...) at crates/rexx-exec/src/sync.rs:112
+#4  0x0000562d2e7c8cb8 in rexx_exec::timer::run_timer () at crates/rexx-exec/src/timer.rs:461
+#5  0x0000562d2e906df0 in core::ops::function::FnOnce::call_once<fn(), ()> () at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250
+#6  std::sys::backtrace::__rust_begin_short_backtrace<fn(), ()> (f=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sys/backtrace.rs:166
+#7  0x0000562d2e9194f0 in std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure#0}<fn(), ()> () at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:70
+#8  core::panic::unwind_safe::{impl#23}::call_once<(), std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<fn(), ()>> (self=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275
+#9  std::panicking::catch_unwind::do_call<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<fn(), ()>>, ()> (data=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573
+#10 0x0000562d2e9690e0 in __rust_try ()
+#11 0x0000562d2e9210e6 in std::panicking::catch_unwind<(), core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<fn(), ()>>> (f=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541
+#12 std::panic::catch_unwind<core::panic::unwind_safe::AssertUnwindSafe<std::thread::lifecycle::spawn_unchecked::{closure#1}::{closure_env#0}<fn(), ()>>, ()> (f=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359
+#13 std::thread::lifecycle::spawn_unchecked::{closure#1}<fn(), ()> () at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/thread/lifecycle.rs:68
+#14 core::ops::function::FnOnce::call_once<std::thread::lifecycle::spawn_unchecked::{closure_env#1}<fn(), ()>, ()> () at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/ops/function.rs:250
+#15 0x0000562d2ee95b05 in alloc::boxed::{impl#40}::call_once<(), (dyn core::ops::function::FnOnce<(), Output=()> + core::marker::Send), alloc::alloc::Global> (self=..., args=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/boxed.rs:2387
+#16 0x0000562d2eec9f6c in std::sys::thread::unix::{impl#2}::new::thread_start (data=...) at src/sys/thread/unix.rs:127
+#17 0x0000562d2e4ae8d9 in __tsan_thread_start_func ()
+#18 0x00007f642b039db8 in start_thread (arg=...) at ./nptl/pthread_create.c:454
+#19 0x00007f642b0b7f98 in __GI___clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:78
+
+Thread 2 (Thread 0x7f636602c6c0 (LWP 303800) "rexx-pool"):
+#0  syscall () at ../sysdeps/unix/sysv/linux/x86_64/syscall.S:38
+#1  0x0000562d2ee8e24b in std::sys::sync::futex::unix::futex_wait (futex=..., expected=..., timeout=...) at src/sys/sync/futex/unix.rs:63
+#2  0x0000562d2eecc2f3 in std::sys::sync::condvar::futex::Condvar::wait_optional_timeout (self=..., mutex=..., timeout=...) at src/sys/sync/condvar/futex.rs:49
+#3  std::sys::sync::condvar::futex::Condvar::wait (self=..., mutex=...) at src/sys/sync/condvar/futex.rs:33
+#4  0x0000562d2e9693e8 in std::sync::poison::condvar::Condvar::wait<rexx_exec::baton::State<rexx_exec::island::Islanded<core::ptr::non_null::NonNull<rexx_exec::Interp>>>> (self=..., guard=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/sync/poison/condvar.rs:128
+#5  0x0000562d2eb7d5fb in rexx_exec::sync::wait<rexx_exec::baton::State<rexx_exec::island::Islanded<core::ptr::non_null::NonNull<rexx_exec::Interp>>>> (condvar=..., guard=...) at crates/rexx-exec/src/sync.rs:42
+#6  rexx_exec::baton::Baton<rexx_exec::island::Islanded<core::ptr::non_null::NonNull<rexx_exec::Interp>>>::await_lend<rexx_exec::island::Islanded<core::ptr::non_null::NonNull<rexx_exec::Interp>>> (self=...) at crates/rexx-exec/src/baton.rs:162
+#7  rexx_exec::island::Lent::wait (baton=...) at crates/rexx-exec/src/island.rs:105
+#8  0x0000562d2e8a8873 in rexx_exec::dispatch::library::Recalling::recall (self=...) at crates/rexx-exec/src/dispatch/library.rs:1386
+#9  0x0000562d2ea8a9ae in rexx_exec::dispatch::library::{impl#4}::run::{closure#0} (contexts=...) at crates/rexx-exec/src/dispatch/library.rs:1329
+#10 rexx_api::ffi::ThreadContext::enter<(rexx_api::invoke::Completion, rexx_exec::island::Lent), rexx_exec::dispatch::library::{impl#4}::run::{closure_env#0}> (self=..., activation=..., body=...) at crates/rexx-api/src/ffi.rs:870
+#11 0x0000562d2e8a81e8 in rexx_exec::dispatch::library::PooledCall::run (self=...) at crates/rexx-exec/src/dispatch/library.rs:1324
+#12 0x0000562d2e7b2c8b in rexx_exec::scheduler::{impl#7}::exit_for_native::{closure#1}::{closure#0} () at crates/rexx-exec/src/scheduler.rs:740
+#13 core::panic::unwind_safe::{impl#23}::call_once<(), rexx_exec::scheduler::{impl#7}::exit_for_native::{closure#1}::{closure_env#0}> (self=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/panic/unwind_safe.rs:275
+#14 std::panicking::catch_unwind::do_call<core::panic::unwind_safe::AssertUnwindSafe<rexx_exec::scheduler::{impl#7}::exit_for_native::{closure#1}::{closure_env#0}>, ()> (data=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:573
+#15 0x0000562d2e8154c0 in __rust_try.llvm.3366488151039868235 ()
+#16 0x0000562d2e7b22a9 in std::panicking::catch_unwind<(), core::panic::unwind_safe::AssertUnwindSafe<rexx_exec::scheduler::{impl#7}::exit_for_native::{closure#1}::{closure_env#0}>> (f=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panicking.rs:541
+#17 std::panic::catch_unwind<core::panic::unwind_safe::AssertUnwindSafe<rexx_exec::scheduler::{impl#7}::exit_for_native::{closure#1}::{closure_env#0}>, ()> (f=...) at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/panic.rs:359
+#18 rexx_exec::scheduler::pool::posting_panics<rexx_exec::scheduler::{impl#7}::exit_for_native::{closure#1}::{closure_env#0}> (inbox=..., baton=..., job=...) at crates/rexx-exec/src/scheduler/pool.rs:41
+#19 0x0000562d2e55d97d in rexx_exec::scheduler::{impl#7}::exit_for_native::{closure#1} () at crates/rexx-exec/src/scheduler.rs:740
+
+Thread 1 (Thread 0x7f642afa1280 (LWP 301014) "rexx_exec-6c80e"):
+#0  0x0000562d2e52a66a in __sanitizer::FutexWait(__sanitizer::atomic_uint32_t*, unsigned int) ()
+#1  0x0000562d2e52adea in __sanitizer::Semaphore::Wait() ()
+#2  0x0000562d2e50cde4 in __tsan::TraceSwitchPartImpl(__tsan::ThreadState*) ()
+#3  0x0000562d2e50e8e2 in __tsan::TraceRestartFuncEntry(__tsan::ThreadState*, unsigned long) ()
+#4  0x0000562d2e4aaf33 in __tsan::ScopedInterceptor::ScopedInterceptor(__tsan::ThreadState*, char const*, unsigned long) ()
+#5  0x0000562d2e4ac78a in __interceptor_malloc ()
+#6  0x00007f642b024d1b in __fopen_internal (filename=..., mode=..., is32=...) at ./libio/iofopen.c:65
+#7  0x00007f642b024dfa in _IO_new_fopen (filename=..., mode=...) at ./libio/iofopen.c:86
+#8  0x00007f642b03b4d3 in __pthread_getattr_np (thread_id=..., attr=...) at ./nptl/pthread_getattr_np.c:85
+#9  0x0000562d2e53199e in __sanitizer::GetThreadStackTopAndBottom(bool, unsigned long*, unsigned long*) ()
+#10 0x0000562d2e51d0f3 in __sanitizer::BufferedStackTrace::UnwindImpl(unsigned long, unsigned long, void*, bool, unsigned int) ()
+#11 0x0000562d2e53b427 in __sanitizer::ReportDeadlySignal(__sanitizer::SignalContext const&, unsigned int, void (*)(__sanitizer::SignalContext const&, void const*, __sanitizer::BufferedStackTrace*), void const*) ()
+#12 0x0000562d2e53b7b1 in __sanitizer::HandleDeadlySignal(void*, void*, unsigned int, void (*)(__sanitizer::SignalContext const&, void const*, __sanitizer::BufferedStackTrace*), void const*) ()
+#13 <signal handler called>
+#14 0x0000562d2e50ceea in __tsan::TraceSwitchPartImpl(__tsan::ThreadState*) ()
+#15 0x0000562d2e50e8e2 in __tsan::TraceRestartFuncEntry(__tsan::ThreadState*, unsigned long) ()
+#16 0x0000562d2e4aaf33 in __tsan::ScopedInterceptor::ScopedInterceptor(__tsan::ThreadState*, char const*, unsigned long) ()
+#17 0x0000562d2e4aa064 in __tsan_memset ()
+#18 0x0000562d2ece47c1 in std::hash::random::DefaultHasher::new () at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/hash/random.rs:107
+#19 std::hash::random::{impl#3}::default () at /home/moritz/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/hash/random.rs:120
+[Inferior 1 (process 301014) detached]
