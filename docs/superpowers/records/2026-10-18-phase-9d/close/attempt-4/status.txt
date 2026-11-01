@@ -1,0 +1,16 @@
+head abf0fe679700ad73598072b8886d2d178a174dbb
+start 2026-11-01T10:05:19.419334+00:00
+preflight started at 2026-11-01T10:05:32.885500+00:00
+preflight exit 0 validated 0 at 2026-11-01T10:05:33.260641+00:00
+G1-fmt started at 2026-11-01T10:05:34.105566+00:00
+G1-fmt exit 0 validated 0 at 2026-11-01T10:05:36.783782+00:00
+G2-clippy started at 2026-11-01T10:05:37.621480+00:00
+G2-clippy exit 0 validated 0 at 2026-11-01T10:05:53.950509+00:00
+G3-build-release started at 2026-11-01T10:05:54.797056+00:00
+G3-build-release exit 124 validated 124 at 2026-11-01T10:15:55.075231+00:00
+G3-build-release-continuation-1 started at 2026-11-01T10:15:55.652400+00:00
+G3-build-release-continuation-1 exit 0 validated 0 at 2026-11-01T10:22:48.277350+00:00
+G4-test-release started at 2026-11-01T10:22:49.114613+00:00
+G4-test-release exit 124 validated 124 at 2026-11-01T11:02:49.474608+00:00
+aborted: G4 timed out under external host load
+finished

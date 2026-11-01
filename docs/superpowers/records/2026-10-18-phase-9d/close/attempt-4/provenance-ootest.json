@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "svn",
+    "info",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/ootest"
+  ],
+  "status": 0,
+  "stdout": "Path: ootest\nWorking Copy Root Path: /home/moritz/dev/repos/ooRexx-rust-rewrite/ootest\nURL: https://svn.code.sf.net/p/oorexx/code-0/test/trunk\nRelative URL: ^/test/trunk\nRepository Root: https://svn.code.sf.net/p/oorexx/code-0\nRepository UUID: 0b6cbdbe-3aab-466e-b73a-abd511dda0a2\nRevision: 13178\nNode Kind: directory\nSchedule: normal\nLast Changed Author: jfaucher\nLast Changed Rev: 13169\nLast Changed Date: 2026-06-19 14:43:42 +0200 (Fri, 19 Jun 2026)\n\n",
+  "stderr": ""
+}

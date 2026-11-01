@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "svn",
+    "info",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/oodocs/rexxref"
+  ],
+  "status": 0,
+  "stdout": "Path: oodocs/rexxref\nWorking Copy Root Path: /home/moritz/dev/repos/ooRexx-rust-rewrite/oodocs/rexxref\nURL: https://svn.code.sf.net/p/oorexx/code-0/docs/trunk/rexxref\nRelative URL: ^/docs/trunk/rexxref\nRepository Root: https://svn.code.sf.net/p/oorexx/code-0\nRepository UUID: 0b6cbdbe-3aab-466e-b73a-abd511dda0a2\nRevision: 13198\nNode Kind: directory\nSchedule: normal\nLast Changed Author: orexx\nLast Changed Rev: 13178\nLast Changed Date: 2026-07-14 16:19:44 +0200 (Tue, 14 Jul 2026)\n\n",
+  "stderr": ""
+}
