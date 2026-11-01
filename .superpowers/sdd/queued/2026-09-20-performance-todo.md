@@ -1094,3 +1094,11 @@ The same idea applied at three sites in one function on `varlookup`: **-0.86%**,
 
 A prediction and a rival hypothesis were written down before the second
 measurement. **Both were wrong in sign.** They are kept beside the report.
+
+## Phase 9 close residuals, 2026-11-01
+
+Whole-process and libc-subtracted Ir against the Phase 9 pin, `phase-9d-gate.md`.
+
+* `define` +3.57% / +8.56%. Function diff of one round: a new `HashMap` `filter_map` walk +52.5M Ir, `free_unheld_behaviours` +9.9M and `Body::trace` +7.6M, against `add_global` -37.4M and `memcmp` -39.3M. Check whether the walk scales with live classes.
+* `compound` +1.42% / +1.24%, cause not attributed.
+* `sendloop` +2.85% / +0.25% and `dispatch` +1.93% / +0.17%: mostly libc, cause not attributed.

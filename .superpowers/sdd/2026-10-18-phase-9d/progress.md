@@ -577,3 +577,7 @@ Ruling: under the sanitizer marker the stem chain runs 5,000 links (`7feb9ba1a`)
 
 Task 10: fix round 5/5 complete. The unchanged helper at `7feb9ba1a` printed api 0, lib 0, int 0 with no `tsan.*` file (`close/tsan-after-chain-fit/`): API 70, library 1,227, integration targets 63, 8, 41, 1. A watchpoint on the new binary shows `rexx-interp` never reaches the shadow-stack end. A silent overrun by another test stays undetectable by this helper. The next commit is the fresh close candidate.
 
+
+## Fifth close: All gates pass
+
+Close at `d675de751`: every functional gate and TSan passed, with no sanitizer reports. Callgrind's exit 1 is budget only, on five programs. Attempt 4's failures did not recur on a quieter host. Ruling: accept those five under plan ruling 14 and queue them; Moritz has not ruled on the figures. Records: `docs/superpowers/plans/phase-9d-gate.md`, `phase-9-gate.md`.

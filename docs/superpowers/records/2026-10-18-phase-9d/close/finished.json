@@ -1,0 +1,27 @@
+{
+  "head": "d675de751bf465140ec834482c9c7fb9f0832177",
+  "statuses": {
+    "preflight": 0,
+    "G1-fmt": 0,
+    "G2-clippy": 0,
+    "G3-build-release": 124,
+    "G4-test-release": 0,
+    "whole-suite": 0,
+    "G5-build-debug": 0,
+    "G6-test-debug": 0,
+    "G7-clippy-pinning": 0,
+    "G8-build-pinning": 0,
+    "G8-test-pinning": 0,
+    "G9-build-loom": 0,
+    "G9-loom": 0,
+    "TSan": 0,
+    "performance-build": 0,
+    "performance-copy": 0,
+    "callgrind": 1
+  },
+  "failed": {
+    "G3-build-release": 124,
+    "callgrind": 1
+  },
+  "finished": "2026-11-01T13:08:09.081233+00:00"
+}

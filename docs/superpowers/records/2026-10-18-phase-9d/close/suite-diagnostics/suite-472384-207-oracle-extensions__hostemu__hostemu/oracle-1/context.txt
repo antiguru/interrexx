@@ -1,0 +1,59 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-207-oracle-extensions__hostemu__hostemu/run
+TZ=None
+status=Some(0) ended=Exited(0) took=36.517317ms
+GroupRun {
+    group: "extensions/hostemu/hostemu",
+    expected: {},
+    started: {
+        "TEST_EXECIO_DISKR_DEFAULT",
+        "TEST_EXECIO_DISKR_FIFO",
+        "TEST_EXECIO_DISKR_LIFO",
+        "TEST_EXECIO_DISKR_SKIP_THEN_STEM",
+        "TEST_EXECIO_DISKR_START_AT_THREE_READ_FOUR_FIFO",
+        "TEST_EXECIO_DISKR_START_AT_THREE_READ_FOUR_STEM",
+        "TEST_EXECIO_DISKR_START_AT_TWO_FIFO",
+        "TEST_EXECIO_DISKR_START_AT_TWO_STEM",
+        "TEST_EXECIO_DISKR_STEM",
+        "TEST_EXECIO_DISKR_STEM_SKIP",
+        "TEST_EXECIO_DISKR_TWO_LINES_FIFO",
+        "TEST_EXECIO_DISKR_TWO_LINES_STEM",
+        "TEST_EXECIO_DISKW_DEFAULT",
+        "TEST_EXECIO_DISKW_STEM",
+        "TEST_HI",
+        "TEST_TE",
+    },
+    passed: {
+        "TEST_EXECIO_DISKR_DEFAULT",
+        "TEST_EXECIO_DISKR_FIFO",
+        "TEST_EXECIO_DISKR_LIFO",
+        "TEST_EXECIO_DISKR_SKIP_THEN_STEM",
+        "TEST_EXECIO_DISKR_START_AT_THREE_READ_FOUR_FIFO",
+        "TEST_EXECIO_DISKR_START_AT_THREE_READ_FOUR_STEM",
+        "TEST_EXECIO_DISKR_START_AT_TWO_FIFO",
+        "TEST_EXECIO_DISKR_START_AT_TWO_STEM",
+        "TEST_EXECIO_DISKR_STEM",
+        "TEST_EXECIO_DISKR_STEM_SKIP",
+        "TEST_EXECIO_DISKR_TWO_LINES_FIFO",
+        "TEST_EXECIO_DISKR_TWO_LINES_STEM",
+        "TEST_EXECIO_DISKW_DEFAULT",
+        "TEST_EXECIO_DISKW_STEM",
+        "TEST_HI",
+        "TEST_TE",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: OracleUlimit,
+    tests_ran: Some(
+        "16",
+    ),
+    took: 36.517317ms,
+}
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-207-oracle-extensions__hostemu__hostemu/started.txt canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-207-oracle-extensions__hostemu__hostemu/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 583, modified: SystemTime { tv_sec: 1793535151, tv_nsec: 503748967 }, accessed: SystemTime { tv_sec: 1793535151, tv_nsec: 484807703 }, created: SystemTime { tv_sec: 1793535151, tv_nsec: 484807703 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-207-oracle-extensions__hostemu__hostemu/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-207-oracle-extensions__hostemu__hostemu/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-207-oracle-extensions__hostemu__hostemu/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67503680, modified: SystemTime { tv_sec: 1793535149, tv_nsec: 65923210 }, accessed: SystemTime { tv_sec: 1793535149, tv_nsec: 49923670 }, created: SystemTime { tv_sec: 1793535149, tv_nsec: 49923670 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-207-oracle-extensions__hostemu__hostemu/run/ooRexx/extensions/hostemu/hostemu.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-207-oracle-extensions__hostemu__hostemu/run/ooRexx/extensions/hostemu/hostemu.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 9409, modified: SystemTime { tv_sec: 1793535151, tv_nsec: 471216880 }, accessed: SystemTime { tv_sec: 1793535151, tv_nsec: 470581337 }, created: SystemTime { tv_sec: 1793535151, tv_nsec: 470581337 }, .. })

@@ -1,0 +1,47 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-337-oracle-base__rexxutil__SysSearchPath/run
+TZ=None
+status=Some(0) ended=Exited(0) took=15.950567ms
+GroupRun {
+    group: "base/rexxutil/SysSearchPath",
+    expected: {},
+    started: {
+        "TEST_SEARCHPATH_ABSOLUTE",
+        "TEST_SEARCHPATH_ARGS_FOUR",
+        "TEST_SEARCHPATH_ARGS_NONE",
+        "TEST_SEARCHPATH_ARGS_ONE",
+        "TEST_SEARCHPATH_EMPTY",
+        "TEST_SEARCHPATH_OPTION_INVALID",
+        "TEST_SEARCHPATH_OPTION_NULL",
+        "TEST_SEARCHPATH_RELATIVE",
+        "TEST_SEARCHPATH_SHELL",
+        "TEST_SEARCHPATH_VARIABLE",
+    },
+    passed: {
+        "TEST_SEARCHPATH_ABSOLUTE",
+        "TEST_SEARCHPATH_ARGS_FOUR",
+        "TEST_SEARCHPATH_ARGS_NONE",
+        "TEST_SEARCHPATH_ARGS_ONE",
+        "TEST_SEARCHPATH_EMPTY",
+        "TEST_SEARCHPATH_OPTION_INVALID",
+        "TEST_SEARCHPATH_OPTION_NULL",
+        "TEST_SEARCHPATH_RELATIVE",
+        "TEST_SEARCHPATH_SHELL",
+        "TEST_SEARCHPATH_VARIABLE",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: OracleUlimit,
+    tests_ran: Some(
+        "10",
+    ),
+    took: 15.950567ms,
+}
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-337-oracle-base__rexxutil__SysSearchPath/started.txt canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-337-oracle-base__rexxutil__SysSearchPath/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 335, modified: SystemTime { tv_sec: 1793535153, tv_nsec: 197377261 }, accessed: SystemTime { tv_sec: 1793535153, tv_nsec: 193804636 }, created: SystemTime { tv_sec: 1793535153, tv_nsec: 193804636 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-337-oracle-base__rexxutil__SysSearchPath/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-337-oracle-base__rexxutil__SysSearchPath/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-337-oracle-base__rexxutil__SysSearchPath/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67503680, modified: SystemTime { tv_sec: 1793535149, tv_nsec: 65923210 }, accessed: SystemTime { tv_sec: 1793535149, tv_nsec: 49923670 }, created: SystemTime { tv_sec: 1793535149, tv_nsec: 49923670 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-337-oracle-base__rexxutil__SysSearchPath/run/ooRexx/base/rexxutil/SysSearchPath.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-337-oracle-base__rexxutil__SysSearchPath/run/ooRexx/base/rexxutil/SysSearchPath.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 7453, modified: SystemTime { tv_sec: 1793535153, tv_nsec: 184053310 }, accessed: SystemTime { tv_sec: 1793535153, tv_nsec: 183476916 }, created: SystemTime { tv_sec: 1793535153, tv_nsec: 183476916 }, .. })

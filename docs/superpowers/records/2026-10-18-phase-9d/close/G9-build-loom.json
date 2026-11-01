@@ -1,0 +1,49 @@
+{
+  "action": {
+    "name": "G9-build-loom",
+    "argv": [
+      "cargo",
+      "test",
+      "-j",
+      "4",
+      "-p",
+      "rexx-exec",
+      "--test",
+      "loom",
+      "--no-run"
+    ],
+    "cap": "16G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/loom",
+      "RUSTFLAGS": "--cfg loom"
+    }
+  },
+  "argv": [
+    "timeout",
+    "--kill-after=15",
+    "600",
+    "memcap",
+    "16G",
+    "cargo",
+    "test",
+    "-j",
+    "4",
+    "-p",
+    "rexx-exec",
+    "--test",
+    "loom",
+    "--no-run"
+  ],
+  "status": 0,
+  "started": "2026-11-01T12:39:47.593802+00:00",
+  "finished": "2026-11-01T12:40:40.325245+00:00",
+  "interrupted": false,
+  "pid": 685121,
+  "surviving_group": false,
+  "orphaned_children": false,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "4364feefa81b054607f2e8a054e252899f65fe91666b334ec2a5fe502d5e6b4c"
+}

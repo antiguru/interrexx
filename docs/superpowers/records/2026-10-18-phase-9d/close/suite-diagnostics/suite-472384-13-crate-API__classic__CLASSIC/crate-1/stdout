@@ -1,0 +1,473 @@
+Searching for test containers
+Executing automated test suite
+
+ooTest Framework - Automated Test of the ooRexx Interpreter
+
+Interpreter:        REXX-ooRexx_5.3.0(MT)_64-bit 6.06 30 Jul 2026
+OS Name:            LINUX
+SysVersion:         Linux 7.2.11+deb14-amd64
+
+Tests ran:          63
+Assertions:         75
+Failures:           40
+Errors:             5
+
+[failure] 20261101 13:12:29.274049
+  Test:   TEST_31A_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   280
+  Failed: assertEquals
+    Expected: 0
+    Actual:   144
+
+[failure] 20261101 13:12:29.274686
+  Test:   TEST_31B_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   296
+  Failed: assertEquals
+    Expected: 8
+    Actual:   144
+
+[failure] 20261101 13:12:29.274963
+  Test:   TEST_31C_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   310
+  Failed: assertEquals
+    Expected: 8
+    Actual:   144
+
+[failure] 20261101 13:12:29.275259
+  Test:   TEST_31_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   263
+  Failed: assertEquals
+    Expected: 1
+    Actual:   144
+
+[failure] 20261101 13:12:29.275461
+  Test:   TEST_32A_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   359
+  Failed: assertEquals
+    Expected: 1
+    Actual:   144
+
+[failure] 20261101 13:12:29.275648
+  Test:   TEST_32_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   332
+  Failed: assertEquals
+    Expected: 1
+    Actual:   144
+
+[failure] 20261101 13:12:29.275830
+  Test:   TEST_33A_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   401
+  Failed: assertEquals
+    Expected: 0
+    Actual:   144
+
+[failure] 20261101 13:12:29.275994
+  Test:   TEST_33B_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   418
+  Failed: assertEquals
+    Expected: 1
+    Actual:   144
+
+[failure] 20261101 13:12:29.276158
+  Test:   TEST_33C_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   432
+  Failed: assertEquals
+    Expected: 8
+    Actual:   144
+
+[failure] 20261101 13:12:29.276352
+  Test:   TEST_33D_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   446
+  Failed: assertEquals
+    Expected: 4
+    Actual:   144
+
+[failure] 20261101 13:12:29.276543
+  Test:   TEST_33_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   378
+  Failed: assertEquals
+    Expected: 0
+    Actual:   144
+
+[failure] 20261101 13:12:29.276746
+  Test:   TEST_34A_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   483
+  Failed: assertEquals
+    Expected: 0
+    Actual:   144
+
+[failure] 20261101 13:12:29.276924
+  Test:   TEST_34B_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   500
+  Failed: assertEquals
+    Expected: 8
+    Actual:   144
+
+[failure] 20261101 13:12:29.277100
+  Test:   TEST_34_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   460
+  Failed: assertEquals
+    Expected: 0
+    Actual:   144
+
+[failure] 20261101 13:12:29.277293
+  Test:   TEST_35A_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   534
+  Failed: assertEquals
+    Expected: 0
+    Actual:   144
+
+[failure] 20261101 13:12:29.277472
+  Test:   TEST_35B_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   550
+  Failed: assertEquals
+    Expected: 8
+    Actual:   144
+
+[failure] 20261101 13:12:29.277654
+  Test:   TEST_35_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   513
+  Failed: assertEquals
+    Expected: 0
+    Actual:   144
+
+[failure] 20261101 13:12:29.277839
+  Test:   TEST_37A_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   581
+  Failed: assertEquals
+    Expected: 0
+    Actual:   144
+
+[failure] 20261101 13:12:29.278020
+  Test:   TEST_37B_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   597
+  Failed: assertEquals
+    Expected: 8
+    Actual:   144
+
+[failure] 20261101 13:12:29.278220
+  Test:   TEST_37_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   564
+  Failed: assertEquals
+    Expected: 1
+    Actual:   144
+
+[failure] 20261101 13:12:29.278421
+  Test:   TEST_38A_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   646
+  Failed: assertEquals
+    Expected: 1
+    Actual:   144
+
+[failure] 20261101 13:12:29.278624
+  Test:   TEST_38_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   619
+  Failed: assertEquals
+    Expected: 1
+    Actual:   144
+
+[failure] 20261101 13:12:29.278822
+  Test:   TEST_39A_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   688
+  Failed: assertEquals
+    Expected: 0
+    Actual:   144
+
+[failure] 20261101 13:12:29.279026
+  Test:   TEST_39B_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   705
+  Failed: assertEquals
+    Expected: 1
+    Actual:   144
+
+[failure] 20261101 13:12:29.279205
+  Test:   TEST_39C_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   719
+  Failed: assertEquals
+    Expected: 8
+    Actual:   144
+
+[failure] 20261101 13:12:29.279395
+  Test:   TEST_39D_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   733
+  Failed: assertEquals
+    Expected: 4
+    Actual:   144
+
+[failure] 20261101 13:12:29.279600
+  Test:   TEST_39E_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   747
+  Failed: assertEquals
+    Expected: 8
+    Actual:   144
+
+[failure] 20261101 13:12:29.279779
+  Test:   TEST_39_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   665
+  Failed: assertEquals
+    Expected: 0
+    Actual:   144
+
+[failure] 20261101 13:12:29.279977
+  Test:   TEST_40A_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   784
+  Failed: assertEquals
+    Expected: 0
+    Actual:   144
+
+[failure] 20261101 13:12:29.280154
+  Test:   TEST_40B_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   801
+  Failed: assertEquals
+    Expected: 8
+    Actual:   144
+
+[failure] 20261101 13:12:29.280341
+  Test:   TEST_40C_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   815
+  Failed: assertEquals
+    Expected: 8
+    Actual:   144
+
+[failure] 20261101 13:12:29.280525
+  Test:   TEST_40_VARIABLEPOOL
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   761
+  Failed: assertEquals
+    Expected: 0
+    Actual:   144
+
+[failure] 20261101 13:12:29.283690
+  Test:   TEST_SHV_DROP_DIRECT
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   1132
+  Failed: assertSame
+    Expected: 0
+    Actual:   144
+
+[failure] 20261101 13:12:29.283950
+  Test:   TEST_SHV_DROP_SYMBOLIC
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   1171
+  Failed: assertSame
+    Expected: 0
+    Actual:   144
+    Message:  null
+
+[failure] 20261101 13:12:29.284196
+  Test:   TEST_SHV_FETCH_DIRECT
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   1009
+  Failed: assertSame
+    Expected: 0
+    Actual:   144
+    Message:  NULL
+
+[failure] 20261101 13:12:29.284433
+  Test:   TEST_SHV_FETCH_SYMBOLIC
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   1074
+  Failed: assertSame
+    Expected: 0
+    Actual:   144
+    Message:  null
+
+[failure] 20261101 13:12:29.284825
+  Test:   TEST_SHV_NEXT
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   1297
+  Failed: assertSame
+    Expected: 5
+    Actual:   9
+
+[failure] 20261101 13:12:29.285008
+  Test:   TEST_SHV_RC
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   989
+  Failed: assertSame
+    Expected: 0
+    Actual:   144
+
+[failure] 20261101 13:12:29.285267
+  Test:   TEST_SHV_SET_DIRECT
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   1203
+  Failed: assertSame
+    Expected: 1
+    Actual:   144
+    Message:  NULL
+
+[failure] 20261101 13:12:29.285498
+  Test:   TEST_SHV_SET_SYMBOLIC
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Line:   1231
+  Failed: assertSame
+    Expected: 1
+    Actual:   144
+    Message:  range
+
+[error] 20261101 13:12:29.281069
+  Test:   TEST_51_EXTERNALFUNCTION
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Event:  SYNTAX 43.1 raised unexpectedly.
+    Could not find routine "MYTESTEXTFUNC".
+    Line:    832
+   832 *-* call MyTestExtFunc
+       *-* Compiled method "SEND" with scope "Message".
+  1585 *-*     .message~new(self, methodName)~send
+  1548 *-* self~doTheTest(fName, aTestResult)  -- carry out the testmethod
+   548 *-*   test~execute(testResult, verbose)
+   548 *-*   test~execute(testResult, verbose)
+   110 *-* suite~execute(testResult)
+    79 *-* retCode = 'worker.rex'(arguments)
+
+[error] 20261101 13:12:29.281270
+  Test:   TEST_54_EXTERNALFUNCTION
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Event:  SYNTAX 43.1 raised unexpectedly.
+    Could not find routine "MYTESTEXTFUNC".
+    Line:    850
+   850 *-* call MyTestExtFunc
+       *-* Compiled method "SEND" with scope "Message".
+  1585 *-*     .message~new(self, methodName)~send
+  1548 *-* self~doTheTest(fName, aTestResult)  -- carry out the testmethod
+   548 *-*   test~execute(testResult, verbose)
+   548 *-*   test~execute(testResult, verbose)
+   110 *-* suite~execute(testResult)
+    79 *-* retCode = 'worker.rex'(arguments)
+
+[error] 20261101 13:12:29.282066
+  Test:   TEST_70_MACROSPACE
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Event:  SYNTAX 43.1 raised unexpectedly.
+    Could not find routine "MYREVERSE".
+    Line:    899
+   899 *-* retc = myreverse(teststr)
+       *-* Compiled method "SEND" with scope "Message".
+  1585 *-*     .message~new(self, methodName)~send
+  1548 *-* self~doTheTest(fName, aTestResult)  -- carry out the testmethod
+   548 *-*   test~execute(testResult, verbose)
+   548 *-*   test~execute(testResult, verbose)
+   110 *-* suite~execute(testResult)
+    79 *-* retCode = 'worker.rex'(arguments)
+
+[error] 20261101 13:12:29.282494
+  Test:   TEST_71_MACROSPACE
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Event:  SYNTAX 43.1 raised unexpectedly.
+    Could not find routine "MYUPPER".
+    Line:    910
+   910 *-* retc = myupper(teststr)
+       *-* Compiled method "SEND" with scope "Message".
+  1585 *-*     .message~new(self, methodName)~send
+  1548 *-* self~doTheTest(fName, aTestResult)  -- carry out the testmethod
+   548 *-*   test~execute(testResult, verbose)
+   548 *-*   test~execute(testResult, verbose)
+   110 *-* suite~execute(testResult)
+    79 *-* retCode = 'worker.rex'(arguments)
+
+[error] 20261101 13:12:29.283440
+  Test:   TEST_77_FUNCTION
+  Class:  CLASSIC.testGroup
+  File:   .../ooRexx/API/classic/CLASSIC.testGroup
+  Event:  SYNTAX 43.1 raised unexpectedly.
+    Could not find routine "MYFUNCTION".
+    Line:    971
+   971 *-* self~assertEquals("MYFUNCTION 1 Hello World!", myfunction("Hello World!"))
+       *-* Compiled method "SEND" with scope "Message".
+  1585 *-*     .message~new(self, methodName)~send
+  1548 *-* self~doTheTest(fName, aTestResult)  -- carry out the testmethod
+   548 *-*   test~execute(testResult, verbose)
+   548 *-*   test~execute(testResult, verbose)
+   110 *-* suite~execute(testResult)
+    79 *-* retCode = 'worker.rex'(arguments)
+
+Interpreter:        REXX-ooRexx_5.3.0(MT)_64-bit 6.06 30 Jul 2026
+OS Name:            LINUX
+SysVersion:         Linux 7.2.11+deb14-amd64
+
+Tests ran:          63
+Assertions:         75
+Failures:           40
+Errors:             5
+
+File search:        00:00:00.006637
+Suite construction: 00:00:00.002185
+Test execution:     00:00:00.016446
+Total time:         00:00:00.026771
+

@@ -1,0 +1,54 @@
+{
+  "action": {
+    "name": "G7-clippy-pinning",
+    "argv": [
+      "cargo",
+      "clippy",
+      "-j",
+      "4",
+      "-p",
+      "rexx-exec",
+      "--all-targets",
+      "--features",
+      "pinning",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "cap": "16G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/pinning"
+    }
+  },
+  "argv": [
+    "timeout",
+    "--kill-after=15",
+    "600",
+    "memcap",
+    "16G",
+    "cargo",
+    "clippy",
+    "-j",
+    "4",
+    "-p",
+    "rexx-exec",
+    "--all-targets",
+    "--features",
+    "pinning",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "status": 0,
+  "started": "2026-11-01T12:38:29.399182+00:00",
+  "finished": "2026-11-01T12:38:42.242291+00:00",
+  "interrupted": false,
+  "pid": 682467,
+  "surviving_group": false,
+  "orphaned_children": false,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "a850c673ecdece825dce5bdce88625dea62231624e0e2b8b7aff330b024dd08c"
+}

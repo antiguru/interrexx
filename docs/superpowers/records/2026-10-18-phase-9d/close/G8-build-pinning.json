@@ -1,0 +1,52 @@
+{
+  "action": {
+    "name": "G8-build-pinning",
+    "argv": [
+      "cargo",
+      "test",
+      "-j",
+      "4",
+      "-p",
+      "rexx-exec",
+      "--features",
+      "pinning",
+      "--test",
+      "concurrency_tests",
+      "--no-run"
+    ],
+    "cap": "16G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/pinning"
+    }
+  },
+  "argv": [
+    "timeout",
+    "--kill-after=15",
+    "600",
+    "memcap",
+    "16G",
+    "cargo",
+    "test",
+    "-j",
+    "4",
+    "-p",
+    "rexx-exec",
+    "--features",
+    "pinning",
+    "--test",
+    "concurrency_tests",
+    "--no-run"
+  ],
+  "status": 0,
+  "started": "2026-11-01T12:38:43.346953+00:00",
+  "finished": "2026-11-01T12:39:44.082775+00:00",
+  "interrupted": false,
+  "pid": 683646,
+  "surviving_group": false,
+  "orphaned_children": false,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "c82f12b0d036ebd4fc6ec54e9449f6a0a762cd7e72699cbc1a7bc1cb3a0acab5"
+}

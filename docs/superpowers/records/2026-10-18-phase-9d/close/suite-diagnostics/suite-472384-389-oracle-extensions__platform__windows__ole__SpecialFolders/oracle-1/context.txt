@@ -1,0 +1,26 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-389-oracle-extensions__platform__windows__ole__SpecialFolders/run
+TZ=None
+status=Some(0) ended=Exited(0) took=17.398408ms
+GroupRun {
+    group: "extensions/platform/windows/ole/SpecialFolders",
+    expected: {},
+    started: {},
+    passed: {},
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: OracleUlimit,
+    tests_ran: Some(
+        "0",
+    ),
+    took: 17.398408ms,
+}
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-389-oracle-extensions__platform__windows__ole__SpecialFolders/started.txt canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-389-oracle-extensions__platform__windows__ole__SpecialFolders/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-389-oracle-extensions__platform__windows__ole__SpecialFolders/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-389-oracle-extensions__platform__windows__ole__SpecialFolders/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67503680, modified: SystemTime { tv_sec: 1793535149, tv_nsec: 65923210 }, accessed: SystemTime { tv_sec: 1793535149, tv_nsec: 49923670 }, created: SystemTime { tv_sec: 1793535149, tv_nsec: 49923670 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-389-oracle-extensions__platform__windows__ole__SpecialFolders/run/ooRexx/extensions/platform/windows/ole/SpecialFolders.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-389-oracle-extensions__platform__windows__ole__SpecialFolders/run/ooRexx/extensions/platform/windows/ole/SpecialFolders.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 4265, modified: SystemTime { tv_sec: 1793535153, tv_nsec: 709695276 }, accessed: SystemTime { tv_sec: 1793535153, tv_nsec: 709104423 }, created: SystemTime { tv_sec: 1793535153, tv_nsec: 709104423 }, .. })

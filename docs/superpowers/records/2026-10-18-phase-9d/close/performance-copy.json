@@ -1,0 +1,18 @@
+{
+  "action": {
+    "name": "performance-copy",
+    "argv": [
+      "internal-copy"
+    ],
+    "cap": "8G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace"
+    }
+  },
+  "status": 0,
+  "sha256": "4f56bcfe519a454259cd688c4cc101c8f76191e0f64bb09adb9d83159f513ae2",
+  "finished": "2026-11-01T12:53:15.383208+00:00"
+}

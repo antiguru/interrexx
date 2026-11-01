@@ -1,0 +1,38 @@
+head d675de751bf465140ec834482c9c7fb9f0832177
+start 2026-11-01T11:29:00.962898+00:00
+preflight started at 2026-11-01T11:29:01.926640+00:00
+preflight exit 0 validated 0 at 2026-11-01T11:29:02.300553+00:00
+G1-fmt started at 2026-11-01T11:29:03.145550+00:00
+G1-fmt exit 0 validated 0 at 2026-11-01T11:29:05.826980+00:00
+G2-clippy started at 2026-11-01T11:29:06.669411+00:00
+G2-clippy exit 0 validated 0 at 2026-11-01T11:29:22.989775+00:00
+G3-build-release started at 2026-11-01T11:29:23.830707+00:00
+G3-build-release exit 124 validated 124 at 2026-11-01T11:39:24.108886+00:00
+G3-build-release-continuation-1 started at 2026-11-01T11:39:24.676785+00:00
+G3-build-release-continuation-1 exit 0 validated 0 at 2026-11-01T11:44:39.361001+00:00
+G4-test-release started at 2026-11-01T11:44:40.190416+00:00
+G4-test-release exit 0 validated 0 at 2026-11-01T12:10:53.334046+00:00
+whole-suite started at 2026-11-01T12:10:54.221778+00:00
+whole-suite exit 0 validated 0 at 2026-11-01T12:16:39.648887+00:00
+G5-build-debug started at 2026-11-01T12:16:40.500441+00:00
+G5-build-debug exit 0 validated 0 at 2026-11-01T12:19:56.249724+00:00
+G6-test-debug started at 2026-11-01T12:19:57.096177+00:00
+G6-test-debug exit 0 validated 0 at 2026-11-01T12:38:28.554469+00:00
+G7-clippy-pinning started at 2026-11-01T12:38:29.399369+00:00
+G7-clippy-pinning exit 0 validated 0 at 2026-11-01T12:38:42.506924+00:00
+G8-build-pinning started at 2026-11-01T12:38:43.347100+00:00
+G8-build-pinning exit 0 validated 0 at 2026-11-01T12:39:44.340535+00:00
+G8-test-pinning started at 2026-11-01T12:39:45.173382+00:00
+G8-test-pinning exit 0 validated 0 at 2026-11-01T12:39:46.757886+00:00
+G9-build-loom started at 2026-11-01T12:39:47.594000+00:00
+G9-build-loom exit 0 validated 0 at 2026-11-01T12:40:40.584103+00:00
+G9-loom started at 2026-11-01T12:40:41.428589+00:00
+G9-loom exit 0 validated 0 at 2026-11-01T12:47:43.949513+00:00
+TSan started at 2026-11-01T12:47:44.836674+00:00
+TSan exit 0 validated 0 at 2026-11-01T12:51:45.484649+00:00
+performance-build started at 2026-11-01T12:51:46.327057+00:00
+performance-build exit 0 validated 0 at 2026-11-01T12:53:14.463744+00:00
+performance-copy exit 0 at 2026-11-01T12:53:15.383509+00:00
+callgrind started at 2026-11-01T12:53:16.302431+00:00
+callgrind exit 1 validated 1 at 2026-11-01T13:07:52.684809+00:00
+finished at 2026-11-01T13:08:09.081456+00:00

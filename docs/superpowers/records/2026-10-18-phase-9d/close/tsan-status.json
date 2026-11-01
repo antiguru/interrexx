@@ -1,0 +1,54 @@
+{
+  "action": {
+    "name": "TSan",
+    "argv": [
+      "bash",
+      "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan.sh",
+      "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/tsan",
+      "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan"
+    ],
+    "cap": "8G",
+    "seconds": 3000,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/tsan"
+    }
+  },
+  "argv": [
+    "timeout",
+    "--kill-after=15",
+    "3000",
+    "memcap",
+    "8G",
+    "bash",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan.sh",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/tsan",
+    "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan"
+  ],
+  "status": 0,
+  "started": "2026-11-01T12:47:44.836571+00:00",
+  "finished": "2026-11-01T12:51:45.219530+00:00",
+  "interrupted": false,
+  "pid": 687044,
+  "surviving_group": false,
+  "orphaned_children": false,
+  "stdout_sha256": "90e7fa968524174ff532d79122bf080d9ec330969c3c37bdf4cfd22cacb5909b",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "children": [
+    [
+      "api",
+      "0"
+    ],
+    [
+      "lib",
+      "0"
+    ],
+    [
+      "int",
+      "0"
+    ]
+  ],
+  "diagnostics": [],
+  "validated_status": 0
+}

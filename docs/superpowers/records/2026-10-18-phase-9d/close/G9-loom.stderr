@@ -1,0 +1,17 @@
+warning: constant `SIM` is never used
+  --> crates/rexx-exec/tests/../src/timer.rs:38:18
+   |
+38 | pub(crate) const SIM: u32 = 8;
+   |                  ^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `FOREIGN` is never used
+  --> crates/rexx-exec/tests/../src/timer.rs:41:18
+   |
+41 | pub(crate) const FOREIGN: u32 = 16;
+   |                  ^^^^^^^
+
+warning: `rexx-exec` (test "loom") generated 2 warnings
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.03s
+     Running tests/loom.rs (/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/loom/debug/deps/loom-04d922ae492edd29)

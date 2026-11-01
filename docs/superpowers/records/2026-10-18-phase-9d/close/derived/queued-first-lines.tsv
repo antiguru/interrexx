@@ -1,0 +1,246 @@
+item	first line	ruled
+2026-09-15-file-split.md	"**CLOSED: 9956c0ac6.** 2026-09-15-file-split/progress.md ends ""File-split plan complete"" at the final-review fix 9956c0ac6."	closed:9956c0ac6
+2026-09-16-worktree-build-precondition.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8e1 (1d8b03220).**	closed:1d8b03220
+2026-09-17-crexx-derived-candidates.md	**DEFERRED to Phase 9.1, ruled by Moritz 2026-10-18.** unsized performance candidates; no probe.	phase:9.1
+2026-09-17-oracle-deadline-is-wall-clock.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8c (949a7806b).**	closed:949a7806b
+2026-09-19-driver-control-flow-spike.md	"**CLOSED: rejected 2026-09-19.** its own ""Spike result"" section; report .superpowers/sdd/2026-09-19-driver-control-flow-spike-report.md."	closed:rejected 2026-09-19
+2026-09-20-instructions-per-op.md	**DEFERRED to Phase 9.1, ruled by Moritz 2026-10-18.** a measurement record behind the performance to-do; no probe.	phase:9.1
+2026-09-20-performance-todo.md	**DEFERRED to Phase 9.1, ruled by Moritz 2026-10-18.** the open performance queue; no probe.	phase:9.1
+2026-09-21-flaky-unstable-row-gate.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8c (949a7806b).**	closed:949a7806b
+2026-09-21-parse-message-target-unimplemented.md	**CLOSED: probe agrees.** closed 2026-09-28 by Phase 8 surface Task 8; the witness agrees on all three descriptors.	closed:probe agrees
+2026-09-22-clause-shape-distribution.md	**DEFERRED to Phase 9.1, ruled by Moritz 2026-10-18.** static op-shape evidence for superinstructions; no probe.	phase:9.1
+2026-09-22-driver-frame-pressure.md	**DEFERRED to Phase 9.1, ruled by Moritz 2026-10-18.** unrun outlining variant; no probe.	phase:9.1
+2026-09-22-tracefunction-ungated.md	**DEFERRED to Phase 9.1, ruled by Moritz 2026-10-18.** no probe; both Op::TraceFunction pushes in ir/compile.rs (:1627, :1645) are still unconditional.	phase:9.1
+2026-09-24-arity-harness-ignores-target-dir.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8b (ecce67dad).**	closed:ecce67dad
+2026-09-24-mutate-4c-stale-anchor.md	**CLOSED 2026-10-30 by Task 8.8d (03d74f029).**	closed:03d74f029
+2026-09-24-refusal-scanner-test-files.md	**CLOSED 2026-10-30 by Task 8.8d (03d74f029).**	closed:03d74f029
+2026-09-25-pos-window-doc-pointers.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8e1 (1d8b03220).**	closed:1d8b03220
+2026-09-25-table-c-derivation-literals.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8e1 (1d8b03220).**	closed:1d8b03220
+2026-09-26-flatloop-spike-comment.md	"**CLOSED: 4b694fe7c.** its own ""Closed 2026-09-29"" section; no ""SPIKE, not for commit"" remains under rust/crates."	closed:4b694fe7c
+2026-09-27-stream-write-visibility.md	**CLOSED 2026-10-28 by Phase 9d Task 8.6 (b53b1de0c).**	closed:b53b1de0c
+2026-09-28-compiled-source-parse-errors.md	"**CLOSED: probe agrees.** the traceback now prints the source line and the Compiled method ""NEW"" line on both sides."	closed:probe agrees
+2026-09-28-condition-object-divergences-found-in-fix-round-a.md	**CLOSED 2026-10-19 by Phase 9d Task 6.9 (94b09da09).** `queued-probes/callarg` and `queued-probes/coorder` are identical to the oracle on stdout, stderr and rc (`docs/superpowers/records/2026-10-18-phase-9d/t6.9/queued/`).	9d-cluster:call-on-trap-argument
+2026-09-28-phase-5-refusal-labels.md	"**CLOSED: Phase 6.1 Task 7.** its own ""Closed 2026-10-09"" section; closed_phases.rs:37 lists ""Phase 5"" in CLOSED."	closed:Phase 6.1 Task 7
+2026-09-28-rexxqueue-in-function-group.md	**DEFERRED to Phase 10, ruled by Moritz 2026-10-18.** not probed, it reaches rxapi; roadmap row 10 names FUNCTION TEST_REXXQUEUE.	phase:10
+2026-09-28-use-arg-message-term.md	**CLOSED: probe agrees.** stdout x, rc 0 on both.	closed:probe agrees
+2026-09-29-closed-phases-owner-gaps.md	"**CLOSED: Phase 6.1 Task 7.** its own ""Closed 2026-10-09"" section; the_row_check_reads_only_a_resolution_that_opens_a_clause is in tests/closed_phases.rs."	closed:Phase 6.1 Task 7
+2026-09-29-release-local-reference-memory.md	"**DEFERRED to Phase 10, ruled by Moritz 2026-10-18.** not probed, it needs the forged native library; native-API memory, ruled ""do not fix, queue"" at the Phase 8 close."	phase:10
+2026-09-30-drop-unset-stem-symbol.md	**CLOSED 2026-10-27 by Phase 9d Task 8.5 (2589e88b3).**	closed:2589e88b3
+2026-09-30-hash-subclass-init-capacity.md	**CLOSED: 1c0e1d769.** closed by Phase 9a Task 8; its witness corpus/lang/hash_subclass_init_capacity.rex agrees.	closed:1c0e1d769
+2026-09-30-min-with-function-arg.md	**CLOSED: Phase 6 Task 9 fix round 1.** its witness corpus/lang/builtin_argument_call.rex agrees.	closed:Phase 6 Task 9 fix round 1
+2026-09-30-stringtable-subclass-new-arg.md	**CLOSED: 1c0e1d769.** closed by Phase 9a Task 8; its witness agrees.	closed:1c0e1d769
+2026-10-01-condition-object-directory-methods.md	**CLOSED: probe agrees.** items 13 and copy items 13 on both.	closed:probe agrees
+2026-10-01-message-notify-single-slot.md	**CLOSED: probe agrees.** RESOLVED by Phase 6 S2-S5 Task 7 fix round 1; re2a 1 0 0 and re2b 0 1 0 1 0 on both.	closed:probe agrees
+2026-10-01-message-start-result-traceback.md	**CLOSED 2026-10-22 by Phase 9d Task 8.2 (137cba4af): Deviation 67.**	closed:137cba4af
+2026-10-01-reply-continuation-state-visibility.md	**CLOSED: probe agrees.** own probe from the text: the later guarded send reads the continuation's write on both.	closed:probe agrees
+2026-10-01-routine-call-context-name.md	**CLOSED 2026-10-22 by Phase 9d Task 8.3 (68e7f15d5).**	closed:68e7f15d5
+2026-10-01-setmethod-run-fall-to-unknown.md	"**CLOSED: probe agrees.** own probe: setMethod and run answer ""m ran"" and ""run ran"" on both."	closed:probe agrees
+2026-10-01-syntax-unwind-superlinear.md	**CLOSED: e8a19b2e6.** RESOLVED in its first line; depth 2000 agrees (h 44.1), test appends_and_reads_copy_slots_linearly.	closed:e8a19b2e6
+2026-10-01-time-elapsed-loop-hang.md	**CLOSED: e25925ad8.** RESOLVED in its first line; both loops end on both sides.	closed:e25925ad8
+2026-10-02-context-executable-setmethod.md	**CLOSED: probe agrees.** The NIL object, rc 0 on both.	closed:probe agrees
+2026-10-02-do-with-over-refusal.md	**CLOSED: probe agrees.** DO WITH .	closed:probe agrees
+2026-10-02-exit-in-handler-at-reply.md	**CLOSED: 04c46cb3b.** RESOLVED in its first line; rc 165 and the 91.999 report on both.	closed:04c46cb3b
+2026-10-02-frame-executable-invocation-and-native-levels.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (5053fbd9b).**	closed:5053fbd9b
+2026-10-02-halt-after-replied-send.md	**CLOSED: 23716a5ec.** RESOLVED in its first line; one run a side agrees, rc 252 and the 4.1 report.	closed:23716a5ec
+2026-10-02-halt-site-oracle-yield-cadence.md	**CLOSED: Deviation 22.** a licensed scheduling observable (rulings P32, P44); not probed, the site varies run to run.	closed:Deviation 22
+2026-10-02-kept-context-held-98983-overwritable.md	**DEFERRED to Phase 10, ruled by Moritz 2026-10-18.** not probed, it needs a forged extension; a native-API path beside Deviation 24.	phase:10
+2026-10-02-notifier-failure-in-started-activity.md	**CLOSED: probe agrees.** RESOLVED in its first line; three notifier runs and two reports on both.	closed:probe agrees
+2026-10-02-trace-entry-after-expose.md	**CLOSED 2026-10-19 by Phase 9d Task 6.10.** `queued-probes/texpose` is identical to the oracle on stdout, stderr and rc (`docs/superpowers/records/2026-10-18-phase-9d/t6.10/queued/`).	closed:fcb358fd7
+2026-10-02-traced-init-routed-sink-silent-exit.md	**CLOSED 2026-10-19 by Phase 9d Task 6.10.** `queued-probes/tracedinit` is identical to the oracle on stdout, stderr and rc (`docs/superpowers/records/2026-10-18-phase-9d/t6.10/queued/`).	closed:fcb358fd7
+2026-10-02-traceobject-variable-and-collector.md	**CLOSED 2026-10-19 by Phase 9d Task 6.10.** its VARIABLE entry, the TraceObject made for every line (collector, notify, option `P`) and the `T`, `S` and `F` formats on the default route are witnessed by `trace_object_probe_collect` and `trace_object_format_default_route`; `TEST_VARIABLE` passes, and `TEST_TRACEOBJECT_COLLECTOR` fails only on the package name, which is `dynamic-package-name`'s. The EXECUTABLE bullet stays under the class-methods.txt exclusion.	9d-cluster:traceobject-probe-option
+2026-10-02-triggered-exit-trace-line-unrouted.md	**CLOSED 2026-10-19 by Phase 9d Task 6.10.** `queued-probes/trigexit` is identical to the oracle on stdout, stderr and rc (`docs/superpowers/records/2026-10-18-phase-9d/t6.10/queued/`).	closed:fcb358fd7
+2026-10-02-uninit-reply-at-termination.md	**CLOSED: Deviation 21.** licensed by ruling P39; not probed, the oracle's third line races process exit.	closed:Deviation 21
+2026-10-02-while-condition-failure-traceback.md	**CLOSED 2026-10-22 by Phase 9d Task 8.2 (a52fa561b).**	closed:a52fa561b
+2026-10-03-interpret-translation-error-traceback.md	**CLOSED: probe agrees.** both report 99.912 with the interpreted clause's line.	closed:probe agrees
+2026-10-04-aborted-run-leaks-interp.md	**DEFERRED to Phase 10, ruled by Moritz 2026-10-18.** embedding API (ruling P53); no probe.	phase:10
+2026-10-04-send-site-cache-self-customization.md	**DEFERRED to Phase 9.1, ruled by Moritz 2026-10-18.** design note with ranked items; no probe.	phase:9.1
+2026-10-05-call-on-notready-stdin-eof.md	**CLOSED: probe agrees.** own probe from the text: the handler runs, rc 0 on both.	closed:probe agrees
+2026-10-05-stdin-chars-after-drain.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8e1 (probe agrees).**	closed:probe agrees
+2026-10-05-stream-fifo-terminal-seek.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8f (3979b7e31).** FIFO read, terminal and closing-LINEOUT subparts are verified under the recorded rulings.	closed:3979b7e31
+2026-10-05-two-interpreters-signal-race.md	**DEFERRED to Phase 10, ruled by Moritz 2026-10-18.** the second interpreter instance is row 10's; no probe.	phase:10
+2026-10-07-debug-input-does-not-reach-pauses.md	**CLOSED: probe agrees.** typed then after on both; TRACE TEST_TRACE_NUMERIC_DEBUG passed at the 9c close.	closed:probe agrees
+2026-10-07-debug-pause-skipped-after-flowed-clause.md	**CLOSED: probe agrees.** c1 p1 p2 c3 p3 c4 on both.	closed:probe agrees
+2026-10-07-interpret-syntax-traceback-line.md	"**CLOSED: probe agrees.** both print 1 *-* y=(; and ""at ""("""" for the INTERPRET form."	closed:probe agrees
+2026-10-07-seeded-random-switch-mode.md	**CLOSED: Phase 6.1.** the simulation mode shipped in Phase 6.1 (crates/rexx-exec/src/sim.rs, sim:trace replay).	closed:Phase 6.1
+2026-10-07-unjudged-scheduler-mutants.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8g (3c76dbeeb).**	closed:3c76dbeeb
+2026-10-09-full-pool-inline-command-hang.md	**CLOSED: 51782fcb8.** RESOLVED in its first line; not re-probed (fills a 64-thread pool); scheduler/tests/pool.rs holds its tests.	closed:51782fcb8
+2026-10-09-literals-rows-need-a-test-case.md	**CLOSED: 98caea3de.** RESOLVED in its first line; tests/assertions.rs:208 EXEMPT is empty.	closed:98caea3de
+2026-10-09-wrong-type-native-rows-name-phase-9.md	**CLOSED: ae86f4d04.** RESOLVED in its first line; a_native_row_on_a_receiver_of_another_class_refuses_its_type is in dispatch/tests.rs.	closed:ae86f4d04
+2026-10-10-array-sort-after-remove.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7a (030af45a1).**	closed:030af45a1
+2026-10-10-beep-wrong-type-message.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7a (030af45a1).**	closed:030af45a1
+2026-10-10-call-on-nostring-insert.md	"**CLOSED: probe agrees.** own probe: 25.1 found ""NOSTRING"" on both."	closed:probe agrees
+2026-10-10-class-enhanced-skips-new.md	**CLOSED: 70d314bac.** closed by Phase 9a Task 8b; both probes agree.	closed:70d314bac
+2026-10-10-compiled-method-package-in-trace.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (probe agrees: docs/superpowers/records/2026-10-18-phase-9d/t8.7b/probes/compiled-method-package/t4c.rex).**	closed:probe agrees
+2026-10-10-debug-do-header-notready-order.md	**DEFERRED to Phase 11.1, ruled by Moritz 2026-10-18.** probe still differs: the handler runs before the header's pause here.	phase:11.1
+2026-10-10-debug-equals-after-iterate-indent.md	**DEFERRED to Phase 11.1, ruled by Moritz 2026-10-18.** probe still differs: the re-executed ITERATE echoes at its static indent here; a KNOWN GAP row in phase-4-exclusions.txt.	phase:11.1
+2026-10-10-debug-labelled-block-header-pause.md	**DEFERRED to Phase 11.1, ruled by Moritz 2026-10-18.** probe still differs: no pause after a labelled block DO header; a KNOWN GAP row.	phase:11.1
+2026-10-10-debug-reply-pause-and-banner.md	**DEFERRED to Phase 11.1, ruled by Moritz 2026-10-18.** probe still differs: no pause after REPLY and a repeated banner; a KNOWN GAP row.	phase:11.1
+2026-10-10-debug-typed-call-sigl.md	**DEFERRED to Phase 11.1, ruled by Moritz 2026-10-18.** probe still differs: in sub 1 here, in sub 3 on the oracle.	phase:11.1
+2026-10-10-debug-typed-raise-untrapped.md	**DEFERRED to Phase 11.1, ruled by Moritz 2026-10-18.** probe still differs: typed lines keep running after an untrapped RAISE here.	phase:11.1
+2026-10-10-debug-typed-signal.md	**DEFERRED to Phase 11.1, ruled by Moritz 2026-10-18.** probe still differs: a typed SIGNAL does not transfer control here.	phase:11.1
+2026-10-10-directory-setmethod-unknown-traceback-line.md	**CLOSED 2026-10-22 by Phase 9d Task 8.2 (a52fa561b).**	closed:a52fa561b
+2026-10-10-emptyloop-wall-clock.md	**DEFERRED to Phase 9.1, ruled by Moritz 2026-10-18.** unattributed cycles; no probe.	phase:9.1
+2026-10-10-enhanced-object-name-in-messages.md	"**CLOSED: 70d314bac.** closed by Phase 9a Task 8b; ""enhanced Object"" on both."	closed:70d314bac
+2026-10-10-failed-spawn-runs-inline.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8e2 (ae6a6bd04).**	closed:ae6a6bd04
+2026-10-10-leave-iterate-error-not-trappable.md	**CLOSED 2026-10-22 by Phase 9d Task 8.2 (4acd606e9).**	closed:4acd606e9
+2026-10-10-list-remove-copies-per-call.md	**DEFERRED to Phase 9.1, ruled by Moritz 2026-10-18.** own reduced probe: 2000 removes from a 100000-item List take over 0.5 s here and under it on the oracle.	phase:9.1
+2026-10-10-misplaced-class-attribute-error.md	**CLOSED 2026-10-18 by Phase 9d Task 6.6 (ab941ce38).** The probe now matches the oracle byte for byte, rc 157 on both.	9d-cluster:attribute-body-error-number
+2026-10-10-native-routine-arguments-not-strings.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7a (030af45a1).**	closed:030af45a1
+2026-10-10-oracle-judged-seeded-gate.md	**CLOSED: not wanted.** its first line: CLOSED as not wanted by Moritz, 2026-10-10.	closed:not wanted
+2026-10-10-prologue-frames-missing-loading-levels.md	**CLOSED 2026-10-19 by Phase 9d Task 6.10.** `queued-probes/frames1` and `queued-probes/frames2` are identical to the oracle on stdout, stderr and rc (`docs/superpowers/records/2026-10-18-phase-9d/t6.10/queued/`).	9d-cluster:prolog-trace-lines
+2026-10-10-propagated-condition-extra-traceback-line.md	**CLOSED 2026-10-22 by Phase 9d Task 8.2 (12ef5a35c).**	closed:12ef5a35c
+2026-10-10-raise-novalue-return-into-call-on-any.md	**CLOSED 2026-10-22 by Phase 9d Task 8.2 (4acd606e9).**	closed:4acd606e9
+2026-10-10-reply-continuation-trace-entry.md	**CLOSED 2026-10-19 by Phase 9d Task 6.10.** `queued-probes/p7` is identical to the oracle on stdout, stderr and rc (`docs/superpowers/records/2026-10-18-phase-9d/t6.10/queued/`), and TRACE `TEST_TRACE_LABEL_WITH_FORWARD` passes.	9d-cluster:trace-reply-continuation
+2026-10-10-reply-propagated-condition-traceback-line.md	**CLOSED 2026-10-22 by Phase 9d Task 8.2 (12ef5a35c).**	closed:12ef5a35c
+2026-10-10-rexxcps-task-6-round-2-delta.md	**CLOSED: 6.1 close within budget.** a +0.09% delta the 6.1 close absorbed (rexxcps +0.2694% against base61, task-12-evidence/cg-close2/table.txt); no probe.	closed:6.1 close within budget
+2026-10-10-rooting-harness-blind-to-dropped-pushes.md	**CLOSED 2026-10-30 by Task 8.8d (03d74f029).**	closed:03d74f029
+2026-10-10-routine-new-no-package-parent.md	**CLOSED: 8b95afe79.** RESOLVED in its first line; helper found on both.	closed:8b95afe79
+2026-10-10-security-manager-command-rc-requires.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (5053fbd9b).**	closed:5053fbd9b
+2026-10-10-select-case-value-outlives-construct.md	**NOT A DIVERGENCE, ruled by Moritz 2026-10-18.** no program reads the stale value; an unasserted invariant, no probe.	not-a-divergence
+2026-10-10-sim-pool-seeded-delivery.md	**DEFERRED to a later research phase, ruled by Moritz 2026-10-18.**	phase:research
+2026-10-10-sim-shrinker.md	**DEFERRED to a later research phase, ruled by Moritz 2026-10-18.**	phase:research
+2026-10-10-string-translate-empty-tables.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7a (030af45a1).**	closed:030af45a1
+2026-10-10-subclass-package.md	**CLOSED: 1c0e1d769.** closed by Phase 9a Task 8; 1 and 3 on both.	closed:1c0e1d769
+2026-10-10-subclass-rexxinfo.md	**CLOSED: 1c0e1d769.** closed by Phase 9a Task 8; 99.949 on both.	closed:1c0e1d769
+2026-10-10-trace-c-command-echo.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8e1 (probe agrees).**	closed:probe agrees
+2026-10-10-translation-error-inserts.md	"**CLOSED: Phase 9c Tasks 3 and 4.** `trace ?s` and `e103` answer the oracle's inserts with identical stdout, stderr and rc, closed 2026-10-17 by Phase 9c (`.superpowers/sdd/2026-10-15-phase-9c/task-4-report.md`, ""Queued items closed"")."	closed:Phase 9c Tasks 3 and 4
+2026-10-10-trapped-header-comparison-holds-to-object.md	**NOT A DIVERGENCE, ruled by Moritz 2026-10-18.** probe still differs only in when UNINIT runs, which is collection timing (Moritz 2026-09-01: gc ordering is unpredictable).	not-a-divergence
+2026-10-10-uninit-drain-signal-interpret-and-trace.md	**CLOSED 2026-10-21 by Phase 9d Task 8.1 (e909de2d4).** The trace-line half already held at the base `f1480269a`.	closed:e909de2d4
+2026-10-10-upstream-do-to-identity.md	**NOT A DIVERGENCE, ruled by Moritz 2026-10-18.** upstream report; Deviation 25 is the crate's rule.	not-a-divergence
+2026-10-10-upstream-zero-pass-do-reexecute.md	**NOT A DIVERGENCE, ruled by Moritz 2026-10-18.** upstream report; Deviation 26 is the crate's rule.	not-a-divergence
+2026-10-10-variable-reference-concatenation.md	**CLOSED 2026-10-27 by Phase 9d Task 8.5 (074ada1da).**	closed:074ada1da
+2026-10-10-whole-groups-differing-rows-that-agree.md	**CLOSED: rows removed.** the TIME and CALL rows it names are gone from DIFFERING (tests/concurrency_tests.rs:2664) and REPLY's stay, as it suggested.	closed:rows removed
+2026-10-11-output-lost-on-kill.md	**CLOSED: e4bbcbba4.** Phase 9c Task 7 hands standard error over at each line end, so a kill keeps it as on the oracle (closed 2026-10-17), while a redirected standard output is still lost at a kill, as Python's is: Deviation 40 (`docs/superpowers/plans/phase-4-exclusions.txt`).	closed:e4bbcbba4
+2026-10-12-buffer-copy-uncharged.md	**DEFERRED to Phase 9.1, ruled by Moritz 2026-10-18.** collector accounting under memory pressure; no probe.	phase:9.1
+2026-10-12-method-source-compile-retention.md	**CLOSED: Phase 9b1 L8.** queued-probes/memcompile/rss.txt: 44992 kB at 50000 and 45160 kB at 100000 here, was 921808 kB; flat.	closed:Phase 9b1 L8
+2026-10-12-package-as-real-object.md	**CLOSED: Phase 9b1.** phase-9b1-gate.md: L5 to L7 fixed, TESTRECLAIM01 passed; side-maps.tsv keeps package state on the package object's body.	closed:Phase 9b1
+2026-10-12-randomised-hash-iteration.md	**DEFERRED to a later research phase, ruled by Moritz 2026-10-18.**	phase:research
+2026-10-13-class-named-drops-raised-condition.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (5053fbd9b).**	closed:5053fbd9b
+2026-10-13-class-side-string-method-not-sent.md	**CLOSED: 0a055271c.** Closed 2026-10-14 by Phase 9b1 Task 2; the probe agrees on both engines.	closed:0a055271c
+2026-10-13-error-position-ampersand.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7a (probe agrees: docs/superpowers/records/2026-10-18-phase-9d/queued-probes/imeth/imeth.rex).**	closed:probe agrees
+2026-10-13-lossy-path-sites.md	**CLOSED 2026-10-28 by Phase 9d Task 8.6 (b53b1de0c).**	closed:b53b1de0c
+2026-10-13-named-semaphores-design.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8e1 (probe agrees).**	closed:probe agrees
+2026-10-13-passwd-home-ignores-nss.md	**DEFERRED to Phase 11, ruled by Moritz 2026-10-18.** not probed, no NSS-only account here; a host assumption, which row 11 puts behind the platform seam.	phase:11
+2026-10-13-phase-9b-carry-in.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8e1 (9d minors) (1d8b03220).**	closed:1d8b03220
+2026-10-13-phase-9b1-uniform-object-model.md	**CLOSED: Phase 9b1.** phase-9b1-gate.md: every leak fixed or licensed, SysStemSort as Deviation 37, the addRoutine copy as L10.	closed:Phase 9b1
+2026-10-13-security-manager-and-library-key.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (5053fbd9b).**	closed:5053fbd9b
+2026-10-13-stdin-stream-object-queries.md	**CLOSED 2026-10-28 by Phase 9d Task 8.6 (b53b1de0c).**	closed:b53b1de0c
+2026-10-13-stdout-write-errors-swallowed.md	**CLOSED 2026-10-28 by Phase 9d Task 8.6 (b53b1de0c, 4f079c0d2): sink errors reach stream writes; the residuals are Deviation 40's write-error sentence and Deviation 73.**	closed:4f079c0d2
+2026-10-13-sysfork-design.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8e1 (probe agrees).**	closed:probe agrees
+2026-10-13-yaml-pass-boundary-guard.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8e1 (probe agrees).**	closed:probe agrees
+2026-10-14-class-side-defaultname.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7a (030af45a1).**	closed:030af45a1
+2026-10-14-filespec-string-arg.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7a (030af45a1).**	closed:030af45a1
+2026-10-14-native-method-frames.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (probe agrees: docs/superpowers/records/2026-10-18-phase-9d/t8.7b/probes/frames/f1.rex, whose `send`, `sendwith`, `osend`, `call` and `callwith` rows agree at base; its `run`, `sort`, `eq`, `makearray` and `hash` rows are 2026-10-22-live-frames-omit-nested-primitives.md's, closed by 5053fbd9b).**	closed:probe agrees
+2026-10-14-routine-start-call-panic.md	**CLOSED 2026-10-21 by Phase 9d Task 8.1 (fb86ce94f).** Part 2 is not fixed: any expression register keeps its value until reused, not only a call's; reported in `.superpowers/sdd/2026-10-18-phase-9d/task-8.1-report.md`.	closed:fb86ce94f
+2026-10-15-9b1-task-8b-review-minors.md	**OPEN: m5 belongs to the targeted performance round after 9d.** m1 is resolved by Deviation 71 and witness `2589e88b3`, and m4 is fixed by `68e7f15d5`.	after 9d
+2026-10-15-executable-flags-and-result.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8e2 (ae6a6bd04).**	closed:ae6a6bd04
+2026-10-15-isguarded-copy-and-additional.md	**CLOSED 2026-10-22 by Phase 9d Task 8.3 (68e7f15d5).**	closed:68e7f15d5
+2026-10-15-routines-table-silent-none.md	**CLOSED 2026-10-27 by Phase 9d Task 8.5 (2589e88b3).**	closed:2589e88b3
+2026-10-16-bignum-remainder-speed.md	**DEFERRED to Phase 9.1, ruled by Moritz 2026-10-18.** probe: output 78 on both, 2000 iterations under 1 s on the oracle and over it here.	phase:9.1
+2026-10-16-stream-command-open-missing-file.md	**CLOSED 2026-10-18 by Phase 9d Task 6.4 (a735033de).**	9d-cluster:stream-notready-names
+2026-10-17-library-bind-before-options.md	**CLOSED 2026-10-26 by Phase 9d Task 8.4 (f84e64ee4).**	closed:f84e64ee4
+2026-10-17-newmethod-parent-package.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (5053fbd9b).**	closed:5053fbd9b
+2026-10-17-oracle-not-op-forwarding-bug-2117.md	**NOT A DIVERGENCE, ruled by Moritz 2026-10-18.** upstream report SF #2117; probe: the oracle answers 1 0 and the crate the right 0 1.	not-a-divergence
+2026-10-17-phase-10-corpus-and-rxfunc.md	**DEFERRED to Phase 10, ruled by Moritz 2026-10-18.** ruled by Moritz 2026-10-17 (9d plan ruling 3).	phase:10
+2026-10-17-routine-call-frame-name.md	**CLOSED 2026-10-22 by Phase 9d Task 8.3 (68e7f15d5).**	closed:68e7f15d5
+2026-10-17-scanner-reports-later-clause-error.md	**CLOSED 2026-10-26 by Phase 9d Task 8.4 (44f1cb56b).**	closed:44f1cb56b
+2026-10-18-class-methods-no-argument.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8e1 (probe agrees).**	closed:probe agrees
+2026-10-18-command-waits-for-background-child.md	**CLOSED 2026-10-28 by Phase 9d Task 8.6 (b53b1de0c).**	closed:b53b1de0c
+2026-10-18-do-count-wider-than-digits.md	"**RULED: closed:Deviation 47, ruled by Moritz 2026-10-19 (""proposal ok"").** Deviation 47 licenses it."	closed:Deviation 47
+2026-10-18-duplicate-member-checked-at-install.md	**CLOSED 2026-10-26 by Phase 9d Task 8.4 (f84e64ee4).**	closed:f84e64ee4
+2026-10-18-fifo-buffered-write-seek.md	**CLOSED: Deviation 48, ruled by Moritz 2026-10-18.** This crate writes to a transient stream without seeking. The oracle defect is not copied.	closed:Deviation 48
+2026-10-18-fuzz-comparison-lostdigits.md	**CLOSED: fixed 2026-10-20 by Phase 9d Task 6.14 (`009fd1978`).** Witness `corpus/lang/lostdigits_fuzz_compare.rex`; the different-sign case is reported in `task-6.14-report.md`.	closed:009fd1978
+2026-10-18-install-error-names-caller-file.md	**CLOSED 2026-10-27 by Phase 9d Task 8.4: the file-naming instances at e54ed5724; the hs9/qpull report-line paragraph under Deviation 67 as extended (e8d9200e5).**	closed:e8d9200e5
+2026-10-18-max-integer-unrounded.md	**CLOSED: fixed 2026-10-20 by Phase 9d Task 6.14 (`009fd1978`).** The function form rounds as the message form does; Deviation 44's witness `max-min-wide-integer-rounds`.	closed:009fd1978
+2026-10-18-options-trace-constant-expression.md	**CLOSED 2026-10-26 by Phase 9d Task 8.4 (7fe50bedd).**	closed:7fe50bedd
+2026-10-18-sysfiletree-tree-directory-flaky.md	**CLOSED 2026-10-31 by Phase 9d Task 8.8 (`6f2c1346e`).**	closed:6f2c1346e
+2026-10-18-upstream-bag-hasitem.md	**NOT A DIVERGENCE, ruled by Moritz 2026-10-18.** upstream report; Deviation 45 is the crate's rule.	not-a-divergence
+2026-10-19-condition-deviation-candidates.md	**CLOSED 2026-10-22 by Phase 9d Task 8.2 (9f8be0ec2).**	closed:9f8be0ec2
+2026-10-19-context-name-during-install.md	**CLOSED 2026-10-22 by Phase 9d Task 8.3 (68e7f15d5).**	closed:68e7f15d5
+2026-10-19-drive-rs-macros.md	"**RULED: later, ruled by Moritz 2026-10-19 (""proposal ok"").** after the 9d close."	later
+2026-10-19-guarded-trace-destination-spin.md	**RULED: Phase 10 under Moritz's 2026-10-19 conditional ruling, reconciled 2026-10-30.** Task 8.1 found that lifting the pinned-guard-wait limit requires resumable trace emission across emitting sites. Phase 10 continuation activities own this work. The hang and pinned-guard refusal remain open.	phase:10
+2026-10-19-index-argument-string-conversion.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7a (030af45a1).**	closed:030af45a1
+2026-10-19-local-novalue-hook.md	**CLOSED 2026-10-27 by Phase 9d Task 8.5 (2589e88b3).**	closed:2589e88b3
+2026-10-19-perf-round-and-whole-review.md	**RULED: later, by Moritz 2026-10-19.** A targeted performance round, and a manual whole-implementation review.	later
+2026-10-19-security-manager-protected-primitive.md	**CLOSED by Phase 9d Task 6.12** (`security-manager-method-event`): `setProtected` marks the method its object stands for, and a copy and `define` carry it. Witness `corpus/lang/security_manager_set_protected.rex`, identical to the oracle.	closed:Phase 9d Task 6.12
+2026-10-19-sigterm-in-trace-delivery.md	**CLOSED 2026-10-21 by Phase 9d Task 8.1 (fb86ce94f).** No change: the halt is raised inside the delivery, and both interpreters keep running because the untrapped HALT's report goes to the same spinning destination; witness `signals.rs` `sigterm_reaches_a_spinning_trace_destination`.	closed:fb86ce94f
+2026-10-19-sortwith-on-foreign-class.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7a (030af45a1).**	closed:030af45a1
+2026-10-19-trace-chunk-swap.md	"**RULED: later, ruled by Moritz 2026-10-19 (""proposal ok"").** closes Deviation 50 at no per-clause cost."	later
+2026-10-19-trace-destination-recursion-oom.md	**CLOSED 2026-10-21 by Phase 9d Task 8.1 (fb86ce94f).** Memory is bounded; the run takes about 5 minutes at the 10000-level limit, reported in `.superpowers/sdd/2026-10-18-phase-9d/task-8.1-report.md`.	closed:fb86ce94f
+2026-10-19-traceobject-cost.md	**CLOSED, ruled by Moritz 2026-10-19: the performance of traced programs is irrelevant. There are no targets for it and no need to match the oracle.** Found by the Phase 9d Task 6.10 review. Building a TraceObject in Rexx code makes tracing several times slower than the oracle.	closed:ruled 2026-10-19
+2026-10-19-upstream-refused-insert-mutates.md	**NOT COPIED, ruled by the controller 2026-10-19 under Moritz's standing rule that oracle bugs are never copied.** Upstream report only; no suite test depends on either shape.	not-a-divergence
+2026-10-19-variable-reference-deviation-candidates.md	**CLOSED 2026-10-27 by Phase 9d Task 8.5 (2589e88b3).**	closed:2589e88b3
+2026-10-19-variable-reference-gaps.md	**CLOSED 2026-10-27 by Phase 9d Task 8.5 (2589e88b3).**	closed:2589e88b3
+2026-10-20-call-on-delayed-reraise.md	**CLOSED 2026-10-22 by Phase 9d Task 8.2 (918e67f90).**	closed:918e67f90
+2026-10-20-collect-stress-raise-additional-array.md	**CLOSED 2026-10-21 by Phase 9d Task 8.1 (fb86ce94f).** Two more panics the first one hid are fixed with it; the subset's remaining divergences are reported in `.superpowers/sdd/2026-10-18-phase-9d/task-8.1-report.md`.	closed:fb86ce94f
+2026-10-20-definemethods-supplier.md	"**CLOSED: Implemented at `ad0741664` for the Phase 9d close on 2026-10-31.** Moritz authorized the correction with ""fix now."". Collection subclasses now receive `SUPPLIER` through normal dispatch, including protected sends and recursive installation inside that method. Fourteen paired witnesses match on stdout, stderr and exit status, with focused ordinary and forced-collection regressions passing. The evidence and retained native-directory boundary are recorded in `../2026-10-18-phase-9d/task-10-corrections-report.md`."	closed:ad0741664
+2026-10-20-halt-after-signal-on-syntax.md	**CLOSED 2026-10-22 by Phase 9d Task 8.2 (918e67f90).**	closed:918e67f90
+2026-10-20-lineout-buffered-until-close.md	"**CLOSED, ruled by Moritz 2026-10-20 (""Write-through, no Dev""): no Deviation.** rexxref expects buffering and offers NOBUFFER and FLUSH to make writes visible (funct.xml:4331-4335, 4390-4391; iostrms.xml:495-500), but never requires written data to stay hidden, so both interpreters follow it. The crate keeps writing through. Measured by Phase 9d Task 6.15 (`docs/superpowers/records/2026-10-18-phase-9d/t6.15/probes/lineout-visibility.rex`)."	not-a-divergence
+2026-10-21-call-site-reads-kept-before-arguments.md	**CLOSED 2026-10-22 by Phase 9d Task 8.3 (68e7f15d5).**	closed:68e7f15d5
+2026-10-21-copied-package-routine-executable.md	**CLOSED 2026-10-22 by Phase 9d Task 8.3 (68e7f15d5).**	closed:68e7f15d5
+2026-10-21-lineout-nil-names-file.md	**CLOSED 2026-10-22 by Phase 9d Task 8.2 (12ef5a35c).**	closed:12ef5a35c
+2026-10-21-main-program-executable-annotations.md	**CLOSED 2026-10-22 by Phase 9d Task 8.3 (68e7f15d5).**	closed:68e7f15d5
+2026-10-21-quick-native-calls-wall-bound-flake.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8c (949a7806b).**	closed:949a7806b
+2026-10-21-raise-in-routine-keeps-call-site.md	**CLOSED 2026-10-22 by Phase 9d Task 8.3 (68e7f15d5).**	closed:68e7f15d5
+2026-10-21-redirected-target-timed-line-flake.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8c (d7581cc4a).**	closed:d7581cc4a
+2026-10-21-routine-new-call-frames.md	**CLOSED 2026-10-22 by Phase 9d Task 8.3 (68e7f15d5).**	closed:68e7f15d5
+2026-10-21-stdin-linein-then-charin.md	**CLOSED: 3cd8cff5c.** Phase 9d Task 6.15 fix round 4: a file standard input is a persistent	closed:3cd8cff5c
+2026-10-22-collect-stress-zero-collection-drift.md	**CLOSED 2026-10-30 by Task 8.8d (03d74f029).**	closed:03d74f029
+2026-10-22-constant-frame-and-executable.md	**CLOSED 2026-10-26 by Phase 9d Task 8.4 (7fe50bedd).**	closed:7fe50bedd
+2026-10-22-directory-subclass-unknown-frame.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (5053fbd9b).**	closed:5053fbd9b
+2026-10-22-executable-at-quadratic-depth.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (5053fbd9b).**	closed:5053fbd9b
+2026-10-22-interpret-clause-traceback-indent.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (5053fbd9b).**	closed:5053fbd9b
+2026-10-22-lineout-four-args-error.md	**CLOSED 2026-10-29 by Phase 9d Task 8.7c (e620097f0).**	closed:e620097f0
+2026-10-22-live-frames-omit-nested-primitives.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (5053fbd9b).**	closed:5053fbd9b
+2026-10-22-security-manager-set-mid-activation.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (5053fbd9b).**	closed:5053fbd9b
+2026-10-22-user-raised-in-own-handler.md	"**CLOSED 2026-10-28 by Phase 9d Task 8.7b fix round 1 (10b0f5081): ruled by Moritz 2026-10-28 (""Follow rexxref, Deviation""); a condition raised again while its CALL ON trap is delayed is held and redelivered as rexxref condtra.xml says (rust/crates/rexx-exec/tests/delayed_trap_cases/crate).**"	closed:10b0f5081
+2026-10-26-compile-failure-condition-names-caller.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (5053fbd9b).**	closed:5053fbd9b
+2026-10-26-file-date-time-dst-dependent.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8c (949a7806b).**	closed:949a7806b
+2026-10-26-library-rxmath-error-number.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (probe agrees: docs/superpowers/records/2026-10-18-phase-9d/t8.7b/probes/rxmath/b3.rex, b4.rex; the 98.903 is the crate run without the oracle's library directory).**	closed:probe agrees
+2026-10-26-main-program-level-during-requires-install.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (5053fbd9b).**	closed:5053fbd9b
+2026-10-26-redirected-target-waits-timing-flake.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8c (d7581cc4a).**	closed:d7581cc4a
+2026-10-27-deadlock-report-shape.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (probe agrees: docs/superpowers/records/2026-10-18-phase-9d/t8.7b/probes/deadlock/classes.txt; this crate's outcomes are a subset of the oracle's, the rest Deviation 67's race).**	closed:probe agrees
+2026-10-27-reaped-child-test-load-flake.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8c (d7581cc4a).**	closed:d7581cc4a
+2026-10-27-stem-array-default-string-value.md	**CLOSED 2026-10-29 by Phase 9d Task 8.7c (e620097f0).**	closed:e620097f0
+2026-10-27-stem-default-arithmetic-nostring.md	"**CLOSED 2026-10-29 by Phase 9d Task 8.7c fix round 1 (6da312e62), ruled R1 ""Default's value, stem named"".**"	closed:6da312e62
+2026-10-27-string-equals-makestring-argument.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7a (030af45a1).**	closed:030af45a1
+2026-10-27-varref-operator-traceback-line.md	**CLOSED 2026-10-29 by Phase 9d Task 8.7c (e620097f0).**	closed:e620097f0
+2026-10-28-append-stream-positioned-writes.md	"**CLOSED 2026-10-29 by Phase 9d Task 8.7c fix round 1 (6da312e62), ruled R3 ""Enforce rexxref"".**"	closed:6da312e62
+2026-10-28-bump-oracle-version.md	"**OPEN, queued 2026-10-28 by the controller at Moritz's request (""Queue a TODO to bump the oracle version. Several of the bugs have been fixed.""); proposed: after Phase 9d closes, before Phase 10's gates.**"	after 9d
+2026-10-28-hash-lookup-identity-first.md	"**CLOSED 2026-10-29 by Phase 9d Task 8.7c fix round 1 (6da312e62), under the Deviation ruled R2 ""Keep rexxref, Deviation"".**"	closed:6da312e62
+2026-10-28-internal-rendering-defaultname.md	**CLOSED 2026-10-29 by Phase 9d Task 8.7c (e620097f0).**	closed:e620097f0
+2026-10-28-primitives-without-frame.md	**CLOSED 2026-10-29 by Phase 9d Task 8.7c (e620097f0).**	closed:e620097f0
+2026-10-28-rexx-package-source.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7b (5053fbd9b).**	closed:5053fbd9b
+2026-10-28-stream-query-residuals.md	"**CLOSED 2026-10-29 by Phase 9d Task 8.7c fix round 1 (6da312e62): part 1 fixed by e620097f0, part 2 under Deviation 55, part 3 ruled R5 ""New Deviation, oracle bug"".**"	closed:6da312e62
+2026-10-28-trace-object-renderings.md	**CLOSED 2026-10-29 by Phase 9d Task 8.7c (e620097f0).**	closed:e620097f0
+2026-10-28-trace-reference-assignment-unrooted.md	**CLOSED 2026-10-28 by Phase 9d Task 8.7a (030af45a1).**	closed:030af45a1
+2026-10-29-debug-input-traps-off.md	"**CLOSED 2026-10-29 by Phase 9d Task 8.7c fix round 2 (9af69058d), ruled by Moritz 2026-10-29 (""Traps off only while the line runs""): traps are OFF while the typed line runs; the read of .DEBUGINPUT is an ordinary stream read, so its conditions reach their traps (Deviation 75's delayed rule included).**"	closed:9af69058d
+2026-10-29-debug-typed-exit.md	**OPEN, queued 2026-10-29 by the controller; proposed Phase 11.1 with its family (debug-typed-raise-untrapped, debug-typed-signal, debug-typed-call-sigl).**	phase:11.1
+2026-10-29-grandchild-sleeps-process-wide.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8b (ecce67dad).**	closed:ecce67dad
+2026-10-29-hash-collection-messages-sent.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8f (3979b7e31).**	closed:3979b7e31
+2026-10-29-in-flight-native-call-leaks-interpreter.md	"**OPEN, queued 2026-10-29 by the controller from an external (codex) review of 9af69058d; Moritz 2026-10-29 ""lgtm"" to the placement: proposed after 9d (needs a reproducing program first).**"	after 9d
+2026-10-29-native-buffer-bytes-uncharged.md	"**OPEN, queued 2026-10-29 by the controller from an external (codex) review of 9af69058d; Moritz 2026-10-29 ""lgtm"" to the placement: proposed after 9d (witness through the C API harness).**"	after 9d
+2026-10-29-notready-delay-across-internal-call.md	**CLOSED 2026-10-29 by Phase 9d Task 8.7c (e620097f0).**	closed:e620097f0
+2026-10-29-oracle-harness-stdin-deadlock.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8b (ecce67dad).**	closed:ecce67dad
+2026-10-29-perf-round-codex-agenda.md	"**OPEN, queued 2026-10-29 by the controller from an external (codex) review of 9af69058d; Moritz 2026-10-29 ""lgtm"" to the placement: perf round after 9d.**"	after 9d
+2026-10-29-pow-integral-exponent-overflow.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8 (3148553fe).**	closed:3148553fe
+2026-10-29-stdout-query-size-position-file.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8f (3979b7e31).**	closed:3979b7e31
+2026-10-29-stem-index-string-values.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8f (3979b7e31).**	closed:3979b7e31
+2026-10-29-suite-fixture-stderr-refusal-load-flake.md	"**OPEN FOLLOW-UP, approved by Moritz 2026-10-31 (""lgtm""); outside Task 8.8 closure.**"	follow-up
+2026-10-29-trace-assignment-rendered-once.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8f (3979b7e31).**	closed:3979b7e31
+2026-10-29-unary-integer-specialization.md	**OPEN, queued 2026-10-29 by the controller from Moritz's measurement; proposed perf round after 9d.**	after 9d
+2026-10-30-number-max-object-argument.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8f (3979b7e31).**	closed:3979b7e31
+2026-10-30-parse-pattern-conversion-raise.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8f (3979b7e31).**	closed:3979b7e31
+2026-10-30-raise-description-unsent.md	**CLOSED 2026-10-30 by Phase 9d Task 8.8f (3979b7e31).**	closed:3979b7e31
+bounds-check-brief.md	**CLOSED: dispatched.** a dispatched performance brief: report .superpowers/sdd/2026-09-21-bounds-check-report.md; item 7 landed (performance-todo.md:1012).	closed:dispatched
+category-rollup-brief.md	**CLOSED: dispatched.** a dispatched performance brief: result docs/superpowers/records/2026-09-20-performance-items/2026-09-22-category-rollup.md.	closed:dispatched
+driver-gap-brief.md	**CLOSED: dispatched.** a dispatched performance brief: report .superpowers/sdd/2026-09-22-driver-gap-report.md.	closed:dispatched
+o2-survival-brief.md	**CLOSED: dispatched.** a dispatched performance brief: result docs/superpowers/records/2026-09-20-performance-items/2026-09-22-o2-survival.md.	closed:dispatched
+op-fusion-brief.md	**CLOSED: dispatched.** a dispatched performance brief: report .superpowers/sdd/2026-09-21-op-fusion-report.txt; item 3 landed at 725aa8863.	closed:dispatched
+parse-contained-brief.md	**CLOSED: dispatched.** a dispatched performance brief: report .superpowers/sdd/2026-09-21-parse-contained-report.txt.	closed:dispatched
+parse-cost-scout-brief.md	**CLOSED: dispatched.** a dispatched performance brief: report .superpowers/sdd/2026-09-21-parse-cost-scout-report.md.	closed:dispatched
+parse-in-place-brief.md	**CLOSED: dispatched.** a dispatched performance brief: report .superpowers/sdd/2026-09-21-parse-in-place-report.txt; landed at 5e765dc5a.	closed:dispatched
+reprofile-brief.md	**CLOSED: dispatched.** a dispatched performance brief: report .superpowers/sdd/2026-09-21-reprofile-report.md.	closed:dispatched
+store-fusion-brief.md	**CLOSED: dispatched.** a dispatched performance brief: report .superpowers/sdd/2026-09-22-store-fusion-report.md.	closed:dispatched
+trace-emission-brief.md	**CLOSED: dispatched.** a dispatched performance brief: item 1 landed (performance-todo.md:374, 7a28f68e6 and 7fbadfecb).	closed:dispatched
+trace-quickening-brief.md	**CLOSED: dispatched.** a dispatched performance brief: item 2 built and reverted (performance-todo.md:619).	closed:dispatched

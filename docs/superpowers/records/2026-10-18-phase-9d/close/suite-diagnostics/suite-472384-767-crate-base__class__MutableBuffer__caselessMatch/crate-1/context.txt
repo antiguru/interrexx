@@ -1,0 +1,51 @@
+run=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-767-crate-base__class__MutableBuffer__caselessMatch/run
+TZ=None
+status=Some(0) ended=Exited(0) took=91.299938ms
+GroupRun {
+    group: "base/class/MutableBuffer/caselessMatch",
+    expected: {},
+    started: {
+        "TESTNEGATIVELENGTH",
+        "TESTNEGATIVEN",
+        "TESTNEGATIVEPOS",
+        "TESTNONINTEGERLENGTH",
+        "TESTNONINTEGERN",
+        "TESTNONINTEGERPOS",
+        "TESTNONNUMERICLENGTH",
+        "TESTNONNUMERICN",
+        "TESTNONNUMERICPOS",
+        "TESTZERON",
+        "TESTZEROPOS",
+        "TEST_MATCH_CASELESS",
+    },
+    passed: {
+        "TESTNEGATIVELENGTH",
+        "TESTNEGATIVEN",
+        "TESTNEGATIVEPOS",
+        "TESTNONINTEGERLENGTH",
+        "TESTNONINTEGERN",
+        "TESTNONINTEGERPOS",
+        "TESTNONNUMERICLENGTH",
+        "TESTNONNUMERICN",
+        "TESTNONNUMERICPOS",
+        "TESTZERON",
+        "TESTZEROPOS",
+        "TEST_MATCH_CASELESS",
+    },
+    failed: {},
+    blocked: {},
+    blocked_at_load: None,
+    ended_before_a_test: None,
+    iterations: 1,
+    ended_normally: true,
+    cap: Memcap,
+    tests_ran: Some(
+        "12",
+    ),
+    took: 91.299938ms,
+}
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-767-crate-base__class__MutableBuffer__caselessMatch/started.txt canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-767-crate-base__class__MutableBuffer__caselessMatch/started.txt") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100664 (-rw-rw-r--) }), len: 297, modified: SystemTime { tv_sec: 1793535168, tv_nsec: 411596405 }, accessed: SystemTime { tv_sec: 1793535168, tv_nsec: 405367632 }, created: SystemTime { tv_sec: 1793535168, tv_nsec: 405367632 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-767-crate-base__class__MutableBuffer__caselessMatch/run/child.rex canonical=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" }) metadata=Err(Os { code: 2, kind: NotFound, message: "No such file or directory" })
+read failed: No such file or directory (os error 2)
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-767-crate-base__class__MutableBuffer__caselessMatch/bin-rexx/rexx canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-767-crate-base__class__MutableBuffer__caselessMatch/bin-rexx/rexx") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 67503680, modified: SystemTime { tv_sec: 1793535149, tv_nsec: 65923210 }, accessed: SystemTime { tv_sec: 1793535149, tv_nsec: 49923670 }, created: SystemTime { tv_sec: 1793535149, tv_nsec: 49923670 }, .. })
+path=/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-767-crate-base__class__MutableBuffer__caselessMatch/run/ooRexx/base/class/MutableBuffer/caselessMatch.testGroup canonical=Ok("/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace/tmp/suite-472384-767-crate-base__class__MutableBuffer__caselessMatch/run/ooRexx/base/class/MutableBuffer/caselessMatch.testGroup") metadata=Ok(Metadata { file_type: FileType { is_file: true, is_dir: false, is_symlink: false, .. }, permissions: Permissions(FilePermissions { mode: 0o100775 (-rwxrwxr-x) }), len: 5595, modified: SystemTime { tv_sec: 1793535168, tv_nsec: 340739610 }, accessed: SystemTime { tv_sec: 1793535168, tv_nsec: 340258093 }, created: SystemTime { tv_sec: 1793535168, tv_nsec: 340258093 }, .. })

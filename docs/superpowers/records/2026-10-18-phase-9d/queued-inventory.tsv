@@ -167,7 +167,7 @@ gate:phase-9a-gate.md:462	process	-	closed:03d74f029	no probe; the ffi.rs texts'
 gate:phase-9a-gate.md:463	divergence	queued-probes/ins25/ins25.rex:1,queued-probes/ins35/ins35.rex:1,queued-probes/ins47/ins47.rex:1,queued-probes/rnmsg/rnmsg.rex:1	closed:probe agrees	own probes of the named inserts (25.907, 35.1, 47.2, the Routine~new message) agree; 9c Tasks 2 to 4	closed:probe agrees
 gate:phase-9a-gate.md:464	divergence	queued-probes/startw/startw.rex:1	closed:Phase 9b1 L9	Method side-map rows are pruned (phase-9b1-gate.md L9); own startWith probe agrees on the header	closed:Phase 9b1 L9
 gate:phase-9a-gate.md:465	design	-	closed:Deviation 35	HANDLE:0, 1 and 2 reach the standard streams and any other descriptor is refused	closed:Deviation 35
-gate:phase-9a-gate.md:466	perf	-	9d	no probe; each is for the Phase 9 close callgrind, which is 9d Task 10's	9d
+gate:phase-9a-gate.md:466	perf	-	9d	closed by the Phase 9 close callgrind, phase-9d-gate.md Performance	closed-9d
 gate:phase-9a-gate.md:468	process	-	closed:pin rebuilt	/home/moritz/dev/repos/ooRexx-p9-pin/rexx-run exists and the 9d constraints measure against it	closed:pin rebuilt
 gate:phase-9a-gate.md:469	divergence	queued-probes/exttr/exttr.rex:1,queued-probes/t4c/t4c.rex:1	closed:probe agrees	the external CALL half agrees (exttr); Routine~new's >I> package is that cluster's mechanism	closed:probe agrees
 gate:phase-9a-gate.md:470	divergence	queued-probes/memcompile/memcompile.rex:1	closed:Phase 9b1	method-source retention is flat (its own row); the gc-trigger file was closed and removed in d81bacfad	closed:Phase 9b1

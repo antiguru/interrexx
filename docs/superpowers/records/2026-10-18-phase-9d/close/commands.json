@@ -1,0 +1,351 @@
+[
+  {
+    "name": "preflight",
+    "argv": [
+      "python3",
+      "scripts/test_preflight.py"
+    ],
+    "cap": "8G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace"
+    }
+  },
+  {
+    "name": "G1-fmt",
+    "argv": [
+      "cargo",
+      "fmt",
+      "--all",
+      "--check"
+    ],
+    "cap": "8G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace"
+    }
+  },
+  {
+    "name": "G2-clippy",
+    "argv": [
+      "cargo",
+      "clippy",
+      "-j",
+      "4",
+      "--workspace",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "cap": "16G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/clippy"
+    }
+  },
+  {
+    "name": "G3-build-release",
+    "argv": [
+      "cargo",
+      "test",
+      "-j",
+      "4",
+      "--workspace",
+      "--release",
+      "--no-run"
+    ],
+    "cap": "16G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace",
+      "REXX_CORPUS_GATE": "1"
+    }
+  },
+  {
+    "name": "G4-test-release",
+    "argv": [
+      "cargo",
+      "test",
+      "-j",
+      "4",
+      "--workspace",
+      "--release",
+      "--no-fail-fast"
+    ],
+    "cap": "8G",
+    "seconds": 2400,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace",
+      "REXX_CORPUS_GATE": "1",
+      "REXX_TIMER_TABLE": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/G4-timer-table.txt",
+      "REXX_CRITERION_ONE_TABLE": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/G4-criterion-one-table.txt",
+      "REXX_CRITERION_ONE_S3_TABLE": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/G4-criterion-one-s3-table.txt",
+      "REXX_SUITE_DIAGNOSTICS": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/release-diagnostics"
+    }
+  },
+  {
+    "name": "whole-suite",
+    "argv": [
+      "cargo",
+      "test",
+      "-j",
+      "4",
+      "--release",
+      "-p",
+      "rexx-exec",
+      "--test",
+      "suite",
+      "l3_core_suite",
+      "--",
+      "--nocapture"
+    ],
+    "cap": "8G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace",
+      "REXX_SUITE_GATE": "1",
+      "REXX_SUITE_TABLE": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/suite/table.tsv",
+      "REXX_SUITE_DIAGNOSTICS": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/suite-diagnostics"
+    }
+  },
+  {
+    "name": "G5-build-debug",
+    "argv": [
+      "cargo",
+      "test",
+      "-j",
+      "4",
+      "--workspace",
+      "--no-fail-fast",
+      "--no-run"
+    ],
+    "cap": "16G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace",
+      "REXX_CORPUS_GATE": "1"
+    }
+  },
+  {
+    "name": "G6-test-debug",
+    "argv": [
+      "cargo",
+      "test",
+      "-j",
+      "4",
+      "--workspace",
+      "--no-fail-fast"
+    ],
+    "cap": "8G",
+    "seconds": 3000,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace",
+      "REXX_CORPUS_GATE": "1",
+      "REXX_TIMER_TABLE": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/G6-timer-table.txt",
+      "REXX_CRITERION_ONE_TABLE": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/G6-criterion-one-table.txt",
+      "REXX_CRITERION_ONE_S3_TABLE": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/G6-criterion-one-s3-table.txt",
+      "REXX_SUITE_DIAGNOSTICS": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/debug-diagnostics"
+    }
+  },
+  {
+    "name": "G7-clippy-pinning",
+    "argv": [
+      "cargo",
+      "clippy",
+      "-j",
+      "4",
+      "-p",
+      "rexx-exec",
+      "--all-targets",
+      "--features",
+      "pinning",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "cap": "16G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/pinning"
+    }
+  },
+  {
+    "name": "G8-build-pinning",
+    "argv": [
+      "cargo",
+      "test",
+      "-j",
+      "4",
+      "-p",
+      "rexx-exec",
+      "--features",
+      "pinning",
+      "--test",
+      "concurrency_tests",
+      "--no-run"
+    ],
+    "cap": "16G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/pinning"
+    }
+  },
+  {
+    "name": "G8-test-pinning",
+    "argv": [
+      "cargo",
+      "test",
+      "-j",
+      "4",
+      "-p",
+      "rexx-exec",
+      "--features",
+      "pinning",
+      "--test",
+      "concurrency_tests",
+      "--",
+      "measured::a_",
+      "measured::an_"
+    ],
+    "cap": "8G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/pinning"
+    }
+  },
+  {
+    "name": "G9-build-loom",
+    "argv": [
+      "cargo",
+      "test",
+      "-j",
+      "4",
+      "-p",
+      "rexx-exec",
+      "--test",
+      "loom",
+      "--no-run"
+    ],
+    "cap": "16G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/loom",
+      "RUSTFLAGS": "--cfg loom"
+    }
+  },
+  {
+    "name": "G9-loom",
+    "argv": [
+      "cargo",
+      "test",
+      "-j",
+      "4",
+      "-p",
+      "rexx-exec",
+      "--test",
+      "loom"
+    ],
+    "cap": "8G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/loom",
+      "RUSTFLAGS": "--cfg loom"
+    }
+  },
+  {
+    "name": "TSan",
+    "argv": [
+      "bash",
+      "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan.sh",
+      "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/tsan",
+      "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/tsan"
+    ],
+    "cap": "8G",
+    "seconds": 3000,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/tsan"
+    }
+  },
+  {
+    "name": "performance-build",
+    "argv": [
+      "cargo",
+      "build",
+      "-j",
+      "4",
+      "--release",
+      "-p",
+      "rexx-exec",
+      "--bin",
+      "rexx"
+    ],
+    "cap": "16G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace"
+    }
+  },
+  {
+    "name": "performance-copy",
+    "argv": [
+      "internal-copy"
+    ],
+    "cap": "8G",
+    "seconds": 600,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace"
+    }
+  },
+  {
+    "name": "callgrind",
+    "argv": [
+      "bench-programs/callgrind.sh",
+      "-B",
+      "0.5",
+      "-o",
+      "/home/moritz/dev/repos/ooRexx-p9-pin/cg-9d/close",
+      "pin=/home/moritz/dev/repos/ooRexx-p9-pin/rexx-run",
+      "head=/home/moritz/dev/repos/ooRexx-p9-pin/rexx-9d-d675de751bf465140ec834482c9c7fb9f0832177"
+    ],
+    "cap": "8G",
+    "seconds": 43200,
+    "env": {
+      "CARGO_INCREMENTAL": "0",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_TARGET_DIR": "/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/d675de751bf465140ec834482c9c7fb9f0832177/workspace"
+    }
+  }
+]

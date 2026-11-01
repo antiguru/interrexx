@@ -1,0 +1,21 @@
+
+running 16 tests
+test measured::a_slice_deferred_inside_a_sort_comparator_is_counted_once ... ok
+test measured::a_park_point_native_is_not_a_frame_above_itself ... ok
+test measured::a_slice_deferred_before_a_pinned_park_stays_with_its_activity ... ok
+test measured::a_sleep_in_a_tree_evaluated_expression_is_a_pinned_wait ... ok
+test measured::an_immovable_reply_is_counted_with_its_frames ... ok
+test measured::a_pinned_busy_wait_counts_its_pinned_yields ... ok
+test measured::a_park_records_the_pinned_frames_above_it ... ok
+test measured::an_inverted_wait_is_counted_with_its_kind_and_frames ... ok
+test measured::a_park_inside_a_recursing_native_is_under_a_pinned_frame ... ok
+test measured::a_sleep_is_a_pinned_wait_only_under_a_pinned_frame ... ok
+test measured::a_wait_is_a_park_point ... ok
+test measured::a_guard_when_is_a_pinned_wait_only_under_a_pinned_frame ... ok
+test measured::a_park_inside_a_stackless_entry_is_under_no_pinned_frame ... ok
+test measured::a_park_under_each_frame_kind_records_it ... ok
+test measured::a_buried_sleeper_due_first_is_a_late_wake ... ok
+test measured::a_new_into_init_is_stackless_or_pinned ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 66 filtered out; finished in 1.19s
+

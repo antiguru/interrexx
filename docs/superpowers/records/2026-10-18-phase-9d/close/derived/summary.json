@@ -1,0 +1,104 @@
+{
+  "mode": "close evidence derivation",
+  "suite_root": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/suite",
+  "pending_gate466": "allow",
+  "limitations": [
+    "No new licence, oracle cause or performance ruling is inferred",
+    "Named policy success must come from actual G4/G6 logs",
+    "A whole-phase gate verdict remains the controller responsibility"
+  ],
+  "git_head": "d675de751bf465140ec834482c9c7fb9f0832177",
+  "rust_tree": "c25eeeecacf8b29004cc5b925f7213c38081fc7b",
+  "suite": {
+    "deltas": {
+      "delta-vs-9c": {
+        "old_tests": 24523,
+        "new_tests": 24523,
+        "changed_rows": 640,
+        "added": 0,
+        "removed": 0
+      },
+      "delta-vs-t9": {
+        "old_tests": 24523,
+        "new_tests": 24523,
+        "changed_rows": 0,
+        "added": 0,
+        "removed": 0
+      }
+    },
+    "tests": 24523,
+    "groups": 402,
+    "extension_rows": 453,
+    "oracle_differences": 102,
+    "binary_exception": {
+      "group": "utilities/rexx/rexx_command",
+      "test": "TEST_PASSINGARGS7",
+      "row": "Deviation(40)",
+      "oracle": "passed",
+      "crate": "failed"
+    }
+  },
+  "dispositions": {
+    "refusal_rows": 15,
+    "inventory_rows": 287,
+    "queued_files": 245,
+    "pending_gate466": "allow"
+  },
+  "frozen_head": "d675de751bf465140ec834482c9c7fb9f0832177",
+  "retained_close_failures": {
+    "G3-build-release": 124,
+    "callgrind": 1
+  },
+  "canonical_finished_statuses": {
+    "preflight": 0,
+    "G1-fmt": 0,
+    "G2-clippy": 0,
+    "G3-build-release": 124,
+    "G4-test-release": 0,
+    "whole-suite": 0,
+    "G5-build-debug": 0,
+    "G6-test-debug": 0,
+    "G7-clippy-pinning": 0,
+    "G8-build-pinning": 0,
+    "G8-test-pinning": 0,
+    "G9-build-loom": 0,
+    "G9-loom": 0,
+    "TSan": 0,
+    "performance-build": 0,
+    "performance-copy": 0,
+    "callgrind": 1
+  },
+  "no_run_compile_completion": {
+    "original_status": 124,
+    "completed_compile_status": 0,
+    "continuation_used": true,
+    "frozen_head": "d675de751bf465140ec834482c9c7fb9f0832177",
+    "frozen_rust_tree": "c25eeeecacf8b29004cc5b925f7213c38081fc7b",
+    "ruling_sha256": "b33e883a47ac0e59dfda7bfd16d8c3e1bfbfb4a1376481484b92eb26a24fa480",
+    "attempts": [
+      {
+        "name": "G3-build-release",
+        "status": 124,
+        "started": "2026-11-01T11:29:23.830504+00:00",
+        "finished": "2026-11-01T11:39:23.849394+00:00",
+        "record_sha256": "29551466c93f89d4a00f32a41c598e39b36d225678fee6ec017566c620e98939",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "13a299a8d1261e102510e172b3131db5d09db76e0594eb11cf61e3244ea96b5c"
+      },
+      {
+        "name": "G3-build-release-continuation-1",
+        "status": 0,
+        "started": "2026-11-01T11:39:24.676607+00:00",
+        "finished": "2026-11-01T11:44:39.101376+00:00",
+        "record_sha256": "0c131d30012dc7e44409bdb0dd78e8a175d715132f69dae58e2bfdda83339b3f",
+        "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stderr_sha256": "074cde3099cd669b8e064022acd063b45b093326a0749b6f05d736448890b96e"
+      }
+    ],
+    "g4_started": "2026-11-01T11:44:40.190267+00:00",
+    "limitation": "Original G3 raw timeout remains a canonical gate failure. This proves only completed no-run compilation before G4."
+  },
+  "performance_adjudicated": false,
+  "errors": [],
+  "derivation_passed": true
+}
