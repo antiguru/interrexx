@@ -10,9 +10,9 @@ Frozen at `d675de751`, Rust tree `c25eeeeca`, on fresh target directories, by `C
 | --- | --- | --- |
 | preflight, G1 fmt, G2 clippy | 0 | |
 | G3 release no-run | 124 | 600 s bound hit while compiling. Identical bounded continuation exit 0 before any test, `C/G3-build-release-continuation-1.json`, `C/build-continuation-ruling.json` |
-| G4 full release | 0 | 3831 passed, 178 test targets |
+| G4 full release | 0 | 3831 passed across 178 result blocks, which include child `cargo test` re-runs; 157 test binaries plus 11 doc-test runs |
 | whole suite | 0 | 402 groups, 24,523 rows, no row changed from Task 9 |
-| G5, G6 full debug | 0 | 3836 passed, 178 test targets |
+| G5, G6 full debug | 0 | 3836 passed across 178 result blocks, same shape |
 | G7 pinning clippy, G8 pinning | 0 | 16 tests |
 | G9 Loom | 0 | 15 models |
 | TSan | 0, validated 0 | api, lib, int 0; 70, 1234, 113 tests; no `tsan.*` file, `C/tsan-status.json`, `C/tsan/` |
@@ -21,7 +21,7 @@ Frozen at `d675de751`, Rust tree `c25eeeeca`, on fresh target directories, by `C
 
 ## Suite and inventory
 
-`C/derived/summary.json`, from `C/profile-verifier/evidence-audit.py`: 402 groups, 24,523 rows, 640 rows changed from the 9c close, none from Task 9, 453 extension rows, 102 oracle differences, 15 refusal rows disposed, 287 inventory rows and 245 queued files ruled. The set header derivation prints nothing (`C/derived/set-header.stdout`). Extension rows: `C/derived/extensions.tsv`. Refusals: `C/derived/refusal-dispositions.tsv`. Queued first lines: `C/derived/queued-first-lines.tsv`. The one binary exception is Deviation 40, `rexx_command` `TEST_PASSINGARGS7`. Gate item `phase-9a-gate.md:466` is closed by this record.
+`C/derived-final/summary.json`, from `C/profile-verifier/evidence-audit.py`: 402 groups, 24,523 rows, 640 rows changed from the 9c close, none from Task 9, 453 extension rows, 102 oracle differences, 15 refusal rows disposed, 287 inventory rows and 245 queued files ruled. The set header derivation prints nothing (`C/derived/set-header.stdout`). Extension rows: `C/derived/extensions.tsv`. Refusals: `C/derived/refusal-dispositions.tsv`. Queued first lines: `C/derived/queued-first-lines.tsv`. The one binary exception is Deviation 40, `rexx_command` `TEST_PASSINGARGS7`. Gate item `phase-9a-gate.md:466`, the close callgrind, was executed; `C/derived-final/` is the strict audit with no pending item. Its acceptance is the Performance ruling below.
 
 ## Performance
 
@@ -37,7 +37,7 @@ Whole-process rows over +0.5%, retained as measured:
 | `compound` | +1.4212% | +1.2446% |
 | `pingsem` | +0.5231% | +0.4933% |
 
-Controller adjudication under plan ruling 14 (+0.5% guards obvious regressions and does not block a close): none blocks the close. Moritz has not ruled on these figures. Causes known so far, and the follow-up, are in `.superpowers/sdd/queued/2026-09-20-performance-todo.md`, "Phase 9 close residuals".
+Spec section 8's budget is +0.5% on every program, and ruling 14 accepted one +0.53% figure. **These five exceed that and await Moritz's ruling; criterion 5 is open until then.** The controller's recommendation is acceptance as drift for the perf round. Causes known so far, and the follow-up, are in `.superpowers/sdd/queued/2026-09-20-performance-todo.md`, "Phase 9 close residuals".
 
 ## Negative history
 

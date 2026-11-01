@@ -1,0 +1,16 @@
+{
+  "delta-vs-9c.tsv": "3fefe1b2e3e845ebdd7869a05253855e3b18a4ebf1956bba2b6e40186a64fefe",
+  "delta-vs-t9.tsv": "898d7a329ac72cc237e82d828dc8fbd8fb8d8914f641121af01d80f0a99c9d52",
+  "extensions.tsv": "51e510516db68784575005ca0a4bd1037f45c7060b23468389d24705b138ae72",
+  "inputs-sha256.json": "1763ba57f8abe2481e4358c26280f6dacee523272d2ab7ce0fa5e3ea631f8640",
+  "inventory.tsv": "f147e4fdc4be81d0f814b99ca2867353449937d6f4ac994a40a9446528050095",
+  "oracle-differences.tsv": "cb23298d1cd307399dec9d44934d27f3a22ebb003174e6b31c87996d01403384",
+  "parent-binary-rows.tsv": "bf7d7639fdb4d7f110f2998dc499d563b51d3460650d4836326dd11cd94513c1",
+  "policy-and-binary-checks.tsv": "42b54c91c679731e0bf17020a61076285d8a4d55ea57f82a156a9ec6a806153e",
+  "queued-first-lines.tsv": "38314cace1837adf163a1ecd87196b99ffd3905b3fc1fd5116938fc2e7ce94c2",
+  "refusal-dispositions.tsv": "c8ca90de9785a583f673187c2e2c6f3da18f6845951785ce9b2fbd0947cf5bb3",
+  "set-header-command.json": "69ff5f7e6dc00539bfc2a516918855a0a90e804befe2cf87faf13beba3109b0d",
+  "set-header.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "set-header.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "summary.json": "41c9f4ebf969355cad967ee38ce58b683a13353a2f2b112777c33ff9b06d9cb6"
+}
