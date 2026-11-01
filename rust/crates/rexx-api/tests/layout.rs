@@ -903,7 +903,8 @@ fn identifier_at(text: &str) -> String {
 /// extensions call, through the header's inline wrappers.
 fn members_the_test_extensions_call() -> BTreeSet<String> {
     let header = header();
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../testbinaries");
+    let root =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../third_party/ooRexx/testbinaries");
     let mut called = BTreeSet::new();
     for file in ["orxmethod.cpp", "orxfunction.cpp"] {
         let path = root.join(file);

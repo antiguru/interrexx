@@ -389,5 +389,5 @@ pub fn corpus_dir() -> PathBuf {
 
 /// The samples directory at the repository root.
 pub fn samples_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../samples")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../third_party/ooRexx/samples")
 }

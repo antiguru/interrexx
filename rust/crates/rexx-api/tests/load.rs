@@ -164,8 +164,9 @@ fn a_package_asking_for_this_interpreter_or_less_is_accepted() {
 /// The hexadecimal value `#define <current>` names through one more
 /// `#define`, as the header spells both current versions.
 fn current_version(current: &str) -> c_int {
-    let header = std::fs::read_to_string(repository_root().join("api/oorexxapi.h"))
-        .expect("the frozen header is readable");
+    let header =
+        std::fs::read_to_string(repository_root().join("third_party/ooRexx/api/oorexxapi.h"))
+            .expect("the frozen header is readable");
     let named = header
         .lines()
         .find_map(|line| line.strip_prefix(&format!("#define {current} ")))

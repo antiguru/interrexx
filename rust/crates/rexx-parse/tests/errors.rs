@@ -944,7 +944,8 @@ fn oracle_name(pair: (u16, u16)) -> String {
 
 #[test]
 fn every_unreached_reason_still_holds() {
-    let interpreter = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../interpreter");
+    let interpreter =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../third_party/ooRexx/interpreter");
     let mut seen = std::collections::BTreeSet::new();
     for (pair, reason) in UNREACHED_BY_FILE {
         assert!(seen.insert(*pair), "{pair:?} is recorded twice");
@@ -994,7 +995,7 @@ fn every_unreached_reason_still_holds() {
 
 /// Every `.rex` file under `samples/`, found with a recursive walk.
 fn sample_programs() -> Vec<PathBuf> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../samples");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../third_party/ooRexx/samples");
     let mut found = Vec::new();
     let mut stack = vec![root];
     while let Some(dir) = stack.pop() {

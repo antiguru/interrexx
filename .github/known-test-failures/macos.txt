@@ -1,0 +1,14 @@
+# macOS-only expected failures. See common.txt for the shared ones and
+# README.md for what may go in here.
+
+# Same family as the SysSleep entries in common.txt: an assertion about
+# real-time behaviour that a shared virtual machine cannot honour. A ticker set
+# to fire three times within a span fired twice.
+#
+#   should have triggered three times, but triggered 2 times
+#
+# Listed for macOS only because that is the only place it has been seen so far.
+# If it turns up elsewhere it should move to common.txt then, the way the
+# SysSleep pair did once Windows reproduced it, rather than being moved now on
+# the assumption that it will.
+TICKER.testGroup/TEST_TICKER_THREE_ARGS_TIMESPAN_TRIGGER_MULTIPLE

@@ -293,7 +293,7 @@ pub fn fresh_copy_from(run: &Path, root: &Path, dir: &str) {
     }
     without_rxfuncquery(&run.join("ooTest.frm"));
     fs::copy(
-        worktree().join("extensions/rxregexp/rxregexp.cls"),
+        worktree().join("third_party/ooRexx/extensions/rxregexp/rxregexp.cls"),
         run.join("rxregexp.cls"),
     )
     .expect("cannot copy rxregexp.cls");

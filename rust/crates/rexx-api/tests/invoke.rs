@@ -653,7 +653,7 @@ fn every_rxmath_routine_is_typed() {
 fn the_array_is_as_long_as_the_oracles() {
     assert_eq!(invoke::MAX_NATIVE_ARGUMENTS, 16);
     let header = std::fs::read_to_string(
-        repository_root().join("interpreter/execution/NativeActivation.hpp"),
+        repository_root().join("third_party/ooRexx/interpreter/execution/NativeActivation.hpp"),
     )
     .expect("the oracle's header is readable");
     let declared = header

@@ -43,7 +43,7 @@ fn build_forge(dir: &Path) {
 /// Builds the extension `source` as `library` and checks it NEEDs no
 /// interpreter.
 fn build_library(source: &Path, library: &Path) {
-    let api = worktree().join("api");
+    let api = worktree().join("third_party/ooRexx/api");
     let built = Command::new("g++")
         .args(["-shared", "-fPIC", "-O1", "-static-libstdc++"])
         .arg(format!("-I{}", api.display()))

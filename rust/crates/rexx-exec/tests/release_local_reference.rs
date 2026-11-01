@@ -28,7 +28,7 @@ fn worktree() -> PathBuf {
 /// Builds the extension `release_local_reference/<name>.cpp` into `dir` as
 /// `lib<name>.so`.
 fn build_library(dir: &Path, name: &str) {
-    let api = worktree().join("api");
+    let api = worktree().join("third_party/ooRexx/api");
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join(format!("tests/release_local_reference/{name}.cpp"));
     let built = Command::new("c++")

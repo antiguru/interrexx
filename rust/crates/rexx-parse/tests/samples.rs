@@ -26,7 +26,7 @@ fn rex_files_under(dir: &Path) -> Vec<PathBuf> {
 
 #[test]
 fn every_sample_rex_file_parses() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../samples");
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../third_party/ooRexx/samples");
     let files = rex_files_under(&dir);
 
     let mut lines = 0usize;

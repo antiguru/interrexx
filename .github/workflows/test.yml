@@ -18,8 +18,6 @@ jobs:
         with:
           submodules: true
       - uses: actions-rust-lang/setup-rust-toolchain@v2
-        with:
-          rust-src-dir: rust
       - name: Install oracle build dependencies
         run: sudo apt-get update && sudo apt-get install -y cmake subversion libxml2-dev libncurses-dev
       - name: Build third-party trees

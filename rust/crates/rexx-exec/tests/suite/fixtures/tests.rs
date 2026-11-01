@@ -187,8 +187,7 @@ fn the_crate_side_finds_its_own_rexx_and_rexxc() {
         "a symlink resolves to the target directory, where no samples are"
     );
     assert!(
-        bin.join("../third_party/ooRexx/samples/factor.rex")
-            .is_file(),
+        bin.join("../samples/factor.rex").is_file(),
         "the samples beside the bin"
     );
     assert_eq!(resolve("rexxc", &path), Some(bin.join("rexxc")));
