@@ -23,8 +23,14 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y cmake subversion libxml2-dev libncurses-dev
       - name: Build third-party trees
         run: ../scripts/setup-third-party.sh
+      - name: Provide memcap
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
+          chmod +x "$HOME/.local/bin/memcap"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Cargo test
-        run: cargo test --locked --workspace -j4
+        run: cargo test --locked --workspace --no-fail-fast -j4
 
   fmt:
     name: Cargo fmt
