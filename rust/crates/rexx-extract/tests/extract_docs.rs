@@ -36,8 +36,12 @@ fn derived() -> Option<Vec<(&'static str, docs::RowSet)>> {
     let root = oodocs()?;
     let revision = docs::svn_revision(&root.join("rexxref")).expect("svn info oodocs/rexxref");
     Some(
-        docs::derive(&root, &repo_root().join("third_party/ooRexx/interpreter"), &revision)
-            .unwrap_or_else(|e| panic!("{e}")),
+        docs::derive(
+            &root,
+            &repo_root().join("third_party/ooRexx/interpreter"),
+            &revision,
+        )
+        .unwrap_or_else(|e| panic!("{e}")),
     )
 }
 
