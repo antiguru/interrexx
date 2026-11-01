@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! Times each `bench-programs/*.rex` file under the interpreter named by
 //! `REXX_BENCH_BINARY`. This is Task 0.7: it asserts nothing and gates
 //! nothing -- it only establishes the numbers that every later phase's

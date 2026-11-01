@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! The conversion builtins: `B2X`, `BITAND`, `BITOR`, `BITXOR`, `C2D`, `C2X`,
 //! `D2C`, `D2X`, `X2B`, `X2C`, `X2D` and `XRANGE`.
 //! ```text

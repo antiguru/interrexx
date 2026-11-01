@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! `rexxc` against the oracle's, and against `corpus/errors/parse-errors.tsv`.
 //!
 //! Each case of `tests/rexxc/cases` runs both binaries with the same words
@@ -30,7 +19,7 @@ const CASE_DIR: &str = "tests/rexxc";
 /// The oracle's address-space cap, in KiB.
 const ORACLE_MEMORY_LIMIT_KIB: u64 = 1_048_576;
 
-const ORACLE_ROOT: &str = "/home/moritz/dev/repos/ooRexx/build";
+const ORACLE_ROOT: &str = env!("REXX_ORACLE_ROOT");
 
 /// How much of an output file a case reports: the `#!` line and the binary
 /// tag with two of its pad bytes, or the encoded tag.

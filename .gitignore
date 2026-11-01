@@ -1,0 +1,12 @@
+# Third-party checkouts and builds, see scripts/setup-third-party.sh.
+/build
+/ootest
+/oodocs
+/third_party/oracle
+
+/rust/target/
+/rust/corpus-l1/
+
+# SDD scratch; ledgers are force-added.
+/.superpowers/
+__pycache__/

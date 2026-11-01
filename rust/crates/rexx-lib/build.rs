@@ -16,17 +16,17 @@ struct Source {
 const SOURCES: &[Source] = &[
     Source {
         name: "CoreClasses.orx",
-        path: "../../../interpreter/RexxClasses/CoreClasses.orx",
+        path: "../../../third_party/ooRexx/interpreter/RexxClasses/CoreClasses.orx",
         sha256: "c00727ab66e0fd862f12a7c023656c948259837b8432fa0d149bd6938fe2ff47",
     },
     Source {
         name: "StreamClasses.orx",
-        path: "../../../interpreter/RexxClasses/StreamClasses.orx",
+        path: "../../../third_party/ooRexx/interpreter/RexxClasses/StreamClasses.orx",
         sha256: "b61440a82bd3b2c198a84f44f8f9f0057aed847750c7b9e2c7fc05a819b92bba",
     },
     Source {
         name: "PlatformObjects.orx",
-        path: "../../../interpreter/platform/unix/PlatformObjects.orx",
+        path: "../../../third_party/ooRexx/interpreter/platform/unix/PlatformObjects.orx",
         sha256: "04f89bb9b1ff2f5ee06f774f6b1b4159699198cc7da48c8703a9a0ab7fe8435e",
     },
 ];

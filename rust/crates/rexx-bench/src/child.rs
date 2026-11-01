@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! The two interpreters this repository compares, and the single capped,
 //! directory-pinned way of launching either of them.
 
@@ -24,7 +13,7 @@ pub const ADDRESS_SPACE_LIMIT_KIB: u64 = 8 * 1024 * 1024;
 /// `rexx-exec/tests/support/oracle.rs` gives: the point of the comparison is
 /// "against *this* build", and an env var would let a different one answer
 /// for it with nothing to notice.
-pub const ORACLE_ROOT: &str = "/home/moritz/dev/repos/ooRexx/build";
+pub const ORACLE_ROOT: &str = env!("REXX_ORACLE_ROOT");
 
 /// One interpreter, and what its child processes need in the environment.
 pub struct Side {

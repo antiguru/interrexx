@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! The op-stream serialiser: one line per op, read by the golden tests in
 //! `golden_tests.rs` and by [`crate::render_ir`], which the `rexx-ir` binary
 //! prints.

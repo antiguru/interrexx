@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! Running a Rexx program through the built C++ interpreter, and comparing
 //! its three observable channels against this crate's own.
 
@@ -68,7 +57,7 @@ const POLL_INTERVAL: Duration = Duration::from_millis(5);
 /// Root of the built C++ oracle. See the module doc for why this is
 /// hardcoded rather than read from an env var.
 pub fn oracle_root() -> PathBuf {
-    PathBuf::from("/home/moritz/dev/repos/ooRexx/build")
+    PathBuf::from(env!("REXX_ORACLE_ROOT"))
 }
 
 /// The oracle binary, the library directory it needs on `LD_LIBRARY_PATH`,

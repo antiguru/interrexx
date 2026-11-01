@@ -7,7 +7,7 @@
 #   ORACLE_PROGRAMS  programs also run on the oracle (arm name "oracle")
 #   -T        print the table for OUTDIR's wall.tsv without running
 # env: REXX_LIB_DIR  put on LD_LIBRARY_PATH (default: the oracle's build/lib)
-#      ORACLE_ROOT   the oracle's build directory (default /home/moritz/dev/repos/ooRexx/build)
+#      ORACLE_ROOT   the oracle's build directory (default third_party/oracle)
 #      PROGRAMS      the programs to run (default: callgrind.sh's PROGRAMS)
 #
 # Each binary is copied to OUTDIR/stage/rexx before each of its runs; bash's
@@ -31,7 +31,7 @@ if [ $# -lt 1 ]; then
     echo "usage: wallclock.sh [-r ROUNDS] [-o OUTDIR] [-x ORACLE_PROGRAMS] [-T] NAME=BINARY..." >&2
     exit 2
 fi
-oracle_root=${ORACLE_ROOT:-/home/moritz/dev/repos/ooRexx/build}
+oracle_root=${ORACLE_ROOT:-$(dirname "$0")/../../third_party/oracle}
 lib=${REXX_LIB_DIR:-$oracle_root/lib}
 [ -n "$out" ] || out=$(mktemp -d)
 mkdir -p "$out/stage"

@@ -1,0 +1,4 @@
+# Unmodified third-party trees. `setup-third-party.sh` populates them.
+[env]
+REXX_UPSTREAM = { value = "../third_party/ooRexx", relative = true }
+REXX_ORACLE_ROOT = { value = "../third_party/oracle", relative = true }

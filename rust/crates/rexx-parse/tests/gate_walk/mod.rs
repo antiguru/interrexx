@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! This file stays `mod.rs`, not `gate_walk.rs`, because `tests/` is Cargo's
 //! integration-test root: a bare `tests/gate_walk.rs` would be auto-discovered
 //! as its own test binary in addition to being pulled in as a module by

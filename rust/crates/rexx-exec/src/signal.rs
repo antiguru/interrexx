@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! The signal handlers (D-U3; spec 2026-09-29 section 4). A process entry
 //! point that starts Rexx for a user installs them once (ruling P62): SIGINT
 //! and SIGTERM where the action is the default or ignored, SIGHUP only where

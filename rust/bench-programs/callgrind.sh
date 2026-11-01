@@ -36,7 +36,7 @@ if [ $# -lt 1 ]; then
     echo "usage: callgrind.sh [-r ROUNDS] [-j JOBS] [-o OUTDIR] [-p PROGRAMS] [-B PCT] [-T] NAME=BINARY..." >&2
     exit 2
 fi
-lib=${REXX_LIB_DIR:-/home/moritz/dev/repos/ooRexx/build/lib}
+lib=${REXX_LIB_DIR:-$(dirname "$0")/../../third_party/oracle/lib}
 [ -f "$lib/liborxfunction.so" ] || { echo "no liborxfunction.so in $lib; set REXX_LIB_DIR" >&2; exit 2; }
 [ -n "$out" ] || out=$(mktemp -d)
 mkdir -p "$out"

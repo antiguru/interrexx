@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 use super::*;
 
 /// The three partial rows are builtin names, and the whole exclusions are
@@ -198,9 +187,10 @@ fn the_raw_argument_table_re_derives_from_the_oracles_own_source() {
     /// The accessors that are `stack->peek` and convert nothing.
     const RAW: &[&str] = &["get_arg", "optional_argument", "arg_exists", "arg_omitted"];
 
-    let path = std::path::PathBuf::from(
-        "/home/moritz/dev/repos/ooRexx/interpreter/expression/BuiltinFunctions.cpp",
-    );
+    let path = std::path::PathBuf::from(concat!(
+        env!("REXX_UPSTREAM"),
+        "/interpreter/expression/BuiltinFunctions.cpp"
+    ));
     let text = std::fs::read_to_string(&path).unwrap_or_else(|e| {
         panic!(
             "cannot read {} -- the builtin bodies this table derives from are part of \

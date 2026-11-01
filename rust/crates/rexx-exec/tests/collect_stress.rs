@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! The 4a exit gate's criterion 4: the named L0 subset -- the union of every
 //! `rust/corpus/phase-*.txt` file, which is what [`read_subset`]'s caller
 //! reads -- passes again under collect-on-every-allocation, and the mode is

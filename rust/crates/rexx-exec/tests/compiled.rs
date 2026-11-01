@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! Compiled programs, restored by every route the oracle restores one.
 //!
 //! Each side's `rexxc` compiles `tests/compiled/programs` into that side's
@@ -31,7 +20,7 @@ const ORACLE_IMAGE: &str = "tests/compiled/oracle.rxo";
 /// The oracle's address-space cap, in KiB.
 const ORACLE_MEMORY_LIMIT_KIB: u64 = 1_048_576;
 
-const ORACLE_ROOT: &str = "/home/moritz/dev/repos/ooRexx/build";
+const ORACLE_ROOT: &str = env!("REXX_ORACLE_ROOT");
 
 /// What every image starts with, on either side.
 const IMAGE_PREFIX: &[u8] = b"#!/usr/bin/env rexx\n/**/@REXX";

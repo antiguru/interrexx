@@ -5,7 +5,8 @@ members = ["crates/*"]
 [workspace.package]
 edition = "2024"
 rust-version = "1.96.1"
-license = "CPL-1.0"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/antiguru/interrexx"
 
 [workspace.lints.rust]
 # `deny` and not `forbid`, decided by Moritz 2026-08-20 after the alternative

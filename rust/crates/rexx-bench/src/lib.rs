@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! Shared plumbing for the Task 0.7 benchmark harness (`benches/interpreter.rs`),
 //! the cold-start timer (`src/bin/rexx-time.rs`), the interleaved
 //! two-interpreter suite (`src/bin/rexx-bench-suite.rs`) and the between-run

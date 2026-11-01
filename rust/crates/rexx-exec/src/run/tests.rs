@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 use super::*;
 use crate::Activation;
 use crate::plan::{BodyKey, ProgramId};
@@ -653,9 +642,10 @@ fn building_a_programs_package_charges_it() {
 fn a_collection_drops_the_rows_of_swept_loaded_methods() {
     let mut interp = Interp::new();
     // Where `rxregexp` is: the oracle's own libraries, as `tests/support/oracle.rs` names them.
-    interp.library_search = vec![std::path::PathBuf::from(
-        "/home/moritz/dev/repos/ooRexx/build/lib",
-    )];
+    interp.library_search = vec![std::path::PathBuf::from(concat!(
+        env!("REXX_ORACLE_ROOT"),
+        "/lib"
+    ))];
     interp.bootstrap_library().expect("library");
     let rows = |interp: &Interp| {
         (

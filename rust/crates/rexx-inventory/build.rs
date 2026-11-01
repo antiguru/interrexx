@@ -5,8 +5,9 @@ use quick_xml::events::Event;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-const MESSAGES_XML: &str = "../../../interpreter/messages/rexxmsg.xml";
-const BUILTINS_CPP: &str = "../../../interpreter/expression/BuiltinFunctions.cpp";
+const MESSAGES_XML: &str = "../../../third_party/ooRexx/interpreter/messages/rexxmsg.xml";
+const BUILTINS_CPP: &str =
+    "../../../third_party/ooRexx/interpreter/expression/BuiltinFunctions.cpp";
 
 /// Messages the oracle raises with more inserts than their text uses, each with
 /// that count. The extra inserts reach a trapped condition's `ADDITIONAL`.

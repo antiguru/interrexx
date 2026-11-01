@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! The `rexx` command line against the oracle's: each case of
 //! `tests/rexx_command/cases` runs both binaries with the same words from a
 //! directory of the same programs, and the three descriptors must agree. The
@@ -29,7 +18,7 @@ const CASE_DIR: &str = "tests/rexx_command";
 /// The oracle's address-space cap, in KiB.
 const ORACLE_MEMORY_LIMIT_KIB: u64 = 1_048_576;
 
-const ORACLE_ROOT: &str = "/home/moritz/dev/repos/ooRexx/build";
+const ORACLE_ROOT: &str = env!("REXX_ORACLE_ROOT");
 
 /// The programs every case runs among.
 fn lay_fixture(dir: &Path) {

@@ -29,7 +29,9 @@ const CASES: &[Case] = &[
     Case {
         name: "CoreClasses.orx",
         // 4,193 lines (Task 3.10 brief).
-        text: include_bytes!("../../../../interpreter/RexxClasses/CoreClasses.orx"),
+        text: include_bytes!(
+            "../../../../third_party/ooRexx/interpreter/RexxClasses/CoreClasses.orx"
+        ),
         main_instructions: 41,
         directives: 347,
         nested_instructions: 2390,
@@ -37,7 +39,9 @@ const CASES: &[Case] = &[
     Case {
         name: "StreamClasses.orx",
         // 1,010 lines (Task 3.10 brief).
-        text: include_bytes!("../../../../interpreter/RexxClasses/StreamClasses.orx"),
+        text: include_bytes!(
+            "../../../../third_party/ooRexx/interpreter/RexxClasses/StreamClasses.orx"
+        ),
         main_instructions: 7,
         directives: 153,
         nested_instructions: 610,

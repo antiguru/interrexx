@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! Re-derives the internal-package routine names from the C++ tree and
 //! compares them with the crate's own table, in both directions. The names are
 //! an external enumeration -- three files in a tree this project does not
@@ -18,9 +7,10 @@
 use std::collections::BTreeSet;
 use std::fs;
 
-const NATIVE_FUNCTIONS: &str = "../../../interpreter/runtime/NativeFunctions.h";
-const REXXUTIL_COMMON: &str = "../../../interpreter/runtime/RexxUtilCommon.cpp";
-const REXXUTIL_UNIX: &str = "../../../interpreter/platform/unix/SysRexxUtilFunctions.h";
+const NATIVE_FUNCTIONS: &str = "../../../third_party/ooRexx/interpreter/runtime/NativeFunctions.h";
+const REXXUTIL_COMMON: &str = "../../../third_party/ooRexx/interpreter/runtime/RexxUtilCommon.cpp";
+const REXXUTIL_UNIX: &str =
+    "../../../third_party/ooRexx/interpreter/platform/unix/SysRexxUtilFunctions.h";
 
 /// Every `MACRO(Name, entry)` first argument in `text`, for the macro named.
 fn first_arguments(text: &str, macro_name: &str) -> BTreeSet<String> {

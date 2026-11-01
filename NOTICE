@@ -1,0 +1,15 @@
+interrexx is licensed under MIT OR Apache-2.0, except as stated here.
+
+ooRexx (third_party/ooRexx, a pinned unmodified submodule) is under the Common
+Public License 1.0. It is not part of this repository's source. At build time
+rexx-lib embeds CoreClasses.orx, StreamClasses.orx and PlatformObjects.orx from
+it, so built binaries contain that CPL-licensed code, and rexx-classes and
+rexx-inventory generate tables from Setup.cpp, BuiltinFunctions.cpp and
+rexxmsg.xml.
+
+ooTest and the ooRexx documentation are fetched by scripts/setup-third-party.sh
+and are not redistributed here.
+
+Test data under rust/corpus and rust/crates that still carries a Rexx Language
+Association header keeps that header and licence. Its bytes are compared with
+the oracle, so it is not edited.

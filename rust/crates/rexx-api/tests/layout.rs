@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! The `#[repr(C)]` surface measured against the frozen header.
 //!
 //! Member names and interface versions are read out of `api/oorexxapi.h` here
@@ -28,7 +17,8 @@ use std::path::PathBuf;
 
 /// The frozen header (D5), which `api/` holds read-only.
 fn header() -> String {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../api/oorexxapi.h");
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../third_party/ooRexx/api/oorexxapi.h");
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
 }
 

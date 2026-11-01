@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! Reading the interpreter's own bootstrap Rexx -- `CoreClasses.orx` and
 //! `StreamClasses.orx` -- so a gate table can say which directive shapes the
 //! bootstrap actually depends on.
@@ -22,7 +11,7 @@ pub const STREAM_CLASSES: &str = "StreamClasses.orx";
 
 /// Where the interpreter keeps its bootstrap Rexx.
 pub fn orx_root() -> PathBuf {
-    PathBuf::from("/home/moritz/dev/repos/ooRexx/interpreter/RexxClasses")
+    PathBuf::from(concat!(env!("REXX_UPSTREAM"), "/interpreter/RexxClasses"))
 }
 
 /// One operand of a directive clause, and whether it arrived as a quoted

@@ -7,7 +7,7 @@ set -u
 scratch=${1:?usage: derive.sh SCRATCH_ROOT [CORPUS]}
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 corpus=${2:-$here/parse-errors.tsv}
-oracle=/home/moritz/dev/repos/ooRexx/build
+oracle=$(dirname "$0")/../../../third_party/oracle
 
 # Prints `expect<TAB>line<TAB>message` for one rexxc stderr file, the message
 # escaped as the program field is.

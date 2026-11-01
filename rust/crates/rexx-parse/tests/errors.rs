@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! The phase's error gate: what this parser rejects, what it accepts, and the
 //! number, sub-number and line it reports, all against `build/bin/rexxc`.
 
@@ -943,7 +932,7 @@ fn every_message_the_parser_names_is_raised_by_a_corpus_row_or_recorded_as_unrea
 /// The oracle's symbolic name for `pair`, from `RexxErrorCodes.h`.
 fn oracle_name(pair: (u16, u16)) -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../interpreter/messages/RexxErrorCodes.h");
+        .join("../../../third_party/ooRexx/interpreter/messages/RexxErrorCodes.h");
     let text = std::fs::read_to_string(&path).expect("RexxErrorCodes.h is readable");
     let number = format!("= {},", u32::from(pair.0) * 1000 + u32::from(pair.1));
     text.lines()
@@ -1048,7 +1037,7 @@ fn both_bootstrap_files_parse() {
     // tree and the only input that exercises the directive grammar at scale.
     for name in ["CoreClasses.orx", "StreamClasses.orx"] {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../interpreter/RexxClasses")
+            .join("../../../third_party/ooRexx/interpreter/RexxClasses")
             .join(name);
         let text = std::fs::read(&path).unwrap_or_else(|e| panic!("{name} is readable: {e}"));
         parse_program(text).unwrap_or_else(|e| panic!("{name} failed to parse: {e}"));

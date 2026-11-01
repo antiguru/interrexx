@@ -4,7 +4,7 @@
 use rexx_inventory::errors;
 use std::collections::HashMap;
 
-const HEADER: &str = "../../../interpreter/messages/RexxErrorMessages.h";
+const HEADER: &str = "../../../third_party/ooRexx/interpreter/messages/RexxErrorMessages.h";
 
 /// Pulls `MESSAGE(Symbol, "text")` pairs out of the generated C header.
 fn oracle_messages() -> HashMap<String, String> {

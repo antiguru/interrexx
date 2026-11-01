@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! `Setup.cpp`, read for the native-or-Rexx column and the entry-point token
 //! that `collection_scopes.rs` and `introspection_scopes.rs` both join onto
 //! the oracle's own scope answer.
@@ -28,7 +17,10 @@ pub fn setup_tables() -> (
     HashMap<String, HashMap<String, Native>>,
     HashMap<String, HashMap<String, Native>>,
 ) {
-    let path = PathBuf::from("/home/moritz/dev/repos/ooRexx/interpreter/memory/Setup.cpp");
+    let path = PathBuf::from(concat!(
+        env!("REXX_UPSTREAM"),
+        "/interpreter/memory/Setup.cpp"
+    ));
     let text = fs::read_to_string(&path)
         .unwrap_or_else(|e| panic!("cannot read the oracle's {}: {e}", path.display()));
     let mut instance: HashMap<String, HashMap<String, Native>> = HashMap::new();

@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! The `HANDLE:n` shapes Deviation 35 licenses, run on this crate alone: the
 //! oracle reads nothing through such a stream and crashes on a write
 //! (`corpus/oracle-crashes.txt` entry 12a), so none of these programs may be

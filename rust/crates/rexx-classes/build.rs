@@ -5,7 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
-const SETUP_CPP: &str = "../../../interpreter/memory/Setup.cpp";
+const SETUP_CPP: &str = "../../../third_party/ooRexx/interpreter/memory/Setup.cpp";
 
 fn main() {
     println!("cargo::rerun-if-changed={SETUP_CPP}");

@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! The in-process external data queue (I15) that `PUSH` and `QUEUE` write to,
 //! through `Interp::queue_evaluated` (`run.rs`), which both engines enter.
 //! One per `Interp`, held as a plain field rather than anything IPC-backed --

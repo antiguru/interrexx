@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 //! The directive grammar, pinned against `build/bin/rexxc`.
 
 use std::cell::RefCell;
@@ -1421,7 +1410,7 @@ fn a_body_error_is_reported_against_the_body_and_not_the_directive() {
 #[test]
 fn core_classes_parses() {
     const CORE_CLASSES: &str =
-        include_str!("../../../../../interpreter/RexxClasses/CoreClasses.orx");
+        include_str!("../../../../../third_party/ooRexx/interpreter/RexxClasses/CoreClasses.orx");
     let directives =
         parse(CORE_CLASSES).unwrap_or_else(|e| panic!("CoreClasses.orx failed to parse: {e:?}"));
     // The pinned counts, so a change that silently stops producing directives
@@ -1468,7 +1457,7 @@ fn the_other_shipped_packages_parse() {
     // non-empty.
     const PACKAGES: &[(&str, &str, Counts)] = &[(
         "StreamClasses.orx",
-        include_str!("../../../../../interpreter/RexxClasses/StreamClasses.orx"),
+        include_str!("../../../../../third_party/ooRexx/interpreter/RexxClasses/StreamClasses.orx"),
         Counts {
             classes: 7,
             methods: 139,

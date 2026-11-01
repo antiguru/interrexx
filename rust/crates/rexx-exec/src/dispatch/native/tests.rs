@@ -1,14 +1,3 @@
-/*----------------------------------------------------------------------------*/
-/*                                                                            */
-/* Copyright (c) 2026 Rexx Language Association. All rights reserved.          */
-/*                                                                            */
-/* This program and the accompanying materials are made available under       */
-/* the terms of the Common Public License v1.0 which accompanies this         */
-/* distribution. A copy is also available at the following address:           */
-/* https://www.oorexx.org/license.html                                        */
-/*                                                                            */
-/*----------------------------------------------------------------------------*/
-
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
@@ -19,7 +8,7 @@ use super::*;
 /// The interpreter's own bootstrap Rexx, at the paths the C++ tree keeps
 /// it at.
 fn bootstrap_files() -> Vec<PathBuf> {
-    let root = PathBuf::from("/home/moritz/dev/repos/ooRexx/interpreter");
+    let root = PathBuf::from(concat!(env!("REXX_UPSTREAM"), "/interpreter"));
     vec![
         root.join("RexxClasses/CoreClasses.orx"),
         root.join("RexxClasses/StreamClasses.orx"),
