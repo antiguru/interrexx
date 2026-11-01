@@ -337,7 +337,7 @@ fn a_command_a_test_leaves_running_is_killed_with_the_run() {
     assert_eq!(tests, ["TEST_A"]);
     assert_eq!(end_reason(&process, Duration::from_secs(60)), None);
     assert!(
-        !super::process_ownership::grandchild_sleeps(&run),
+        super::process_ownership::grandchild_ends_within(&run, Duration::from_secs(10)),
         "the command outlived the run"
     );
     fs::remove_dir_all(run.parent().expect("a parent")).expect("cannot remove the run");
