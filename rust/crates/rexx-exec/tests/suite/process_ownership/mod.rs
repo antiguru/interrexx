@@ -18,6 +18,10 @@ pub(super) fn grandchild_sleeps(run: &Path) -> bool {
 /// Whether `Grandchild`'s sleeper disappears within `bound`, which is shorter
 /// than its sleep. SIGKILL returns before the target has exited, and the
 /// sleeper's output is not a pipe the run waits on.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "this harness bounds a real process"
+)]
 pub(super) fn grandchild_ends_within(run: &Path, bound: Duration) -> bool {
     let start = Instant::now();
     while grandchild_sleeps(run) {
