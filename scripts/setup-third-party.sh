@@ -7,6 +7,8 @@ OODOCS_REVISION=13198
 SVN=https://svn.code.sf.net/p/oorexx/code-0
 
 git submodule update --init third_party/ooRexx
+# The compile date is observable through .RexxInfo and PARSE VERSION.
+export SOURCE_DATE_EPOCH=1785412800
 cmake -S third_party/ooRexx -B third_party/oracle \
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release
 cmake --build third_party/oracle -j"${JOBS:-4}"
