@@ -1,0 +1,475 @@
+warning: Missing auto-load script at offset 0 in section .debug_gdb_scripts
+of file /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/2135aee6f186d415/out/rexx_exec-2135aee6f186d415.
+Use `info auto-load python-scripts [REGEXP]' to list them.
+Temporary breakpoint 1 at 0x74320d: rexx_exec::dispatch::hash::stem::forward_to_value. (2 locations)
+
+This GDB supports auto-downloading debuginfo from the following URLs:
+  <https://debuginfod.debian.net>
+Debuginfod has been disabled.
+To make this setting permanent, add 'set debuginfod enabled off' to .gdbinit.
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/x86_64-linux-gnu/libthread_db.so.1".
+
+running 1 test
+test tests::resources::a_long_chain_of_stem_subclass_instances_is_walked_once ... [New Thread 0x7ffff4bff6c0 (LWP 11644) (id 2)]
+[New Thread 0x7ffff43fe6c0 (LWP 11645) (id 3)]
+[New Thread 0x7ffff41fd6c0 (LWP 11646) (id 4)]
+[New Thread 0x7ffff3ffc6c0 (LWP 11647) (id 5)]
+[New Thread 0x7fffd3ffb6c0 (LWP 11648) (id 6)]
+[Switching to thread 5 (Thread 0x7ffff3ffc6c0 (LWP 11647))]
+
+Thread 5 "rexx-interp" hit Temporary breakpoint 1.1, rexx_exec::dispatch::hash::stem::forward_to_value (interp=0x7ffff3ff80c8, receiver=..., message=..., args=...) at crates/rexx-exec/src/dispatch/hash/stem.rs:460
+460	fn forward_to_value(
+Warning: the current language does not match this frame.
+=== first forward
+[Current thread is 5 (Thread 0x7ffff3ffc6c0 (LWP 11647))]
+Temporary breakpoint 2 at 0x5555559218b2
+
+Thread 5 "rexx-interp" hit Temporary breakpoint 2, 0x00005555559218b2 in __tsan::ScopedInterceptor::ScopedInterceptor(__tsan::ThreadState*, char const*, unsigned long) ()
+=== push site
+$1 = 0x7ffff3ffbd40
+$2 = 0x7ffff67720b8
+stop value 0x1 at 0x7ffff6771ff8 base 0x7ffff6772000 used entries 23 end 0x7ffff67f2000
+$3 = 0x7ffff67f2000
+=== content at end before
+0x7ffff67f2000:	0x00005555559252a9	0x00005555563107b9
+0x7ffff67f2010:	0x0000555556308c15	0x0000555555cd3d94
+Hardware watchpoint 3: -location *(long*)$end
+[Thread 0x7fffd3ffb6c0 (LWP 11648) (id 6) exited]
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1240 filtered out; finished in 2.71s
+
+[Thread 0x7ffff3ffc6c0 (LWP 11647) (id 5) exited]
+[Thread 0x7ffff43fe6c0 (LWP 11645) (id 3) exited]
+[Switching to thread 4 (Thread 0x7ffff41fd6c0 (LWP 11646))]
+
+Thread 4 "tests::resource" hit Hardware watchpoint 3: -location *(long*)$end
+
+Old value = 93824996233897
+New value = 140737350686655
+0x000055555598a869 in __tsan_func_entry ()
+=== watch hit
+[Current thread is 4 (Thread 0x7ffff41fd6c0 (LWP 11646))]
+$4 = 0x7ffff67f2000
+$5 = 0x7ffff41fc338
+rip            0x55555598a869      0x55555598a869 <__tsan_func_entry+57>
+#0  0x000055555598a869 in __tsan_func_entry ()
+#1  0x000055555630c6de in std::sys::thread_local::native::eager::destroy::{closure#0}<core::cell::Cell<core::option::Option<alloc::rcs::arc::Arc<std::sync::poison::mutex::Mutex<alloc::vec::Vec<u8, alloc::alloc::Global>>, alloc::alloc::Global>>>> () at src/sys/thread_local/native/eager.rs:73
+#2  std::sys::thread_local::abort_on_dtor_unwind<std::sys::thread_local::native::eager::destroy::{closure_env#0}<core::cell::Cell<core::option::Option<alloc::rcs::arc::Arc<std::sync::poison::mutex::Mutex<alloc::vec::Vec<u8, alloc::alloc::Global>>, alloc::alloc::Global>>>>> (f=...) at src/sys/thread_local/mod.rs:224
+#3  std::sys::thread_local::native::eager::destroy<core::cell::Cell<core::option::Option<alloc::rcs::arc::Arc<std::sync::poison::mutex::Mutex<alloc::vec::Vec<u8, alloc::alloc::Global>>, alloc::alloc::Global>>>> (ptr=0x7ffff41fcc98 "") at src/sys/thread_local/native/eager.rs:72
+#4  0x00007ffff7cb57bf in __GI___call_tls_dtors () at ./stdlib/cxa_thread_atexit_impl.c:156
+#5  0x00007ffff7d07c65 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:459
+process 11641
+Mapped address spaces:
+
+Start Addr         End Addr           Size               Offset             Perms File 
+0x0000020000000000 0x0000100000000000 0xe0000000000      0x0                ---p   
+0x0000100000000000 0x0000158800001000 0x58800001000      0x0                rw-p   
+0x0000158800001000 0x0000158800028000 0x27000            0x0                rw-p   
+0x0000158800028000 0x0000158800029000 0x1000             0x0                rw-p   
+0x0000158800029000 0x000015880004a000 0x21000            0x0                rw-p   
+0x000015880004a000 0x0000159000001000 0x7fffb7000        0x0                rw-p   
+0x0000159000001000 0x0000159000030000 0x2f000            0x0                rw-p   
+0x0000159000030000 0x0000159800001000 0x7fffd1000        0x0                rw-p   
+0x0000159800001000 0x0000159800038000 0x37000            0x0                rw-p   
+0x0000159800038000 0x000015a000001000 0x7fffc9000        0x0                rw-p   
+0x000015a000001000 0x000015a000040000 0x3f000            0x0                rw-p   
+0x000015a000040000 0x000015a000041000 0x1000             0x0                rw-p   
+0x000015a000041000 0x000015a000080000 0x3f000            0x0                rw-p   
+0x000015a000080000 0x00001aaaab23a000 0x50aab1ba000      0x0                rw-p   
+0x00001aaaab23a000 0x00001aaaab2ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab2ba000 0x00001aaaab33a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab33a000 0x00001aaaab3ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab3ba000 0x00001aaaab43a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab43a000 0x00001aaaab4ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab4ba000 0x00001aaaab53a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab53a000 0x00001aaaab5ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab5ba000 0x00001aaaab63a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab63a000 0x00001aaaab6ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab6ba000 0x00001aaaab73a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab73a000 0x00001aaaab7ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab7ba000 0x00001aaaab83a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab83a000 0x00001aaaab8ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab8ba000 0x00001aaaab93a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab93a000 0x00001aaaab9ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaab9ba000 0x00001aaaaba3a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaaba3a000 0x00001aaaababa000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaababa000 0x00001aaaabb3a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaabb3a000 0x00001aaaabbba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaabbba000 0x00001aaaabc3a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaabc3a000 0x00001aaaabcba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaabcba000 0x00001aaaabd3a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaabd3a000 0x00001aaaabdba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaabdba000 0x00001aaaabe3a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaabe3a000 0x00001aaaabeba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaabeba000 0x00001aaaabf3a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaabf3a000 0x00001aaaabfba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaabfba000 0x00001aaaac03a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac03a000 0x00001aaaac0ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac0ba000 0x00001aaaac13a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac13a000 0x00001aaaac1ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac1ba000 0x00001aaaac23a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac23a000 0x00001aaaac2ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac2ba000 0x00001aaaac33a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac33a000 0x00001aaaac3ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac3ba000 0x00001aaaac43a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac43a000 0x00001aaaac4ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac4ba000 0x00001aaaac53a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac53a000 0x00001aaaac5ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac5ba000 0x00001aaaac63a000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac63a000 0x00001aaaac6ba000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac6ba000 0x00001aaaac6e8000 0x2e000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00001aaaac6e8000 0x00002fffa3a01000 0x1554f7319000     0x0                rw-p   
+0x00002fffa3a01000 0x00002fffa4000000 0x5ff000           0x0                rw-p   
+0x00002fffa4000000 0x00002fffa56fb000 0x16fb000          0x0                rw-p   
+0x00002fffa56fb000 0x00002fffa573e000 0x43000            0x0                rw-p   
+0x00002fffa573e000 0x00002fffa5ac1000 0x383000           0x0                rw-p   
+0x00002fffa5ac1000 0x00002fffa5dc0000 0x2ff000           0x0                rw-p   
+0x00002fffa5dc0000 0x00002fffa5dc3000 0x3000             0x0                rw-p   
+0x00002fffa5dc3000 0x00002fffa6286000 0x4c3000           0x0                rw-p   
+0x00002fffa6286000 0x00002fffa67cb000 0x545000           0x0                rw-p   
+0x00002fffa67cb000 0x00002fffa6aca000 0x2ff000           0x0                rw-p   
+0x00002fffa6aca000 0x00002fffa712d000 0x663000           0x0                rw-p   
+0x00002fffa712d000 0x00002fffa738e000 0x261000           0x0                rw-p   
+0x00002fffa738e000 0x00002fffa7453000 0xc5000            0x0                rw-p   
+0x00002fffa7453000 0x00002fffa75d2000 0x17f000           0x0                rw-p   
+0x00002fffa75d2000 0x00002fffa7735000 0x163000           0x0                rw-p   
+0x00002fffa7735000 0x00002fffa78b4000 0x17f000           0x0                rw-p   
+0x00002fffa78b4000 0x00002fffa7977000 0xc3000            0x0                rw-p   
+0x00002fffa7977000 0x00002fffa7bf6000 0x27f000           0x0                rw-p   
+0x00002fffa7bf6000 0x00002fffa7bf9000 0x3000             0x0                rw-p   
+0x00002fffa7bf9000 0x00002fffa7ff4000 0x3fb000           0x0                rw-p   
+0x00002fffa7ff4000 0x00002fffa7ffb000 0x7000             0x0                rw-p   
+0x00002fffa7ffb000 0x00002fffe7ff6000 0x3fffb000         0x0                rw-p   
+0x00002fffe7ff6000 0x00002fffe7ffd000 0x7000             0x0                rw-p   
+0x00002fffe7ffd000 0x00002fffe83f8000 0x3fb000           0x0                rw-p   
+0x00002fffe83f8000 0x00002fffe83ff000 0x7000             0x0                rw-p   
+0x00002fffe83ff000 0x00002fffe87fa000 0x3fb000           0x0                rw-p   
+0x00002fffe87fa000 0x00002fffeaacf000 0x22d5000          0x0                rw-p   
+0x00002fffeaacf000 0x00002fffeabff000 0x130000           0x0                rw-p   
+0x00002fffeabff000 0x00002fffeb27f000 0x680000           0x0                rw-p   
+0x00002fffeb27f000 0x00002fffeb33e000 0xbf000            0x0                rw-p   
+0x00002fffeb33e000 0x00002fffeb341000 0x3000             0x0                rw-p   
+0x00002fffeb341000 0x00002fffeb400000 0xbf000            0x0                rw-p   
+0x00002fffeb400000 0x00002fffeb6c7000 0x2c7000           0x0                rw-p   
+0x00002fffeb6c7000 0x00002fffeb75e000 0x97000            0x0                rw-p   
+0x00002fffeb75e000 0x00002fffebab1000 0x353000           0x0                rw-p   
+0x00002fffebab1000 0x00002fffebb10000 0x5f000            0x0                rw-p   
+0x00002fffebb10000 0x00002fffebb93000 0x83000            0x0                rw-p   
+0x00002fffebb93000 0x00002fffebbde000 0x4b000            0x0                rw-p   
+0x00002fffebbde000 0x00002fffebec1000 0x2e3000           0x0                rw-p   
+0x00002fffebec1000 0x00002fffec000000 0x13f000           0x0                rw-p   
+0x00002fffec000000 0x00002fffec2a7000 0x2a7000           0x0                rw-p   
+0x00002fffec2a7000 0x00002fffec378000 0xd1000            0x0                rw-p   
+0x00002fffec378000 0x00002fffec398000 0x20000            0x0                rw-p   
+0x00002fffec398000 0x00002fffec39b000 0x3000             0x0                rw-p   
+0x00002fffec39b000 0x00002fffec3de000 0x43000            0x0                rw-p   
+0x00002fffec3de000 0x00002fffef936000 0x3558000          0x0                rw-p   
+0x00002fffef936000 0x00002fffef9b6000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00002fffef9b6000 0x00002fffefa36000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00002fffefa36000 0x00002fffefab6000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00002fffefab6000 0x00002fffefb36000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00002fffefb36000 0x00002fffefbb6000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00002fffefbb6000 0x00002fffefc06000 0x50000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00002fffefc06000 0x00002fffefcf6000 0xf0000            0x0                rw-p   
+0x00002fffefcf6000 0x00002fffefd76000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00002fffefd76000 0x00002fffefdf6000 0x80000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00002fffefdf6000 0x00002fffefe14000 0x1e000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00002fffefe14000 0x00002fffeff06000 0xf2000            0x0                rw-p   
+0x00002fffeff06000 0x00002fffeff4e000 0x48000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00002fffeff4e000 0x00002fffeff8e000 0x40000            0x0                rw-p   
+0x00002fffeff8e000 0x00002fffeffe0000 0x52000            0x0                r--p  /tmp/tsan.rodata.11641 (deleted) 
+0x00002fffeffe0000 0x0000380000000000 0x80010020000      0x0                rw-p   
+0x0000380000000000 0x0000550000000000 0x1d0000000000     0x0                ---p   
+0x0000555555554000 0x000055555591d000 0x3c9000           0x0                r--p  /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/2135aee6f186d415/out/rexx_exec-2135aee6f186d415 
+0x000055555591d000 0x0000555556374000 0xa57000           0x3c8000           r-xp  /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/2135aee6f186d415/out/rexx_exec-2135aee6f186d415 
+0x0000555556374000 0x0000555556432000 0xbe000            0xe1e000           r--p  /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/2135aee6f186d415/out/rexx_exec-2135aee6f186d415 
+0x0000555556432000 0x000055555643a000 0x8000             0xedb000           rw-p  /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/tsan/x86_64-unknown-linux-gnu/debug/build/rexx-exec/2135aee6f186d415/out/rexx_exec-2135aee6f186d415 
+0x000055555643a000 0x000055555738e000 0xf54000           0x0                rw-p   
+0x00005a0000000000 0x0000720400000000 0x180400000000     0x0                ---p   
+0x0000720400000000 0x0000720400a80000 0xa80000           0x0                rw-p   
+0x0000720400a80000 0x0000720780000000 0x37f580000        0x0                ---p   
+0x0000720780000000 0x00007207802c0000 0x2c0000           0x0                rw-p   
+0x00007207802c0000 0x0000720800000000 0x7fd40000         0x0                ---p   
+0x0000720800000000 0x0000720800100000 0x100000           0x0                rw-p   
+0x0000720800100000 0x0000720b80000000 0x37ff00000        0x0                ---p   
+0x0000720b80000000 0x0000720b80040000 0x40000            0x0                rw-p   
+0x0000720b80040000 0x0000720c00000000 0x7ffc0000         0x0                ---p   
+0x0000720c00000000 0x0000720c00040000 0x40000            0x0                rw-p   
+0x0000720c00040000 0x0000720f80000000 0x37ffc0000        0x0                ---p   
+0x0000720f80000000 0x0000720f80040000 0x40000            0x0                rw-p   
+0x0000720f80040000 0x0000721000000000 0x7ffc0000         0x0                ---p   
+0x0000721000000000 0x0000721002780000 0x2780000          0x0                rw-p   
+0x0000721002780000 0x0000721380000000 0x37d880000        0x0                ---p   
+0x0000721380000000 0x0000721380280000 0x280000           0x0                rw-p   
+0x0000721380280000 0x0000721400000000 0x7fd80000         0x0                ---p   
+0x0000721400000000 0x0000721400040000 0x40000            0x0                rw-p   
+0x0000721400040000 0x0000721780000000 0x37ffc0000        0x0                ---p   
+0x0000721780000000 0x0000721780040000 0x40000            0x0                rw-p   
+0x0000721780040000 0x0000721800000000 0x7ffc0000         0x0                ---p   
+0x0000721800000000 0x0000721800080000 0x80000            0x0                rw-p   
+0x0000721800080000 0x0000721b80000000 0x37ff80000        0x0                ---p   
+0x0000721b80000000 0x0000721b80040000 0x40000            0x0                rw-p   
+0x0000721b80040000 0x0000721c00000000 0x7ffc0000         0x0                ---p   
+0x0000721c00000000 0x0000721c00040000 0x40000            0x0                rw-p   
+0x0000721c00040000 0x0000721f80000000 0x37ffc0000        0x0                ---p   
+0x0000721f80000000 0x0000721f80040000 0x40000            0x0                rw-p   
+0x0000721f80040000 0x0000722000000000 0x7ffc0000         0x0                ---p   
+0x0000722000000000 0x00007220000c0000 0xc0000            0x0                rw-p   
+0x00007220000c0000 0x0000722380000000 0x37ff40000        0x0                ---p   
+0x0000722380000000 0x0000722380040000 0x40000            0x0                rw-p   
+0x0000722380040000 0x0000722400000000 0x7ffc0000         0x0                ---p   
+0x0000722400000000 0x0000722400040000 0x40000            0x0                rw-p   
+0x0000722400040000 0x0000722780000000 0x37ffc0000        0x0                ---p   
+0x0000722780000000 0x0000722780040000 0x40000            0x0                rw-p   
+0x0000722780040000 0x0000722800000000 0x7ffc0000         0x0                ---p   
+0x0000722800000000 0x0000722800040000 0x40000            0x0                rw-p   
+0x0000722800040000 0x0000722b80000000 0x37ffc0000        0x0                ---p   
+0x0000722b80000000 0x0000722b80040000 0x40000            0x0                rw-p   
+0x0000722b80040000 0x0000722c00000000 0x7ffc0000         0x0                ---p   
+0x0000722c00000000 0x0000722c00040000 0x40000            0x0                rw-p   
+0x0000722c00040000 0x0000722f80000000 0x37ffc0000        0x0                ---p   
+0x0000722f80000000 0x0000722f80040000 0x40000            0x0                rw-p   
+0x0000722f80040000 0x0000723000000000 0x7ffc0000         0x0                ---p   
+0x0000723000000000 0x0000723000040000 0x40000            0x0                rw-p   
+0x0000723000040000 0x0000723380000000 0x37ffc0000        0x0                ---p   
+0x0000723380000000 0x0000723380040000 0x40000            0x0                rw-p   
+0x0000723380040000 0x0000723400000000 0x7ffc0000         0x0                ---p   
+0x0000723400000000 0x0000723400040000 0x40000            0x0                rw-p   
+0x0000723400040000 0x0000723780000000 0x37ffc0000        0x0                ---p   
+0x0000723780000000 0x0000723780040000 0x40000            0x0                rw-p   
+0x0000723780040000 0x0000723800000000 0x7ffc0000         0x0                ---p   
+0x0000723800000000 0x0000723800040000 0x40000            0x0                rw-p   
+0x0000723800040000 0x0000723b80000000 0x37ffc0000        0x0                ---p   
+0x0000723b80000000 0x0000723b80040000 0x40000            0x0                rw-p   
+0x0000723b80040000 0x0000723c00000000 0x7ffc0000         0x0                ---p   
+0x0000723c00000000 0x0000723c00040000 0x40000            0x0                rw-p   
+0x0000723c00040000 0x0000723f80000000 0x37ffc0000        0x0                ---p   
+0x0000723f80000000 0x0000723f80040000 0x40000            0x0                rw-p   
+0x0000723f80040000 0x0000724000000000 0x7ffc0000         0x0                ---p   
+0x0000724000000000 0x0000724000040000 0x40000            0x0                rw-p   
+0x0000724000040000 0x0000724380000000 0x37ffc0000        0x0                ---p   
+0x0000724380000000 0x0000724380040000 0x40000            0x0                rw-p   
+0x0000724380040000 0x0000724400000000 0x7ffc0000         0x0                ---p   
+0x0000724400000000 0x00007244003c0000 0x3c0000           0x0                rw-p   
+0x00007244003c0000 0x0000724780000000 0x37fc40000        0x0                ---p   
+0x0000724780000000 0x0000724780040000 0x40000            0x0                rw-p   
+0x0000724780040000 0x0000724800000000 0x7ffc0000         0x0                ---p   
+0x0000724800000000 0x0000724800040000 0x40000            0x0                rw-p   
+0x0000724800040000 0x0000724b80000000 0x37ffc0000        0x0                ---p   
+0x0000724b80000000 0x0000724b80040000 0x40000            0x0                rw-p   
+0x0000724b80040000 0x0000724c00000000 0x7ffc0000         0x0                ---p   
+0x0000724c00000000 0x0000724c00040000 0x40000            0x0                rw-p   
+0x0000724c00040000 0x0000724f80000000 0x37ffc0000        0x0                ---p   
+0x0000724f80000000 0x0000724f80040000 0x40000            0x0                rw-p   
+0x0000724f80040000 0x0000725000000000 0x7ffc0000         0x0                ---p   
+0x0000725000000000 0x0000725000040000 0x40000            0x0                rw-p   
+0x0000725000040000 0x0000725380000000 0x37ffc0000        0x0                ---p   
+0x0000725380000000 0x0000725380040000 0x40000            0x0                rw-p   
+0x0000725380040000 0x0000725400000000 0x7ffc0000         0x0                ---p   
+0x0000725400000000 0x0000725400040000 0x40000            0x0                rw-p   
+0x0000725400040000 0x0000725780000000 0x37ffc0000        0x0                ---p   
+0x0000725780000000 0x0000725780040000 0x40000            0x0                rw-p   
+0x0000725780040000 0x0000725800000000 0x7ffc0000         0x0                ---p   
+0x0000725800000000 0x0000725800080000 0x80000            0x0                rw-p   
+0x0000725800080000 0x0000725b80000000 0x37ff80000        0x0                ---p   
+0x0000725b80000000 0x0000725b80040000 0x40000            0x0                rw-p   
+0x0000725b80040000 0x0000725c00000000 0x7ffc0000         0x0                ---p   
+0x0000725c00000000 0x0000725c00040000 0x40000            0x0                rw-p   
+0x0000725c00040000 0x0000725f80000000 0x37ffc0000        0x0                ---p   
+0x0000725f80000000 0x0000725f80040000 0x40000            0x0                rw-p   
+0x0000725f80040000 0x0000726000000000 0x7ffc0000         0x0                ---p   
+0x0000726000000000 0x0000726000040000 0x40000            0x0                rw-p   
+0x0000726000040000 0x0000726380000000 0x37ffc0000        0x0                ---p   
+0x0000726380000000 0x0000726380040000 0x40000            0x0                rw-p   
+0x0000726380040000 0x0000726400000000 0x7ffc0000         0x0                ---p   
+0x0000726400000000 0x0000726400040000 0x40000            0x0                rw-p   
+0x0000726400040000 0x0000726780000000 0x37ffc0000        0x0                ---p   
+0x0000726780000000 0x0000726780040000 0x40000            0x0                rw-p   
+0x0000726780040000 0x0000726800000000 0x7ffc0000         0x0                ---p   
+0x0000726800000000 0x0000726800040000 0x40000            0x0                rw-p   
+0x0000726800040000 0x0000726b80000000 0x37ffc0000        0x0                ---p   
+0x0000726b80000000 0x0000726b80040000 0x40000            0x0                rw-p   
+0x0000726b80040000 0x0000726c00000000 0x7ffc0000         0x0                ---p   
+0x0000726c00000000 0x0000726c00040000 0x40000            0x0                rw-p   
+0x0000726c00040000 0x0000726f80000000 0x37ffc0000        0x0                ---p   
+0x0000726f80000000 0x0000726f80040000 0x40000            0x0                rw-p   
+0x0000726f80040000 0x0000727000000000 0x7ffc0000         0x0                ---p   
+0x0000727000000000 0x0000727000040000 0x40000            0x0                rw-p   
+0x0000727000040000 0x0000727380000000 0x37ffc0000        0x0                ---p   
+0x0000727380000000 0x0000727380040000 0x40000            0x0                rw-p   
+0x0000727380040000 0x0000727400000000 0x7ffc0000         0x0                ---p   
+0x0000727400000000 0x0000727400040000 0x40000            0x0                rw-p   
+0x0000727400040000 0x0000727780000000 0x37ffc0000        0x0                ---p   
+0x0000727780000000 0x0000727780040000 0x40000            0x0                rw-p   
+0x0000727780040000 0x0000727800000000 0x7ffc0000         0x0                ---p   
+0x0000727800000000 0x0000727800040000 0x40000            0x0                rw-p   
+0x0000727800040000 0x0000727b80000000 0x37ffc0000        0x0                ---p   
+0x0000727b80000000 0x0000727b80040000 0x40000            0x0                rw-p   
+0x0000727b80040000 0x0000727c00000000 0x7ffc0000         0x0                ---p   
+0x0000727c00000000 0x0000727c00240000 0x240000           0x0                rw-p   
+0x0000727c00240000 0x0000727f80000000 0x37fdc0000        0x0                ---p   
+0x0000727f80000000 0x0000727f80040000 0x40000            0x0                rw-p   
+0x0000727f80040000 0x0000728000000000 0x7ffc0000         0x0                ---p   
+0x0000728000000000 0x0000728000040000 0x40000            0x0                rw-p   
+0x0000728000040000 0x0000728380000000 0x37ffc0000        0x0                ---p   
+0x0000728380000000 0x0000728380040000 0x40000            0x0                rw-p   
+0x0000728380040000 0x0000728400000000 0x7ffc0000         0x0                ---p   
+0x0000728400000000 0x0000728400040000 0x40000            0x0                rw-p   
+0x0000728400040000 0x0000728780000000 0x37ffc0000        0x0                ---p   
+0x0000728780000000 0x0000728780040000 0x40000            0x0                rw-p   
+0x0000728780040000 0x0000728800000000 0x7ffc0000         0x0                ---p   
+0x0000728800000000 0x0000728800080000 0x80000            0x0                rw-p   
+0x0000728800080000 0x0000728b80000000 0x37ff80000        0x0                ---p   
+0x0000728b80000000 0x0000728b80040000 0x40000            0x0                rw-p   
+0x0000728b80040000 0x0000728c00000000 0x7ffc0000         0x0                ---p   
+0x0000728c00000000 0x0000728c04740000 0x4740000          0x0                rw-p   
+0x0000728c04740000 0x0000728f80000000 0x37b8c0000        0x0                ---p   
+0x0000728f80000000 0x0000728f80040000 0x40000            0x0                rw-p   
+0x0000728f80040000 0x0000729000000000 0x7ffc0000         0x0                ---p   
+0x0000729000000000 0x0000729000040000 0x40000            0x0                rw-p   
+0x0000729000040000 0x0000729380000000 0x37ffc0000        0x0                ---p   
+0x0000729380000000 0x0000729380040000 0x40000            0x0                rw-p   
+0x0000729380040000 0x0000729400000000 0x7ffc0000         0x0                ---p   
+0x0000729400000000 0x0000729400040000 0x40000            0x0                rw-p   
+0x0000729400040000 0x0000729780000000 0x37ffc0000        0x0                ---p   
+0x0000729780000000 0x0000729780040000 0x40000            0x0                rw-p   
+0x0000729780040000 0x0000729800000000 0x7ffc0000         0x0                ---p   
+0x0000729800000000 0x0000729800040000 0x40000            0x0                rw-p   
+0x0000729800040000 0x0000729b80000000 0x37ffc0000        0x0                ---p   
+0x0000729b80000000 0x0000729b80040000 0x40000            0x0                rw-p   
+0x0000729b80040000 0x0000729c00000000 0x7ffc0000         0x0                ---p   
+0x0000729c00000000 0x0000729c00080000 0x80000            0x0                rw-p   
+0x0000729c00080000 0x0000729f80000000 0x37ff80000        0x0                ---p   
+0x0000729f80000000 0x0000729f80040000 0x40000            0x0                rw-p   
+0x0000729f80040000 0x000072a000000000 0x7ffc0000         0x0                ---p   
+0x000072a000000000 0x000072a000040000 0x40000            0x0                rw-p   
+0x000072a000040000 0x000072a380000000 0x37ffc0000        0x0                ---p   
+0x000072a380000000 0x000072a380040000 0x40000            0x0                rw-p   
+0x000072a380040000 0x000072a400000000 0x7ffc0000         0x0                ---p   
+0x000072a400000000 0x000072a400040000 0x40000            0x0                rw-p   
+0x000072a400040000 0x000072a780000000 0x37ffc0000        0x0                ---p   
+0x000072a780000000 0x000072a780040000 0x40000            0x0                rw-p   
+0x000072a780040000 0x000072a800000000 0x7ffc0000         0x0                ---p   
+0x000072a800000000 0x000072a800040000 0x40000            0x0                rw-p   
+0x000072a800040000 0x000072ab80000000 0x37ffc0000        0x0                ---p   
+0x000072ab80000000 0x000072ab80040000 0x40000            0x0                rw-p   
+0x000072ab80040000 0x000072ac00000000 0x7ffc0000         0x0                ---p   
+0x000072ac00000000 0x000072ac00080000 0x80000            0x0                rw-p   
+0x000072ac00080000 0x000072af80000000 0x37ff80000        0x0                ---p   
+0x000072af80000000 0x000072af80040000 0x40000            0x0                rw-p   
+0x000072af80040000 0x000072b000000000 0x7ffc0000         0x0                ---p   
+0x000072b000000000 0x000072b000040000 0x40000            0x0                rw-p   
+0x000072b000040000 0x000072b380000000 0x37ffc0000        0x0                ---p   
+0x000072b380000000 0x000072b380040000 0x40000            0x0                rw-p   
+0x000072b380040000 0x000072b400000000 0x7ffc0000         0x0                ---p   
+0x000072b400000000 0x000072b400040000 0x40000            0x0                rw-p   
+0x000072b400040000 0x000072b780000000 0x37ffc0000        0x0                ---p   
+0x000072b780000000 0x000072b780040000 0x40000            0x0                rw-p   
+0x000072b780040000 0x000072b800000000 0x7ffc0000         0x0                ---p   
+0x000072b800000000 0x000072b800040000 0x40000            0x0                rw-p   
+0x000072b800040000 0x000072bb80000000 0x37ffc0000        0x0                ---p   
+0x000072bb80000000 0x000072bb80040000 0x40000            0x0                rw-p   
+0x000072bb80040000 0x000072bc00000000 0x7ffc0000         0x0                ---p   
+0x000072bc00000000 0x000072bc00040000 0x40000            0x0                rw-p   
+0x000072bc00040000 0x000072bf80000000 0x37ffc0000        0x0                ---p   
+0x000072bf80000000 0x000072bf80040000 0x40000            0x0                rw-p   
+0x000072bf80040000 0x000072c000000000 0x7ffc0000         0x0                ---p   
+0x000072c000000000 0x000072c000040000 0x40000            0x0                rw-p   
+0x000072c000040000 0x000072c380000000 0x37ffc0000        0x0                ---p   
+0x000072c380000000 0x000072c380040000 0x40000            0x0                rw-p   
+0x000072c380040000 0x000072c400000000 0x7ffc0000         0x0                ---p   
+0x000072c400000000 0x000072c400040000 0x40000            0x0                rw-p   
+0x000072c400040000 0x000072c780000000 0x37ffc0000        0x0                ---p   
+0x000072c780000000 0x000072c780040000 0x40000            0x0                rw-p   
+0x000072c780040000 0x000072c800000000 0x7ffc0000         0x0                ---p   
+0x000072c800000000 0x000072c800040000 0x40000            0x0                rw-p   
+0x000072c800040000 0x000072cb80000000 0x37ffc0000        0x0                ---p   
+0x000072cb80000000 0x000072cb80040000 0x40000            0x0                rw-p   
+0x000072cb80040000 0x000072cc00000000 0x7ffc0000         0x0                ---p   
+0x000072cc00000000 0x000072cc00040000 0x40000            0x0                rw-p   
+0x000072cc00040000 0x000072cf80000000 0x37ffc0000        0x0                ---p   
+0x000072cf80000000 0x000072cf80040000 0x40000            0x0                rw-p   
+0x000072cf80040000 0x000072d000000000 0x7ffc0000         0x0                ---p   
+0x000072d000000000 0x000072d000040000 0x40000            0x0                rw-p   
+0x000072d000040000 0x000072d380000000 0x37ffc0000        0x0                ---p   
+0x000072d380000000 0x000072d380040000 0x40000            0x0                rw-p   
+0x000072d380040000 0x0000730000000000 0x2c7ffc0000       0x0                ---p   
+0x0000730000000000 0x0000730000002000 0x2000             0x0                rw-p   
+0x0000730000002000 0x00007a0000000000 0x6ffffffe000      0x0                ---p   
+0x00007fffcec00000 0x00007fffd1c00000 0x3000000          0x0                rw-p   
+0x00007fffd2000000 0x00007fffd2800000 0x800000           0x0                rw-p   
+0x00007fffd28ff000 0x00007fffd2d5f000 0x460000           0x0                rw-p   
+0x00007fffd3144000 0x00007fffd33e4000 0x2a0000           0x0                rw-p   
+0x00007fffd3545000 0x00007fffd3895000 0x350000           0x0                rw-p   
+0x00007fffd38a0000 0x00007fffd3940000 0xa0000            0x0                rw-p   
+0x00007fffd39c8000 0x00007fffd3a28000 0x60000            0x0                rw-p   
+0x00007fffd3a35000 0x00007fffd3ab5000 0x80000            0x0                rw-p   
+0x00007fffd3ae9000 0x00007fffd3b99000 0xb0000            0x0                rw-p   
+0x00007fffd3b9a000 0x00007fffd3cfa000 0x160000           0x0                rw-p   
+0x00007ffff3ffd000 0x00007ffff4c00000 0xc03000           0x0                rw-p   
+0x00007ffff4c00000 0x00007ffff5400000 0x800000           0x0                rw-p   
+0x00007ffff5400000 0x00007ffff5500000 0x100000           0x0                rw-p   
+0x00007ffff5506000 0x00007ffff5566000 0x60000            0x0                rw-p   
+0x00007ffff556a000 0x00007ffff55ba000 0x50000            0x0                rw-p   
+0x00007ffff55c0000 0x00007ffff5900000 0x340000           0x0                rw-p   
+0x00007ffff590e000 0x00007ffff593e000 0x30000            0x0                rw-p   
+0x00007ffff593f000 0x00007ffff599f000 0x60000            0x0                rw-p   
+0x00007ffff59a0000 0x00007ffff5b00000 0x160000           0x0                rw-p   
+0x00007ffff5b02000 0x00007ffff5b62000 0x60000            0x0                rw-p   
+0x00007ffff5b70000 0x00007ffff5d00000 0x190000           0x0                rw-p   
+0x00007ffff5d07000 0x00007ffff5d57000 0x50000            0x0                rw-p   
+0x00007ffff5d58000 0x00007ffff5dc8000 0x70000            0x0                rw-p   
+0x00007ffff5dd0000 0x00007ffff5f00000 0x130000           0x0                rw-p   
+0x00007ffff5f0f000 0x00007ffff5faf000 0xa0000            0x0                rw-p   
+0x00007ffff5fb0000 0x00007ffff6100000 0x150000           0x0                rw-p   
+0x00007ffff6103000 0x00007ffff6183000 0x80000            0x0                rw-p   
+0x00007ffff618c000 0x00007ffff61cc000 0x40000            0x0                rw-p   
+0x00007ffff61f0000 0x00007ffff6540000 0x350000           0x0                rw-p   
+0x00007ffff65c0000 0x00007ffff6700000 0x140000           0x0                rw-p   
+0x00007ffff6702000 0x00007ffff6772000 0x70000            0x0                rw-p   
+0x00007ffff67f2000 0x00007ffff6872000 0x80000            0x0                rw-p   
+0x00007ffff6872000 0x00007ffff6d00000 0x48e000           0x0                rw-p   
+0x00007ffff6d09000 0x00007ffff6d89000 0x80000            0x0                rw-p   
+0x00007ffff6e09000 0x00007ffff6f6f000 0x166000           0x0                rw-p   
+0x00007ffff6f6f000 0x00007ffff6fef000 0x80000            0x0                rw-p   
+0x00007ffff6fef000 0x00007ffff7420000 0x431000           0x0                rw-p   
+0x00007ffff7420000 0x00007ffff7c00000 0x7e0000           0x0                ---p   
+0x00007ffff7c04000 0x00007ffff7c73000 0x6f000            0x0                rw-p   
+0x00007ffff7c73000 0x00007ffff7c9b000 0x28000            0x0                r--p  /usr/lib/x86_64-linux-gnu/libc.so.6 
+0x00007ffff7c9b000 0x00007ffff7e03000 0x168000           0x28000            r-xp  /usr/lib/x86_64-linux-gnu/libc.so.6 
+0x00007ffff7e03000 0x00007ffff7e56000 0x53000            0x190000           r--p  /usr/lib/x86_64-linux-gnu/libc.so.6 
+0x00007ffff7e56000 0x00007ffff7e5a000 0x4000             0x1e3000           r--p  /usr/lib/x86_64-linux-gnu/libc.so.6 
+0x00007ffff7e5a000 0x00007ffff7e5c000 0x2000             0x1e7000           rw-p  /usr/lib/x86_64-linux-gnu/libc.so.6 
+0x00007ffff7e5c000 0x00007ffff7e69000 0xd000             0x0                rw-p   
+0x00007ffff7e69000 0x00007ffff7e7b000 0x12000            0x0                r--p  /usr/lib/x86_64-linux-gnu/libm.so.6 
+0x00007ffff7e7b000 0x00007ffff7f0a000 0x8f000            0x12000            r-xp  /usr/lib/x86_64-linux-gnu/libm.so.6 
+0x00007ffff7f0a000 0x00007ffff7f7d000 0x73000            0xa1000            r--p  /usr/lib/x86_64-linux-gnu/libm.so.6 
+0x00007ffff7f7d000 0x00007ffff7f7e000 0x1000             0x113000           r--p  /usr/lib/x86_64-linux-gnu/libm.so.6 
+0x00007ffff7f7e000 0x00007ffff7f7f000 0x1000             0x114000           rw-p  /usr/lib/x86_64-linux-gnu/libm.so.6 
+0x00007ffff7f7f000 0x00007ffff7f83000 0x4000             0x0                r--p  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 
+0x00007ffff7f83000 0x00007ffff7fa7000 0x24000            0x4000             r-xp  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 
+0x00007ffff7fa7000 0x00007ffff7fab000 0x4000             0x28000            r--p  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 
+0x00007ffff7fab000 0x00007ffff7fac000 0x1000             0x2b000            r--p  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 
+0x00007ffff7fac000 0x00007ffff7fad000 0x1000             0x2c000            rw-p  /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 
+0x00007ffff7fad000 0x00007ffff7fb6000 0x9000             0x0                rw-p   
+0x00007ffff7fb6000 0x00007ffff7fb7000 0x1000             0x0                rw-p   
+0x00007ffff7fb7000 0x00007ffff7fbe000 0x7000             0x0                rw-p   
+0x00007ffff7fbe000 0x00007ffff7fc2000 0x4000             0x0                r--p  [vvar] 
+0x00007ffff7fc2000 0x00007ffff7fc4000 0x2000             0x0                r--p  [vvar_vclock] 
+0x00007ffff7fc4000 0x00007ffff7fc6000 0x2000             0x0                r-xp  [vdso] 
+0x00007ffff7fc6000 0x00007ffff7fc7000 0x1000             0x0                r--p  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 
+0x00007ffff7fc7000 0x00007ffff7ff0000 0x29000            0x1000             r-xp  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 
+0x00007ffff7ff0000 0x00007ffff7ffb000 0xb000             0x2a000            r--p  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 
+0x00007ffff7ffb000 0x00007ffff7ffd000 0x2000             0x35000            r--p  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 
+0x00007ffff7ffd000 0x00007ffff7ffe000 0x1000             0x37000            rw-p  /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 
+0x00007ffff7ffe000 0x00007ffff7fff000 0x1000             0x0                rw-p   
+0x00007ffffffdd000 0x00007ffffffff000 0x22000            0x0                rw-p  [stack] 
+[Thread 0x7ffff41fd6c0 (LWP 11646) (id 4) exited]
+[Thread 0x7ffff7c6f280 (LWP 11641) (id 1) exited]
+[Thread 0x7ffff4bff6c0 (LWP 11644) (id 2) exited]
+[New process 11641 (id 7)]
+[Inferior 1 (process 11641) exited normally]
+=== after
+The program being debugged is not being run.

@@ -567,3 +567,13 @@ Ruling: authorize correction round 4/5 for the two reproduced instrumented test-
 Correction round 4 moved the two resource-sensitive tests without changing their original bodies, then added marker-only native-stack and wait resources. The 33 MiB successful rendering preflight and original recursive assertions pass under actual TSan, while all 50,000 links complete within the instrumented 180-second deadline. Ordinary debug, marker zero, release, the complete 1,241-test library, formatting and Clippy pass with the original normal resources retained. Independent scoped review approves the two original findings without a new Important or Critical defect in the patch. The unchanged complete helper still reports API zero, library 66 and integration zero, with an unattributed write-SEGV and the named deadline test failure, so full close acceptance remains open.
 
 Task 10: fix round 4/5 (two resource findings addressed, full-library crash and deadline failure open; source commits `a5e56c800` and `0e1c10551`, evidence `d162099f3`). Root independently read the focused status and stdout, helper component validation and unchanged helper/suppression/runtime diff. Only notifier nesting and the moved long-chain case lacked a completion row in the full library, narrowing the next diagnostic without proving which owns the fault. No new semantic deviation, exclusion, suppression or passing-close claim follows from this scoped approval.
+
+
+## Shadow-stack root cause: Round 5 fixes the sanitizer crash
+
+The WRITE-SEGV is the long-chain test overrunning TSan's unchecked 65,536-entry shadow stack, proven by a first-fault capture and a hardware watchpoint (`close/tsan-sequence-controls/root-cause.md`). Round 4's solo TSan pass was a silent overrun, not a fit. Earlier sequence hypotheses are withdrawn: predecessors only changed the neighbouring mapping.
+
+Ruling: under the sanitizer marker the stem chain runs 5,000 links (`7feb9ba1a`); ordinary runs keep 50,000. Cost if wrong: the walked-once property is not exercised at full length under TSan, while every normal gate still does. This is a test resource change, not a Deviation, skip or suppression.
+
+Task 10: fix round 5/5 complete. The unchanged helper at `7feb9ba1a` printed api 0, lib 0, int 0 with no `tsan.*` file (`close/tsan-after-chain-fit/`): API 70, library 1,227, integration targets 63, 8, 41, 1. A watchpoint on the new binary shows `rexx-interp` never reaches the shadow-stack end. A silent overrun by another test stays undetectable by this helper. The next commit is the fresh close candidate.
+
