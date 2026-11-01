@@ -37,7 +37,7 @@ Whole-process rows over +0.5%, retained as measured:
 | `compound` | +1.4212% | +1.2446% |
 | `pingsem` | +0.5231% | +0.4933% |
 
-Spec section 8's budget is +0.5% on every program, and ruling 14 accepted one +0.53% figure. **These five exceed that and await Moritz's ruling; criterion 5 is open until then.** The controller's recommendation is acceptance as drift for the perf round. Causes known so far, and the follow-up, are in `.superpowers/sdd/queued/2026-09-20-performance-todo.md`, "Phase 9 close residuals".
+Spec section 8's budget is +0.5% on every program, and ruling 14 accepted one +0.53% figure. Moritz accepted these five on 2026-11-01 ("accept."), for the perf round. Causes known so far, and the follow-up, are in `.superpowers/sdd/queued/2026-09-20-performance-todo.md`, "Phase 9 close residuals".
 
 ## Negative history
 

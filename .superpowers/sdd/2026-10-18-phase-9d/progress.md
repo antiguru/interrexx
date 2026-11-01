@@ -580,4 +580,4 @@ Task 10: fix round 5/5 complete. The unchanged helper at `7feb9ba1a` printed api
 
 ## Fifth close: All gates pass
 
-Close at `d675de751`: every functional gate and TSan passed, with no sanitizer reports. Callgrind's exit 1 is budget only, on five programs. Attempt 4's failures did not recur on a quieter host. The five exceed the budget and ruling 14's accepted figure, so final review holds criterion 5 open for Moritz's ruling; they are queued for the perf round. Records: `docs/superpowers/plans/phase-9d-gate.md`, `phase-9-gate.md`.
+Close at `d675de751`: every functional gate and TSan passed, with no sanitizer reports. Callgrind's exit 1 is budget only, on five programs. Attempt 4's failures did not recur on a quieter host. The five exceed the budget and ruling 14's accepted figure, and Moritz accepted them on 2026-11-01 ("accept."); they are queued for the perf round. Phase 9 is closed. Records: `docs/superpowers/plans/phase-9d-gate.md`, `phase-9-gate.md`.
