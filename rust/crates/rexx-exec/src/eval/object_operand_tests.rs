@@ -241,11 +241,11 @@ fn an_object_as_a_do_over_target_is_array_requested() {
     );
 
     // The adjacent successes: `.environment` and `.methods` have a store and
-    // iterate through `MAKEARRAY` (measured, oracle `69` at rc 0 for
+    // iterate through `MAKEARRAY` (measured, oracle `74` at rc 0 for
     // `.environment`).
     assert_eq!(
         run_source(b"n = 0\ndo e over .environment\n  n = n + 1\nend\nsay n\n"),
-        (0, "69\n".to_string(), String::new())
+        (0, "74\n".to_string(), String::new())
     );
     assert_eq!(
         run_source(b"n = 0\ndo e over .methods\n  n = n + 1\nend\nsay n\n::method a\n::method b\n"),

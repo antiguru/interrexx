@@ -1036,7 +1036,7 @@ fn every_sample_program_parses() {
 fn both_bootstrap_files_parse() {
     // The interpreter's own class library, which is the largest real Rexx in the
     // tree and the only input that exercises the directive grammar at scale.
-    for name in ["CoreClasses.orx", "StreamClasses.orx"] {
+    for name in ["CoreClasses.orx", "StreamClasses.orx", "CommandClasses.orx"] {
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../../third_party/ooRexx/interpreter/RexxClasses")
             .join(name);
