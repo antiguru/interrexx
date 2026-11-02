@@ -1,0 +1,13 @@
+[package]
+name = "rexx-rxapi"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+# Exposes `transport::direct`; never in a default build.
+test-direct = []
+
+[lints]
+workspace = true
