@@ -3132,6 +3132,18 @@ DEVIATIONS -- permanent, chosen
      Witness: t8.8/semantics/equality-reentry/probe.rex, with two retained
      oracle runs and the crate's before/fixed descriptor records beside it.
 
+ 85. .ENVIRONMENT IS PER INTERPRETER (Phase 10). OWNER: none.
+
+     Ruled by Moritz 2026-11-02: ".environment: record the deviation."
+     The oracle holds one heap, one collector and one .environment in the
+     global memoryObject (RexxCore.h:267, Setup.cpp:300), so every instance
+     in a process sees the same directory and objects by pointer, and only
+     .local is per instance. This crate's interpreters share nothing (Phase
+     6 P6-1), so each has its own .environment, and an object crossing
+     instances through the native API is refused. Only a host running two
+     instances can observe it. This extends the Phase 9 licence R2 of
+     2026-09-29-phase-6-concurrency-design.md.
+
 EXPRKIND OWNERSHIP -- the expression forms 4a/4b do not evaluate
 ---------------------------------------------------------------------
 

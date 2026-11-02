@@ -60,6 +60,11 @@ of a `MIT OR Apache-2.0` project. Interrexx therefore ships no C++ of its own at
 * **Linux is the tested platform.**
 * **The clean room covers `librexxapi` too,** and the oracle is run, never disassembled or traced.
 * **The guarded trace destination hang is deferred** out of Phase 10 to the queue.
+* **`.environment` is per interpreter, recorded as Deviation 85** (2026-11-02). Objects crossing
+  instances through the native API are refused.
+* **`rxregexp`, `rxmath`, `rxunixsys` and `rxsock` become Rust builtins,** with `hostemu` and
+  `orxncurses` staying C add-ons (2026-11-02). The `.cls` wrappers of `rxregexp` and `rxsock` are
+  rewritten under the clean-room rules.
 * **No perf gates** in 10 or 10.1, and testing with as few tools as possible.
 
 ## The clean room
@@ -154,17 +159,6 @@ onto `main` when the one below lands.
 4. Four Rust builtins, two C add-ons, with the `Row10NativeApi` groups they unlock.
 5. Corpus.
 6. `gate:phase-9a-gate.md:476`, L3-full close.
-
-## Open for Moritz's ruling
-
-Moritz set the goal "finish phase 10" without ruling on these. The author adopted its own
-recommendations so work could proceed. Both are reversible and neither counts as his ruling.
-
-* **Numbered Deviation, proposed:** `.environment` is per interpreter, where the oracle's is one
-  process-wide directory in one heap. Objects crossing instances through the native API are refused.
-  Visible only to a C host running two instances. Sharing would reverse Phase 6's P6-1.
-* **The builtin split in goal 4,** which changes the roadmap's "recompile and pass" for four
-  extensions. The `.cls` wrappers of `rxregexp` and `rxsock` are rewritten under the clean-room rules.
 
 ## Left to the builder
 
