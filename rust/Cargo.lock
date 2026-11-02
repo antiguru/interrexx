@@ -654,6 +654,10 @@ dependencies = [
 [[package]]
 name = "rexx-rxapi"
 version = "0.1.0"
+dependencies = [
+ "chrono",
+ "rustix",
+]
 
 [[package]]
 name = "rustc-hash"
