@@ -7,6 +7,9 @@
 //! line. Images this crate refuses are pinned against this crate alone: the
 //! oracle crashes on a truncated image.
 
+#[path = "support/oracle_runtime.rs"]
+mod oracle_runtime;
+
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -71,7 +74,8 @@ impl Side {
                 .arg(format!(
                     "ulimit -v {ORACLE_MEMORY_LIMIT_KIB} && exec \"$0\" \"$@\""
                 ))
-                .env("LD_LIBRARY_PATH", Path::new(ORACLE_ROOT).join("lib"));
+                .env("LD_LIBRARY_PATH", Path::new(ORACLE_ROOT).join("lib"))
+                .env("XDG_RUNTIME_DIR", oracle_runtime::dir());
         }
         command
             .arg(program)

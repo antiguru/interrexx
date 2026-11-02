@@ -7,6 +7,9 @@
 //! bytes of the file [`output_name`] spells after the run, the part of an
 //! image both sides write alike, and removes it.
 
+#[path = "support/oracle_runtime.rs"]
+mod oracle_runtime;
+
 use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 use std::path::{Path, PathBuf};
@@ -130,7 +133,8 @@ fn command(program: &Path, dir: &Path, oracle: bool) -> Command {
             .arg(format!(
                 "ulimit -v {ORACLE_MEMORY_LIMIT_KIB} && exec \"$0\" \"$@\""
             ))
-            .env("LD_LIBRARY_PATH", Path::new(ORACLE_ROOT).join("lib"));
+            .env("LD_LIBRARY_PATH", Path::new(ORACLE_ROOT).join("lib"))
+            .env("XDG_RUNTIME_DIR", oracle_runtime::dir());
     }
     command
         .arg(program)

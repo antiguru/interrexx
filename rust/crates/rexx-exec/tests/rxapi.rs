@@ -2,6 +2,9 @@
 //! stops its daemon after. `rxapi` and `rxqueue` are the `rexx-rxapi` binaries beside `rexx`,
 //! which a workspace build makes.
 
+#[path = "support/oracle_runtime.rs"]
+mod oracle_runtime;
+
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -359,6 +362,73 @@ fn a_service_directory_too_long_for_a_socket_is_passed_over() {
         long.display()
     );
     assert_eq!(stderr(&output), warning.repeat(2));
+}
+
+/// The child half of the test below: one oracle run, in this process's private runtime.
+#[test]
+#[ignore = "the child half of a test, run by the_oracles_daemon_stops_with_its_test_process"]
+fn child_runs_the_oracle() {
+    let root = Path::new(env!("REXX_ORACLE_ROOT"));
+    let dir = oracle_runtime::dir();
+    let program = dir.join("one.rex");
+    std::fs::write(&program, "say 1\n").expect("the program is written");
+    let output = Command::new("timeout")
+        .args(["-k", "5", "20"])
+        .arg(root.join("bin/rexx"))
+        .arg(&program)
+        .env("LD_LIBRARY_PATH", root.join("lib"))
+        .env("XDG_RUNTIME_DIR", dir)
+        .stdin(Stdio::null())
+        .output()
+        .expect("the oracle runs");
+    assert_eq!(stdout(&output), "1\n", "{}", stderr(&output));
+}
+
+/// Whether an `rxapi` runs with `XDG_RUNTIME_DIR` set to `dir`.
+fn oracle_daemon_in(dir: &Path) -> bool {
+    let wanted = format!("XDG_RUNTIME_DIR={}", dir.display()).into_bytes();
+    std::fs::read_dir("/proc").is_ok_and(|entries| {
+        entries.flatten().any(|entry| {
+            let path = entry.path();
+            std::fs::read(path.join("comm")).is_ok_and(|comm| comm == b"rxapi\n")
+                && std::fs::read(path.join("environ"))
+                    .is_ok_and(|environ| environ.split(|byte| *byte == 0).any(|var| var == wanted))
+        })
+    })
+}
+
+/// Every oracle run starts or reaches an oracle `rxapi`, which never exits on its own: a test
+/// process's oracle runs get a runtime directory of its own, and its daemon stops once the
+/// process has ended.
+#[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a real daemon's real exit, polled"
+)]
+fn the_oracles_daemon_stops_with_its_test_process() {
+    let child = Command::new(std::env::current_exe().expect("the test binary"))
+        .args([
+            "--exact",
+            "child_runs_the_oracle",
+            "--ignored",
+            "--nocapture",
+        ])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("the child runs");
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("oracle-runtime-{}", child.id()));
+    let status = child.wait_with_output().expect("the child ends").status;
+    assert!(status.success(), "the child's oracle run failed");
+    let stopped = (0..100).any(|_| {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        !oracle_daemon_in(&dir) && !dir.exists()
+    });
+    assert!(
+        stopped,
+        "an oracle rxapi in {} outlived its test process",
+        dir.display()
+    );
 }
 
 /// Review Focus 4: a function one program registers is registered for the next.

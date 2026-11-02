@@ -61,6 +61,7 @@ pub fn run_group_on_oracle_from(
         .args(driver_args(&run, &group_file))
         .current_dir(&run)
         .env("LD_LIBRARY_PATH", oracle_root().join("lib"))
+        .env("XDG_RUNTIME_DIR", crate::support::oracle_runtime::dir())
         .env("PATH", path);
     if let Some(temporary) = temporary {
         command.env("TMPDIR", temporary);

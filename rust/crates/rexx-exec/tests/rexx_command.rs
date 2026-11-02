@@ -8,6 +8,9 @@
 //! fixture's `DIR`, `path=DIR` puts it in front of `PATH`, and `cwd=DIR` runs
 //! from it. `DIR` is a name [`directory`] spells.
 
+#[path = "support/oracle_runtime.rs"]
+mod oracle_runtime;
+
 use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 use std::path::{Path, PathBuf};
@@ -220,7 +223,8 @@ fn run(
             .arg(format!(
                 "ulimit -v {ORACLE_MEMORY_LIMIT_KIB} && exec \"$0\" \"$@\""
             ))
-            .env("LD_LIBRARY_PATH", Path::new(ORACLE_ROOT).join("lib"));
+            .env("LD_LIBRARY_PATH", Path::new(ORACLE_ROOT).join("lib"))
+            .env("XDG_RUNTIME_DIR", oracle_runtime::dir());
     }
     command
         .arg(program)
