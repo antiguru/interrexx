@@ -646,6 +646,38 @@ fn a_macrospace_larger_than_the_limit_still_saves_whole() {
     }
 }
 
+/// Measured here: a list scanned per macro took 27 s, a set 0.04 s.
+#[test]
+fn a_selective_load_does_not_scan_the_names_per_macro() {
+    let name_of = |at: usize| format!("MACRO{at:06}").into_bytes();
+    let names: Vec<Vec<u8>> = (0..120_000).map(|at| name_of(at * 2 + 1)).collect();
+    let macros: Vec<Macro> = (0..120_000)
+        .map(|at| Macro {
+            name: name_of(at * 2),
+            image: Vec::new(),
+            position: 1,
+        })
+        .collect();
+    let mut core = Core::new();
+
+    #[expect(clippy::disallowed_methods, reason = "this test is about real cost")]
+    let start = std::time::Instant::now();
+    let loaded = status(
+        &mut core,
+        client(1),
+        Request::LoadMacros {
+            names: Some(names),
+            macros,
+        },
+    );
+    #[expect(clippy::disallowed_methods, reason = "this test is about real cost")]
+    let spent = start.elapsed();
+
+    assert_eq!(loaded, OK);
+    assert!(core.is_empty(), "no listed name was in the file");
+    assert!(spent.as_secs() < 5, "{spent:?}");
+}
+
 fn cancel(core: &mut Core, connection: u64, call: u64) -> Reply {
     reply(core, client(connection), Request::CancelPull { call })
 }

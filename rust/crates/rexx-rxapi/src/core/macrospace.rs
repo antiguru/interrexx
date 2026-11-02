@@ -1,6 +1,6 @@
 //! The per-user table of compiled routines.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use super::{fold, truncated};
 use crate::message::code::*;
@@ -113,7 +113,7 @@ impl MacroSpace {
     }
 
     pub(super) fn load(&mut self, names: Option<Vec<Vec<u8>>>, macros: Vec<Macro>) -> Reply {
-        let wanted: Option<Vec<Vec<u8>>> =
+        let wanted: Option<HashSet<Vec<u8>>> =
             names.map(|names| names.iter().map(|name| key(name)).collect());
         for loaded in macros {
             let selected = wanted
