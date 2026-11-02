@@ -4039,7 +4039,7 @@ impl Interp {
             executable: None,
             activation: None,
         };
-        self.blame_native_level(Raised::compiled_method_line(name, scope), None, level);
+        self.blame_native_level(Raised::compiled_method_line(name, scope), level);
     }
 
     /// [`Interp::blame_native_method`] for a method an `EXTERNAL` directive
@@ -4056,7 +4056,6 @@ impl Interp {
         arguments: &[Option<ObjRef>],
         reraised: bool,
     ) {
-        let package = self.external_package_path(method);
         let level = NativeLevel {
             method: true,
             name,
@@ -4072,7 +4071,7 @@ impl Interp {
                 reraised,
             }),
         };
-        self.blame_native_level(Raised::compiled_method_line(name, scope), package, level);
+        self.blame_native_level(Raised::compiled_method_line(name, scope), level);
     }
 
     /// The same for a routine of an internal package, whose traceback line
@@ -4105,7 +4104,7 @@ impl Interp {
                 reraised: failure.reraised_by_native_call(),
             }),
         };
-        self.blame_native_level(Raised::compiled_routine_line(name), None, level);
+        self.blame_native_level(Raised::compiled_routine_line(name), level);
     }
 
     /// The same for a routine of a loaded library, whose level carries the
@@ -4123,7 +4122,6 @@ impl Interp {
         if self.activity.failure_site.is_some() {
             return;
         }
-        let package = program.map(|program| self.package_path(program).to_vec());
         let executable = self.routine_executable(ran, code);
         let level = NativeLevel {
             method: false,
@@ -4136,17 +4134,12 @@ impl Interp {
                 reraised,
             }),
         };
-        self.blame_native_level(Raised::compiled_routine_line(name), package, level);
+        self.blame_native_level(Raised::compiled_routine_line(name), level);
     }
 
     /// Records `text` as a native level's whole traceback line, first call
     /// wins, and closes the level so the sending clause records its own.
-    fn blame_native_level(
-        &mut self,
-        text: Vec<u8>,
-        package: Option<Vec<u8>>,
-        level: NativeLevel<'_>,
-    ) {
+    fn blame_native_level(&mut self, text: Vec<u8>, level: NativeLevel<'_>) {
         if self.activity.failure_site.is_some() {
             return;
         }

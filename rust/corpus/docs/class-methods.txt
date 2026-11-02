@@ -932,28 +932,28 @@ Alarm	triggered	instance	covered	mthAlarmTriggered	utilityclasses.xml:304	a comm
 AlarmNotification	cancel	instance	covered	mthAlarmNotificationCancel	utilityclasses.xml:371	a bare ~new constructs an instance on the oracle
 AlarmNotification	triggered	instance	covered	mthAlarmNotificationTriggered	utilityclasses.xml:394	a bare ~new constructs an instance on the oracle
 Buffer	new	class	unreachable	mthBufferNew	utilityclasses.xml:459	the reference says instances come only from native code -- utilityclasses.xml:429 "can only be created using the native code application programming interfaces."
-CommandContext	&added53;[ ]	instance	not-covered	mthCommandContextBrackets	utilityclasses.xml:540	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;[ ]=	instance	not-covered	mthCommandContextBracketsEquals	utilityclasses.xml:568	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;dropVar	instance	not-covered	mthCommandContextDropVar	utilityclasses.xml:603	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;environment	instance	not-covered	mthCommandContextEnvironment	utilityclasses.xml:619	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;error	instance	not-covered	mthCommandContextError	utilityclasses.xml:635	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;getVar	instance	not-covered	mthCommandContextGetVar	utilityclasses.xml:653	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;hasVar	instance	not-covered	mthCommandContextHasVar	utilityclasses.xml:667	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;input	instance	not-covered	mthCommandContextInput	utilityclasses.xml:682	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;isRedirected	instance	not-covered	mthCommandContextIsRedirected	utilityclasses.xml:708	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;isValid	instance	not-covered	mthCommandContextIsValid	utilityclasses.xml:734	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;output	instance	not-covered	mthCommandContextOutput	utilityclasses.xml:748	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;raise	instance	not-covered	mthCommandContextRaise	utilityclasses.xml:784	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;raiseError	instance	not-covered	mthCommandContextRaiseError	utilityclasses.xml:863	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;raiseFailure	instance	not-covered	mthCommandContextRaiseFailure	utilityclasses.xml:877	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;setVar	instance	not-covered	mthCommandContextSetVar	utilityclasses.xml:893	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandContext	&added53;variables	instance	not-covered	mthCommandContextVariables	utilityclasses.xml:907	no construction program is committed; a bare ~new raises 93.901 on the oracle
-CommandHandler	&added53;deregister	class	covered	mthCommandHandlerDeregister	utilityclasses.xml:996	a bare ~new constructs an instance on the oracle
-CommandHandler	&added53;environments	class	covered	mthCommandHandlerEnvironments	utilityclasses.xml:1023	a bare ~new constructs an instance on the oracle
-CommandHandler	&added53;handler	class	covered	mthCommandHandlerHandler	utilityclasses.xml:1060	a bare ~new constructs an instance on the oracle
-CommandHandler	&added53;handlers	class	covered	mthCommandHandlerHandlers	utilityclasses.xml:1078	a bare ~new constructs an instance on the oracle
-CommandHandler	&added53;register	class	covered	mthCommandHandlerRegister	utilityclasses.xml:1095	a bare ~new constructs an instance on the oracle
-CommandHandler	&added53;command	instance	covered	mthCommandHandlerCommand	utilityclasses.xml:1122	a bare ~new constructs an instance on the oracle
+CommandContext	[ ]	instance	not-covered	mthCommandContextBrackets	utilityclasses.xml:540	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	[ ]=	instance	not-covered	mthCommandContextBracketsEquals	utilityclasses.xml:568	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	dropVar	instance	not-covered	mthCommandContextDropVar	utilityclasses.xml:603	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	environment	instance	not-covered	mthCommandContextEnvironment	utilityclasses.xml:619	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	error	instance	not-covered	mthCommandContextError	utilityclasses.xml:635	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	getVar	instance	not-covered	mthCommandContextGetVar	utilityclasses.xml:653	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	hasVar	instance	not-covered	mthCommandContextHasVar	utilityclasses.xml:667	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	input	instance	not-covered	mthCommandContextInput	utilityclasses.xml:682	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	isRedirected	instance	not-covered	mthCommandContextIsRedirected	utilityclasses.xml:708	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	isValid	instance	not-covered	mthCommandContextIsValid	utilityclasses.xml:734	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	output	instance	not-covered	mthCommandContextOutput	utilityclasses.xml:748	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	raise	instance	not-covered	mthCommandContextRaise	utilityclasses.xml:784	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	raiseError	instance	not-covered	mthCommandContextRaiseError	utilityclasses.xml:863	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	raiseFailure	instance	not-covered	mthCommandContextRaiseFailure	utilityclasses.xml:877	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	setVar	instance	not-covered	mthCommandContextSetVar	utilityclasses.xml:893	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandContext	variables	instance	not-covered	mthCommandContextVariables	utilityclasses.xml:907	no construction program is committed; a bare ~new raises 93.901 on the oracle
+CommandHandler	deregister	class	covered	mthCommandHandlerDeregister	utilityclasses.xml:996	a bare ~new constructs an instance on the oracle
+CommandHandler	environments	class	covered	mthCommandHandlerEnvironments	utilityclasses.xml:1023	a bare ~new constructs an instance on the oracle
+CommandHandler	handler	class	covered	mthCommandHandlerHandler	utilityclasses.xml:1060	a bare ~new constructs an instance on the oracle
+CommandHandler	handlers	class	covered	mthCommandHandlerHandlers	utilityclasses.xml:1078	a bare ~new constructs an instance on the oracle
+CommandHandler	register	class	covered	mthCommandHandlerRegister	utilityclasses.xml:1095	a bare ~new constructs an instance on the oracle
+CommandHandler	command	instance	covered	mthCommandHandlerCommand	utilityclasses.xml:1122	a bare ~new constructs an instance on the oracle
 Comparable	compareTo	instance	covered	mthComparableCompareTo	utilityclasses.xml:1308	a bare ~new constructs an instance on the oracle
 Comparator	compare	instance	covered	mthComparatorCompare	utilityclasses.xml:1402	a bare ~new constructs an instance on the oracle
 CaselessComparator	compare	instance	covered	mthCaselessComparatorCompare	utilityclasses.xml:1474	a bare ~new constructs an instance on the oracle
@@ -1188,9 +1188,9 @@ MutexSemaphore	new	class	covered	mthMutexSemaphoreNew	utilityclasses.xml:7298	a 
 MutexSemaphore	acquire	instance	covered	mthMutexSemaphoreAcquire	utilityclasses.xml:7313	a bare ~new constructs an instance on the oracle
 MutexSemaphore	release	instance	covered	mthMutexSemaphoreRelease	utilityclasses.xml:7401	a bare ~new constructs an instance on the oracle
 MutexSemaphore	uninit	instance	covered	mthMutexSemaphoreUninit	utilityclasses.xml:7423	a bare ~new constructs an instance on the oracle
-NativeCommandHandler	&added53;command	instance	not-covered	mthNativeCommandHandlerCommand	utilityclasses.xml:7492	no construction program is committed; a bare ~new raises 97.2 on the oracle
-NativeCommandHandler	&added53;kind	instance	not-covered	mthNativeCommandHandlerKind	utilityclasses.xml:7539	no construction program is committed; a bare ~new raises 97.2 on the oracle
-NativeCommandHandler	&added53;name	instance	not-covered	mthNativeCommandHandlerName	utilityclasses.xml:7565	no construction program is committed; a bare ~new raises 97.2 on the oracle
+NativeCommandHandler	command	instance	not-covered	mthNativeCommandHandlerCommand	utilityclasses.xml:7492	no construction program is committed; a bare ~new raises 97.2 on the oracle
+NativeCommandHandler	kind	instance	not-covered	mthNativeCommandHandlerKind	utilityclasses.xml:7539	no construction program is committed; a bare ~new raises 97.2 on the oracle
+NativeCommandHandler	name	instance	not-covered	mthNativeCommandHandlerName	utilityclasses.xml:7565	no construction program is committed; a bare ~new raises 97.2 on the oracle
 Orderable	=	instance	covered	mthOrderableComparisonMethods	utilityclasses.xml:7665	a bare ~new constructs an instance on the oracle
 Orderable	==	instance	covered	mthOrderableComparisonMethods	utilityclasses.xml:7665	a bare ~new constructs an instance on the oracle
 Orderable	<	instance	covered	mthOrderableComparisonMethods	utilityclasses.xml:7665	a bare ~new constructs an instance on the oracle
