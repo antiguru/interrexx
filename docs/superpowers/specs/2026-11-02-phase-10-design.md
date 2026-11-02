@@ -125,9 +125,10 @@ and a version mismatch reached by any other route is a clean refusal.
 
 ### Process death
 
-A closed connection is a cleanup hint for session queues. Nothing depends on it. A crashed
-process's session queue may linger until the daemon exits, which matches the oracle's exposure.
-Blocked pulls end when their connection closes.
+A closed connection is the only end signal, for a clean exit and a crash alike; there is no shutdown
+message (Moritz, 2026-11-02). A process attaches its session queue through its connection before
+its first command, and the daemon removes a session queue once no connection uses it, whatever it
+holds (`rxapi-behaviour.md` Resolution 4). Blocked pulls end when their connection closes.
 
 ## Testing
 

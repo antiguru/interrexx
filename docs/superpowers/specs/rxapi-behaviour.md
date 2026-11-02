@@ -247,8 +247,8 @@ items until the service ends, and any later process given the handle finds them.
 whose id happens to match an old handle would inherit the leftover queue; this was not provoked.
 **Documented:** the queue is created by the top-level program, is available to children while that
 process runs, and "is deleted when the process that created it ends".
-**Design:** a closed connection is a cleanup hint for session queues and nothing may depend on it.
-A crashed process's session queue may linger until the service exits.
+**Design:** superseded by Resolution 4: a session queue goes when its last connection closes, so a
+crashed process's session queue goes with its connection.
 
 The inheritance tests need only the sharing. No test reads the value of `RXQUEUESESSION`, so the
 format is free apart from these rules: it is set by the client at initialisation, a child inherits it
