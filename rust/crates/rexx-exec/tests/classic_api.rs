@@ -5,6 +5,7 @@
 
 use std::collections::BTreeSet;
 use std::ffi::OsString;
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::OnceLock;
@@ -379,6 +380,127 @@ fn run_program(name: &str, program: &str, files: &[(&str, &str)]) -> String {
         String::from_utf8_lossy(&output.stderr)
     );
     String::from_utf8_lossy(&output.stdout).into_owned()
+}
+
+/// Queue item 4: two interpreters in one process, `rexx` and one an extension starts with
+/// `RexxStart`, each wait on a command when the process group takes a SIGINT, as a terminal's
+/// Ctrl-C sends it. The kernel hands the process's signal to one of its threads, often not the
+/// one waiting on the inner command, and that command's child ends at once; the inner command's
+/// clause is halted all the same, never run on past. The miss is a race the thread the signal
+/// went to loses when it is slow to run its handler, so the runs go in batches beside threads
+/// that keep every CPU busy.
+#[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "this test times and loads real runs"
+)]
+fn a_group_signal_halts_both_interpreters_waiting_on_commands() {
+    const BATCHES: usize = 4;
+    const AT_ONCE: usize = 30;
+    let tester =
+        std::fs::read_to_string(repository().join("ootest/ooRexx/API/oo/INVOCATIONTester.cls"))
+            .expect("INVOCATIONTester.cls");
+    let work = scratch().join("group-signal");
+    let _ = std::fs::remove_dir_all(&work);
+    std::fs::create_dir_all(&work).expect("a work directory");
+    for (file, text) in [
+        (
+            "main.rex",
+            "signal on halt\nparse arg id\n\
+             a = .InvocationTester~new~start('callRexxStart', 'inner.rex', .array~of(id))\n\
+             say 'started'\n'sleep 10'\nsay 'outer missed' rc a~result\nexit\n\
+             halt: say 'outer halted' a~result\n::requires 'INVOCATIONTester.cls'\n",
+        ),
+        (
+            "inner.rex",
+            "signal on halt\nparse arg id\ncall lineout 'inner.'id, 'x'\ncall lineout 'inner.'id\n\
+             'sleep 10'\nreturn 'inner missed' rc\nhalt: return 'inner halted'\n",
+        ),
+        ("INVOCATIONTester.cls", &tester),
+    ] {
+        std::fs::write(work.join(file), text).expect("a file is written");
+    }
+    let api = scratch().join("api-group-signal");
+    let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let cpus = std::thread::available_parallelism().map_or(4, std::num::NonZero::get);
+    let busy: Vec<_> = (0..cpus + cpus / 2)
+        .map(|_| {
+            let stop = std::sync::Arc::clone(&stop);
+            std::thread::spawn(move || {
+                while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                    std::hint::spin_loop();
+                }
+            })
+        })
+        .collect();
+    let deadline = std::time::Duration::from_secs(60);
+    let mut wrong = Vec::new();
+    for batch in 0..BATCHES {
+        let runs: Vec<_> = (0..AT_ONCE)
+            .map(|at| {
+                let id = format!("{batch}-{at}");
+                let out = work.join(format!("out.{id}"));
+                let child = Command::new(REXX)
+                    .args(["main.rex", &id])
+                    .current_dir(&work)
+                    .env("REXX_API_DIR", &api)
+                    .env("LD_LIBRARY_PATH", library_path(true))
+                    .stdin(Stdio::null())
+                    .stdout(std::fs::File::create(&out).expect("the output file"))
+                    .stderr(Stdio::null())
+                    .process_group(0)
+                    .spawn()
+                    .expect("rexx starts");
+                (id, out, child)
+            })
+            .collect();
+        let signalled: Vec<_> = runs
+            .into_iter()
+            .map(|(id, out, mut child)| {
+                let began = std::time::Instant::now();
+                while !(work.join(format!("inner.{id}")).exists()
+                    && std::fs::read_to_string(&out).is_ok_and(|text| text.contains("started")))
+                    && began.elapsed() < deadline
+                {
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                }
+                // Both commands have started.
+                std::thread::sleep(std::time::Duration::from_millis(300));
+                let group = format!("-{}", child.id());
+                let sent = Command::new("kill")
+                    .args(["-INT", "--", &group])
+                    .status()
+                    .is_ok_and(|status| status.success());
+                if !sent {
+                    let _ = child.kill();
+                }
+                (id, out, child)
+            })
+            .collect();
+        for (id, out, mut child) in signalled {
+            let began = std::time::Instant::now();
+            while child.try_wait().ok().flatten().is_none() && began.elapsed() < deadline {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            let _ = child.kill();
+            let _ = child.wait();
+            let stdout = std::fs::read_to_string(&out).unwrap_or_default();
+            if stdout != "started\nouter halted inner halted\n" {
+                wrong.push(format!("{id}: {stdout:?}"));
+            }
+        }
+    }
+    stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    for thread in busy {
+        thread.join().expect("a busy thread");
+    }
+    stop_service(&api);
+    assert!(
+        wrong.is_empty(),
+        "{} of {}:\n{wrong:#?}",
+        wrong.len(),
+        BATCHES * AT_ONCE
+    );
 }
 
 /// A macro an extension adds or drops through the C API reaches a call site that resolved the

@@ -153,10 +153,21 @@ pub(crate) fn receive() {
 /// handlers are installed, and the thread's mask restored after: a signal
 /// then interrupts the wait, and its handler has run before the wait
 /// returns.
+///
+/// The kernel hands a signal sent to the process to one thread that takes
+/// it, which may be another interpreter's: a terminal's Ctrl-C can end the
+/// wait's child before that thread has run the handler, and this
+/// interpreter would then find no signal arrived and run on past the
+/// clause. Blocking and unblocking once more before the restore has the
+/// kernel deliver a signal still pending for the process here, so its
+/// handler has run before the wait returns.
 pub(crate) fn unblocked<R>(wait: impl FnOnce() -> R) -> R {
     struct Restore(libc::sigset_t);
     impl Drop for Restore {
         fn drop(&mut self) {
+            let halting = halting();
+            mask(libc::SIG_BLOCK, &halting);
+            mask(libc::SIG_UNBLOCK, &halting);
             mask(libc::SIG_SETMASK, &self.0);
         }
     }
