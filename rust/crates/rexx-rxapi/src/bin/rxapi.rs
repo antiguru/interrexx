@@ -4,7 +4,7 @@ use std::io::Write;
 use std::process::ExitCode;
 use std::time::Duration;
 
-use rexx_rxapi::daemon::{Exit, Options, serve};
+use rexx_rxapi::daemon::{Exit, MAX_BACKLOG, Options, serve};
 use rexx_rxapi::message::wire::PROTOCOL_VERSION;
 use rexx_rxapi::transport::unix::{Unix, prepare_dir, service_dir};
 
@@ -60,6 +60,7 @@ fn main() -> ExitCode {
         dir: &dir,
         version: PROTOCOL_VERSION,
         uid: rustix::process::getuid().as_raw(),
+        backlog: MAX_BACKLOG,
         dry_run,
         idle_grace: idle_grace(),
         report: &say,

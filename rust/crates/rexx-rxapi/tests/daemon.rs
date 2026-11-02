@@ -375,11 +375,16 @@ fn own_uid() -> u32 {
 }
 
 fn serve_version(dir: PathBuf, version: u32) -> std::thread::JoinHandle<Exit> {
+    serve_backlog(dir, version, daemon::MAX_BACKLOG)
+}
+
+fn serve_backlog(dir: PathBuf, version: u32, backlog: usize) -> std::thread::JoinHandle<Exit> {
     std::thread::spawn(move || {
         daemon::serve(&Options {
             dir: &dir,
             version,
             uid: own_uid(),
+            backlog,
             dry_run: false,
             idle_grace: Duration::from_secs(60),
             report: &|_| {},
@@ -445,6 +450,7 @@ fn a_connection_from_another_user_is_dropped() {
             dir: &dir,
             version: PROTOCOL_VERSION,
             uid: own_uid() + 1,
+            backlog: daemon::MAX_BACKLOG,
             dry_run: false,
             idle_grace: Duration::from_secs(60),
             report: &report,
@@ -499,6 +505,50 @@ fn a_daemon_out_of_threads_drops_that_connection_and_keeps_serving() {
             duplicate: Some(true),
         },
     );
+}
+
+/// Replies to this client's requests pile up behind a socket it does not read. It can only fill
+/// its own socket, everyone else is served, and nothing it asked for is dropped.
+#[test]
+fn a_client_that_stops_reading_stops_being_read() {
+    const REQUESTS: u64 = 5000;
+    let service = ServiceDir::new();
+    prepare_dir(&service.dir).expect("the directory");
+    let daemon = serve_backlog(service.dir.clone(), PROTOCOL_VERSION, 64 << 10);
+    let held = connect_version(&service.dir, PROTOCOL_VERSION);
+    let add = Request::AddMacro {
+        name: b"m".to_vec(),
+        image: vec![7; 16 << 10],
+        position: 1,
+    };
+    assert_eq!(held.call(add).expect("a reply"), Reply::Status(OK));
+    let mut stalled = raw_client(&service.dir);
+    stalled
+        .set_write_timeout(Some(Duration::from_secs(1)))
+        .expect("a timeout");
+    let resolve = wire::frame(
+        0,
+        &wire::encode_request(&Request::ResolveMacro {
+            name: b"m".to_vec(),
+        }),
+    );
+
+    let sent = (0..REQUESTS)
+        .take_while(|_| stalled.write_all(&resolve).is_ok())
+        .count();
+
+    assert!((sent as u64) < REQUESTS, "the service read them all");
+    open(&held, "others are served");
+    for _ in 0..sent {
+        assert!(matches!(
+            read_raw(&mut stalled).1,
+            Reply::MacroImage { status: OK, .. }
+        ));
+    }
+
+    drop(stalled);
+    Unix::stop_version(&service.dir, PROTOCOL_VERSION).expect("the daemon stops");
+    assert_eq!(daemon.join().expect("the daemon"), Exit::Stopped);
 }
 
 /// Review Focus 5.

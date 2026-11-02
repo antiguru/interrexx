@@ -7,6 +7,7 @@ use std::os::unix::fs::{FileTypeExt, OpenOptionsExt};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::time::Duration;
 
 use chrono::{DateTime, Datelike, Local, TimeZone, Timelike};
@@ -20,12 +21,17 @@ use crate::transport::unix::{lock_path, peer_uid, socket_path};
 /// How long a silent connector may hold a thread before its handshake.
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(2);
 
+/// `Options::backlog` for a real service. One reply may exceed it, and the next waits.
+pub const MAX_BACKLOG: usize = 64 << 20;
+
 /// What a daemon run needs.
 pub struct Options<'a> {
     pub dir: &'a Path,
     pub version: u32,
     /// The one user served.
     pub uid: u32,
+    /// Reply bytes a connection may have waiting before the service stops reading it.
+    pub backlog: usize,
     /// Take the lock, report, and stop instead of listening.
     pub dry_run: bool,
     /// How long a daemon nobody has connected to waits before exiting.
@@ -72,6 +78,7 @@ enum Event {
         connection: u64,
         stream: UnixStream,
         outgoing: Sender<Outgoing>,
+        backlog: Arc<Backlog>,
     },
     Frame {
         connection: u64,
@@ -113,7 +120,60 @@ enum Outgoing {
         call: u64,
         reply: Reply,
         source: Option<Source>,
+        weight: usize,
     },
+}
+
+/// Reply bytes on their way to one client.
+#[derive(Default)]
+struct Backlog {
+    bytes: Mutex<usize>,
+    drained: Condvar,
+}
+
+impl Backlog {
+    fn bytes(&self) -> MutexGuard<'_, usize> {
+        self.bytes
+            .lock()
+            .expect("the critical sections cannot panic")
+    }
+
+    fn add(&self, weight: usize) {
+        *self.bytes() += weight;
+    }
+
+    fn remove(&self, weight: usize) {
+        *self.bytes() -= weight;
+        self.drained.notify_all();
+    }
+
+    fn wait_for_room(&self, limit: usize) {
+        let bytes = self.bytes();
+        let _room = self
+            .drained
+            .wait_while(bytes, |bytes| *bytes >= limit)
+            .expect("the critical sections cannot panic");
+    }
+}
+
+/// What `reply` adds to a backlog: its variable bytes, and a fixed charge so that small replies
+/// count too.
+fn weight(reply: &Reply) -> usize {
+    const FIXED: usize = 64;
+    FIXED
+        + match reply {
+            Reply::Pulled {
+                item: Some(item), ..
+            } => item.data.len(),
+            Reply::MacroImage {
+                image: Some(image), ..
+            } => image.len(),
+            Reply::Macros { macros, .. } => macros
+                .iter()
+                .map(|entry| entry.name.len() + entry.image.len())
+                .sum(),
+            _ => 0,
+        }
 }
 
 fn take_lock(path: &Path) -> io::Result<Option<File>> {
@@ -164,8 +224,9 @@ pub fn serve(options: &Options<'_>) -> io::Result<Exit> {
 
         let (events, incoming) = mpsc::channel();
         let version = options.version;
-        let uid = options.uid;
-        std::thread::Builder::new().spawn(move || accept(listener, version, uid, events))?;
+        let (uid, backlog) = (options.uid, options.backlog);
+        std::thread::Builder::new()
+            .spawn(move || accept(listener, version, uid, backlog, events))?;
         let (connections, ended) = own_core(incoming, options.idle_grace);
 
         let _ = fs::remove_file(&socket);
@@ -179,7 +240,7 @@ pub fn serve(options: &Options<'_>) -> io::Result<Exit> {
     Ok(Exit::Stopped)
 }
 
-fn accept(listener: UnixListener, version: u32, uid: u32, events: Sender<Event>) {
+fn accept(listener: UnixListener, version: u32, uid: u32, limit: usize, events: Sender<Event>) {
     let mut next_connection = 0;
     for stream in listener.incoming() {
         let Ok(stream) = stream else { continue };
@@ -189,7 +250,7 @@ fn accept(listener: UnixListener, version: u32, uid: u32, events: Sender<Event>)
         let connection = next_connection;
         next_connection += 1;
         let events = events.clone();
-        spawn(move || read_client(stream, connection, version, events));
+        spawn(move || read_client(stream, connection, version, limit, events));
     }
 }
 
@@ -199,7 +260,13 @@ fn spawn(body: impl FnOnce() + Send + 'static) -> bool {
 }
 
 /// Answers a connection's handshake, then feeds its frames to the owner until it ends.
-fn read_client(mut stream: UnixStream, connection: u64, version: u32, events: Sender<Event>) {
+fn read_client(
+    mut stream: UnixStream,
+    connection: u64,
+    version: u32,
+    limit: usize,
+    events: Sender<Event>,
+) {
     if !accepted_hello(&mut stream, version) {
         return;
     }
@@ -210,19 +277,26 @@ fn read_client(mut stream: UnixStream, connection: u64, version: u32, events: Se
         return;
     };
     let (outgoing, to_write) = mpsc::channel();
+    let backlog = Arc::new(Backlog::default());
     let writer_events = events.clone();
-    if !spawn(move || write_client(writer, version, to_write, writer_events)) {
+    let writer_backlog = Arc::clone(&backlog);
+    if !spawn(move || write_client(writer, version, to_write, writer_backlog, writer_events)) {
         return;
     }
     let connected = Event::Connected {
         connection,
         stream: owner_stream,
         outgoing,
+        backlog: Arc::clone(&backlog),
     };
     if events.send(connected).is_err() {
         return;
     }
-    while let Ok(Some((call, body))) = wire::read_frame(&mut stream) {
+    loop {
+        backlog.wait_for_room(limit);
+        let Ok(Some((call, body))) = wire::read_frame(&mut stream) else {
+            break;
+        };
         let Ok(command) = wire::decode_command(&body) else {
             break;
         };
@@ -261,6 +335,7 @@ fn write_client(
     mut stream: UnixStream,
     version: u32,
     to_write: Receiver<Outgoing>,
+    backlog: Arc<Backlog>,
     events: Sender<Event>,
 ) {
     let mut open = true;
@@ -273,6 +348,7 @@ fn write_client(
                 call,
                 reply,
                 source,
+                weight,
             } => {
                 let frame = open.then(|| wire::frame(call, &wire::encode_reply(&reply)));
                 open = frame.is_some_and(|frame| stream.write_all(&frame).is_ok());
@@ -286,6 +362,7 @@ fn write_client(
                 {
                     let _ = events.send(Event::Undelivered { source, item });
                 }
+                backlog.remove(weight);
             }
         }
     }
@@ -294,6 +371,7 @@ fn write_client(
 struct Connection {
     stream: UnixStream,
     outgoing: Sender<Outgoing>,
+    backlog: Arc<Backlog>,
 }
 
 /// Owns the core until the daemon should exit, answering the streams still open and whether this
@@ -323,10 +401,16 @@ fn own_core(events: Receiver<Event>, idle_grace: Duration) -> (Vec<UnixStream>, 
                 connection,
                 stream,
                 outgoing,
+                backlog,
             } => {
                 served = true;
                 let _ = outgoing.send(Outgoing::Welcome);
-                connections.insert(connection, Connection { stream, outgoing });
+                let open = Connection {
+                    stream,
+                    outgoing,
+                    backlog,
+                };
+                connections.insert(connection, open);
             }
             Event::Frame {
                 command: Command::Stop,
@@ -396,10 +480,13 @@ fn send_reply(
     source: Option<Source>,
 ) {
     if let Some(connection) = connections.get(&client.connection) {
+        let weight = weight(&reply);
+        connection.backlog.add(weight);
         let _ = connection.outgoing.send(Outgoing::Reply {
             call: client.call,
             reply,
             source,
+            weight,
         });
     }
 }
@@ -423,6 +510,7 @@ mod tests {
             connection: 0,
             stream,
             outgoing,
+            backlog: Arc::default(),
         };
         events.send(connected).expect("the owner is listening");
         drop(events);
