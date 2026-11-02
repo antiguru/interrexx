@@ -277,16 +277,17 @@ pub unsafe extern "C" fn RexxDeregisterSubcom(
     code(unsafe { capi::deregister(Registry::Subcom, self::name(name), text(library)) })
 }
 
-/// `RexxLoadSubcom`.
+/// `RexxLoadSubcom`: loads `name`'s handler; the library is ignored.
 ///
 /// # Safety
 /// As [`RexxRegisterSubcomDll`].
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxLoadSubcom(
-    _name: *const c_char,
+    name: *const c_char,
     _library: *const c_char,
 ) -> RexxReturnCode {
-    code(capi::NOT_REGISTERED)
+    // SAFETY: the caller's guarantee.
+    code(capi::load_subcom(unsafe { self::name(name) }))
 }
 
 /// `RexxRegisterExitDll`.

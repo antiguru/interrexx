@@ -95,19 +95,22 @@ fn request(action: Action) -> Request {
     }
 }
 
-/// The return code of `reply`. A `LOAD` succeeds only for a registration with no library: this
-/// command loads no library.
+/// The return code of `reply`. A `LOAD` succeeds for a registration with no library, or whose
+/// library loads and has its procedure, as spelled or uppercased.
 fn status(reply: Reply, load: bool) -> u64 {
     match reply {
         Reply::Registration {
             status: OK,
             registered: Some(registered),
         } if load => {
-            if registered.library.is_empty() {
-                OK
-            } else {
-                NOT_REGISTERED
-            }
+            let loads = registered.library.is_empty()
+                || rexx_api::load::classic_procedure(
+                    &registered.library,
+                    &registered.procedure,
+                    &[],
+                )
+                .is_some();
+            if loads { OK } else { NOT_REGISTERED }
         }
         Reply::Status(status) | Reply::Registration { status, .. } => status,
         _ => NOT_REGISTERED,
@@ -214,7 +217,7 @@ mod tests {
     }
 
     #[test]
-    fn a_load_succeeds_only_without_a_library() {
+    fn a_load_fails_for_a_library_that_does_not_load() {
         let found = |library: &[u8]| Reply::Registration {
             status: OK,
             registered: Some(Registered {

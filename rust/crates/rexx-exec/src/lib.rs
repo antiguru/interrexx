@@ -51,6 +51,7 @@ use queue::Queue;
 mod rxapi_client;
 pub use rxapi_client::use_api_service;
 pub mod capi;
+mod classic;
 
 // What a command line supplies to a top-level program: the one argument string
 // it can carry, how a list of words becomes that string, and where `.input`
@@ -1706,6 +1707,12 @@ struct Interp {
     /// ([`Interp::merge_routines`]), and `~addRoutine`/`~addPublicRoutine`.
     /// See `Resolved::kept_until_routines_change`.
     pub(crate) routine_generation: u32,
+    /// The classic function handlers calls have resolved, by uppercased name, kept until
+    /// `RxFuncDrop` names them: a handler dropped by any other route stays callable here.
+    pub(crate) classic_functions: FxHashMap<Vec<u8>, rexx_api::load::ClassicEntry>,
+    /// The classic subcommand handlers commands have resolved, by uppercased environment, kept for
+    /// the interpreter's life.
+    pub(crate) classic_subcoms: FxHashMap<Vec<u8>, rexx_api::load::ClassicEntry>,
     /// The access scope and protection of every method that has one -- the
     /// oracle's `isSpecial()` set, which is what `RexxObject::messageSend`
     /// consults before it runs anything.
@@ -2410,6 +2417,8 @@ impl Interp {
             package_routines: FxHashMap::default(),
             package_routine_codes: Vec::new(),
             routine_generation: 0,
+            classic_functions: FxHashMap::default(),
+            classic_subcoms: FxHashMap::default(),
             global_references: rexx_api::handles::Table::new(),
             command_handlers: FxHashMap::default(),
             kept_strings: rustc_hash::FxHashMap::default(),
@@ -3439,6 +3448,9 @@ impl Interp {
             package_routines: _,
             package_routine_codes: _,
             routine_generation: _,
+            // Entry points, not objects.
+            classic_functions: _,
+            classic_subcoms: _,
             global_references,
             // Entry points, not objects.
             command_handlers: _,

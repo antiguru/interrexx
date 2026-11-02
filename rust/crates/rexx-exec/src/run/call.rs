@@ -337,6 +337,9 @@ impl Interp {
             // decided here; the path is searched for again where the
             // file is entered, because a `Resolved` is `Copy` and this
             // resolver is `&self`.
+            // **A registered classic function**, which `SystemInterpreter::invokeExternalFunction`
+            // tries after the macros searched first and before the external file search.
+            None if self.classic_function(name).is_some() => Resolved::Registered,
             None if self.external_program(name).is_some() => Resolved::External,
             None if crate::builtin::rexxutil::macros::macro_position(name)
                 == Some(crate::builtin::rexxutil::macros::AFTER) =>
@@ -1071,7 +1074,11 @@ impl Interp {
         // the manager first**, an unresolvable name included.
         if matches!(
             resolved,
-            Resolved::Library(_) | Resolved::External | Resolved::Macro | Resolved::Unresolved
+            Resolved::Library(_)
+                | Resolved::External
+                | Resolved::Macro
+                | Resolved::Registered
+                | Resolved::Unresolved
         ) && let Some(handled) = self.call_checkpoint(name, &arguments[from..])?
         {
             return Ok(Begun::Done(Ended::Returned(handled)));
@@ -1095,6 +1102,11 @@ impl Interp {
         if let Resolved::Macro = resolved {
             return self
                 .enter_macro(name, arguments[from..].to_vec(), call_type)
+                .map(|value| Begun::Done(Ended::Returned(value)));
+        }
+        if let Resolved::Registered = resolved {
+            return self
+                .call_classic_function(name, &arguments[from..])
                 .map(|value| Begun::Done(Ended::Returned(value)));
         }
 
@@ -1144,6 +1156,7 @@ impl Interp {
             Resolved::Library(_) => unreachable!("the library path returns just above"),
             Resolved::External => unreachable!("the external path returns just above"),
             Resolved::Macro => unreachable!("the macro path returns just above"),
+            Resolved::Registered => unreachable!("the registered path returns just above"),
             Resolved::Unresolved => unreachable!("an unresolved name raises just above"),
         };
 

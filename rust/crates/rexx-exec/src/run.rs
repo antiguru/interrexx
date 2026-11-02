@@ -220,6 +220,9 @@ pub(crate) enum Resolved {
     /// packages' routines or after the external file search as its position says. Its image is
     /// fetched again where it is entered.
     Macro,
+    /// A classic function handler registered under this name (`RxFuncAdd`,
+    /// `RexxRegisterFunctionDll|Exe`), found in `Interp::classic_functions` where it is entered.
+    Registered,
     /// Nothing answers this name. **Not an error here**: the security
     /// manager's `CALL` checkpoint runs before 43.1 is reported
     /// (`RexxActivation::externalCall`, `execution/RexxActivation.cpp:3077`
@@ -251,6 +254,7 @@ impl Resolved {
                 | Resolved::LibraryRoutine(_)
                 | Resolved::External
                 | Resolved::Macro
+                | Resolved::Registered
         )
     }
 

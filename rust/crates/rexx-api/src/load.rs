@@ -12,9 +12,9 @@ use crate::ffi::{
 };
 use crate::invoke::MAX_NATIVE_ARGUMENTS;
 use crate::layout::{
-    PackageHook, RexxCallContext_, RexxExitContext_, RexxIORedirectorContext_, RexxMethodContext_,
-    RexxMethodEntry, RexxObjectPtr, RexxPackageEntry, RexxRoutineEntry, RexxStringObject,
-    RexxThreadContext_, ValueDescriptor, ValueUnion,
+    CONSTRXSTRING, PackageHook, RXSTRING, RexxCallContext_, RexxExitContext_,
+    RexxIORedirectorContext_, RexxMethodContext_, RexxMethodEntry, RexxObjectPtr, RexxPackageEntry,
+    RexxRoutineEntry, RexxStringObject, RexxThreadContext_, ValueDescriptor, ValueUnion,
 };
 use crate::values::{ARGUMENT_TERMINATOR, ResultRead, Written};
 use std::ffi::{CStr, c_char, c_int, c_void};
@@ -1318,6 +1318,179 @@ impl ClassicEntry {
     pub fn address(self) -> *mut c_void {
         self.0.as_ptr()
     }
+
+    /// Calls a `RexxFunctionHandler` with `name`, `arguments` (`None` an omitted one) and the
+    /// current queue's name, as `NativeActivation::callRegisteredRoutine` does
+    /// (`interpreter/execution/NativeActivation.cpp:1466`): each string NUL-terminated beyond its
+    /// length, and the result in a `DEFRXSTRING` buffer the handler may replace with a block
+    /// `free` releases.
+    #[must_use]
+    pub fn call_function(
+        self,
+        name: &[u8],
+        arguments: &[Option<&[u8]>],
+        queue: &[u8],
+    ) -> ClassicResult<usize> {
+        let name = terminated(name);
+        let queue = terminated(queue);
+        let held: Vec<Option<Vec<u8>>> = arguments
+            .iter()
+            .map(|argument| argument.map(terminated))
+            .collect();
+        let argv: Vec<CONSTRXSTRING> = held
+            .iter()
+            .map(|argument| match argument {
+                Some(bytes) => CONSTRXSTRING {
+                    strlength: bytes.len() - 1,
+                    strptr: bytes.as_ptr().cast(),
+                },
+                None => CONSTRXSTRING {
+                    strlength: 0,
+                    strptr: std::ptr::null(),
+                },
+            })
+            .collect();
+        let mut buffer = [0u8; DEFAULT_RESULT_BUFFER];
+        let mut result = RXSTRING {
+            strlength: buffer.len(),
+            strptr: buffer.as_mut_ptr().cast(),
+        };
+        // SAFETY: `new`'s caller guaranteed a `RexxFunctionHandler` (`api/rexx.h`), mapped for
+        // the process's life. Every string is NUL-terminated and outlives the call, `argv`
+        // holds `arguments.len()` elements, and `result` addresses a buffer of its length.
+        let rc = unsafe {
+            let handler = std::mem::transmute::<*mut c_void, FunctionHandler>(self.address());
+            handler(
+                name.as_ptr().cast(),
+                argv.len(),
+                argv.as_ptr(),
+                queue.as_ptr().cast(),
+                &raw mut result,
+            )
+        };
+        // SAFETY: the handler left `result` addressing `buffer` or a block of its own.
+        let value = unsafe { take_result(&result, buffer.as_mut_ptr()) };
+        ClassicResult { rc, value }
+    }
+
+    /// Calls a `RexxSubcomHandler` with `command`, as `CommandHandlerDispatcher::run` does
+    /// (`interpreter/concurrency/CommandHandler.cpp`), answering its return code, its flags and
+    /// its result.
+    #[must_use]
+    pub fn call_subcom(self, command: &[u8]) -> (ClassicResult<c_int>, u16) {
+        let command = terminated(command);
+        let argument = CONSTRXSTRING {
+            strlength: command.len() - 1,
+            strptr: command.as_ptr().cast(),
+        };
+        let mut flags: u16 = 0;
+        let mut buffer = [0u8; DEFAULT_RESULT_BUFFER];
+        let mut result = RXSTRING {
+            strlength: buffer.len(),
+            strptr: buffer.as_mut_ptr().cast(),
+        };
+        // SAFETY: `new`'s caller guaranteed a `RexxSubcomHandler` (`api/rexx.h`), mapped for the
+        // process's life. The command is NUL-terminated and outlives the call, and `result`
+        // addresses a buffer of its length.
+        let rc = unsafe {
+            let handler = std::mem::transmute::<*mut c_void, SubcomHandler>(self.address());
+            handler(&raw const argument, &raw mut flags, &raw mut result)
+        };
+        // SAFETY: the handler left `result` addressing `buffer` or a block of its own.
+        let value = unsafe { take_result(&result, buffer.as_mut_ptr()) };
+        (ClassicResult { rc, value }, flags)
+    }
+}
+
+/// `DEFRXSTRING`, the result buffer a classic handler is handed.
+const DEFAULT_RESULT_BUFFER: usize = 256;
+
+/// `RexxFunctionHandler` (`api/rexx.h`). It may unwind as a [`Stub`] may.
+type FunctionHandler = unsafe extern "C-unwind" fn(
+    *const c_char,
+    usize,
+    *const CONSTRXSTRING,
+    *const c_char,
+    *mut RXSTRING,
+) -> usize;
+
+/// `RexxSubcomHandler` (`api/rexx.h`).
+type SubcomHandler =
+    unsafe extern "C-unwind" fn(*const CONSTRXSTRING, *mut u16, *mut RXSTRING) -> c_int;
+
+/// A classic handler's return code and result, `None` where it left a null `strptr`.
+#[derive(Debug, PartialEq, Eq)]
+pub struct ClassicResult<R> {
+    pub rc: R,
+    pub value: Option<Vec<u8>>,
+}
+
+fn terminated(bytes: &[u8]) -> Vec<u8> {
+    let mut held = Vec::with_capacity(bytes.len() + 1);
+    held.extend_from_slice(bytes);
+    held.push(0);
+    held
+}
+
+/// The bytes `result` holds, releasing a block the handler put in place of `buffer`.
+///
+/// # Safety
+/// A non-null `result.strptr` is `buffer` or a `malloc` block, holding `strlength` bytes.
+unsafe fn take_result(result: &RXSTRING, buffer: *mut u8) -> Option<Vec<u8>> {
+    if result.strptr.is_null() {
+        return None;
+    }
+    // SAFETY: the caller's guarantee.
+    let value = unsafe { std::slice::from_raw_parts(result.strptr.cast::<u8>(), result.strlength) }
+        .to_vec();
+    if result.strptr.cast::<u8>() != buffer {
+        // SAFETY: a block of the handler's own, which the API releases (`releaseResultMemory`).
+        unsafe { libc::free(result.strptr.cast()) };
+    }
+    Some(value)
+}
+
+/// Libraries a classic registration loaded, held open for the process's life: an entry point
+/// resolved from one is never invalidated.
+static CLASSIC_LIBRARIES: Mutex<Vec<libloading::Library>> = Mutex::new(Vec::new());
+
+/// The entry point `procedure` names in the library `library` names, searched as [`open`]
+/// searches, first as spelled and then uppercased, as `RexxResolve*` find a registration's
+/// handler.
+#[must_use]
+pub fn classic_procedure(
+    library: &[u8],
+    procedure: &[u8],
+    search: &[PathBuf],
+) -> Option<ClassicEntry> {
+    let name = std::str::from_utf8(library).ok()?;
+    if name.len() > MAX_LIBRARY_NAME_LENGTH {
+        return None;
+    }
+    let file = format!("lib{name}{}", std::env::consts::DLL_SUFFIX);
+    let handle = search
+        .iter()
+        .find_map(|directory| dlopen(&directory.join(&file)))
+        .or_else(|| dlopen(Path::new(&file)))
+        .or_else(|| dlopen(&Path::new(SECOND_ATTEMPT_DIRECTORY).join(&file)))?;
+    let lookup = |symbol: &[u8]| {
+        let symbol = terminated(symbol);
+        // SAFETY: the symbol is read as an address only. A classic registration names a handler
+        // of the registry's C signature, which the API contract makes the registrant's to
+        // guarantee, as `ClassicEntry::new` asks.
+        unsafe {
+            handle
+                .get::<*mut c_void>(symbol.as_slice())
+                .ok()
+                .and_then(|address| ClassicEntry::new(*address))
+        }
+    };
+    let entry = lookup(procedure).or_else(|| lookup(&procedure.to_ascii_uppercase()))?;
+    CLASSIC_LIBRARIES
+        .lock()
+        .expect("the libraries' critical section cannot panic")
+        .push(handle);
+    Some(entry)
 }
 
 /// `DIRECT_COMMAND_ENVIRONMENT` (`api/oorexxapi.h:479`).

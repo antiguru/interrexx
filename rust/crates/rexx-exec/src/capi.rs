@@ -256,6 +256,58 @@ pub fn deregister(registry: Registry, name: &[u8], library: Option<&[u8]>) -> u6
     }))
 }
 
+/// The handler `name` resolves to in `registry`, as `RexxResolveSubcom` and its siblings find
+/// it: this process's entry point, else the registration's library loaded in this process and
+/// its procedure found, first as registered and then uppercased, with `search` tried before the
+/// loader's own path. `Ok(None)` for a registration naming no library; `RXSUBCOM_NOTREG` where
+/// nothing is registered or the library or procedure is not found. `start` lets the lookup start
+/// a service; without it, no running service means nothing is registered.
+pub fn resolve(
+    registry: Registry,
+    name: &[u8],
+    search: &[std::path::PathBuf],
+    start: bool,
+) -> Result<Option<ClassicEntry>, u64> {
+    if let Some(entry) = registered_entry(registry, name) {
+        return Ok(Some(entry));
+    }
+    let client = match start {
+        true => rxapi_client::client()?,
+        false => rxapi_client::running_client().ok_or(NOT_REGISTERED)?,
+    };
+    let reply = client.call(Request::QueryRegistration {
+        registry,
+        name: name.to_vec(),
+        library: Vec::new(),
+    });
+    let registered = match reply {
+        Ok(Reply::Registration {
+            status: OK,
+            registered: Some(registered),
+        }) => registered,
+        reply => {
+            return Err(match status_of(&reply) {
+                OK => NOT_REGISTERED,
+                status => status,
+            });
+        }
+    };
+    if registered.library.is_empty() {
+        return Ok(None);
+    }
+    rexx_api::load::classic_procedure(&registered.library, &registered.procedure, search)
+        .map(Some)
+        .ok_or(NOT_REGISTERED)
+}
+
+/// `RexxLoadSubcom`: whether `name`'s handler resolves. The library argument is ignored.
+pub fn load_subcom(name: &[u8]) -> u64 {
+    match resolve(Registry::Subcom, name, &[], true) {
+        Ok(_) => OK,
+        Err(status) => status,
+    }
+}
+
 /// `RexxQueryFunction`: an entry point of this process's, else a registration.
 pub fn query_function(name: &[u8]) -> u64 {
     query_registration(Registry::Function, name, None).0

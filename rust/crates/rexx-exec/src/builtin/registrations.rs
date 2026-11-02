@@ -3,7 +3,7 @@
 //!
 //! A function a package library exports, or an internal package's, is callable without the
 //! registry. Any other library is a classic one: its function is registered with the service,
-//! and it resolves only through a classic handler, which this crate does not call.
+//! and resolves to its `RexxFunctionHandler`.
 
 use rexx_core::ObjRef;
 use rexx_rxapi::message::code::OK;
@@ -12,6 +12,7 @@ use rexx_rxapi::message::{Registry, Reply, Request};
 use super::{Args, arg, required_string};
 use crate::Interp;
 use crate::LibraryLoad;
+use crate::capi;
 use crate::error::Failure;
 use crate::internal_routines::{self, Package};
 use crate::rxapi_client;
@@ -41,7 +42,7 @@ pub(crate) fn rxfuncadd(
         Some(value) => interp.to_text(value).into_owned(),
         None => upper.clone(),
     };
-    if interp.function_loaded(&upper) {
+    if interp.function_loaded(&upper) || interp.classic_functions.contains_key(&upper) {
         return Ok(boolean(interp, false));
     }
     if let Some(package) = Package::named(&module) {
@@ -57,11 +58,12 @@ pub(crate) fn rxfuncadd(
         LibraryLoad::Missing | LibraryLoad::Version => {}
     }
     register_function(&upper, &module, &procedure);
-    Ok(boolean(interp, true))
+    let resolved = interp.resolve_classic_function(&upper);
+    interp.routines_changed();
+    Ok(boolean(interp, !resolved))
 }
 
-/// Registers `name` as `library`'s `procedure` with the service, whatever the outcome: the
-/// function then resolves only through a classic handler.
+/// Registers `name` as `library`'s `procedure` with the service, whatever the outcome.
 pub(crate) fn register_function(name: &[u8], library: &[u8], procedure: &[u8]) {
     if let Ok(client) = rxapi_client::client() {
         let _ = client.call(Request::Register {
@@ -82,7 +84,10 @@ pub(crate) fn rxfuncquery(
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     let upper = required_string(interp, args, 1).to_ascii_uppercase();
-    if interp.function_loaded(&upper) {
+    if interp.function_loaded(&upper)
+        || interp.classic_functions.contains_key(&upper)
+        || capi::registered_entry(Registry::Function, &upper).is_some()
+    {
         return Ok(boolean(interp, false));
     }
     let status = registry_status(Request::QueryRegistration {
@@ -100,6 +105,12 @@ pub(crate) fn rxfuncdrop(
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     let upper = required_string(interp, args, 1).to_ascii_uppercase();
+    interp.classic_functions.remove(&upper);
+    interp.routines_changed();
+    if capi::registered_entry(Registry::Function, &upper).is_some() {
+        let status = capi::deregister(Registry::Function, &upper, None);
+        return Ok(boolean(interp, status != OK));
+    }
     let status = registry_status(Request::Deregister {
         registry: Registry::Function,
         name: upper,

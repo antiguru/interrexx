@@ -29,7 +29,7 @@ use collector::collect;
 /// A return code's whole-number value under the default precision, or `None`
 /// where it has none -- `RexxObject::numberValue(wholenumber_t &)`, which is
 /// what the `+++ "RC(n)"` line is gated on.
-fn whole_value(text: &[u8]) -> Option<i32> {
+pub(crate) fn whole_value(text: &[u8]) -> Option<i32> {
     let number = rexx_num::Number::parse(std::str::from_utf8(text).ok()?)?;
     i32::try_from(number.whole_value(9)?).ok()
 }
@@ -817,6 +817,11 @@ impl Interp {
                 .map(Commanded::Done);
         }
         let Some(handler) = handler_for(environment) else {
+            if let Some(entry) = self.classic_subcom(environment) {
+                return self
+                    .run_classic_command(entry, environment, command, io.is_some())
+                    .map(Commanded::Done);
+            }
             if self.libraries.classic_environment(environment) {
                 return Err(crate::Loud::loader_environment(environment).into());
             }
