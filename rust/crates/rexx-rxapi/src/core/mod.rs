@@ -4,7 +4,7 @@ mod macrospace;
 mod queue;
 mod registry;
 
-use crate::message::{Reply, Request};
+use crate::message::{Item, Reply, Request};
 
 use macrospace::MacroSpace;
 use queue::Queues;
@@ -126,6 +126,12 @@ impl Core {
     /// Replies to parked requests that have become ready since the last call.
     pub fn take_ready(&mut self) -> Vec<(ClientId, Reply)> {
         self.queues.take_ready()
+    }
+
+    /// A pull of `name` took `item`, and its client was gone. The item goes to the next waiter, or
+    /// back to the head of the queue.
+    pub fn undelivered(&mut self, session: u64, name: Option<Vec<u8>>, item: Item) {
+        self.queues.restore(session, name, item);
     }
 
     /// `client`'s connection closed: its parked pulls end and its session queues lose a user.

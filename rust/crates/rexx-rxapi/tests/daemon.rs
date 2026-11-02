@@ -1,8 +1,8 @@
 //! A real daemon, each test in its own `REXX_API_DIR`.
 
-use std::io::ErrorKind;
+use std::io::{ErrorKind, Read, Write};
 use std::os::unix::fs::PermissionsExt;
-use std::os::unix::net::UnixListener;
+use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Output, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -11,8 +11,8 @@ use std::time::Duration;
 
 use rexx_rxapi::daemon::{self, Exit, Options};
 use rexx_rxapi::message::code::*;
-use rexx_rxapi::message::wire::PROTOCOL_VERSION;
-use rexx_rxapi::message::{FIFO, Registry, Reply, Request, Timestamp, WAIT};
+use rexx_rxapi::message::wire::{self, PROTOCOL_VERSION};
+use rexx_rxapi::message::{FIFO, NO_WAIT, Registry, Reply, Request, Timestamp, WAIT};
 use rexx_rxapi::transport::unix::{Unix, lock_path, prepare_dir, socket_path};
 use rexx_rxapi::transport::{Transport, TransportError};
 
@@ -185,6 +185,57 @@ fn spawn_child(name: &str, service: &ServiceDir) -> Child {
         .stdout(Stdio::null())
         .spawn()
         .expect("the child starts")
+}
+
+/// A client that speaks the protocol by hand, so a test controls what it reads and when it closes.
+fn raw_client(dir: &Path) -> UnixStream {
+    let mut stream = UnixStream::connect(socket_path(dir, PROTOCOL_VERSION)).expect("the socket");
+    stream
+        .write_all(&wire::hello(PROTOCOL_VERSION))
+        .expect("the hello");
+    let mut welcome = [0; wire::WELCOME_LENGTH];
+    stream.read_exact(&mut welcome).expect("the welcome");
+    assert!(wire::read_welcome(&welcome).0);
+    stream
+}
+
+fn send_raw(stream: &mut UnixStream, call: u64, request: &Request) {
+    stream
+        .write_all(&wire::frame(call, &wire::encode_request(request)))
+        .expect("the frame");
+}
+
+fn read_raw(stream: &mut UnixStream) -> (u64, Reply) {
+    let (call, body) = wire::read_frame(stream)
+        .expect("a frame")
+        .expect("an open connection");
+    (call, wire::decode_reply(&body).expect("a reply"))
+}
+
+/// Parks a pull on `stream`: the owner handles one connection's frames in order, so the reply to
+/// the frame after it proves it parked.
+fn park_raw(stream: &mut UnixStream, queue: &str) {
+    send_raw(stream, 1, &pull_request(queue));
+    let probe = Request::QueueExists {
+        name: Some(queue.as_bytes().to_vec()),
+    };
+    send_raw(stream, 2, &probe);
+    assert_eq!(read_raw(stream), (2, Reply::Status(OK)));
+}
+
+fn take_now(client: &impl Transport, queue: &str) -> Option<Vec<u8>> {
+    let pull = Request::PullQueue {
+        session: 1,
+        name: Some(queue.as_bytes().to_vec()),
+        wait: NO_WAIT,
+    };
+    match client.call(pull).expect("a reply") {
+        Reply::Pulled {
+            status: OK,
+            item: Some(item),
+        } => Some(item.data),
+        _ => None,
+    }
 }
 
 /// Review Focus 1.
@@ -527,6 +578,43 @@ fn a_killed_blocked_process_leaves_its_queue_deletable_and_the_daemon_alive() {
             .expect("the daemon answers"),
         Reply::Status(QUEUE_NOT_REGISTERED)
     );
+}
+
+#[test]
+#[ignore = "the client half of a test, run through spawn_child"]
+fn child_closes_waiters_under_adds() {
+    let dir = PathBuf::from(std::env::var_os(CHILD_DIR).expect("run by spawn_child"));
+    let client = Unix::connect_or_start_with(&dir, Path::new(DAEMON)).expect("a daemon");
+    open(&client, "q");
+    for round in 0..3000_u32 {
+        let mut waiter = raw_client(&dir);
+        park_raw(&mut waiter, "q");
+        drop(waiter);
+
+        let data = round.to_le_bytes();
+        assert_eq!(
+            client.call(add_request("q", &data)).expect("a reply"),
+            Reply::Status(OK)
+        );
+
+        let mut item = None;
+        eventually("the item is back", || {
+            item = take_now(&client, "q");
+            item.is_some()
+        });
+        assert_eq!(item.as_deref(), Some(&data[..]), "round {round}");
+    }
+}
+
+/// The add can reach the owner before the closed waiter's `Closed` event, so the item is handed
+/// to a connection that is already gone. The order is a race, hence the rounds. A separate process
+/// because a sibling test's `fork` holds the waiter's descriptor open for an instant, and a write
+/// to a peer that is not yet closed succeeds.
+#[test]
+fn an_item_handed_to_a_closed_waiter_stays_in_the_queue() {
+    let service = ServiceDir::new();
+    let mut child = spawn_child("child_closes_waiters_under_adds", &service);
+    assert!(child.wait().expect("the child").success());
 }
 
 #[test]

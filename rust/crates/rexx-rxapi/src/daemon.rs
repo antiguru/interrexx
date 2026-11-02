@@ -14,7 +14,7 @@ use rustix::fs::{FlockOperation, flock};
 
 use crate::core::{ClientId, Core, Outcome};
 use crate::message::wire::{self, Command};
-use crate::message::{Reply, Request, Timestamp};
+use crate::message::{Item, Reply, Request, Timestamp};
 use crate::transport::unix::{lock_path, peer_uid, socket_path};
 
 /// How long a silent connector may hold a thread before its handshake.
@@ -81,12 +81,39 @@ enum Event {
     Closed {
         connection: u64,
     },
+    Undelivered {
+        source: Source,
+        item: Item,
+    },
+}
+
+/// The queue a pull addressed.
+#[derive(Clone)]
+struct Source {
+    session: u64,
+    name: Option<Vec<u8>>,
+}
+
+impl Source {
+    fn of(request: &Request) -> Option<Source> {
+        match request {
+            Request::PullQueue { session, name, .. } => Some(Source {
+                session: *session,
+                name: name.clone(),
+            }),
+            _ => None,
+        }
+    }
 }
 
 /// What a connection's writer sends.
 enum Outgoing {
     Welcome,
-    Reply(u64, Reply),
+    Reply {
+        call: u64,
+        reply: Reply,
+        source: Option<Source>,
+    },
 }
 
 fn take_lock(path: &Path) -> io::Result<Option<File>> {
@@ -177,7 +204,8 @@ fn read_client(mut stream: UnixStream, connection: u64, version: u32, events: Se
         return;
     };
     let (outgoing, to_write) = mpsc::channel();
-    std::thread::spawn(move || write_client(writer, version, to_write));
+    let writer_events = events.clone();
+    std::thread::spawn(move || write_client(writer, version, to_write, writer_events));
     let connected = Event::Connected {
         connection,
         stream: owner_stream,
@@ -219,17 +247,38 @@ fn accepted_hello(stream: &mut UnixStream, version: u32) -> bool {
     false
 }
 
-/// Writes on its own thread, so a client that stops reading stalls only itself.
-fn write_client(mut stream: UnixStream, version: u32, to_write: Receiver<Outgoing>) {
+/// Writes on its own thread, so a client that stops reading stalls only itself. After a failed
+/// write every item still bound for this client goes back to the owner.
+fn write_client(
+    mut stream: UnixStream,
+    version: u32,
+    to_write: Receiver<Outgoing>,
+    events: Sender<Event>,
+) {
+    let mut open = true;
     for message in to_write {
-        let written = match message {
-            Outgoing::Welcome => stream.write_all(&wire::welcome(true, version)),
-            Outgoing::Reply(call, reply) => {
-                stream.write_all(&wire::frame(call, &wire::encode_reply(&reply)))
+        match message {
+            Outgoing::Welcome => {
+                open = open && stream.write_all(&wire::welcome(true, version)).is_ok();
             }
-        };
-        if written.is_err() {
-            return;
+            Outgoing::Reply {
+                call,
+                reply,
+                source,
+            } => {
+                let frame = open.then(|| wire::frame(call, &wire::encode_reply(&reply)));
+                open = frame.is_some_and(|frame| stream.write_all(&frame).is_ok());
+                if let (
+                    false,
+                    Some(source),
+                    Reply::Pulled {
+                        item: Some(item), ..
+                    },
+                ) = (open, source, reply)
+                {
+                    let _ = events.send(Event::Undelivered { source, item });
+                }
+            }
         }
     }
 }
@@ -243,6 +292,7 @@ struct Connection {
 fn own_core(events: Receiver<Event>, idle_grace: Duration) -> Vec<UnixStream> {
     let mut core = Core::new();
     let mut connections: HashMap<u64, Connection> = HashMap::new();
+    let mut parked: HashMap<ClientId, Source> = HashMap::new();
     let mut served = false;
     loop {
         let event = if served {
@@ -271,15 +321,22 @@ fn own_core(events: Receiver<Event>, idle_grace: Duration) -> Vec<UnixStream> {
                 command: Command::Request(request),
             } => {
                 let client = ClientId { connection, call };
-                if let Outcome::Reply(reply) = core.handle(client, stamped(request)) {
-                    send_reply(&connections, client, reply);
+                let source = Source::of(&request);
+                match core.handle(client, stamped(request)) {
+                    Outcome::Reply(reply) => send_reply(&connections, client, reply, source),
+                    Outcome::Parked => {
+                        parked.extend(source.map(|source| (client, source)));
+                    }
                 }
-                for (client, reply) in core.take_ready() {
-                    send_reply(&connections, client, reply);
-                }
+                send_ready(&mut core, &connections, &mut parked);
+            }
+            Event::Undelivered { source, item } => {
+                core.undelivered(source.session, source.name, item);
+                send_ready(&mut core, &connections, &mut parked);
             }
             Event::Closed { connection } => {
                 core.client_closed(ClientId::connection(connection));
+                parked.retain(|client, _| client.connection != connection);
                 if let Some(closed) = connections.remove(&connection) {
                     let _ = closed.stream.shutdown(std::net::Shutdown::Both);
                 }
@@ -303,11 +360,29 @@ fn stamped(mut request: Request) -> Request {
     request
 }
 
-fn send_reply(connections: &HashMap<u64, Connection>, client: ClientId, reply: Reply) {
+fn send_ready(
+    core: &mut Core,
+    connections: &HashMap<u64, Connection>,
+    parked: &mut HashMap<ClientId, Source>,
+) {
+    for (client, reply) in core.take_ready() {
+        let source = parked.remove(&client);
+        send_reply(connections, client, reply, source);
+    }
+}
+
+fn send_reply(
+    connections: &HashMap<u64, Connection>,
+    client: ClientId,
+    reply: Reply,
+    source: Option<Source>,
+) {
     if let Some(connection) = connections.get(&client.connection) {
-        let _ = connection
-            .outgoing
-            .send(Outgoing::Reply(client.call, reply));
+        let _ = connection.outgoing.send(Outgoing::Reply {
+            call: client.call,
+            reply,
+            source,
+        });
     }
 }
 

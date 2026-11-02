@@ -581,6 +581,88 @@ fn a_killed_blocked_client_leaves_its_queue_deletable() {
     assert_eq!(delete(&mut core, Some("q")), OK);
 }
 
+fn item(data: &str) -> Item {
+    Item {
+        data: data.as_bytes().to_vec(),
+        time: Timestamp::default(),
+    }
+}
+
+#[test]
+fn an_undelivered_item_goes_to_the_head_and_keeps_its_time() {
+    let mut core = Core::new();
+    open(&mut core, "q");
+    status(&mut core, client(1), add(Some("q"), "later", FIFO));
+    let stamped = Item {
+        time: Timestamp {
+            year: 126,
+            ..Timestamp::default()
+        },
+        ..item("first")
+    };
+
+    core.undelivered(SESSION, name("Q"), stamped.clone());
+
+    assert_eq!(
+        reply(&mut core, client(1), pull(Some("q"), NO_WAIT)),
+        Reply::Pulled {
+            status: OK,
+            item: Some(stamped)
+        },
+        "names fold, and the item keeps its place and its timestamp"
+    );
+    assert_eq!(pulled(&mut core, Some("q")), b"later");
+}
+
+#[test]
+fn an_undelivered_item_goes_to_the_next_waiter() {
+    let mut core = Core::new();
+    open(&mut core, "q");
+    assert_eq!(
+        core.handle(client(2), pull(Some("q"), WAIT)),
+        Outcome::Parked
+    );
+
+    core.undelivered(SESSION, name("q"), item("a"));
+
+    let ready = core.take_ready();
+    assert_eq!(ready.len(), 1);
+    assert_eq!(ready[0].0, client(2));
+    assert_eq!(
+        count(&mut core, Some("q")),
+        Reply::QueueCount {
+            status: OK,
+            count: Some(0)
+        }
+    );
+}
+
+#[test]
+fn an_undelivered_item_of_a_session_queue_returns_to_that_queue() {
+    let mut core = Core::new();
+    status(&mut core, client(1), add(None, "b", FIFO));
+
+    core.undelivered(SESSION, None, item("a"));
+
+    assert_eq!(pulled(&mut core, None), b"a");
+    assert_eq!(pulled(&mut core, Some("SESSION")), b"b");
+}
+
+#[test]
+fn an_undelivered_item_of_a_deleted_queue_is_gone() {
+    let mut core = Core::new();
+    open(&mut core, "q");
+    assert_eq!(delete(&mut core, Some("q")), OK);
+
+    core.undelivered(SESSION, name("q"), item("a"));
+    core.undelivered(SESSION + 1, None, item("b"));
+    core.undelivered(SESSION, name("bad name"), item("c"));
+
+    assert_eq!(exists(&mut core, Some("q")), QUEUE_NOT_REGISTERED);
+    assert!(core.take_ready().is_empty());
+    assert!(core.is_empty());
+}
+
 #[test]
 fn closing_a_connection_ends_all_its_waits_and_nobody_elses() {
     let mut core = Core::new();

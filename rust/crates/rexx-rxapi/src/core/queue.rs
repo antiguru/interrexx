@@ -274,6 +274,21 @@ impl Queues {
         }
     }
 
+    /// Puts back an item a pull of `name` could not deliver. A queue that is gone keeps nothing.
+    pub(super) fn restore(&mut self, session: u64, name: Option<Vec<u8>>, item: Item) {
+        let queue = match target(name) {
+            Ok(Target::Session) => self
+                .sessions
+                .get_mut(&session)
+                .map(|session| &mut session.queue),
+            Ok(Target::Named(key)) => self.named.get_mut(&key),
+            Err(_) => None,
+        };
+        if let Some(queue) = queue {
+            queue.add(item, LIFO, &mut self.ready);
+        }
+    }
+
     pub(super) fn take_ready(&mut self) -> Vec<(ClientId, Reply)> {
         std::mem::take(&mut self.ready)
     }
