@@ -220,68 +220,43 @@ fn every_directive_this_crate_can_install_leaves_the_program_alone() {
     }
 }
 
-/// The refusals Task 21 leaves where the oracle answers, asserted here
-/// because nothing else can assert them.
+/// `defineMethods` over `.local` refuses an entry that is not a method source,
+/// as the oracle does (measured, rc 163).
 #[test]
-fn the_refusals_this_task_leaves_where_the_oracle_answers_still_fire() {
-    let cases: &[(&[u8], &str)] = &[(
-        b".K~defineMethods(.local)\n::class K\n",
-        "a directory whose entries this crate does not fill is not implemented (Phase 10 Rxapi)",
-    )];
-    for (source, message) in cases {
-        let outcome = routine_program(source);
-        assert_eq!(
-            outcome.exit_code,
-            crate::NOT_IMPLEMENTED_EXIT,
-            "{message}: exit code"
-        );
-        assert_eq!(
-            String::from_utf8_lossy(&outcome.stderr),
-            format!("rexx-exec: {message}\n"),
-            "{message}: stderr"
-        );
-    }
+fn define_methods_over_local_refuses_a_non_method_entry() {
+    let outcome = routine_program(b".K~defineMethods(.local)\n::class K\n");
+    assert_eq!(outcome.exit_code, 163);
+    assert!(
+        String::from_utf8_lossy(&outcome.stderr).contains(
+            "Error 93.974:  The method source argument must be a string, array, or method object."
+        ),
+        "{}",
+        String::from_utf8_lossy(&outcome.stderr)
+    );
 }
 
-/// Every directive form whose installation this crate **cannot** perform
-/// refuses the program before its first clause, naming the owning phase.
+/// A `REGISTERED` routine whose entry point no classic library supplies is
+/// 90.999 on the directive's line, before the first clause. Measured, oracle:
+/// `::routine r external "REGISTERED nosuchlib nofn"` is 90.999 rc 166.
 #[test]
-fn every_directive_this_crate_cannot_install_refuses_before_the_first_clause() {
-    // **The row that says which `EXTERNAL` form is still refused**:
-    // `REGISTERED`, naming a library and a procedure that resolve, so the only
-    // thing left to refuse it is the directive. The `LIBRARY <other>` forms
-    // are `a_directive_naming_a_library_that_is_not_there_is_98_903`'s, where
-    // the oracle's own condition is what answers.
-    let cases: &[(&[u8], &str)] = &[(
-        b"say 'main ran'\n::routine r external \"REGISTERED rxmath RxCalcSqrt\"\n",
-        "::ROUTINE EXTERNAL naming REGISTERED is not implemented (Phase 10 Rxapi)",
-    )];
-    for (source, message) in cases {
-        let outcome = routine_program(source);
-        assert_eq!(
-            outcome.exit_code,
-            crate::NOT_IMPLEMENTED_EXIT,
-            "{message}: exit code"
-        );
-        assert_eq!(
-            outcome.stdout, b"",
-            "{message}: stdout must be empty -- main must not have run"
-        );
-        assert_eq!(
-            outcome.stderr,
-            format!("rexx-exec: {message}\n").into_bytes(),
-            "{message}: stderr"
-        );
-    }
+fn a_registered_routine_nothing_supplies_is_90_999_before_the_first_clause() {
+    let outcome =
+        routine_program(b"say 'main ran'\n::routine r external \"REGISTERED nosuchlib nofn\"\n");
+    assert_eq!(outcome.exit_code, 166);
+    assert_eq!(outcome.stdout, b"", "main must not have run");
+    let stderr = String::from_utf8_lossy(&outcome.stderr);
+    assert!(
+        stderr.contains("Error 90.999:  Unable to find external routine \"nofn\"."),
+        "{stderr}"
+    );
 }
 
 /// **A routine one of the oracle's internal packages exports refuses loudly**,
 /// naming the phase that owes it, where a routine some phase has written
 /// answers. Either way the name is the oracle's own, and answering 43.1 for
 /// it -- "no such routine", which a program cannot tell from its own typo --
-/// is what this boundary exists to prevent. The excluded builtins take their
-/// owner from the same table, and the last case is the adjacent one: a name
-/// no package exports still raises 43.1.
+/// is what this boundary exists to prevent. The last case is the adjacent
+/// one: a name no package exports still raises 43.1.
 #[test]
 fn an_internal_routine_refuses_loudly_where_an_unknown_name_still_raises() {
     // The delivered side of the same boundary: a row that has a body answers,
@@ -342,10 +317,6 @@ fn an_internal_routine_refuses_loudly_where_an_unknown_name_still_raises() {
             b"say SysCreateMutexSem('t8nul' || '0'x || copies('z', 300))\n",
             "routine \"SYSCREATEMUTEXSEM\" with a named semaphore, a POSIX sem_open semaphore \
              shared between processes, is not supported (Deviation 43)",
-        ),
-        (
-            b"say rxqueue('G')\n",
-            "routine \"RXQUEUE\" is not implemented (Phase 10 Rxapi)",
         ),
     ];
     for (source, message) in cases {

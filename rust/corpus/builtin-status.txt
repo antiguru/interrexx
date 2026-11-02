@@ -83,7 +83,7 @@ QUEUED	implemented
 RANDOM	implemented
 REVERSE	implemented
 RIGHT	implemented
-RXQUEUE	excluded
+RXQUEUE	implemented
 SIGN	implemented
 SOURCELINE	implemented
 SPACE	implemented
@@ -111,9 +111,9 @@ XRANGE	implemented
 USERID	implemented
 LOWER	implemented
 UPPER	implemented
-RXFUNCADD	excluded
-RXFUNCDROP	excluded
-RXFUNCQUERY	excluded
+RXFUNCADD	implemented
+RXFUNCDROP	implemented
+RXFUNCQUERY	implemented
 ENDLOCAL	implemented
 SETLOCAL	implemented
 QUALIFY	implemented

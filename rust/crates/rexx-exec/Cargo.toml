@@ -39,6 +39,9 @@ rexx-classes = { path = "../rexx-classes" }
 # for as long as that activation is on its stack (D5, Phase 8 Task 4).
 rexx-api = { path = "../rexx-api" }
 
+# The API service's client and vocabulary: external queues, registrations and the macrospace.
+rexx-rxapi = { path = "../rexx-rxapi" }
+
 # The interpreter's own `.orx` library sources, embedded with a sha256 pin.
 # `Interp::bootstrap_library` runs them at interpreter start;
 # `tests/bootstrap_install_oracle.rs` reads the same bytes to compose its own

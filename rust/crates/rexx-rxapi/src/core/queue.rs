@@ -318,7 +318,8 @@ impl Queues {
         });
     }
 
-    pub(super) fn no_named_queues(&self) -> bool {
+    /// No named queue. A session queue lasts only while a connection uses it.
+    pub(super) fn hold_nothing(&self) -> bool {
         self.named.is_empty()
     }
 }

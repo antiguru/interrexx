@@ -141,12 +141,12 @@ fn the_bootstrap_leaves_the_oracles_names_in_the_oracles_order() {
                 )
             })
             .collect();
-        let expected: &[&str] = if oracle == ORACLE_LOCAL {
-            &["STDQUE"]
-        } else {
-            &[]
-        };
-        assert_eq!(owed, expected, "{}", String::from_utf8_lossy(dotted));
+        assert_eq!(
+            owed,
+            Vec::<&str>::new(),
+            "{}",
+            String::from_utf8_lossy(dotted)
+        );
     }
 }
 
@@ -280,7 +280,7 @@ fn every_directory_method_answers_on_both_directories_as_on_a_copy() {
 
 /// A native method's class search over its program refuses an entry this
 /// crate does not build in the program's own local, where a class beside it
-/// answers; `.local`'s owed `STDQUE` and a missing name answer none.
+/// answers; a missing name answers none.
 #[test]
 fn a_class_search_from_a_program_refuses_an_owed_entry() {
     let mut interp = Interp::new();
@@ -290,7 +290,7 @@ fn a_class_search_from_a_program_refuses_an_owed_entry() {
         .package_object(Package::Program(program))
         .expect("a fresh program's package");
     let local = interp.package_local(package);
-    let owed = interp.environment_model().owed[1].0;
+    let owed = interp.environment_model().owed[0].0;
     let array = interp.classes().lookup("Array").expect("Array is native");
     hash::directory_put(&mut interp, local, b"OWEDCLASS", owed).expect("puts");
     hash::directory_put(&mut interp, local, b"FOUNDCLASS", array).expect("puts");
@@ -302,14 +302,10 @@ fn a_class_search_from_a_program_refuses_an_owed_entry() {
         interp.class_in_program(program, b"OWEDCLASS"),
         Err(Failure::Loud(_))
     ));
-    for name in [b"STDQUE".as_slice(), b"NOSUCHCLASS"] {
-        assert_eq!(
-            interp.class_in_program(program, name).ok(),
-            Some(None),
-            "{}",
-            String::from_utf8_lossy(name)
-        );
-    }
+    assert_eq!(
+        interp.class_in_program(program, b"NOSUCHCLASS").ok(),
+        Some(None)
+    );
 }
 
 /// A trace destination whose `n`th `LINEOUT` sends `ITEMS` to a Stem built

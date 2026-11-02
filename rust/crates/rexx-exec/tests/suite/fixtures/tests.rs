@@ -31,8 +31,8 @@ fn names(names: &[&str]) -> BTreeSet<String> {
     names.iter().map(|name| (*name).to_string()).collect()
 }
 
-const MACRO_REFUSAL: &str =
-    "rexx-exec: routine \"SYSQUERYREXXMACRO\" is not implemented (Phase 10 Rxapi)";
+const REFUSAL: &str = "rexx-exec: the LIBRARY REXX entry point \"cmdhandler_environments\" \
+                       is not implemented (Phase 10 Embedding)";
 
 #[test]
 fn a_refusal_ends_the_run_and_the_next_run_goes_past_it() {
@@ -41,7 +41,7 @@ fn a_refusal_ends_the_run_and_the_next_run_goes_past_it() {
     assert_eq!(run.iterations, 2);
     assert_eq!(
         run.blocked,
-        BTreeMap::from([("TEST_B".to_string(), MACRO_REFUSAL.to_string())])
+        BTreeMap::from([("TEST_B".to_string(), REFUSAL.to_string())])
     );
     assert_eq!(
         run.started,
@@ -58,7 +58,7 @@ fn a_refusal_ends_the_run_and_the_next_run_goes_past_it() {
 fn a_refusal_at_load_is_blocked_at_load_after_one_run() {
     let run = crate_run(&settings(), "RefusedProlog");
     assert_eq!(run.iterations, 1);
-    assert_eq!(run.blocked_at_load.as_deref(), Some(MACRO_REFUSAL));
+    assert_eq!(run.blocked_at_load.as_deref(), Some(REFUSAL));
     assert!(run.started.is_empty());
     assert!(run.blocked.is_empty());
     assert!(run.passed.is_empty() && run.failed.is_empty());
@@ -308,7 +308,7 @@ fn a_child_refusing_on_the_inherited_stderr_leaves_the_run_ended_normally() {
     );
     assert_eq!(tests, ["TEST_A"]);
     assert!(
-        String::from_utf8_lossy(&process.run.stderr).contains(MACRO_REFUSAL),
+        String::from_utf8_lossy(&process.run.stderr).contains(REFUSAL),
         "the child's refusal is on the run's stderr: {:?}",
         String::from_utf8_lossy(&process.run.stderr)
     );
@@ -374,10 +374,10 @@ fn a_run_that_starts_no_test_after_an_earlier_one_did_is_not_blocked_at_load() {
     assert_eq!(run.iterations, 2);
     assert_eq!(
         run.blocked,
-        BTreeMap::from([("TEST_A".to_string(), MACRO_REFUSAL.to_string())])
+        BTreeMap::from([("TEST_A".to_string(), REFUSAL.to_string())])
     );
     assert_eq!(run.blocked_at_load, None);
-    assert_eq!(run.ended_before_a_test.as_deref(), Some(MACRO_REFUSAL));
+    assert_eq!(run.ended_before_a_test.as_deref(), Some(REFUSAL));
     assert!(!run.ended_normally);
 }
 

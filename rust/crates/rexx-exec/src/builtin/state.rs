@@ -88,8 +88,17 @@ pub(crate) fn queued(
     _name: &[u8],
     _args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
-    let count = interp.queue.len();
-    Ok(interp.text(count.to_string().as_bytes()))
+    let Some(queue) = interp.local_route(b"STDQUE")? else {
+        let count = interp.queue.len();
+        return Ok(interp.text(count.to_string().as_bytes()));
+    };
+    let caller = interp.caller();
+    let answer = pinned!(
+        interp,
+        crate::pinning::PinKind::PullWrapper,
+        interp.send_message(queue, b"QUEUED", None, &[], caller)
+    )?;
+    Ok(answer.unwrap_or_else(|| interp.text(b"0")))
 }
 
 /// `GC()` / `GC('Force')`: whether a collection was run.

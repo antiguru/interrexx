@@ -321,7 +321,8 @@ impl Oracle {
             .arg(path)
             .args(args)
             .current_dir(path.parent().unwrap_or(Path::new(".")))
-            .env("LD_LIBRARY_PATH", &self.lib_dir);
+            .env("LD_LIBRARY_PATH", &self.lib_dir)
+            .env("XDG_RUNTIME_DIR", super::oracle_runtime::dir());
         command
     }
 

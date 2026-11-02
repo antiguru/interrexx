@@ -8,7 +8,7 @@
 //! `tests/internal_routines.rs` re-derives this table from those three C++
 //! files.
 
-use rexx_core::{Deferral, Owner};
+use rexx_core::Owner;
 
 /// Which internal package exports the routine.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -86,22 +86,16 @@ const fn util_run(name: &'static str, body: InternalBody) -> InternalRoutine {
     }
 }
 
-const fn util(name: &'static str, owner: Owner) -> InternalRoutine {
-    InternalRoutine {
-        name,
-        package: Package::RexxUtil,
-        owner: Some(owner),
-        body: None,
-    }
-}
-
 /// Every name the two packages register on Linux.
 pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
     rexx_run("Directory", crate::builtin::platform::directory),
     rexx_run("Filespec", crate::builtin::platform::filespec),
     rexx_run("Beep", crate::builtin::platform::beep),
-    util("SysAddRexxMacro", Owner::Phase10(Deferral::Rxapi)),
-    util("SysClearRexxMacroSpace", Owner::Phase10(Deferral::Rxapi)),
+    util_run("SysAddRexxMacro", crate::builtin::rexxutil::macros::add),
+    util_run(
+        "SysClearRexxMacroSpace",
+        crate::builtin::rexxutil::macros::clear,
+    ),
     util_run("SysCloseEventSem", crate::builtin::rexxutil::close_sem),
     util_run("SysCloseMutexSem", crate::builtin::rexxutil::close_sem),
     util_run("SysCls", crate::builtin::rexxutil::process::cls),
@@ -121,7 +115,10 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysDropFuncs",
         crate::builtin::rexxutil::process::load_funcs,
     ),
-    util("SysDropRexxMacro", Owner::Phase10(Deferral::Rxapi)),
+    util_run(
+        "SysDropRexxMacro",
+        crate::builtin::rexxutil::macros::drop_macro,
+    ),
     util_run(
         "SysDumpVariables",
         crate::builtin::rexxutil::stems::dump_variables,
@@ -171,7 +168,10 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysLoadFuncs",
         crate::builtin::rexxutil::process::load_funcs,
     ),
-    util("SysLoadRexxMacroSpace", Owner::Phase10(Deferral::Rxapi)),
+    util_run(
+        "SysLoadRexxMacroSpace",
+        crate::builtin::rexxutil::macros::load,
+    ),
     util_run("SysMkDir", crate::builtin::rexxutil::mk_dir),
     util_run("SysOpenEventSem", crate::builtin::rexxutil::open_sem),
     util_run("SysOpenMutexSem", crate::builtin::rexxutil::open_sem),
@@ -180,19 +180,25 @@ pub(crate) static INTERNAL_ROUTINES: &[InternalRoutine] = &[
         "SysQueryProcess",
         crate::builtin::rexxutil::process::query_process,
     ),
-    util("SysQueryRexxMacro", Owner::Phase10(Deferral::Rxapi)),
+    util_run("SysQueryRexxMacro", crate::builtin::rexxutil::macros::query),
     util_run(
         "SysReleaseMutexSem",
         crate::builtin::rexxutil::release_mutex_sem,
     ),
-    util("SysReorderRexxMacro", Owner::Phase10(Deferral::Rxapi)),
+    util_run(
+        "SysReorderRexxMacro",
+        crate::builtin::rexxutil::macros::reorder,
+    ),
     util_run("SysRequestMutexSem", crate::builtin::rexxutil::wait_sem),
     util_run(
         "SysResetEventSem",
         crate::builtin::rexxutil::reset_event_sem,
     ),
     util_run("SysRmDir", crate::builtin::rexxutil::rm_dir),
-    util("SysSaveRexxMacroSpace", Owner::Phase10(Deferral::Rxapi)),
+    util_run(
+        "SysSaveRexxMacroSpace",
+        crate::builtin::rexxutil::macros::save,
+    ),
     util_run(
         "SysSearchPath",
         crate::builtin::rexxutil::files::search_path,

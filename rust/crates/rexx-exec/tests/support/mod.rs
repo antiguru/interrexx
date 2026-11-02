@@ -22,6 +22,9 @@ pub mod setup_cpp;
 /// to invoke the oracle identically or their results are not comparable.
 pub mod oracle;
 
+/// The oracle's private `XDG_RUNTIME_DIR`, whose daemon is stopped when the process ends.
+pub mod oracle_runtime;
+
 /// What a corpus program runs with besides its own text, read and laid out the
 /// same way by every harness that runs corpus programs.
 pub mod sidecar;

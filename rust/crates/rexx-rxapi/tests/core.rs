@@ -873,7 +873,10 @@ fn session_queues_are_shared_by_handle_and_on_demand() {
         },
         "a child with the handle shares the queue"
     );
-    assert!(core.is_empty(), "session queues do not count");
+    assert!(
+        core.is_empty(),
+        "a session queue holding lines is not held state"
+    );
 }
 
 #[test]
@@ -886,51 +889,48 @@ fn a_session_wait_works_and_a_child_satisfies_it() {
     assert_eq!(ready[0].0, client(1));
 }
 
-/// Resolution 4: a session queue goes when its last connected user closes.
+/// Resolution 4: a session queue goes when no connection uses it, whatever it holds.
 #[test]
-fn a_session_queue_goes_with_its_last_user() {
+fn a_session_queue_goes_once_unused() {
     let mut core = Core::new();
     let attach = Request::CreateSessionQueue { session: SESSION };
     assert_eq!(status(&mut core, client(1), attach.clone()), OK);
     assert_eq!(status(&mut core, client(1), attach), OK, "repeatable");
-    assert_eq!(status(&mut core, client(2), add(None, "a", FIFO)), OK);
+    let detach = Request::DeleteSessionQueue { session: SESSION };
+    assert_eq!(status(&mut core, client(1), detach.clone()), OK);
+    assert_eq!(status(&mut core, client(1), detach), OK, "repeatable");
+    core.client_closed(client(1));
+    assert!(core.is_empty(), "an empty unused session queue is gone");
 
+    assert_eq!(status(&mut core, client(2), add(None, "a", FIFO)), OK);
     core.client_closed(client(2));
     assert_eq!(
         count(&mut core, None),
         Reply::QueueCount {
             status: OK,
-            count: Some(1)
-        },
-        "the parent still holds it"
-    );
-    let detach = Request::DeleteSessionQueue { session: SESSION };
-    assert_eq!(status(&mut core, client(1), detach.clone()), OK);
-    assert_eq!(status(&mut core, client(1), detach), OK, "repeatable");
-    assert_eq!(
-        count(&mut core, None),
-        Reply::QueueCount {
-            status: OK,
-            count: Some(1)
-        },
-        "the stop hook leaves content alone"
-    );
-
-    core.client_closed(client(1));
-    assert_eq!(
-        reply(
-            &mut core,
-            client(3),
-            Request::QueryQueue {
-                session: SESSION,
-                name: None
-            }
-        ),
-        Reply::QueueCount {
-            status: OK,
             count: Some(0)
-        }
+        },
+        "lines go with the last user"
     );
+    core.client_closed(client(1));
+
+    let parent = Request::CreateSessionQueue { session: SESSION };
+    assert_eq!(status(&mut core, client(3), parent), OK);
+    assert_eq!(status(&mut core, client(4), add(None, "b", FIFO)), OK);
+    core.client_closed(client(4));
+    assert_eq!(
+        reply(&mut core, client(3), pull(None, NO_WAIT)),
+        Reply::Pulled {
+            status: OK,
+            item: Some(Item {
+                data: b"b".to_vec(),
+                time: Timestamp::default(),
+            }),
+        },
+        "a writer's lines stay while another connection uses the queue"
+    );
+    core.client_closed(client(3));
+    assert!(core.is_empty());
 }
 
 const LIB: &[u8] = b"lib";

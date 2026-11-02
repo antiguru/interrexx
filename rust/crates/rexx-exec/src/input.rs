@@ -562,9 +562,21 @@ impl Interp {
     /// answers** -- measured, a program with one line pushed reads it and the
     /// destination sees a single `LINEIN`, for the second read.
     pub(crate) fn pull_line(&mut self) -> Result<Vec<u8>, Failure> {
-        match self.queue.pop() {
-            Some(line) => Ok(line),
-            None => self.linein_line(),
+        let Some(queue) = self.local_route(b"STDQUE")? else {
+            return match self.queue.pop() {
+                Some(line) => Ok(line),
+                None => self.linein_line(),
+            };
+        };
+        let caller = self.caller();
+        let answer = pinned!(
+            self,
+            crate::pinning::PinKind::PullWrapper,
+            self.send_message(queue, b"PULL", None, &[], caller)
+        )?;
+        match answer {
+            Some(value) if value != ObjRef::NIL => Ok(self.to_text(value).into_owned()),
+            _ => self.linein_line(),
         }
     }
 

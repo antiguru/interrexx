@@ -81,7 +81,35 @@ pub(crate) fn linein(
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     whole_positions(interp, name, args, &[2, 3])?;
+    if names_queue(interp, args) {
+        return send_to_queue(interp, b"LINEIN", None);
+    }
     send_to_stream(interp, args, b"LINEIN", true, true)
+}
+
+/// Whether the first argument is `QUEUE:`, in any case.
+fn names_queue(interp: &mut Interp, args: Args<'_>) -> bool {
+    arg(args, 1).is_some_and(|value| interp.to_text(value).eq_ignore_ascii_case(b"QUEUE:"))
+}
+
+/// `message` sent to `.local`'s `STDQUE`, with `argument`.
+fn send_to_queue(
+    interp: &mut Interp,
+    message: &[u8],
+    argument: Option<ObjRef>,
+) -> Result<ObjRef, Failure> {
+    let queue = interp.local_route(b"STDQUE")?.unwrap_or(ObjRef::NIL);
+    let caller = interp.caller();
+    let arguments: &[Option<ObjRef>] = match argument {
+        Some(_) => &[argument],
+        None => &[],
+    };
+    let answer = pinned!(
+        interp,
+        crate::pinning::PinKind::PullWrapper,
+        interp.send_message(queue, message, None, arguments, caller)
+    )?;
+    Ok(answer.unwrap_or(ObjRef::NIL))
 }
 
 /// `CHARIN(name, [start], [length])`.
@@ -91,6 +119,9 @@ pub(crate) fn charin(
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     whole_positions(interp, name, args, &[2, 3])?;
+    if names_queue(interp, args) {
+        return Err(Raised::syntax(40, 915, vec![name.to_vec()]).into());
+    }
     send_to_stream(interp, args, b"CHARIN", true, true)
 }
 
@@ -101,15 +132,21 @@ pub(crate) fn charout(
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     whole_positions(interp, name, args, &[3])?;
+    if names_queue(interp, args) {
+        return Err(Raised::syntax(40, 915, vec![name.to_vec()]).into());
+    }
     send_to_stream(interp, args, b"CHAROUT", false, true)
 }
 
 /// `CHARS(name)`.
 pub(crate) fn chars(
     interp: &mut Interp,
-    _name: &'static [u8],
+    name: &'static [u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
+    if names_queue(interp, args) {
+        return Err(Raised::syntax(40, 915, vec![name.to_vec()]).into());
+    }
     send_to_stream(interp, args, b"CHARS", true, true)
 }
 
@@ -122,6 +159,12 @@ pub(crate) fn lineout(
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
     whole_positions(interp, name, args, &[3])?;
+    if names_queue(interp, args) {
+        return match arg(args, 2) {
+            Some(line) => send_to_queue(interp, b"QUEUE", Some(line)),
+            None => Ok(interp.counted(0)),
+        };
+    }
     let answer = send_to_stream(interp, args, b"LINEOUT", false, true)?;
     if args.len() < 2 {
         let name = match arg(args, 1) {
@@ -153,6 +196,14 @@ pub(crate) fn lines(
             }
         },
     };
+    if names_queue(interp, args) {
+        let answer = send_to_queue(interp, b"QUEUED", None)?;
+        if option == b'C' {
+            return Ok(answer);
+        }
+        let present = interp.to_text(answer).as_ref() != b"0";
+        return Ok(interp.text(if present { b"1" } else { b"0" }));
+    }
     let stream_name = match arg(args, 1) {
         Some(value) => interp.to_text(value).into_owned(),
         None => Vec::new(),

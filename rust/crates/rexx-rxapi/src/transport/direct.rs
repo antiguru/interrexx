@@ -222,8 +222,11 @@ mod tests {
     }
 
     #[test]
-    fn dropping_a_client_closes_it_for_the_core() {
+    fn a_dropped_writers_lines_stay_while_another_connection_uses_the_queue() {
         let client = Direct::new();
+        client
+            .call(Request::CreateSessionQueue { session: 9 })
+            .expect("direct calls do not fail");
         let session = client.client();
         let query = |client: &Direct| {
             client
@@ -247,7 +250,7 @@ mod tests {
             query(&client),
             Reply::QueueCount {
                 status: OK,
-                count: Some(0)
+                count: Some(1)
             }
         );
     }

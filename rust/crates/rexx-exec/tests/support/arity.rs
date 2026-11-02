@@ -368,7 +368,8 @@ fn oracle_command(oracle: &Path, program: &Path, dir: &Path) -> Command {
             program.display()
         ))
         .current_dir(dir)
-        .env("LD_LIBRARY_PATH", oracle.join("lib"));
+        .env("LD_LIBRARY_PATH", oracle.join("lib"))
+        .env("XDG_RUNTIME_DIR", super::oracle_runtime::dir());
     command
 }
 

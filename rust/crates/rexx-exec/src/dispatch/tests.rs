@@ -1957,46 +1957,24 @@ fn an_unknown_sent_by_hand_converts_its_argument_list() {
     );
 }
 
-/// An entry the oracle's own directory holds and this crate does not build
-/// is a refusal, not `.nil` -- and the refusal is per directory, because
-/// the oracle answers `.nil` for a `.local` name asked of `.environment`.
+/// `.local`'s `STDQUE` is the session queue on every read, as on the oracle
+/// (measured, rc 0, each line below).
 #[test]
-fn a_directory_entry_the_oracle_has_and_this_crate_does_not_is_loud() {
-    // **`.environment` has none left**, which is why `.local`'s is the
-    // only one asked about. Each read below answers or compares
-    // `STDQUE`'s item.
-    for source in [
-        "say .local['STDQUE']\n",
-        "say .context~package~findClass('stdque')\n",
-        "say .local~entry('stdque')\n",
-        "say .local~stdque\n",
-        "say .local~allItems~items\n",
-        "say .local~supplier~index\n",
-        "say .local~hasItem('x')\n",
-        "say .local~index('x')\n",
-        "say .local~removeItem('x')\n",
-        "say .local~remove('STDQUE')\n",
-        "say .local~removeEntry('stdque')\n",
-        "do n over .local~allItems; end\n",
-    ] {
-        let (code, stdout, stderr) = run_source(source);
-        assert_eq!(
-            (code, stdout.as_str(), stderr.as_str()),
-            (
-                120,
-                "",
-                "rexx-exec: directory entry \"STDQUE\" is not implemented (Phase 10 Rxapi)\n"
-            ),
-            "{source:?}"
-        );
-    }
+fn local_stdque_answers_the_session_queue_on_every_read() {
     assert_eq!(
-        run_source("say .stdque\n"),
+        run_source(
+            "say .local['STDQUE']\n\
+             say .context~package~findClass('stdque')\n\
+             say .local~entry('stdque')\n\
+             say .local~stdque\n\
+             say .local~allItems~items .local~index(.stdque) .stdque~class\n\
+             say .local~remove('STDQUE') .local~hasIndex('STDQUE')\n"
+        ),
         (
-            120,
-            String::new(),
-            "rexx-exec: environment symbol \".STDQUE\" is not implemented (Phase 10 Rxapi)\n"
-                .to_string()
+            0,
+            "SESSION\nSESSION\nSESSION\nSESSION\n10 STDQUE The RexxQueue class\nSESSION 0\n"
+                .to_string(),
+            String::new()
         )
     );
     // The adjacent successes, each the oracle's own answer: the index and
@@ -2138,23 +2116,42 @@ fn a_conversion_this_phase_does_not_model_is_loud_where_the_ones_it_models_answe
     }
 }
 
-/// **A `reqstr` context whose instruction this phase refuses stays
-/// refused**, which is the honest reading of the section's own list: it
-/// bounds the row set, and a row whose instruction is another phase's is
-/// outside it.
+/// A `lineIn` on the in-process session queue with no other activity to add a
+/// line is a wait nothing left to run can end, which the oracle blocks on for
+/// ever (Deviation 20). With another activity alive, it waits for that one.
 #[test]
-fn a_reqstr_context_whose_instruction_is_another_phases_is_still_loud() {
+fn a_line_in_nothing_can_satisfy_is_an_unsatisfiable_wait() {
+    let outcome = crate::run_program(
+        "linein.rex",
+        b"say 'before'\nsay .RexxQueue~new~lineIn\n".to_vec(),
+        crate::Invocation::none().with_deadline(std::time::Duration::from_secs(20)),
+    );
+    assert_eq!(outcome.exit_code, crate::NOT_IMPLEMENTED_EXIT);
+    assert_eq!(outcome.stdout, b"before\n");
+    assert_eq!(
+        String::from_utf8_lossy(&outcome.stderr),
+        "rexx-exec: a wait that nothing left to run can end is not implemented\n"
+    );
     assert_eq!(
         run_source(
-            "address 'SYSTEM' .K with output using (.rexxqueue~new)\n::class K\n\
-             ::method makeString class\n  return 'true'\n"
+            "t = .t~new; t~start('late')\nsay .RexxQueue~new~lineIn\n::class t\n\
+             ::method late\n  call SysSleep 0.05\n  queue 'arrived'\n"
         ),
-        (
-            120,
-            String::new(),
-            "rexx-exec: an ADDRESS WITH RexxQueue redirection is not implemented (Phase 10 Rxapi)\n"
-                .to_string()
-        )
+        (0, "arrived\n".to_string(), String::new())
+    );
+}
+
+/// **A `reqstr` command reaches a `RexxQueue` redirection target**: the command
+/// is the class's `makeString`, and its output lines are queued in order.
+#[test]
+fn a_reqstr_command_writes_to_a_rexxqueue_target() {
+    assert_eq!(
+        run_source(
+            "q = .rexxqueue~new\naddress 'SYSTEM' .K with output using (q)\n\
+             say rc q~queued q~pull\n::class K\n\
+             ::method makeString class\n  return 'echo hi; echo there'\n"
+        ),
+        (0, "0 2 hi\n".to_string(), String::new())
     );
 }
 

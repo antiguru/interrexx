@@ -255,7 +255,14 @@ fn an_overlap_probe_restores_absent_empty_and_present_timezone_settings() {
             String::from_utf8_lossy(&out.stderr)
         );
         assert_eq!(out.stdout, cpp.stdout, "{name}");
-        assert_eq!(out.stderr, cpp.stderr, "{name}");
+        // The program runs commands, so it starts an API daemon that ends just after it does;
+        // memcap may report that daemon as still in its group. That line is memcap's, not ours.
+        let stderr: Vec<u8> = String::from_utf8_lossy(&out.stderr)
+            .lines()
+            .filter(|line| !(line.starts_with("memcap: left ") && line.ends_with("still in it")))
+            .flat_map(|line| format!("{line}\n").into_bytes())
+            .collect();
+        assert_eq!(stderr, cpp.stderr, "{name}");
         let stdout = String::from_utf8_lossy(&out.stdout);
         eprintln!("{name} restoration: {stdout}");
         assert!(

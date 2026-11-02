@@ -15,8 +15,7 @@ return testResult
 
 ::method test_a
   child = .stream~new('child.rex')
-  child~lineout("name = 'SysQueryRexx' || 'Macro'")
-  child~lineout("interpret 'r =' name || '(''x'')'")
+  child~lineout("r = .CommandHandler~environments")
   child~close
   address system 'rexx child.rex'
   self~assertSame(120, rc)

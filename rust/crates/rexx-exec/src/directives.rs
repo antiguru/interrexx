@@ -1,7 +1,7 @@
 //! What a program's directives say before any of them is installed.
 
-use crate::{GeneratedKind, Loud, dispatch, owned_message};
-use rexx_core::{Deferral, ObjRef, Owner};
+use crate::{GeneratedKind, dispatch};
+use rexx_core::ObjRef;
 use rexx_parse::{
     AnnotationTarget, AttributeDirective, AttributeStyle, ClassDirective, ClassRef, Directive,
     DirectiveKind, MethodDirective, Program, SymbolId,
@@ -21,8 +21,8 @@ fn class_references(class: &ClassDirective) -> impl Iterator<Item = &ClassRef> {
 }
 
 // Which stage answers when directives could each refuse a file, all
-// measured against the oracle. [`directive_gap`] and
-// [`Interp::resolve_directive_library`] are the walks it describes.
+// measured against the oracle. [`Interp::resolve_directive_library`] is the
+// walk it describes.
 // ```text
 // ::routine/::method/::attribute EXTERNAL  vs a failing ::CLASS  98.903 rc 158, the EXTERNAL line
 // ::routine/::method/::attribute EXTERNAL  vs a ::CLASS cycle    98.903 rc 158, the EXTERNAL line
@@ -45,46 +45,6 @@ fn class_references(class: &ClassDirective) -> impl Iterator<Item = &ClassRef> {
 // ::routine r / ::annotate routine r / a duplicate ::ROUTINE pair       99.903 rc 157
 // ::routine r / ::annotate routine r / a class-less ::constant (1/0)    99.906 rc 157
 // ```
-/// The gap a `::` directive declares at install time, or `None` for one this
-/// crate can install.
-pub(super) fn directive_gap(kind: &DirectiveKind) -> Option<Loud> {
-    let gap = |name: &str, owner: Owner| {
-        Some(Loud {
-            message: owned_message(name, Some(owner)),
-        })
-    };
-    match kind {
-        // `REGISTERED` resolves through the RXAPI function registry, and
-        // registers the name there before resolving it
-        // (`PackageManager::resolveRoutine`, `package/PackageManager.cpp:312`):
-        // measured, a later process's `rxfuncquery` answers `0` for a name
-        // such a directive failed to resolve.
-        DirectiveKind::Routine(routine)
-            if routine
-                .external
-                .as_ref()
-                .is_some_and(|spec| spec.registered) =>
-        {
-            gap(
-                "::ROUTINE EXTERNAL naming REGISTERED",
-                Owner::Phase10(Deferral::Rxapi),
-            )
-        }
-        // `::OPTIONS` installs (`Interp::install_directives`' own walk): it
-        // resolves no name, runs no code, and every setting it writes is one
-        // an activation of this package's code starts from.
-        DirectiveKind::Annotate(_)
-        | DirectiveKind::Attribute(_)
-        | DirectiveKind::Class(_)
-        | DirectiveKind::Constant(_)
-        | DirectiveKind::Method(_)
-        | DirectiveKind::Options(_)
-        | DirectiveKind::Requires(_)
-        | DirectiveKind::Resource(_)
-        | DirectiveKind::Routine(_) => None,
-    }
-}
-
 /// The `LIBRARY REXX` entry point a directive's `EXTERNAL` names and the
 /// `REXX` package does not export -- the one the oracle reports 90.998 for --
 /// or `None` for a directive whose `EXTERNAL` resolves and for one carrying

@@ -841,6 +841,7 @@ impl Interp {
         {
             return Ok(Commanded::Done(outcome));
         }
+        self.share_session_queue()?;
         if let Some(context) = io {
             context.begin(self)?;
         }

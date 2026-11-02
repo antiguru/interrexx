@@ -305,6 +305,13 @@ impl Interp {
             {
                 Resolved::Library(program)
             }
+            // A macro searched before the routines below
+            // (`SystemInterpreter::invokeExternalFunction`).
+            None if crate::builtin::rexxutil::macros::macro_position(name)
+                == Some(crate::builtin::rexxutil::macros::BEFORE) =>
+            {
+                Resolved::Macro
+            }
             // **A routine of the oracle's own internal packages**, which
             // it consults here -- after the running package's routines and
             // before the external file search. Answering 43.1 for one of
@@ -331,6 +338,11 @@ impl Interp {
             // file is entered, because a `Resolved` is `Copy` and this
             // resolver is `&self`.
             None if self.external_program(name).is_some() => Resolved::External,
+            None if crate::builtin::rexxutil::macros::macro_position(name)
+                == Some(crate::builtin::rexxutil::macros::AFTER) =>
+            {
+                Resolved::Macro
+            }
             // 43.1, once the search above has found nothing, and
             // raised by the consumer rather than here. Measured in a
             // clean directory with nothing of that name beside the
@@ -1059,7 +1071,7 @@ impl Interp {
         // the manager first**, an unresolvable name included.
         if matches!(
             resolved,
-            Resolved::Library(_) | Resolved::External | Resolved::Unresolved
+            Resolved::Library(_) | Resolved::External | Resolved::Macro | Resolved::Unresolved
         ) && let Some(handled) = self.call_checkpoint(name, &arguments[from..])?
         {
             return Ok(Begun::Done(Ended::Returned(handled)));
@@ -1078,6 +1090,11 @@ impl Interp {
         if let Resolved::External = resolved {
             return self
                 .enter_external_program(name, arguments[from..].to_vec(), call_type)
+                .map(|value| Begun::Done(Ended::Returned(value)));
+        }
+        if let Resolved::Macro = resolved {
+            return self
+                .enter_macro(name, arguments[from..].to_vec(), call_type)
                 .map(|value| Begun::Done(Ended::Returned(value)));
         }
 
@@ -1126,6 +1143,7 @@ impl Interp {
             Resolved::Routine(installed) => Entered::Routine(installed),
             Resolved::Library(_) => unreachable!("the library path returns just above"),
             Resolved::External => unreachable!("the external path returns just above"),
+            Resolved::Macro => unreachable!("the macro path returns just above"),
             Resolved::Unresolved => unreachable!("an unresolved name raises just above"),
         };
 

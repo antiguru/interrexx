@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
+use std::os::fd::AsFd;
 use std::os::unix::fs::{FileTypeExt, OpenOptionsExt};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
@@ -36,6 +37,9 @@ pub struct Options<'a> {
     pub dry_run: bool,
     /// How long a daemon nobody has connected to waits before exiting.
     pub idle_grace: Duration,
+    /// Close every descriptor above standard error besides the lock file and the listener, once
+    /// both are open: only for a daemon that is its own process and has no other thread yet.
+    pub close_inherited: bool,
     /// Receives each `rxapi: ...` line.
     pub report: &'a dyn Fn(&str),
 }
@@ -220,6 +224,9 @@ pub fn serve(options: &Options<'_>) -> io::Result<Exit> {
             fs::remove_file(&socket)?;
         }
         let listener = UnixListener::bind(&socket)?;
+        if options.close_inherited {
+            crate::descriptors::close_inherited(&[lock_file.as_fd(), listener.as_fd()]);
+        }
         report("rxapi: service successfully started; listening");
 
         let (events, incoming) = mpsc::channel();

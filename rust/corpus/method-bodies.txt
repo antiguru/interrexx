@@ -1229,22 +1229,22 @@ RexxInfo	release	instance	answers	rc 0
 RexxInfo	revision	instance	answers	rc 0
 RexxInfo	version	instance	answers	rc 0
 RexxQueue	new	class	answers	rc 0
-RexxQueue	create	class	loud	the LIBRARY REXX entry point "rexx_create_queue"
-RexxQueue	delete	class	loud	the LIBRARY REXX entry point "rexx_delete_queue"
-RexxQueue	exists	class	loud	the LIBRARY REXX entry point "rexx_queue_exists"
-RexxQueue	open	class	loud	the LIBRARY REXX entry point "rexx_open_queue"
-RexxQueue	delete	instance	loud	the LIBRARY REXX entry point "rexx_delete_queue"
-RexxQueue	empty	instance	loud	the LIBRARY REXX entry point "rexx_clear_queue"
+RexxQueue	create	class	unstable	the oracle
+RexxQueue	delete	class	answers	rc 168
+RexxQueue	exists	class	answers	rc 168
+RexxQueue	open	class	answers	rc 168
+RexxQueue	delete	instance	answers	rc 0
+RexxQueue	empty	instance	answers	rc 0
 RexxQueue	get	instance	answers	rc 0
 RexxQueue	init	instance	answers	rc 165
-RexxQueue	lineIn	instance	loud	the LIBRARY REXX entry point "rexx_linein_queue"
-RexxQueue	lineOut	instance	loud	the LIBRARY REXX entry point "rexx_queue_queue"
-RexxQueue	makeArray	instance	loud	the LIBRARY REXX entry point "rexx_query_queue"
-RexxQueue	pull	instance	loud	the LIBRARY REXX entry point "rexx_pull_queue"
-RexxQueue	push	instance	loud	the LIBRARY REXX entry point "rexx_push_queue"
-RexxQueue	queue	instance	loud	the LIBRARY REXX entry point "rexx_queue_queue"
-RexxQueue	queued	instance	loud	the LIBRARY REXX entry point "rexx_query_queue"
-RexxQueue	say	instance	loud	the LIBRARY REXX entry point "rexx_queue_queue"
+RexxQueue	lineIn	instance	loud	a wait that nothing left to run can end
+RexxQueue	lineOut	instance	answers	rc 0
+RexxQueue	makeArray	instance	answers	rc 0
+RexxQueue	pull	instance	answers	rc 0
+RexxQueue	push	instance	answers	rc 0
+RexxQueue	queue	instance	answers	rc 0
+RexxQueue	queued	instance	answers	rc 0
+RexxQueue	say	instance	answers	rc 0
 RexxQueue	set	instance	answers	rc 163
 Singleton	new	class	answers	rc 163
 StackFrame	arguments	instance	answers	rc 0

@@ -81,6 +81,7 @@ fn only_the_granted_module_may_say_unsafe() {
             "crates/rexx-core/src/lib.rs".to_string(),
             "crates/rexx-exec/src/island.rs".to_string(),
             "crates/rexx-exec/src/signal.rs".to_string(),
+            "crates/rexx-rxapi/src/descriptors.rs".to_string(),
         ],
         "the set of `unsafe_code` opt-ins in this workspace has changed. Each \
          one is a decision of Moritz's, taken per site against the bar in \
@@ -102,6 +103,7 @@ fn only_the_granted_module_may_say_unsafe() {
             "crates/rexx-core/src/frame.rs".to_string(),
             "crates/rexx-exec/src/island.rs".to_string(),
             "crates/rexx-exec/src/signal.rs".to_string(),
+            "crates/rexx-rxapi/src/descriptors.rs".to_string(),
         ],
         "an `unsafe` block appeared outside the modules granted permission for \
          it"

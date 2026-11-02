@@ -90,10 +90,6 @@ fn every_implemented_row_names_an_in_scope_builtin() {
 fn dispatch_declines_a_name_that_is_not_a_builtin() {
     let mut interp = Interp::new();
     assert!(dispatch(&mut interp, b"ZORKOLO", &[]).is_none());
-    assert!(
-        dispatch(&mut interp, b"RXQUEUE", &[]).is_none(),
-        "a whole exclusion is not a builtin name here either"
-    );
 }
 
 fn never_run(_: &mut Interp, _: &'static [u8], _: Args<'_>) -> Result<ObjRef, Failure> {

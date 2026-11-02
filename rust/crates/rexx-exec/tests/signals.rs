@@ -1277,7 +1277,15 @@ fn only_the_interpreter_and_its_waits_take_the_halting_signals() {
     let mut seen = Vec::new();
     for _ in 0..3 {
         std::thread::sleep(Duration::from_secs(1));
-        seen.push(halting_blocked(child.id()));
+        let mut threads = halting_blocked(child.id());
+        // The thread reaping a daemon the command started, there only when
+        // no daemon was running already.
+        let starter = ("rexx-api-start".to_string(), true);
+        threads.retain(|thread| {
+            assert!(thread.0 != starter.0 || *thread == starter, "{thread:?}");
+            thread.0 != starter.0
+        });
+        seen.push(threads);
         std::thread::sleep(Duration::from_secs(1));
     }
     {
@@ -1296,12 +1304,26 @@ fn only_the_interpreter_and_its_waits_take_the_halting_signals() {
     // reads no pipe and is one thread.
     let waiting = thread("rexx-pool", false);
     let idle = thread("rexx-pool", true);
+    // The API connection the command opened, which reads its replies.
+    let api = thread("rexx-api", true);
     assert_eq!(
         seen,
         [
-            vec![run.clone(), interp.clone(), waiting.clone(), timer.clone()],
-            vec![run.clone(), interp.clone(), idle, timer.clone()],
-            vec![run, interp, waiting, timer],
+            vec![
+                run.clone(),
+                api.clone(),
+                interp.clone(),
+                waiting.clone(),
+                timer.clone()
+            ],
+            vec![
+                run.clone(),
+                api.clone(),
+                interp.clone(),
+                idle,
+                timer.clone()
+            ],
+            vec![run, api, interp, waiting, timer],
         ]
     );
 }

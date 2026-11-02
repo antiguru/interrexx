@@ -14,17 +14,7 @@ pub mod builtins {
     /// its whole exclusions followed by its partial rows. The owner rides here
     /// rather than in the refusal, so a name and the phase blamed for it
     /// cannot drift apart.
-    pub const EXCLUDED: &[(&str, &str, &str)] = &[
-        ("RXQUEUE", "Phase 10", "Rxapi"),
-        ("RXFUNCADD", "Phase 10", "Rxapi"),
-        ("RXFUNCDROP", "Phase 10", "Rxapi"),
-        ("RXFUNCQUERY", "Phase 10", "Rxapi"),
-        // Partial: in scope in one form, excluded in another. The owner is
-        // the excluded form's -- `QUEUED`'s cross-process half is the RXAPI
-        // daemon's. `VALUE`'s external selector and `ADDRESS`'s command
-        // issuing were here too and are gone: both forms run now.
-        ("QUEUED", "Phase 10", "Rxapi"),
-    ];
+    pub const EXCLUDED: &[(&str, &str, &str)] = &[];
 
     /// The phase owing `name`'s excluded form and its reason, or `None` for
     /// a name [`EXCLUDED`] does not list.
@@ -45,7 +35,7 @@ pub mod builtins {
     /// literal `3` at the two places that subtract it, because "in
     /// `EXCLUDED`" and "excluded outright" are different sets and the
     /// difference is exactly these names.
-    pub const PARTIALLY_EXCLUDED: &[&str] = &["QUEUED"];
+    pub const PARTIALLY_EXCLUDED: &[&str] = &[];
 
     /// The builtins excluded outright: [`EXCLUDED`] less
     /// [`PARTIALLY_EXCLUDED`], in `EXCLUDED` order.

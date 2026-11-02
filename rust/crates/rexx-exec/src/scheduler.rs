@@ -2121,6 +2121,14 @@ impl Interp {
     pub(crate) fn retest_wait(&mut self, reason: ParkReason) -> Option<ParkReason> {
         match reason {
             ParkReason::Semaphore(wait) => self.retest_semaphore(wait).map(ParkReason::Semaphore),
+            ParkReason::Sleep { .. }
+                if !self.activity.woken_by_halt
+                    && self.queue_wait_pending()
+                    && !self.queue_wait_is_unending() =>
+            {
+                let deadline = self.now() + crate::dispatch::queue_methods::WAIT_POLL;
+                Some(ParkReason::Sleep { deadline })
+            }
             _ => None,
         }
     }

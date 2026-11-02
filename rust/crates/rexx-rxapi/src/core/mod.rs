@@ -135,14 +135,15 @@ impl Core {
         self.queues.restore(session, name, item);
     }
 
-    /// `client`'s connection closed: its parked pulls end and its session queues lose a user.
+    /// `client`'s connection closed: its parked pulls end and its session queues lose a user. A
+    /// session queue goes once it has no user, whatever it holds.
     pub fn client_closed(&mut self, client: ClientId) {
         self.queues.connection_closed(client.connection);
     }
 
     /// No named queue, registration or macro.
     pub fn is_empty(&self) -> bool {
-        self.queues.no_named_queues() && self.registries.is_empty() && self.macros.is_empty()
+        self.queues.hold_nothing() && self.registries.is_empty() && self.macros.is_empty()
     }
 }
 

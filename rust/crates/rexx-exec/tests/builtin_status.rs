@@ -418,17 +418,13 @@ fn the_status_file_matches_a_live_differential_run() {
         rexx_inventory::builtins::wholly_excluded().len(),
         "the excluded rows are exactly the names excluded outright"
     );
-    // Moved 11 -> 4 and 70 -> 77 on 2026-09-12, deliberately: Phase 7 gave the
-    // seven stream builtins bodies, so they left the whole-exclusion set and
-    // became in-scope names measured by their own probes. The four left are
-    // the RXAPI ones. The comment this pair used to carry said these counts
-    // could not rot as a task lands; landing the streams is what falsified it,
-    // so they are moved with the reason rather than derived away.
-    assert_eq!(excluded, 4, "phase-4-exclusions.txt's whole exclusions");
+    // Moved 4 -> 0 and 77 -> 81 when Phase 10 delivered the RXAPI builtins,
+    // the last whole exclusions.
+    assert_eq!(excluded, 0, "phase-4-exclusions.txt's whole exclusions");
     assert_eq!(
         run.derived.len() - excluded,
-        77,
-        "77 of the 81 builtins are in scope, three of them partially"
+        81,
+        "all 81 builtins are in scope"
     );
 
     // The assertion a classifier that consults only name tables cannot pass.
@@ -441,10 +437,9 @@ fn the_status_file_matches_a_live_differential_run() {
         run.oracle_invocations,
         run.in_scope.len()
     );
-    // 70 -> 77 with the pair above, and for the same reason: the seven stream
-    // builtins are in scope now, so the oracle runs a probe for each of them.
+    // With the pair above: one probe per in-scope name.
     assert_eq!(
-        run.oracle_invocations, 77,
+        run.oracle_invocations, 81,
         "one oracle run per in-scope name"
     );
 

@@ -63,6 +63,7 @@ fn main() -> ExitCode {
         backlog: MAX_BACKLOG,
         dry_run,
         idle_grace: idle_grace(),
+        close_inherited: true,
         report: &say,
     };
     match serve(&options) {

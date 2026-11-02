@@ -3,6 +3,7 @@
 //! `RexxUtilCommon.cpp`.
 
 pub(crate) mod files;
+pub(crate) mod macros;
 pub(crate) mod messages;
 pub(crate) mod process;
 pub(crate) mod stems;
