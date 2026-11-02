@@ -884,6 +884,42 @@ CALLREXX1 - RESULT-LENGTH:           0
 CALLREXX1 - RESULT-Value:            (null)
 ";
 
+/// A SIGINT while a classic `RexxStart` runs halts the program and leaves the process running,
+/// the handler installed afterwards: an untrapped halt is reported as Error 4.1 and answers -4,
+/// a trapped one returns its value. Measured on the oracle with the same driver; ours ended the
+/// process (status 130) before `RexxStart` installed the handlers.
+#[test]
+fn a_sigint_during_rexx_start_halts_the_program_not_the_process() {
+    let files = [
+        (
+            "sleep.rex",
+            "say \"sleeping\"\ncall SysSleep 5\nsay \"woke\"\nreturn \"done\"\n",
+        ),
+        (
+            "sleeph.rex",
+            "signal on halt\nsay \"sleeping\"\ncall SysSleep 5\nsay \"woke\"\nreturn \"done\"\n\
+             halt: return \"halted\"\n",
+        ),
+    ];
+    let output = run_driver("sigint", &files, &["sleep.rex"]);
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "before\nsleeping\nafter rc=-4 short=-4 result=(null)\nhandler afterwards: installed\n"
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.ends_with("Error 4.1:  Program interrupted with HALT condition.\n"),
+        "{stderr}"
+    );
+    let output = run_driver("sigint", &files, &["sleeph.rex"]);
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "before\nsleeping\nafter rc=0 short=0 result=halted\nhandler afterwards: installed\n"
+    );
+}
+
 /// The family driver's standard output on the oracle.
 const FAMILY_STDOUT: &str = r#"version Open Object Rexx Version 5.3.0 r0
 code 3001: Failure during initialization: File "&1" is unreadable.

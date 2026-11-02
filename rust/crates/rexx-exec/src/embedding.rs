@@ -145,6 +145,11 @@ fn write_outcome(outcome: &crate::Outcome) {
 /// single command argument `//T` translates the program without running it
 /// (`api/InterpreterAPI.cpp:127`), leaving the `short` alone.
 pub fn rexx_start(start: Start) -> Started {
+    // The oracle's interpreter takes the halting signals (`SystemInterpreter`), so a SIGINT
+    // during the run halts the program rather than ending the process, and the handlers stay
+    // installed once it returns -- measured, `RexxStart` of `call SysSleep 5` answers -4 with
+    // Error 4.1 reported, or the trapped halt's result.
+    crate::timer::install_signals();
     let Start {
         name,
         instore,
