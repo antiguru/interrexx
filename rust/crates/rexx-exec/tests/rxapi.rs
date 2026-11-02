@@ -192,6 +192,22 @@ fn a_halt_ends_a_queue_wait_and_leaves_the_queue_usable() {
     assert_eq!(output.status.code(), Some(0));
 }
 
+/// A `lineIn` waiting on the session queue keeps waiting when a background command starts the
+/// service during the wait and the queue moves there, and gets the line the command adds later.
+#[test]
+fn a_session_wait_survives_the_queue_moving_to_the_service() {
+    for wait in ["linein('QUEUE:')", ".RexxQueue~new('SESSION')~lineIn"] {
+        let service = Service::new();
+        let output = service.run(&format!(
+            "'(sleep 1; (sleep 2; echo late) | rxqueue) &'\n\
+             t = time('e'); l = {wait}\n\
+             say '['l']' (time('e') - t > 2.5)\n"
+        ));
+        assert_eq!(stdout(&output), "[late] 1\n", "{wait}: {}", stderr(&output));
+        assert_eq!(output.status.code(), Some(0), "{wait}");
+    }
+}
+
 /// Review Focus 4: a function one program registers is registered for the next.
 #[test]
 fn a_registration_outlives_its_program() {

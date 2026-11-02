@@ -141,6 +141,27 @@ fn move_lines(client: &rxapi_client::ApiClient, lines: &mut VecDeque<Vec<u8>>) {
     }
 }
 
+/// A waiting pull of `name` a helper thread holds in the service, or `None` without one.
+fn remote_wait(name: &[u8]) -> Option<RemoteWait> {
+    let client = rxapi_client::client().ok()?;
+    let wait = RemoteWait::default();
+    let request = Request::PullQueue {
+        session: client.session(),
+        name: Some(name.to_vec()),
+        wait: WAIT,
+    };
+    let (token, slot) = (wait.token.clone(), Arc::clone(&wait.slot));
+    std::thread::spawn(move || {
+        let reply = client.call_cancellable(request, &token);
+        let (held, filled) = &*slot;
+        *held
+            .lock()
+            .expect("the slot's critical section cannot panic") = Some(reply);
+        filled.notify_all();
+    });
+    Some(wait)
+}
+
 /// `request`'s status from the service.
 fn call_status(request: Request) -> u64 {
     match rxapi_client::client().and_then(|client| client.call(request)) {
@@ -290,24 +311,7 @@ impl Interp {
     pub(crate) fn begin_queue_wait(&mut self, name: Vec<u8>) {
         let remote = match self.queue_is_local(&name) {
             true => None,
-            false => rxapi_client::client().ok().map(|client| {
-                let wait = RemoteWait::default();
-                let request = Request::PullQueue {
-                    session: client.session(),
-                    name: Some(name.clone()),
-                    wait: WAIT,
-                };
-                let (token, slot) = (wait.token.clone(), Arc::clone(&wait.slot));
-                std::thread::spawn(move || {
-                    let reply = client.call_cancellable(request, &token);
-                    let (held, filled) = &*slot;
-                    *held
-                        .lock()
-                        .expect("the slot's critical section cannot panic") = Some(reply);
-                    filled.notify_all();
-                });
-                wait
-            }),
+            false => remote_wait(&name),
         };
         self.activity.queue_wait = Some(Box::new(QueueWait { name, remote }));
     }
@@ -326,12 +330,16 @@ impl Interp {
 
     /// Whether the running activity waits for a line that has not arrived.
     pub(crate) fn queue_wait_pending(&mut self) -> bool {
-        let Some(wait) = self.activity.queue_wait.take() else {
+        let Some(mut wait) = self.activity.queue_wait.take() else {
             return false;
         };
+        if wait.remote.is_none() && !self.queue_is_local(&wait.name) {
+            // The session queue moved to the service during the wait: the wait goes on there.
+            wait.remote = remote_wait(&wait.name);
+        }
         let pending = match &wait.remote {
             Some(remote) => remote.peek().is_none(),
-            None => self.queue_is_local(&wait.name) && self.queue.lines.is_empty(),
+            None => self.queue.lines.is_empty(),
         };
         self.activity.queue_wait = Some(wait);
         pending
