@@ -244,7 +244,35 @@ fn row_directory(group: &str, method: &str) -> PathBuf {
     dir
 }
 
+/// Points the process's API connection at a service of its own below the
+/// target directory, which `RXQUEUE`'s rows reach, and starts a watcher that
+/// stops that service and removes its directory once this process has ended:
+/// queues a row leaves behind would keep it running.
+fn private_service() {
+    static CHOSEN: std::sync::Once = std::sync::Once::new();
+    CHOSEN.call_once(|| {
+        let dir =
+            Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("bif-api-{}", std::process::id()));
+        let daemon = Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi");
+        rexx_exec::use_api_service(&dir, &daemon);
+        let _ = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(
+                "while kill -0 \"$0\" 2>/dev/null; do sleep 1; done; \
+                 REXX_API_DIR=\"$1\" \"$2\" --stop >/dev/null 2>&1; rm -rf \"$1\"",
+            )
+            .arg(std::process::id().to_string())
+            .arg(&dir)
+            .arg(&daemon)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+    });
+}
+
 fn evaluate(row: &RowKind) -> RowOutcome {
+    private_service();
     match row {
         // **Two runs, not one program printing two lines.** A single program
         // whose output is split on `\n` cannot compare operands that are

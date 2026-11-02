@@ -49,6 +49,7 @@ use queue::Queue;
 
 // The process's connection to the API service.
 mod rxapi_client;
+pub use rxapi_client::use_api_service;
 
 // What a command line supplies to a top-level program: the one argument string
 // it can carry, how a list of words becomes that string, and where `.input`

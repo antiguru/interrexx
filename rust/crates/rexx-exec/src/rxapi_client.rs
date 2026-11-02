@@ -1,6 +1,7 @@
 //! The process's one connection to the API service, opened on first need and kept for the
 //! process's life, so a registration it makes stays owned by it.
 
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use rexx_rxapi::client::{Session, connect};
@@ -21,6 +22,27 @@ pub(crate) struct ApiClient {
 /// The connection, or the failure every later call answers.
 static CLIENT: OnceLock<Result<ApiClient, u64>> = OnceLock::new();
 
+/// The service directory and the daemon to start in it, where the process named them.
+static SERVICE: OnceLock<(PathBuf, PathBuf)> = OnceLock::new();
+
+/// Points this process's connection at the service in `dir`, started from `daemon`, instead of
+/// the one `REXX_API_DIR` or the defaults name: for an embedding, such as a test harness, whose
+/// programs must not reach the user's service. `false` where the process already chose one.
+pub fn use_api_service(dir: &Path, daemon: &Path) -> bool {
+    CLIENT.get().is_none()
+        && SERVICE
+            .set((dir.to_path_buf(), daemon.to_path_buf()))
+            .is_ok()
+}
+
+/// The service directory this process uses.
+fn chosen_dir() -> PathBuf {
+    match SERVICE.get() {
+        Some((dir, _)) => dir.clone(),
+        None => service_dir(),
+    }
+}
+
 /// This process's session queue.
 pub(crate) fn session() -> Session {
     static SESSION: OnceLock<Session> = OnceLock::new();
@@ -40,8 +62,14 @@ pub(crate) fn client() -> Result<&'static ApiClient, u64> {
             if !connections_allowed() {
                 return Err(NO_SERVICE);
             }
+            let transport = match SERVICE.get() {
+                Some((dir, daemon)) => {
+                    Unix::connect_or_start_with(dir, daemon).map_err(|error| error.status())?
+                }
+                None => connect()?,
+            };
             let client = ApiClient {
-                transport: connect()?,
+                transport,
                 session: session_handle(),
             };
             client.call(Request::CreateSessionQueue {
@@ -62,7 +90,7 @@ pub(crate) fn running_client() -> Option<&'static ApiClient> {
     if !connections_allowed() {
         return None;
     }
-    let dir = service_dir();
+    let dir = chosen_dir();
     if !socket_path(&dir, PROTOCOL_VERSION).exists() {
         return None;
     }
@@ -81,9 +109,9 @@ pub(crate) fn running_client() -> Option<&'static ApiClient> {
 }
 
 /// Whether this process may reach a service: a unit test may only through a private
-/// `REXX_API_DIR`, so none reaches the user's own.
+/// directory, so none reaches the user's own.
 fn connections_allowed() -> bool {
-    !cfg!(test) || std::env::var_os("REXX_API_DIR").is_some()
+    !cfg!(test) || SERVICE.get().is_some() || std::env::var_os("REXX_API_DIR").is_some()
 }
 
 impl ApiClient {
