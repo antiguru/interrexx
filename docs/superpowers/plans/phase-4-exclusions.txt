@@ -3139,6 +3139,19 @@ DEVIATIONS -- permanent, chosen
      instances can observe it. This extends the Phase 9 licence R2 of
      2026-09-29-phase-6-concurrency-design.md.
 
+ 86. THE API DAEMON STARTS ON DEMAND AND SPEAKS ITS OWN WORDS (Phase 10).
+     OWNER: none.
+
+     Ruled by Moritz 2026-11-02: "the first test encodes implementation
+     details, let's record a deviation."
+     The oracle's rexx starts its rxapi at every interpreter start, and a
+     second rxapi run with no arguments prints two fixed lines about its
+     lock file and exits. This crate starts its daemon only when a program
+     first needs the service (a program using only QUEUE and PULL starts
+     none), and its rxapi prints its own text. ooTest's
+     utilities/rxapi.testGroup TEST_RXAPI_LOCKED asserts both oracle
+     behaviours, so it is licensed under this Deviation.
+
 EXPRKIND OWNERSHIP -- the expression forms 4a/4b do not evaluate
 ---------------------------------------------------------------------
 
