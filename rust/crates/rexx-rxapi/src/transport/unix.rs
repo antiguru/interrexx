@@ -13,6 +13,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
+use rustix::fs::{Access, access};
 use rustix::net::sockopt::socket_peercred;
 use rustix::net::{SendFlags, send};
 
@@ -86,16 +87,18 @@ pub fn peer_uid(stream: &UnixStream) -> io::Result<u32> {
     Ok(socket_peercred(stream)?.uid.as_raw())
 }
 
-/// `rxapi` beside this executable, else on `PATH`.
+/// The first `rxapi` that can run, beside this executable, else on `PATH`. The answer is absolute
+/// because the daemon starts in `/`.
 fn find_daemon() -> Result<PathBuf, TransportError> {
     let beside = std::env::current_exe()
         .ok()
         .and_then(|exe| Some(exe.parent()?.join("rxapi")));
     let on_path = std::env::var_os("PATH").unwrap_or_default();
+    let here = std::env::current_dir().map_err(|error| unavailable(&error))?;
     beside
         .into_iter()
-        .chain(std::env::split_paths(&on_path).map(|dir| dir.join("rxapi")))
-        .find(|candidate| candidate.is_file())
+        .chain(std::env::split_paths(&on_path).map(|dir| here.join(dir).join("rxapi")))
+        .find(|candidate| candidate.is_file() && access(candidate, Access::EXEC_OK).is_ok())
         .ok_or_else(|| TransportError::Unavailable("no rxapi executable found".to_owned()))
 }
 

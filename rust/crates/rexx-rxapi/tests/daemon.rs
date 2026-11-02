@@ -1,6 +1,7 @@
 //! A real daemon, each test in its own `REXX_API_DIR`.
 
 use std::io::{ErrorKind, Read, Write};
+use std::os::fd::AsRawFd;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
@@ -15,6 +16,7 @@ use rexx_rxapi::message::wire::{self, PROTOCOL_VERSION};
 use rexx_rxapi::message::{FIFO, NO_WAIT, Registry, Reply, Request, Timestamp, WAIT};
 use rexx_rxapi::transport::unix::{Unix, lock_path, prepare_dir, socket_path};
 use rexx_rxapi::transport::{CancelToken, Transport, TransportError};
+use rustix::io::{FdFlags, fcntl_setfd};
 use rustix::process::{Pid, Resource, Rlimit, getrlimit, prlimit};
 
 const DAEMON: &str = env!("CARGO_BIN_EXE_rxapi");
@@ -549,6 +551,76 @@ fn a_client_that_stops_reading_stops_being_read() {
     drop(stalled);
     Unix::stop_version(&service.dir, PROTOCOL_VERSION).expect("the daemon stops");
     assert_eq!(daemon.join().expect("the daemon"), Exit::Stopped);
+}
+
+#[test]
+#[ignore = "the client half of two tests, run with a chosen PATH"]
+fn child_starts_the_daemon_from_path() {
+    let dir = PathBuf::from(std::env::var_os(CHILD_DIR).expect("run by a parent test"));
+    let client = Unix::connect_or_start(&dir).expect("a daemon found on PATH");
+    assert_eq!(
+        open(&client, "q"),
+        Reply::QueueOpened {
+            status: OK,
+            duplicate: Some(false),
+        }
+    );
+}
+
+/// Runs the client half in `service`'s root, with `path` as its `PATH`.
+fn start_from_path(service: &ServiceDir, path: &str) -> bool {
+    let bin = service.root.join("bin");
+    std::fs::create_dir(&bin).expect("a directory");
+    std::os::unix::fs::symlink(DAEMON, bin.join("rxapi")).expect("the link");
+    Command::new(std::env::current_exe().expect("the test binary"))
+        .args(["--exact", "child_starts_the_daemon_from_path"])
+        .args(["--ignored", "--nocapture"])
+        .env(CHILD_DIR, &service.dir)
+        .env("PATH", path)
+        .current_dir(&service.root)
+        .stdout(Stdio::null())
+        .status()
+        .expect("the child runs")
+        .success()
+}
+
+/// The daemon starts in `/`, where a relative entry would mean something else.
+#[test]
+fn a_relative_path_entry_finds_the_daemon() {
+    let service = ServiceDir::new();
+    assert!(start_from_path(&service, "bin"));
+}
+
+#[test]
+fn the_search_continues_past_an_rxapi_that_cannot_run() {
+    let service = ServiceDir::new();
+    let first = service.root.join("first");
+    std::fs::create_dir(&first).expect("a directory");
+    std::fs::write(first.join("rxapi"), "not a program").expect("a plain file");
+    let bare = service.root.join("first/bare");
+    std::fs::create_dir(&bare).expect("a directory");
+    std::fs::create_dir(bare.join("rxapi")).expect("a directory of that name");
+
+    assert!(start_from_path(&service, "first/bare:first:bin"));
+}
+
+/// Red until a descriptor can be closed without `unsafe`, which is Moritz's ruling to make.
+#[test]
+#[ignore = "closing inherited descriptors awaits an unsafe ruling"]
+fn a_started_daemon_does_not_keep_inherited_descriptors() {
+    let service = ServiceDir::new();
+    let (inherited, _peer) = UnixStream::pair().expect("a pair");
+    fcntl_setfd(&inherited, FdFlags::empty()).expect("inheritable");
+    let label = std::fs::read_link(format!("/proc/self/fd/{}", inherited.as_raw_fd()))
+        .expect("the descriptor's label");
+
+    let _client = service.connect();
+
+    let held: Vec<PathBuf> = std::fs::read_dir(format!("/proc/{}/fd", service.pid()))
+        .expect("the daemon's descriptors")
+        .filter_map(|entry| std::fs::read_link(entry.ok()?.path()).ok())
+        .collect();
+    assert!(!held.contains(&label), "{held:?}");
 }
 
 /// Review Focus 5.
