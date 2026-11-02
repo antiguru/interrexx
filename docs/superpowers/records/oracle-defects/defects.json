@@ -26,7 +26,7 @@
   "expected": "",
   "cause": "BuiltinFunctions.cpp:1163 range check 'yearday < 0 || yearday > YEAR_DAYS + 1' lets 0 pass; RexxDateTime::setDay (RexxDateTime.cpp:457-475) computes month=0; 'M' reads monthNames[month-1] (RexxDateTime.cpp:526).",
   "source": "rust/corpus/oracle-crashes.txt entry 2; memory/oorexx-oracle-crashing-probes.md; memory/oorexx-filed-tickets-2026-08.md",
-  "status": "FIXED upstream r13250 (SF #2082; now Error 40.19), per Josep (ooRexx maintainer) 2026-10-22, repros run on trunk r13285; was: SF #2082 (filed 2026-08-22, open)",
+  "status": "FIXED upstream r13250 (SF #2082; now Error 40.19), per Josep (ooRexx maintainer) 2026-10-22, confirmed at the pinned oracle r13346; repros run on trunk r13285; was: SF #2082 (filed 2026-08-22, open)",
   "crate": "Not stated in the sources beyond the Rust port having wrapped a usize and aborted rc 101 before it was fixed."
  },
  {
@@ -41,7 +41,7 @@
   "expected": "range is a window; the oracle's own twin caselessPos gives 0 for 'axan'~caselessPos('an',1,3).",
   "cause": "StringUtil::pos (classes/support/StringUtil.cpp:206-253): rescan from haypointer+1 with the same length, so every rescan ends at endpointer+1.",
   "source": "rust/corpus/oracle-crashes.txt entry 3; docs/superpowers/plans/phase-4-exclusions.txt Deviation 3; memory/oorexx-pos-window-overrun.md; memory/oorexx-filed-tickets-2026-08.md",
-  "status": "FIXED upstream r13268 (SF #2083), per Josep (ooRexx maintainer) 2026-10-22, repros run on trunk r13285; was: SF #2083 (filed 2026-08-22, open) + deviation 3",
+  "status": "FIXED upstream r13268 (SF #2083), per Josep (ooRexx maintainer) 2026-10-22, confirmed at the pinned oracle r13346; repros run on trunk r13285; was: SF #2083 (filed 2026-08-22, open) + deviation 3",
   "crate": "Reproduces the in-string overrun (find_forward); declines the past-the-end NUL match and answers 0 (Deviation 3, licensed by Moritz 2026-08-14)."
  },
  {
@@ -86,7 +86,7 @@
   "expected": "",
   "cause": "ArrayClass::validateIndex (classes/ArrayClass.cpp:1219-1226) takes indirect->items() (non-empty count) with indirect->data() (raw slots); validateSingleDimensionIndex then calls index[0]->requiredPositive on OREF_NULL (:1264).",
   "source": "rust/corpus/oracle-crashes.txt entry 6; memory/oorexx-filed-tickets-2026-08.md",
-  "status": "FIXED upstream r13264 (SF #2085; now Error 98.975), per Josep (ooRexx maintainer) 2026-10-22, repros run on trunk r13285; was: SF #2085 (filed 2026-08-22, open)",
+  "status": "FIXED upstream r13264 (SF #2085; now Error 98.975), per Josep (ooRexx maintainer) 2026-10-22, confirmed at the pinned oracle r13346; repros run on trunk r13285; was: SF #2085 (filed 2026-08-22, open)",
   "crate": "Refuses with Loud::array_index_hole; no oracle behaviour to match."
  },
  {
@@ -266,7 +266,7 @@
   "expected": "",
   "cause": "RexxObject::copy (classes/ObjectClass.cpp:554-564) copies object variables incl. CSELF; stream_uninit (streamLibrary/StreamNative.cpp:2190-2200) destructs StreamInfo explicitly, so the second uninit destructs the same block (read, not run under a debugger).",
   "source": "rust/corpus/oracle-crashes.txt entry 13",
-  "status": "crash entry 13 (no upstream ticket)",
+  "status": "rc 0, 5 of 5, at oracle r13346; no ticket names the fix. Was: crash entry 13 (no upstream ticket)",
   "crate": "COPY clones the state block; the copy is an independent unopened stream; nothing aborts (licensed divergence)."
  },
  {
@@ -326,7 +326,7 @@
   "expected": "",
   "cause": "Not established.",
   "source": "rust/corpus/oracle-crashes.txt entry 18",
-  "status": "crash entry 18 (no upstream ticket; test extension orxmethod)",
+  "status": "Error 93.900 rc 163 at oracle r13346. Was: crash entry 18 (no upstream ticket; test extension orxmethod)",
   "crate": "Prints 'before', then reports 'Error 0' with '<no message 0.0 in the catalogue>', rc 0."
  },
  {
@@ -356,7 +356,7 @@
   "expected": "",
   "cause": "Not established.",
   "source": "rust/corpus/oracle-crashes.txt entry 20",
-  "status": "FIXED upstream r13251 (SF #2093; now Error 11.1, trapped by SIGNAL ON SYNTAX), per Josep (ooRexx maintainer) 2026-10-22, repros run on trunk r13285; was: crash entry 20 (no upstream ticket)",
+  "status": "FIXED upstream r13251 (SF #2093; now Error 11.1, trapped by SIGNAL ON SYNTAX), per Josep (ooRexx maintainer) 2026-10-22, confirmed at the pinned oracle r13346; repros run on trunk r13285; was: crash entry 20 (no upstream ticket)",
   "crate": "Prints 'start', 'caught 11 SYNTAX' and an empty line, rc 0."
  },
  {
@@ -431,7 +431,7 @@
   "expected": "",
   "cause": "alarm_startTimer's semaphore is a local of the native (platform/unix/TimeSupport.cpp:116); EVENTSEMHANDLE keeps a pointer to it, which alarm_stopTimer posts (:165-166) after the frame is gone. .Alarm~cancel reaches it only before init clears eventSemHandle.",
   "source": "rust/corpus/oracle-crashes.txt entry 25",
-  "status": "crash entry 25 (no upstream ticket)",
+  "status": "SIGSEGV rc 139 at oracle r13346, was a glibc assertion abort. Was: crash entry 25 (no upstream ticket)",
   "crate": "Stop on an ended timer does nothing (ruling R-T8-2)."
  },
  {
@@ -626,7 +626,7 @@
   "expected": "A Rexx error condition (40.922/40.923/40.924) instead of a crash.",
   "cause": "Activity::cleanupStackFrame (Activity.cpp:1685) via popStackFrame (:1705) from NativeActivation::callNativeRoutine (:1453): popStackFrame pops until it finds target; target already gone, activations->pop() returns NULL, cleanupStackFrame(NULL) dereferences it. Chain RexxStemSort (InterpreterAPI.cpp:428) -> NativeActivation::stemSort (:3559) -> StemClass::sort (StemClass.cpp:1605). Two candidate fixes (NULL guard masks it; root fix is unwinding the frame before the pop).",
   "source": "rust/corpus/oracle-crashes.txt entry 37; memory/oorexx-sysstemsort-crash-2068.md; memory/oorexx-filed-tickets-2026-07.md",
-  "status": "FIXED upstream r13284, test r13285 (SF #2068; re-reported as #2120), per Josep (ooRexx maintainer) 2026-10-22, repros run on trunk r13285; was: SF #2068 (open upstream, commented with one-line repro and root cause)",
+  "status": "FIXED upstream r13284, test r13285 (SF #2068; re-reported as #2120), per Josep (ooRexx maintainer) 2026-10-22, confirmed at the pinned oracle r13346; repros run on trunk r13285; was: SF #2068 (open upstream, commented with one-line repro and root cause)",
   "crate": "Reports the STRING-method case at rc 163 with Compiled routine \"SYSSTEMSORT\" in the traceback; raises 40.919/40.921/40.922+ like the trapped oracle."
  },
  {
@@ -656,7 +656,7 @@
   "expected": "Move copies and unlinks, answering 0.",
   "cause": "temporaryFilename (platform/unix/SysFileSystem.cpp at oracle cb9563364) returns without setting errInfo on success, so moveFile answers stack garbage; also formats the spare name into a 7-byte snprintf bound.",
   "source": "rust/corpus/oracle-crashes.txt entry 39",
-  "status": "FIXED upstream r13260 (SF #2098), per Josep (ooRexx maintainer) 2026-10-22, repros run on trunk r13285; was: crash entry 39 (fourth mode: undefined answer); fixed in this checkout's interpreter/ (both noted)",
+  "status": "FIXED upstream r13260 (SF #2098), per Josep (ooRexx maintainer) 2026-10-22, confirmed at the pinned oracle r13346; repros run on trunk r13285; was: crash entry 39 (fourth mode: undefined answer); fixed in this checkout's interpreter/ (both noted)",
   "crate": "Copies and unlinks, answering 0."
  },
  {
@@ -791,7 +791,7 @@
   "expected": "",
   "cause": "Not read.",
   "source": "rust/corpus/oracle-crashes.txt entry 49",
-  "status": "crash entry 49 (no upstream ticket)",
+  "status": "rc 0, 5 of 5, at oracle r13346; no ticket names the fix. Was: crash entry 49 (no upstream ticket)",
   "crate": "Answers x, rc 0 (and p10a/p10b/p10c values)."
  },
  {
@@ -896,7 +896,7 @@
   "expected": "",
   "cause": "CommandIOContext::resolveConflicts (CommandIOContext.cpp:131) wraps output, where error was meant, in a BufferingOutputTarget when the error target is also the input; with no output target it wraps NULL.",
   "source": "rust/corpus/oracle-crashes.txt entry 56",
-  "status": "FIXED upstream r13262 (SF #2087), per Josep (ooRexx maintainer) 2026-10-22, repros run on trunk r13285; was: crash entry 56 (no upstream ticket)",
+  "status": "FIXED upstream r13262 (SF #2087), per Josep (ooRexx maintainer) 2026-10-22, confirmed at the pinned oracle r13346; repros run on trunk r13285; was: crash entry 56 (no upstream ticket)",
   "crate": "Answers 'error only 1 [in]', rc 0."
  },
  {
@@ -1391,7 +1391,7 @@
   "expected": "Canonical engineering rendering (10E+9).",
   "cause": "Sign inversion in NumberString::copyIfNecessary (classes/NumberStringClass.cpp:3652): 'isScientific() != form' where Numerics::FORM_SCIENTIFIC is false and FORM_ENGINEERING true (runtime/Numerics.cpp:108); under ENGINEERING it never clones and returns the object whose cached stringObject is the literal's text. Only ABS reaches it.",
   "source": "docs/superpowers/plans/phase-4-exclusions.txt Known gaps ('KNOWN GAP: ABS OF A POSITIVE LITERAL UNDER NUMERIC FORM ENGINEERING' and 'THE ORACLE BINARY ... CARRIES A LOCAL, UNCOMMITTED FIX')",
-  "status": "Moritz patched the local oracle tree 2026-08-05 16:02 (uncommitted, not upstream); not filed",
+  "status": "The r13346 oracle is unpatched, so it answers abs(1e10) as 1E10 and the crate answers 10E+9. Was: Moritz patched the local oracle tree 2026-08-05 16:02 (uncommitted, not upstream); not filed",
   "crate": "Answered the canonical 10E+9 throughout."
  },
  {
@@ -1526,7 +1526,7 @@
   "expected": "0 1",
   "cause": "RexxInteger::notOp lacks a '!' (oorexx-devel 2026-10-17, Josep Maria).",
   "source": ".superpowers/sdd/queued/2026-10-17-oracle-not-op-forwarding-bug-2117.md",
-  "status": "FIXED upstream r13272, tests r13273 (SF #2117), per Josep (ooRexx maintainer) 2026-10-22, repros run on trunk r13285; was: SF #2117 (queued file ruled NOT A DIVERGENCE 2026-10-18)",
+  "status": "FIXED upstream r13272, tests r13273 (SF #2117), per Josep (ooRexx maintainer) 2026-10-22, confirmed at the pinned oracle r13346; repros run on trunk r13285; was: SF #2117 (queued file ruled NOT A DIVERGENCE 2026-10-18)",
   "crate": "Answers the right 0 1; not copied."
  },
  {
@@ -1676,7 +1676,7 @@
   "expected": "",
   "cause": "SysMutex Interpreter::resourceLock is a namespace-scope static in Interpreter.cpp whose dynamic initialiser runs after _rexx_init (platform/unix/SystemInitialization.cpp); Interpreter::startInterpreter's ResourceSection does nothing so the !isActive() bootstrap test is unsynchronised. Fix on branch concurrency-dispatch-fixes: function-local static.",
   "source": "memory/oorexx-resource-lock-dead.md; memory/oorexx-concurrent-bootstrap-crash.md; memory/oorexx-activity-dispatch-crash.md; memory/oorexx-filed-tickets-2026-07.md",
-  "status": "FIXED upstream r13179-r13195 (SF #2078), per Josep (ooRexx maintainer) 2026-10-22, repros run on trunk r13285; was: SF #2078 (filed 2026-07-26; most serious finding); SF #2020 commented 2026-07-26 with the A/B; fixed on a local branch, not upstream",
+  "status": "FIXED upstream r13179-r13195 (SF #2078), per Josep (ooRexx maintainer) 2026-10-22, confirmed at the pinned oracle r13346; repros run on trunk r13285; was: SF #2078 (filed 2026-07-26; most serious finding); SF #2020 commented 2026-07-26 with the A/B; fixed on a local branch, not upstream",
   "crate": ""
  },
  {
@@ -1931,7 +1931,7 @@
   "expected": "rc 0.",
   "cause": "Not traced in the C++.",
   "source": "Phase 9d Task 8.6 report and review (task-8.6-report.md, task-8.6-review.md)",
-  "status": "open (not copied)",
+  "status": "prints `rc 0` at oracle r13346. Was: open (not copied)",
   "crate": "Prints rc 0."
  },
  {

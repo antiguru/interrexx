@@ -903,6 +903,10 @@ DEVIATIONS -- permanent, chosen
   3. POS's window overrun can match the haystack's NUL terminator; this
      crate declines to invent that byte.
 
+     FIXED UPSTREAM at r13268 (SF #2083). The oracle at r13346 has no overrun:
+     `pos('a'||'00'x,'aa')` and `pos('ab','aab',1,2)` are 0, and this crate's
+     `find_forward` matches it. The text below describes the older oracle.
+
      IMPLEMENTED by the pre-Phase-5 defect round: `find_forward`
      (`rust/crates/rexx-exec/src/builtin/string.rs`) reproduces
      `StringUtil::pos`'s own window overrun (`classes/support/
