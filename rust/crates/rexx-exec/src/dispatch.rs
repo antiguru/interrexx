@@ -2933,10 +2933,13 @@ impl Interp {
                 .map(Started::Ran);
         }
         // A library method's own frame holds the lock, which `SetGuardOff`
-        // may give up, and releases it where it still holds it.
+        // may give up, and releases it where it still holds it. A scoped
+        // native method gives it up by taking `scoped_guard`.
         let library = matches!(invocable, Invocable::Library(_));
+        let outer = self.activity.scoped_guard.replace(key);
         let outcome = self.run_other(invocable, cleared, resolution, receiver, name, args, true);
-        if !library {
+        let held = std::mem::replace(&mut self.activity.scoped_guard, outer);
+        if !library && held.is_some() {
             self.release_guard(key);
         }
         outcome

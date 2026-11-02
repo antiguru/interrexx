@@ -327,6 +327,9 @@ pub(crate) struct Activity {
     pub(crate) woken_by_halt: bool,
     /// A `RexxQueue~lineIn` waiting for its line.
     pub(crate) queue_wait: Option<Box<crate::queue::QueueWait>>,
+    /// The guard lock the running scoped native method holds, which it may give up
+    /// (`SetGuardOff`) by taking it.
+    pub(crate) scoped_guard: Option<crate::guards::GuardKey>,
     /// While it is parked in a semaphore wait, that wait's sleeper order
     /// where it is timed.
     pub(crate) semaphore_wait: Option<Option<u64>>,
@@ -522,6 +525,7 @@ impl Activity {
             asleep: None,
             woken_by_halt: false,
             queue_wait: None,
+            scoped_guard: None,
             semaphore_wait: None,
             parked_block: None,
             waiting_traced: None,
@@ -685,6 +689,7 @@ impl Activity {
             asleep: _,
             woken_by_halt: _,
             queue_wait: _,
+            scoped_guard: _,
             semaphore_wait: _,
             parked_block: _,
             waiting_traced: _,

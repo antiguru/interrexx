@@ -50,7 +50,7 @@ impl Service {
         .expect("a PATH");
         let mut command = Command::new("timeout");
         command
-            .args(["-k", "5", "60"])
+            .args(["-k", "5", "30"])
             .arg(REXX)
             .arg(&file)
             .current_dir(self.root.join("work"))
@@ -277,4 +277,28 @@ fn a_registered_routine_stays_registered_after_its_program_fails() {
     assert_eq!(first.status.code(), Some(166));
     let second = service.run("say rxfuncquery('FOO6')\n");
     assert_eq!(stdout(&second), "0\n", "{}", stderr(&second));
+}
+
+/// A waiting `lineIn` gives up its guard, as the oracle's `SetGuardOff` does, so another
+/// activity's guarded `lineOut` on the same queue object delivers its line: run directly and
+/// from inside an `INTERPRET`, where the wait does not return to the scheduler.
+#[test]
+fn a_waiting_line_in_lets_a_line_out_through_its_guard() {
+    let service = Service::new();
+    for wait in ["say q~lineIn", "interpret 'say q~lineIn'"] {
+        let output = service.run(&format!(
+            "t = .t~new\nt~go\n::class t\n::method go\n  .RexxQueue~delete('WAITQ')\n  \
+             q = .RexxQueue~new('WAITQ')\n  self~delayedWrite(q, 'written')\n  \
+             say q~queued\n  {wait}\n  say q~delete\n\
+             ::method delayedWrite unguarded\n  use strict arg q, line\n  reply\n  \
+             call SysSleep 0.1\n  q~lineOut(line)\n"
+        ));
+        assert_eq!(
+            stdout(&output),
+            "0\nwritten\n0\n",
+            "{wait}: {}",
+            stderr(&output)
+        );
+        assert_eq!(output.status.code(), Some(0), "{wait}");
+    }
 }

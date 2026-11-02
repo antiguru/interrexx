@@ -214,8 +214,8 @@ pub(super) fn pull(
     }
 }
 
-/// `rexx_linein_queue()`: the head line, waiting for one, or `.nil` on any failure. A halt
-/// ends the wait.
+/// `rexx_linein_queue()`: the head line, waiting for one, or `.nil` on any failure. The wait
+/// gives up the guard lock, and a halt ends it.
 pub(super) fn linein(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -228,6 +228,9 @@ pub(super) fn linein(
         Ok(line) => return ran(interp.text(&line)),
         Err(QUEUE_EMPTY) => {}
         Err(_) => return ran(ObjRef::NIL),
+    }
+    if let Some(key) = interp.activity.scoped_guard.take() {
+        interp.release_guard(key);
     }
     interp.begin_queue_wait(name);
     let deadline = interp.now() + WAIT_POLL;
