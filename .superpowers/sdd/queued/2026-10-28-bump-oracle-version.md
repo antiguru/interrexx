@@ -1,4 +1,4 @@
-**OPEN, queued 2026-10-28 by the controller at Moritz's request ("Queue a TODO to bump the oracle version. Several of the bugs have been fixed."); proposed: after Phase 9d closes, before Phase 10's gates.**
+**CLOSED 2026-11-02 by Phase 10 PR 0: `docs/superpowers/records/2026-11-02-phase-10/pr0/README.md`. Originally queued 2026-10-28 by the controller at Moritz's request ("Queue a TODO to bump the oracle version. Several of the bugs have been fixed.").**
 
 # Bump the oracle to current upstream trunk
 
