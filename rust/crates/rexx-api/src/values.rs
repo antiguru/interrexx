@@ -855,6 +855,13 @@ pub struct Activation<'a> {
     pending: Cell<Option<usize>>,
     frame: Cell<Option<u64>>,
     between_halves: Cell<bool>,
+    /// Whether `RexxVariablePool` reaches the calling activation's variables
+    /// through this call: a routine's, a classic function's or an exit's,
+    /// never a method's (`RXSHV_NOAVL`).
+    pool: Cell<bool>,
+    /// The variables an `RXSHV_NEXTV` sequence has still to answer, taken
+    /// at its first request and dropped once it answers `RXSHV_LVAR`.
+    pool_cursor: RefCell<Option<std::collections::VecDeque<(Vec<u8>, Vec<u8>)>>>,
 }
 
 impl<'a> Activation<'a> {
@@ -865,7 +872,36 @@ impl<'a> Activation<'a> {
             pending: Cell::new(None),
             frame: Cell::new(None),
             between_halves: Cell::new(false),
+            pool: Cell::new(false),
+            pool_cursor: RefCell::new(None),
         }
+    }
+
+    /// Lets `RexxVariablePool` reach the calling activation's variables
+    /// through this call.
+    pub fn open_variable_pool(&self) {
+        self.pool.set(true);
+    }
+
+    /// Whether [`Activation::open_variable_pool`] was called.
+    pub fn variable_pool_open(&self) -> bool {
+        self.pool.get()
+    }
+
+    /// The next variable of an `RXSHV_NEXTV` sequence, `fill` taking the
+    /// calling activation's variables at its first request; `None` ends the
+    /// sequence, and the request after it starts a new one.
+    pub(crate) fn next_pool_variable(
+        &self,
+        fill: impl FnOnce() -> Vec<(Vec<u8>, Vec<u8>)>,
+    ) -> Option<(Vec<u8>, Vec<u8>)> {
+        let mut cursor = self.pool_cursor.borrow_mut();
+        let pending = cursor.get_or_insert_with(|| fill().into());
+        let next = pending.pop_front();
+        if next.is_none() {
+            *cursor = None;
+        }
+        next
     }
 
     /// Whether [`Host::between_halves`] runs for this call.

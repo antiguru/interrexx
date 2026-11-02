@@ -4479,6 +4479,326 @@ unsafe extern "C" fn reallocate_object_memory(
     activation.reallocate_object_memory(pointer, size)
 }
 
+/// The classic API's calls into the running program from a handler it
+/// called: `RexxVariablePool` and `RexxCallBack` (`api/rexx.h`).
+pub mod classic {
+    use super::{Activation, CALLING, Entered, Reached, unwind};
+    use crate::callbacks::{CallBack, PoolAnswer, PoolRequest};
+    use crate::layout::{CONSTRXSTRING, RXSTRING, RexxReturnCode, SHVBLOCK};
+    use std::ffi::c_char;
+
+    /// `RXSHV_NEWV`.
+    const NEW_VARIABLE: u8 = 0x01;
+    /// `RXSHV_LVAR`.
+    const LAST_VARIABLE: u8 = 0x02;
+    /// `RXSHV_TRUNC`.
+    const TRUNCATED: u8 = 0x04;
+    /// `RXSHV_BADN`.
+    const BAD_NAME: u8 = 0x08;
+    /// `RXSHV_MEMFL`.
+    const MEMORY_FAILURE: u8 = 0x10;
+    /// `RXSHV_BADF`.
+    const BAD_FUNCTION: u8 = 0x80;
+    /// `RXSHV_NOAVL`.
+    pub const POOL_UNAVAILABLE: RexxReturnCode = 144;
+    /// `RX_CB_BADP`.
+    const CALL_BACK_BAD_PARAMETERS: RexxReturnCode = 1;
+    /// `RX_CB_NOTSTARTED`.
+    pub const CALL_BACK_NOT_STARTED: RexxReturnCode = 2;
+    /// `RX_CB_BADN`.
+    const CALL_BACK_NO_LABEL: RexxReturnCode = 8;
+
+    /// The native call this thread runs innermost, under the baton, where
+    /// it opened the variable pool and still runs as its activity's.
+    fn calling<'a>() -> Option<Reached<'a>> {
+        // SAFETY: a call in flight on this thread outlives the callback it
+        // makes, as in `super::reached`.
+        let calling = unsafe { CALLING.get().cast::<Entered<'a>>().as_ref() }?;
+        // SAFETY: the activation is borrowed for as long as its call is in
+        // flight; the reference is shared, as in `super::addressed`.
+        let activation = unsafe { &*calling.activation.cast::<Activation<'a>>() };
+        let held = activation.hold_baton();
+        let reached = Reached::checked(activation, held);
+        (!reached.abandoned && reached.variable_pool_open()).then_some(reached)
+    }
+
+    /// The bytes `string` addresses, empty for a null pointer.
+    ///
+    /// # Safety
+    /// A non-null `strptr` addresses `strlength` readable bytes.
+    unsafe fn bytes<'b>(strptr: *const c_char, strlength: usize) -> &'b [u8] {
+        if strptr.is_null() {
+            return &[];
+        }
+        // SAFETY: the caller's guarantee.
+        unsafe { std::slice::from_raw_parts(strptr.cast(), strlength) }
+    }
+
+    /// Hands `value` back through `strptr`/`strlength`: into the caller's
+    /// buffer of `capacity` bytes, truncated to it (`RXSHV_TRUNC`), or into a
+    /// block `RexxFreeMemory` releases where the caller gave none, its length
+    /// then the new capacity.
+    ///
+    /// # Safety
+    /// A non-null `*strptr` addresses `*capacity` writable bytes.
+    unsafe fn give(
+        strptr: &mut *mut c_char,
+        strlength: &mut usize,
+        capacity: &mut usize,
+        value: &[u8],
+    ) -> u8 {
+        if strptr.is_null() {
+            // SAFETY: `malloc` of a non-zero size; `RexxFreeMemory` is `free`.
+            let block = unsafe { libc::malloc(value.len() + 1) }.cast::<u8>();
+            if block.is_null() {
+                return MEMORY_FAILURE;
+            }
+            // SAFETY: the block holds `value.len() + 1` bytes.
+            unsafe {
+                std::ptr::copy_nonoverlapping(value.as_ptr(), block, value.len());
+                block.add(value.len()).write(0);
+            }
+            *strptr = block.cast();
+            *strlength = value.len();
+            *capacity = value.len();
+            return 0;
+        }
+        let kept = value.len().min(*capacity);
+        // SAFETY: the caller's buffer holds `capacity` bytes.
+        unsafe { std::ptr::copy_nonoverlapping(value.as_ptr(), strptr.cast::<u8>(), kept) };
+        *strlength = kept;
+        if kept < value.len() { TRUNCATED } else { 0 }
+    }
+
+    /// One block's request, answering its `shvret`.
+    ///
+    /// # Safety
+    /// The block's strings are as `api/rexx.h` asks: `shvname` readable for
+    /// its length, and a non-null fetch buffer writable for `shvvaluelen`.
+    unsafe fn serve(activation: &Activation<'_>, block: &mut SHVBLOCK) -> u8 {
+        // SAFETY: the caller's guarantee.
+        let name = unsafe { bytes(block.shvname.strptr, block.shvname.strlength) };
+        // SAFETY: as above, for a set's value.
+        let value = unsafe { bytes(block.shvvalue.strptr, block.shvvalue.strlength) };
+        let request = match block.shvcode {
+            0 | 3 => PoolRequest::Set {
+                name,
+                symbolic: block.shvcode == 3,
+                value,
+            },
+            1 | 4 => PoolRequest::Fetch {
+                name,
+                symbolic: block.shvcode == 4,
+            },
+            2 | 5 => PoolRequest::Drop {
+                name,
+                symbolic: block.shvcode == 5,
+            },
+            7 => PoolRequest::Private { name },
+            6 => {
+                let Some((name, value)) = activation.pool_next() else {
+                    return LAST_VARIABLE;
+                };
+                let mut strptr = block.shvname.strptr.cast_mut();
+                // SAFETY: a non-null name buffer is the caller's, of
+                // `shvnamelen` bytes.
+                let mut ret = unsafe {
+                    give(
+                        &mut strptr,
+                        &mut block.shvname.strlength,
+                        &mut block.shvnamelen,
+                        &name,
+                    )
+                };
+                block.shvname.strptr = strptr;
+                // SAFETY: as above, for the value buffer.
+                ret |= unsafe {
+                    give(
+                        &mut block.shvvalue.strptr,
+                        &mut block.shvvalue.strlength,
+                        &mut block.shvvaluelen,
+                        &value,
+                    )
+                };
+                return ret;
+            }
+            _ => return BAD_FUNCTION,
+        };
+        let fetching = matches!(
+            request,
+            PoolRequest::Fetch { .. } | PoolRequest::Private { .. }
+        );
+        match activation.pool_request(request) {
+            PoolAnswer::BadName => BAD_NAME,
+            PoolAnswer::Served { new, value } => {
+                let mut ret = if new { NEW_VARIABLE } else { 0 };
+                if fetching && let Some(value) = value {
+                    // SAFETY: the caller's guarantee for a fetch buffer.
+                    ret |= unsafe {
+                        give(
+                            &mut block.shvvalue.strptr,
+                            &mut block.shvvalue.strlength,
+                            &mut block.shvvaluelen,
+                            &value,
+                        )
+                    };
+                }
+                ret
+            }
+        }
+    }
+
+    /// `RexxVariablePool`: each block of the chain `blocks` served in turn
+    /// against the activation that called the running routine, classic
+    /// function or exit, answering their return codes OR'ed; `RXSHV_NOAVL`
+    /// where this thread runs none.
+    ///
+    /// # Safety
+    /// `blocks` is null or the head of a chain of `SHVBLOCK`s as `api/rexx.h`
+    /// describes, each live and unaliased for the call.
+    pub unsafe fn variable_pool(blocks: *mut SHVBLOCK) -> RexxReturnCode {
+        let Some(activation) = calling() else {
+            return POOL_UNAVAILABLE;
+        };
+        let mut answered: RexxReturnCode = 0;
+        let mut at = blocks;
+        // SAFETY: the caller guarantees each link of the chain.
+        while let Some(block) = unsafe { at.as_mut() } {
+            // SAFETY: the caller's guarantee for the block's strings.
+            let ret = unsafe { serve(&activation, block) };
+            block.shvret = ret;
+            answered |= RexxReturnCode::from(ret);
+            at = block.shvnext;
+        }
+        answered
+    }
+
+    /// C's `atoi` of `text`, as a `short`.
+    fn short_value(text: &[u8]) -> i16 {
+        let mut rest = text
+            .iter()
+            .skip_while(|byte| byte.is_ascii_whitespace())
+            .peekable();
+        let negative = match rest.peek() {
+            Some(b'-') => {
+                rest.next();
+                true
+            }
+            Some(b'+') => {
+                rest.next();
+                false
+            }
+            _ => false,
+        };
+        let mut value: i64 = 0;
+        for &byte in rest.take_while(|byte| byte.is_ascii_digit()) {
+            value = (value * 10 + i64::from(byte - b'0')) % (1 << 32);
+        }
+        if negative {
+            value = -value;
+        }
+        // The `int` atoi answers, cast to `short` as C casts it.
+        value as i32 as i16
+    }
+
+    /// `RexxCallBack`: the label `label` of the activation that called the
+    /// running external function, run as an internal function over the
+    /// `argc` strings at `argv` (a null `strptr` an omitted one). The result
+    /// goes into `result`'s buffer where it fits, else into a block
+    /// `RexxFreeMemory` releases, and its `atoi` into `rc`. A condition the
+    /// call raises, or an `EXIT`, ends the external function here: it
+    /// unwinds to the boundary that called it, which re-raises it.
+    ///
+    /// # Safety
+    /// A non-null `label` is NUL-terminated, `argv` holds `argc` strings each
+    /// readable for its length, and a non-null `rc` and `result` are
+    /// writable, `result`'s non-null buffer for its `strlength`.
+    pub unsafe fn call_back(
+        label: *const c_char,
+        argc: usize,
+        argv: *const CONSTRXSTRING,
+        rc: *mut i16,
+        result: *mut RXSTRING,
+    ) -> RexxReturnCode {
+        let Some(activation) = calling() else {
+            return CALL_BACK_NOT_STARTED;
+        };
+        // SAFETY: the caller's guarantee for the label.
+        let Some(label) = (unsafe { super::name_of(label) }) else {
+            return CALL_BACK_BAD_PARAMETERS;
+        };
+        if argc > 0 && argv.is_null() {
+            return CALL_BACK_BAD_PARAMETERS;
+        }
+        let arguments: Vec<Option<Vec<u8>>> = (0..argc)
+            .map(|index| {
+                // SAFETY: `argv` holds `argc` strings.
+                let argument = unsafe { *argv.add(index) };
+                (!argument.strptr.is_null())
+                    // SAFETY: the string is readable for its length.
+                    .then(|| unsafe { bytes(argument.strptr, argument.strlength) }.to_vec())
+            })
+            .collect();
+        let answered = activation.call_back(label, &arguments);
+        let value = match answered {
+            CallBack::Returned(value) => value,
+            CallBack::NoLabel => {
+                if !rc.is_null() {
+                    // SAFETY: the caller's guarantee.
+                    unsafe { rc.write(0) };
+                }
+                return CALL_BACK_NO_LABEL;
+            }
+            CallBack::Ended => {
+                drop(activation);
+                unwind()
+            }
+        };
+        if !rc.is_null() {
+            let short = value.as_deref().map_or(0, short_value);
+            // SAFETY: the caller's guarantee.
+            unsafe { rc.write(short) };
+        }
+        // SAFETY: the caller's guarantee.
+        if let Some(result) = unsafe { result.as_mut() } {
+            match value {
+                None => {
+                    result.strptr = std::ptr::null_mut();
+                    result.strlength = 0;
+                }
+                Some(value) => {
+                    let mut capacity = result.strlength;
+                    if value.len() > capacity {
+                        result.strptr = std::ptr::null_mut();
+                    }
+                    // SAFETY: a buffer left in place holds `capacity` bytes.
+                    unsafe {
+                        give(
+                            &mut result.strptr,
+                            &mut result.strlength,
+                            &mut capacity,
+                            &value,
+                        )
+                    };
+                }
+            }
+        }
+        0
+    }
+
+    #[cfg(test)]
+    mod tests {
+        #[test]
+        fn short_value_is_atoi_cast_to_short() {
+            assert_eq!(super::short_value(b"42"), 42);
+            assert_eq!(super::short_value(b"  -7x"), -7);
+            assert_eq!(super::short_value(b"3 a 0 c"), 3);
+            assert_eq!(super::short_value(b"abc"), 0);
+            assert_eq!(super::short_value(b"65537"), 1);
+        }
+    }
+}
+
 /// What a stub read through the context, which is the channel
 /// `argumentExists` uses (`api/oorexxapi.h:4276`).
 #[cfg(test)]

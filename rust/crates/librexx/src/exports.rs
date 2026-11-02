@@ -8,12 +8,9 @@ use std::ffi::{c_char, c_int, c_short, c_void};
 
 use rexx_api::layout::{
     CONSTRXSTRING, RXSTRING, RexxInstance_, RexxReturnCode, RexxStemObject, RexxThreadContext_,
+    SHVBLOCK,
 };
 
-/// `RXSHV_NOAVL`: no interpreter to answer.
-const VARIABLE_POOL_UNAVAILABLE: RexxReturnCode = 144;
-/// `RX_CB_NOTSTARTED`.
-const CALL_BACK_NOT_STARTED: RexxReturnCode = 2;
 /// `RXARI_NOT_FOUND`.
 const TARGET_NOT_FOUND: RexxReturnCode = 1;
 
@@ -111,28 +108,32 @@ pub extern "C" fn RexxGetErrorMessageByNumber(_number: c_int) -> *const c_char {
     std::ptr::null()
 }
 
-/// `RexxVariablePool`.
+/// `RexxVariablePool`, against the activation that called the routine, classic function or
+/// exit this thread runs; `RXSHV_NOAVL` where it runs none.
 ///
 /// # Safety
 /// As [`RexxStart`].
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn RexxVariablePool(_blocks: *mut c_void) -> RexxReturnCode {
-    VARIABLE_POOL_UNAVAILABLE
+pub unsafe extern "C" fn RexxVariablePool(blocks: *mut SHVBLOCK) -> RexxReturnCode {
+    // SAFETY: the caller's guarantee, which is `variable_pool`'s.
+    unsafe { rexx_api::ffi::classic::variable_pool(blocks) }
 }
 
-/// `RexxCallBack`.
+/// `RexxCallBack`: a label of the program whose external function this thread runs, called
+/// as an internal function. A condition or `EXIT` in it unwinds the external function.
 ///
 /// # Safety
 /// As [`RexxStart`].
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn RexxCallBack(
-    _label: *const c_char,
-    _argc: usize,
-    _argv: *const CONSTRXSTRING,
-    _rc: *mut c_short,
-    _result: *mut RXSTRING,
+pub unsafe extern "C-unwind" fn RexxCallBack(
+    label: *const c_char,
+    argc: usize,
+    argv: *const CONSTRXSTRING,
+    rc: *mut c_short,
+    result: *mut RXSTRING,
 ) -> RexxReturnCode {
-    CALL_BACK_NOT_STARTED
+    // SAFETY: the caller's guarantee, which is `call_back`'s.
+    unsafe { rexx_api::ffi::classic::call_back(label, argc, argv, rc, result) }
 }
 
 /// `RexxSetHalt`.

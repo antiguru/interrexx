@@ -182,6 +182,19 @@ pub struct CONSTRXSTRING {
     pub strptr: *const c_char,
 }
 
+/// `SHVBLOCK` (`api/rexx.h:212-220`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct SHVBLOCK {
+    pub shvnext: *mut SHVBLOCK,
+    pub shvname: CONSTRXSTRING,
+    pub shvvalue: RXSTRING,
+    pub shvnamelen: usize,
+    pub shvvaluelen: usize,
+    pub shvcode: u8,
+    pub shvret: u8,
+}
+
 /// `RexxQueueTime` (`api/rexx.h:245-256`).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]

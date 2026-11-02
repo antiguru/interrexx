@@ -583,6 +583,18 @@ impl Surface for FakeHost {
     fn add_command_handler(&mut self, name: &[u8], handler: crate::load::CommandHandler) {
         self.handlers.push((name.to_vec(), handler));
     }
+
+    fn variable_pool(&mut self, _request: super::PoolRequest<'_>) -> super::PoolAnswer {
+        super::PoolAnswer::BadName
+    }
+
+    fn pool_variables(&mut self) -> Vec<(Vec<u8>, Vec<u8>)> {
+        Vec::new()
+    }
+
+    fn call_back(&mut self, _label: &[u8], _arguments: &[Option<Vec<u8>>]) -> super::CallBack {
+        super::CallBack::NoLabel
+    }
 }
 
 impl FakeHost {

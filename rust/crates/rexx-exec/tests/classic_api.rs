@@ -270,6 +270,36 @@ fn the_classic_function_and_subcommand_tests_pass() {
     );
 }
 
+/// The whole CLASSIC group, its variable-pool tests included: `RexxVariablePool` from a routine
+/// reaches its caller's variables (set, fetch and drop, direct and symbolic, the private names
+/// and `RXSHV_NEXTV`), and from a method answers `RXSHV_NOAVL`.
+#[test]
+fn the_whole_classic_group_passes() {
+    let outcome = classic();
+    assert!(
+        outcome.failed.is_empty() && outcome.ran == 72,
+        "{:?} failed of {} run:\n{}",
+        outcome.failed,
+        outcome.ran,
+        outcome.stdout
+    );
+}
+
+/// `RexxCallBack` from a classic function runs a label of its caller as an internal function:
+/// results, arguments, shared variables, `SIGL`, nesting, and a condition or `EXIT` in the
+/// label ending the external function.
+#[test]
+fn the_rexx_call_back_group_passes() {
+    let outcome = run_group("API/classic", "RexxCallBack", library_path(true));
+    assert!(
+        outcome.failed.is_empty() && outcome.ran == 19,
+        "{:?} failed of {} run:\n{}",
+        outcome.failed,
+        outcome.ran,
+        outcome.stdout
+    );
+}
+
 /// `rxsubcom LOAD` loads `orxclassic1` and finds its handler, so the group's `haveLibrary` tests
 /// run their bodies: more assertions than the same group makes without the library to load.
 #[test]

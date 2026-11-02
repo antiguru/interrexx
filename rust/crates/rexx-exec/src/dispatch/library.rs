@@ -392,6 +392,9 @@ impl Interp {
             });
             activation.set_frame(frame);
             activation.set_between_halves(stress);
+            if matches!(held, HeldCall::Routine(_)) {
+                activation.open_variable_pool();
+            }
             let answered = thread.enter(&activation, |contexts| match &held {
                 HeldCall::Method(held, _) => {
                     invoke::held_method(held, &contexts.method(), &activation, args)
@@ -1228,6 +1231,9 @@ impl OffBaton {
         if let Some(number) = pending {
             activation.raise(number);
         }
+        if matches!(held, HeldCall::Routine(_)) {
+            activation.open_variable_pool();
+        }
         thread.enter(&activation, |contexts| post(held.call(native, contexts)));
         activation.pending()
     }
@@ -1309,6 +1315,9 @@ impl PooledCall {
             activation.set_frame(self.frame);
             if let Some(number) = self.pending {
                 activation.raise(number);
+            }
+            if matches!(held, HeldCall::Routine(_)) {
+                activation.open_variable_pool();
             }
             let (completion, ended) = thread.enter(&activation, |contexts| {
                 drop(entered);
@@ -2146,6 +2155,7 @@ fn percent_g(value: f64, significant: usize) -> String {
     format!("{sign}0.{zeros}{}", digits.trim_end_matches('0'))
 }
 
+mod pool;
 mod surface;
 #[cfg(test)]
 mod tests;

@@ -426,6 +426,25 @@ impl Surface for Interp {
         }
     }
 
+    fn variable_pool(
+        &mut self,
+        request: rexx_api::callbacks::PoolRequest<'_>,
+    ) -> rexx_api::callbacks::PoolAnswer {
+        self.pool_request(request)
+    }
+
+    fn pool_variables(&mut self) -> Vec<(Vec<u8>, Vec<u8>)> {
+        Interp::pool_variables(self)
+    }
+
+    fn call_back(
+        &mut self,
+        label: &[u8],
+        arguments: &[Option<Vec<u8>>],
+    ) -> rexx_api::callbacks::CallBack {
+        Interp::call_back(self, label, arguments)
+    }
+
     fn in_caller(&mut self, frame: u64, serve: &mut dyn FnMut(&mut dyn Surface)) {
         match self.suspended_caller(frame) {
             Some(index) => serve(&mut *CallerSwap::new(self, index)),
@@ -831,7 +850,7 @@ impl Interp {
 
     /// The value `result` carries, or `None` with its condition held on the
     /// running native call.
-    fn held<T>(&mut self, result: Result<T, Failure>) -> Option<T> {
+    pub(super) fn held<T>(&mut self, result: Result<T, Failure>) -> Option<T> {
         match result {
             Ok(value) => Some(value),
             Err(failure) => {
@@ -858,7 +877,7 @@ impl Interp {
     /// A compound name's stem, with its period, and its tail resolved as
     /// `VALUE` resolves one: each piece that is a symbol replaced by the
     /// variable's value.
-    fn compound_parts(&mut self, upper: &[u8]) -> (Vec<u8>, Vec<u8>) {
+    pub(super) fn compound_parts(&mut self, upper: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let dot = upper
             .iter()
             .position(|&byte| byte == b'.')

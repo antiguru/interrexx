@@ -61,7 +61,9 @@ impl Interp {
         }
         let queue = self.current_queue_name()?;
         let borrowed: Vec<Option<&[u8]>> = texts.iter().map(Option::as_deref).collect();
-        let called = entry.call_function(name, &borrowed, &queue);
+        let called = self.run_classic_handler(name, arguments, || {
+            entry.call_function(name, &borrowed, &queue)
+        })?;
         if called.rc != 0 {
             self.blame_native_routine(name, None, arguments, crate::RoutineObject::OfCode, None);
             return Err(Raised::routine_failed(name).into());
@@ -70,7 +72,7 @@ impl Interp {
     }
 
     /// The name `RXQUEUE('Get')` answers.
-    fn current_queue_name(&mut self) -> Result<Vec<u8>, Failure> {
+    pub(crate) fn current_queue_name(&mut self) -> Result<Vec<u8>, Failure> {
         let Some(queue) = self.local_route(b"STDQUE")? else {
             return Ok(b"SESSION".to_vec());
         };

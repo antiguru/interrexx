@@ -262,6 +262,59 @@ pub trait Surface {
     /// to the environment `name`, upper-cased, replacing the handler that
     /// name had.
     fn add_command_handler(&mut self, name: &[u8], handler: crate::load::CommandHandler);
+
+    /// One `RexxVariablePool` request against the calling activation's
+    /// variables (rexxpg, "Variable Pool Interface").
+    fn variable_pool(&mut self, request: PoolRequest<'_>) -> PoolAnswer;
+
+    /// Every variable of the calling activation as `RXSHV_NEXTV` answers it,
+    /// name and string value: a stem's own value under its name where it has
+    /// one, then each tail as a compound name.
+    fn pool_variables(&mut self) -> Vec<(Vec<u8>, Vec<u8>)>;
+
+    /// `RexxCallBack`: the calling activation's label `label` run as an
+    /// internal function over `arguments` (`None` an omitted one).
+    fn call_back(&mut self, label: &[u8], arguments: &[Option<Vec<u8>>]) -> CallBack;
+}
+
+/// One `SHVBLOCK` request (`api/rexx.h`), its name as the block holds it.
+#[derive(Clone, Copy, Debug)]
+pub enum PoolRequest<'r> {
+    /// `RXSHV_SET` or, `symbolic`, `RXSHV_SYSET`.
+    Set {
+        name: &'r [u8],
+        symbolic: bool,
+        value: &'r [u8],
+    },
+    /// `RXSHV_FETCH` or `RXSHV_SYFET`.
+    Fetch { name: &'r [u8], symbolic: bool },
+    /// `RXSHV_DROPV` or `RXSHV_SYDRO`.
+    Drop { name: &'r [u8], symbolic: bool },
+    /// `RXSHV_PRIV`.
+    Private { name: &'r [u8] },
+}
+
+/// What one [`PoolRequest`] answered.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PoolAnswer {
+    /// Served: `new` where the variable had no value (`RXSHV_NEWV`), and the
+    /// value a fetch answers.
+    Served { new: bool, value: Option<Vec<u8>> },
+    /// `RXSHV_BADN`.
+    BadName,
+}
+
+/// What a [`Surface::call_back`] ended with.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CallBack {
+    /// The label returned, with its result where it gave one.
+    Returned(Option<Vec<u8>>),
+    /// No such label (`RX_CB_BADN`).
+    NoLabel,
+    /// The call raised a condition or exited, which the host keeps for the
+    /// external function's caller: the external function does not get
+    /// control back.
+    Ended,
 }
 
 /// `Error_Incorrect_method_positive` (`api/oorexxerrors.h`), which `ArrayAt`
@@ -1353,6 +1406,45 @@ impl Activation<'_> {
     pub fn context_variables(&self, outer: Option<u64>) -> RexxObjectPtr {
         self.surface_handle("CallContextInterface.GetAllContextVariables", |surface| {
             in_caller(surface, outer, |surface| surface.context_variables())
+        })
+    }
+
+    /// One `RexxVariablePool` request against the calling activation.
+    pub fn pool_request(&self, request: PoolRequest<'_>) -> PoolAnswer {
+        self.with_surface(
+            "RexxVariablePool",
+            PoolAnswer::Served {
+                new: true,
+                value: None,
+            },
+            |cx| {
+                cx.host
+                    .surface()
+                    .expect("checked by with_surface")
+                    .variable_pool(request)
+            },
+        )
+    }
+
+    /// The next variable of an `RXSHV_NEXTV` sequence, `None` at its end.
+    pub fn pool_next(&self) -> Option<(Vec<u8>, Vec<u8>)> {
+        self.next_pool_variable(|| {
+            self.with_surface("RexxVariablePool", Vec::new(), |cx| {
+                cx.host
+                    .surface()
+                    .expect("checked by with_surface")
+                    .pool_variables()
+            })
+        })
+    }
+
+    /// `RexxCallBack`.
+    pub fn call_back(&self, label: &[u8], arguments: &[Option<Vec<u8>>]) -> CallBack {
+        self.with_surface("RexxCallBack", CallBack::NoLabel, |cx| {
+            cx.host
+                .surface()
+                .expect("checked by with_surface")
+                .call_back(label, arguments)
         })
     }
 

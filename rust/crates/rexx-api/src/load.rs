@@ -1323,14 +1323,15 @@ impl ClassicEntry {
     /// current queue's name, as `NativeActivation::callRegisteredRoutine` does
     /// (`interpreter/execution/NativeActivation.cpp:1466`): each string NUL-terminated beyond its
     /// length, and the result in a `DEFRXSTRING` buffer the handler may replace with a block
-    /// `free` releases.
+    /// `free` releases. `None` where a `RexxCallBack` the handler made ended it, unwinding
+    /// through it, with the condition or `EXIT` kept by the host.
     #[must_use]
     pub fn call_function(
         self,
         name: &[u8],
         arguments: &[Option<&[u8]>],
         queue: &[u8],
-    ) -> ClassicResult<usize> {
+    ) -> Option<ClassicResult<usize>> {
         let name = terminated(name);
         let queue = terminated(queue);
         let held: Vec<Option<Vec<u8>>> = arguments
@@ -1358,7 +1359,7 @@ impl ClassicEntry {
         // SAFETY: `new`'s caller guaranteed a `RexxFunctionHandler` (`api/rexx.h`), mapped for
         // the process's life. Every string is NUL-terminated and outlives the call, `argv`
         // holds `arguments.len()` elements, and `result` addresses a buffer of its length.
-        let rc = unsafe {
+        let called = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
             let handler = std::mem::transmute::<*mut c_void, FunctionHandler>(self.address());
             handler(
                 name.as_ptr().cast(),
@@ -1367,10 +1368,15 @@ impl ClassicEntry {
                 queue.as_ptr().cast(),
                 &raw mut result,
             )
+        }));
+        let rc = match called {
+            Ok(rc) => rc,
+            Err(payload) if payload.is::<crate::ffi::Thrown>() => return None,
+            Err(payload) => std::panic::resume_unwind(payload),
         };
         // SAFETY: the handler left `result` addressing `buffer` or a block of its own.
         let value = unsafe { take_result(&result, buffer.as_mut_ptr()) };
-        ClassicResult { rc, value }
+        Some(ClassicResult { rc, value })
     }
 
     /// Calls a `RexxSubcomHandler` with `command`, as `CommandHandlerDispatcher::run` does
