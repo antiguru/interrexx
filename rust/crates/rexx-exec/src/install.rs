@@ -2340,6 +2340,16 @@ impl Interp {
         self.routine_generation = self.routine_generation.wrapping_add(1);
     }
 
+    /// [`Interp::routines_changed`] where the C API changed the macrospace or a registration
+    /// since this interpreter last looked: an extension's native call may have.
+    pub(crate) fn sync_api_changes(&mut self) {
+        let now = crate::capi::changes();
+        if now != self.api_changes_seen {
+            self.api_changes_seen = now;
+            self.routines_changed();
+        }
+    }
+
     /// [`Interp::resolve_library`] for a caller whose failure is a condition:
     /// 98.903 for a name that resolved to nothing and 98.982 for a package
     /// entry asking for a newer interpreter.

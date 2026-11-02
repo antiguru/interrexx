@@ -868,6 +868,7 @@ impl Interp {
     /// Pops the innermost native frame and takes its held condition out of
     /// it, leaving the rest held.
     fn take_native_frame(&mut self) -> (Popped, Box<crate::NativeFrame>) {
+        self.sync_api_changes();
         let mut frame = self
             .activity
             .native_handles

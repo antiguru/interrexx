@@ -356,3 +356,75 @@ fn a_failing_classic_function_raises_40_1() {
         "{stderr}"
     );
 }
+
+/// Runs `program` as `program.rex` in a fresh directory `name` holding `files`, with the
+/// compiled test libraries, against a private service it stops after. Its stdout.
+fn run_program(name: &str, program: &str, files: &[(&str, &str)]) -> String {
+    let work = scratch().join(name);
+    let _ = std::fs::remove_dir_all(&work);
+    std::fs::create_dir_all(&work).expect("a work directory");
+    std::fs::write(work.join("program.rex"), program).expect("the program is written");
+    for (file, text) in files {
+        std::fs::write(work.join(file), text).expect("a file is written");
+    }
+    let api = scratch().join(format!("api-{name}"));
+    let output = rexx(&["program.rex"], &work, &api, library_path(true))
+        .output()
+        .expect("rexx runs");
+    stop_service(&api);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    String::from_utf8_lossy(&output.stdout).into_owned()
+}
+
+/// A macro an extension adds or drops through the C API reaches a call site that resolved the
+/// name before: the site does not keep its earlier resolution. Matches the oracle.
+#[test]
+fn a_macrospace_change_through_the_c_api_reaches_a_resolved_call_site() {
+    let stdout = run_program(
+        "macro-generation",
+        "m = .M~new\n\
+         do i = 1 to 3\n\
+         \x20 if i = 2 then say 'add' m~add('FOO', 'macro.rex', 1)\n\
+         \x20 if i = 3 then say 'drop' m~drop('FOO')\n\
+         \x20 say foo()\n\
+         end\n\
+         ::class M\n\
+         ::method add external \"LIBRARY orxclassic TestAddMacro\"\n\
+         ::method drop external \"LIBRARY orxclassic TestDropMacro\"\n",
+        &[
+            ("foo.rex", "return 'file'\n"),
+            ("macro.rex", "return 'macro'\n"),
+        ],
+    );
+    assert_eq!(stdout, "file\nadd 0\nmacro\ndrop 0\nfile\n");
+}
+
+/// The C API and the program see one session queue: an extension's query and pull find a line
+/// the program queued while the interpreter held the queue in process, and the program pulls a
+/// line the extension added. Matches the oracle.
+#[test]
+fn the_c_api_and_the_program_share_the_session_queue() {
+    let stdout = run_program(
+        "session-queue",
+        "q = .Q~new\n\
+         queue 'from rexx'\n\
+         say 'count' q~count('SESSION') q~flag\n\
+         say 'pull' q~pull('SESSION') q~flag\n\
+         say 'add' q~add('SESSION', 'from c', 0) queued()\n\
+         parse pull line; say 'line' line\n\
+         ::class Q\n\
+         ::attribute flag get\n\
+         ::method count external \"LIBRARY orxclassic TestQueryQueue\"\n\
+         ::method pull external \"LIBRARY orxclassic TestPullFromQueue\"\n\
+         ::method add external \"LIBRARY orxclassic TestAddQueue\"\n",
+        &[],
+    );
+    assert_eq!(
+        stdout,
+        "count 0 1\npull 0 from rexx\nadd 0 1\nline from c\n"
+    );
+}

@@ -4522,6 +4522,24 @@ pub mod classic {
         (!reached.abandoned && reached.variable_pool_open()).then_some(reached)
     }
 
+    /// Where this thread runs a native call, has its interpreter move a session queue it still
+    /// holds in process to the service ([`crate::callbacks::Surface::share_session_queue`]):
+    /// what a C API operation on the session queue does first, so that it and the program
+    /// see one queue.
+    pub fn share_session_queue() {
+        // SAFETY: as in `calling`.
+        let Some(calling) = (unsafe { CALLING.get().cast::<Entered<'_>>().as_ref() }) else {
+            return;
+        };
+        // SAFETY: as in `calling`.
+        let activation = unsafe { &*calling.activation.cast::<Activation<'_>>() };
+        let held = activation.hold_baton();
+        let reached = Reached::checked(activation, held);
+        if !reached.abandoned {
+            reached.share_session_queue();
+        }
+    }
+
     /// The bytes `string` addresses, empty for a null pointer.
     ///
     /// # Safety

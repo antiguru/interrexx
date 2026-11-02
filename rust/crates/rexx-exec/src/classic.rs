@@ -111,6 +111,7 @@ impl Interp {
             return Err(Raised::redirection_not_supported(environment).into());
         }
         let (called, flags) = entry.call_subcom(command);
+        self.sync_api_changes();
         let text = match (called.rc, called.value) {
             (0, Some(value)) => value,
             (0, None) => b"0".to_vec(),

@@ -1707,6 +1707,10 @@ struct Interp {
     /// ([`Interp::merge_routines`]), and `~addRoutine`/`~addPublicRoutine`.
     /// See `Resolved::kept_until_routines_change`.
     pub(crate) routine_generation: u32,
+    /// [`capi::changes`] when this interpreter last moved
+    /// [`Interp::routine_generation`] for it: a macrospace or registration
+    /// change made through the C API, which an extension's native call makes.
+    pub(crate) api_changes_seen: u64,
     /// The classic function handlers calls have resolved, by uppercased name, kept until
     /// `RxFuncDrop` names them: a handler dropped by any other route stays callable here.
     pub(crate) classic_functions: FxHashMap<Vec<u8>, rexx_api::load::ClassicEntry>,
@@ -2417,6 +2421,7 @@ impl Interp {
             package_routines: FxHashMap::default(),
             package_routine_codes: Vec::new(),
             routine_generation: 0,
+            api_changes_seen: capi::changes(),
             classic_functions: FxHashMap::default(),
             classic_subcoms: FxHashMap::default(),
             global_references: rexx_api::handles::Table::new(),
@@ -3448,6 +3453,7 @@ impl Interp {
             package_routines: _,
             package_routine_codes: _,
             routine_generation: _,
+            api_changes_seen: _,
             // Entry points, not objects.
             classic_functions: _,
             classic_subcoms: _,

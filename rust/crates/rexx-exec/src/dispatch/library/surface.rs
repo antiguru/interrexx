@@ -445,6 +445,11 @@ impl Surface for Interp {
         Interp::call_back(self, label, arguments)
     }
 
+    fn share_session_queue(&mut self) {
+        let shared = Interp::share_session_queue(self);
+        self.held(shared);
+    }
+
     fn in_caller(&mut self, frame: u64, serve: &mut dyn FnMut(&mut dyn Surface)) {
         match self.suspended_caller(frame) {
             Some(index) => serve(&mut *CallerSwap::new(self, index)),

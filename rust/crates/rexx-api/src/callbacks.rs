@@ -275,6 +275,11 @@ pub trait Surface {
     /// `RexxCallBack`: the calling activation's label `label` run as an
     /// internal function over `arguments` (`None` an omitted one).
     fn call_back(&mut self, label: &[u8], arguments: &[Option<Vec<u8>>]) -> CallBack;
+
+    /// Moves the session queue to the API service where the interpreter still holds it in
+    /// process, as it does before a command, so that a C API operation on it and the program
+    /// see one queue.
+    fn share_session_queue(&mut self);
 }
 
 /// One `SHVBLOCK` request (`api/rexx.h`), its name as the block holds it.
@@ -1436,6 +1441,16 @@ impl Activation<'_> {
                     .pool_variables()
             })
         })
+    }
+
+    /// [`Surface::share_session_queue`].
+    pub fn share_session_queue(&self) {
+        self.with_surface("RexxAddQueue", (), |cx| {
+            cx.host
+                .surface()
+                .expect("checked by with_surface")
+                .share_session_queue();
+        });
     }
 
     /// `RexxCallBack`.

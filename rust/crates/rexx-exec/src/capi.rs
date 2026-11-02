@@ -3,6 +3,7 @@
 //!
 //! A `None` name is a NULL pointer at the C API. Statuses are the `rexxapidefs.h` values.
 
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, MutexGuard};
 
 use rexx_api::load::ClassicEntry;
@@ -23,6 +24,22 @@ use crate::rxapi_client;
 
 /// `RXSUBCOM_NONDROP`: only the registering process may drop.
 pub const OWNER_ONLY: usize = 1;
+
+/// How many macrospace and registration changes this module has made, which an interpreter of
+/// this process compares when a native call ends, so that a call site does not keep a
+/// resolution made before one ([`crate::Interp::sync_api_changes`]).
+static CHANGES: AtomicU64 = AtomicU64::new(0);
+
+/// [`CHANGES`] now.
+pub(crate) fn changes() -> u64 {
+    CHANGES.load(Ordering::Acquire)
+}
+
+/// Answers `status`, counting a change that may move what a name resolves to.
+fn changed(status: u64) -> u64 {
+    CHANGES.fetch_add(1, Ordering::AcqRel);
+    status
+}
 
 /// An entry-point registration.
 struct Registered {
@@ -72,6 +89,15 @@ fn status_of(reply: &Result<Reply, u64>) -> u64 {
 
 fn session() -> u64 {
     rxapi_client::session_handle()
+}
+
+/// Where `name` is the session queue, has an interpreter whose native call this thread runs
+/// move the session queue it still holds in process to the service first, as it does before a
+/// command, so that this operation and the program see one queue.
+fn attach_session(name: Option<&[u8]>) {
+    if name.is_none_or(|name| name.eq_ignore_ascii_case(b"SESSION")) {
+        rexx_api::ffi::classic::share_session_queue();
+    }
 }
 
 fn owned(name: Option<&[u8]>) -> Option<Vec<u8>> {
@@ -129,6 +155,7 @@ pub fn delete_queue(name: Option<&[u8]>) -> u64 {
 
 /// `RexxClearQueue`.
 pub fn clear_queue(name: Option<&[u8]>) -> u64 {
+    attach_session(name);
     status_of(&call(Request::ClearQueue {
         session: session(),
         name: owned(name),
@@ -137,6 +164,7 @@ pub fn clear_queue(name: Option<&[u8]>) -> u64 {
 
 /// `RexxQueryQueue`: the status and the count.
 pub fn query_queue(name: Option<&[u8]>) -> (u64, Option<u64>) {
+    attach_session(name);
     match call(Request::QueryQueue {
         session: session(),
         name: owned(name),
@@ -148,6 +176,7 @@ pub fn query_queue(name: Option<&[u8]>) -> (u64, Option<u64>) {
 
 /// `RexxAddQueue`.
 pub fn add_queue(name: Option<&[u8]>, data: Vec<u8>, flag: u64) -> u64 {
+    attach_session(name);
     status_of(&call(Request::AddQueue {
         session: session(),
         name: owned(name),
@@ -159,6 +188,7 @@ pub fn add_queue(name: Option<&[u8]>, data: Vec<u8>, flag: u64) -> u64 {
 
 /// `RexxPullFromQueue`: the status and the item.
 pub fn pull_queue(name: Option<&[u8]>, wait: u64) -> (u64, Option<Item>) {
+    attach_session(name);
     match call(Request::PullQueue {
         session: session(),
         name: owned(name),
@@ -178,14 +208,14 @@ pub fn register_library(
     user_area: Option<[u8; 16]>,
     drop_authority: usize,
 ) -> u64 {
-    status_of(&call(Request::Register {
+    changed(status_of(&call(Request::Register {
         registry,
         name: name.to_vec(),
         library: library.to_vec(),
         procedure: procedure.to_vec(),
         user_area,
         owner_only: drop_authority == OWNER_ONLY,
-    }))
+    })))
 }
 
 /// `RexxRegister*Exe`: `RXSUBCOM_DUP` where this process already has `name`, the first entry
@@ -206,7 +236,7 @@ pub fn register_entry(
         entry,
         user_area: user_area.unwrap_or_default(),
     });
-    OK
+    changed(OK)
 }
 
 /// The entry point this process registered as `name`.
@@ -246,14 +276,14 @@ pub fn deregister(registry: Registry, name: &[u8], library: Option<&[u8]>) -> u6
         let mut entries = entry_points();
         if let Some(at) = find(&entries, registry, name) {
             entries.remove(at);
-            return OK;
+            return changed(OK);
         }
     }
-    status_of(&call(Request::Deregister {
+    changed(status_of(&call(Request::Deregister {
         registry,
         name: name.to_vec(),
         library: library.unwrap_or_default().to_vec(),
-    }))
+    })))
 }
 
 /// The handler `name` resolves to in `registry`, as `RexxResolveSubcom` and its siblings find
@@ -318,23 +348,23 @@ pub fn add_macro(name: &[u8], file: &[u8], position: u64) -> u64 {
     let Some(image) = macros::translate(file, name) else {
         return macros::SOURCE_NOT_FOUND;
     };
-    status_of(&call(Request::AddMacro {
+    changed(status_of(&call(Request::AddMacro {
         name: name.to_vec(),
         image,
         position,
-    }))
+    })))
 }
 
 /// `RexxDropMacro`.
 pub fn drop_macro(name: &[u8]) -> u64 {
-    status_of(&call(Request::DropMacro {
+    changed(status_of(&call(Request::DropMacro {
         name: name.to_vec(),
-    }))
+    })))
 }
 
 /// `RexxClearMacroSpace`.
 pub fn clear_macros() -> u64 {
-    status_of(&call(Request::ClearMacroSpace))
+    changed(status_of(&call(Request::ClearMacroSpace)))
 }
 
 /// `RexxQueryMacro`: the status and the position, 0 where absent.
@@ -349,10 +379,10 @@ pub fn query_macro(name: &[u8]) -> (u64, u64) {
 
 /// `RexxReorderMacro`.
 pub fn reorder_macro(name: &[u8], position: u64) -> u64 {
-    status_of(&call(Request::ReorderMacro {
+    changed(status_of(&call(Request::ReorderMacro {
         name: name.to_vec(),
         position,
-    }))
+    })))
 }
 
 /// `RexxSaveMacroSpace`: the macros `names` lists, or every one, written to `file`. A failure
@@ -381,5 +411,5 @@ pub fn load_macros(names: Option<Vec<Vec<u8>>>, file: &[u8]) -> u64 {
         names,
         macros: read,
     }));
-    if status == OK { loaded } else { status }
+    changed(if status == OK { loaded } else { status })
 }

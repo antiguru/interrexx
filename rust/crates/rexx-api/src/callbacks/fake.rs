@@ -595,6 +595,8 @@ impl Surface for FakeHost {
     fn call_back(&mut self, _label: &[u8], _arguments: &[Option<Vec<u8>>]) -> super::CallBack {
         super::CallBack::NoLabel
     }
+
+    fn share_session_queue(&mut self) {}
 }
 
 impl FakeHost {
