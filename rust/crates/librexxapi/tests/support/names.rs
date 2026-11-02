@@ -115,6 +115,11 @@ pub fn exported_rexx_functions(path: &Path) -> BTreeSet<String> {
         .collect()
 }
 
+/// Every symbol `path`'s symbol tables name, one `readelf` line each.
+pub fn symbol_table(path: &Path) -> String {
+    readelf(&["--syms", "-W"], path)
+}
+
 /// `path`'s dynamic section entries of `kind` (`NEEDED`, `SONAME`, `RUNPATH`), their bracketed
 /// values.
 pub fn dynamic_entries(path: &Path, kind: &str) -> Vec<String> {

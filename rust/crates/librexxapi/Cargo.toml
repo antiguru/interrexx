@@ -11,12 +11,9 @@ name = "rexxapi"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-# The interpreter's API client, whose connection, session queue and in-process
-# registrations the exports share with any interpreter in the same image.
-rexx-exec = { path = "../rexx-exec" }
-# The `#[repr(C)]` structs of `api/rexx.h`.
+# The `#[repr(C)]` structs of `api/rexx.h` the forwarded signatures name.
 rexx-api = { path = "../rexx-api" }
-# `malloc` and `free`: blocks the API hands out are released with `RexxFreeMemory` or `free`.
+# `dlopen` and `dlsym`, which find each forwarded name in `librexx.so.4`.
 libc = "0.2.186"
 
 [lints]

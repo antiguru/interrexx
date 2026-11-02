@@ -76,6 +76,7 @@ fn only_the_granted_module_may_say_unsafe() {
         granted,
         vec![
             "crates/librexx/src/exports.rs".to_string(),
+            "crates/librexx/src/rexxapi_exports.rs".to_string(),
             "crates/librexxapi/src/exports.rs".to_string(),
             "crates/rexx-api/src/ffi.rs".to_string(),
             "crates/rexx-api/src/load.rs".to_string(),
@@ -100,6 +101,7 @@ fn only_the_granted_module_may_say_unsafe() {
         uses,
         vec![
             "crates/librexx/src/exports.rs".to_string(),
+            "crates/librexx/src/rexxapi_exports.rs".to_string(),
             "crates/librexxapi/src/exports.rs".to_string(),
             "crates/rexx-api/src/ffi.rs".to_string(),
             "crates/rexx-api/src/load.rs".to_string(),

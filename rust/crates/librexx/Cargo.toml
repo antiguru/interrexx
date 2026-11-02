@@ -15,7 +15,7 @@ crate-type = ["cdylib", "rlib"]
 rexx-exec = { path = "../rexx-exec" }
 # The `#[repr(C)]` structs of `api/rexx.h` and `api/oorexxapi.h`.
 rexx-api = { path = "../rexx-api" }
-# `malloc` and `free`, which `librexxapi`'s exports compiled in here use.
+# `malloc` and `free`, which `librexxapi`'s exports, owned here, use.
 libc = "0.2.186"
 
 [lints]

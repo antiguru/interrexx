@@ -647,9 +647,15 @@ fn concurrent_instances_start_run_and_terminate() {
 
 /// A driver from `tests/classic_api/`, compiled against the test libraries' `librexx.so.4`.
 fn driver(name: &str) -> PathBuf {
+    driver_linked(name, name, &["-lrexx", "-lrexxapi"])
+}
+
+/// The driver `name` from `tests/classic_api/`, built as `out` with `flags` ending the command
+/// line (`-l` options in that order), against the test libraries.
+fn driver_linked(name: &str, out: &str, flags: &[&str]) -> PathBuf {
     let source =
         Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("tests/classic_api/{name}.cpp"));
-    let out = testbinaries().join(name);
+    let out = testbinaries().join(out);
     let api = repository().join("third_party/ooRexx/api");
     let output = Command::new("c++")
         .arg("-o")
@@ -659,7 +665,8 @@ fn driver(name: &str) -> PathBuf {
         .arg(format!("-I{}", api.join("platform/unix").display()))
         .arg(format!("-L{}", testbinaries().display()))
         .arg(format!("-Wl,-rpath,{}", testbinaries().display()))
-        .args(["-pthread", "-lrexx", "-lrexxapi"])
+        .arg("-pthread")
+        .args(flags)
         .output()
         .expect("c++ runs");
     assert!(
@@ -672,7 +679,16 @@ fn driver(name: &str) -> PathBuf {
 
 /// Runs the driver `name` from a directory holding `files`, with `arguments`.
 fn run_driver(name: &str, files: &[(&str, &str)], arguments: &[&str]) -> std::process::Output {
-    let binary = driver(name);
+    run_binary(&driver(name), name, files, arguments)
+}
+
+/// Runs `binary`, a driver, as `name` from a directory holding `files`, with `arguments`.
+fn run_binary(
+    binary: &Path,
+    name: &str,
+    files: &[(&str, &str)],
+    arguments: &[&str],
+) -> std::process::Output {
     let dir = scratch().join(format!("driver-{name}"));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("the driver's directory");
@@ -691,6 +707,38 @@ fn run_driver(name: &str, files: &[(&str, &str)], arguments: &[&str]) -> std::pr
         .expect("the driver runs");
     stop_service(&api);
     output
+}
+
+/// A program linked against `librexxapi.so.4` before `librexx.so.4`, after it, against
+/// `librexx.so.4` alone, or against `librexxapi.so.4` alone (finding `RexxStart` in the
+/// `librexx.so.4` loaded as its dependency) registers a function with `RexxRegisterFunctionExe`
+/// and calls it from a program `RexxStart` runs: `librexx.so.4` owns the one API state and
+/// `librexxapi.so.4` forwards to it (Moritz, 2026-11-03, option A). Before, `librexxapi.so.4`
+/// held a state of its own, the registration went there and `RexxStart` raised Error 43.1 for
+/// `-lrexxapi -lrexx`. The oracle answers as here in both two-library orders; it links neither
+/// single-library form (its `librexx.so.4` exports no registration, its `librexxapi.so.4` no
+/// `RexxStart`).
+#[test]
+fn a_registration_reaches_rexx_start_in_every_link_order() {
+    for (out, libraries) in [
+        ("order-rexx-first", &["-lrexx", "-lrexxapi"][..]),
+        ("order-rexxapi-first", &["-lrexxapi", "-lrexx"][..]),
+        ("order-rexx-alone", &["-lrexx"][..]),
+        (
+            "order-rexxapi-alone",
+            &["-DFIND_REXXSTART", "-lrexxapi", "-ldl"][..],
+        ),
+    ] {
+        let binary = driver_linked("order", out, libraries);
+        let output = run_binary(&binary, out, &[], &[]);
+        assert!(output.status.success(), "{out}: {output:?}");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stdout),
+            "register 0 query 0\ncode 0 result fromC\nderegister 0\n",
+            "{out}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 }
 
 /// Review Focus 4: a thread the instance never saw attaches, calls a program through the

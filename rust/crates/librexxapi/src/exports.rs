@@ -1,219 +1,58 @@
-//! The `librexxapi` C entry points: shims over `rexx_exec::capi`. The `rexx` executable and
-//! `librexx` compile this file too, so an extension reaches the state of the interpreter its
-//! symbols bind to.
-// D-U1 as extended 2026-11-02: one export module per C library.
+//! `librexxapi.so.4`'s C entry points, each forwarding to the definition `librexx.so.4` exports
+//! (Moritz, 2026-11-03, option A). This library holds no API state: `librexx.so.4`, which it
+//! records as `NEEDED`, owns it, so a program linked against either library or both, in either
+//! order, registers and runs against one state.
+// D-U1 as extended 2026-11-02: the export modules of the C libraries.
 #![allow(unsafe_code)]
 #![allow(non_snake_case)]
 
 use std::ffi::{CStr, c_char, c_void};
+use std::sync::OnceLock;
 
 use rexx_api::layout::{
     CONSTRXSTRING, REXXDATETIME, REXXPFN, RXSTRING, RexxQueueTime, RexxReturnCode,
 };
-use rexx_api::load::ClassicEntry;
-use rexx_exec::capi::{self, Registry, Timestamp};
 
-fn code(status: u64) -> RexxReturnCode {
-    RexxReturnCode::try_from(status).unwrap_or(RexxReturnCode::MAX)
-}
-
-/// The bytes of the C string at `pointer`, `None` for null.
-///
-/// # Safety
-/// `pointer` is null or a NUL-terminated string that outlives `'a`.
-unsafe fn text<'a>(pointer: *const c_char) -> Option<&'a [u8]> {
-    // SAFETY: the caller's guarantee.
-    (!pointer.is_null()).then(|| unsafe { CStr::from_ptr(pointer) }.to_bytes())
-}
-
-/// The bytes of a name the API requires, the empty string for null.
-///
-/// # Safety
-/// As [`text`].
-unsafe fn name<'a>(pointer: *const c_char) -> &'a [u8] {
-    // SAFETY: the caller's guarantee.
-    unsafe { text(pointer) }.unwrap_or_default()
-}
-
-/// The 16 bytes of a user area, `None` for null.
-///
-/// # Safety
-/// `pointer` is null or addresses 16 readable bytes.
-unsafe fn user_area(pointer: *const c_char) -> Option<[u8; 16]> {
-    // SAFETY: the caller's guarantee.
-    (!pointer.is_null()).then(|| unsafe { pointer.cast::<[u8; 16]>().read_unaligned() })
-}
-
-/// The names a macrospace call lists, `None` for a null list.
-///
-/// # Safety
-/// `names` is null or addresses `count` pointers, each as [`text`] asks.
-unsafe fn names(count: usize, names: *const *const c_char) -> Option<Vec<Vec<u8>>> {
-    if names.is_null() {
-        return None;
-    }
-    // SAFETY: the caller's guarantee.
-    let list = unsafe { std::slice::from_raw_parts(names, count) };
-    // SAFETY: as above, for each element.
-    Some(
-        list.iter()
-            .map(|&each| unsafe { name(each) }.to_vec())
-            .collect(),
-    )
-}
-
-/// Hands `bytes` back through `data`: into the caller's buffer where it is strictly shorter than
-/// the buffer, else into a new block `RexxFreeMemory` releases, with a NUL after the bytes.
-/// `false` where no block could be allocated.
-///
-/// # Safety
-/// `data` addresses an initialised `RXSTRING` whose non-null `strptr` has `strlength` writable
-/// bytes.
-unsafe fn hand_back(data: *mut RXSTRING, bytes: &[u8]) -> bool {
-    // SAFETY: the caller's guarantee.
-    let data = unsafe { &mut *data };
-    if !data.strptr.is_null() && bytes.len() < data.strlength {
-        // SAFETY: the buffer holds `strlength` bytes, more than `bytes.len()`.
-        unsafe { std::ptr::copy_nonoverlapping(bytes.as_ptr(), data.strptr.cast(), bytes.len()) };
-        data.strlength = bytes.len();
-        return true;
-    }
-    // SAFETY: `malloc` has no precondition.
-    let block = unsafe { libc::malloc(bytes.len() + 1) }.cast::<u8>();
-    if block.is_null() {
-        return false;
-    }
-    // SAFETY: the block holds `bytes.len() + 1` bytes.
-    unsafe {
-        std::ptr::copy_nonoverlapping(bytes.as_ptr(), block, bytes.len());
-        block.add(bytes.len()).write(0);
-    }
-    data.strptr = block.cast();
-    data.strlength = bytes.len();
-    true
-}
-
-fn queue_time(time: Timestamp) -> RexxQueueTime {
-    RexxQueueTime {
-        hours: time.hours,
-        minutes: time.minutes,
-        seconds: time.seconds,
-        hundredths: 0,
-        day: time.day,
-        month: time.month,
-        year: time.year,
-        weekday: time.weekday,
-        microseconds: 0,
-        yearday: u32::from(time.yearday),
-    }
-}
-
-/// `RexxPullFromQueue` and `RexxPullQueue`: the status, with the item's time where an item was
-/// handed back.
-///
-/// # Safety
-/// As [`hand_back`], and `name` as [`text`].
-unsafe fn pull(
-    name: *const c_char,
-    data: *mut RXSTRING,
-    wait: usize,
-) -> (RexxReturnCode, Option<Timestamp>) {
-    // SAFETY: the caller's guarantee.
-    let (status, item) = capi::pull_queue(unsafe { text(name) }, wait as u64);
-    let Some(item) = item else {
-        return (code(status), None);
-    };
-    // SAFETY: the caller's guarantee.
-    if !data.is_null() && !unsafe { hand_back(data, &item.data) } {
-        return (code(capi::MEMORY_FAILURE), None);
-    }
-    (code(status), Some(item.time))
-}
-
-/// An entry-point registration.
-///
-/// # Safety
-/// `name` and `user` as [`text`] and [`user_area`] ask; a non-null `entry` is a handler of
-/// `registry`'s signature, mapped for the process's life.
-unsafe fn register_entry(
-    registry: Registry,
-    name: *const c_char,
-    entry: REXXPFN,
-    user: *const c_char,
-) -> RexxReturnCode {
-    // SAFETY: the caller's guarantee that `entry` is such a handler.
-    let Some(entry) = (unsafe { ClassicEntry::new(entry) }) else {
-        return code(capi::BAD_ENTRY);
-    };
-    // SAFETY: the caller's guarantee.
-    let status =
-        unsafe { capi::register_entry(registry, self::name(name), entry, user_area(user)) };
-    code(status)
-}
-
-/// A query: `*flags` is 0, then 1 when found, and `user` gets the stored area when found.
-///
-/// # Safety
-/// As [`RexxQuerySubcom`].
-unsafe fn query(
-    registry: Registry,
-    name: *const c_char,
-    library: *const c_char,
-    flags: *mut u16,
-    user: *mut c_char,
-) -> RexxReturnCode {
-    if !flags.is_null() {
-        // SAFETY: the caller's guarantee.
-        unsafe { flags.write(0) };
-    }
-    // SAFETY: the caller's guarantee.
-    let (status, area) =
-        unsafe { capi::query_registration(registry, self::name(name), text(library)) };
-    if status == 0 {
-        if !flags.is_null() {
-            // SAFETY: as above.
-            unsafe { flags.write(1) };
+/// The definition of `name` in `librexx.so.4`, which the loader mapped as this library's
+/// `NEEDED` entry. Lookup goes through `librexx.so.4`'s handle, never the global scope, where
+/// this library's own definition may come first. Aborts where the library or the name is missing:
+/// there is no state to answer from.
+fn target(name: &CStr) -> *mut c_void {
+    static LIBREXX: OnceLock<usize> = OnceLock::new();
+    let handle = *LIBREXX.get_or_init(|| {
+        let soname = c"librexx.so.4";
+        // SAFETY: `soname` is NUL-terminated; `RTLD_NOLOAD` maps nothing new.
+        let mut handle =
+            unsafe { libc::dlopen(soname.as_ptr(), libc::RTLD_NOW | libc::RTLD_NOLOAD) };
+        if handle.is_null() {
+            // SAFETY: as above; loading the library runs only its own initialisers.
+            handle = unsafe { libc::dlopen(soname.as_ptr(), libc::RTLD_NOW) };
         }
-        if let Some(area) = area
-            && !user.is_null()
-        {
-            // SAFETY: the caller's guarantee of 16 writable bytes.
-            unsafe { user.cast::<[u8; 16]>().write_unaligned(area) };
+        if handle.is_null() {
+            failed("librexx.so.4 is not loaded and cannot be");
         }
+        handle as usize
+    });
+    // SAFETY: `handle` came from `dlopen` and is never closed; `name` is NUL-terminated.
+    let symbol = unsafe { libc::dlsym(handle as *mut c_void, name.as_ptr()) };
+    if symbol.is_null() {
+        failed(&format!(
+            "librexx.so.4 defines no {}",
+            name.to_string_lossy()
+        ));
     }
-    code(status)
+    symbol
 }
 
-/// A library registration.
-///
-/// # Safety
-/// Each pointer as [`text`] or [`user_area`] asks.
-unsafe fn register_library(
-    registry: Registry,
-    name: *const c_char,
-    library: *const c_char,
-    procedure: *const c_char,
-    user: *const c_char,
-    drop_authority: usize,
-) -> RexxReturnCode {
-    // SAFETY: the caller's guarantee, for each pointer.
-    let status = unsafe {
-        capi::register_library(
-            registry,
-            self::name(name),
-            self::name(library),
-            self::name(procedure),
-            user_area(user),
-            drop_authority,
-        )
-    };
-    code(status)
+fn failed(what: &str) -> ! {
+    eprintln!("librexxapi.so.4: {what}");
+    std::process::abort()
 }
 
-/// `RexxRegisterSubcomDll`.
+/// Forwards to `librexx.so.4`'s `RexxRegisterSubcomDll`.
 ///
 /// # Safety
-/// Every pointer is null or what `api/rexx.h` declares.
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxRegisterSubcomDll(
     name: *const c_char,
@@ -222,37 +61,48 @@ pub unsafe extern "C" fn RexxRegisterSubcomDll(
     user: *const c_char,
     drop_authority: usize,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxRegisterSubcomDll` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(
+                *const c_char,
+                *const c_char,
+                *const c_char,
+                *const c_char,
+                usize,
+            ) -> RexxReturnCode,
+        >(target(c"RexxRegisterSubcomDll"))
+    };
     // SAFETY: the caller's guarantee.
-    unsafe {
-        register_library(
-            Registry::Subcom,
-            name,
-            library,
-            procedure,
-            user,
-            drop_authority,
-        )
-    }
+    unsafe { forward(name, library, procedure, user, drop_authority) }
 }
 
-/// `RexxRegisterSubcomExe`.
+/// Forwards to `librexx.so.4`'s `RexxRegisterSubcomExe`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`]; a non-null `entry` is a `RexxSubcomHandler`.
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxRegisterSubcomExe(
     name: *const c_char,
     entry: REXXPFN,
     user: *const c_char,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxRegisterSubcomExe` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(*const c_char, REXXPFN, *const c_char) -> RexxReturnCode,
+        >(target(c"RexxRegisterSubcomExe"))
+    };
     // SAFETY: the caller's guarantee.
-    unsafe { register_entry(Registry::Subcom, name, entry, user) }
+    unsafe { forward(name, entry, user) }
 }
 
-/// `RexxQuerySubcom`.
+/// Forwards to `librexx.so.4`'s `RexxQuerySubcom`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`]; a non-null `user` has 16 writable bytes.
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxQuerySubcom(
     name: *const c_char,
@@ -260,40 +110,66 @@ pub unsafe extern "C" fn RexxQuerySubcom(
     flags: *mut u16,
     user: *mut c_char,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxQuerySubcom` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(
+                *const c_char,
+                *const c_char,
+                *mut u16,
+                *mut c_char,
+            ) -> RexxReturnCode,
+        >(target(c"RexxQuerySubcom"))
+    };
     // SAFETY: the caller's guarantee.
-    unsafe { query(Registry::Subcom, name, library, flags, user) }
+    unsafe { forward(name, library, flags, user) }
 }
 
-/// `RexxDeregisterSubcom`.
+/// Forwards to `librexx.so.4`'s `RexxDeregisterSubcom`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxDeregisterSubcom(
     name: *const c_char,
     library: *const c_char,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxDeregisterSubcom` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(*const c_char, *const c_char) -> RexxReturnCode,
+        >(target(c"RexxDeregisterSubcom"))
+    };
     // SAFETY: the caller's guarantee.
-    code(unsafe { capi::deregister(Registry::Subcom, self::name(name), text(library)) })
+    unsafe { forward(name, library) }
 }
 
-/// `RexxLoadSubcom`: loads `name`'s handler; the library is ignored.
+/// Forwards to `librexx.so.4`'s `RexxLoadSubcom`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxLoadSubcom(
     name: *const c_char,
-    _library: *const c_char,
+    library: *const c_char,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxLoadSubcom` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(*const c_char, *const c_char) -> RexxReturnCode,
+        >(target(c"RexxLoadSubcom"))
+    };
     // SAFETY: the caller's guarantee.
-    code(capi::load_subcom(unsafe { self::name(name) }))
+    unsafe { forward(name, library) }
 }
 
-/// `RexxRegisterExitDll`.
+/// Forwards to `librexx.so.4`'s `RexxRegisterExitDll`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxRegisterExitDll(
     name: *const c_char,
@@ -302,50 +178,68 @@ pub unsafe extern "C" fn RexxRegisterExitDll(
     user: *const c_char,
     drop_authority: usize,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxRegisterExitDll` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(
+                *const c_char,
+                *const c_char,
+                *const c_char,
+                *const c_char,
+                usize,
+            ) -> RexxReturnCode,
+        >(target(c"RexxRegisterExitDll"))
+    };
     // SAFETY: the caller's guarantee.
-    unsafe {
-        register_library(
-            Registry::Exit,
-            name,
-            library,
-            procedure,
-            user,
-            drop_authority,
-        )
-    }
+    unsafe { forward(name, library, procedure, user, drop_authority) }
 }
 
-/// `RexxRegisterExitExe`.
+/// Forwards to `librexx.so.4`'s `RexxRegisterExitExe`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`]; a non-null `entry` is a `RexxExitHandler`.
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxRegisterExitExe(
     name: *const c_char,
     entry: REXXPFN,
     user: *const c_char,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxRegisterExitExe` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(*const c_char, REXXPFN, *const c_char) -> RexxReturnCode,
+        >(target(c"RexxRegisterExitExe"))
+    };
     // SAFETY: the caller's guarantee.
-    unsafe { register_entry(Registry::Exit, name, entry, user) }
+    unsafe { forward(name, entry, user) }
 }
 
-/// `RexxDeregisterExit`.
+/// Forwards to `librexx.so.4`'s `RexxDeregisterExit`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxDeregisterExit(
     name: *const c_char,
     library: *const c_char,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxDeregisterExit` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(*const c_char, *const c_char) -> RexxReturnCode,
+        >(target(c"RexxDeregisterExit"))
+    };
     // SAFETY: the caller's guarantee.
-    code(unsafe { capi::deregister(Registry::Exit, self::name(name), text(library)) })
+    unsafe { forward(name, library) }
 }
 
-/// `RexxQueryExit`.
+/// Forwards to `librexx.so.4`'s `RexxQueryExit`.
 ///
 /// # Safety
-/// As [`RexxQuerySubcom`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxQueryExit(
     name: *const c_char,
@@ -353,156 +247,228 @@ pub unsafe extern "C" fn RexxQueryExit(
     flags: *mut u16,
     user: *mut c_char,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxQueryExit` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(
+                *const c_char,
+                *const c_char,
+                *mut u16,
+                *mut c_char,
+            ) -> RexxReturnCode,
+        >(target(c"RexxQueryExit"))
+    };
     // SAFETY: the caller's guarantee.
-    unsafe { query(Registry::Exit, name, library, flags, user) }
+    unsafe { forward(name, library, flags, user) }
 }
 
-/// `RexxRegisterFunctionDll`: always owner-only.
+/// Forwards to `librexx.so.4`'s `RexxRegisterFunctionDll`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxRegisterFunctionDll(
     name: *const c_char,
     library: *const c_char,
     procedure: *const c_char,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxRegisterFunctionDll` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(*const c_char, *const c_char, *const c_char) -> RexxReturnCode,
+        >(target(c"RexxRegisterFunctionDll"))
+    };
     // SAFETY: the caller's guarantee.
-    unsafe {
-        register_library(
-            Registry::Function,
-            name,
-            library,
-            procedure,
-            std::ptr::null(),
-            capi::OWNER_ONLY,
-        )
-    }
+    unsafe { forward(name, library, procedure) }
 }
 
-/// `RexxRegisterFunctionExe`.
+/// Forwards to `librexx.so.4`'s `RexxRegisterFunctionExe`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`]; a non-null `entry` is a `RexxFunctionHandler`.
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxRegisterFunctionExe(
     name: *const c_char,
     entry: REXXPFN,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxRegisterFunctionExe` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(*const c_char, REXXPFN) -> RexxReturnCode,
+        >(target(c"RexxRegisterFunctionExe"))
+    };
     // SAFETY: the caller's guarantee.
-    unsafe { register_entry(Registry::Function, name, entry, std::ptr::null()) }
+    unsafe { forward(name, entry) }
 }
 
-/// `RexxDeregisterFunction`.
+/// Forwards to `librexx.so.4`'s `RexxDeregisterFunction`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxDeregisterFunction(name: *const c_char) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxDeregisterFunction` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<*mut c_void, unsafe extern "C" fn(*const c_char) -> RexxReturnCode>(
+            target(c"RexxDeregisterFunction"),
+        )
+    };
     // SAFETY: the caller's guarantee.
-    code(unsafe { capi::deregister(Registry::Function, self::name(name), None) })
+    unsafe { forward(name) }
 }
 
-/// `RexxQueryFunction`.
+/// Forwards to `librexx.so.4`'s `RexxQueryFunction`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxQueryFunction(name: *const c_char) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxQueryFunction` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<*mut c_void, unsafe extern "C" fn(*const c_char) -> RexxReturnCode>(
+            target(c"RexxQueryFunction"),
+        )
+    };
     // SAFETY: the caller's guarantee.
-    code(capi::query_function(unsafe { self::name(name) }))
+    unsafe { forward(name) }
 }
 
-/// `RexxAddMacro`.
+/// Forwards to `librexx.so.4`'s `RexxAddMacro`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxAddMacro(
     name: *const c_char,
     file: *const c_char,
     position: usize,
 ) -> RexxReturnCode {
-    // SAFETY: the caller's guarantee, for each pointer.
-    code(unsafe { capi::add_macro(self::name(name), self::name(file), position as u64) })
+    // SAFETY: `librexx.so.4` defines `RexxAddMacro` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(*const c_char, *const c_char, usize) -> RexxReturnCode,
+        >(target(c"RexxAddMacro"))
+    };
+    // SAFETY: the caller's guarantee.
+    unsafe { forward(name, file, position) }
 }
 
-/// `RexxDropMacro`.
+/// Forwards to `librexx.so.4`'s `RexxDropMacro`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxDropMacro(name: *const c_char) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxDropMacro` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<*mut c_void, unsafe extern "C" fn(*const c_char) -> RexxReturnCode>(
+            target(c"RexxDropMacro"),
+        )
+    };
     // SAFETY: the caller's guarantee.
-    code(capi::drop_macro(unsafe { self::name(name) }))
+    unsafe { forward(name) }
 }
 
-/// `RexxSaveMacroSpace`: every macro where `names` is null.
+/// Forwards to `librexx.so.4`'s `RexxSaveMacroSpace`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`]; a non-null `names` addresses `count` names.
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxSaveMacroSpace(
     count: usize,
     names: *const *const c_char,
     file: *const c_char,
 ) -> RexxReturnCode {
-    // SAFETY: the caller's guarantee, for each pointer.
-    code(unsafe { capi::save_macros(self::names(count, names), self::name(file)) })
+    // SAFETY: `librexx.so.4` defines `RexxSaveMacroSpace` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(usize, *const *const c_char, *const c_char) -> RexxReturnCode,
+        >(target(c"RexxSaveMacroSpace"))
+    };
+    // SAFETY: the caller's guarantee.
+    unsafe { forward(count, names, file) }
 }
 
-/// `RexxLoadMacroSpace`: every macro where `names` is null.
+/// Forwards to `librexx.so.4`'s `RexxLoadMacroSpace`.
 ///
 /// # Safety
-/// As [`RexxSaveMacroSpace`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxLoadMacroSpace(
     count: usize,
     names: *const *const c_char,
     file: *const c_char,
 ) -> RexxReturnCode {
-    // SAFETY: the caller's guarantee, for each pointer.
-    code(unsafe { capi::load_macros(self::names(count, names), self::name(file)) })
+    // SAFETY: `librexx.so.4` defines `RexxLoadMacroSpace` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(usize, *const *const c_char, *const c_char) -> RexxReturnCode,
+        >(target(c"RexxLoadMacroSpace"))
+    };
+    // SAFETY: the caller's guarantee.
+    unsafe { forward(count, names, file) }
 }
 
-/// `RexxQueryMacro`: `*position` is 0 where the macro is absent.
+/// Forwards to `librexx.so.4`'s `RexxQueryMacro`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxQueryMacro(name: *const c_char, position: *mut u16) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxQueryMacro` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(*const c_char, *mut u16) -> RexxReturnCode,
+        >(target(c"RexxQueryMacro"))
+    };
     // SAFETY: the caller's guarantee.
-    let (status, found) = capi::query_macro(unsafe { self::name(name) });
-    if !position.is_null() {
-        // SAFETY: the caller's guarantee. The header's `unsigned short` truncates.
-        unsafe { position.write(found as u16) };
-    }
-    code(status)
+    unsafe { forward(name, position) }
 }
 
-/// `RexxReorderMacro`.
+/// Forwards to `librexx.so.4`'s `RexxReorderMacro`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxReorderMacro(name: *const c_char, position: usize) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxReorderMacro` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(*const c_char, usize) -> RexxReturnCode,
+        >(target(c"RexxReorderMacro"))
+    };
     // SAFETY: the caller's guarantee.
-    code(capi::reorder_macro(
-        unsafe { self::name(name) },
-        position as u64,
-    ))
+    unsafe { forward(name, position) }
 }
 
-/// `RexxClearMacroSpace`.
-#[unsafe(no_mangle)]
-pub extern "C" fn RexxClearMacroSpace() -> RexxReturnCode {
-    code(capi::clear_macros())
-}
-
-/// `RexxCreateQueue`.
+/// Forwards to `librexx.so.4`'s `RexxClearMacroSpace`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`]; `name` has `size` writable bytes.
+/// As that function asks.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn RexxClearMacroSpace() -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxClearMacroSpace` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<*mut c_void, unsafe extern "C" fn() -> RexxReturnCode>(target(
+            c"RexxClearMacroSpace",
+        ))
+    };
+    // SAFETY: the caller's guarantee.
+    unsafe { forward() }
+}
+
+/// Forwards to `librexx.so.4`'s `RexxCreateQueue`.
+///
+/// # Safety
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxCreateQueue(
     name: *mut c_char,
@@ -510,115 +476,111 @@ pub unsafe extern "C" fn RexxCreateQueue(
     requested: *const c_char,
     duplicate: *mut usize,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxCreateQueue` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(*mut c_char, usize, *const c_char, *mut usize) -> RexxReturnCode,
+        >(target(c"RexxCreateQueue"))
+    };
     // SAFETY: the caller's guarantee.
-    let (status, created, flag) = capi::create_queue(unsafe { text(requested) }, size);
-    if let Some(created) = created
-        && !name.is_null()
-        && size > 0
-    {
-        let length = created.len().min(size - 1);
-        // SAFETY: `name` holds `size` bytes, and `length + 1` is at most that.
-        unsafe {
-            std::ptr::copy_nonoverlapping(created.as_ptr(), name.cast::<u8>(), length);
-            name.add(length).write(0);
-        }
-    }
-    if let Some(flag) = flag
-        && !duplicate.is_null()
-    {
-        // SAFETY: the caller's guarantee.
-        unsafe { duplicate.write(usize::from(flag)) };
-    }
-    code(status)
+    unsafe { forward(name, size, requested, duplicate) }
 }
 
-/// `RexxOpenQueue`.
+/// Forwards to `librexx.so.4`'s `RexxOpenQueue`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxOpenQueue(
     name: *const c_char,
     duplicate: *mut usize,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxOpenQueue` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(*const c_char, *mut usize) -> RexxReturnCode,
+        >(target(c"RexxOpenQueue"))
+    };
     // SAFETY: the caller's guarantee.
-    let (status, flag) = capi::open_queue(unsafe { text(name) });
-    if let Some(flag) = flag
-        && !duplicate.is_null()
-    {
-        // SAFETY: the caller's guarantee.
-        unsafe { duplicate.write(usize::from(flag)) };
-    }
-    code(status)
+    unsafe { forward(name, duplicate) }
 }
 
-/// `RexxQueueExists`.
+/// Forwards to `librexx.so.4`'s `RexxQueueExists`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxQueueExists(name: *const c_char) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxQueueExists` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<*mut c_void, unsafe extern "C" fn(*const c_char) -> RexxReturnCode>(
+            target(c"RexxQueueExists"),
+        )
+    };
     // SAFETY: the caller's guarantee.
-    code(capi::queue_exists(unsafe { text(name) }))
+    unsafe { forward(name) }
 }
 
-/// `RexxDeleteQueue`.
+/// Forwards to `librexx.so.4`'s `RexxDeleteQueue`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxDeleteQueue(name: *const c_char) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxDeleteQueue` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<*mut c_void, unsafe extern "C" fn(*const c_char) -> RexxReturnCode>(
+            target(c"RexxDeleteQueue"),
+        )
+    };
     // SAFETY: the caller's guarantee.
-    code(capi::delete_queue(unsafe { text(name) }))
+    unsafe { forward(name) }
 }
 
-/// `RexxQueryQueue`.
+/// Forwards to `librexx.so.4`'s `RexxQueryQueue`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxQueryQueue(name: *const c_char, count: *mut usize) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxQueryQueue` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(*const c_char, *mut usize) -> RexxReturnCode,
+        >(target(c"RexxQueryQueue"))
+    };
     // SAFETY: the caller's guarantee.
-    let (status, found) = capi::query_queue(unsafe { text(name) });
-    if let Some(found) = found
-        && !count.is_null()
-    {
-        // SAFETY: the caller's guarantee.
-        unsafe { count.write(found as usize) };
-    }
-    code(status)
+    unsafe { forward(name, count) }
 }
 
-/// `RexxAddQueue`.
+/// Forwards to `librexx.so.4`'s `RexxAddQueue`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`]; `data` addresses a `CONSTRXSTRING` whose non-null `strptr` has
-/// `strlength` readable bytes.
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxAddQueue(
     name: *const c_char,
     data: *const CONSTRXSTRING,
     flag: usize,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxAddQueue` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(*const c_char, *const CONSTRXSTRING, usize) -> RexxReturnCode,
+        >(target(c"RexxAddQueue"))
+    };
     // SAFETY: the caller's guarantee.
-    let item = unsafe { data.as_ref() }
-        .filter(|data| !data.strptr.is_null())
-        // SAFETY: the caller's guarantee.
-        .map(|data| unsafe { std::slice::from_raw_parts(data.strptr.cast::<u8>(), data.strlength) })
-        .unwrap_or_default();
-    // SAFETY: the caller's guarantee.
-    code(capi::add_queue(
-        unsafe { text(name) },
-        item.to_vec(),
-        flag as u64,
-    ))
+    unsafe { forward(name, data, flag) }
 }
 
-/// `RexxPullFromQueue`.
+/// Forwards to `librexx.so.4`'s `RexxPullFromQueue`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`]; `data` addresses an initialised `RXSTRING` whose non-null
-/// `strptr` has `strlength` writable bytes.
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxPullFromQueue(
     name: *const c_char,
@@ -626,21 +588,26 @@ pub unsafe extern "C" fn RexxPullFromQueue(
     time: *mut RexxQueueTime,
     wait: usize,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxPullFromQueue` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(
+                *const c_char,
+                *mut RXSTRING,
+                *mut RexxQueueTime,
+                usize,
+            ) -> RexxReturnCode,
+        >(target(c"RexxPullFromQueue"))
+    };
     // SAFETY: the caller's guarantee.
-    let (status, stamp) = unsafe { pull(name, data, wait) };
-    if let Some(stamp) = stamp
-        && !time.is_null()
-    {
-        // SAFETY: the caller's guarantee.
-        unsafe { time.write(queue_time(stamp)) };
-    }
-    status
+    unsafe { forward(name, data, time, wait) }
 }
 
-/// `RexxPullQueue`: `RexxPullFromQueue` with the older time stamp, `valid` set.
+/// Forwards to `librexx.so.4`'s `RexxPullQueue`.
 ///
 /// # Safety
-/// As [`RexxPullFromQueue`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxPullQueue(
     name: *const c_char,
@@ -648,73 +615,114 @@ pub unsafe extern "C" fn RexxPullQueue(
     time: *mut REXXDATETIME,
     wait: usize,
 ) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxPullQueue` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<
+            *mut c_void,
+            unsafe extern "C" fn(
+                *const c_char,
+                *mut RXSTRING,
+                *mut REXXDATETIME,
+                usize,
+            ) -> RexxReturnCode,
+        >(target(c"RexxPullQueue"))
+    };
     // SAFETY: the caller's guarantee.
-    let (status, stamp) = unsafe { pull(name, data, wait) };
-    if let Some(stamp) = stamp
-        && !time.is_null()
-    {
-        let stamp = queue_time(stamp);
-        let older = REXXDATETIME {
-            hours: stamp.hours,
-            minutes: stamp.minutes,
-            seconds: stamp.seconds,
-            hundredths: 0,
-            day: stamp.day,
-            month: stamp.month,
-            year: stamp.year,
-            weekday: stamp.weekday,
-            microseconds: 0,
-            yearday: stamp.yearday as usize,
-            valid: 1,
-        };
-        // SAFETY: the caller's guarantee.
-        unsafe { time.write(older) };
-    }
-    status
+    unsafe { forward(name, data, time, wait) }
 }
 
-/// `RexxClearQueue`.
+/// Forwards to `librexx.so.4`'s `RexxClearQueue`.
 ///
 /// # Safety
-/// As [`RexxRegisterSubcomDll`].
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxClearQueue(name: *const c_char) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxClearQueue` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<*mut c_void, unsafe extern "C" fn(*const c_char) -> RexxReturnCode>(
+            target(c"RexxClearQueue"),
+        )
+    };
     // SAFETY: the caller's guarantee.
-    code(capi::clear_queue(unsafe { text(name) }))
+    unsafe { forward(name) }
 }
 
-/// `RexxCreateSessionQueue`.
-#[unsafe(no_mangle)]
-pub extern "C" fn RexxCreateSessionQueue() -> RexxReturnCode {
-    code(capi::create_session_queue())
-}
-
-/// `RexxDeleteSessionQueue`.
-#[unsafe(no_mangle)]
-pub extern "C" fn RexxDeleteSessionQueue() -> RexxReturnCode {
-    code(capi::delete_session_queue())
-}
-
-/// `RexxShutDownAPI`: does nothing and answers 1 (Resolution 1).
-#[unsafe(no_mangle)]
-pub extern "C" fn RexxShutDownAPI() -> RexxReturnCode {
-    1
-}
-
-/// `RexxAllocateMemory`: `malloc`, so `free` releases the block too.
-#[unsafe(no_mangle)]
-pub extern "C" fn RexxAllocateMemory(size: usize) -> *mut c_void {
-    // SAFETY: `malloc` has no precondition.
-    unsafe { libc::malloc(size) }
-}
-
-/// `RexxFreeMemory`: `free`, answering 0.
+/// Forwards to `librexx.so.4`'s `RexxCreateSessionQueue`.
 ///
 /// # Safety
-/// `block` is null or a block `RexxAllocateMemory` or `malloc` returned and not yet released.
+/// As that function asks.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn RexxCreateSessionQueue() -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxCreateSessionQueue` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<*mut c_void, unsafe extern "C" fn() -> RexxReturnCode>(target(
+            c"RexxCreateSessionQueue",
+        ))
+    };
+    // SAFETY: the caller's guarantee.
+    unsafe { forward() }
+}
+
+/// Forwards to `librexx.so.4`'s `RexxDeleteSessionQueue`.
+///
+/// # Safety
+/// As that function asks.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn RexxDeleteSessionQueue() -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxDeleteSessionQueue` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<*mut c_void, unsafe extern "C" fn() -> RexxReturnCode>(target(
+            c"RexxDeleteSessionQueue",
+        ))
+    };
+    // SAFETY: the caller's guarantee.
+    unsafe { forward() }
+}
+
+/// Forwards to `librexx.so.4`'s `RexxShutDownAPI`.
+///
+/// # Safety
+/// As that function asks.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn RexxShutDownAPI() -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxShutDownAPI` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<*mut c_void, unsafe extern "C" fn() -> RexxReturnCode>(target(
+            c"RexxShutDownAPI",
+        ))
+    };
+    // SAFETY: the caller's guarantee.
+    unsafe { forward() }
+}
+
+/// Forwards to `librexx.so.4`'s `RexxAllocateMemory`.
+///
+/// # Safety
+/// As that function asks.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn RexxAllocateMemory(size: usize) -> *mut c_void {
+    // SAFETY: `librexx.so.4` defines `RexxAllocateMemory` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<*mut c_void, unsafe extern "C" fn(usize) -> *mut c_void>(target(
+            c"RexxAllocateMemory",
+        ))
+    };
+    // SAFETY: the caller's guarantee.
+    unsafe { forward(size) }
+}
+
+/// Forwards to `librexx.so.4`'s `RexxFreeMemory`.
+///
+/// # Safety
+/// As that function asks.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxFreeMemory(block: *mut c_void) -> RexxReturnCode {
+    // SAFETY: `librexx.so.4` defines `RexxFreeMemory` with this signature.
+    let forward = unsafe {
+        std::mem::transmute::<*mut c_void, unsafe extern "C" fn(*mut c_void) -> RexxReturnCode>(
+            target(c"RexxFreeMemory"),
+        )
+    };
     // SAFETY: the caller's guarantee.
-    unsafe { libc::free(block) };
-    0
+    unsafe { forward(block) }
 }

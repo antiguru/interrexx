@@ -12,18 +12,20 @@ fn library() -> std::path::PathBuf {
     deps_dir().join("librexx.so")
 }
 
+/// `librexx.so.4` owns the API's state (Moritz, 2026-11-03, option A) and needs no library of
+/// the API: `librexxapi.so.4` needs it, never the reverse.
 #[test]
-fn the_library_names_itself_and_needs_librexxapi() {
+fn the_library_names_itself_and_needs_no_other_api_library() {
     assert_eq!(dynamic_entries(&library(), "SONAME"), ["librexx.so.4"]);
+    let needed = dynamic_entries(&library(), "NEEDED");
     assert!(
-        dynamic_entries(&library(), "NEEDED").contains(&"librexxapi.so.4".to_owned()),
-        "{:?}",
-        dynamic_entries(&library(), "NEEDED")
+        !needed.iter().any(|entry| entry.starts_with("librexx")),
+        "{needed:?}"
     );
-    assert_eq!(dynamic_entries(&library(), "RPATH"), ["$ORIGIN"]);
 }
 
-/// `librexxapi`'s names are carried too, so a process that loads both keeps one API state.
+/// `librexxapi`'s names are exported here too, where their state is: a program linked against
+/// this library alone registers and runs, and `librexxapi.so.4` forwards to these definitions.
 #[test]
 fn the_library_exports_both_libraries_names() {
     let exported = exported_rexx_functions(&library());
