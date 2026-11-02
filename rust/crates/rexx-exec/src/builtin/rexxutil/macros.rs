@@ -203,11 +203,11 @@ pub(crate) fn save(
 /// Writes `bytes` to `file`, removing a partial file on failure.
 fn write_file(file: &[u8], bytes: &[u8]) -> u64 {
     let path = crate::paths::os_path(file);
-    match std::fs::write(&path, bytes) {
+    match std::fs::write(path, bytes) {
         Ok(()) => OK,
         Err(_) => {
-            if std::fs::metadata(&path).is_ok_and(|metadata| metadata.is_file()) {
-                let _ = std::fs::remove_file(&path);
+            if std::fs::metadata(path).is_ok_and(|metadata| metadata.is_file()) {
+                let _ = std::fs::remove_file(path);
             }
             MACRO_FILE_ERROR
         }
