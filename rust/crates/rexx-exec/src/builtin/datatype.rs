@@ -54,7 +54,6 @@ pub(crate) fn classify(text: &[u8]) -> SymbolKind {
     }
 
     let mut compound = 0usize;
-    let mut have_exponent = false;
     let mut scan = 0usize;
     while scan < len && is_symbol_byte(text[scan]) {
         if text[scan] == b'.' {
@@ -65,11 +64,8 @@ pub(crate) fn classify(text: &[u8]) -> SymbolKind {
 
     if scan < len {
         // A non-symbol byte, other than a `+`/`-` closing out an exponent,
-        // is bad outright -- and a sign is only that exception when there is
-        // a preceding byte for it to look back at (`scan == 0` is the read
-        // one byte before the string that the C++'s own pointer arithmetic
-        // performs at this exact spot -- undefined there, and unconditionally
-        // rejected here, which is what every leading-sign probe measures).
+        // is bad outright. A sign needs a preceding `E` and a valid mantissa
+        // before it.
         if scan + 1 >= len {
             return SymbolKind::Bad;
         }
@@ -80,14 +76,17 @@ pub(crate) fn classify(text: &[u8]) -> SymbolKind {
         if scan == 0 || !text[scan - 1].eq_ignore_ascii_case(&b'E') {
             return SymbolKind::Bad;
         }
-        scan += 1;
-        while scan < len {
-            if !text[scan].is_ascii_digit() {
-                return SymbolKind::Bad;
-            }
-            scan += 1;
+        if !text[scan + 1..].iter().all(u8::is_ascii_digit) {
+            return SymbolKind::Bad;
         }
-        have_exponent = true;
+        let mantissa = &text[..scan - 1];
+        let periods = mantissa.iter().filter(|&&byte| byte == b'.').count();
+        let digits = mantissa.iter().filter(|byte| byte.is_ascii_digit()).count();
+        return if digits > 0 && periods <= 1 && digits + periods == mantissa.len() {
+            SymbolKind::Numeric
+        } else {
+            SymbolKind::Bad
+        };
     }
 
     if text[0] == b'.' || text[0].is_ascii_digit() {
@@ -95,11 +94,7 @@ pub(crate) fn classify(text: &[u8]) -> SymbolKind {
             return SymbolKind::LiteralDot;
         }
         if compound > 1 {
-            return if have_exponent {
-                SymbolKind::Bad
-            } else {
-                SymbolKind::Literal
-            };
+            return SymbolKind::Literal;
         }
         // A fresh scan from the start: digit/period run, then an optional
         // exponent. Independent of `scan` above, which by this point has
@@ -113,9 +108,6 @@ pub(crate) fn classify(text: &[u8]) -> SymbolKind {
         }
         if text[s].eq_ignore_ascii_case(&b'E') {
             s += 1;
-            if s < len && matches!(text[s], b'-' | b'+') {
-                return SymbolKind::Numeric;
-            }
             while s < len {
                 if !text[s].is_ascii_digit() {
                     return SymbolKind::Literal;

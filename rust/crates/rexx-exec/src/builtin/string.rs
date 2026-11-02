@@ -70,18 +70,9 @@ pub(crate) fn delete_range(bytes: &mut Vec<u8>, begin: usize, range: Option<usiz
 
 // ---- the shared search primitives ----
 
-/// The 1-based offset of the first `needle` at or after `start` that
-/// `StringUtil::pos` finds within `range` bytes of `start`, or 0 for no match.
-/// `start` is zero-based and an empty needle never matches.
-///
-/// `StringUtil::pos` rescans after a rejected candidate with the length
-/// measured from that candidate, so the next search can reach one byte beyond
-/// the window. Thus `pos('an','axan',1,3)` is 3, but
-/// `pos('an','zxan',1,3)` is 0 because no candidate inside the window starts
-/// a rescan. The overrun does not accumulate across rejected candidates.
-/// Unlike the C++ search, this does not match the string's NUL terminator:
-/// `pos('a'||'00'x,'aa')` answers 0 under Deviation 3, since copying through
-/// that C++ match can crash `changestr` (oracle-crashes.txt entry 3).
+/// The 1-based offset of the first `needle` at or after `start` that lies
+/// wholly within `range` bytes of `start`, or 0 for no match. `start` is
+/// zero-based and an empty needle never matches.
 pub(crate) fn find_forward(haystack: &[u8], needle: &[u8], start: usize, range: usize) -> usize {
     // `haystack.len() - start` underflows for a start past the end, which is
     // exactly the case the guard below rejects; taking the saturating
@@ -103,13 +94,8 @@ pub(crate) fn find_forward(haystack: &[u8], needle: &[u8], start: usize, range: 
     // is found a word at a time ([`find_byte`]) and only a position holding it
     // is tested further.
     let starts = range - last;
-    // Whether the scan below reached a first byte at all, which is the
-    // question the overrun path asks. Recorded as the scan runs so that path
-    // does not walk the same bytes again to answer it.
-    let mut saw_first = false;
     let mut at = 0;
     while let Some(offset) = find_byte(&window[at..starts], first) {
-        saw_first = true;
         let position = at + offset;
         if window[position + last] == needle[last]
             && window[position..position + needle.len()] == *needle
@@ -119,25 +105,7 @@ pub(crate) fn find_forward(haystack: &[u8], needle: &[u8], start: usize, range: 
         at = position + 1;
     }
 
-    // **The overrun the doc above describes, and the failure path is the only
-    // one that pays for it.** The scan just made covered every start at which
-    // the whole needle fits; this is the one position past them, and the
-    // oracle reaches it only after its own scan has found the first byte among
-    // those starts. `saw_first` records exactly that, so asking it is asking
-    // whether the oracle's loop would have run at all.
-    if !saw_first {
-        return 0;
-    }
-    let over = start + range - last;
-    // At most one byte past the haystack, since `range` is capped at what
-    // follows `start` -- and that byte is the terminator this declines to
-    // invent, so `get` answering `None` is the divergence the doc records and
-    // not a bound being papered over.
-    debug_assert!(over + needle.len() <= haystack.len() + 1);
-    match haystack.get(over..over + needle.len()) {
-        Some(candidate) if candidate == needle => over + 1,
-        _ => 0,
-    }
+    0
 }
 
 /// The index of the first `byte` in `hay`, or `None`.

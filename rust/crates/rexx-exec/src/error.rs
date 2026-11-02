@@ -1112,7 +1112,7 @@ impl Raised {
         Raised::syntax(93, 918, vec![index.to_vec()])
     }
 
-    /// 98.975: a sort was asked to order an array with a hole in it.
+    /// 98.975: a sort or a spread subscript met an array with a hole in it.
     pub(crate) fn missing_array_element(position: usize) -> Raised {
         Raised::syntax(98, 975, vec![position.to_string().into_bytes()])
     }
