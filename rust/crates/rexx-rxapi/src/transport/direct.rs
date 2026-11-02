@@ -222,7 +222,7 @@ mod tests {
     }
 
     #[test]
-    fn dropping_a_client_closes_it_for_the_core() {
+    fn a_dropped_writers_lines_stay_in_its_session_queue() {
         let client = Direct::new();
         let session = client.client();
         let query = |client: &Direct| {
@@ -247,7 +247,7 @@ mod tests {
             query(&client),
             Reply::QueueCount {
                 status: OK,
-                count: Some(0)
+                count: Some(1)
             }
         );
     }

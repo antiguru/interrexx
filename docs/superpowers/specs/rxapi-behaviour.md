@@ -815,8 +815,8 @@ These settle where interrexx departs from, or chooses among, the behaviour above
 2. **The daemon binary is named `rxapi`** and prints what `rxapi.testGroup` relies on.
 3. **The macrospace file layout is interrexx's own.** Compiled images are engine-specific. A file the
    oracle wrote is refused with the return code for an invalid file.
-4. **Session queues do not hold the daemon up.** They go when their last connected user closes, and
-   the exit rule counts only named queues, registrations and macros.
+4. **A session queue goes when no connection uses it and it is empty.** One holding lines counts for
+   the daemon's exit rule, so `cmd | rxqueue` still delivers after `rxqueue` exits.
 5. **Registrations stay owner-only,** as observed. A daemon holding them stays up.
 6. **Timestamps** keep the observed zero-based `month` and years-since-1900 `year`.
 7. **A blocked pull ends when its connection closes,** and the queue stays usable. The observed

@@ -873,7 +873,7 @@ fn session_queues_are_shared_by_handle_and_on_demand() {
         },
         "a child with the handle shares the queue"
     );
-    assert!(core.is_empty(), "session queues do not count");
+    assert!(!core.is_empty(), "a session queue holding lines counts");
 }
 
 #[test]
@@ -886,51 +886,32 @@ fn a_session_wait_works_and_a_child_satisfies_it() {
     assert_eq!(ready[0].0, client(1));
 }
 
-/// Resolution 4: a session queue goes when its last connected user closes.
+/// Resolution 4: a session queue goes when no connection uses it and it is empty.
 #[test]
-fn a_session_queue_goes_with_its_last_user() {
+fn a_session_queue_goes_once_unused_and_empty() {
     let mut core = Core::new();
     let attach = Request::CreateSessionQueue { session: SESSION };
     assert_eq!(status(&mut core, client(1), attach.clone()), OK);
     assert_eq!(status(&mut core, client(1), attach), OK, "repeatable");
-    assert_eq!(status(&mut core, client(2), add(None, "a", FIFO)), OK);
-
-    core.client_closed(client(2));
-    assert_eq!(
-        count(&mut core, None),
-        Reply::QueueCount {
-            status: OK,
-            count: Some(1)
-        },
-        "the parent still holds it"
-    );
     let detach = Request::DeleteSessionQueue { session: SESSION };
     assert_eq!(status(&mut core, client(1), detach.clone()), OK);
     assert_eq!(status(&mut core, client(1), detach), OK, "repeatable");
+    core.client_closed(client(1));
+    assert!(core.is_empty(), "an empty unused session queue is gone");
+
+    assert_eq!(status(&mut core, client(2), add(None, "a", FIFO)), OK);
+    core.client_closed(client(2));
+    assert!(!core.is_empty(), "lines outlive the writer");
     assert_eq!(
         count(&mut core, None),
         Reply::QueueCount {
             status: OK,
             count: Some(1)
         },
-        "the stop hook leaves content alone"
+        "a later reader finds them"
     );
-
-    core.client_closed(client(1));
-    assert_eq!(
-        reply(
-            &mut core,
-            client(3),
-            Request::QueryQueue {
-                session: SESSION,
-                name: None
-            }
-        ),
-        Reply::QueueCount {
-            status: OK,
-            count: Some(0)
-        }
-    );
+    assert_eq!(pulled(&mut core, None), b"a");
+    assert!(core.is_empty(), "an empty queue holds the daemon no more");
 }
 
 const LIB: &[u8] = b"lib";

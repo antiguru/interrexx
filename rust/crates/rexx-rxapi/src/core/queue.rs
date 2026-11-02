@@ -314,11 +314,16 @@ impl Queues {
         self.sessions.retain(|_, session| {
             session.queue.waiters.retain(keeps);
             session.users.remove(&connection);
-            !session.users.is_empty()
+            !session.users.is_empty() || !session.queue.items.is_empty()
         });
     }
 
-    pub(super) fn no_named_queues(&self) -> bool {
+    /// No named queue, and no session queue holding lines.
+    pub(super) fn hold_nothing(&self) -> bool {
         self.named.is_empty()
+            && self
+                .sessions
+                .values()
+                .all(|session| session.queue.items.is_empty())
     }
 }
