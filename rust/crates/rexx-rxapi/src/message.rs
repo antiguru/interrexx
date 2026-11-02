@@ -43,6 +43,8 @@ pub mod code {
     pub const NOT_REGISTERED: u64 = 30;
     /// `RXSUBCOM_NOCANDROP`.
     pub const NO_CAN_DROP: u64 = 40;
+    /// `RXMACRO_NO_STORAGE`.
+    pub const MACRO_NO_STORAGE: u64 = 1;
     /// `RXMACRO_NOT_FOUND`.
     pub const MACRO_NOT_FOUND: u64 = 2;
     /// `RXMACRO_FILE_ERROR`.

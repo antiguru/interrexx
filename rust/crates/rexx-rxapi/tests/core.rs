@@ -582,6 +582,70 @@ fn a_killed_blocked_client_leaves_its_queue_deletable() {
     assert_eq!(delete(&mut core, Some("q")), OK);
 }
 
+const MEBIBYTE: usize = 1 << 20;
+
+fn sized_macro(core: &mut Core, macro_name: String, size: usize) {
+    let request = Request::AddMacro {
+        name: macro_name.into_bytes(),
+        image: vec![0; size],
+        position: 1,
+    };
+    assert_eq!(status(core, client(1), request), OK);
+}
+
+fn save_names(core: &mut Core, names: Option<Vec<Vec<u8>>>) -> Reply {
+    reply(core, client(1), Request::SaveMacros { names })
+}
+
+#[test]
+fn a_save_repeating_a_name_beyond_the_limit_is_refused_before_it_is_built() {
+    let mut core = Core::new();
+    sized_macro(&mut core, "big".to_owned(), MEBIBYTE);
+    let repeated = vec![b"big".to_vec(); 512];
+
+    assert_eq!(
+        save_names(&mut core, Some(repeated.clone())),
+        Reply::Macros {
+            status: MACRO_NO_STORAGE,
+            macros: Vec::new()
+        }
+    );
+
+    let mut with_absent = repeated;
+    with_absent.push(b"absent".to_vec());
+    assert_eq!(
+        save_names(&mut core, Some(with_absent)),
+        Reply::Macros {
+            status: MACRO_NOT_FOUND,
+            macros: Vec::new()
+        },
+        "an absent name still answers first"
+    );
+    let Reply::Macros { status: OK, macros } =
+        save_names(&mut core, Some(vec![b"big".to_vec(); 2]))
+    else {
+        panic!("a small repeat is a valid save");
+    };
+    assert_eq!(macros.len(), 2);
+}
+
+#[test]
+fn a_macrospace_larger_than_the_limit_still_saves_whole() {
+    let mut core = Core::new();
+    let names: Vec<String> = (0..300).map(|at| format!("M{at}")).collect();
+    for macro_name in &names {
+        sized_macro(&mut core, macro_name.clone(), MEBIBYTE);
+    }
+    let listed: Vec<Vec<u8>> = names.iter().map(|name| name.as_bytes().to_vec()).collect();
+
+    for selection in [None, Some(listed)] {
+        let Reply::Macros { status: OK, macros } = save_names(&mut core, selection) else {
+            panic!("every macro once is what a macrospace holds");
+        };
+        assert_eq!(macros.len(), names.len());
+    }
+}
+
 fn cancel(core: &mut Core, connection: u64, call: u64) -> Reply {
     reply(core, client(connection), Request::CancelPull { call })
 }

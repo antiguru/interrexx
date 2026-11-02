@@ -6,6 +6,10 @@ use super::{fold, truncated};
 use crate::message::code::*;
 use crate::message::{Macro, Reply};
 
+/// The image bytes a save may reach by listing a name repeatedly. A short request can name one
+/// large image many times, and the service would hold a copy for each.
+const MAX_SAVE_REPEAT: usize = 256 << 20;
+
 /// Macros by folded name. Positions are stored unchecked, as the API does.
 #[derive(Default)]
 pub(super) struct MacroSpace {
@@ -90,14 +94,19 @@ impl MacroSpace {
             None if self.macros.is_empty() => return refused(MACRO_FILE_ERROR),
             None => self.macros.values().cloned().collect(),
             Some(names) => {
-                let listed: Option<Vec<Macro>> = names
+                let found: Option<Vec<&Macro>> = names
                     .iter()
-                    .map(|name| self.macros.get(&key(name)).cloned())
+                    .map(|name| self.macros.get(&key(name)))
                     .collect();
-                match listed {
-                    Some(listed) => listed,
-                    None => return refused(MACRO_NOT_FOUND),
+                let Some(found) = found else {
+                    return refused(MACRO_NOT_FOUND);
+                };
+                let wanted = found.iter().map(|entry| entry.image.len()).sum::<usize>();
+                let held = self.macros.values().map(|entry| entry.image.len()).sum();
+                if wanted > usize::max(held, MAX_SAVE_REPEAT) {
+                    return refused(MACRO_NO_STORAGE);
                 }
+                found.into_iter().cloned().collect()
             }
         };
         Reply::Macros { status: OK, macros }
