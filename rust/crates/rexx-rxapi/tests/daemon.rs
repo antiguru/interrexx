@@ -389,6 +389,7 @@ fn serve_backlog(dir: PathBuf, version: u32, backlog: usize) -> std::thread::Joi
             backlog,
             dry_run: false,
             idle_grace: Duration::from_secs(60),
+            close_inherited: false,
             report: &|_| {},
         })
         .expect("the other version serves")
@@ -455,6 +456,7 @@ fn a_connection_from_another_user_is_dropped() {
             backlog: daemon::MAX_BACKLOG,
             dry_run: false,
             idle_grace: Duration::from_secs(60),
+            close_inherited: false,
             report: &report,
         })
     });
@@ -604,9 +606,8 @@ fn the_search_continues_past_an_rxapi_that_cannot_run() {
     assert!(start_from_path(&service, "first/bare:first:bin"));
 }
 
-/// Red until a descriptor can be closed without `unsafe`, which is Moritz's ruling to make.
+/// A daemon a client started keeps none of the client's descriptors.
 #[test]
-#[ignore = "closing inherited descriptors awaits an unsafe ruling"]
 fn a_started_daemon_does_not_keep_inherited_descriptors() {
     let service = ServiceDir::new();
     let (inherited, _peer) = UnixStream::pair().expect("a pair");
