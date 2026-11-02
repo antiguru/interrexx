@@ -1,3 +1,5 @@
+**DEFERRED out of Phase 10, ruled by Moritz 2026-11-02.**
+
 **RULED: Phase 10 under Moritz's 2026-10-19 conditional ruling, reconciled 2026-10-30.** Task 8.1 found that lifting the pinned-guard-wait limit requires resumable trace emission across emitting sites. Phase 10 continuation activities own this work. The hang and pinned-guard refusal remain open.
 
 **RULED: 9d, ruled by Moritz 2026-10-19 ("proposal ok").** 9d if lifting the pinned-guard-wait limit is tractable, else Phase 10.
