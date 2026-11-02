@@ -66,6 +66,12 @@ of a `MIT OR Apache-2.0` project. Interrexx therefore ships no C++ of its own at
   `orxncurses` staying C add-ons (2026-11-02). The `.cls` wrappers of `rxregexp` and `rxsock` are
   rewritten under the clean-room rules.
 * **No perf gates** in 10 or 10.1, and testing with as few tools as possible.
+* **D-U1 extends to the C exports** (2026-11-02): one export module per new cdylib crate (`librexx`,
+  `librexxapi`) may use `unsafe`, holding only `extern "C"` shims over safe code, pinned in
+  `unsafe_sites.rs`.
+* **The started daemon closes inherited descriptors through one `unsafe` function** (2026-11-02): at
+  daemon start-up it closes every descriptor above 2 except its own lock file and listener, pinned in
+  `unsafe_sites.rs`. Chosen over adding `nix` and over dropping the requirement.
 
 ## The clean room
 
