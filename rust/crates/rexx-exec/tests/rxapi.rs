@@ -227,6 +227,24 @@ fn character_builtins_refuse_the_queue() {
     }
 }
 
+/// Every process cargo runs reaches a service below the target directory, never the user's:
+/// in-process programs and the `rexx` a test starts through `REXX_API_DIR`, the oracle's daemon
+/// through `XDG_RUNTIME_DIR`.
+#[test]
+fn tests_reach_only_private_services() {
+    let target = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target");
+    let target = std::fs::canonicalize(&target).expect("the target directory exists");
+    for name in ["REXX_API_DIR", "XDG_RUNTIME_DIR"] {
+        let value = std::env::var_os(name).unwrap_or_default();
+        let parent = Path::new(&value).parent().map(std::fs::canonicalize);
+        assert!(
+            matches!(parent, Some(Ok(ref dir)) if *dir == target),
+            "{name} is {value:?}, not a directory in {}",
+            target.display()
+        );
+    }
+}
+
 /// Review Focus 4: a function one program registers is registered for the next.
 #[test]
 fn a_registration_outlives_its_program() {
