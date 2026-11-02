@@ -142,10 +142,12 @@ fn start_daemon(daemon: &Path, dir: &Path) -> Result<(), TransportError> {
         .spawn()
         .map_err(|error| unavailable(&error))?;
     // Reaps a starter that lost the race, and otherwise waits out the daemon.
-    std::thread::spawn(move || {
-        let mut child = child;
-        let _ = child.wait();
-    });
+    let _ = std::thread::Builder::new()
+        .name("rexx-api-start".to_owned())
+        .spawn(move || {
+            let mut child = child;
+            let _ = child.wait();
+        });
     Ok(())
 }
 
@@ -301,7 +303,10 @@ impl Unix {
         let calls = SharedCalls::default();
         let reader = {
             let calls = Arc::clone(&calls);
-            std::thread::spawn(move || read_replies(reader_stream, calls))
+            std::thread::Builder::new()
+                .name("rexx-api".to_owned())
+                .spawn(move || read_replies(reader_stream, calls))
+                .map_err(ConnectFailure::Absent)?
         };
         Ok(Unix {
             stream: Mutex::new(stream),

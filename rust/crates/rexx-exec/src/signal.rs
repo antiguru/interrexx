@@ -167,6 +167,20 @@ pub(crate) fn unblocked<R>(wait: impl FnOnce() -> R) -> R {
     wait()
 }
 
+/// Runs `start` with the halting signals blocked in this thread and the
+/// thread's mask restored after, so a thread `start` spawns, such as the API
+/// connection's reader, never takes them (ruling P67).
+pub(crate) fn blocked<R>(start: impl FnOnce() -> R) -> R {
+    struct Restore(libc::sigset_t);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            mask(libc::SIG_SETMASK, &self.0);
+        }
+    }
+    let _restore = Restore(mask(libc::SIG_BLOCK, &halting()));
+    start()
+}
+
 /// The signal that interrupts the interpreter's thread inside an inline
 /// native call in the simulation mode: its handler does nothing, so a system
 /// call it interrupts returns `EINTR`, and it halts nothing.

@@ -58,27 +58,30 @@ pub(crate) fn session_handle() -> u64 {
 /// API code, and stays the answer for the process's life.
 pub(crate) fn client() -> Result<&'static ApiClient, u64> {
     CLIENT
-        .get_or_init(|| {
-            if !connections_allowed() {
-                return Err(NO_SERVICE);
-            }
-            let transport = match SERVICE.get() {
-                Some((dir, daemon)) => {
-                    Unix::connect_or_start_with(dir, daemon).map_err(|error| error.status())?
-                }
-                None => connect()?,
-            };
-            let client = ApiClient {
-                transport,
-                session: session_handle(),
-            };
-            client.call(Request::CreateSessionQueue {
-                session: client.session,
-            })?;
-            Ok(client)
-        })
+        .get_or_init(|| crate::signal::blocked(connect_client))
         .as_ref()
         .map_err(|status| *status)
+}
+
+/// A new connection, attached to this process's session queue.
+fn connect_client() -> Result<ApiClient, u64> {
+    if !connections_allowed() {
+        return Err(NO_SERVICE);
+    }
+    let transport = match SERVICE.get() {
+        Some((dir, daemon)) => {
+            Unix::connect_or_start_with(dir, daemon).map_err(|error| error.status())?
+        }
+        None => connect()?,
+    };
+    let client = ApiClient {
+        transport,
+        session: session_handle(),
+    };
+    client.call(Request::CreateSessionQueue {
+        session: client.session,
+    })?;
+    Ok(client)
 }
 
 /// The process's client where it is connected or a service is running to connect to, starting
@@ -94,7 +97,8 @@ pub(crate) fn running_client() -> Option<&'static ApiClient> {
     if !socket_path(&dir, PROTOCOL_VERSION).exists() {
         return None;
     }
-    let transport = Unix::connect_version(&dir, PROTOCOL_VERSION).ok()?;
+    let transport =
+        crate::signal::blocked(|| Unix::connect_version(&dir, PROTOCOL_VERSION)).ok()?;
     let client = ApiClient {
         transport,
         session: session_handle(),

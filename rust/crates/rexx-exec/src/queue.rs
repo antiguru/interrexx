@@ -150,6 +150,7 @@ fn remote_wait(name: &[u8]) -> Option<RemoteWait> {
     };
     let (token, slot) = (wait.token.clone(), Arc::clone(&wait.slot));
     std::thread::spawn(move || {
+        crate::signal::block();
         let reply = client.call_cancellable(request, &token);
         let (held, filled) = &*slot;
         *held
