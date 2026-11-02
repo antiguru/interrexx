@@ -1,3 +1,4 @@
-# The oracle's outcomes of corpus/lang/started_raises.rex program, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of corpus/lang/started_raises.rex program, 10 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 5	0	b850677cf0298138	rc 0, stdout 1 lines, stderr 3 lines
+5	0	4caeb4bb35265de6	rc 0, stdout 1 lines, stderr 3 lines

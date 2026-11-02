@@ -1,3 +1,4 @@
-# The oracle's outcomes of corpus/lang/message_halt_self.rex program, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of corpus/lang/message_halt_self.rex program, 10 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 5	0	c449f73ab32c5985	rc 0, stdout 4 lines, stderr 3 lines
+5	0	c3426324d6c6bedf	rc 0, stdout 4 lines, stderr 3 lines

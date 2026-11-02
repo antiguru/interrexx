@@ -1,3 +1,4 @@
-# The oracle's outcomes of doc/rexxref/chapter5/Section1.testGroup derived, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of doc/rexxref/chapter5/Section1.testGroup derived, 10 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 5	0	10c3f5d3e5be20c8	pass, assertions 6, rc 0, last started TEST_OBJECT_START, failing []
+5	0	6283aedd831f1846	pass, assertions 6, rc 0, last started TEST_OBJECT_START, failing []

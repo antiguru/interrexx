@@ -1,3 +1,4 @@
-# The oracle's outcomes of base/directives/ATTRIBUTE.testGroup whole, 30 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/directives/ATTRIBUTE.testGroup whole, 35 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 30	0	dc443810b778ea95	pass, assertions 304, rc 0, last started TEST_SET_RETURN, failing []
+5	0	4df5f0d76070a64b	pass, assertions 304, rc 0, last started TEST_SET_RETURN, failing []

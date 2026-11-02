@@ -1,3 +1,4 @@
-# The oracle's outcomes of base/keyword/RAISE.testGroup whole, 30 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/keyword/RAISE.testGroup whole, 35 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 30	0	114214424049fcee	pass, assertions 130, rc 0, last started TEST_RAISE_USER, failing []
+5	0	1d55c8c896a450bc	pass, assertions 130, rc 0, last started TEST_RAISE_USER, failing []

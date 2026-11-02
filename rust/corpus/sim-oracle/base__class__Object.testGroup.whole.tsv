@@ -1,3 +1,4 @@
-# The oracle's outcomes of base/class/Object.testGroup whole, 30 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/class/Object.testGroup whole, 35 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 30	0	924a387db13b429d	pass, assertions 311, rc 0, last started TEST_UNSETMETHOD_NO_ARG, failing []
+5	0	f2ceed36cb3368e8	pass, assertions 320, rc 0, last started TEST_UNSETMETHOD_NO_ARG, failing []

@@ -1,3 +1,4 @@
-# The oracle's outcomes of base/class/Class.testGroup derived, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/class/Class.testGroup derived, 10 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 5	0	e87c360d1301baa4	pass, assertions 4, rc 0, last started TEST_SUBCLASSES, failing []
+5	0	048300326a0ff9fa	pass, assertions 4, rc 0, last started TEST_SUBCLASSES, failing []

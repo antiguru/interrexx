@@ -1,3 +1,4 @@
-# The oracle's outcomes of corpus/lang/main_fails_in_pinned_yield.rex program, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of corpus/lang/main_fails_in_pinned_yield.rex program, 10 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 5	214	d8e7be7c3bed1b31	rc 214, stdout 1 lines, stderr 6 lines
+5	214	f6a5ab9cf5b50755	rc 214, stdout 1 lines, stderr 6 lines

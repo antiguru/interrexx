@@ -1,3 +1,4 @@
-# The oracle's outcomes of base/keyword/TRACE_TraceObject.testGroup derived, 30 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/keyword/TRACE_TraceObject.testGroup derived, 35 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 30	0	0894cf694a9a8c2a	pass, assertions 605, rc 0, last started TEST_TRACEOBJECT_COLLECTOR, failing []
+5	0	03e6618d6a4d5b78	pass, assertions 605, rc 0, last started TEST_TRACEOBJECT_COLLECTOR, failing []

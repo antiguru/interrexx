@@ -1,3 +1,4 @@
-# The oracle's outcomes of corpus/lang/reply_continuation_error_stderr.rex program, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of corpus/lang/reply_continuation_error_stderr.rex program, 10 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 5	3	0304689e1fe58aa0	rc 3, stdout 2 lines, stderr 3 lines
+5	3	b4822695a2d9c2de	rc 3, stdout 2 lines, stderr 3 lines
