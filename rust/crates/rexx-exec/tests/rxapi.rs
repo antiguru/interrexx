@@ -208,6 +208,25 @@ fn a_session_wait_survives_the_queue_moving_to_the_service() {
     }
 }
 
+/// The character builtins refuse `QUEUE:`, as the oracle does.
+#[test]
+fn character_builtins_refuse_the_queue() {
+    let service = Service::new();
+    for call in ["chars('QUEUE:')", "charin('queue:')", "charout('QUEUE:', 'x')"] {
+        let output = service.run(&format!(
+            "signal on syntax\nsay {call}\nexit\n\
+             syntax: say condition('o')~code condition('o')~message\n"
+        ));
+        let name = call[..call.find('(').expect("a call")].to_ascii_uppercase();
+        assert_eq!(
+            stdout(&output),
+            format!("40.915 {name} cannot be used with QUEUE:.\n"),
+            "{call}: {}",
+            stderr(&output)
+        );
+    }
+}
+
 /// Review Focus 4: a function one program registers is registered for the next.
 #[test]
 fn a_registration_outlives_its_program() {

@@ -141,9 +141,12 @@ pub(crate) fn charout(
 /// `CHARS(name)`.
 pub(crate) fn chars(
     interp: &mut Interp,
-    _name: &'static [u8],
+    name: &'static [u8],
     args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
+    if names_queue(interp, args) {
+        return Err(Raised::syntax(40, 915, vec![name.to_vec()]).into());
+    }
     send_to_stream(interp, args, b"CHARS", true, true)
 }
 
