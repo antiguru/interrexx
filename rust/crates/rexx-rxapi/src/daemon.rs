@@ -165,13 +165,14 @@ pub fn serve(options: &Options<'_>) -> io::Result<Exit> {
         let (events, incoming) = mpsc::channel();
         let version = options.version;
         let uid = options.uid;
-        std::thread::spawn(move || accept(listener, version, uid, events));
-        let connections = own_core(incoming, options.idle_grace);
+        std::thread::Builder::new().spawn(move || accept(listener, version, uid, events))?;
+        let (connections, ended) = own_core(incoming, options.idle_grace);
 
         let _ = fs::remove_file(&socket);
         for stream in connections {
             let _ = stream.shutdown(std::net::Shutdown::Both);
         }
+        ended?;
     }
     drop(lock_file);
     report("rxapi: service stopped and lockfile released; exiting");
@@ -188,8 +189,13 @@ fn accept(listener: UnixListener, version: u32, uid: u32, events: Sender<Event>)
         let connection = next_connection;
         next_connection += 1;
         let events = events.clone();
-        std::thread::spawn(move || read_client(stream, connection, version, events));
+        spawn(move || read_client(stream, connection, version, events));
     }
+}
+
+/// Starts a connection's thread. At the thread limit that connection goes and the service stays.
+fn spawn(body: impl FnOnce() + Send + 'static) -> bool {
+    std::thread::Builder::new().spawn(body).is_ok()
 }
 
 /// Answers a connection's handshake, then feeds its frames to the owner until it ends.
@@ -205,7 +211,9 @@ fn read_client(mut stream: UnixStream, connection: u64, version: u32, events: Se
     };
     let (outgoing, to_write) = mpsc::channel();
     let writer_events = events.clone();
-    std::thread::spawn(move || write_client(writer, version, to_write, writer_events));
+    if !spawn(move || write_client(writer, version, to_write, writer_events)) {
+        return;
+    }
     let connected = Event::Connected {
         connection,
         stream: owner_stream,
@@ -288,19 +296,28 @@ struct Connection {
     outgoing: Sender<Outgoing>,
 }
 
-/// Owns the core until the daemon should exit, answering the streams still open.
-fn own_core(events: Receiver<Event>, idle_grace: Duration) -> Vec<UnixStream> {
+/// Owns the core until the daemon should exit, answering the streams still open and whether this
+/// was a normal exit. Every sender gone means nothing can reach the core, which is a failure.
+fn own_core(events: Receiver<Event>, idle_grace: Duration) -> (Vec<UnixStream>, io::Result<()>) {
     let mut core = Core::new();
     let mut connections: HashMap<u64, Connection> = HashMap::new();
     let mut parked: HashMap<ClientId, Source> = HashMap::new();
     let mut served = false;
+    let mut ended = Ok(());
     loop {
         let event = if served {
             events.recv().map_err(|_| RecvTimeoutError::Disconnected)
         } else {
             events.recv_timeout(idle_grace)
         };
-        let Ok(event) = event else { break };
+        let event = match event {
+            Ok(event) => event,
+            Err(RecvTimeoutError::Timeout) => break,
+            Err(RecvTimeoutError::Disconnected) => {
+                ended = Err(io::Error::other("the accept thread is gone"));
+                break;
+            }
+        };
         match event {
             Event::Connected {
                 connection,
@@ -346,10 +363,11 @@ fn own_core(events: Receiver<Event>, idle_grace: Duration) -> Vec<UnixStream> {
             break;
         }
     }
-    connections
+    let streams = connections
         .into_values()
         .map(|connection| connection.stream)
-        .collect()
+        .collect();
+    (streams, ended)
 }
 
 /// Items carry the daemon's local time, whatever the client sent.
@@ -390,6 +408,35 @@ fn send_reply(
 mod tests {
     use super::*;
     use chrono::Utc;
+
+    #[test]
+    fn losing_every_event_sender_is_a_failure() {
+        let (events, incoming) = mpsc::channel();
+        drop(events);
+        let (_, ended) = own_core(incoming, Duration::from_secs(60));
+        assert!(ended.is_err(), "before any client");
+
+        let (events, incoming) = mpsc::channel();
+        let (stream, _peer) = UnixStream::pair().expect("a pair");
+        let (outgoing, _to_write) = mpsc::channel();
+        let connected = Event::Connected {
+            connection: 0,
+            stream,
+            outgoing,
+        };
+        events.send(connected).expect("the owner is listening");
+        drop(events);
+        let (streams, ended) = own_core(incoming, Duration::from_secs(60));
+        assert!(ended.is_err(), "with a client connected");
+        assert_eq!(streams.len(), 1, "its stream is handed back to be shut");
+    }
+
+    #[test]
+    fn an_expired_grace_is_a_normal_exit() {
+        let (_events, incoming) = mpsc::channel();
+        let (_, ended) = own_core(incoming, Duration::from_millis(1));
+        assert!(ended.is_ok());
+    }
 
     #[test]
     fn timestamps_count_as_struct_tm_does() {

@@ -15,6 +15,7 @@ use rexx_rxapi::message::wire::{self, PROTOCOL_VERSION};
 use rexx_rxapi::message::{FIFO, NO_WAIT, Registry, Reply, Request, Timestamp, WAIT};
 use rexx_rxapi::transport::unix::{Unix, lock_path, prepare_dir, socket_path};
 use rexx_rxapi::transport::{Transport, TransportError};
+use rustix::process::{Pid, Resource, Rlimit, getrlimit, prlimit};
 
 const DAEMON: &str = env!("CARGO_BIN_EXE_rxapi");
 const CHILD_DIR: &str = "RXAPI_TEST_CHILD_DIR";
@@ -446,6 +447,50 @@ fn a_connection_from_another_user_is_dropped() {
     let refused = Unix::connect_version(&service.dir, PROTOCOL_VERSION);
 
     assert!(matches!(refused, Err(TransportError::Unavailable(_))));
+}
+
+fn limit_threads(pid: u32, limit: Rlimit) {
+    let pid = Pid::from_raw(pid as i32).expect("a positive pid");
+    prlimit(Some(pid), Resource::Nproc, limit).expect("prlimit");
+}
+
+/// `RLIMIT_NPROC` counts the whole user, so a limit of 0 fails every `clone` in that daemon alone.
+#[test]
+fn a_daemon_out_of_threads_drops_that_connection_and_keeps_serving() {
+    let service = ServiceDir::new();
+    let client = service.connect();
+    open(&client, "held");
+    let pid = service.pid();
+    let inherited = getrlimit(Resource::Nproc);
+    limit_threads(
+        pid,
+        Rlimit {
+            current: Some(0),
+            maximum: inherited.maximum,
+        },
+    );
+
+    let refused = Unix::connect_version(&service.dir, PROTOCOL_VERSION);
+
+    limit_threads(pid, inherited);
+    assert!(matches!(refused, Err(TransportError::Unavailable(_))));
+    let later = Unix::connect_version(&service.dir, PROTOCOL_VERSION).expect("still listening");
+    assert_eq!(
+        open(&later, "held"),
+        Reply::QueueOpened {
+            status: OK,
+            duplicate: Some(true),
+        },
+        "the state survived"
+    );
+    assert_eq!(service.pid(), pid);
+    assert_eq!(
+        open(&client, "held"),
+        Reply::QueueOpened {
+            status: OK,
+            duplicate: Some(true),
+        },
+    );
 }
 
 /// Review Focus 5.
