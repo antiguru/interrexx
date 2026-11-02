@@ -21,6 +21,8 @@ pub enum TransportError {
     Unavailable(String),
     /// The service speaks another protocol version.
     Refused { ours: u32, theirs: u32 },
+    /// The service belongs to another user.
+    Foreign { uid: u32 },
 }
 
 impl TransportError {
@@ -40,6 +42,7 @@ impl fmt::Display for TransportError {
                     "service protocol {theirs}, client protocol {ours}"
                 )
             }
+            TransportError::Foreign { uid } => write!(formatter, "service run by user {uid}"),
         }
     }
 }

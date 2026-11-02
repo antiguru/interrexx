@@ -1,9 +1,11 @@
 //! A real daemon, each test in its own `REXX_API_DIR`.
 
+use std::io::ErrorKind;
+use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::UnixListener;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Output, Stdio};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Barrier};
 use std::time::Duration;
 
@@ -308,11 +310,16 @@ fn a_file_at_the_service_path_is_refused_and_kept() {
     );
 }
 
+fn own_uid() -> u32 {
+    rustix::process::getuid().as_raw()
+}
+
 fn serve_version(dir: PathBuf, version: u32) -> std::thread::JoinHandle<Exit> {
     std::thread::spawn(move || {
         daemon::serve(&Options {
             dir: &dir,
             version,
+            uid: own_uid(),
             dry_run: false,
             idle_grace: Duration::from_secs(60),
             report: &|_| {},
@@ -328,6 +335,66 @@ fn connect_version(dir: &Path, version: u32) -> Unix {
         connected.is_some()
     });
     connected.expect("connected")
+}
+
+/// A directory anyone can write may hold anyone's socket, so nothing connects to it.
+#[test]
+fn a_shared_directory_is_refused_before_any_connect() {
+    let service = ServiceDir::new();
+    prepare_dir(&service.dir).expect("the directory");
+    let listener =
+        UnixListener::bind(socket_path(&service.dir, PROTOCOL_VERSION)).expect("a squatter");
+    listener.set_nonblocking(true).expect("non-blocking");
+    std::fs::set_permissions(&service.dir, std::fs::Permissions::from_mode(0o777)).expect("chmod");
+
+    let refused = |result: Result<(), TransportError>| {
+        let error = result.expect_err("a shared directory");
+        assert_eq!(error.status(), NO_SERVICE);
+        let connected = listener.accept().map(|_| ()).map_err(|error| error.kind());
+        assert_eq!(connected, Err(ErrorKind::WouldBlock), "{error}");
+    };
+    refused(Unix::connect_or_start(&service.dir).map(drop));
+    refused(Unix::connect_version(&service.dir, PROTOCOL_VERSION).map(drop));
+    refused(Unix::stop(&service.dir).map(drop));
+
+    let output = service.rxapi(&["--stop"]);
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(
+        listener.accept().map(|_| ()).map_err(|error| error.kind()),
+        Err(ErrorKind::WouldBlock)
+    );
+
+    std::fs::set_permissions(&service.dir, std::fs::Permissions::from_mode(0o700)).expect("chmod");
+}
+
+/// The daemon's half of the peer check, with this test standing in for the other user.
+#[test]
+fn a_connection_from_another_user_is_dropped() {
+    let service = ServiceDir::new();
+    prepare_dir(&service.dir).expect("the directory");
+    let listening = Arc::new(AtomicBool::new(false));
+    let dir = service.dir.clone();
+    let flag = Arc::clone(&listening);
+    std::thread::spawn(move || {
+        let report = |line: &str| {
+            if line.ends_with("listening") {
+                flag.store(true, Ordering::SeqCst);
+            }
+        };
+        daemon::serve(&Options {
+            dir: &dir,
+            version: PROTOCOL_VERSION,
+            uid: own_uid() + 1,
+            dry_run: false,
+            idle_grace: Duration::from_secs(60),
+            report: &report,
+        })
+    });
+    eventually("the daemon listens", || listening.load(Ordering::SeqCst));
+
+    let refused = Unix::connect_version(&service.dir, PROTOCOL_VERSION);
+
+    assert!(matches!(refused, Err(TransportError::Unavailable(_))));
 }
 
 /// Review Focus 5.

@@ -13,6 +13,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
+use rustix::net::sockopt::socket_peercred;
 use rustix::net::{SendFlags, send};
 
 use super::{Transport, TransportError};
@@ -76,6 +77,15 @@ pub fn prepare_dir(dir: &Path) -> io::Result<PathBuf> {
     fs::canonicalize(dir)
 }
 
+fn own_uid() -> u32 {
+    rustix::process::getuid().as_raw()
+}
+
+/// The user whose process is at the other end of `stream`.
+pub fn peer_uid(stream: &UnixStream) -> io::Result<u32> {
+    Ok(socket_peercred(stream)?.uid.as_raw())
+}
+
 /// `rxapi` beside this executable, else on `PATH`.
 fn find_daemon() -> Result<PathBuf, TransportError> {
     let beside = std::env::current_exe()
@@ -108,6 +118,10 @@ fn start_daemon(daemon: &Path, dir: &Path) -> Result<(), TransportError> {
 
 fn unavailable(error: &io::Error) -> TransportError {
     TransportError::Unavailable(error.to_string())
+}
+
+fn private(dir: &Path) -> Result<PathBuf, TransportError> {
+    prepare_dir(dir).map_err(|error| unavailable(&error))
 }
 
 #[expect(clippy::disallowed_methods, reason = "a real start's real deadline")]
@@ -168,6 +182,23 @@ enum ConnectFailure {
     Refused {
         theirs: u32,
     },
+    /// Another user's process answered.
+    Foreign {
+        uid: u32,
+    },
+}
+
+impl ConnectFailure {
+    fn into_error(self, version: u32) -> TransportError {
+        match self {
+            ConnectFailure::Absent(error) => unavailable(&error),
+            ConnectFailure::Refused { theirs } => TransportError::Refused {
+                ours: version,
+                theirs,
+            },
+            ConnectFailure::Foreign { uid } => TransportError::Foreign { uid },
+        }
+    }
 }
 
 /// One connection to a daemon.
@@ -183,36 +214,35 @@ pub struct Unix {
 impl Unix {
     /// Connects to the service in `dir`, starting it if nothing answers.
     pub fn connect_or_start(dir: &Path) -> Result<Unix, TransportError> {
-        match Unix::connect_version(dir, PROTOCOL_VERSION) {
-            Err(TransportError::Unavailable(_)) => {
-                Unix::connect_or_start_with(dir, &find_daemon()?)
+        let dir = private(dir)?;
+        match Unix::attempt(&dir, PROTOCOL_VERSION, own_uid()) {
+            Err(ConnectFailure::Absent(_)) => {
+                Unix::start_and_connect(&dir, &find_daemon()?, own_uid())
             }
-            result => result,
+            result => result.map_err(|failure| failure.into_error(PROTOCOL_VERSION)),
         }
     }
 
     /// As `connect_or_start`, with the executable to start.
     pub fn connect_or_start_with(dir: &Path, daemon: &Path) -> Result<Unix, TransportError> {
-        let dir = prepare_dir(dir).map_err(|error| unavailable(&error))?;
+        Unix::start_and_connect(&private(dir)?, daemon, own_uid())
+    }
+
+    fn start_and_connect(dir: &Path, daemon: &Path, uid: u32) -> Result<Unix, TransportError> {
         let deadline = now() + START_TIMEOUT;
         let mut next_start = now();
         loop {
-            let error = match Unix::attempt(&dir, PROTOCOL_VERSION) {
+            let error = match Unix::attempt(dir, PROTOCOL_VERSION, uid) {
                 Ok(connected) => return Ok(connected),
-                Err(ConnectFailure::Refused { theirs }) => {
-                    return Err(TransportError::Refused {
-                        ours: PROTOCOL_VERSION,
-                        theirs,
-                    });
-                }
                 Err(ConnectFailure::Absent(error)) => error,
+                Err(failure) => return Err(failure.into_error(PROTOCOL_VERSION)),
             };
             let time = now();
             if time >= deadline {
                 return Err(unavailable(&error));
             }
             if time >= next_start {
-                start_daemon(daemon, &dir)?;
+                start_daemon(daemon, dir)?;
                 next_start = time + RESPAWN_INTERVAL;
             }
             pause();
@@ -221,18 +251,18 @@ impl Unix {
 
     /// Connects to a running service speaking `version`, starting nothing.
     pub fn connect_version(dir: &Path, version: u32) -> Result<Unix, TransportError> {
-        Unix::attempt(dir, version).map_err(|failure| match failure {
-            ConnectFailure::Absent(error) => unavailable(&error),
-            ConnectFailure::Refused { theirs } => TransportError::Refused {
-                ours: version,
-                theirs,
-            },
-        })
+        Unix::attempt(&private(dir)?, version, own_uid())
+            .map_err(|failure| failure.into_error(version))
     }
 
-    fn attempt(dir: &Path, version: u32) -> Result<Unix, ConnectFailure> {
+    /// Connects to the service in the private `dir`, which must run as `uid`.
+    fn attempt(dir: &Path, version: u32, uid: u32) -> Result<Unix, ConnectFailure> {
         let stream =
             UnixStream::connect(socket_path(dir, version)).map_err(ConnectFailure::Absent)?;
+        let peer = peer_uid(&stream).map_err(ConnectFailure::Absent)?;
+        if peer != uid {
+            return Err(ConnectFailure::Foreign { uid: peer });
+        }
         handshake(&stream, version)?;
         let reader_stream = stream.try_clone().map_err(ConnectFailure::Absent)?;
         let calls = SharedCalls::default();
@@ -255,15 +285,14 @@ impl Unix {
 
     /// As `stop`, for the service speaking `version`.
     pub fn stop_version(dir: &Path, version: u32) -> Result<bool, TransportError> {
-        let mut client = match Unix::attempt(dir, version) {
+        Unix::stop_as(&private(dir)?, version, own_uid())
+    }
+
+    fn stop_as(dir: &Path, version: u32, uid: u32) -> Result<bool, TransportError> {
+        let mut client = match Unix::attempt(dir, version, uid) {
             Ok(client) => client,
             Err(ConnectFailure::Absent(_)) => return Ok(false),
-            Err(ConnectFailure::Refused { theirs }) => {
-                return Err(TransportError::Refused {
-                    ours: version,
-                    theirs,
-                });
-            }
+            Err(failure) => return Err(failure.into_error(version)),
         };
         client
             .send(0, &wire::encode_stop())
@@ -342,6 +371,46 @@ mod tests {
         assert_eq!(dir(None, Some("/x")), Path::new("/x/interrexx"));
         assert_eq!(dir(None, None), Path::new("/t/interrexx-7"));
         assert_eq!(dir(Some(""), Some("")), Path::new("/t/interrexx-7"));
+    }
+
+    /// A listener in a private directory, which `uid` here is never the owner of.
+    fn foreign_listener(name: &str) -> (PathBuf, std::os::unix::net::UnixListener, u32) {
+        let root = std::env::temp_dir().join(format!("rxapi-{name}-{}", std::process::id()));
+        let dir = prepare_dir(&root.join("api")).expect("a private directory");
+        let socket = socket_path(&dir, PROTOCOL_VERSION);
+        let listener = std::os::unix::net::UnixListener::bind(socket).expect("a listener");
+        listener.set_nonblocking(true).expect("non-blocking");
+        (root, listener, own_uid() + 1)
+    }
+
+    fn assert_told_nothing(listener: &std::os::unix::net::UnixListener) {
+        let (mut accepted, _) = listener.accept().expect("the attempt connected");
+        accepted.set_nonblocking(true).expect("non-blocking");
+        let mut byte = [0];
+        match accepted.read(&mut byte) {
+            Ok(0) => {}
+            Ok(_) => panic!("the peer was sent bytes"),
+            Err(error) => assert_eq!(error.kind(), io::ErrorKind::WouldBlock),
+        }
+    }
+
+    #[test]
+    fn a_service_of_another_user_is_an_error_not_an_absence() {
+        let (root, listener, uid) = foreign_listener("foreign");
+        let dir = root.join("api");
+        let foreign = TransportError::Foreign { uid: own_uid() };
+
+        assert_eq!(
+            Unix::stop_as(&dir, PROTOCOL_VERSION, uid).err(),
+            Some(foreign.clone())
+        );
+        assert_told_nothing(&listener);
+        let starting = Unix::start_and_connect(&dir, Path::new("/nonexistent"), uid);
+        assert_eq!(starting.err(), Some(foreign.clone()));
+        assert_told_nothing(&listener);
+        assert_eq!(foreign.status(), crate::message::code::NO_SERVICE);
+
+        fs::remove_dir_all(&root).expect("cleanup");
     }
 
     #[test]

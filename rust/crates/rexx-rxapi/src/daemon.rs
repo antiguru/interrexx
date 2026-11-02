@@ -15,7 +15,7 @@ use rustix::fs::{FlockOperation, flock};
 use crate::core::{ClientId, Core, Outcome};
 use crate::message::wire::{self, Command};
 use crate::message::{Reply, Request, Timestamp};
-use crate::transport::unix::{lock_path, socket_path};
+use crate::transport::unix::{lock_path, peer_uid, socket_path};
 
 /// How long a silent connector may hold a thread before its handshake.
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(2);
@@ -24,6 +24,8 @@ const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(2);
 pub struct Options<'a> {
     pub dir: &'a Path,
     pub version: u32,
+    /// The one user served.
+    pub uid: u32,
     /// Take the lock, report, and stop instead of listening.
     pub dry_run: bool,
     /// How long a daemon nobody has connected to waits before exiting.
@@ -135,7 +137,8 @@ pub fn serve(options: &Options<'_>) -> io::Result<Exit> {
 
         let (events, incoming) = mpsc::channel();
         let version = options.version;
-        std::thread::spawn(move || accept(listener, version, events));
+        let uid = options.uid;
+        std::thread::spawn(move || accept(listener, version, uid, events));
         let connections = own_core(incoming, options.idle_grace);
 
         let _ = fs::remove_file(&socket);
@@ -148,10 +151,13 @@ pub fn serve(options: &Options<'_>) -> io::Result<Exit> {
     Ok(Exit::Stopped)
 }
 
-fn accept(listener: UnixListener, version: u32, events: Sender<Event>) {
+fn accept(listener: UnixListener, version: u32, uid: u32, events: Sender<Event>) {
     let mut next_connection = 0;
     for stream in listener.incoming() {
         let Ok(stream) = stream else { continue };
+        if peer_uid(&stream).ok() != Some(uid) {
+            continue;
+        }
         let connection = next_connection;
         next_connection += 1;
         let events = events.clone();

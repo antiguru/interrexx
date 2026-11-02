@@ -59,6 +59,7 @@ fn main() -> ExitCode {
     let options = Options {
         dir: &dir,
         version: PROTOCOL_VERSION,
+        uid: rustix::process::getuid().as_raw(),
         dry_run,
         idle_grace: idle_grace(),
         report: &say,
