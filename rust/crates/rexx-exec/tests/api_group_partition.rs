@@ -10,8 +10,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// The partition this test asserts, per group file stem. Phase 8 is the
-/// groups whose libraries need no interpreter library; any other group is
-/// the latest phase one of its imports belongs to.
+/// groups whose libraries import nothing that names a phase; any other group
+/// is the latest phase one of its imports belongs to.
 const PARTITION: &[(&str, u8)] = &[
     ("METHOD", 8),
     ("CONVERSION", 8),
@@ -299,12 +299,7 @@ fn phase_of(group: &str, reach: &Reach) -> u8 {
         );
         phase = phase.max(class.map(|(_, phase)| *phase));
     }
-    phase.unwrap_or_else(|| {
-        panic!(
-            "{group} needs {:?} but imports nothing that names a phase: {:?}",
-            reach.interpreter, reach.imports
-        )
-    })
+    phase.unwrap_or(8)
 }
 
 /// The derived partition of every `.testGroup` under `groups_dir`, with the

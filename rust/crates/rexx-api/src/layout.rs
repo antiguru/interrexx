@@ -153,10 +153,10 @@ pub struct RexxVariableReferenceObject_ {
 /// A handle to an object of that shape; opaque to an extension.
 pub type RexxVariableReferenceObject = *mut RexxVariableReferenceObject_;
 
-/// `INSTANCE_INTERFACE_VERSION` (`api/oorexxapi.h:477`).
-pub const INSTANCE_INTERFACE_VERSION: wholenumber_t = 101;
-/// `THREAD_INTERFACE_VERSION` (`api/oorexxapi.h:499`).
-pub const THREAD_INTERFACE_VERSION: wholenumber_t = 103;
+/// `INSTANCE_INTERFACE_VERSION` (`api/oorexxapi.h:478`).
+pub const INSTANCE_INTERFACE_VERSION: wholenumber_t = 102;
+/// `THREAD_INTERFACE_VERSION` (`api/oorexxapi.h:503`).
+pub const THREAD_INTERFACE_VERSION: wholenumber_t = 104;
 /// `METHOD_INTERFACE_VERSION` (`api/oorexxapi.h:680`).
 pub const METHOD_INTERFACE_VERSION: wholenumber_t = 102;
 /// `CALL_INTERFACE_VERSION` (`api/oorexxapi.h:716`).
@@ -377,6 +377,14 @@ pub const REFUSING_MEMBERS: &[(&str, Owner)] = &[
     ),
     (
         "RexxInstanceInterface.SetTrace",
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    (
+        "RexxInstanceInterface.StackCommandEnvironment",
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    (
+        "RexxThreadInterface.RaiseConditionObject",
         Owner::Phase10(Deferral::Embedding),
     ),
     (
@@ -643,7 +651,7 @@ macro_rules! interface {
 }
 
 interface! {
-    /// `RexxInstanceInterface` (`api/oorexxapi.h:482-493`).
+    /// `RexxInstanceInterface` (`api/oorexxapi.h:483-496`).
     RexxInstanceInterface, populated {
         interfaceVersion: { value wholenumber_t = INSTANCE_INTERFACE_VERSION },
         Terminate: { call(*mut RexxInstance_) },
@@ -653,11 +661,12 @@ interface! {
         Halt: { call(*mut RexxInstance_) },
         SetTrace: { call(*mut RexxInstance_, logical_t) },
         AddCommandEnvironment: { call(*mut RexxInstance_, *const c_char, REXXPFN, c_int) },
+        StackCommandEnvironment: { call(*mut RexxInstance_, *const c_char, REXXPFN, c_int) -> logical_t },
     }
 }
 
 interface! {
-    /// `RexxThreadInterface` (`api/oorexxapi.h:503-674`).
+    /// `RexxThreadInterface` (`api/oorexxapi.h:506-680`).
     RexxThreadInterface, populated {
         interfaceVersion: { value wholenumber_t = THREAD_INTERFACE_VERSION },
         DetachThread: { call(*mut RexxThreadContext_) },
@@ -808,6 +817,7 @@ interface! {
         IsStringTable: { call(*mut RexxThreadContext_, RexxObjectPtr) -> logical_t },
         SendMessageScoped: { call(*mut RexxThreadContext_, RexxObjectPtr, CSTRING, RexxClassObject, RexxArrayObject) -> RexxObjectPtr },
         GetInterpreterInstance: { aborts call(*mut RexxThreadContext_) -> *mut RexxInstance_ },
+        RaiseConditionObject: { call(*mut RexxThreadContext_, RexxDirectoryObject) },
     }
 }
 
