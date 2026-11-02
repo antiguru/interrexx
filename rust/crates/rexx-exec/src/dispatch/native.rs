@@ -33,6 +33,8 @@ pub(crate) enum Family {
     Queue,
     /// `streamLibrary/FileNative.cpp`: `.File`'s body.
     File,
+    /// `concurrency/CommandHandler.cpp`: `.CommandHandler`'s body.
+    Command,
 }
 
 impl Family {
@@ -45,6 +47,7 @@ impl Family {
             Family::Stream => "stream",
             Family::Queue => "queue",
             Family::File => "file",
+            Family::Command => "command",
         }
     }
 }
@@ -492,6 +495,91 @@ static LIBRARY_REXX_METHODS: &[NativeExternal] = &[
         Family::File,
         Arity::Fixed(2),
         super::files::search_path_impl,
+    ),
+    deferred(
+        "cmdhandler_environments",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdhandler_handler",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdhandler_handlers",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdhandler_register",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdhandler_deregister",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdcontext_isRedirected",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdcontext_isValid",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdcontext_check",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdcontext_getVar",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdcontext_hasVar",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdcontext_setVar",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdcontext_dropVar",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdcontext_variables",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdcontext_forward",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdcontext_lineIn",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdcontext_write",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
+    ),
+    deferred(
+        "cmdnative_kind",
+        Family::Command,
+        Owner::Phase10(Deferral::Embedding),
     ),
 ];
 
