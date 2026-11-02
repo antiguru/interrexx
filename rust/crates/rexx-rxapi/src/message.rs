@@ -3,6 +3,8 @@
 //! Names and items are bytes. A name of `None` is a NULL name at the C API. Flags stay raw numbers
 //! because a bad flag is an answer, not a malformed request.
 
+pub mod wire;
+
 /// `RXQUEUE_FIFO`, the add flag.
 pub const FIFO: u64 = 0;
 /// `RXQUEUE_LIFO`, the add flag.

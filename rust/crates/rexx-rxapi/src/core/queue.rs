@@ -1,5 +1,6 @@
 //! Named and session queues, and pulls waiting on them.
 
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use super::{ClientId, Outcome, fold};
@@ -128,9 +129,8 @@ impl Queues {
             if !is_valid(&requested) || is_session(&requested) {
                 return refused(QUEUE_BAD_NAME);
             }
-            let key = fold(&requested);
-            if !self.named.contains_key(&key) {
-                self.named.insert(key, Queue::default());
+            if let Entry::Vacant(vacant) = self.named.entry(fold(&requested)) {
+                vacant.insert(Queue::default());
                 return Reply::QueueCreated {
                     status: OK,
                     name: Some(requested),
