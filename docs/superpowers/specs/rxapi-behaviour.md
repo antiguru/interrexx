@@ -806,34 +806,19 @@ and load with an explicit name list holding every macro, and macro search order 
 own macros behind and clears the macrospace as it needs, so the group assumes a macrospace it may
 freely clear.
 
-## Open questions
+## Resolutions for interrexx
 
-1. **`RexxShutDownAPI`.** The oracle's returns 1 and does nothing. The design makes it the stop. It is
-   not settled whether it should return 0 on success or keep 1 for callers, nor what it does while
-   the service holds queues. The oracle's internal stop refused when anything was held, but no public
-   path reaches it. No test calls it.
-2. **`rxapi` binary and `rxapi.testGroup`.** The test needs a file named `rxapi` beside the `rexx`
-   executable that prints those lines when a service is running. The design does not name the daemon
-   binary. Either the daemon takes that name and those messages, with "lockfile" meaning its own lock
-   file, or a row is ruled for this test. It also needs a service holding the lock while the test
-   runs, which the client's own connection provides.
-3. **Macrospace file compatibility.** The layout above is recorded, but images are specific to the
-   interpreter. It is not settled whether interrexx should keep the layout, or only the observable
-   rules: the return codes, the partial-load behaviour and `test_load_file_invalid`'s need for a
-   recognisable signature. An oracle-written file cannot run on interrexx either way. Whether loading
-   one should give 6 rather than storing unusable images is a choice for the builder or Moritz.
-4. **Session queue cleanup.** The design treats a closed connection as a hint. The oracle never
-   cleans up, and the documentation says the queue dies with its creator. An inherited queue may be in
-   use by children after the creator exits, as in a background child outliving its parent, and it is
-   unsettled whether cleanup waits for all inheritors. Keeping the oracle's behaviour, removing nothing
-   until the service exits, conflicts with "the service exits when it holds no queue" unless session
-   queues do not count towards holding. No test decides this.
-5. **Owner identity after process exit.** On the oracle an owner-only registration, which includes
-   every `RxFuncAdd`, cannot be dropped by a later process. That also means a daemon holding one
-   never meets the design's exit condition. It is unsettled whether a registrant's exit should
-   relax ownership. The design's rule that correctness does not depend on noticing death points to
-   keeping it as is.
-6. **Timestamp values.** The zero-based `month` and years-since-1900 `year` are recorded as observed.
-   The application programming book is not in `oodocs`, so the documented intent could not be checked.
-7. **A process whose id matches an old session handle.** The behaviour is stated from the absence of
-   any cleanup. It was not provoked on the oracle.
+These settle where interrexx departs from, or chooses among, the behaviour above.
+
+1. **`RexxShutDownAPI`** behaves as observed: it does nothing and returns 1. The stop is `rxapi` with
+   a stop option, used by test teardown.
+2. **The daemon binary is named `rxapi`** and prints what `rxapi.testGroup` relies on.
+3. **The macrospace file layout is interrexx's own.** Compiled images are engine-specific. A file the
+   oracle wrote is refused with the return code for an invalid file.
+4. **Session queues do not hold the daemon up.** They go when their last connected user closes, and
+   the exit rule counts only named queues, registrations and macros.
+5. **Registrations stay owner-only,** as observed. A daemon holding them stays up.
+6. **Timestamps** keep the observed zero-based `month` and years-since-1900 `year`.
+7. **A blocked pull ends when its connection closes,** and the queue stays usable. The observed
+   undeletable queue and daemon death are oracle defects and are not reproduced.
+8. **Process id reuse** cannot arise, because identity is the connection and never the process id.

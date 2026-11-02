@@ -114,8 +114,8 @@ and a version mismatch reached by any other route is a clean refusal.
 * Each protocol version has its own socket, so an upgraded client starts a new daemon instead of
   being refused by an old one. The old daemon keeps serving old clients. A cross-version refusal
   therefore cannot arise in normal use.
-* `RexxShutDownAPI` is the explicit stop. End-to-end tests use it for teardown, and users never
-  need it.
+* `rxapi` with a stop option is the explicit stop. End-to-end tests use it for teardown, and users
+  never need it. `RexxShutDownAPI` stays the oracle's no-op.
 
 ### Process death
 
@@ -169,7 +169,7 @@ transport is kept out of release paths, and how PRs split further when one grows
 
 * The oracle bump goes first, as PR 0, so the behaviour description and the extension builds are
   not written against a tree that then moves.
-* One socket per protocol version, and `RexxShutDownAPI` as the only stop.
+* One socket per protocol version, and a stop option on `rxapi` as the only stop.
 * `rxunixsys` is a sixth extension, because L3-full's clause has no row excluding it.
 * A test that cannot pass on this host stops for Moritz's ruling; the plan proposes the row, and no
   exclusion row is added without him.
