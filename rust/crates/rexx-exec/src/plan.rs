@@ -945,7 +945,7 @@ impl Interp {
         }
         let chunk = match self.chunks.get(&(key, trace)) {
             Some(chunk) => Rc::clone(chunk),
-            None => match if self.clause_exits {
+            None => match if self.clause_exits || self.trace_switchable {
                 crate::ir::compile_unsettled(body, plan, trace)
             } else {
                 crate::ir::compile(body, plan, trace)

@@ -754,3 +754,212 @@ fn two_instances_keep_their_environments_and_both_take_a_halt() {
         "{stdout}"
     );
 }
+
+/// The rest of the classic family, from a driver: `RexxGetErrorMessage`,
+/// `RexxGetErrorMessageByNumber` and `RexxGetVersionInformation`; `RexxStart`'s leading-blank
+/// argument, its emptied result, its `//T` translation, an in-store source's image reused and
+/// the macrospace an empty pair names; `RexxTranslateInstoreProgram`, `RexxTranslateProgram`
+/// and `RexxCompileProgram` and the images they write run; `RexxSetHalt`, `RexxSetTrace` and
+/// `RexxResetTrace` naming the thread a program runs on, from another thread and from a
+/// function the program calls. Standard output and error are the oracle's, measured with the
+/// same driver built against it.
+#[test]
+fn the_classic_family_answers_as_the_oracle_does() {
+    let output = run_driver(
+        "family",
+        &[
+            (
+                "good.rex",
+                "say \"good ran\" arg(1)\nreturn \"res\" arg(1)\n",
+            ),
+            ("bad.rex", "say \"bad\"\nif then\n"),
+            ("nores.rex", "say \"noresult\"\n"),
+            (
+                "loop.rex",
+                "signal on halt\ndo forever\n  if time(\"E\") > 5 then return \"not halted\"\nend\n\
+                 halt: return \"halted at\" condition(\"D\")\n",
+            ),
+            (
+                "self.rex",
+                "signal on halt\nx = selfhalt()\nsay \"after selfhalt\" x\nreturn \"not halted\"\n\
+                 halt: return \"halted\" x\n",
+            ),
+            (
+                "trace.rex",
+                "x = selftrace()\na = 1 + 1\ny = selftrace(1)\nb = trace()\nreturn x y b\n",
+            ),
+        ],
+        &[],
+    );
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(String::from_utf8_lossy(&output.stdout), FAMILY_STDOUT);
+    let dir = scratch().join("driver-family");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        FAMILY_STDERR.replace("{dir}", &dir.display().to_string())
+    );
+}
+
+/// `callrexx1`, the classic sample (`samples/api/classic/unix/callrexx`), built against our
+/// libraries and run from a copy of its directory with every prompt answered: each `RexxStart`
+/// answers as on the oracle -- results the program returns into a null, a large enough and a
+/// too-small buffer, arguments, an in-store source and then its image alone -- through the
+/// eighth call, which loads a macro. The oracle then ends with SIGSEGV running that macro from
+/// the macrospace, where ours runs it and goes on to delete it.
+#[test]
+fn callrexx1_runs_as_on_the_oracle() {
+    let sample = repository().join("third_party/ooRexx/samples/api/classic/unix/callrexx");
+    let dir = scratch().join("callrexx1");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("the sample's directory");
+    for entry in std::fs::read_dir(&sample).expect("the sample's sources") {
+        let path = entry.expect("an entry").path();
+        if path.extension().is_some_and(|extension| extension == "rex") {
+            std::fs::copy(&path, dir.join(path.file_name().expect("a name"))).expect("a copy");
+        }
+    }
+    let api = scratch().join("api-callrexx1");
+    let mut child = Command::new("timeout")
+        .args(["-k", "5", "120"])
+        .arg(testbinaries().join("callrexx1"))
+        .current_dir(&dir)
+        .env("REXX_API_DIR", &api)
+        .env("TERM", "dumb")
+        .env(
+            "PATH",
+            std::env::join_paths([bin_dir(), "/usr/bin".into(), "/bin".into()]).expect("a PATH"),
+        )
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("callrexx1 runs");
+    {
+        use std::io::Write as _;
+        let mut stdin = child.stdin.take().expect("its input");
+        let _ = stdin.write_all(&[b'\n'; 20]);
+    }
+    let output = child.wait_with_output().expect("callrexx1 ends");
+    stop_service(&api);
+    assert!(output.status.success(), "{output:?}");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let returned: Vec<&str> = stdout
+        .lines()
+        .filter(|line| line.starts_with("CALLREXX1 - "))
+        .collect();
+    let oracle: Vec<&str> = CALLREXX1_RETURNS.lines().collect();
+    assert_eq!(returned.get(..oracle.len()), Some(&oracle[..]), "{stdout}");
+    assert_eq!(returned.len(), oracle.len() + 9, "{stdout}");
+    assert!(
+        stdout.contains("Now inside the file macros.rex which is located in the REXX Macrospace"),
+        "{stdout}"
+    );
+}
+
+/// `callrexx1`'s report of each of its first eight `RexxStart` calls on the oracle.
+const CALLREXX1_RETURNS: &str = "\
+CALLREXX1 - Back from REXXSTART:  Return Code: 0
+CALLREXX1 - RESULT-LENGTH:           8
+CALLREXX1 - RESULT-Value:            99999999
+CALLREXX1 - Back from REXXSTART:  Return Code: 0
+CALLREXX1 - RESULT-LENGTH:           8
+CALLREXX1 - RESULT-Value:            99999999
+CALLREXX1 - Back from REXXSTART:  Return Code: 0
+CALLREXX1 - RESULT-LENGTH:           8
+CALLREXX1 - RESULT-Value:            99999999
+CALLREXX1 - Back from REXXSTART:  Return Code: 0
+CALLREXX1 - RESULT-LENGTH:           1
+CALLREXX1 - RESULT-Value:            0
+CALLREXX1 - Back from REXXSTART:  Return Code: 0
+CALLREXX1 - RESULT-LENGTH:           1
+CALLREXX1 - RESULT-Value:            0
+CALLREXX1 - Back from REXXSTART:  Return Code: 0
+CALLREXX1 - RESULT-LENGTH:           0
+CALLREXX1 - RESULT-Value:            
+CALLREXX1 - Back from REXXSTART:  Return Code: 0
+CALLREXX1 - RESULT-LENGTH:           0
+CALLREXX1 - RESULT-Value:            (null)
+CALLREXX1 - Back from REXXSTART:  Return Code: 0
+CALLREXX1 - RESULT-LENGTH:           0
+CALLREXX1 - RESULT-Value:            (null)
+";
+
+/// The family driver's standard output on the oracle.
+const FAMILY_STDOUT: &str = r#"version Open Object Rexx Version 5.3.0 r0
+code 3001: Failure during initialization: File "&1" is unreadable.
+code 35929: Missing expression in logical expression list.
+code 40001: External routine "&1" failed.
+code 0: (null)
+code 3: (null)
+code 99999: (null)
+code 999013: Output file name must be different from input file name.
+number 1: (null)
+number 200: Failure during initialization: File "&1" is unreadable.
+number 534: Failure during initialization: Program "&1" was not found.
+number 0: (null)
+number 99999: (null)
+terminated 1
+good ran x
+good: rc=0 short=0 result=res x len=5
+good ran lead
+leading blank: rc=0 short=0 result=res lead len=8
+noresult
+no result: rc=0 short=0 result=(null) len=0
+missing: rc=-3 short=-3 result=preset len=16
+//T good: rc=0 short=-99 result=preset len=16
+//t bad: rc=-35 short=-99 result=preset len=16
+bad: rc=-35 short=-35 result=preset len=16
+instore ran a
+instore source: rc=0 short=0 result=is a len=4
+image filled: yes
+instore ran b
+instore image: rc=0 short=0 result=is b len=4
+macrospace missing: rc=-3 short=-3 result=preset len=16
+instore bad: rc=-35 short=-35 result=preset len=16
+translate instore rc=0 image=yes
+instore ran c
+translated image: rc=0 short=0 result=is c len=4
+translate instore bad rc=-35 image=no
+translate rc=0
+good ran t
+run translated: rc=0 short=0 result=res t len=5
+compile encoded rc=0
+good ran e
+run encoded: rc=0 short=0 result=res e len=5
+translate bad rc=-35 exists=0
+translate missing rc=-3
+translate no output rc=0
+idle halt=1 trace=1 reset=1
+halt from another thread=0
+runner loop.rex: rc=0 short=0 result=halted at 
+after the run=1
+runner self.rex: rc=0 short=0 result=halted 0
+runner trace.rex: rc=0 short=0 result=0 0 O
+"#;
+
+/// The family driver's standard error on the oracle, `{dir}` the directory it ran in.
+const FAMILY_STDERR: &str = r#"Error 3:  Failure during initialization.
+Error 3.901:  Failure during initialization: Program "nothere.rex" was not found.
+     2 *-* if then
+Error 35 running {dir}/bad.rex line 2:  Invalid expression.
+Error 35.929:  Missing expression in logical expression list.
+     2 *-* if then
+Error 35 running {dir}/bad.rex line 2:  Invalid expression.
+Error 35.929:  Missing expression in logical expression list.
+Error 3:  Failure during initialization.
+Error 3.1:  Failure during initialization: File "nores.rex" is unreadable.
+     1 *-* if then
+Error 35 running ibad line 1:  Invalid expression.
+Error 35.929:  Missing expression in logical expression list.
+     2 *-* if then
+Error 35 running {dir}/bad.rex line 2:  Invalid expression.
+Error 35.929:  Missing expression in logical expression list.
+Error 3:  Failure during initialization.
+Error 3.901:  Failure during initialization: Program "nothere.rex" was not found.
+       +++ "LINUX COMMAND {dir}/trace.rex"
+     2 *-* a = 1 + 1
+       >>>   "2"
++++ Interactive trace. "Trace Off" to end debug, ENTER to continue. +++
+     3 *-* y = selftrace(1)
+       >>>   "0"
+"#;

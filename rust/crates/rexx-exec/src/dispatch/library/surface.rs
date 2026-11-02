@@ -770,18 +770,7 @@ impl Surface for Interp {
     /// frame's external trace, `TRACE ?R` on and `TRACE O` off. An idle
     /// activity's frame is not reached.
     fn set_trace(&mut self, _all: bool, on: bool) {
-        if self.running_activation().is_none() {
-            return;
-        }
-        let mode = if on {
-            crate::trace::TraceMode {
-                debug: true,
-                ..crate::trace::TraceMode::RESULTS
-            }
-        } else {
-            crate::trace::TraceMode::OFF
-        };
-        self.set_trace_mode(mode);
+        self.set_external_trace(on);
     }
 
     /// `Activity::raiseConditionObject`: the condition `condition` names,

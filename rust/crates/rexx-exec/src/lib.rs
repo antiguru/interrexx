@@ -1661,6 +1661,13 @@ struct Interp {
     /// Whether the halt or the trace exit is installed and so runs at each clause boundary
     /// (`Activity::queryTrcHlt`).
     pub(crate) clause_exits: bool,
+    /// Whether another thread can switch the trace of this run at a clause boundary
+    /// (`RexxSetTrace`), so that no chunk may settle a clause's trace setting at compile time.
+    pub(crate) trace_switchable: bool,
+    /// A native call posted to this interpreter's own inbox, which the clause boundary that
+    /// ends the calling clause serves: the activation depth of that clause. It sets
+    /// `clause_exits` to be reached there.
+    pub(crate) boundary_posts: Option<usize>,
     /// An embedding instance's `EXTERNAL_CALL_PATH` and
     /// `EXTERNAL_CALL_EXTENSIONS`, which every external search uses.
     pub(crate) call_search: require::Instance,
@@ -2458,6 +2465,8 @@ impl Interp {
             subcom_aliases: FxHashMap::default(),
             exits: None,
             clause_exits: false,
+            trace_switchable: false,
+            boundary_posts: None,
             call_search: require::Instance::default(),
             kept_strings: rustc_hash::FxHashMap::default(),
             kept_names: rustc_hash::FxHashMap::default(),
@@ -3548,6 +3557,8 @@ impl Interp {
             // Entry points, not objects.
             exits: _,
             clause_exits: _,
+            trace_switchable: _,
+            boundary_posts: _,
             call_search: _,
             // Copies keyed by object, dropped with it rather than keeping it.
             kept_strings: _,
@@ -4359,6 +4370,11 @@ fn execute_kept(
     let (argument, deadline, switch_mode) = (parts.argument, parts.deadline, parts.switch_mode);
     let (arguments, start, address) = (parts.arguments, parts.start, parts.address);
     let exits = parts.exits;
+    // Reachable by `RexxSetHalt` and `RexxSetTrace` through either thread while it runs.
+    interp.trace_switchable = parts.classic_thread.is_some();
+    let _classic = parts.classic_thread.map(|caller| {
+        embedding::ClassicRun::register([caller, signal::current_thread()], interp.timer.inbox())
+    });
     interp.input = Input::new(parts.input);
     interp.standard_transient = parts.standard_transient;
     if let Some(sinks) = &parts.sinks {

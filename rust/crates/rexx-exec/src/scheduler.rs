@@ -164,6 +164,9 @@ pub(crate) enum Posted {
     Panicked(Box<dyn std::any::Any + Send>),
     /// A signal arrived: every activity is halted ([`Interp::halt_all`]).
     Halt,
+    /// `RexxSetTrace` (`true`) or `RexxResetTrace` named this run's thread: the running Rexx
+    /// frame's external trace ([`Interp::set_external_trace`]).
+    Trace(bool),
     /// A chunk of standard input, empty at its end.
     Input(Vec<u8>),
 }
@@ -1580,6 +1583,7 @@ impl Interp {
                     self.timer.requests().clear(crate::timer::HALT);
                     self.halt_all();
                 }
+                Posted::Trace(on) => self.set_external_trace(on),
                 Posted::Input(chunk) => self.input.receive(chunk),
                 Posted::Unblocked {
                     activity,

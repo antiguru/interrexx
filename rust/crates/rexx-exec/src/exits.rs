@@ -276,10 +276,25 @@ impl Interp {
     /// The halt and trace exits at a clause boundary (`RexxActivation::processClauseBoundary`):
     /// a halt the halt exit asks for is raised there, and a trace the trace exit asks for is
     /// turned on as `RXTRACE` turns it on. The library's own code calls neither, as the
-    /// oracle's image code does not (`RexxActivation::run`'s `isOldSpace`).
+    /// oracle's image code does not (`RexxActivation::run`'s `isOldSpace`). Before them, what a
+    /// native call posted to this interpreter's own inbox is served (`boundary_posts`).
     #[cold]
     #[inline(never)]
     pub(crate) fn run_clause_exits(&mut self) -> Result<(), Failure> {
+        // Served at a boundary of the activation that made the call, or of one it returned to:
+        // not at one of an `INTERPRET` a debug pause runs above it, whose setting a trace
+        // request does not reach.
+        if let Some(depth) = self.boundary_posts
+            && self.activation_depth() <= depth
+        {
+            self.boundary_posts = None;
+            self.clause_exits =
+                self.exit_installed(exit_code::HLT) || self.exit_installed(exit_code::TRC);
+            self.drain_completions();
+        }
+        if !self.exit_installed(exit_code::HLT) && !self.exit_installed(exit_code::TRC) {
+            return Ok(());
+        }
         let Some(program) = self.running_activation().map(|running| running.program_id) else {
             return Ok(());
         };
@@ -315,6 +330,23 @@ impl Interp {
         self.exits
             .as_ref()
             .is_some_and(|exits| exits.root == Some(program))
+    }
+
+    /// `Activity::setTrace` (`concurrency/Activity.cpp`): the running Rexx frame's external
+    /// trace, `TRACE ?R` on and `TRACE O` off. An idle activity's frame is not reached.
+    pub(crate) fn set_external_trace(&mut self, on: bool) {
+        if self.running_activation().is_none() {
+            return;
+        }
+        let mode = if on {
+            crate::trace::TraceMode {
+                debug: true,
+                ..crate::trace::TraceMode::RESULTS
+            }
+        } else {
+            crate::trace::TraceMode::OFF
+        };
+        self.set_trace_mode(mode);
     }
 
     /// The halt exit's clear, once a trap has taken a `HALT` (`callHaltClearExit`), unless the

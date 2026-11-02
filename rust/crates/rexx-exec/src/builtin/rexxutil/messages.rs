@@ -121,10 +121,14 @@ fn error_message(interp: &Interp, catalog: Option<&[u8]>, set: i32, number: i32)
 /// `RexxGetErrorMessageByNumber`: the text of the message whose message
 /// number is `number`.
 fn rexx_message(number: i32) -> Option<&'static str> {
+    mapped_message(number).map(|message| message.text)
+}
+
+/// The message `Message_map_table` maps the message number `number` to.
+pub(crate) fn mapped_message(number: i32) -> Option<&'static rexx_inventory::errors::Message> {
     rexx_inventory::errors::MESSAGES
         .iter()
         .find(|message| message.major < MAPPED_MAJOR_LIMIT && i32::from(message.number) == number)
-        .map(|message| message.text)
 }
 
 /// Where `formatMessage` reads its substitution values.

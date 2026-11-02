@@ -89,6 +89,9 @@ pub struct Invocation {
     /// The system exits an embedding's `RexxStart` names: each a function code and the name
     /// of a registered exit handler.
     exits: Vec<(std::ffi::c_int, Vec<u8>)>,
+    /// The thread an embedding's `RexxStart` was called on, which `RexxSetHalt` and
+    /// `RexxSetTrace` name to reach this run.
+    classic_thread: Option<usize>,
 }
 
 /// How an embedding calls a program (`RXCOMMAND`, `RXSUBROUTINE`,
@@ -177,6 +180,7 @@ impl Invocation {
             start: StartType::Command,
             address: None,
             exits: Vec::new(),
+            classic_thread: None,
         }
     }
 
@@ -206,6 +210,14 @@ impl Invocation {
     /// name of a registered exit handler.
     pub fn with_exits(self, exits: Vec<(std::ffi::c_int, Vec<u8>)>) -> Invocation {
         Invocation { exits, ..self }
+    }
+
+    /// The same invocation, run for a `RexxStart` called on the thread `thread`.
+    pub fn with_classic_thread(self, thread: usize) -> Invocation {
+        Invocation {
+            classic_thread: Some(thread),
+            ..self
+        }
     }
 
     /// The same invocation, resolving relative paths against `directory`.
@@ -333,6 +345,7 @@ impl Invocation {
             start: self.start,
             address: self.address,
             exits: self.exits,
+            classic_thread: self.classic_thread,
         }
     }
 }
@@ -354,6 +367,7 @@ pub(crate) struct InvocationParts {
     pub(crate) start: StartType,
     pub(crate) address: Option<Vec<u8>>,
     pub(crate) exits: Vec<(std::ffi::c_int, Vec<u8>)>,
+    pub(crate) classic_thread: Option<usize>,
     pub(crate) frame_block: FrameBlock,
     pub(crate) switch_mode: Option<SwitchMode>,
 }

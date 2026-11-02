@@ -858,6 +858,14 @@ impl Interp {
         let (answer, mut frame) = self.take_native_frame();
         self.end_native_frame(&mut frame);
         self.activity.native_spares.push(frame);
+        // A request the call made of this interpreter -- `RexxSetHalt` naming the thread it
+        // runs on -- is served at the end of the clause that made the call, where the oracle's
+        // clause boundary takes it, rather than when the countdown next runs out.
+        if self.timer.requests().pending(crate::timer::BOUNDARY) {
+            self.timer.requests().clear(crate::timer::BOUNDARY);
+            self.boundary_posts = Some(self.activation_depth());
+            self.clause_exits = true;
+        }
         answer
     }
 

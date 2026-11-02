@@ -99,11 +99,15 @@ pub unsafe extern "C" fn RexxStart(
             (!argument.strptr.is_null()).then(|| text(argument.strptr, argument.strlength))
         })
         .collect();
-    // SAFETY: as above, for the in-store pair.
-    let source = (!instore.is_null())
-        .then(|| unsafe { *instore })
-        .filter(|source| !source.strptr.is_null())
-        .map(|source| text(source.strptr, source.strlength));
+    // SAFETY: as above, for the in-store pair, a null `strptr` an absent string.
+    let pair = (!instore.is_null()).then(|| unsafe { [*instore, *instore.add(1)] });
+    let held = |string: RXSTRING| {
+        (!string.strptr.is_null()).then(|| text(string.strptr, string.strlength))
+    };
+    let instore_pair = pair.map(|[source, image]| rexx_exec::embedding::Instore {
+        source: held(source),
+        image: held(image),
+    });
     // SAFETY: NUL-terminated where non-null.
     let c_text = |pointer: *const c_char| unsafe {
         (!pointer.is_null()).then(|| std::ffi::CStr::from_ptr(pointer).to_bytes().to_vec())
@@ -115,18 +119,32 @@ pub unsafe extern "C" fn RexxStart(
     };
     let started = rexx_exec::embedding::rexx_start(rexx_exec::embedding::Start {
         name: c_text(name).unwrap_or_default(),
-        source,
+        instore: instore_pair,
         arguments,
         environment: c_text(environment).filter(|environment| !environment.is_empty()),
         start,
         exits,
     });
-    if !rc.is_null() {
+    if let (false, Some(short)) = (rc.is_null(), started.short) {
         // SAFETY: the caller's guarantee.
-        unsafe { rc.write(started.short) };
+        unsafe { rc.write(short) };
+    }
+    if let Some(image) = started.image {
+        // SAFETY: `instore` holds two strings, the second the caller's to receive the image.
+        unsafe { give_block(&mut *instore.add(1), &image) };
     }
     // SAFETY: the caller's guarantee.
-    if let (Some(result), Some(value)) = (unsafe { result.as_mut() }, started.result) {
+    let mut result = unsafe { result.as_mut() };
+    // A run that answered nothing empties the caller's result (`RexxStartDispatcher::run`); a
+    // `//T` translation, which leaves the short alone, ran nothing and leaves it too.
+    let ran = started.short.is_some();
+    if let (Some(result), 0, None, true) =
+        (result.as_deref_mut(), started.code, &started.result, ran)
+    {
+        result.strptr = std::ptr::null_mut();
+        result.strlength = 0;
+    }
+    if let (Some(result), Some(value)) = (result, started.result) {
         if result.strptr.is_null() || result.strlength <= value.len() {
             // SAFETY: `malloc` of a non-zero size; `RexxFreeMemory` is `free`.
             result.strptr = unsafe { libc::malloc(value.len() + 1) }.cast();
@@ -144,6 +162,28 @@ pub unsafe extern "C" fn RexxStart(
     started.code
 }
 
+/// Hands `bytes` back through `string` in a block `RexxFreeMemory` releases, NUL-terminated;
+/// a null block where none could be allocated.
+///
+/// # Safety
+/// `string` is writable.
+unsafe fn give_block(string: &mut RXSTRING, bytes: &[u8]) {
+    // SAFETY: `malloc` of a non-zero size; `RexxFreeMemory` is `free`.
+    let block = unsafe { libc::malloc(bytes.len() + 1) }.cast::<u8>();
+    if block.is_null() {
+        string.strptr = std::ptr::null_mut();
+        string.strlength = 0;
+        return;
+    }
+    // SAFETY: the block holds `bytes.len() + 1` bytes.
+    unsafe {
+        std::ptr::copy_nonoverlapping(bytes.as_ptr(), block, bytes.len());
+        block.add(bytes.len()).write(0);
+    }
+    string.strptr = block.cast();
+    string.strlength = bytes.len();
+}
+
 /// `RexxWaitForTermination`, a no-op the header keeps for binary compatibility.
 #[unsafe(no_mangle)]
 pub extern "C" fn RexxWaitForTermination() {}
@@ -154,44 +194,69 @@ pub extern "C" fn RexxDidRexxTerminate() -> RexxReturnCode {
     1
 }
 
-/// `RexxTranslateProgram`.
+/// `RexxTranslateProgram`: `RexxCompileProgram` without encoding.
 ///
 /// # Safety
-/// As [`RexxStart`].
+/// As [`RexxCompileProgram`].
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxTranslateProgram(
-    _input: *const c_char,
-    _output: *const c_char,
-    _exits: *mut c_void,
+    input: *const c_char,
+    output: *const c_char,
+    exits: *mut c_void,
 ) -> RexxReturnCode {
-    TARGET_NOT_FOUND
+    // SAFETY: the caller's guarantee.
+    unsafe { RexxCompileProgram(input, output, exits, false) }
 }
 
-/// `RexxTranslateInstoreProgram`.
+/// `RexxTranslateInstoreProgram`: `source`, named `name`, translated, its image into `image`
+/// in a block `RexxFreeMemory` releases; 0, or the negated error number, leaving `image`.
 ///
 /// # Safety
-/// As [`RexxStart`].
+/// `name` is null or NUL-terminated, `source` is readable for its length, and `image` is
+/// writable.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxTranslateInstoreProgram(
-    _name: *const c_char,
-    _source: *const CONSTRXSTRING,
-    _image: *mut RXSTRING,
+    name: *const c_char,
+    source: *const CONSTRXSTRING,
+    image: *mut RXSTRING,
 ) -> RexxReturnCode {
-    TARGET_NOT_FOUND
+    // SAFETY: the caller's guarantee.
+    let name = unsafe { text_of(name) }.unwrap_or_default();
+    // SAFETY: the caller's guarantee.
+    let source = unsafe { source.as_ref() }
+        .filter(|source| !source.strptr.is_null())
+        .map_or_else(Vec::new, |source| unsafe {
+            std::slice::from_raw_parts(source.strptr.cast::<u8>(), source.strlength).to_vec()
+        });
+    match rexx_exec::embedding::translate_instore(&name, source) {
+        Ok(bytes) => {
+            // SAFETY: the caller's guarantee.
+            if let Some(image) = unsafe { image.as_mut() } {
+                // SAFETY: `image` is writable.
+                unsafe { give_block(image, &bytes) };
+            }
+            0
+        }
+        Err(code) => code,
+    }
 }
 
-/// `RexxCompileProgram`.
+/// `RexxCompileProgram`: the program file `input` translated and, where `output` is not null,
+/// its image written to that file, base64-encoded where `encode` is set; 0, or the negated
+/// error number. The system exits are not called: a translation runs no exit's event.
 ///
 /// # Safety
-/// As [`RexxStart`].
+/// `input` and `output` are null or NUL-terminated.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxCompileProgram(
-    _input: *const c_char,
-    _output: *const c_char,
+    input: *const c_char,
+    output: *const c_char,
     _exits: *mut c_void,
-    _encode: bool,
+    encode: bool,
 ) -> RexxReturnCode {
-    TARGET_NOT_FOUND
+    // SAFETY: the caller's guarantee.
+    let (input, output) = unsafe { (text_of(input), text_of(output)) };
+    rexx_exec::embedding::translate_file(&input.unwrap_or_default(), output.as_deref(), encode)
 }
 
 /// `RexxCreateInterpreterImage`.
@@ -201,22 +266,36 @@ pub unsafe extern "C" fn RexxCompileProgram(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxCreateInterpreterImage(_target: *const c_char) {}
 
-/// `RexxGetVersionInformation`.
+/// `RexxGetVersionInformation`: the version banner in a block `RexxFreeMemory` releases, or
+/// null where none could be allocated.
 #[unsafe(no_mangle)]
 pub extern "C" fn RexxGetVersionInformation() -> *mut c_char {
-    std::ptr::null_mut()
+    let text = rexx_exec::embedding::version_information();
+    // SAFETY: `malloc` of a non-zero size; `RexxFreeMemory` is `free`.
+    let block = unsafe { libc::malloc(text.len() + 1) }.cast::<u8>();
+    if !block.is_null() {
+        // SAFETY: the block holds `text.len() + 1` bytes.
+        unsafe {
+            std::ptr::copy_nonoverlapping(text.as_ptr(), block, text.len());
+            block.add(text.len()).write(0);
+        }
+    }
+    block.cast()
 }
 
-/// `RexxGetErrorMessage`.
+/// `RexxGetErrorMessage`: the text of the message `code` (major times 1000 plus minor), null
+/// where there is none. The text lives as long as the library.
 #[unsafe(no_mangle)]
-pub extern "C" fn RexxGetErrorMessage(_code: c_int) -> *const c_char {
-    std::ptr::null()
+pub extern "C" fn RexxGetErrorMessage(code: c_int) -> *const c_char {
+    rexx_exec::embedding::error_message(code).map_or(std::ptr::null(), std::ffi::CStr::as_ptr)
 }
 
-/// `RexxGetErrorMessageByNumber`.
+/// `RexxGetErrorMessageByNumber`: the text of the message `number` maps to, null where there
+/// is none.
 #[unsafe(no_mangle)]
-pub extern "C" fn RexxGetErrorMessageByNumber(_number: c_int) -> *const c_char {
-    std::ptr::null()
+pub extern "C" fn RexxGetErrorMessageByNumber(number: c_int) -> *const c_char {
+    rexx_exec::embedding::error_message_by_number(number)
+        .map_or(std::ptr::null(), std::ffi::CStr::as_ptr)
 }
 
 /// `RexxVariablePool`, against the activation that called the routine, classic function or
@@ -247,22 +326,28 @@ pub unsafe extern "C-unwind" fn RexxCallBack(
     unsafe { rexx_api::ffi::classic::call_back(label, argc, argv, rc, result) }
 }
 
-/// `RexxSetHalt`.
-#[unsafe(no_mangle)]
-pub extern "C" fn RexxSetHalt(_process: i32, _thread: usize) -> RexxReturnCode {
-    TARGET_NOT_FOUND
+/// `RXARI_OK` where `done`, else `RXARI_NOT_FOUND`.
+fn found(done: bool) -> RexxReturnCode {
+    if done { 0 } else { TARGET_NOT_FOUND }
 }
 
-/// `RexxSetTrace`.
+/// `RexxSetHalt`: the `RexxStart` run on `thread` halted at its next clause. The process id is
+/// ignored, as the oracle ignores it.
 #[unsafe(no_mangle)]
-pub extern "C" fn RexxSetTrace(_process: i32, _thread: usize) -> RexxReturnCode {
-    TARGET_NOT_FOUND
+pub extern "C" fn RexxSetHalt(_process: i32, thread: usize) -> RexxReturnCode {
+    found(rexx_exec::embedding::classic_halt(thread))
 }
 
-/// `RexxResetTrace`.
+/// `RexxSetTrace`: the external trace of the `RexxStart` run on `thread` turned on.
 #[unsafe(no_mangle)]
-pub extern "C" fn RexxResetTrace(_process: i32, _thread: usize) -> RexxReturnCode {
-    TARGET_NOT_FOUND
+pub extern "C" fn RexxSetTrace(_process: i32, thread: usize) -> RexxReturnCode {
+    found(rexx_exec::embedding::classic_trace(thread, true))
+}
+
+/// `RexxResetTrace`: the external trace of the `RexxStart` run on `thread` turned off.
+#[unsafe(no_mangle)]
+pub extern "C" fn RexxResetTrace(_process: i32, thread: usize) -> RexxReturnCode {
+    found(rexx_exec::embedding::classic_trace(thread, false))
 }
 
 /// `RexxOption` (`api/oorexxapi.h`): a name and a value of the type the name
