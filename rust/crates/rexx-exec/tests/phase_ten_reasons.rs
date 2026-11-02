@@ -14,7 +14,6 @@ use std::path::{Path, PathBuf};
 #[path = "support/literals.rs"]
 mod source_literals;
 
-use rexx_core::Owner;
 use source_literals::{literals, names, shown, source_files};
 
 /// The crates whose refusals the scan covers.
@@ -254,22 +253,5 @@ fn a_test_module_file_resolves_where_rustc_finds_it() {
             PathBuf::from("/c/src/ir/golden_tests.rs"),
             PathBuf::from("/c/src/ir/golden_tests"),
         ]
-    );
-}
-
-/// `rexx-inventory` depends on no crate holding the enum, so its `EXCLUDED`
-/// table spells each reason as the variant's name; every one names a
-/// variant, and the owner the refusal prints is that variant's label.
-#[test]
-fn every_excluded_builtin_names_a_reason_the_enum_knows() {
-    for (name, phase, reason) in rexx_inventory::builtins::EXCLUDED {
-        let owner = Owner::named(phase, Some(reason)).unwrap_or_else(|| {
-            panic!("{name}'s owner {phase:?} with reason {reason:?} is not a D3 owner")
-        });
-        assert_eq!(owner.label(), format!("{phase} {reason}"));
-    }
-    assert!(
-        !rexx_inventory::builtins::EXCLUDED.is_empty(),
-        "the table is empty, so this test passes over nothing"
     );
 }

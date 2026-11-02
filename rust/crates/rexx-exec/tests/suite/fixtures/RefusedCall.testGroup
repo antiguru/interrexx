@@ -1,6 +1,5 @@
 #!/usr/bin/env rexx
-/* TEST_B calls a routine this crate refuses. Its name is built at run time,
-   so reaching_rxapi does not rename the test out. */
+/* TEST_B sends a message this crate refuses. */
   parse source . . s
   group = .TestGroup~new(s)
   group~add(.RefusedCall.testGroup)
@@ -16,8 +15,7 @@ return testResult
   self~assertSame(1, 1)
 
 ::method test_b
-  name = 'SysQueryRexx' || 'Macro'
-  interpret 'r =' name || '(''x'')'
+  r = .CommandHandler~environments
   self~assertSame(1, 1)
 
 ::method test_c

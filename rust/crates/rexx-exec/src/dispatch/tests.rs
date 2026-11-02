@@ -2116,6 +2116,31 @@ fn a_conversion_this_phase_does_not_model_is_loud_where_the_ones_it_models_answe
     }
 }
 
+/// A `lineIn` on the in-process session queue with no other activity to add a
+/// line is a wait nothing left to run can end, which the oracle blocks on for
+/// ever (Deviation 20). With another activity alive, it waits for that one.
+#[test]
+fn a_line_in_nothing_can_satisfy_is_an_unsatisfiable_wait() {
+    let outcome = crate::run_program(
+        "linein.rex",
+        b"say 'before'\nsay .RexxQueue~new~lineIn\n".to_vec(),
+        crate::Invocation::none().with_deadline(std::time::Duration::from_secs(20)),
+    );
+    assert_eq!(outcome.exit_code, crate::NOT_IMPLEMENTED_EXIT);
+    assert_eq!(outcome.stdout, b"before\n");
+    assert_eq!(
+        String::from_utf8_lossy(&outcome.stderr),
+        "rexx-exec: a wait that nothing left to run can end is not implemented\n"
+    );
+    assert_eq!(
+        run_source(
+            "t = .t~new; t~start('late')\nsay .RexxQueue~new~lineIn\n::class t\n\
+             ::method late\n  call SysSleep 0.05\n  queue 'arrived'\n"
+        ),
+        (0, "arrived\n".to_string(), String::new())
+    );
+}
+
 /// **A `reqstr` command reaches a `RexxQueue` redirection target**: the command
 /// is the class's `makeString`, and its output lines are queued in order.
 #[test]

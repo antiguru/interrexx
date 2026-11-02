@@ -215,7 +215,8 @@ pub(super) fn pull(
 }
 
 /// `rexx_linein_queue()`: the head line, waiting for one, or `.nil` on any failure. The wait
-/// gives up the guard lock, and a halt ends it.
+/// gives up the guard lock, and a halt ends it. A wait on the in-process session queue that no
+/// other activity can satisfy is refused, where the oracle blocks for ever (Deviation 20).
 pub(super) fn linein(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -233,6 +234,10 @@ pub(super) fn linein(
         interp.release_guard(key);
     }
     interp.begin_queue_wait(name);
+    if interp.queue_wait_is_unending() {
+        interp.end_queue_wait(true);
+        return Err(crate::Loud::unsatisfiable_wait().into());
+    }
     let deadline = interp.now() + WAIT_POLL;
     interp.park_native(ParkReason::Sleep { deadline }, linein_woken, receiver)
 }
@@ -241,6 +246,10 @@ pub(super) fn linein(
 fn linein_woken(interp: &mut Interp, _receiver: ObjRef) -> Result<Option<ObjRef>, Failure> {
     interp.activity.asleep = None;
     let halted = std::mem::take(&mut interp.activity.woken_by_halt);
+    if !halted && interp.queue_wait_is_unending() {
+        interp.end_queue_wait(true);
+        return Err(crate::Loud::unsatisfiable_wait().into());
+    }
     Ok(Some(match interp.end_queue_wait(halted) {
         Some(line) => interp.text(&line),
         None => ObjRef::NIL,

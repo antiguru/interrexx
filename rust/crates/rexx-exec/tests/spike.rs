@@ -58,13 +58,14 @@ fn the_loud_failure_code_cannot_be_confused_with_a_rexx_error() {
     );
     let outcome = run_program(
         SPIKE_PATH,
-        b"say .local['STDQUE']\n".to_vec(),
+        b"say .CommandHandler~environments\n".to_vec(),
         rexx_exec::Invocation::none(),
     );
     assert_eq!(outcome.exit_code, NOT_IMPLEMENTED_EXIT);
     assert_eq!(
         String::from_utf8(outcome.stderr).expect("the loud message is ASCII"),
-        "rexx-exec: directory entry \"STDQUE\" is not implemented (Phase 10 Rxapi)\n"
+        "rexx-exec: the LIBRARY REXX entry point \"cmdhandler_environments\" is not \
+         implemented (Phase 10 Embedding)\n"
     );
 }
 
@@ -76,18 +77,18 @@ fn a_loud_failure_message_does_not_grow_with_the_expression() {
 
     let small = run_program(
         SPIKE_PATH,
-        b"say .local['STDQUE']\n".to_vec(),
+        b"say .CommandHandler~send('ENVIRONMENTS')\n".to_vec(),
         rexx_exec::Invocation::none(),
     );
     assert_eq!(small.exit_code, NOT_IMPLEMENTED_EXIT);
 
-    // The same refusal with its index built by a three-thousand-term
+    // The same refusal with its message name built by a three-thousand-term
     // concatenation, which is what a message formatting the node would print.
-    let mut deep = b"say .local[".to_vec();
+    let mut deep = b"say .CommandHandler~send(".to_vec();
     for _ in 0..3_000 {
         deep.extend_from_slice(b"'' || ");
     }
-    deep.extend_from_slice(b"'STDQUE']\n");
+    deep.extend_from_slice(b"'ENVIRONMENTS')\n");
     let deep = run_program(SPIKE_PATH, deep, rexx_exec::Invocation::none());
     assert_eq!(deep.exit_code, NOT_IMPLEMENTED_EXIT);
 
@@ -102,7 +103,7 @@ fn a_loud_failure_message_does_not_grow_with_the_expression() {
     );
     let stderr = String::from_utf8(deep.stderr).expect("the loud message is ASCII");
     assert!(
-        stderr.contains("STDQUE"),
+        stderr.contains("cmdhandler_environments"),
         "the message should name the form it could not evaluate, and was {stderr:?}"
     );
 }

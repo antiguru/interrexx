@@ -312,6 +312,18 @@ impl Interp {
         self.activity.queue_wait = Some(Box::new(QueueWait { name, remote }));
     }
 
+    /// Whether the running activity's wait is for the in-process session queue, which no other
+    /// process can reach, while it is empty and no other activity is alive to add a line.
+    pub(crate) fn queue_wait_is_unending(&self) -> bool {
+        self.activity.queue_wait.as_ref().is_some_and(|wait| {
+            wait.remote.is_none()
+                && is_session(&wait.name)
+                && self.queue.sharing == Sharing::Local
+                && self.queue.lines.is_empty()
+                && !self.others_live()
+        })
+    }
+
     /// Whether the running activity waits for a line that has not arrived.
     pub(crate) fn queue_wait_pending(&mut self) -> bool {
         let Some(wait) = self.activity.queue_wait.take() else {

@@ -108,6 +108,10 @@ QUEUED	queue 'a'; queue 'b'; say queued()
 RANDOM	numeric digits 3; say random(12345,12345)
 REVERSE	say reverse('abcdef')
 RIGHT	say '['right('ab',5,'.')']'
+RXFUNCADD	say rxfuncadd('SysSleep', 'rexxutil', 'SysSleep') rxfuncadd('sysSleep', 'rexxutil')
+RXFUNCDROP	say rxfuncdrop('NOSUCHFUNCTIONXYZ')
+RXFUNCQUERY	say rxfuncquery('SysSleep') rxfuncquery('NOSUCHFUNCTIONXYZ')
+RXQUEUE	say rxqueue('get') rxqueue('exists', 'SESSION')
 SIGN	say sign(-12)
 SOURCELINE	say sourceline(1)
 SPACE	say '['space('a   b  c',2)']'

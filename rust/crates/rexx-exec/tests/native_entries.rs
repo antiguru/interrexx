@@ -87,6 +87,17 @@ const IMPLEMENTED: &[&str] = &[
     "stream_query_position",
     "stream_state",
     "stream_uninit",
+    // `.RexxQueue`, over the API service.
+    "rexx_clear_queue",
+    "rexx_create_queue",
+    "rexx_delete_queue",
+    "rexx_linein_queue",
+    "rexx_open_queue",
+    "rexx_pull_queue",
+    "rexx_push_queue",
+    "rexx_query_queue",
+    "rexx_queue_exists",
+    "rexx_queue_queue",
 ];
 
 fn corpus_dir() -> PathBuf {

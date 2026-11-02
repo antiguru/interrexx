@@ -35,8 +35,8 @@ its line breaks collapsed, is in `docs/superpowers/plans/phase-8-gate.md`'s
 surface section with its output before and after, and `closed_phases.rs` now
 asserts the same for Phase 8 over every crate's sources, `rexx-api` included.
 
-The gate reads "77 of the 81 builtins in builtinTable[] (BuiltinFunctions.cpp
-:3042) are in scope, one of them partially, and the excluded set is exactly
+The gate reads "81 of the 81 builtins in builtinTable[] (BuiltinFunctions.cpp
+:3042) are in scope, none of them partially, and the excluded set is exactly
 this file".
 
 
@@ -77,23 +77,15 @@ directory, with the oracle under the standard ulimit.
                 so restoring one needs no std::env::set_var and no lint
                 exception.
 
-  Phase 10, the RXAPI daemon:
+  Phase 10, the RXAPI daemon: NOTHING IS LEFT.
 
-    RXQUEUE     Creates, deletes and selects external data queues.
-    RXFUNCADD   Registers an external function by name.
-    RXFUNCDROP  Deregisters one.
-    RXFUNCQUERY Reports whether one is registered.
+                DELIVERED by Phase 10 PR 2, 2026-11-02, and their rows
+                deleted: RXQUEUE, RXFUNCADD, RXFUNCDROP and RXFUNCQUERY,
+                through the rexx-rxapi service.
 
-                All four are blocked on the rxapi daemon protocol, which
-                nothing in Phase 4 speaks. Measured, rxqueue('G') returns
-                SESSION -- an answer that comes from a live rxapi, which is
-                also why the QUEUED row's single-program caveat below is real
-                rather than theoretical.
-
-The names left are the RXAPI daemon's. How many of the 81 are in scope is
-derived rather than written here: `coverage.rs` computes it from
-`rexx_inventory::builtins`, which is the table this section describes, and
-asserts it.
+No name is left. How many of the 81 are in scope is derived rather than written
+here: `coverage.rs` computes it from `rexx_inventory::builtins`, which is the
+table this section describes, and asserts it.
 
 
 EXCLUSIONS -- partial
@@ -101,8 +93,8 @@ EXCLUSIONS -- partial
 
 A builtin can be in scope in one form and excluded in another. Excluding the
 whole name would overstate the gap; ignoring the split would understate it.
-QUEUED is the only such name left -- VALUE's and ADDRESS()'s rows below record
-what they were and are kept for their arguments, not as open work.
+No such name is left -- the rows below record what they were and are kept for
+their arguments, not as open work.
 
   VALUE      The variable-access form is 4c's. The external-selector form,
              which reads a pool such as ENVIRONMENT, was Phase 7's: it needs
@@ -146,6 +138,9 @@ what they were and are kept for their arguments, not as open work.
              the oracle's rxapi-backed session queue will never match, so a
              differential run of QUEUED is single-program only. This row is a
              caveat on a delivered builtin rather than undelivered work.
+             DELIVERED, 2026-11-02, and the row is gone from `EXCLUDED`: the
+             session queue moves to the rexx-rxapi service before a command
+             starts, so a command's `rxqueue` reaches it.
 
 
 EXCLUSIONS -- trace prefixes, with an owner
