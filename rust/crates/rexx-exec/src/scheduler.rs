@@ -2627,6 +2627,14 @@ impl Interp {
         }
     }
 
+    /// `RexxActivation::halt(description)` for the running activation, as a
+    /// handler written in Rexx asks it with `caller~raise("HALT", rc)`
+    /// (`concurrency/CommandHandler.cpp:451-457`): seen at the end of the
+    /// clause, as a Ctrl-C is.
+    pub(crate) fn request_running_halt(&mut self, description: Vec<u8>) {
+        request_halt(&mut self.activity, Some(description));
+    }
+
     /// [`Interp::halt_all`] before the order of the activities it readies is
     /// settled.
     fn halt_each(&mut self) {

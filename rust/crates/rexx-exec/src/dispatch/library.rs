@@ -661,6 +661,7 @@ impl Interp {
                     // nothing ties the two together.
                     if library.close() {
                         self.command_handlers.clear();
+                        self.environments.close_registered();
                     }
                 }
                 Err(Failure::Loud(loud)) => return Some(*loud),

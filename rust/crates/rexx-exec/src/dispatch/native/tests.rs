@@ -129,35 +129,6 @@ fn the_bootstrap_files_and_the_registry_name_the_same_entry_points() {
     );
 }
 
-/// Every family has at least one entry point this phase defers, so a
-/// program pinning that family's refusal can be written at all.
-#[test]
-fn every_deferred_entry_point_names_an_open_phase() {
-    // The phases that still owe entry points, and no more: another
-    // spelling is either a typo or work nobody has been assigned, and a
-    // phase that has closed cannot owe anything -- a refusal naming one
-    // is a lie a program can read.
-    const OPEN: &[&str] = &["Phase 10"];
-    let mut deferred = 0usize;
-    for entry in LIBRARY_REXX_METHODS {
-        let ExternalBody::Deferred { owner } = entry.body else {
-            continue;
-        };
-        deferred += 1;
-        assert!(
-            OPEN.contains(&match owner {
-                Owner::Phase10(_) => "Phase 10",
-            }),
-            "{} defers to {owner:?}, which is not one of {OPEN:?}",
-            entry.name
-        );
-    }
-    assert!(
-        deferred > 0,
-        "the registry defers nothing at all, so this test is passing over an empty set"
-    );
-}
-
 /// The lookup is caseless and the spelling the table carries is not what
 /// makes a name resolve.
 #[test]

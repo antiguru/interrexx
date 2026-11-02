@@ -98,6 +98,24 @@ const IMPLEMENTED: &[&str] = &[
     "rexx_query_queue",
     "rexx_queue_exists",
     "rexx_queue_queue",
+    // `.CommandHandler` and its context (`CommandClasses.orx`).
+    "cmdcontext_check",
+    "cmdcontext_dropVar",
+    "cmdcontext_forward",
+    "cmdcontext_getVar",
+    "cmdcontext_hasVar",
+    "cmdcontext_isRedirected",
+    "cmdcontext_isValid",
+    "cmdcontext_lineIn",
+    "cmdcontext_setVar",
+    "cmdcontext_variables",
+    "cmdcontext_write",
+    "cmdhandler_deregister",
+    "cmdhandler_environments",
+    "cmdhandler_handler",
+    "cmdhandler_handlers",
+    "cmdhandler_register",
+    "cmdnative_kind",
 ];
 
 fn corpus_dir() -> PathBuf {

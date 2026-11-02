@@ -1,6 +1,6 @@
 #!/usr/bin/env rexx
 /* The prolog calls a routine this crate refuses, before any test starts. */
-  r = .CommandHandler~environments
+  r = .local~send('ZZZ=')
   parse source . . s
   group = .TestGroup~new(s)
   group~add(.RefusedProlog.testGroup)

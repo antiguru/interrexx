@@ -103,6 +103,10 @@ use semaphore::{
 /// `.File`'s entry points, whose Rexx half hands each one an already-qualified
 /// path.
 mod files;
+
+// `.CommandHandler`'s and `.CommandContext`'s entry points.
+mod command_handler;
+pub(crate) use command_handler::new_identity;
 use files::{native_file_path_separator, native_file_separator};
 
 // The collection classes' primitive methods, chained the same way.
@@ -221,10 +225,8 @@ enum Invocable {
     Rexx(crate::InstalledMethodBody),
     Generated(crate::GeneratedMethod),
     /// A `::METHOD ... EXTERNAL 'LIBRARY REXX name'` bound at install to a
-    /// row of [`native`]'s registry. Apart from the entry points this phase
-    /// implements, running one is loud -- so this is the kind whose ordinary
-    /// outcome is a refusal, which is why it is not folded into `Native`
-    /// beside the primitives.
+    /// row of [`native`]'s registry, whose body runs with the method's
+    /// resolution and scope, which a primitive's does not.
     External(&'static native::NativeExternal),
     /// A `::METHOD`/`::ATTRIBUTE ... EXTERNAL 'LIBRARY <name>'` bound at
     /// install to a procedure of a loaded shared library.
@@ -2962,19 +2964,12 @@ impl Interp {
     ) -> Result<Started<Option<ObjRef>>, Failure> {
         let native = !matches!(invocable, Invocable::Generated(_));
         let outcome = match invocable {
-            // **The refusal is the ordinary outcome here**, so unlike the
-            // `Native` arm of `begin_invoke` this one does not blame the
-            // method for it:
-            // a `Loud` is a report about this crate and carries no traceback
-            // at all. The implemented arm does blame, because its refusals
-            // are the oracle's own -- measured, `.k~sep(1)` on a class method
-            // bound to `file_separator` is `88.922 Too many arguments in
-            // invocation; 0 expected.` at rc 168, under a `Compiled method
-            // "SEP" with scope "K".` line.
+            // The implemented arm blames the method for a refusal, because
+            // its refusals are the oracle's own -- measured, `.k~sep(1)` on a
+            // class method bound to `file_separator` is `88.922 Too many
+            // arguments in invocation; 0 expected.` at rc 168, under a
+            // `Compiled method "SEP" with scope "K".` line.
             Invocable::External(entry) => match &entry.body {
-                native::ExternalBody::Deferred { owner } => {
-                    Err(native::deferred_send(entry, *owner).into())
-                }
                 native::ExternalBody::Implemented { arity, run } => {
                     let ran =
                         self.run_external(*arity, resolution, receiver, name, args, |interp| {

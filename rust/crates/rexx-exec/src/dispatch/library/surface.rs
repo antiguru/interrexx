@@ -745,17 +745,19 @@ impl Surface for Interp {
         }
     }
 
+    /// `InterpreterInstance::addCommandHandler` (`runtime/InterpreterInstance.cpp:913`):
+    /// the handler replaces whatever the name had, stacked handlers included.
     fn add_command_handler(&mut self, name: &[u8], handler: rexx_api::load::CommandHandler) {
-        self.command_handlers.insert(
-            name.to_ascii_uppercase().into_boxed_slice(),
-            std::rc::Rc::new(handler),
-        );
+        let upper = name.to_ascii_uppercase();
+        self.environments.replace(&upper);
+        self.command_handlers
+            .insert(upper.into_boxed_slice(), std::rc::Rc::new(handler));
     }
 
-    /// Covers the handler in use under `name`, as `add_command_handler`
-    /// replaces it: what uncovers it again is `.CommandHandler~deregister`'s.
+    /// Covers the handler in use under `name`, as `.CommandHandler~register`
+    /// covers it: what uncovers it again is `.CommandHandler~deregister`'s.
     fn stack_command_handler(&mut self, name: &[u8], handler: rexx_api::load::CommandHandler) {
-        Surface::add_command_handler(self, name, handler);
+        self.stack_native_environment(name, handler);
     }
 
     fn halt(&mut self, all: bool) {
@@ -969,6 +971,27 @@ impl Interp {
         };
         self.roots.activity_mut().push_temp(object);
         Some(object)
+    }
+
+    /// `serve` with the activation `id` of this activity swapped in as the
+    /// running one, as a native callback reaches its caller's variables
+    /// (`Activity::setCallbackParent`), or `None` where this activity holds no
+    /// such activation.
+    pub(crate) fn in_activation<R>(
+        &mut self,
+        id: crate::activation::ActivationId,
+        serve: impl FnOnce(&mut Interp) -> R,
+    ) -> Option<R> {
+        if self.activity.running.as_ref()?.id == id {
+            return Some(serve(self));
+        }
+        let index = self
+            .activity
+            .suspended
+            .iter()
+            .position(|held| held.id == id)?;
+        let mut swapped = CallerSwap::new(self, index);
+        Some(serve(&mut swapped))
     }
 
     /// The index in [`Activity::suspended`] of the activation that made the

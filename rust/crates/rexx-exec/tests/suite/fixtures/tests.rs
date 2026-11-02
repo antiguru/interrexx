@@ -31,8 +31,8 @@ fn names(names: &[&str]) -> BTreeSet<String> {
     names.iter().map(|name| (*name).to_string()).collect()
 }
 
-const REFUSAL: &str = "rexx-exec: the LIBRARY REXX entry point \"cmdhandler_environments\" \
-                       is not implemented (Phase 10 Embedding)";
+const REFUSAL: &str =
+    "rexx-exec: an entry-method assignment to \"ZZZ\" with no value is not implemented";
 
 #[test]
 fn a_refusal_ends_the_run_and_the_next_run_goes_past_it() {

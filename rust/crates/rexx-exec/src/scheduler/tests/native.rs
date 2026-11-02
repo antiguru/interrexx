@@ -415,7 +415,8 @@ fn a_failure_ending_a_native_park_abandons_the_call() {
     let run = counted(
         "o = .t~new\nm = o~start('boom')\nsay TestIntArg(5)\nsay 'after'\n\
          ::requires 'orxfunction' LIBRARY\n::class t\n::method boom\n  \
-         x = .CommandHandler~environments\n",
+         x = length(.nostring~new)\n::class nostring\n::method string\n  \
+         return .directory~new\n",
         false,
         bounded(),
     );
@@ -423,8 +424,8 @@ fn a_failure_ending_a_native_park_abandons_the_call() {
     assert_eq!(run.stdout(), "");
     assert_eq!(
         run.stderr(),
-        "rexx-exec: the LIBRARY REXX entry point \"cmdhandler_environments\" is not implemented \
-         (Phase 10 Embedding)\n"
+        "rexx-exec: a STRING method answering an object with no string value is not \
+         implemented\n"
     );
     assert_eq!(run.exits, 1);
 }

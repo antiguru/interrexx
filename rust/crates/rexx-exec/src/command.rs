@@ -23,8 +23,10 @@ use crate::security::{key, message};
 use crate::{Code, Interp};
 
 mod collector;
+mod environments;
 
 use collector::collect;
+pub(crate) use environments::{Environments, NativeKind};
 
 /// A return code's whole-number value under the default precision, or `None`
 /// where it has none -- `RexxObject::numberValue(wholenumber_t &)`, which is
@@ -130,10 +132,21 @@ impl CommandOutcome {
             condition: None,
         }
     }
+
+    /// An environment no handler answers: `RXSUBCOM_NOTREG` as a `FAILURE`.
+    fn of_failure(rc: i32) -> CommandOutcome {
+        CommandOutcome {
+            rc,
+            status: ReturnStatus::Failure,
+            supplied: None,
+            condition: None,
+        }
+    }
 }
 
 /// What an environment name resolves to.
-enum Handler {
+#[derive(Clone)]
+pub(crate) enum Handler {
     /// A shell, run as `<SHELL_DIRECTORY>/<name> -c <command>`.
     Shell(String),
     /// `PATH`: no shell, so the command string is split here.
@@ -801,42 +814,48 @@ impl Interp {
     /// continuation (`NativeActivation::run`,
     /// `execution/NativeActivation.cpp:1691`, releases the kernel lock around
     /// a command handler), where a halt can abandon it (ruling P60).
+    ///
+    /// A handler written in Rexx (`.CommandHandler~register`) is sent the
+    /// command on this activity ([`Interp::run_rexx_command`]).
     pub(crate) fn run_command(
         &mut self,
         environment: &[u8],
         command: &[u8],
-        io: Option<&IoContext>,
+        shared: Option<&Rc<IoContext>>,
     ) -> Result<Commanded, Failure> {
+        let io = shared.map(|io| &**io);
         // The command exit has the first pass (`RexxActivation::command`).
         if self.exits.is_some()
             && let Some(outcome) = self.command_exit(environment, command)?
         {
             return Ok(Commanded::Done(outcome));
         }
-        let registered = self
-            .command_handlers
-            .get(environment.to_ascii_uppercase().as_slice())
-            .map(Rc::clone);
-        if let Some(handler) = registered {
-            return self
-                .run_registered_command(&handler, environment, command, io)
-                .map(Commanded::Done);
-        }
-        let Some(handler) = handler_for(environment) else {
-            if let Some(entry) = self.classic_subcom(environment) {
+        let handler = match self.resolve_environment(environment) {
+            environments::Resolved::Rexx(handler) => {
+                return self
+                    .run_rexx_command(handler, environment, command, shared)
+                    .map(Commanded::Done);
+            }
+            environments::Resolved::Native(NativeKind::Registered(handler)) => {
+                return self
+                    .run_registered_command(&handler, environment, command, io)
+                    .map(Commanded::Done);
+            }
+            environments::Resolved::Native(NativeKind::Classic(entry)) => {
                 return self
                     .run_classic_command(entry, environment, command, io.is_some())
                     .map(Commanded::Done);
             }
-            if self.libraries.classic_environment(environment) {
+            environments::Resolved::Native(NativeKind::System(handler)) => handler,
+            environments::Resolved::Unknown { removed: false }
+                if self.libraries.classic_environment(environment) =>
+            {
                 return Err(crate::Loud::loader_environment(environment).into());
             }
-            return Ok(Commanded::Done(CommandOutcome {
-                rc: NOT_REGISTERED,
-                status: ReturnStatus::Failure,
-                supplied: None,
-                condition: None,
-            }));
+            environments::Resolved::Native(NativeKind::Closed)
+            | environments::Resolved::Unknown { .. } => {
+                return Ok(Commanded::Done(CommandOutcome::of_failure(NOT_REGISTERED)));
+            }
         };
         // `PATH` names no shell, so a `cd` under it is a program to find
         // rather than a directory to move to.
@@ -980,6 +999,15 @@ impl Interp {
             let (out, err) = redirector.finish();
             context.finish_lines(self, &out, &err)?;
         }
+        self.registered_outcome(handled)
+    }
+
+    /// What a registered handler's answer makes of its command: `RC` and the
+    /// condition it raised, a `SYNTAX` one raised at once.
+    fn registered_outcome(
+        &mut self,
+        handled: crate::dispatch::library::HandledCommand,
+    ) -> Result<CommandOutcome, Failure> {
         let condition = match handled.raised {
             None => None,
             Some(Failure::Raised(held)) if !held.condition.eq_ignore_ascii_case("SYNTAX") => {
@@ -1031,7 +1059,7 @@ impl Interp {
         &mut self,
         environment: &[u8],
         command: &[u8],
-        io: Option<&IoContext>,
+        io: Option<&Rc<IoContext>>,
     ) -> Result<Commanded, Failure> {
         if self.effective_security_manager().is_none() {
             return self.run_command(environment, command, io);
@@ -1137,10 +1165,13 @@ impl Interp {
             self.io_context(code, &name, io)
         );
         let (outcome, context) = match context {
-            Ok(context) => (
-                self.checked_command(&name, &command, context.as_ref()),
-                context,
-            ),
+            Ok(context) => {
+                let context = context.map(Rc::new);
+                (
+                    self.checked_command(&name, &command, context.as_ref()),
+                    context,
+                )
+            }
             Err(failure) => (Err(failure), None),
         };
         self.roots.activity_mut().pop_frame(frame);
@@ -1152,7 +1183,7 @@ impl Interp {
                     indent,
                     at,
                     token,
-                    io: context.map(Rc::new),
+                    io: context,
                     captured: Vec::new(),
                     raised: None,
                     halted: false,

@@ -882,6 +882,16 @@ impl Loud {
         }
     }
 
+    /// A class the `REXX` package defines that it does not hold: an internal
+    /// inconsistency, never a program error.
+    #[cold]
+    #[inline(never)]
+    fn missing_rexx_class(name: &str) -> Loud {
+        Loud {
+            message: format!("the REXX package holds no class {name}"),
+        }
+    }
+
     /// A `Method` or `Routine` object with no executable record. Each one is
     /// recorded where it is built and its record goes only with it, so this
     /// is an internal inconsistency, never a program error.
@@ -1644,6 +1654,10 @@ struct Interp {
     /// name (`InterpreterInstance::commandHandlers`). Emptied at the first
     /// library close, since nothing ties a handler's code to its library.
     command_handlers: FxHashMap<Box<[u8]>, Rc<rexx_api::load::CommandHandler>>,
+    /// The environments `.CommandHandler` has stacked handlers on, the
+    /// objects of the native handlers, and the commands handlers written in
+    /// Rexx are running.
+    environments: command::Environments,
     /// Whether the next native call leaves its driver whatever else runs:
     /// an embedding instance's root call, which waits for the thread that
     /// created the instance while the driver serves that thread's callbacks.
@@ -2460,6 +2474,7 @@ impl Interp {
             classic_subcoms: FxHashMap::default(),
             global_references: rexx_api::handles::Table::new(),
             command_handlers: FxHashMap::default(),
+            environments: command::Environments::default(),
             leave_next_native: false,
             default_address: None,
             subcom_aliases: FxHashMap::default(),
@@ -3551,6 +3566,7 @@ impl Interp {
             global_references,
             // Entry points, not objects.
             command_handlers: _,
+            environments,
             leave_next_native: _,
             default_address: _,
             subcom_aliases: _,
@@ -3627,6 +3643,7 @@ impl Interp {
         } = self;
         activity.object_roots(out);
         activities.object_roots(out);
+        environments.object_roots(out);
         out.extend(stem_exposers.values().flatten().copied());
         out.extend(traced_variable.as_ref().and_then(|traced| traced.value));
         out.extend(global_references.roots());
@@ -4072,11 +4089,11 @@ pub struct NativeEntryPoint {
     /// C++ translation unit defines it.
     pub family: &'static str,
     /// The label of the owner that owes this entry point a body, as its
-    /// refusal prints it, or `None` for one this crate runs.
+    /// refusal prints it, or `None` for one this crate runs, which every
+    /// entry point of the registry is.
     pub owner: Option<&'static str>,
-    /// Whether this phase runs the entry point rather than refusing a send to
-    /// it. A bind succeeds either way -- what it decides is whether the
-    /// declaring *file* installs.
+    /// Whether this crate runs the entry point rather than refusing a send to
+    /// it, which it does for every entry point of the registry.
     pub implemented: bool,
 }
 
