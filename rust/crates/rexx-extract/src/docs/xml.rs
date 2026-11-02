@@ -254,7 +254,13 @@ pub fn xincludes(text: &str) -> Vec<(String, usize)> {
 /// The revision-marker entities `rexxref.ent` defines as the empty
 /// string, split off the front of a title.
 pub fn split_revision_marker(title: &str) -> (Option<&str>, &str) {
-    const MARKERS: &[&str] = &["&added50;", "&added51;", "&added52;", "&added53;", "&changed50;"];
+    const MARKERS: &[&str] = &[
+        "&added50;",
+        "&added51;",
+        "&added52;",
+        "&added53;",
+        "&changed50;",
+    ];
     for marker in MARKERS {
         if let Some(rest) = title.strip_prefix(marker) {
             return (Some(marker), rest);
