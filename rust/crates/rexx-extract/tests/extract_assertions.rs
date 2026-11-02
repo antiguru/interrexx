@@ -441,7 +441,7 @@ fn base_expressions_yields_the_measured_row_and_blocked_counts() {
     assert_eq!(rows_by_group["PRECEDENCE"], 1226);
     assert_eq!(rows_by_group["CONCATENATION"], 388);
     assert_eq!(rows_by_group["MULTIPLICATION"], 1048);
-    assert_eq!(rows_by_group["Literals"], 39);
+    assert_eq!(rows_by_group["Literals"], 47);
     assert_eq!(rows_by_group["SPECIAL"], 27);
 }
 

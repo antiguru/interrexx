@@ -4,7 +4,7 @@
 # files, and `the_row_files_hold_only_checked_rows` (`tests/suite.rs`) asserts
 # each is present; a `refusal: TEXT` row records the refusal the suite gate
 # captured for its test. Phase 10 deletes this file.
-# ootest revision 13178
+# ootest revision 13347
 API/classic/CLASSIC	TEST_01_CREATE_QUEUE	Phase 10 Row10NativeApi	group
 API/classic/CLASSIC	TEST_02_OPEN_QUEUE	Phase 10 Row10NativeApi	group
 API/classic/CLASSIC	TEST_03_QUEUE_EXISTS	Phase 10 Row10NativeApi	group
@@ -356,6 +356,22 @@ extensions/hostemu/hostemu	TEST_EXECIO_DISKW_DEFAULT	Phase 10 Extension	group
 extensions/hostemu/hostemu	TEST_EXECIO_DISKW_STEM	Phase 10 Extension	group
 extensions/hostemu/hostemu	TEST_HI	Phase 10 Extension	group
 extensions/hostemu/hostemu	TEST_TE	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_ANY_BOOLEAN_TO_JSON	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_ARRAY_SHOWS_VALUES	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_COMPARISONS	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_INSTANCES	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_JSON_AND_YAML_ARE_BOOLEANS	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_JSON_TO_YAML	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_LOGICAL_CONTEXTS	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_NEW_IS_PRIVATE	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_NOT	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_OF	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_OF_REJECTS_NON_LOGICAL	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_OPERATORS	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_STRINGS	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_SUBCLASS	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_TABLE_KEY	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_YAML_TO_JSON	Phase 10 Extension	group
 extensions/platform/unix/ncurses/ncurses	TEST_CLASSES	Phase 10 Extension	group
 extensions/platform/unix/rxunixsys/SysUnix	TESTSYSACCESS_1	Phase 10 Extension	group
 extensions/platform/unix/rxunixsys/SysUnix	TESTSYSGETEGID_1	Phase 10 Extension	group

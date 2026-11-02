@@ -38,14 +38,11 @@ pub(crate) struct Delivery {
     /// Render the major line as `Error 42:  ...` rather than
     /// `Error 42 running <path> line 8:  ...`.
     pub(crate) positionless: bool,
-    /// Render the major line as `Error 88 running <path>:  ...`: the program
-    /// name, and no ` line <n>` after it.
+    /// A raise the native boundary makes for itself. Reported at the sending
+    /// clause, measured at r13346: `Error 88 running <program> line <n>`.
     pub(crate) lineless: bool,
-    /// Name `REXX` in place of the program's path. An internal package's
-    /// routine reports that for an argument error, whichever of the two
-    /// packages registers it -- measured, `filespec('D')` and
-    /// `SysFileExists()` both report `Error 88 running REXX:`, where a
-    /// routine's own body raising 88.902 names the program and its line.
+    /// Name `REXX` in place of the program's path, for a raise that is not
+    /// [`Delivery::lineless`].
     pub(crate) internal_package: bool,
     /// A condition held while its `CALL ON` trap was delayed and released
     /// by a `SIGNAL ON`: trapped with the object it was raised with, which
@@ -2080,13 +2077,7 @@ pub(crate) enum FailureSite {
     /// activation, whose whole echo line is a catalogue entry
     /// ([`Raised::compiled_method_line`]) carrying its own blank
     /// line-number field, `*-*` marker and text.
-    Rendered {
-        text: Vec<u8>,
-        /// The file the `EXTERNAL` directive that bound this level was
-        /// written in, which a raise the boundary makes for itself is
-        /// reported against ([`Delivery::lineless`]).
-        package: Option<Vec<u8>>,
-    },
+    Rendered { text: Vec<u8> },
     /// The level a kept condition object was raised again in, which echoes
     /// nothing and whose line and `name` the report names
     /// (`Activity::reraiseException`); no level it leaves records a site.
@@ -2112,17 +2103,6 @@ impl FailureSite {
             FailureSite::Named { name, .. } => Some(name),
             FailureSite::Reraised { name, .. } => name.as_deref(),
             FailureSite::Clause { .. } | FailureSite::Rendered { .. } => None,
-        }
-    }
-
-    /// The file the `EXTERNAL` directive behind a native level was written
-    /// in, or `None` for a level no such directive bound.
-    pub(crate) fn declaring_package(&self) -> Option<&[u8]> {
-        match self {
-            FailureSite::Rendered { package, .. } => package.as_deref(),
-            FailureSite::Clause { .. }
-            | FailureSite::Named { .. }
-            | FailureSite::Reraised { .. } => None,
         }
     }
 
@@ -2277,23 +2257,11 @@ impl Raised {
         // neither, for the reason its own doc gives.
         let innermost = site.sites.iter().find(|entry| entry.line().is_some());
         let line = innermost.and_then(FailureSite::line).unwrap_or(0);
-        // A raise the native boundary makes for itself
-        // (`Delivery::lineless`) is reported against the package that
-        // declared the refused method, where one the extension's own code
-        // raises propagates to the caller and is reported there -- measured,
-        // `p~parse()` on a `::METHOD PARSE EXTERNAL` in a required package is
-        // `Error 88 running <that package>` with no line, and the same
-        // method's own 38.0 is `Error 38 running <the program> line 1`.
-        let boundary = if self.delivery.lineless {
-            site.sites.iter().find_map(FailureSite::declaring_package)
-        } else {
-            None
-        };
-        let named: &[u8] = if self.delivery.internal_package {
+        let named: &[u8] = if self.delivery.internal_package && !self.delivery.lineless {
             b"REXX"
         } else {
-            boundary
-                .or_else(|| innermost.and_then(FailureSite::reported_name))
+            innermost
+                .and_then(FailureSite::reported_name)
                 .unwrap_or(site.path)
         };
         // `RAISE PROPAGATE` drops the position span and nothing else
@@ -2305,9 +2273,7 @@ impl Raised {
         if !self.delivery.positionless {
             position.extend_from_slice(b" running ");
             position.extend_from_slice(named);
-            if !self.delivery.lineless {
-                position.extend_from_slice(format!(" line {line}").as_bytes());
-            }
+            position.extend_from_slice(format!(" line {line}").as_bytes());
         }
         let mut out = format!("Error {}", self.number).into_bytes();
         out.extend_from_slice(&position);

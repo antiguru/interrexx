@@ -35,6 +35,8 @@ beside `~start`.
 
 ```text
 base/bif/STREAM.testGroup TEST_QUERYDIR_EXISTS SysSleep
+base/bif/TIME.testGroup TEST_SIMPLE_ELAPSED SysSleep
+base/bif/TIME.testGroup TEST_SIMPLE_RESET SysSleep
 base/bif/TIME.testGroup TEST_2 SysSleep
 base/bif/TIME.testGroup TEST_3 SysSleep
 base/bif/TIME.testGroup TEST_4 SysSleep
@@ -153,6 +155,7 @@ base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_FROM_NONSELF ~start
 base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_FROM_NONSELF_METHOD_NOT_IN_SUPERCLASS ~start
 base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_AMONG_MIXINCLASSES ~start
 base/class/RexxContext.testGroup TEST_INTERPRETER_THREAD_INVOCATION .context~thread,REPLY,SysSleep,TraceObject field,~start
+base/class/Stem.testGroup TEST_STRING_ARGUMENT_EXTERNAL SysSleep
 base/class/Ticker.testGroup TEST_TICKER_TWO_ARGS_STRING_CANCEL Ticker
 base/class/Ticker.testGroup TEST_TICKER_TWO_ARGS_STRING_TRIGGER SysSleep,Ticker
 base/class/Ticker.testGroup TEST_TICKER_TWO_ARGS_TIMESPAN_CANCEL Ticker
@@ -241,6 +244,9 @@ regressions/bug2003_guard_when.testGroup TEST_GUARD_WHEN_1 GUARD,Message~reply
 ## Exclusions
 
 ```text
+base/class/CommandHandler.testGroup TEST_CONTEXT_REFUSED_ON_ANOTHER_THREAD -- CommandHandler, Phase 10
+base/class/CommandHandler.testGroup TEST_COMMAND_FROM_ANOTHER_THREAD -- CommandHandler, Phase 10
+base/class/CommandHandler.testGroup TEST_CONCURRENT_NESTED_COMMANDS -- CommandHandler, Phase 10
 base/class/RexxQueue.testGroup TEST_DELETE_WHILE_LINEIN -- RexxQueue, Phase 10
 base/class/RexxQueue.testGroup TEST_LINEIN_WAITS_PULL_DOESNT -- RexxQueue, Phase 10
 extensions/rxsock/socketClass.testGroup TEST_005 -- extension Phase 10 recompiles

@@ -3166,10 +3166,7 @@ impl Interp {
             if site.line().is_some() && !matches!(site, FailureSite::Reraised { .. }) {
                 let mut text = Vec::new();
                 site.push_trace_line(&mut text);
-                *site = FailureSite::Rendered {
-                    text,
-                    package: None,
-                };
+                *site = FailureSite::Rendered { text };
             }
         }
     }
@@ -3187,10 +3184,7 @@ impl Interp {
     ) -> Result<Option<ObjRef>, Failure> {
         let sites = traceback
             .into_iter()
-            .map(|text| FailureSite::Rendered {
-                text,
-                package: None,
-            })
+            .map(|text| FailureSite::Rendered { text })
             .collect();
         self.clear_failure_levels();
         let line = self.activity.clause_state.line();

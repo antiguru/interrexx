@@ -502,10 +502,7 @@ impl Interp {
         let above = lines
             .into_iter()
             .skip(kept)
-            .map(|text| FailureSite::Rendered {
-                text,
-                package: None,
-            });
+            .map(|text| FailureSite::Rendered { text });
         let site = self.activity.failure_site.take();
         self.activity.failure_sites.extend(site);
         self.activity.failure_sites.extend(above);

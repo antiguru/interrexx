@@ -4182,7 +4182,7 @@ impl Interp {
             }
             Some(_) | None => {}
         }
-        self.activity.failure_site = Some(FailureSite::Rendered { text, package });
+        self.activity.failure_site = Some(FailureSite::Rendered { text });
         self.seal_site_level();
     }
 }

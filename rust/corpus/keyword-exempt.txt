@@ -67,3 +67,4 @@ CALL::test_literal	RAISED
 CALL::test_expression	RAISED
 CALL::test_on_name	RAISED
 NUMERIC::test_42	RAISED
+ADDRESS::test_with_interpret_sets_routine_config	defect:compound-do-control-variable

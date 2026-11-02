@@ -23,7 +23,6 @@
 # Appendix B; Task 4's in docs/superpowers/plans/phase-6-1-gate.md, "## Task 4"; Task 7's in
 # .superpowers/sdd/2026-10-07-phase-6-1/task-7-report.md; Phase 9a Task 5's in
 # .superpowers/sdd/2026-10-11-phase-9a/task-5-report.md.
-array_index_hole	DEVIATION	-	oracle-crashes.txt entry 6 (SF 2085): the oracle dies on an array subscript that is an empty slot
 binary_operator	GUARD	-	internal inconsistency: every Operator belongs to a family of Interp::apply_binary (census class d-guard)
 call_op_off_its_node	GUARD	-	compiler invariant (census d-guard). Reached once, by a concatenation in a non-first call argument (phase-6-gate.md, Task 13 notes); that repro answers `ok` at 6860d4f80 (Task 7 probe cop/s.rex)
 chunk_map_too_short	GUARD	-	compiler invariant: a chunk maps every instruction of its body (census d-guard)
