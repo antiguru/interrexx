@@ -280,6 +280,22 @@ pub trait Surface {
     /// process, as it does before a command, so that a C API operation on it and the program
     /// see one queue.
     fn share_session_queue(&mut self);
+
+    /// `HaltThread` and, `all`, `Halt`: the running activity, or every
+    /// activity, asked to halt at its next clause.
+    fn halt(&mut self, all: bool);
+
+    /// `SetThreadTrace` and, `all`, `SetTrace`: external tracing of the
+    /// running activity, or of every activity, turned on or off.
+    fn set_trace(&mut self, all: bool, on: bool);
+
+    /// `RaiseConditionObject`: the condition `condition` describes held for
+    /// the call to raise once it returns; `false` where it is no directory.
+    fn raise_condition_object(&mut self, condition: ObjRef) -> bool;
+
+    /// `InterpreterInstance::stackCommandHandler`: `handler` answers commands
+    /// to `name`, covering the handler in use under it.
+    fn stack_command_handler(&mut self, name: &[u8], handler: crate::load::CommandHandler);
 }
 
 /// One `SHVBLOCK` request (`api/rexx.h`), its name as the block holds it.
@@ -1992,6 +2008,54 @@ impl Activation<'_> {
                 .expect("checked by with_surface")
                 .add_command_handler(name, handler);
         });
+    }
+
+    /// `StackCommandEnvironment`.
+    pub fn stack_command_environment(&self, name: &[u8], handler: crate::load::CommandHandler) {
+        self.with_surface("RexxInstanceInterface.StackCommandEnvironment", (), |cx| {
+            cx.host
+                .surface()
+                .expect("checked by with_surface")
+                .stack_command_handler(name, handler);
+        });
+    }
+
+    /// `HaltThread` and, `all`, `Halt`.
+    pub fn halt(&self, all: bool) {
+        self.with_surface("RexxThreadInterface.HaltThread", (), |cx| {
+            cx.host
+                .surface()
+                .expect("checked by with_surface")
+                .halt(all);
+        });
+    }
+
+    /// `SetThreadTrace` and, `all`, `SetTrace`.
+    pub fn set_trace(&self, all: bool, on: bool) {
+        self.with_surface("RexxThreadInterface.SetThreadTrace", (), |cx| {
+            cx.host
+                .surface()
+                .expect("checked by with_surface")
+                .set_trace(all, on);
+        });
+    }
+
+    /// `RaiseConditionObject`: a null or unknown handle is 93.911, one naming
+    /// no directory 93.948, as the oracle's stub reports them.
+    pub fn raise_condition_object(&self, handle: RexxObjectPtr) {
+        let Some(condition) = self.resolve(handle) else {
+            self.raise_syntax(93_911);
+            return;
+        };
+        let raised = self.with_surface("RexxThreadInterface.RaiseConditionObject", true, |cx| {
+            cx.host
+                .surface()
+                .expect("checked by with_surface")
+                .raise_condition_object(condition)
+        });
+        if !raised {
+            self.raise_syntax(93_948);
+        }
     }
 
     /// `ObjectToValue`: `handle` converted as `declared` asks, or `None`

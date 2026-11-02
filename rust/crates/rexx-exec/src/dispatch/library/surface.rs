@@ -751,6 +751,81 @@ impl Surface for Interp {
             std::rc::Rc::new(handler),
         );
     }
+
+    /// Covers the handler in use under `name`, as `add_command_handler`
+    /// replaces it: what uncovers it again is `.CommandHandler~deregister`'s.
+    fn stack_command_handler(&mut self, name: &[u8], handler: rexx_api::load::CommandHandler) {
+        Surface::add_command_handler(self, name, handler);
+    }
+
+    fn halt(&mut self, all: bool) {
+        if all {
+            self.halt_all();
+        } else {
+            self.halt_running();
+        }
+    }
+
+    /// `Activity::setTrace` (`concurrency/Activity.cpp`): the running Rexx
+    /// frame's external trace, `TRACE ?R` on and `TRACE O` off. An idle
+    /// activity's frame is not reached.
+    fn set_trace(&mut self, _all: bool, on: bool) {
+        if self.running_activation().is_none() {
+            return;
+        }
+        let mode = if on {
+            crate::trace::TraceMode {
+                debug: true,
+                ..crate::trace::TraceMode::RESULTS
+            }
+        } else {
+            crate::trace::TraceMode::OFF
+        };
+        self.set_trace_mode(mode);
+    }
+
+    /// `Activity::raiseConditionObject`: the condition `condition` names,
+    /// with its description, additional and result, and `condition` itself
+    /// as the object `CONDITION('O')` answers; a `SYNTAX` one by its `CODE`.
+    fn raise_condition_object(&mut self, condition: ObjRef) -> bool {
+        if !Surface::is_of_class(self, condition, "Directory") {
+            return false;
+        }
+        let text = |interp: &mut Interp, name: &[u8]| {
+            Surface::directory_entry(interp, condition, name)
+                .map(|value| interp.unsent_string_value_text(value))
+        };
+        let name = text(self, b"CONDITION")
+            .unwrap_or_default()
+            .to_ascii_uppercase();
+        let description = text(self, b"DESCRIPTION");
+        let raised = if name == b"SYNTAX" {
+            let code = text(self, b"CODE").unwrap_or_default();
+            let code = String::from_utf8_lossy(&code).into_owned();
+            let (major, minor) = code.split_once('.').unwrap_or((code.as_str(), "0"));
+            Raised {
+                description,
+                ..Raised::syntax(
+                    major.trim().parse().unwrap_or(0),
+                    minor.trim().parse().unwrap_or(0),
+                    Vec::new(),
+                )
+            }
+        } else {
+            Raised {
+                description,
+                ..Raised::condition(Cow::Owned(String::from_utf8_lossy(&name).into_owned()))
+            }
+        };
+        let additional = Surface::directory_entry(self, condition, b"ADDITIONAL");
+        let result = Surface::directory_entry(self, condition, b"RESULT");
+        let frame = self.native_frame_mut();
+        frame.raised = Some(raised.into());
+        frame.additional = additional;
+        frame.result = result;
+        frame.condition = Some(condition);
+        true
+    }
 }
 
 impl Interp {

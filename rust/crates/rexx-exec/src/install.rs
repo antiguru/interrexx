@@ -951,9 +951,10 @@ impl Interp {
                 .find(|(held, _)| held == wanted)
                 .map(|(_, value)| value.as_slice())
         };
-        require::search(
+        require::search_with(
             program,
             name,
+            &self.call_search,
             variable(b"REXX_PATH"),
             variable(b"PATH"),
             self.cwd_bytes(),

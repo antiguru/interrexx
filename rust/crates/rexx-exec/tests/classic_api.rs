@@ -479,3 +479,65 @@ fn rexx_start_runs_twice_and_from_two_activities_at_once() {
     );
     assert_eq!(stdout, "10 1\n12 1\n6 1 8 1\n");
 }
+
+/// The instance API from an extension's native method (`INVOCATION`, a second instance nested in
+/// the running one) and from the `rexxinstance` driver (`ProcessInvocation`): an instance
+/// created, a program called through its thread context with arguments, its result or its
+/// condition decoded, and the instance terminated; the call type, the initial environment,
+/// direct, redirecting and registered command environments, a classic subcommand handler, and
+/// the instance's own search path and extensions. Exits are not implemented, and `rxmath`, which
+/// `TestLoadLibrary` loads, is not on the library path the harness gives.
+#[test]
+fn the_invocation_groups_run_programs_in_instances() {
+    for (group, handlers) in [
+        (
+            "INVOCATION",
+            &["TESTDIRECTCOMMANDHANDLER", "TESTREDIRECTINGCOMMANDHANDLER"][..],
+        ),
+        ("ProcessInvocation", &["TESTCOMMANDHANDLER"][..]),
+    ] {
+        let outcome = run_group("API/oo", group, library_path(true));
+        let mut expected = vec![
+            "TESTCALLRETURN",
+            "TESTCALLTYPE",
+            "TESTINITIALADDRESS",
+            "TESTSYNTAXERROR",
+            "TESTSUBCOMHANDLER",
+            "TESTCLASSICSUBCOMHANDLER",
+            "TESTPATHHANDLER",
+        ];
+        expected.extend(handlers);
+        assert_pass(&outcome, &expected);
+        let others: Vec<&String> = outcome
+            .failed
+            .iter()
+            .filter(|test| !test.contains("EXIT") && *test != "TESTLOADLIBRARY")
+            .collect();
+        assert!(others.is_empty(), "{group}: {others:?}");
+    }
+}
+
+/// `provoke_locks`: eight threads create an instance at once, each runs a program that leaves
+/// reply activities running, and terminates it, ten rounds over: every instance starts, nothing
+/// hangs (the driver's watchdog exits 99) and nothing crashes.
+#[test]
+fn concurrent_instances_start_run_and_terminate() {
+    let api = scratch().join("api-provoke-locks");
+    let output = Command::new("timeout")
+        .args(["-k", "5", "300"])
+        .arg(testbinaries().join("provoke_locks"))
+        .arg(testbinaries().join("provoke_locks.rex"))
+        .args(["8", "10", "240"])
+        .current_dir(scratch())
+        .env("REXX_API_DIR", &api)
+        .stdin(Stdio::null())
+        .output()
+        .expect("provoke_locks runs");
+    stop_service(&api);
+    assert!(
+        output.status.success(),
+        "{:?}\n{}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
+}

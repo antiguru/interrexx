@@ -322,6 +322,46 @@ pub fn routines_only(routines: &[(&str, TypedRoutine)]) -> Library {
     }
 }
 
+/// What an embedding instance's root activity waits in, set once per process.
+static EMBEDDING_WAIT: std::sync::OnceLock<fn(usize)> = std::sync::OnceLock::new();
+
+/// The library whose routine `WAIT` an embedding instance's root activity
+/// calls: the routine runs `wait` with the address of the call's thread
+/// context, and returns once it returns. While it runs, a thread attached to
+/// that context reaches its call ([`crate::ffi::attach_current_thread`]).
+#[cfg(unix)]
+#[must_use]
+pub fn embedding_library(wait: fn(usize)) -> Library {
+    let _ = EMBEDDING_WAIT.set(wait);
+    routines_only(&[("WAIT", embedding_wait)])
+}
+
+/// `WAIT()`: runs [`EMBEDDING_WAIT`] with the call's thread context.
+///
+/// # Safety
+/// As every typed routine stub's: `context` is a live call context, and a
+/// non-null `arguments` is the call's descriptor array.
+unsafe extern "C-unwind" fn embedding_wait(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 2] = [code::LOGICAL_T, ARGUMENT_TERMINATOR];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: `context` is the live call context, and `arguments` the
+    // descriptor array `SIGNATURE` declares the result element of.
+    unsafe {
+        let thread = (*context).threadContext as usize;
+        if let Some(wait) = EMBEDDING_WAIT.get() {
+            wait(thread);
+        }
+        (*arguments).value.value_logical_t = 1;
+    }
+    std::ptr::null_mut()
+}
+
 /// `SENDTHENAWAIT(object, message, path)`: sends `message` to `object`
 /// through the call's thread context, then waits up to half a second for a
 /// file at `path`, answering whether one appeared: a native that blocks
@@ -1533,6 +1573,23 @@ pub struct CommandHandler {
     redirecting: bool,
 }
 
+/// A [`CommandHandler`] on its way to the thread of the interpreter it
+/// serves.
+#[derive(Debug)]
+pub struct SentCommandHandler(CommandHandler);
+
+// SAFETY: a handler is a C function's address and a flag, which owns and
+// borrows nothing; its caller calls it on whichever thread runs the command.
+unsafe impl Send for SentCommandHandler {}
+
+impl SentCommandHandler {
+    /// The handler.
+    #[must_use]
+    pub fn into_inner(self) -> CommandHandler {
+        self.0
+    }
+}
+
 impl CommandHandler {
     /// The handler at `entry_point`, of the environment type `kind`, or
     /// `None` for a null address or a type the header does not define, which
@@ -1551,6 +1608,18 @@ impl CommandHandler {
             entry_point,
             redirecting,
         })
+    }
+
+    /// [`CommandHandler::new`] for an embedding's `DIRECT_ENVIRONMENTS` and
+    /// `REDIRECTING_ENVIRONMENTS` options, sendable to the interpreter's
+    /// thread.
+    ///
+    /// # Safety
+    /// A non-null `entry_point` is a function of the type `kind` names, for
+    /// as long as an interpreter may call it.
+    #[must_use]
+    pub unsafe fn sendable(entry_point: *mut c_void, kind: c_int) -> Option<SentCommandHandler> {
+        CommandHandler::new(entry_point, kind).map(SentCommandHandler)
     }
 
     /// Whether the handler takes an I/O redirector context.

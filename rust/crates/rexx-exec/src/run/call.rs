@@ -1005,13 +1005,25 @@ impl Interp {
         installed: InstalledRoutine,
         arguments: Vec<Option<ObjRef>>,
     ) -> Result<Option<ObjRef>, Failure> {
-        match self.invoke_call_over(
+        let mut arguments = arguments;
+        let begun = self.begin_call(
             Resolved::Routine(installed),
             b"CALL",
-            arguments,
+            &mut arguments,
+            0,
             CallType::Command,
             CallEntry::Written,
-        )? {
+        )?;
+        // An embedding instance's initial environment, which its programs
+        // start with as a top-level program starts with the platform's.
+        if matches!(begun, Begun::Entered)
+            && let Some(name) = self.default_address.clone()
+        {
+            let address = &mut self.activation_mut().address;
+            address.current = Some(Rc::clone(&name));
+            address.alternate = Some(name);
+        }
+        match self.complete_call(begun)? {
             Ended::Exited(value) | Ended::Returned(value) => Ok(value),
         }
     }

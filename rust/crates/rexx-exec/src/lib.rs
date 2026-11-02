@@ -1643,6 +1643,19 @@ struct Interp {
     /// name (`InterpreterInstance::commandHandlers`). Emptied at the first
     /// library close, since nothing ties a handler's code to its library.
     command_handlers: FxHashMap<Box<[u8]>, Rc<rexx_api::load::CommandHandler>>,
+    /// Whether the next native call leaves its driver whatever else runs:
+    /// an embedding instance's root call, which waits for the thread that
+    /// created the instance while the driver serves that thread's callbacks.
+    pub(crate) leave_next_native: bool,
+    /// An embedding instance's `INITIAL_ADDRESS_ENVIRONMENT`, the `ADDRESS` a
+    /// program `CallProgram` runs starts with; `None` the platform default.
+    pub(crate) default_address: Option<Rc<[u8]>>,
+    /// An embedding instance's `REGISTERED_ENVIRONMENTS`: the classic
+    /// subcommand handler an upper-cased environment name is served by.
+    pub(crate) subcom_aliases: FxHashMap<Vec<u8>, Vec<u8>>,
+    /// An embedding instance's `EXTERNAL_CALL_PATH` and
+    /// `EXTERNAL_CALL_EXTENSIONS`, which every external search uses.
+    pub(crate) call_search: require::Instance,
     /// How many times [`Interp::resolve_library`] has asked `load::open` for a
     /// name nothing held, whether or not a library loaded, which is what a
     /// test reads to see that a held one is not asked for again.
@@ -2432,6 +2445,10 @@ impl Interp {
             classic_subcoms: FxHashMap::default(),
             global_references: rexx_api::handles::Table::new(),
             command_handlers: FxHashMap::default(),
+            leave_next_native: false,
+            default_address: None,
+            subcom_aliases: FxHashMap::default(),
+            call_search: require::Instance::default(),
             kept_strings: rustc_hash::FxHashMap::default(),
             kept_names: rustc_hash::FxHashMap::default(),
             kept_holders: rustc_hash::FxHashMap::default(),
@@ -3490,6 +3507,10 @@ impl Interp {
             global_references,
             // Entry points, not objects.
             command_handlers: _,
+            leave_next_native: _,
+            default_address: _,
+            subcom_aliases: _,
+            call_search: _,
             // Copies keyed by object, dropped with it rather than keeping it.
             kept_strings: _,
             kept_names: _,
@@ -4482,6 +4503,118 @@ fn execute_as(
     };
     // A pool thread still running a call ends it under the baton, through
     // this interpreter's state, which therefore outlives the run.
+    if interp.activities.in_flight() {
+        std::mem::forget(interp);
+    }
+    outcome
+}
+
+/// The program an embedding instance's root activity runs: the native call
+/// it waits in, which the thread that created the instance acts as until
+/// `Terminate`. A halt that finds it running is taken quietly.
+const INSTANCE_ROOT: &[u8] = b"signal on halt name done\n\
+call WAIT\n\
+done:\n\
+exit\n\
+::routine WAIT external 'LIBRARY REXXEMBEDDING WAIT'\n";
+
+/// The name the root program's library is registered under.
+const INSTANCE_LIBRARY: &[u8] = b"REXXEMBEDDING";
+
+/// Everything an embedding instance's interpreter thread does: the
+/// interpreter is built and bootstrapped, `options` applied, `started` told
+/// the root thread context and the inbox, and the root activity waits in a
+/// native call that leaves the driver free to serve the attached threads'
+/// callbacks; once it returns, the run ends as a program's does.
+pub(crate) fn run_instance(
+    options: embedding::InstanceOptions,
+    started: Box<dyn FnOnce(usize, crate::sync::Arc<timer::Inbox<timer::Posted>>) + Send>,
+) -> Outcome {
+    use rexx_api::callbacks::Surface as _;
+    let probe = 0u8;
+    let base = &raw const probe as usize;
+    let program = rexx_parse::program_from(rexx_parse::ProgramSource::new(
+        INSTANCE_ROOT.to_vec(),
+        rexx_parse::SourceKind::Program,
+    ))
+    .unwrap_or_else(|_| panic!("the instance's root program parses"));
+    let mut interp = Interp::new();
+    interp.measure_stack(base, INTERPRETER_STACK_BYTES);
+    interp.program_path = b"RexxCreateInterpreter".to_vec();
+    interp.activity.call_context.name = Rc::from(&b"RexxCreateInterpreter"[..]);
+    interp.input = Input::new(ProgramInput::Stdin);
+    let stdout_terminal = std::io::IsTerminal::is_terminal(&std::io::stdout());
+    interp.out_lines = stdout_terminal;
+    interp.out_bound = OUTPUT_BOUND;
+    interp.say_bound = if stdout_terminal { 0 } else { OUTPUT_BOUND };
+    interp.sinks = Some(Sinks {
+        stdout: Box::new(|bytes| {
+            use std::io::Write;
+            let mut stdout = std::io::stdout();
+            stdout.write_all(bytes).and_then(|()| stdout.flush())
+        }),
+        stderr: Box::new(|bytes| {
+            use std::io::Write;
+            std::io::stderr().write_all(bytes)
+        }),
+        stdout_terminal,
+        own_descriptors: true,
+    });
+    let result = interp.bootstrap_library().and_then(|()| {
+        interp.default_address = options.initial_address.as_deref().map(Rc::from);
+        interp.call_search = require::Instance {
+            path: options.external_call_path,
+            extensions: options.external_call_extensions,
+        };
+        for (name, handler) in options.command_handlers {
+            interp.add_command_handler(&name, handler.into_inner());
+        }
+        for (name, registered) in options.registered_environments {
+            interp
+                .subcom_aliases
+                .insert(name.to_ascii_uppercase(), registered);
+        }
+        for library in &options.load_libraries {
+            interp.load_library(library);
+        }
+        let library = rexx_api::load::embedding_library(embedding::wait_in_root);
+        interp.register_library(INSTANCE_LIBRARY, Ok(Some(library)));
+        let thread = interp.thread_context();
+        thread.set_application_data(options.application_data);
+        started(thread.address(), interp.timer.inbox());
+        interp.leave_next_native = true;
+        interp.run_as_started(program, StartType::Command, None)
+    });
+    let mut stderr = Vec::new();
+    if let Err(Failure::Loud(loud)) = &result {
+        stderr.extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+    }
+    let mut refused = interp.run_ready_uninits();
+    let late = interp.run_started_to_end();
+    report_late_failures(&mut interp, late, b"RexxCreateInterpreter", &mut 0);
+    refused.extend(interp.terminate());
+    for loud in refused {
+        stderr.extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+    }
+    let mut trace = std::mem::take(&mut interp.trace);
+    trace.extend(stderr);
+    let outcome = Outcome {
+        exit_code: 0,
+        result: None,
+        error: None,
+        stdout: std::mem::take(&mut interp.out),
+        stderr: trace,
+        stack: interp.stack_span(),
+        collections: 0,
+        #[cfg(test)]
+        peak_body_bytes: 0,
+        chunks_refused: 0,
+        sim: None,
+        #[cfg(feature = "pinning")]
+        pinning: PinReport::default(),
+        #[cfg(feature = "sharing")]
+        sharing: SharingReport::default(),
+    };
     if interp.activities.in_flight() {
         std::mem::forget(interp);
     }

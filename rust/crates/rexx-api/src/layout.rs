@@ -10,7 +10,7 @@
 use std::cell::Cell;
 use std::ffi::{c_char, c_int, c_void};
 
-use rexx_core::{Deferral, Owner};
+use rexx_core::Owner;
 
 /// `wholenumber_t` (`api/rexx.h:237`).
 pub type wholenumber_t = isize;
@@ -439,36 +439,7 @@ pub struct Owned<C, T> {
 
 /// Each member a populated table still refuses, as `Table.Member`, with the
 /// owner and reason its refusal names.
-pub const REFUSING_MEMBERS: &[(&str, Owner)] = &[
-    (
-        "RexxInstanceInterface.Terminate",
-        Owner::Phase10(Deferral::Embedding),
-    ),
-    (
-        "RexxInstanceInterface.Halt",
-        Owner::Phase10(Deferral::Embedding),
-    ),
-    (
-        "RexxInstanceInterface.SetTrace",
-        Owner::Phase10(Deferral::Embedding),
-    ),
-    (
-        "RexxInstanceInterface.StackCommandEnvironment",
-        Owner::Phase10(Deferral::Embedding),
-    ),
-    (
-        "RexxThreadInterface.RaiseConditionObject",
-        Owner::Phase10(Deferral::Embedding),
-    ),
-    (
-        "RexxThreadInterface.HaltThread",
-        Owner::Phase10(Deferral::Embedding),
-    ),
-    (
-        "RexxThreadInterface.SetThreadTrace",
-        Owner::Phase10(Deferral::Embedding),
-    ),
-];
+pub const REFUSING_MEMBERS: &[(&str, Owner)] = &[];
 
 /// The owner a refusal of `entry` names: its [`REFUSING_MEMBERS`] row, and
 /// none for a member no row names, which every populated table fills.

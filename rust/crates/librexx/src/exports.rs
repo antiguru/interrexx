@@ -8,7 +8,7 @@ use std::ffi::{c_char, c_int, c_short, c_void};
 
 use rexx_api::layout::{
     CONSTRXSTRING, RXSTRING, RXSYSEXIT, RexxInstance_, RexxReturnCode, RexxStemObject,
-    RexxThreadContext_, SHVBLOCK,
+    RexxThreadContext_, SHVBLOCK, ValueDescriptor,
 };
 
 /// `RXARI_NOT_FOUND`.
@@ -221,17 +221,135 @@ pub extern "C" fn RexxResetTrace(_process: i32, _thread: usize) -> RexxReturnCod
     TARGET_NOT_FOUND
 }
 
-/// `RexxCreateInterpreter`: 0, no instance.
+/// `RexxOption` (`api/oorexxapi.h`): a name and a value of the type the name
+/// implies, read here as the word it is.
+#[repr(C)]
+struct RexxOption {
+    name: *const c_char,
+    option: ValueDescriptor,
+}
+
+/// `RexxContextEnvironment`, `RexxRedirectingEnvironment` and
+/// `RexxRegisteredEnvironment`: a pointer and a name.
+#[repr(C)]
+struct NamedEntry {
+    first: *mut c_void,
+    name: *const c_char,
+}
+
+/// The bytes of a NUL-terminated string, or `None` for a null pointer.
 ///
 /// # Safety
-/// As [`RexxStart`].
+/// A non-null `text` is NUL-terminated.
+unsafe fn text_of(text: *const c_char) -> Option<Vec<u8>> {
+    // SAFETY: the caller's guarantee.
+    (!text.is_null()).then(|| {
+        unsafe { std::ffi::CStr::from_ptr(text) }
+            .to_bytes()
+            .to_vec()
+    })
+}
+
+/// Each entry of a list ending at a null name or a null first member.
+///
+/// # Safety
+/// A non-null `list` is such a list.
+unsafe fn entries(list: *const NamedEntry) -> Vec<(*mut c_void, Vec<u8>)> {
+    let mut out = Vec::new();
+    if list.is_null() {
+        return out;
+    }
+    let mut at = list;
+    // SAFETY: the caller's guarantee: each entry up to the terminator is
+    // readable and its name NUL-terminated.
+    unsafe {
+        while !(*at).name.is_null() && !(*at).first.is_null() {
+            out.push(((*at).first, text_of((*at).name).unwrap_or_default()));
+            at = at.add(1);
+        }
+    }
+    out
+}
+
+/// The options `options` lists, up to the entry with a null name.
+///
+/// # Safety
+/// A non-null `options` is a list of `RexxOption`s ending with a null name,
+/// each value of the type its name implies.
+unsafe fn instance_options(options: *const RexxOption) -> rexx_exec::embedding::InstanceOptions {
+    let mut read = rexx_exec::embedding::InstanceOptions::default();
+    if options.is_null() {
+        return read;
+    }
+    let mut at = options;
+    // SAFETY: the caller's guarantee, entry by entry.
+    unsafe {
+        while !(*at).name.is_null() {
+            let name = std::ffi::CStr::from_ptr((*at).name).to_bytes();
+            let word = (*at).option.value.value_POINTER;
+            match name {
+                b"InitialAddress" => read.initial_address = text_of(word.cast()),
+                b"ApplicationData" => read.application_data = word as usize,
+                b"LoadRequiredLibrary" => read.load_libraries.extend(text_of(word.cast())),
+                b"ExternalCallPath" => read.external_call_path = text_of(word.cast()),
+                b"ExternalCallPathExt" => {
+                    let list = text_of(word.cast()).unwrap_or_default();
+                    read.external_call_extensions
+                        .extend(list.split(|byte| *byte == b',').map(<[u8]>::to_vec));
+                }
+                b"DirectEnvironments" | b"RedirectingEnvironments" => {
+                    let kind = if name == b"DirectEnvironments" { 1 } else { 2 };
+                    for (handler, name) in entries(word.cast()) {
+                        read.command_handlers.extend(
+                            rexx_api::load::CommandHandler::sendable(handler, kind)
+                                .map(|handler| (name, handler)),
+                        );
+                    }
+                }
+                b"RegisteredEnvironments" => {
+                    for (registered, name) in entries(word.cast()) {
+                        let registered = text_of(registered.cast()).unwrap_or_default();
+                        read.registered_environments.push((name, registered));
+                    }
+                }
+                _ => {}
+            }
+            at = at.add(1);
+        }
+    }
+    read
+}
+
+/// `RexxCreateInterpreter` (`api/oorexxapi.h`): an instance of its own, the
+/// calling thread attached to its root thread context. Answers 1 with the
+/// instance and the context written, else 0.
+///
+/// # Safety
+/// `instance` and `thread` are writable, and a non-null `options` is a list
+/// of `RexxOption`s ending with a null name.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxCreateInterpreter(
-    _instance: *mut *mut RexxInstance_,
-    _thread: *mut *mut RexxThreadContext_,
-    _options: *mut c_void,
+    instance: *mut *mut RexxInstance_,
+    thread: *mut *mut RexxThreadContext_,
+    options: *mut c_void,
 ) -> RexxReturnCode {
-    0
+    // SAFETY: the caller's guarantee.
+    let options = unsafe { instance_options(options.cast()) };
+    let Some(context) = rexx_exec::embedding::create_instance(options) else {
+        return 0;
+    };
+    let context = context as *mut RexxThreadContext_;
+    // SAFETY: `context` is the live root thread context, whose `instance`
+    // link its interpreter wrote; the writes are the caller's guarantee.
+    unsafe {
+        if !thread.is_null() {
+            thread.write(context);
+        }
+        if !instance.is_null() {
+            instance.write((*context).instance);
+        }
+    }
+    1
 }
 
 /// `RexxStemSort`.

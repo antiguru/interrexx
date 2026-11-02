@@ -191,6 +191,9 @@ pub(crate) struct Recall {
     /// The address of a local near the base of that thread's stack, where
     /// Rexx code may run under the lend.
     pub(crate) base: Option<usize>,
+    /// How deep Rexx code may run from `base`, where it is not a pool
+    /// thread's: a thread attached to an embedding instance.
+    pub(crate) room: Option<usize>,
 }
 
 /// Which activity runs while a recalled baton is lent.
@@ -1609,7 +1612,12 @@ impl Interp {
     /// no native call of this interpreter's gets no stack to run Rexx code
     /// on.
     fn serve_recall(&mut self, recall: Recall) {
-        let Recall { by, thread, base } = recall;
+        let Recall {
+            by,
+            thread,
+            base,
+            room,
+        } = recall;
         let outgoing = self.activities.running;
         let activity = match by {
             Recaller::Call { activity, frame } => self
@@ -1631,9 +1639,10 @@ impl Interp {
         self.activities.runs_below += 1;
         let stack = (self.stack_base, self.stack_room);
         self.stack_base = base.unwrap_or(self.stack_base);
-        self.stack_room = match base {
-            Some(_) => self.pool.stack().saturating_sub(STACK_MARGIN),
-            None => 0,
+        self.stack_room = match (base, room) {
+            (Some(_), Some(room)) => room,
+            (Some(_), None) => self.pool.stack().saturating_sub(STACK_MARGIN),
+            (None, _) => 0,
         };
         let baton = crate::sync::Arc::clone(&self.baton);
         baton.lend(thread, crate::island::Island::of(self));
@@ -2586,6 +2595,15 @@ impl Interp {
         self.halt_each();
         if self.sim.is_some() {
             self.sim_order_event(mark);
+        }
+    }
+
+    /// `Activity::halt` for the running activity (`HaltThread`): its
+    /// running Rexx frame is asked to halt.
+    pub(crate) fn halt_running(&mut self) {
+        let running = self.activities.running;
+        if request_halt(&mut self.activity, None) == Some(true) {
+            self.wake_for_halt(running);
         }
     }
 

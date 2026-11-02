@@ -319,6 +319,7 @@ impl Interp {
         };
         let held = HeldCall::Routine(entry.held());
         let exits = self.leaves_driver();
+        self.leave_next_native = false;
         self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, name, args, Some(code));
         self.native_frame_mut().executable = executable;
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
@@ -457,7 +458,10 @@ impl Interp {
     pub(crate) fn leaves_driver(&self) -> bool {
         self.activity.pin_depth == 0
             && !self.activity.resuming
-            && (self.switch.is_some() || self.stress_collect || self.others_live())
+            && (self.switch.is_some()
+                || self.stress_collect
+                || self.leave_next_native
+                || self.others_live())
     }
 
     /// The running activity's native call, its completion drained: its
@@ -1381,6 +1385,7 @@ impl<'p> Recalling<'p> {
             },
             thread: std::thread::current().id(),
             base: Some(self.base),
+            room: None,
         }));
         Lent::wait(self.baton)
     }
@@ -1414,10 +1419,14 @@ impl rexx_api::values::Baton for Requester {
         }
         #[cfg(test)]
         self.baton.count_take();
+        // A thread attached to an embedding instance runs Rexx code on its
+        // own stack, as far as the part of it below a quarter's reserve.
+        let stack = rexx_api::ffi::attached_stack();
         self.inbox.post(Posted::Recall(Recall {
             by: Recaller::Context(context),
             thread: std::thread::current().id(),
-            base: None,
+            base: stack.map(|(top, _)| top),
+            room: stack.map(|(_, size)| size - size / 4),
         }));
         std::mem::forget(Lent::wait(&self.baton));
         true

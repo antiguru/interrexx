@@ -16,8 +16,21 @@ const CURRENT_DIRECTORY: &str = ".";
 /// The path entries a `::REQUIRES` inside a package at `program_dir` is
 /// searched over, in order: the requiring program's own directory, the current
 /// directory, `REXX_PATH`, then `PATH`.
+#[cfg(test)]
 pub(crate) fn search_entries(
     program_dir: Option<&str>,
+    rexx_path: Option<&str>,
+    sys_path: Option<&str>,
+) -> Vec<String> {
+    search_entries_with(program_dir, None, rexx_path, sys_path)
+}
+
+/// [`search_entries`] with an embedding instance's `EXTERNAL_CALL_PATH`,
+/// searched after the current directory and before `REXX_PATH`
+/// (`SysSearchPath::SysSearchPath`, `platform/unix/SysInterpreterInstance.cpp:123`).
+pub(crate) fn search_entries_with(
+    program_dir: Option<&str>,
+    call_path: Option<&str>,
     rexx_path: Option<&str>,
     sys_path: Option<&str>,
 ) -> Vec<String> {
@@ -31,7 +44,7 @@ pub(crate) fn search_entries(
         push(dir);
     }
     push(CURRENT_DIRECTORY);
-    for path in [rexx_path, sys_path].into_iter().flatten() {
+    for path in [call_path, rexx_path, sys_path].into_iter().flatten() {
         for entry in path.split(PATH_SEPARATOR) {
             push(entry);
         }
@@ -43,11 +56,25 @@ pub(crate) fn search_entries(
 const PATH_SEPARATOR: char = ':';
 
 /// Every path a `::REQUIRES` of `name` tries, in the order it tries them.
+#[cfg(test)]
 pub(crate) fn candidates(
     name: &str,
     entries: &[String],
     parent_extension: Option<&str>,
     requires: bool,
+) -> Vec<Vec<String>> {
+    candidates_with(name, entries, parent_extension, requires, &[])
+}
+
+/// [`candidates`] with an embedding instance's `EXTERNAL_CALL_EXTENSIONS`,
+/// tried before the default extensions, which follow where they are not
+/// among them (`SysInterpreterInstance::addSearchExtension`).
+pub(crate) fn candidates_with(
+    name: &str,
+    entries: &[String],
+    parent_extension: Option<&str>,
+    requires: bool,
+    instance_extensions: &[String],
 ) -> Vec<Vec<String>> {
     // **ASCII, because `strlower` is.** A name with a non-ASCII letter lowers
     // to itself here and takes one pass, where Unicode lowercasing would
@@ -69,7 +96,13 @@ pub(crate) fn candidates(
             extensions.push(Some(REQUIRES_EXTENSION));
         }
         extensions.extend(parent_extension.map(Some));
-        extensions.extend(DEFAULT_EXTENSIONS.iter().map(|ext| Some(*ext)));
+        extensions.extend(instance_extensions.iter().map(|ext| Some(ext.as_str())));
+        extensions.extend(
+            DEFAULT_EXTENSIONS
+                .iter()
+                .filter(|ext| !instance_extensions.iter().any(|own| own == *ext))
+                .map(|ext| Some(*ext)),
+        );
         extensions.push(None);
     }
 
@@ -184,16 +217,47 @@ pub(crate) fn search(
     cwd: &[u8],
     requires: bool,
 ) -> Option<Vec<u8>> {
+    search_with(
+        program,
+        name,
+        &Instance::default(),
+        rexx_path,
+        sys_path,
+        cwd,
+        requires,
+    )
+}
+
+/// An embedding instance's own search settings: `EXTERNAL_CALL_PATH` and
+/// `EXTERNAL_CALL_EXTENSIONS`.
+#[derive(Default, Clone, Debug)]
+pub(crate) struct Instance {
+    pub(crate) path: Option<Vec<u8>>,
+    pub(crate) extensions: Vec<Vec<u8>>,
+}
+
+/// [`search`] with an embedding instance's settings.
+pub(crate) fn search_with(
+    program: Option<&[u8]>,
+    name: &[u8],
+    instance: &Instance,
+    rexx_path: Option<&[u8]>,
+    sys_path: Option<&[u8]>,
+    cwd: &[u8],
+    requires: bool,
+) -> Option<Vec<u8>> {
     use std::os::unix::ffi::OsStrExt as _;
     let program = program.map(widen);
     let program = program.as_deref();
-    let entries = search_entries(
+    let entries = search_entries_with(
         program.and_then(program_directory),
+        instance.path.as_deref().map(widen).as_deref(),
         rexx_path.map(widen).as_deref(),
         sys_path.map(widen).as_deref(),
     );
     let extension = program.and_then(program_extension);
-    let groups = candidates(&widen(name), &entries, extension, requires);
+    let extensions: Vec<String> = instance.extensions.iter().map(|ext| widen(ext)).collect();
+    let groups = candidates_with(&widen(name), &entries, extension, requires, &extensions);
     let located = |candidate: &str| crate::paths::normalize_bytes(&narrow(candidate), cwd);
     let hit = first_regular(&groups, |candidate| {
         match std::fs::metadata(std::ffi::OsStr::from_bytes(&located(candidate))) {

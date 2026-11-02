@@ -1,6 +1,7 @@
-//! The classic embedding entry point, `RexxStart` (`api/rexx.h`), over safe
-//! values: the `librexx` export reads the caller's C strings and writes the
-//! answer back.
+//! The embedding entry points over safe values: the classic `RexxStart`
+//! (`api/rexx.h`) and the instance API's `RexxCreateInterpreter`
+//! (`api/oorexxapi.h`). The `librexx` exports read the caller's C structures
+//! and write the answers back.
 
 use std::io::{IsTerminal, Write};
 
@@ -85,5 +86,232 @@ pub fn rexx_start(start: Start) -> Started {
         code: 0,
         result: outcome.result,
         short,
+    }
+}
+
+/// What `RexxCreateInterpreter`'s options set up, read from the caller's
+/// `RexxOption` list.
+#[derive(Default)]
+pub struct InstanceOptions {
+    /// `INITIAL_ADDRESS_ENVIRONMENT`.
+    pub initial_address: Option<Vec<u8>>,
+    /// `APPLICATION_DATA`, the instance's `applicationData`.
+    pub application_data: usize,
+    /// `DIRECT_ENVIRONMENTS` and `REDIRECTING_ENVIRONMENTS`.
+    pub command_handlers: Vec<(Vec<u8>, rexx_api::load::SentCommandHandler)>,
+    /// `REGISTERED_ENVIRONMENTS`: an environment name and the classic
+    /// subcommand handler registered under the second name that serves it.
+    pub registered_environments: Vec<(Vec<u8>, Vec<u8>)>,
+    /// `LOAD_REQUIRED_LIBRARY`.
+    pub load_libraries: Vec<Vec<u8>>,
+    /// `EXTERNAL_CALL_PATH`: searched after the current directory.
+    pub external_call_path: Option<Vec<u8>>,
+    /// `EXTERNAL_CALL_EXTENSIONS`, split at its commas: tried before the
+    /// default extensions.
+    pub external_call_extensions: Vec<Vec<u8>>,
+}
+
+/// Where an instance has got to, under [`Shared::state`].
+#[derive(Default)]
+struct State {
+    /// The root thread context, once the root activity waits in it.
+    context: Option<usize>,
+    /// `Terminate` was called.
+    terminating: bool,
+    /// Threads attached by `AttachThread` and not yet detached, apart from
+    /// the thread that created the instance.
+    attached: usize,
+    /// The interpreter thread has ended.
+    ended: bool,
+}
+
+/// One instance, as the threads that use it share it.
+#[derive(Default)]
+struct Shared {
+    state: std::sync::Mutex<State>,
+    changed: std::sync::Condvar,
+    inbox: std::sync::OnceLock<crate::sync::Arc<crate::timer::Inbox<crate::timer::Posted>>>,
+    thread: std::sync::Mutex<Option<std::thread::JoinHandle<crate::Outcome>>>,
+}
+
+impl Shared {
+    fn state(&self) -> std::sync::MutexGuard<'_, State> {
+        self.state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    fn wait<'a>(
+        &self,
+        state: std::sync::MutexGuard<'a, State>,
+    ) -> std::sync::MutexGuard<'a, State> {
+        self.changed
+            .wait(state)
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+}
+
+/// The live instances, by root thread context address.
+static INSTANCES: std::sync::Mutex<Vec<(usize, std::sync::Arc<Shared>)>> =
+    std::sync::Mutex::new(Vec::new());
+
+fn instances() -> std::sync::MutexGuard<'static, Vec<(usize, std::sync::Arc<Shared>)>> {
+    INSTANCES
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+fn instance(context: usize) -> Option<std::sync::Arc<Shared>> {
+    instances()
+        .iter()
+        .find(|(at, _)| *at == context)
+        .map(|(_, shared)| std::sync::Arc::clone(shared))
+}
+
+/// Instances not yet waiting in their root call, by the interpreter thread's
+/// id, which [`wait_in_root`] finds its own in.
+static STARTING: std::sync::Mutex<Vec<(usize, std::sync::Arc<Shared>)>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// `RexxCreateInterpreter`: an interpreter of its own on a thread of its own,
+/// whose root activity waits in a native call that the calling thread, now
+/// attached to it, acts as; answers the root thread context's address, or
+/// `None` where the interpreter did not start.
+pub fn create_instance(options: InstanceOptions) -> Option<usize> {
+    rexx_api::ffi::set_embedder(&EMBEDDER);
+    // The oracle's instance takes the halting signals (`SystemInterpreter`),
+    // which reach every live interpreter; the caller's mask is its own.
+    crate::timer::install_signals();
+    let shared = std::sync::Arc::new(Shared::default());
+    let starting = std::sync::Arc::clone(&shared);
+    let ending = std::sync::Arc::clone(&shared);
+    let spawned = std::thread::Builder::new()
+        .name("rexx-interp".to_string())
+        .stack_size(crate::INTERPRETER_STACK_BYTES)
+        .spawn(move || {
+            crate::signal::receive();
+            let outcome = crate::run_instance(
+                options,
+                Box::new(move |context, inbox| {
+                    let _ = starting.inbox.set(inbox);
+                    STARTING
+                        .lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner)
+                        .push((context, starting));
+                }),
+            );
+            ending.state().ended = true;
+            ending.changed.notify_all();
+            outcome
+        })
+        .ok()?;
+    *shared
+        .thread
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(spawned);
+    let mut state = shared.state();
+    while state.context.is_none() && !state.ended {
+        state = shared.wait(state);
+    }
+    let context = state.context;
+    drop(state);
+    match context {
+        Some(context) => {
+            rexx_api::ffi::attach_current_thread(context);
+            Some(context)
+        }
+        None => {
+            end(&shared);
+            None
+        }
+    }
+}
+
+/// The root call's body, on the thread running it: the instance is live
+/// until `Terminate` and every other attached thread has detached.
+pub(crate) fn wait_in_root(context: usize) {
+    let shared = {
+        let mut starting = STARTING
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let Some(at) = starting.iter().position(|(at, _)| *at == context) else {
+            return;
+        };
+        starting.remove(at).1
+    };
+    instances().push((context, std::sync::Arc::clone(&shared)));
+    let mut state = shared.state();
+    state.context = Some(context);
+    shared.changed.notify_all();
+    while !(state.terminating && state.attached == 0) {
+        state = shared.wait(state);
+    }
+}
+
+/// Joins the instance's interpreter thread and writes what it left unwritten.
+fn end(shared: &Shared) {
+    let thread = shared
+        .thread
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .take();
+    if let Some(thread) = thread
+        && let Ok(outcome) = thread.join()
+    {
+        let _ = std::io::stdout().write_all(&outcome.stdout);
+        let _ = std::io::stdout().flush();
+        let _ = std::io::stderr().write_all(&outcome.stderr);
+    }
+}
+
+/// The [`rexx_api::ffi::Embedder`] the instance members reach.
+struct Embedder;
+
+static EMBEDDER: Embedder = Embedder;
+
+impl rexx_api::ffi::Embedder for Embedder {
+    fn terminate(&self, context: usize) -> bool {
+        let Some(shared) = instance(context) else {
+            return false;
+        };
+        {
+            let mut state = shared.state();
+            if state.terminating {
+                return false;
+            }
+            state.terminating = true;
+            shared.changed.notify_all();
+        }
+        end(&shared);
+        instances().retain(|(at, _)| *at != context);
+        true
+    }
+
+    fn halt(&self, context: usize) -> bool {
+        let Some(shared) = instance(context) else {
+            return false;
+        };
+        if let Some(inbox) = shared.inbox.get() {
+            inbox.post(crate::timer::Posted::Halt);
+            inbox.requests().set(crate::timer::HALT);
+        }
+        true
+    }
+
+    fn set_trace(&self, _context: usize, _on: bool) -> bool {
+        false
+    }
+
+    fn attached(&self, context: usize, attached: bool) {
+        let Some(shared) = instance(context) else {
+            return;
+        };
+        let mut state = shared.state();
+        if attached {
+            state.attached += 1;
+        } else {
+            state.attached = state.attached.saturating_sub(1);
+        }
+        shared.changed.notify_all();
     }
 }

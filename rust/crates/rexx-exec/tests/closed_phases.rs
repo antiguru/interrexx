@@ -319,11 +319,11 @@ let r = r#"raw "q" Phase 8"#; let u = "Phase 80";
         .iter()
         .filter(|path| shown(path) == "src/ffi.rs")
         .flat_map(|path| literals(&fs::read_to_string(path).expect("a source")))
-        .filter(|(_, literal)| literal.starts_with("RexxInstanceInterface.AttachThread"))
+        .filter(|(_, literal)| literal.starts_with("RexxThreadInterface."))
         .count();
     assert!(
         read >= 1,
-        "the scan read no literal naming the member ffi.rs refuses, so it is not \
-         reading the file it clears"
+        "the scan read no literal naming a thread-table member, which ffi.rs \
+         holds, so it is not reading the file it clears"
     );
 }

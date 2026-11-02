@@ -9,15 +9,13 @@ use std::marker::PhantomData;
 use std::ptr::NonNull;
 use std::rc::Rc;
 
-use rexx_core::{Deferral, Owner};
-
 use crate::layout::{
     CSTRING, CallContextInterface, ExitContextInterface, IORedirectorInterface,
     MethodContextInterface, Owned, POINTER, REXXPFN, RexxArrayObject, RexxBufferObject,
     RexxBufferStringObject, RexxCallContext_, RexxCondition, RexxDirectoryObject, RexxExitContext_,
     RexxIORedirectorContext_, RexxInstance_, RexxInstanceInterface, RexxMethodContext_,
     RexxMutableBufferObject, RexxObjectPtr, RexxPackageEntry, RexxPointerObject, RexxStringObject,
-    RexxThreadContext_, RexxThreadInterface, ValueDescriptor, logical_t, refusal, stringsize_t,
+    RexxThreadContext_, RexxThreadInterface, ValueDescriptor, logical_t, stringsize_t,
     wholenumber_t,
 };
 use crate::redirect::Redirector;
@@ -339,6 +337,10 @@ pub static INSTANCE: RexxInstanceInterface = {
     table.LanguageLevel = language_level;
     table.AttachThread = attach_thread;
     table.AddCommandEnvironment = add_command_environment;
+    table.StackCommandEnvironment = stack_command_environment;
+    table.Terminate = terminate;
+    table.Halt = halt;
+    table.SetTrace = set_trace;
     table
 };
 
@@ -488,6 +490,9 @@ pub const THREAD: RexxThreadInterface = {
     table.RegisterLibrary = register_library;
     table.GetInterpreterInstance = get_interpreter_instance;
     table.DetachThread = detach_thread;
+    table.HaltThread = halt_thread;
+    table.SetThreadTrace = set_thread_trace;
+    table.RaiseConditionObject = raise_condition_object;
     table
 };
 
@@ -694,6 +699,109 @@ thread_local! {
     /// thread, as `layout.rs`'s `REFUSED` is, since a thread's calls nest on
     /// its own stack (spec 2026-09-29 2.4, 2.5).
     static CALLING: Cell<*const Entered<'static>> = const { Cell::new(std::ptr::null()) };
+
+    /// The thread contexts this OS thread is attached to by `AttachThread`,
+    /// or by `RexxCreateInterpreter` on the thread that created the instance,
+    /// each with its count of attaches not yet detached: a callback through
+    /// one from this thread, which runs no native call of its activity,
+    /// reaches that activity's innermost call as its own.
+    static ATTACHED: std::cell::RefCell<Vec<(usize, usize)>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Whether this thread is attached to the thread context at `context`.
+fn attached_here(context: usize) -> bool {
+    ATTACHED.with_borrow(|attached| attached.iter().any(|(at, _)| *at == context))
+}
+
+/// Attaches this thread to the thread context at `context` once more.
+fn attach_here(context: usize) {
+    ATTACHED.with_borrow_mut(
+        |attached| match attached.iter_mut().find(|(at, _)| *at == context) {
+            Some((_, count)) => *count += 1,
+            None => attached.push((context, 1)),
+        },
+    );
+}
+
+/// Ends one attach of this thread to `context`, answering whether it was
+/// attached.
+fn detach_here(context: usize) -> bool {
+    ATTACHED.with_borrow_mut(|attached| {
+        let Some(at) = attached.iter().position(|(at, _)| *at == context) else {
+            return false;
+        };
+        attached[at].1 -= 1;
+        if attached[at].1 == 0 {
+            attached.remove(at);
+        }
+        true
+    })
+}
+
+/// The stack of this thread, its highest address and its size, where the
+/// thread is attached to some thread context; `None` otherwise or where the
+/// platform does not say.
+#[must_use]
+pub fn attached_stack() -> Option<(usize, usize)> {
+    if ATTACHED.with_borrow(Vec::is_empty) {
+        return None;
+    }
+    // SAFETY: `pthread_getattr_np` fills the zeroed attribute object for the
+    // calling thread, which `pthread_attr_getstack` reads and
+    // `pthread_attr_destroy` releases; every pointer is to a live local.
+    unsafe {
+        let mut attributes: libc::pthread_attr_t = std::mem::zeroed();
+        if libc::pthread_getattr_np(libc::pthread_self(), &raw mut attributes) != 0 {
+            return None;
+        }
+        let mut low: *mut std::ffi::c_void = std::ptr::null_mut();
+        let mut size: libc::size_t = 0;
+        let read = libc::pthread_attr_getstack(&raw const attributes, &raw mut low, &raw mut size);
+        libc::pthread_attr_destroy(&raw mut attributes);
+        (read == 0).then(|| (low as usize + size, size))
+    }
+}
+
+/// Attaches this thread to the thread context at `context`, as
+/// `RexxCreateInterpreter` attaches the thread that created the instance.
+pub fn attach_current_thread(context: usize) {
+    attach_here(context);
+}
+
+/// Detaches this thread from `context` entirely, as a terminated instance's
+/// creating thread is.
+pub fn forget_attached(context: usize) {
+    ATTACHED.with_borrow_mut(|attached| attached.retain(|(at, _)| *at != context));
+}
+
+/// What an embedding serves for the instance members that act on a whole
+/// instance rather than on a native call: its interpreter is reached by the
+/// address of its root thread context, from any thread.
+pub trait Embedder: Send + Sync {
+    /// `Terminate`: ends the instance whose root context is at `context`,
+    /// answering once it has ended; `false` where `context` is no instance's
+    /// or the instance cannot end now.
+    fn terminate(&self, context: usize) -> bool;
+    /// `Halt`: asks every activity of the instance to halt; `false` where
+    /// `context` is no instance's.
+    fn halt(&self, context: usize) -> bool;
+    /// `SetTrace`: turns external tracing of every activity on or off;
+    /// `false` where `context` is no instance's.
+    fn set_trace(&self, context: usize, on: bool) -> bool;
+    /// A thread attached to the instance (`true`) or detached from it.
+    fn attached(&self, context: usize, attached: bool);
+}
+
+static EMBEDDER: std::sync::OnceLock<&'static dyn Embedder> = std::sync::OnceLock::new();
+
+/// Installs the process's [`Embedder`], once.
+pub fn set_embedder(embedder: &'static dyn Embedder) {
+    let _ = EMBEDDER.set(embedder);
+}
+
+fn embedder() -> Option<&'static dyn Embedder> {
+    EMBEDDER.get().copied()
 }
 
 /// The calls entered on this OS thread and not yet returned, innermost
@@ -770,6 +878,28 @@ impl ThreadContext {
         // SAFETY: the allocation is live while `self` is, and naming a
         // field's address reads and writes nothing.
         unsafe { (&raw mut (*raw).thread).cast() }
+    }
+
+    /// The address of the instance this context links, as an embedding
+    /// hands it out.
+    #[must_use]
+    pub fn instance_address(&self) -> usize {
+        let raw = self.home.0.as_ptr();
+        // SAFETY: the allocation is live while `self` is, and naming a
+        // field's address reads and writes nothing.
+        unsafe { (&raw mut (*raw).instance) as usize }
+    }
+
+    /// Sets the `applicationData` the instance this context links carries
+    /// (`APPLICATION_DATA`), before any extension is handed it.
+    pub fn set_application_data(&self, data: usize) {
+        let raw = self.home.0.as_ptr();
+        // SAFETY: the allocation is live while `self` is; the field is plain
+        // data, written before the instance is handed out, so nothing reads
+        // it meanwhile.
+        unsafe {
+            (*raw).instance.context.applicationData = data as *mut std::ffi::c_void;
+        }
     }
 
     /// `InterpreterVersion`, called through the instance this context links,
@@ -1292,6 +1422,11 @@ unsafe fn reached<'a>(context: *mut RexxThreadContext_, slot: &str) -> Addressed
     // `ThreadContext`, whose wrapper's `owner` is its `Innermost`, a field of
     // the same allocation.
     let cell = unsafe { &*owner_of::<RexxThreadContext_, Innermost>(context) };
+    if attached_here(context as usize)
+        && !calls_here().any(|entry| std::ptr::eq(entry.innermost, cell))
+    {
+        return attached_call(context, cell, slot);
+    }
     // SAFETY: a call in flight on this thread outlives the callback it makes.
     let calling = unsafe { CALLING.get().cast::<Entered<'a>>().as_ref() };
     let held = match calling {
@@ -1342,6 +1477,34 @@ unsafe fn reached<'a>(context: *mut RexxThreadContext_, slot: &str) -> Addressed
     } else {
         Addressed::Elsewhere(running_reached, None)
     }
+}
+
+/// The innermost call of `cell`'s activity, reached from a thread attached to
+/// its context that runs none of its calls: the attached thread acts as that
+/// call, as the oracle's attached thread is its activity, under the baton the
+/// context's requester takes.
+///
+/// # Panics
+/// Where no native call of the activity is in flight, as [`reached`].
+fn attached_call<'a>(
+    context: *mut RexxThreadContext_,
+    cell: &'a Innermost,
+    slot: &str,
+) -> Addressed<'a> {
+    let held = match &cell.1 {
+        Some(requester) => crate::values::BatonHold::take_for(&**requester, context as usize),
+        None => crate::values::BatonHold::none(),
+    };
+    let innermost = cell.0.get();
+    assert!(
+        !innermost.is_null(),
+        "RexxThreadInterface.{slot} was called with no native call in flight"
+    );
+    // SAFETY: a non-null pointer is a call `ThreadContext::enter` is running,
+    // whose activation is borrowed for as long as the pointer is there, and
+    // the baton is held, so nothing else reaches it meanwhile.
+    let innermost = unsafe { &*(*innermost).activation.cast::<Activation<'a>>() };
+    Addressed::Here(Reached::checked(innermost, held), None)
 }
 
 ///
@@ -4151,13 +4314,36 @@ unsafe fn runs_here(thread: *const Thread) -> bool {
     calls_here().any(|entry| std::ptr::eq(entry.innermost, cell))
 }
 
-/// `AttachThread` from a thread running a native call of the instance's
-/// activity: that thread is attached already, so the context it answers is
-/// the one the running call has.
+/// The [`Thread`] whose `instance` field `instance` is.
 ///
-/// # Panics
-/// Called from a thread running no native call of the instance's activity,
-/// which is embedding.
+/// # Safety
+/// `instance` is an instance a live [`ThreadContext`] links.
+unsafe fn thread_of_instance(instance: *mut RexxInstance_) -> *mut Thread {
+    // SAFETY: the caller guarantees `instance` is the `instance` field of a
+    // live `Thread`, and it was taken from that whole allocation, so stepping
+    // back to the allocation's start stays inside its provenance.
+    unsafe {
+        instance
+            .cast::<u8>()
+            .sub(std::mem::offset_of!(Thread, instance))
+            .cast::<Thread>()
+    }
+}
+
+/// The thread context of the [`Thread`] `thread`.
+///
+/// # Safety
+/// `thread` is a live `Thread`.
+unsafe fn context_of_thread(thread: *mut Thread) -> *mut RexxThreadContext_ {
+    // SAFETY: the caller guarantees `thread`; naming a field reads nothing.
+    unsafe { (&raw mut (*thread).thread).cast() }
+}
+
+/// `AttachThread` (`interpreter/api/InterpreterInstanceStubs.cpp:61`): the
+/// instance's context, which a thread running a native call of its activity
+/// already has. Any other thread is attached to it, so its callbacks reach
+/// that activity's innermost call, until it detaches: every attached thread
+/// shares the one activity, its calls serialized by the baton.
 ///
 /// # Safety
 /// `instance` is an instance a live [`ThreadContext`] links, and a non-null
@@ -4166,29 +4352,20 @@ unsafe extern "C" fn attach_thread(
     instance: *mut RexxInstance_,
     attached: *mut *mut RexxThreadContext_,
 ) -> logical_t {
-    // SAFETY: the caller guarantees `instance` is the `instance` field of a
-    // live `Thread`, and it was taken from that whole allocation, so stepping
-    // back to the allocation's start stays inside its provenance.
-    let thread = unsafe {
-        instance
-            .cast::<u8>()
-            .sub(std::mem::offset_of!(Thread, instance))
-            .cast::<Thread>()
-    };
+    // SAFETY: the caller guarantees `instance`.
+    let thread = unsafe { thread_of_instance(instance) };
     // SAFETY: as above.
-    let home = unsafe { runs_here(thread) };
-    assert!(
-        home,
-        "{}",
-        refusal(
-            "RexxInstanceInterface.AttachThread",
-            Owner::Phase10(Deferral::Embedding)
-        )
-    );
+    let context = unsafe { context_of_thread(thread) };
+    // SAFETY: as above.
+    if !unsafe { runs_here(thread) } {
+        attach_here(context as usize);
+        if let Some(embedder) = embedder() {
+            embedder.attached(context as usize, true);
+        }
+    }
     if !attached.is_null() {
-        // SAFETY: the caller guarantees the write; the context is the
-        // allocation's own `thread` field.
-        unsafe { attached.write((&raw mut (*thread).thread).cast()) };
+        // SAFETY: the caller guarantees the write.
+        unsafe { attached.write(context) };
     }
     1
 }
@@ -4199,8 +4376,8 @@ unsafe extern "C" fn attach_thread(
 /// a null name or a null handler registers nothing.
 ///
 /// # Panics
-/// Called from a thread running no native call of the instance's activity,
-/// which is embedding.
+/// Called from a thread running no native call of the instance's activity
+/// and attached to none, where no call of that activity is in flight.
 ///
 /// # Safety
 /// `instance` is an instance a live [`ThreadContext`] links, a non-null
@@ -4212,37 +4389,137 @@ unsafe extern "C" fn add_command_environment(
     handler: REXXPFN,
     kind: std::ffi::c_int,
 ) {
-    // SAFETY: as in `attach_thread`.
-    let thread = unsafe {
-        instance
-            .cast::<u8>()
-            .sub(std::mem::offset_of!(Thread, instance))
-            .cast::<Thread>()
-    };
-    // SAFETY: as in `attach_thread`.
-    let home = unsafe { runs_here(thread) };
-    assert!(
-        home,
-        "{}",
-        refusal(
-            "RexxInstanceInterface.AddCommandEnvironment from another thread",
-            Owner::Phase10(Deferral::Embedding)
-        )
-    );
-    // SAFETY: as in `attach_thread`; the context is the allocation's own
-    // `thread` field.
-    let activation = unsafe {
-        innermost_activation((&raw mut (*thread).thread).cast(), "AddCommandEnvironment")
-    };
-    let activation = or_nothing!(activation);
-    // SAFETY: the caller guarantees the terminator.
-    let (Some(name), Some(handler)) = (
-        unsafe { name_of(name) },
-        crate::load::CommandHandler::new(handler, kind),
-    ) else {
+    // SAFETY: the caller's guarantees, which are `command_environment`'s.
+    unsafe { command_environment(instance, name, handler, kind, false) };
+}
+
+/// `StackCommandEnvironment`: as `AddCommandEnvironment`, the handler
+/// covering the one in use under `name`; true where it was added.
+///
+/// # Panics
+/// As [`add_command_environment`].
+///
+/// # Safety
+/// As [`add_command_environment`].
+unsafe extern "C" fn stack_command_environment(
+    instance: *mut RexxInstance_,
+    name: CSTRING,
+    handler: REXXPFN,
+    kind: std::ffi::c_int,
+) -> logical_t {
+    // SAFETY: the caller's guarantees, which are `command_environment`'s.
+    logical_t::from(unsafe { command_environment(instance, name, handler, kind, true) })
+}
+
+/// The two command-environment members: from a thread running no call of
+/// the instance's activity, attached for the length of the call, as the
+/// oracle attaches it. Answers whether a handler was added.
+///
+/// # Safety
+/// As [`add_command_environment`].
+unsafe fn command_environment(
+    instance: *mut RexxInstance_,
+    name: CSTRING,
+    handler: REXXPFN,
+    kind: std::ffi::c_int,
+    stack: bool,
+) -> bool {
+    // SAFETY: the caller guarantees `instance`.
+    let thread = unsafe { thread_of_instance(instance) };
+    // SAFETY: as above.
+    let context = unsafe { context_of_thread(thread) };
+    // SAFETY: as above.
+    let visiting = !unsafe { runs_here(thread) } && !attached_here(context as usize);
+    if visiting {
+        attach_here(context as usize);
+    }
+    let added = (|| {
+        // SAFETY: the caller guarantees the terminator.
+        let (Some(name), Some(handler)) = (
+            unsafe { name_of(name) },
+            crate::load::CommandHandler::new(handler, kind),
+        ) else {
+            return false;
+        };
+        // SAFETY: `context` is the live allocation's own `thread` field.
+        let activation = unsafe { innermost_activation(context, "AddCommandEnvironment") };
+        let Some(activation) = activation else {
+            return false;
+        };
+        if stack {
+            activation.stack_command_environment(name, handler);
+        } else {
+            activation.add_command_environment(name, handler);
+        }
+        true
+    })();
+    if visiting {
+        detach_here(context as usize);
+    }
+    added
+}
+
+/// `Terminate` (`interpreter/api/InterpreterInstanceStubs.cpp:52`): ends the
+/// instance and returns once it has ended, waiting for every other attached
+/// thread to detach. From a thread running a call of its activity, and for an
+/// interpreter no embedding created, it does nothing, as the oracle's
+/// `terminate` refuses while the root activity is active.
+///
+/// # Safety
+/// `instance` is an instance a live [`ThreadContext`] links.
+unsafe extern "C" fn terminate(instance: *mut RexxInstance_) {
+    // SAFETY: the caller guarantees `instance`.
+    let thread = unsafe { thread_of_instance(instance) };
+    // SAFETY: as above.
+    if unsafe { runs_here(thread) } {
         return;
-    };
-    activation.add_command_environment(name, handler);
+    }
+    // SAFETY: as above.
+    let context = unsafe { context_of_thread(thread) } as usize;
+    if embedder().is_some_and(|embedder| embedder.terminate(context)) {
+        forget_attached(context);
+    }
+}
+
+/// `Halt` (`interpreter/api/InterpreterInstanceStubs.cpp:67`): every activity
+/// of the instance is asked to halt, from any thread.
+///
+/// # Safety
+/// `instance` is an instance a live [`ThreadContext`] links.
+unsafe extern "C" fn halt(instance: *mut RexxInstance_) {
+    // SAFETY: the caller guarantees `instance`.
+    let thread = unsafe { thread_of_instance(instance) };
+    // SAFETY: as above.
+    let context = unsafe { context_of_thread(thread) };
+    if embedder().is_some_and(|embedder| embedder.halt(context as usize)) {
+        return;
+    }
+    // SAFETY: as above; only a thread that reaches a call of the activity.
+    if unsafe { runs_here(thread) } || attached_here(context as usize) {
+        // SAFETY: as above.
+        or_nothing!(unsafe { innermost_activation(context, "Halt") }).halt(true);
+    }
+}
+
+/// `SetTrace` (`interpreter/api/InterpreterInstanceStubs.cpp:73`): external
+/// tracing of every activity of the instance on or off.
+///
+/// # Safety
+/// As [`halt`].
+unsafe extern "C" fn set_trace(instance: *mut RexxInstance_, setting: logical_t) {
+    // SAFETY: the caller guarantees `instance`.
+    let thread = unsafe { thread_of_instance(instance) };
+    // SAFETY: as above.
+    let context = unsafe { context_of_thread(thread) };
+    if embedder().is_some_and(|embedder| embedder.set_trace(context as usize, setting != 0)) {
+        return;
+    }
+    // SAFETY: as in `halt`.
+    if unsafe { runs_here(thread) } || attached_here(context as usize) {
+        // SAFETY: as above.
+        or_nothing!(unsafe { innermost_activation(context, "SetTrace") })
+            .set_trace(true, setting != 0);
+    }
 }
 
 /// The members a redirecting command handler reads and writes its streams
@@ -4431,15 +4708,58 @@ mod redirector {
     }
 }
 
-/// `DetachThread` of the context [`attach_thread`] answered, which the
-/// running call still holds, so nothing is released.
+/// `DetachThread`: ends one attach of this thread to the context
+/// [`attach_thread`] answered. A thread that runs a call of the context's
+/// activity holds it still, so nothing is released.
 ///
 /// # Safety
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn detach_thread(context: *mut RexxThreadContext_) {
+    if detach_here(context as usize) {
+        if let Some(embedder) = embedder() {
+            embedder.attached(context as usize, false);
+        }
+        return;
+    }
     // SAFETY: as `whole_number_to_object`; the call aborts where no native
     // call is in flight.
     or_nothing!(unsafe { innermost_activation(context, "DetachThread") });
+}
+
+/// `HaltThread` (`interpreter/api/ThreadContextStubs.cpp:91`): the context's
+/// activity is asked to halt.
+///
+/// # Safety
+/// As [`whole_number_to_object`].
+unsafe extern "C" fn halt_thread(context: *mut RexxThreadContext_) {
+    // SAFETY: as `whole_number_to_object`.
+    or_nothing!(unsafe { innermost_activation(context, "HaltThread") }).halt(false);
+}
+
+/// `SetThreadTrace` (`interpreter/api/ThreadContextStubs.cpp:104`): external
+/// tracing of the context's activity on or off.
+///
+/// # Safety
+/// As [`whole_number_to_object`].
+unsafe extern "C" fn set_thread_trace(context: *mut RexxThreadContext_, setting: logical_t) {
+    // SAFETY: as `whole_number_to_object`.
+    or_nothing!(unsafe { innermost_activation(context, "SetThreadTrace") })
+        .set_trace(false, setting != 0);
+}
+
+/// `RaiseConditionObject` (`interpreter/api/ThreadContextStubs.cpp:1934`):
+/// the condition a condition object describes is raised once the call
+/// returns.
+///
+/// # Safety
+/// As [`whole_number_to_object`].
+unsafe extern "C" fn raise_condition_object(
+    context: *mut RexxThreadContext_,
+    condition: RexxDirectoryObject,
+) {
+    // SAFETY: as `whole_number_to_object`.
+    or_nothing!(unsafe { innermost_activation(context, "RaiseConditionObject") })
+        .raise_condition_object(condition.cast());
 }
 
 /// # Safety

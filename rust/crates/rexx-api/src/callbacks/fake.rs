@@ -597,6 +597,18 @@ impl Surface for FakeHost {
     }
 
     fn share_session_queue(&mut self) {}
+
+    fn halt(&mut self, _all: bool) {}
+
+    fn set_trace(&mut self, _all: bool, _on: bool) {}
+
+    fn raise_condition_object(&mut self, _condition: ObjRef) -> bool {
+        false
+    }
+
+    fn stack_command_handler(&mut self, name: &[u8], handler: crate::load::CommandHandler) {
+        self.handlers.push((name.to_vec(), handler));
+    }
 }
 
 impl FakeHost {

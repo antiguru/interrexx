@@ -90,7 +90,12 @@ impl Interp {
         if let Some(entry) = self.classic_subcoms.get(&upper) {
             return Some(*entry);
         }
-        let entry = capi::resolve(Registry::Subcom, environment, &self.library_search, false)
+        let registered = self
+            .subcom_aliases
+            .get(&upper)
+            .cloned()
+            .unwrap_or_else(|| environment.to_vec());
+        let entry = capi::resolve(Registry::Subcom, &registered, &self.library_search, false)
             .ok()
             .flatten()?;
         self.classic_subcoms.insert(upper, entry);
