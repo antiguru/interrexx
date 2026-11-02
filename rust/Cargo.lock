@@ -370,6 +370,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "librexx"
+version = "0.1.0"
+dependencies = [
+ "rexx-api",
+ "rexx-exec",
+]
+
+[[package]]
+name = "librexxapi"
+version = "0.1.0"
+dependencies = [
+ "rexx-api",
+ "rexx-exec",
+]
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

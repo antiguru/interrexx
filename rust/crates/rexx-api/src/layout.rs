@@ -166,6 +166,58 @@ pub const EXIT_INTERFACE_VERSION: wholenumber_t = 101;
 /// `REDIRECT_INTERFACE_VERSION` (`api/oorexxapi.h:768`).
 pub const REDIRECT_INTERFACE_VERSION: wholenumber_t = 100;
 
+/// `RXSTRING` (`api/rexx.h:164-167`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXSTRING {
+    pub strlength: usize,
+    pub strptr: *mut c_char,
+}
+
+/// `CONSTRXSTRING` (`api/rexx.h:169-172`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct CONSTRXSTRING {
+    pub strlength: usize,
+    pub strptr: *const c_char,
+}
+
+/// `RexxQueueTime` (`api/rexx.h:245-256`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RexxQueueTime {
+    pub hours: u16,
+    pub minutes: u16,
+    pub seconds: u16,
+    pub hundredths: u16,
+    pub day: u16,
+    pub month: u16,
+    pub year: u16,
+    pub weekday: u16,
+    pub microseconds: u32,
+    pub yearday: u32,
+}
+
+/// `REXXDATETIME` (`api/platform/unix/rexxplatformapis.h:42-54`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct REXXDATETIME {
+    pub hours: u16,
+    pub minutes: u16,
+    pub seconds: u16,
+    pub hundredths: u16,
+    pub day: u16,
+    pub month: u16,
+    pub year: u16,
+    pub weekday: u16,
+    pub microseconds: usize,
+    pub yearday: usize,
+    pub valid: u16,
+}
+
+/// `RexxReturnCode` (`api/rexx.h:73`).
+pub type RexxReturnCode = c_int;
+
 /// `RexxCondition` (`api/oorexxapi.h:462-473`).
 #[repr(C)]
 pub struct RexxCondition {

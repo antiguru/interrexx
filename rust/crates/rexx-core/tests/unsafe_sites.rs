@@ -75,6 +75,8 @@ fn only_the_granted_module_may_say_unsafe() {
     assert_eq!(
         granted,
         vec![
+            "crates/librexx/src/exports.rs".to_string(),
+            "crates/librexxapi/src/exports.rs".to_string(),
             "crates/rexx-api/src/ffi.rs".to_string(),
             "crates/rexx-api/src/load.rs".to_string(),
             "crates/rexx-core/src/frame.rs".to_string(),
