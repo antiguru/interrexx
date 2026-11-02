@@ -16,6 +16,8 @@ crate-type = ["cdylib", "rlib"]
 rexx-exec = { path = "../rexx-exec" }
 # The `#[repr(C)]` structs of `api/rexx.h`.
 rexx-api = { path = "../rexx-api" }
+# `malloc` and `free`: blocks the API hands out are released with `RexxFreeMemory` or `free`.
+libc = "0.2.186"
 
 [lints]
 workspace = true

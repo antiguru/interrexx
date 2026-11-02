@@ -373,6 +373,7 @@ dependencies = [
 name = "librexx"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "rexx-api",
  "rexx-exec",
 ]
@@ -381,6 +382,7 @@ dependencies = [
 name = "librexxapi"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "rexx-api",
  "rexx-exec",
 ]
@@ -615,6 +617,8 @@ dependencies = [
  "chrono",
  "datadriven",
  "libc",
+ "librexx",
+ "librexxapi",
  "loom",
  "rayon",
  "rexx-api",

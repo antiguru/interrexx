@@ -1292,6 +1292,34 @@ impl HeldRoutine {
     }
 }
 
+/// The entry point of a classic handler: a `RexxFunctionHandler`, `RexxSubcomHandler` or
+/// `RexxExitHandler` (`api/rexx.h`), as its registry declares it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ClassicEntry(std::ptr::NonNull<c_void>);
+
+// SAFETY: the address names code mapped for the process's life, which any thread may call.
+unsafe impl Send for ClassicEntry {}
+// SAFETY: as `Send`; the address is never written through.
+unsafe impl Sync for ClassicEntry {}
+
+impl ClassicEntry {
+    /// The entry at `address`, or `None` for null.
+    ///
+    /// # Safety
+    /// A non-null `address` is the entry point of a handler of the C signature the registry it
+    /// is registered in declares, mapped until the process ends.
+    #[must_use]
+    pub unsafe fn new(address: *mut c_void) -> Option<ClassicEntry> {
+        std::ptr::NonNull::new(address).map(ClassicEntry)
+    }
+
+    /// The address, as the C API hands an entry point back.
+    #[must_use]
+    pub fn address(self) -> *mut c_void {
+        self.0.as_ptr()
+    }
+}
+
 /// `DIRECT_COMMAND_ENVIRONMENT` (`api/oorexxapi.h:479`).
 pub const DIRECT_COMMAND_ENVIRONMENT: c_int = 1;
 

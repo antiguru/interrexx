@@ -86,6 +86,11 @@ pinning = []
 sharing = ["rexx-core/sharing"]
 
 [dev-dependencies]
+# `librexx.so` and `librexxapi.so`, which `tests/classic_api.rs` compiles the ooTest native
+# libraries against. Test-only: the `rexx` executable compiles their export modules itself.
+librexx = { path = "../librexx" }
+librexxapi = { path = "../librexxapi" }
+
 # Case tables as data files rather than `const` arrays in Rust sources, for
 # tables written from Task 6 onward (the plan's Tech Stack section). Test-only.
 # `default-features = false` drops its `async` feature, which is the whole of
