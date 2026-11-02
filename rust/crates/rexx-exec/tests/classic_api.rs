@@ -541,3 +541,113 @@ fn concurrent_instances_start_run_and_terminate() {
         String::from_utf8_lossy(&output.stderr)
     );
 }
+
+/// A driver from `tests/classic_api/`, compiled against the test libraries' `librexx.so.4`.
+fn driver(name: &str) -> PathBuf {
+    let source =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("tests/classic_api/{name}.cpp"));
+    let out = testbinaries().join(name);
+    let api = repository().join("third_party/ooRexx/api");
+    let output = Command::new("c++")
+        .arg("-o")
+        .arg(&out)
+        .arg(&source)
+        .arg(format!("-I{}", api.display()))
+        .arg(format!("-I{}", api.join("platform/unix").display()))
+        .arg(format!("-L{}", testbinaries().display()))
+        .arg(format!("-Wl,-rpath,{}", testbinaries().display()))
+        .args(["-pthread", "-lrexx", "-lrexxapi"])
+        .output()
+        .expect("c++ runs");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    out
+}
+
+/// Runs the driver `name` from a directory holding `files`, with `arguments`.
+fn run_driver(name: &str, files: &[(&str, &str)], arguments: &[&str]) -> std::process::Output {
+    let binary = driver(name);
+    let dir = scratch().join(format!("driver-{name}"));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("the driver's directory");
+    for (file, text) in files {
+        std::fs::write(dir.join(file), text).expect("a program written");
+    }
+    let api = scratch().join(format!("api-{name}"));
+    let output = Command::new("timeout")
+        .args(["-k", "5", "60"])
+        .arg(binary)
+        .args(arguments)
+        .current_dir(&dir)
+        .env("REXX_API_DIR", &api)
+        .stdin(Stdio::null())
+        .output()
+        .expect("the driver runs");
+    stop_service(&api);
+    output
+}
+
+/// Review Focus 4: a thread the instance never saw attaches, calls a program through the
+/// context it is given, and detaches; `Terminate`, called while that thread is attached but
+/// idle, returns without waiting for it, and its later `DetachThread` is harmless. The order
+/// is the oracle's.
+#[test]
+fn a_foreign_thread_attaches_and_terminate_does_not_wait_for_it() {
+    let output = run_driver(
+        "attach",
+        &[("double.rex", "parse arg n\nreturn n * 2\n")],
+        &["double.rex"],
+    );
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "attach 1 result 42\nterminating\nterminated\ndetaching\n",
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// Review Focus 5: two instances in one process. `.local` is each instance's own, and so is
+/// `.environment` (Deviation 85; the oracle's second instance sees the first's entry), and a
+/// SIGINT to the process halts a program running in each.
+#[test]
+fn two_instances_keep_their_environments_and_both_take_a_halt() {
+    let output = run_driver(
+        "two",
+        &[
+            (
+                "set.rex",
+                ".environment~setEntry('RF5ENV', 'one')\n.local~setEntry('RF5LOCAL', 'one')\n\
+                 return .environment~hasEntry('RF5ENV') .local~hasEntry('RF5LOCAL')\n",
+            ),
+            (
+                "see.rex",
+                "return .environment~hasEntry('RF5ENV') .local~hasEntry('RF5LOCAL')\n",
+            ),
+            ("loop.rex", "do forever\n  call SysSleep 0.01\nend\n"),
+        ],
+        &["set.rex", "see.rex", "loop.rex"],
+    );
+    assert!(output.status.success(), "{output:?}");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(
+        lines[..3],
+        ["first 1 1", "second 0 0", "first again 1 1"],
+        "{stdout}"
+    );
+    assert_eq!(lines.pop(), Some("done"), "{stdout}");
+    let mut loops = lines.split_off(3);
+    loops.sort_unstable();
+    assert_eq!(
+        loops,
+        [
+            "first loop condition SYNTAX",
+            "second loop condition SYNTAX"
+        ],
+        "{stdout}"
+    );
+}

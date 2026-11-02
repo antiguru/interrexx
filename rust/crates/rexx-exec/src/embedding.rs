@@ -118,9 +118,6 @@ struct State {
     context: Option<usize>,
     /// `Terminate` was called.
     terminating: bool,
-    /// Threads attached by `AttachThread` and not yet detached, apart from
-    /// the thread that created the instance.
-    attached: usize,
     /// The interpreter thread has ended.
     ended: bool,
 }
@@ -228,7 +225,9 @@ pub fn create_instance(options: InstanceOptions) -> Option<usize> {
 }
 
 /// The root call's body, on the thread running it: the instance is live
-/// until `Terminate` and every other attached thread has detached.
+/// until `Terminate`. A thread attached and idle is not waited for, as the
+/// oracle's `terminate` removes inactive activities; one inside a callback
+/// holds the baton the call's end needs, so the instance ends after it.
 pub(crate) fn wait_in_root(context: usize) {
     let shared = {
         let mut starting = STARTING
@@ -243,7 +242,7 @@ pub(crate) fn wait_in_root(context: usize) {
     let mut state = shared.state();
     state.context = Some(context);
     shared.changed.notify_all();
-    while !(state.terminating && state.attached == 0) {
+    while !state.terminating {
         state = shared.wait(state);
     }
 }
@@ -300,18 +299,5 @@ impl rexx_api::ffi::Embedder for Embedder {
 
     fn set_trace(&self, _context: usize, _on: bool) -> bool {
         false
-    }
-
-    fn attached(&self, context: usize, attached: bool) {
-        let Some(shared) = instance(context) else {
-            return;
-        };
-        let mut state = shared.state();
-        if attached {
-            state.attached += 1;
-        } else {
-            state.attached = state.attached.saturating_sub(1);
-        }
-        shared.changed.notify_all();
     }
 }

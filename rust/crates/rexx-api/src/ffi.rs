@@ -789,8 +789,6 @@ pub trait Embedder: Send + Sync {
     /// `SetTrace`: turns external tracing of every activity on or off;
     /// `false` where `context` is no instance's.
     fn set_trace(&self, context: usize, on: bool) -> bool;
-    /// A thread attached to the instance (`true`) or detached from it.
-    fn attached(&self, context: usize, attached: bool);
 }
 
 static EMBEDDER: std::sync::OnceLock<&'static dyn Embedder> = std::sync::OnceLock::new();
@@ -4359,9 +4357,6 @@ unsafe extern "C" fn attach_thread(
     // SAFETY: as above.
     if !unsafe { runs_here(thread) } {
         attach_here(context as usize);
-        if let Some(embedder) = embedder() {
-            embedder.attached(context as usize, true);
-        }
     }
     if !attached.is_null() {
         // SAFETY: the caller guarantees the write.
@@ -4460,8 +4455,9 @@ unsafe fn command_environment(
 }
 
 /// `Terminate` (`interpreter/api/InterpreterInstanceStubs.cpp:52`): ends the
-/// instance and returns once it has ended, waiting for every other attached
-/// thread to detach. From a thread running a call of its activity, and for an
+/// instance and returns once it has ended. A thread still attached is not
+/// waited for unless it is inside a callback (measured on the oracle: a
+/// thread attached and idle detaches after `Terminate` has returned). From a thread running a call of its activity, and for an
 /// interpreter no embedding created, it does nothing, as the oracle's
 /// `terminate` refuses while the root activity is active.
 ///
@@ -4716,9 +4712,6 @@ mod redirector {
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn detach_thread(context: *mut RexxThreadContext_) {
     if detach_here(context as usize) {
-        if let Some(embedder) = embedder() {
-            embedder.attached(context as usize, false);
-        }
         return;
     }
     // SAFETY: as `whole_number_to_object`; the call aborts where no native
