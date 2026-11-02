@@ -918,9 +918,9 @@ CommandContext	raiseFailure	instance	unanswered	a bare `~new` raises; the method
 CommandContext	setVar	instance	unanswered	a bare `~new` raises; the method was never sent
 CommandContext	variables	instance	unanswered	a bare `~new` raises; the method was never sent
 CommandHandler	deregister	class	answers	rc 163
-CommandHandler	environments	class	loud	the LIBRARY REXX entry point "cmdhandler_environments"
-CommandHandler	handler	class	loud	the LIBRARY REXX entry point "cmdhandler_handler"
-CommandHandler	handlers	class	loud	the LIBRARY REXX entry point "cmdhandler_handlers"
+CommandHandler	environments	class	answers	rc 0
+CommandHandler	handler	class	answers	rc 168
+CommandHandler	handlers	class	answers	rc 168
 CommandHandler	register	class	answers	rc 163
 CommandHandler	command	instance	answers	rc 163
 Comparable	compareTo	instance	answers	rc 163

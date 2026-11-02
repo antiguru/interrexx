@@ -16,6 +16,13 @@ use crate::{Failure, Interp, Loud};
 /// Answer type of every entry point here.
 type Answer = Result<Option<ObjRef>, Failure>;
 
+/// 88.901 for argument `at` (zero-based) left out, as the oracle's native
+/// signature check raises it for these entry points: numbered, and reported
+/// at the sending clause's line (measured, `.CommandHandler~handler`).
+fn missing(at: usize) -> Failure {
+    Raised::missing_named_argument(&(at + 1).to_string()).into()
+}
+
 /// Argument `at` (zero-based), which the C++ entry declares as a required
 /// string (`CSTRING` or `RexxStringObject`).
 fn string_argument(
@@ -25,16 +32,13 @@ fn string_argument(
 ) -> Result<Vec<u8>, Failure> {
     match args.get(at).copied().flatten() {
         Some(value) => interp.string_value_text(value),
-        None => Err(Raised::missing_method_argument(at + 1).into()),
+        None => Err(missing(at)),
     }
 }
 
 /// Argument `at` (zero-based), a required object (`RexxObjectPtr`).
 fn object_argument(args: &[Option<ObjRef>], at: usize) -> Result<ObjRef, Failure> {
-    args.get(at)
-        .copied()
-        .flatten()
-        .ok_or_else(|| Raised::missing_method_argument(at + 1).into())
+    args.get(at).copied().flatten().ok_or_else(|| missing(at))
 }
 
 /// `1` or `0`, as a `logical_t` answers.

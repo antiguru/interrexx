@@ -208,3 +208,40 @@ x: return condition("O")~code condition("O")~message
     assert_eq!(String::from_utf8_lossy(&output.stderr), "");
     assert_eq!(output.status.code(), Some(0), "the exit status");
 }
+
+/// A `.CommandHandler` native sent without a required argument raises 88.901, numbered and at
+/// the sending clause's line, as the oracle's native signature check does; ours raised 93.903.
+#[test]
+fn a_missing_native_argument_raises_88_901() {
+    const PROGRAM: &str = r#"call refused .message~new(.CommandHandler, "HANDLER")
+call refused .message~new(.CommandHandler, "HANDLER", "A", .array~new(1))
+.CommandHandler~handler
+exit
+refused: procedure
+  use arg msg
+  signal on syntax name bad
+  msg~send
+  say "no error"
+  return
+bad:
+  say condition("O")~code condition("O")~message
+  return
+"#;
+    // Measured, oracle, exit status 168.
+    const STDOUT: &str = "88.901 Missing argument; argument 1 is required.\n\
+                          88.901 Missing argument; argument 1 is required.\n";
+    const STDERR: &str = "       *-* Compiled method \"HANDLER\" with scope \"CommandHandler\".\n\
+                          \x20    3 *-* .CommandHandler~handler\n\
+                          Error 88 running {path} line 3:  Invalid argument.\n\
+                          Error 88.901:  Missing argument; argument 1 is required.\n";
+    let run = scratch("missing");
+    std::fs::write(run.join("missing.rex"), PROGRAM).expect("the program");
+    let output = run_rexx(&["missing.rex"], &run, None);
+    let path = run.join("missing.rex");
+    assert_eq!(output.status.code(), Some(168), "{output:?}");
+    assert_eq!(String::from_utf8_lossy(&output.stdout), STDOUT);
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        STDERR.replace("{path}", &path.display().to_string())
+    );
+}
