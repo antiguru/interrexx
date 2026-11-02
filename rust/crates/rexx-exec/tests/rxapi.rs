@@ -145,6 +145,22 @@ fn a_program_without_commands_starts_no_daemon() {
     assert!(!service.api().exists(), "nothing connected to a service");
 }
 
+/// A daemon the program's first command starts is no child of the program: `SysWait` finds no
+/// child to wait for, rather than waiting on the daemon, and the daemon's parent is not `rexx`.
+#[test]
+fn a_started_daemon_is_no_child_of_the_program() {
+    let service = Service::new();
+    let output = service.run(
+        "'true'\n\
+         say SysWait()\n\
+         'read -r _ _ _ parent _ < /proc/$(cat \"$REXX_API_DIR\"/rxapi.*.lock)/stat;' -\n\
+         'test \"$parent\" != \"'SysQueryProcess('PID')'\"'\n\
+         say rc\n",
+    );
+    assert_eq!(stdout(&output), "-1\n0\n", "{}", stderr(&output));
+    assert_eq!(output.status.code(), Some(0));
+}
+
 /// Review Focus 5: a daemon killed under a running program gives a clean error, not a hang or
 /// a panic.
 #[test]

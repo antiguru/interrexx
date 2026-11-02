@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use rexx_rxapi::daemon::{Exit, MAX_BACKLOG, Options, serve};
 use rexx_rxapi::message::wire::PROTOCOL_VERSION;
-use rexx_rxapi::transport::unix::{Unix, prepare_dir, service_dir};
+use rexx_rxapi::transport::unix::{Unix, detach, prepare_dir, service_dir};
 
 /// The status `rxapi.testGroup` sees when another instance holds the lock.
 const LOCKED: u8 = 13;
@@ -25,6 +25,16 @@ fn idle_grace() -> Duration {
 }
 
 fn main() -> ExitCode {
+    // Started by a client: the daemon is this process's child, which outlives it.
+    if let Some(started) = detach() {
+        return match started {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                eprintln!("rxapi: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
     let mut dry_run = false;
     let mut stop = false;
     for argument in std::env::args().skip(1) {
