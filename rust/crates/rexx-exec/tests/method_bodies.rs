@@ -536,6 +536,8 @@ fn run_crate_in_zone(abs: &Path, zone: &str) -> Outcome {
         });
     Outcome {
         exit_code: out.status.code().unwrap_or(-1),
+        result: None,
+        error: None,
         stdout: out.stdout,
         stderr: out.stderr,
         stack: StackSpan::default(),
