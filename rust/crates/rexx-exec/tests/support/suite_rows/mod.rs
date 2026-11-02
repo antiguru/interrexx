@@ -257,6 +257,10 @@ pub const ROW_10_GROUPS: &[&str] = &[
     "API/oo/RexxStart",
 ];
 
+/// The [`ROW_10_GROUPS`] Phase 10 has delivered: they pass, so the roadmap no longer owes them
+/// and they hold no `group` row.
+pub const ROW_10_DELIVERED: &[&str] = &["API/classic/CLASSIC", "API/classic/RexxCallBack"];
+
 /// The `utilities` groups ruling R1 makes Phase 10's.
 pub const R1_GROUPS: &[&str] = &[
     "utilities/rxapi",
@@ -280,7 +284,7 @@ pub fn phase_10_group(group: &str) -> Option<Deferral> {
             .any(|dir| group.starts_with(dir))
     {
         Some(Deferral::Extension)
-    } else if ROW_10_GROUPS.contains(&group) {
+    } else if ROW_10_GROUPS.contains(&group) && !ROW_10_DELIVERED.contains(&group) {
         Some(Deferral::Row10NativeApi)
     } else if R1_GROUPS.contains(&group) {
         Some(Deferral::Rxapi)
