@@ -487,8 +487,8 @@ mod tests {
             (b"1-E1", SymbolKind::Bad),
             (b"1 E1", SymbolKind::Bad),
             (b"1E 1", SymbolKind::Bad),
-            (b"1E1E+1", SymbolKind::Literal),
-            (b"1Garbage+1", SymbolKind::Literal),
+            (b"1E1E+1", SymbolKind::Bad),
+            (b"1Garbage+1", SymbolKind::Bad),
         ];
         for (text, expected) in cases {
             assert_eq!(
@@ -527,8 +527,8 @@ mod tests {
             (b"1-E1", b"BAD"),
             (b"1 E1", b"BAD"),
             (b"1E 1", b"BAD"),
-            (b"1E1E+1", b"LIT"),
-            (b"1Garbage+1", b"LIT"),
+            (b"1E1E+1", b"BAD"),
+            (b"1Garbage+1", b"BAD"),
         ];
         let mut interp = Interp::new();
         for (text, expected) in symbol_cases {

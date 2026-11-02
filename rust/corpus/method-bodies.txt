@@ -901,6 +901,28 @@ Alarm	triggered	instance	answers	rc 0
 AlarmNotification	cancel	instance	answers	rc 165
 AlarmNotification	triggered	instance	answers	rc 163
 Buffer	new	class	answers	rc 163
+CommandContext	[ ]	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	[ ]=	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	dropVar	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	environment	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	error	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	getVar	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	hasVar	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	input	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	isRedirected	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	isValid	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	output	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	raise	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	raiseError	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	raiseFailure	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	setVar	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandContext	variables	instance	unanswered	a bare `~new` raises; the method was never sent
+CommandHandler	deregister	class	answers	rc 163
+CommandHandler	environments	class	loud	the LIBRARY REXX entry point "cmdhandler_environments"
+CommandHandler	handler	class	loud	the LIBRARY REXX entry point "cmdhandler_handler"
+CommandHandler	handlers	class	loud	the LIBRARY REXX entry point "cmdhandler_handlers"
+CommandHandler	register	class	answers	rc 163
+CommandHandler	command	instance	answers	rc 163
 Comparable	compareTo	instance	answers	rc 163
 Comparator	compare	instance	answers	rc 163
 CaselessComparator	compare	instance	answers	rc 163
@@ -1135,6 +1157,9 @@ MutexSemaphore	new	class	answers	rc 0
 MutexSemaphore	acquire	instance	answers	rc 0
 MutexSemaphore	release	instance	answers	rc 0
 MutexSemaphore	uninit	instance	answers	rc 165
+NativeCommandHandler	command	instance	unanswered	a bare `~new` raises; the method was never sent
+NativeCommandHandler	kind	instance	unanswered	a bare `~new` raises; the method was never sent
+NativeCommandHandler	name	instance	unanswered	a bare `~new` raises; the method was never sent
 Orderable	=	instance	answers	rc 163
 Orderable	==	instance	answers	rc 163
 Orderable	<	instance	answers	rc 163

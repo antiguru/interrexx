@@ -21,6 +21,7 @@ const PARTITION: &[(&str, u8)] = &[
     ("INVOCATION", 10),
     ("ProcessInvocation", 10),
     ("CLASSIC", 10),
+    ("RexxCallBack", 10),
 ];
 
 /// SONAME stems of the oracle's own interpreter. The walk stops at them:
@@ -60,6 +61,7 @@ const REGISTRIES: &[&str] = &[
     "RexxSaveMacroSpace",
     "RexxQueryMacro",
     "RexxReorderMacro",
+    "RexxCallBack",
 ];
 
 /// Imports that name no phase of their own: memory and the variable pool,
