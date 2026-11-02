@@ -250,6 +250,7 @@ pub fn by_test(rows: &[Row]) -> BTreeMap<(String, String), &Row> {
 /// The groups of the native-API partition's row 10, as `dir/group`.
 pub const ROW_10_GROUPS: &[&str] = &[
     "API/classic/CLASSIC",
+    "API/classic/RexxCallBack",
     "API/oo/INVOCATION",
     "API/oo/ProcessInvocation",
     "API/oo/ProcessRexxStart",
