@@ -4,7 +4,7 @@
 # files, and `the_row_files_hold_only_checked_rows` (`tests/suite.rs`) asserts
 # each is present; a `refusal: TEXT` row records the refusal the suite gate
 # captured for its test. Phase 10 deletes this file.
-# ootest revision 13178
+# ootest revision 13347
 API/classic/CLASSIC	TEST_01_CREATE_QUEUE	Phase 10 Row10NativeApi	group
 API/classic/CLASSIC	TEST_02_OPEN_QUEUE	Phase 10 Row10NativeApi	group
 API/classic/CLASSIC	TEST_03_QUEUE_EXISTS	Phase 10 Row10NativeApi	group
@@ -77,6 +77,25 @@ API/classic/CLASSIC	TEST_SHV_PRIVATE	Phase 10 Rxapi	reaching_rxapi
 API/classic/CLASSIC	TEST_SHV_RC	Phase 10 Row10NativeApi	group
 API/classic/CLASSIC	TEST_SHV_SET_DIRECT	Phase 10 Row10NativeApi	group
 API/classic/CLASSIC	TEST_SHV_SET_SYMBOLIC	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_ARGUMENTS	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_CONDITION_TRAPPED_IN_THE_CALLBACK	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_EXIT	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_FROM_A_ROUTINE	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_HALT	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_LABEL_NOT_CASE_SENSITIVE	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_NESTED	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_NO_RESULT	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_NO_SUCH_LABEL	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_NUMERIC_RESTORED	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_OTHER_THREAD	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_PROCEDURE	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_RESULT	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_RESULT_LARGER_THAN_THE_BUFFER	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_SIGL	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_SYNTAX_ENDS_THE_FUNCTION	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_SYNTAX_RAISED_ON_RETURN	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_UNBOUNDED_RECURSION	Phase 10 Row10NativeApi	group
+API/classic/RexxCallBack	TEST_VARIABLES_SHARED	Phase 10 Row10NativeApi	group
 API/oo/FUNCTION	TEST_REXXQUEUE	Phase 10 Rxapi	reaching_rxapi
 API/oo/INVOCATION	TESTCALLRETURN	Phase 10 Rxapi	reaching_rxapi
 API/oo/INVOCATION	TESTCALLTYPE	Phase 10 Rxapi	reaching_rxapi
@@ -356,6 +375,22 @@ extensions/hostemu/hostemu	TEST_EXECIO_DISKW_DEFAULT	Phase 10 Extension	group
 extensions/hostemu/hostemu	TEST_EXECIO_DISKW_STEM	Phase 10 Extension	group
 extensions/hostemu/hostemu	TEST_HI	Phase 10 Extension	group
 extensions/hostemu/hostemu	TEST_TE	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_ANY_BOOLEAN_TO_JSON	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_ARRAY_SHOWS_VALUES	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_COMPARISONS	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_INSTANCES	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_JSON_AND_YAML_ARE_BOOLEANS	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_JSON_TO_YAML	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_LOGICAL_CONTEXTS	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_NEW_IS_PRIVATE	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_NOT	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_OF	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_OF_REJECTS_NON_LOGICAL	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_OPERATORS	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_STRINGS	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_SUBCLASS	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_TABLE_KEY	Phase 10 Extension	group
+extensions/logicalwrapper/LogicalWrapper	TEST_YAML_TO_JSON	Phase 10 Extension	group
 extensions/platform/unix/ncurses/ncurses	TEST_CLASSES	Phase 10 Extension	group
 extensions/platform/unix/rxunixsys/SysUnix	TESTSYSACCESS_1	Phase 10 Extension	group
 extensions/platform/unix/rxunixsys/SysUnix	TESTSYSGETEGID_1	Phase 10 Extension	group

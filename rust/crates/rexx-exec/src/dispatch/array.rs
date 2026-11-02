@@ -194,7 +194,7 @@ fn single_dimension_position(
         // Only the spread above can produce this: an argument list of its own
         // drops a trailing omission, so `~at(,)` arrives as no argument at all
         // and is 93.901 above.
-        [None] => Err(Loud::array_index_hole().into()),
+        [None] => Err(Raised::missing_array_element(1).into()),
         _ => {
             if array_is_fixed_dimension(interp, receiver)? {
                 return Err(Raised::too_many_subscripts(1).into());

@@ -1,14 +1,16 @@
 # Programs known to crash or exhaust the C++ oracle interpreter
-# (/home/moritz/dev/repos/ooRexx/build/bin/rexx), so nobody has to
+# (third_party/oracle/bin/rexx, r13346), so nobody has to
 # rediscover them by running them. This file exists precisely so a sweep,
 # a probe, or a corpus generator can exclude these by reference rather
 # than by folklore passed between sessions -- do not run any of the
 # programs below to "confirm" the entry still holds; that is the failure
 # mode this file exists to end.
 #
-# Every entry was measured under the standard oracle wrapper:
-#   ( ulimit -v 1048576; LD_LIBRARY_PATH=/home/moritz/dev/repos/ooRexx/build/lib \
-#     /home/moritz/dev/repos/ooRexx/build/bin/rexx /abs/path/FILE )
+# Every entry was measured under the standard oracle wrapper, and re-run once
+# at r13346 (docs/superpowers/records/2026-11-02-phase-10/pr0/). An entry that
+# no longer fails keeps its number and says so, for the citations to it:
+#   ( ulimit -v 1048576; LD_LIBRARY_PATH=third_party/oracle/lib \
+#     third_party/oracle/bin/rexx /abs/path/FILE )
 # run from a fresh empty directory (the scratchpad root is on the oracle's
 # own external-routine search path and must never be the run directory).
 #
@@ -48,50 +50,11 @@ the same reason this file now carries the account.
 
 ## 2. `say date('M','0','D')`
 
-    say date('M','0','D')
-
-Effect: SIGSEGV, rc 139, deterministic (measured 3 runs of 3).
-
-Cause: `DATE`'s day-of-year range check
-(`interpreter/expression/BuiltinFunctions.cpp:1163`) is
-`yearday < 0 || yearday > YEAR_DAYS + 1 || ...`, so `0` passes it -- day
-zero is not the day-of-year range's lower bound, it is one below the
-first valid day, and the check only rejects strictly negative values.
-`RexxDateTime::setDay` (`classes/support/RexxDateTime.cpp:457-475`) then
-computes `month = 0` for a zero day count, and the `'M'` output style
-reads `monthNames[month - 1]` (`RexxDateTime.cpp:526`) -- `monthNames[-1]`,
-one element before the array, whose stored bytes happen to form an
-invalid pointer that a subsequent string read dereferences. Other output
-styles derived from the same `month == 0` state (`D`, `B`, `W`, `F`, `T`)
-read a different out-of-bounds slot (`monthStarts[-1]`) that happens to
-hold `0` on this build and so return stable, wrong-looking-but-harmless
-numbers instead of crashing -- `'M'` is the one that dies because it is
-the one whose out-of-bounds read is dereferenced as a pointer rather than
-used as an integer. Found 2026-08-07 building this project's differential
-corpus; filed upstream 2026-08-22 as **SF #2082**.
+Dropped at r13346: Error 40.19 rc 216 (SF #2082, r13250).
 
 ## 3. `changestr('a'||'00'x,'aa','ZZZ')`
 
-    say changestr('a'||'00'x, 'aa', 'ZZZ')
-
-Effect: SIGSEGV, rc 139, deterministic.
-
-Cause: the tail of `StringUtil::pos`'s own window-overrun defect
-(DEVIATION 3, `docs/superpowers/plans/phase-4-exclusions.txt`, and
-`find_forward`'s own doc comment in
-`rust/crates/rexx-exec/src/builtin/string.rs` for the full mechanism).
-`POS`'s search can match one byte past the end of the haystack, where the
-C++ reads the `RexxString`'s own NUL terminator -- so a needle ending in
-`'00'x`, searched to the end of the haystack, can match through that
-terminator (`pos('a'||'00'x,'aa')` is 2 on the oracle, a match "ending"
-one byte past a two-byte haystack). `POS` and `COUNTSTR` merely report
-that position and survive; `CHANGESTR` copies the haystack up to and
-including the matched needle, and copying "through" a match that runs
-past the buffer's own bytes is what walks off the end of the allocation
-and crashes. Found 2026-08-14 while fixing the Rust port's own `POS`;
-filed upstream 2026-08-22 as **SF #2083**, which carries this crash and
-the in-string wrong answer as one ticket because one off-by-one causes
-both.
+Dropped at r13346: answers `aa` rc 0 (SF #2083, r13268); POS's overrun is gone with it.
 
 ## 4. `NUMERIC DIGITS` above 1000, used in an arithmetic operation
 
@@ -108,6 +71,9 @@ proportionally to that precision on a scale this project has not
 characterised further, so the safe rule is the blanket one already in
 `rust/CLAUDE.md` and every phase plan -- never set it above 1000 in a
 probe, full stop, rather than searching for the exact boundary.
+
+At r13346 this program answers `2` rc 0 under the standard wrapper, as the
+July build does, so the hazard is not this program; the rule stands.
 
 ## 5. One clause queuing the same `CALL ON` condition twice
 
@@ -142,35 +108,7 @@ agreeing with the oracle. Filed upstream 2026-08-22 as **SF #2084**.
 
 ## 6. An array with a leading empty slot as the sole subscript of `~at`
 
-    a = (1,2)
-    say a~at((,2))
-
-Effect: **SIGSEGV, rc 139**, deterministic (measured 3 runs of 3, and the
-same for `a~at((,,3))`).
-
-Cause: `ArrayClass::validateIndex` spreads a lone array argument into the
-subscript list by taking its **item count** alongside its **slot array**
-(`classes/ArrayClass.cpp:1219`-`:1226`): `indexCount = indirect->items()`
-and `index = indirect->data()`. `items()` counts the non-empty slots and
-`data()` is the raw slot array, so an array whose leading slot is empty and
-whose item count is one hands `validateSingleDimensionIndex` an
-`indexCount` of 1 with `index[0] == OREF_NULL`, and `:1264` calls
-`index[0]->requiredPositive(argPosition)` on it.
-
-The neighbours bound it and are all clean: `a~at((1,))` answers `1` (one
-item, leading slot filled), `a~at((1,,3))` is 93.926 (two items, so the
-count is rejected before either subscript is read), and `a~at((,))` is
-93.901 (no items at all). Any array whose first filled slot is not slot one
-and which holds exactly one item is the crashing shape.
-
-Consequence for this crate: **there is no oracle behaviour to match**, so
-`rexx-exec` refuses the shape rather than answering it -- `Loud::
-array_index_hole`, whose own doc names
-`dispatch/tests.rs`'s `an_expanded_index_of_one_empty_slot_is_loud` as the
-instrument. No differential row can cover it.
-
-Found 2026-08-22 while building this crate's own `~at`; filed upstream the
-same day as **SF #2085**.
+Dropped at r13346: Error 98.975 rc 158 (SF #2085, r13264).
 
 ## 7. `GUARD ... WHEN` in a method, with an expression that is false
 
@@ -778,39 +716,11 @@ twice in one clause") covers it.
 
 ## 13. `~copy` of a `Stream`
 
-    say 'main'
-    s = .Stream~new('nosuch_xyz.txt')
-    c = s~copy
-    say 'done'
-
-Abort, rc 134, `double free or corruption (out)` on stderr. **The program runs to
-completion first** -- `main` and `done` both print, and the abort happens during
-interpreter termination, so a probe that reads only stdout sees a clean run.
-
-Neither an open nor an existing file is needed. Measured, all rc 134 with the same
-stderr: the program above (no such file, never opened); the same against an existing
-file; `~open('read')` before the `~copy`; and `~open('read')` before it with `s~close`
-and `c~close` after. In the read variant the two objects share one file position --
-`c~linein` answers `hello` and `s~linein` then answers empty -- which is the same
-sharing seen from the other side.
-
-Two negative controls, both rc 0: `.MutableBuffer~new('abc')~copy` answers `abc`, and
-`~copy` of an ordinary instance answers its own class. So this is not `COPY` and not
-native state in general.
-
-`RexxObject::copy` (`classes/ObjectClass.cpp:554-564`) clones the object and then
-`copyObjectVariables`, which carries `CSELF` -- the `StreamInfo *` -- into the copy;
-`stream_uninit` (`streamLibrary/StreamNative.cpp:2190-2200`) calls
-`stream_info->~StreamInfo()` explicitly and drops `CSELF`, so the second object's
-`uninit` destructs the same block again. `MutableBuffer` is unaffected because it keeps
-no `CSELF`. **Read**, not measured under a debugger.
-
-Found 2026-09-12 by Task 5 of the Phase 7 plan, while establishing whether this crate's
-`StreamState` may derive `Clone`. **No upstream ticket.** For this crate it is a
-licensed divergence: `COPY` clones the state block, so the copy is an independent,
-unopened stream and nothing aborts.
+Dropped at r13346: rc 0, 5 of 5, nothing on stderr. No upstream ticket names it.
 
 ## 14. Package-wide `::OPTIONS TRACE I` with a Rexx object as the trace destination
+
+At r13346 this is SIGBUS, rc 135, where it was SIGSEGV.
 
     s = .sink~new
     zz = .traceoutput~destination(s)
@@ -919,37 +829,11 @@ so the program is the entry. **No upstream ticket.**
 
 ## 17. orxmethod's `TestRaiseCondition` with a description, read back by a `CALL ON` handler
 
-    t = .T~new
-    call on user bar name h
-    say 'r' t~rc('USER BAR', 'a description', , 'r2')
-    say 'after'
-    exit
-    h: say 'handler' condition('d'); return
-    ::class T
-    ::method rc external "LIBRARY orxmethod TestRaiseCondition"
-
-SIGSEGV, rc 139, measured by the Phase 8 surface plan's Task 5 and again by its behaviour review.
-`TestRaiseCondition` passes its `OPTIONAL_CSTRING` description to `RaiseCondition` cast to a
-`RexxStringObject` (`testbinaries/orxmethod.cpp:2116`), so the condition's `DESCRIPTION` is a C
-string the interpreter treats as an object, and reading it back is the crash. **Read**, not
-established under a debugger. The fault is the test extension's, not the interpreter's. This crate
-prints `r r2`, `handler ` with an empty description and `after`, rc 0 (measured 2026-09-26). No upstream ticket.
+Dropped at r13346: prints `r r2`, `handler a description`, `after`, rc 0.
 
 ## 18. orxmethod's `TestRaiseCondition('SYNTAX')` with nothing else
 
-    t = .T~new
-    say 'before'
-    t~rc('SYNTAX')
-    say 'after'
-    ::class T
-    ::method rc external "LIBRARY orxmethod TestRaiseCondition"
-
-SIGSEGV, rc 139, after `before`. Measured by the Phase 8 surface plan's Task 5 behaviour review,
-and hit again by its fix round 1 inside a longer probe. A `SYNTAX` condition raised by name carries
-no error number, code or message for the interpreter's `SYNTAX` handling to read. **Cause not
-established.** This crate prints `before`, then reports `Error 0` with `<no message 0.0 in the catalogue>`, rc 0
-(measured 2026-09-26). No upstream
-ticket.
+Dropped at r13346: Error 93.900 rc 163: `RaiseCondition cannot raise a SYNTAX condition`.
 
 ## 19. Two orxmethod `TestRaiseCondition` USER raises trapped by CALL ON in one clause
 
@@ -969,23 +853,7 @@ twice. No upstream ticket.
 
 ## 20. Unbounded recursion by internal function call, trapped by `SIGNAL ON SYNTAX`
 
-    signal on syntax name caught
-    say 'start'
-    n = rec(1)
-    say 'unreached' n
-    exit
-    caught:
-      say 'caught' rc condition('C')
-      say condition('D')
-      exit 0
-    rec: procedure
-      return rec(arg(1) + 1) + 1
-
-SIGSEGV, rc 139, after `start`, stderr empty. Measured once, 2026-09-30, by Phase 6 Task 8 while
-writing its depth-cap witnesses. **Cause not established.** The same recursion by `CALL` under the
-same trap, and the same recursion through a `::ROUTINE`, are rc 0 on the oracle and identical here
-(`lang/call_depth_cap_call.rex`, `lang/call_depth_cap_function.rex`). This crate prints `start`,
-`caught 11 SYNTAX` and an empty line, rc 0 (measured 2026-09-30). No upstream ticket.
+Dropped at r13346: prints `start`, `caught 11 SYNTAX` and an empty line, rc 0 (SF #2093, r13251).
 
 ## 21. Using `self` inside the `INIT` of a `Directory` or `Table` subclass
 
@@ -1079,6 +947,8 @@ re-review 2, `rr-t6/p2/traceobj.rex`); the started activity is not needed. **Cau
 established.** No upstream ticket.
 
 ## 25. `alarm_stopTimer` on the handle of an `alarm_startTimer` whose wait has ended
+
+At r13346 this is SIGSEGV, rc 139, where it was a glibc assertion abort.
 
     o = .t~new
     say o~alarmStart(0, 10)
@@ -1320,46 +1190,7 @@ This crate stores the setting and answers `?n/a?`. Cause not read. No upstream t
 
 ## 37. An untrapped error raised from inside `SysStemSort`'s sort
 
-    call SysStemSort "s."
-
-SIGSEGV, rc 139, deterministic: upstream **SF #2068**, reduced to this line on 2026-07-25 (project
-memory), not re-run since. Any error `StemClass::sort` (`classes/StemClass.cpp:1605`) raises
-itself crashes the same way when nothing traps it: an element 0 that is not a count (40.922, the
-line above), a first or last element past it (40.923), and a missing element (40.924). Measured
-2026-10-13 by Phase 9b Task 3, 3 runs of 3 each under the standard wrapper, stdout `go` and nothing
-on stderr:
-
-    say 'go'
-    a.0 = 2; a.1 = 'q'
-    call SysStemSort 'a.'
-
-    say 'go'
-    a.0 = 2; a.1 = 'q'; a.2 = 'p'
-    call SysStemSort 'a.', , , 3
-
-An error raised by a method the sort sends crashes too: an element's `STRING` method raising
-93.900, left untrapped, gave SIGSEGV, rc 139, 1 run of 1 under the standard wrapper, 2026-10-14
-(Phase 9b1 Task 3, `docs/superpowers/records/2026-10-14-phase-9b1/task-3/probes/q2.rex`):
-
-    s.0 = 2; s.1 = .k~new; s.2 = 'a'
-    call SysStemSort 's.'
-    say 'not reached'
-    ::class k
-    ::method string
-      raise syntax 93.900 array('boom')
-
-It is filed here rather than as an entry of its own because it leaves the sort by an error as the
-three above do. The C++ path was not read. This crate reports it at rc 163 with
-`Compiled routine "SYSSTEMSORT".` between the method's line and the call's, pinned in the case file
-named below.
-
-The same errors under `SIGNAL ON SYNTAX` answer on the oracle, which is how ooTest's `SysStemSort`
-group and `corpus/lang/rexxutil_stem_sort.rex` reach them. An error `SysStemSort` raises before
-it sorts is reported untrapped as usual: 40.919 (`call SysStemSort '*'`) and 40.921 (`first` 3,
-`last` 2) measured 2026-10-13, 3 runs of 3 each, rc 216 with the ordinary report, and 40.920 is
-the witness's own last clause. This crate raises each of the three as the trapped oracle does. Pinned
-by `builtin::rexxutil::stems::tests::an_untrapped_error_inside_the_sort_is_reported`, which reads
-`crates/rexx-exec/tests/stem_sort_untrapped_cases/crate`.
+Dropped at r13346: its programs raise their error, rc 216 and 163 (SF #2068, r13284).
 
 ## 38. `SysDumpVariables` over a variable whose `STRING` method raises
 
@@ -1387,20 +1218,7 @@ upstream ticket.
 
 ## 39. `SysFileMove` across file systems
 
-    call lineout 'xfs.txt', 'x'
-    call lineout 'xfs.txt'
-    away = SysTempFileName('/tmp/rexxutil-xfs-?????')
-    say SysFileMove('xfs.txt', away) SysFileExists('xfs.txt') SysFileExists(away)
-
-Not a crash: an UNDEFINED ANSWER, a fourth mode. Run from a directory on another file system than
-`/tmp`, 3 runs under the standard wrapper and `memcap 4G`, measured 2026-10-13 by Phase 9b Task 4:
-stdout `32617 1 0`, `32685 1 0`, `32756 1 0`, nothing moved and rc 0. The oracle's
-`temporaryFilename` (`platform/unix/SysFileSystem.cpp` at the oracle's `cb9563364`) returns
-without setting `errInfo` on success, so `moveFile` answers whatever the stack held. It also
-formats the spare name into a 7-byte `snprintf` bound. This checkout's `interpreter/` has both
-fixed, and this crate follows it: the move copies and unlinks, answering 0, pinned by
-`builtin::rexxutil::files::tests::a_move_across_file_systems_copies_and_unlinks`. No corpus
-witness can run it.
+Dropped at r13346: answers `0 0 1` from a directory on another file system than `/tmp` (SF #2098, r13260).
 
 ## 40. `SysFileTree` over a name `stat` fails on: a dangling link, or `ELOOP`
 
@@ -1583,7 +1401,7 @@ collecting at every allocation. No corpus witness can run it. No upstream ticket
 
     say qualify('~')
 
-From source, not run. `SysFileSystem::resolveTilde` (`platform/unix/SysFileSystem.cpp:569` at the
+Measured at r13346 under `env -u HOME`: SIGSEGV, rc 139. `SysFileSystem::resolveTilde` (`platform/unix/SysFileSystem.cpp:569` at the
 oracle's `cb9563364`, `:486` in this checkout's `interpreter/`) assigns `getenv("HOME")` to a
 `FileNameBuffer`, whose `operator=` (`memory/FileNameBuffer.hpp:122`) runs `strlen` on it:
 `strlen(NULL)` where `HOME` is unset, as in entry 44's `cd ~`, which was measured.
@@ -1595,55 +1413,7 @@ qualifies to the null string and `~/x` to `/x`, pinned by
 
 ## 49. A reference to a returned procedure's variable, assigned, then a collection
 
-    r = mk('a')
-    call filler
-    r~value = 'x'
-    call filler
-    say r~value
-    exit
-    mk: procedure
-      use arg v
-      y = v
-      return >y
-    ::routine filler
-      do i = 1 to 300
-        z = copies('x', 100000)
-      end
-      return
-
-Effect: SIGSEGV, rc 139, nothing on stdout. Measured 2026-10-15 by Phase 9b1 Task 8b, 3 runs under
-the standard wrapper from a fresh empty directory, 3 of 3. Without the second `call filler` it
-answers `x`, rc 0, measured once. Found while measuring the collect_stress shapes for variable-reference
-cells. This crate answers `x`, rc 0. No upstream ticket.
-
-The same crash follows a reference to a dropped object's instance variable, assigned, then a
-collection:
-
-    r = .k~new~ref
-    call filler
-    say 'p10a' length(r~value) left(r~value,3)
-    r~value = copies('nw', 7)
-    call filler
-    say 'p10b' length(r~value) left(r~value,3)
-    o = .k~new
-    r2 = o~ref
-    drop o
-    call filler
-    say 'p10c' length(r2~value)
-    exit
-    ::class k
-    ::method ref
-      expose v
-      v = copies('ov', 13)
-      return >v
-    ::routine filler
-      do i = 1 to 300; z = copies('x', 100000); end
-      return
-
-Effect: SIGSEGV, rc 139, 3 of 3, measured 2026-10-15 by the Phase 9b1 Task 8b review
-(`.superpowers/sdd/2026-10-14-phase-9b1/task-8b-review-files/refs/p11_objpool_assign_oracle_segv.rex`).
-This crate answers `p10a 26 ovo`, `p10b 14 nwn`, `p10c 26`, rc 0, pinned crate-only by
-`collect_stress`'s `an_instance_variable_reference_outlives_its_object`.
+Dropped at r13346: both programs answer rc 0, 5 of 5, with the crate's output. No upstream ticket names it.
 
 ## 50. `Class~new` sent to a hash class with `.Class` as the message scope
 
@@ -1784,18 +1554,7 @@ crate reads the object's string value too, which is 3.1 naming `an Object`
 
 ## 56. A redirected command whose error stem is also its input stem, with no output target
 
-    w.0 = 1; w.1 = 'in'
-    address system 'cat >&2' with input stem w. error stem w.
-    say 'error only' w.0 '['w.1']'
-
-Effect: SIGSEGV, rc 139, on 3 of 3 runs, with nothing written to either stream. With an output
-target as well (`output stem v.`) it runs and answers `[U.]` for the error stem's line. Cause
-(found by the Task 6.13 re-review r2): `CommandIOContext::resolveConflicts`
-(`CommandIOContext.cpp:131`) wraps `output`, where `error` was meant, in a `BufferingOutputTarget`
-when the error target is also the input; with no output target it wraps NULL. Measured
-2026-10-20 by Phase 9d Task 6.13 fix round 2, under the standard wrapper from a fresh empty
-directory (found by the Task 6.13 re-review). This crate answers `error only 1 [in]`, rc 0. No
-upstream ticket.
+Dropped at r13346: answers `error only 1 [in]` rc 0 (SF #2087, r13262).
 
 ## 57. Four started activities each running a redirected command with input, output and error stems
 
@@ -1904,16 +1663,7 @@ re-run by Task 8.7a. No upstream ticket.
 
 ## 63. TRACE I over a `~value=` assignment to a variable reference
 
-    q = >y
-    trace i
-    q~value = 3
-    say y
-
-Effect: SIGSEGV, rc 139, after `>A>   "3"` on stderr, stdout empty. Measured 2026-10-28 by Phase 9d
-Task 8.7a fix round 1 under the standard wrapper from a fresh empty directory, 3 of 3 runs; the Task
-8.7a review had it 4 of 4 (`.superpowers/sdd/2026-10-18-phase-9d/t87a-review-scratch/tr2/n5.rex`,
-`tr/a17.rex`). Without TRACE the oracle prints `3` at rc 0. This crate prints `3` at rc 0 with the
-`>V>`/`>>>` lines for `say y`. No upstream ticket.
+Dropped at r13346: prints `3` rc 0, 5 of 5, with the crate's stderr. No upstream ticket names it.
 
 ## 64. A direct RAISE ... RETURN of a CALL ON condition in its own handler, then a SIGNAL ON re-issued in a handler over its condition raised again
 

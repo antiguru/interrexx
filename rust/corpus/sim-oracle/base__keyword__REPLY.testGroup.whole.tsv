@@ -1,11 +1,20 @@
-# The oracle's outcomes of base/keyword/REPLY.testGroup whole, 30 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/keyword/REPLY.testGroup whole, 60 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
+12	0	016ae10f938d646c	pass, assertions 17, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
 7	0	3842484797ee3028	pass, assertions 11, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
+7	0	0a78d9669a04b8e1	pass, assertions 18, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
 6	0	ff3e304679f8c3ac	pass, assertions 15, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
 4	0	2a59dba0c1b3c10d	pass, assertions 16, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
 4	0	f9aa68f2d4f63b22	pass, assertions 17, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
+4	0	2c79c3069fc756e8	pass, assertions 13, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
 3	0	1151106c67cfd29b	pass, assertions 10, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
 2	0	22a84049d06ed06e	pass, assertions 13, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
 2	0	bb568d1c263da271	pass, assertions 9, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
+2	0	aeca853fff4710bf	pass, assertions 16, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
 1	0	79065f1d50ff83ff	pass, assertions 14, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
 1	0	7d54540705ecb573	pass, assertions 18, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
+1	0	f5b8d0eb84d375cd	pass, assertions 14, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
+1	0	22158476d5e806e2	pass, assertions 15, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
+1	0	9ddf42d0f011062e	pass, assertions 11, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
+1	0	709b51fa3c561049	pass, assertions 10, rc 0, last started TEST_REPLY__CODE_RETURN, failing []
+1	0	ee447ac694cc755b	pass, assertions 12, rc 0, last started TEST_REPLY__CODE_RETURN, failing []

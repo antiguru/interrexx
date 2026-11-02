@@ -680,7 +680,7 @@ impl<'a> Scanner<'a> {
                     if inch.is_ascii_digit() {
                         ExpState::EDigit
                     } else {
-                        ExpState::E
+                        ExpState::Excluded
                     }
                 }
                 ExpState::ESign => {

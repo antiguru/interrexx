@@ -17,12 +17,17 @@ const SOURCES: &[Source] = &[
     Source {
         name: "CoreClasses.orx",
         path: "../../../third_party/ooRexx/interpreter/RexxClasses/CoreClasses.orx",
-        sha256: "c00727ab66e0fd862f12a7c023656c948259837b8432fa0d149bd6938fe2ff47",
+        sha256: "b7c7b71409657c7aa0751408045cb0cad130b51bf7659f362feb919b25f2afad",
     },
     Source {
         name: "StreamClasses.orx",
         path: "../../../third_party/ooRexx/interpreter/RexxClasses/StreamClasses.orx",
         sha256: "b61440a82bd3b2c198a84f44f8f9f0057aed847750c7b9e2c7fc05a819b92bba",
+    },
+    Source {
+        name: "CommandClasses.orx",
+        path: "../../../third_party/ooRexx/interpreter/RexxClasses/CommandClasses.orx",
+        sha256: "d54af93d041310e890b12d8323dd01035aaac3bbde940bfd057c47c1d1b941e5",
     },
     Source {
         name: "PlatformObjects.orx",

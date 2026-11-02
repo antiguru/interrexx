@@ -1,3 +1,4 @@
-# The oracle's outcomes of corpus/lang/new_init_subclasses.rex program, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of corpus/lang/new_init_subclasses.rex program, 10 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 5	214	c5360254c28e0855	rc 214, stdout 28 lines, stderr 5 lines
+5	214	b713a3e428b442b3	rc 214, stdout 28 lines, stderr 5 lines

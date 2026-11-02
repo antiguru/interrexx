@@ -67,7 +67,7 @@ fn a_destination_failing_deep_for_every_report_line_runs_under_the_oracles_memor
     }
     expected.push_str(&format!(
         "     9 *-* call spin {DEPTH}\n\
-         \x20 1457 *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" \
+         \x20 1459 *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" \
          (no source available).\n\
          \x20    3 *-* x = 1\n\
          Error 42 running PROGRAM line 13:  Arithmetic overflow/underflow.\n\

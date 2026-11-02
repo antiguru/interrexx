@@ -33,7 +33,7 @@
 # module is `src/docs/directives.rs`. Re-derived and compared in both
 # directions by `tests/extract_docs.rs`.
 #
-# derived-at: oodocs/rexxref/en-US r13198
+# derived-at: oodocs/rexxref/en-US r13347
 
 ::ANNOTATE	ATTRIBUTE	subkeyword	both	DirectiveParser.cpp:2046 case SUBDIRECTIVE_ATTRIBUTE; dire.xml:79 indexterm
 ::ANNOTATE	CLASS	subkeyword	both	DirectiveParser.cpp:1965 case SUBDIRECTIVE_CLASS; dire.xml:81 indexterm
@@ -110,7 +110,7 @@
 ::REQUIRES	LIBRARY	subkeyword	both	DirectiveParser.cpp:2836 case SUBDIRECTIVE_LIBRARY; dire.xml:1051 indexterm
 ::REQUIRES	NAMESPACE	subkeyword	both	DirectiveParser.cpp:2809 case SUBDIRECTIVE_NAMESPACE; dire.xml:1092 <option>
 ::RESOURCE	END	subkeyword	parser-only	DirectiveParser.cpp:2295 comparison SUBDIRECTIVE_END; no <option> or subkeyword indexterm in dire.xml's resourced section
-::RESOURCE	LIBRARY	subkeyword	cross-reference	dire.xml:1140 indexterm; resourceDirective has no arm for it, handled by ::REQUIRES (DirectiveParser.cpp:2836)
-::ROUTINE	EXTERNAL	subkeyword	both	DirectiveParser.cpp:2603 case SUBDIRECTIVE_EXTERNAL; dire.xml:1233 indexterm
-::ROUTINE	PRIVATE	subkeyword	both	DirectiveParser.cpp:2629 case SUBDIRECTIVE_PRIVATE; dire.xml:1231 indexterm
-::ROUTINE	PUBLIC	subkeyword	both	DirectiveParser.cpp:2619 case SUBDIRECTIVE_PUBLIC; dire.xml:1232 indexterm
+::RESOURCE	LIBRARY	subkeyword	cross-reference	dire.xml:1147 indexterm; resourceDirective has no arm for it, handled by ::REQUIRES (DirectiveParser.cpp:2836)
+::ROUTINE	EXTERNAL	subkeyword	both	DirectiveParser.cpp:2603 case SUBDIRECTIVE_EXTERNAL; dire.xml:1240 indexterm
+::ROUTINE	PRIVATE	subkeyword	both	DirectiveParser.cpp:2629 case SUBDIRECTIVE_PRIVATE; dire.xml:1238 indexterm
+::ROUTINE	PUBLIC	subkeyword	both	DirectiveParser.cpp:2619 case SUBDIRECTIVE_PUBLIC; dire.xml:1239 indexterm

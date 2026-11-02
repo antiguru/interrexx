@@ -1,3 +1,4 @@
-# The oracle's outcomes of base/special.variables/RESULT_RC_SIGL.testGroup whole, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/special.variables/RESULT_RC_SIGL.testGroup whole, 10 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 5	0	0f49809edcfb2651	pass, assertions 52, rc 0, last started TEST_SIGL, failing []
+5	0	19b170e71e3989e3	pass, assertions 52, rc 0, last started TEST_SIGL, failing []

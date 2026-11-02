@@ -1,3 +1,4 @@
-# The oracle's outcomes of base/class/MutexSemaphore.testGroup single, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/class/MutexSemaphore.testGroup single, 10 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 5	0	540091c112987d74	pass, assertions 13, rc 0, last started TEST_EXCLUSION, failing []
+5	0	0a1580d2dcf359e6	pass, assertions 13, rc 0, last started TEST_EXCLUSION, failing []

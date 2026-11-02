@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 /// The ooTest revision every absolute literal below was measured at. Named
 /// in each failure message so a red count is diagnosable as `svn up` rather
 /// than as a regression in this repository.
-const OOTEST_REVISION: &str = "r13178";
+const OOTEST_REVISION: &str = "r13347";
 
 /// What a red absolute-literal test most likely means, appended to every
 /// such failure.
@@ -67,7 +67,7 @@ fn measure() -> Vec<(String, usize, usize, usize)> {
 /// The absolute committed literals: per-group row counts, and the four
 /// totals. Measured at [`OOTEST_REVISION`].
 const PER_GROUP: &[(&str, usize, usize)] = &[
-    ("ADDRESS", 222, 11),
+    ("ADDRESS", 230, 19),
     ("ASSIGNMENT", 265, 265),
     ("Assignments", 0, 0),
     ("CALL", 128, 50),
@@ -80,7 +80,7 @@ const PER_GROUP: &[(&str, usize, usize)] = &[
     ("FORWARD", 0, 0),
     ("GUARD", 15, 0),
     ("IF", 159, 29),
-    ("INTERPRET", 6, 3),
+    ("INTERPRET", 10, 3),
     ("ITERATE", 21, 20),
     ("LABEL", 0, 0),
     ("LEAVE", 17, 17),
@@ -111,11 +111,11 @@ const PER_GROUP: &[(&str, usize, usize)] = &[
 /// `.testGroup` files scanned.
 const TOTAL_FILES: usize = 39;
 /// Exact-spelling `self~assertSame` occurrences across all of them.
-const TOTAL_CALLS: usize = 2441;
+const TOTAL_CALLS: usize = 2453;
 /// Calls carried by a body this extractor turned into a runnable program.
-const TOTAL_ROWS: usize = 1773;
+const TOTAL_ROWS: usize = 1781;
 /// Calls in a method this extractor could not turn into one.
-const TOTAL_DROPPED: usize = 668;
+const TOTAL_DROPPED: usize = 672;
 
 /// **Criterion 2, the absolute literals.** Everything a percentage would
 /// hide: the file count, the independently-counted call total, the row and
@@ -203,7 +203,7 @@ fn the_row_floor() {
     );
 }
 
-/// **The 668 calls outside the population, accounted for by reason.**
+/// **The calls outside the population, accounted for by reason.**
 #[test]
 fn the_drop_reasons_account_for_every_call_outside_the_population() {
     /// `(reason, methods, calls)`, measured at [`OOTEST_REVISION`].
@@ -213,7 +213,7 @@ fn the_drop_reasons_account_for_every_call_outside_the_population() {
         (DropReason::ContinuedLine, 2, 3),
         (DropReason::AssertSameList, 0, 0),
         (DropReason::OtherAssertion, 138, 169),
-        (DropReason::MessageSend, 96, 491),
+        (DropReason::MessageSend, 99, 495),
         (DropReason::UnparsedCallShape, 0, 0),
         (DropReason::NotAClause, 0, 0),
     ];

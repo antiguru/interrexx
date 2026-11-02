@@ -1,3 +1,4 @@
-# The oracle's outcomes of base/directives/CONSTANT.testGroup whole, 30 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/directives/CONSTANT.testGroup whole, 35 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 30	0	98ba0b335dce91ce	pass, assertions 174, rc 0, last started TEST_SUBCLASS_DEFINITION, failing []
+5	0	21cff7e938175600	pass, assertions 174, rc 0, last started TEST_SUBCLASS_DEFINITION, failing []

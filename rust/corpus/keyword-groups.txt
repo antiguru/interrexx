@@ -4,7 +4,7 @@
 #
 # Pinned the way `phase-4a.txt` is pinned, and for the same reason: the
 # extractor's absolute row/drop literals are only meaningful against a known
-# input set. Measured at ooTest **r13178** (`svn info ootest`). `ootest/` is
+# input set. Measured at ooTest **r13347** (`svn info ootest`). `ootest/` is
 # NOT checked-in test data -- it is git-ignored (`.gitignore:6`), has zero
 # tracked files, and exists only as an SVN working copy of
 # `svn.code.sf.net/p/oorexx/code-0/test/trunk`. So a red count here is

@@ -1,3 +1,4 @@
-# The oracle's outcomes of base/bif/STREAM.testGroup whole, 30 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/bif/STREAM.testGroup whole, 35 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 30	1	0c9175c7a857b253	failure, assertions 218, rc 1, last started TEST_WRONG_TOO_MANY_ARGS_S, failing [TEST_RELATIVE_FILE_EXISTS TEST_RELATIVE_FILE_EXISTS2]
+5	1	581ea15ab2a5dd39	failure, assertions 218, rc 1, last started TEST_WRONG_TOO_MANY_ARGS_S, failing [TEST_RELATIVE_FILE_EXISTS TEST_RELATIVE_FILE_EXISTS2]

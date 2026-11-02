@@ -1669,8 +1669,6 @@ fn a_semaphore_instance_runs_its_finalizer_without_refusing() {
     }
 }
 
-/// **The one shape of `~at` that has no oracle behaviour to match**, and
-/// the instrument [`Loud::array_index_hole`]'s own doc names.
 #[test]
 fn array_of_fills_its_slots_from_its_arguments() {
     assert_eq!(
@@ -1705,22 +1703,19 @@ fn array_of_on_a_subclass_answers_an_instance_of_it() {
 
 /// A lone array argument is spread into the subscript list by item count
 /// with slot array, so an array whose leading slot is empty and whose item
-/// count is one hands the C++ a null subscript and it dies. The program is
-/// in `corpus/oracle-crashes.txt` and must never be run against the
-/// oracle, so a differential row cannot cover this and this test is the
-/// whole of it.
+/// count is one is 98.975, as on the oracle.
 #[test]
-fn an_expanded_index_of_one_empty_slot_is_loud() {
+fn an_expanded_index_of_one_empty_slot_is_98_975() {
     for source in [
         "a = (1,2)\nsay a~at((,2))\n",
         "a = (1,2)\nsay a~at((,,3))\n",
         "a = (1,2)\nsay a[(,2)]\n",
     ] {
         let (code, stdout, stderr) = run_source(source);
-        assert_eq!((code, stdout.as_str()), (120, ""), "{source:?}");
-        assert_eq!(
-            stderr, "rexx-exec: an array subscript that is an empty slot is not implemented\n",
-            "{source:?}"
+        assert_eq!((code, stdout.as_str()), (158, ""), "{source:?}");
+        assert!(
+            stderr.ends_with("Error 98.975:  Missing array element at position 1.\n"),
+            "{source:?}: {stderr}"
         );
     }
     // The neighbouring successes: one item spread from a two-slot array,

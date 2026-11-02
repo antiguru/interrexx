@@ -12,6 +12,7 @@ fn bootstrap_files() -> Vec<PathBuf> {
     vec![
         root.join("RexxClasses/CoreClasses.orx"),
         root.join("RexxClasses/StreamClasses.orx"),
+        root.join("RexxClasses/CommandClasses.orx"),
         root.join("platform/unix/PlatformObjects.orx"),
     ]
 }

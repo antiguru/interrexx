@@ -735,14 +735,6 @@ impl Loud {
         }
     }
 
-    /// An array subscript list whose only element is an empty slot, which the
-    /// oracle answers by dying (`corpus/oracle-crashes.txt` entry 6).
-    fn array_index_hole() -> Loud {
-        Loud {
-            message: owned_message("an array subscript that is an empty slot", None),
-        }
-    }
-
     /// A `receiver~NAME=` entry-method send that carried no value argument,
     /// which the oracle stores whatever its evaluation stack holds for
     /// (Deviation 29).

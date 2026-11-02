@@ -990,7 +990,7 @@ pub(crate) fn date(
             b'F' => whole_number_of(indate_bytes).is_some_and(|n| timestamp.set_base_time(n)),
             b'T' => whole_number_of(indate_bytes).is_some_and(|n| timestamp.set_unix_time(n)),
             b'D' => whole_number_of(indate_bytes).is_some_and(|n| {
-                let in_range = n >= 0 && (n <= 365 || (n == 366 && is_leap_year(current.year)));
+                let in_range = n >= 1 && (n <= 365 || (n == 366 && is_leap_year(current.year)));
                 if in_range {
                     timestamp.set_date(current.year, n);
                 }

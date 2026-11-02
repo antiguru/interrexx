@@ -3,7 +3,7 @@
 # being the 1-based position of the row among the rows its own method yielded;
 # lines starting with # are comments.
 #
-# Measured at ooTest r13178. This is the committed set `bif_assertions.rs`
+# Measured at ooTest r13347. This is the committed set `bif_assertions.rs`
 # polices in both directions: a row here that starts passing is as red as a row
 # not here that starts failing, so an improvement shows up in a diff rather than
 # being quietly absorbed.

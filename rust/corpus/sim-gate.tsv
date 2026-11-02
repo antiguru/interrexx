@@ -49,6 +49,8 @@ base/class/Object.testGroup	whole	320	70	0	81	91	-	-
 base/class/Object.testGroup	derived	320	70	14	66	76	-	-
 base/class/RexxContext.testGroup	whole	7	70	0	61	66	-	-
 base/class/RexxContext.testGroup	derived	7	70	14	51	56	-	-
+base/class/Stem.testGroup	whole	0	70	0	71	71	-	-
+base/class/Stem.testGroup	derived	0	70	14	61	61	-	-
 base/class/Ticker.testGroup	whole	5752	70	0	55	66	-	-
 base/class/Ticker.testGroup	derived	5752	70	14	55	66	-	-
 base/directives/ATTRIBUTE.testGroup	whole	0	70	0	71	81	-	-

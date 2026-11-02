@@ -1,6 +1,6 @@
 /* Table C method rows: StackFrame, instance arm. corpus/docs/class-set.txt
    records this class as `not-covered`, because
-   no construction program is committed; the reference says the user cannot create one and names a Rexx-level route instead -- utilityclasses.xml:9407 "StackFrame instances cannot be directly created by the user.".
+   no construction program is committed; the reference says the user cannot create one and names a Rexx-level route instead -- utilityclasses.xml:10341 "StackFrame instances cannot be directly created by the user.".
    So ~new raises and no line below it is reached; the row's evidence
    is that raise, which is what the row set says there is to have.
    Derived by crates/rexx-exec/tests/table_c/probes.rs, which re-derives

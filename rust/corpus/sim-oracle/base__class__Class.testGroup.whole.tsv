@@ -1,3 +1,4 @@
-# The oracle's outcomes of base/class/Class.testGroup whole, 30 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/class/Class.testGroup whole, 35 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 30	0	55165b279652078d	pass, assertions 312, rc 0, last started TEST_UNINHERIT_TWO_ARGS, failing []
+5	0	f680da4e8ab33c0f	pass, assertions 312, rc 0, last started TEST_UNINHERIT_TWO_ARGS, failing []

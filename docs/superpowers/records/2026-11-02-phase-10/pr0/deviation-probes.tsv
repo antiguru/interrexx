@@ -1,0 +1,60 @@
+deviation	title	probe_path	old_rc	new_rc	changed	old_vs_new
+2	The EVALUATION-depth limit raises 11.1 where the oracle raises nothing.	./dev/2	0,139	0,139	no	same; 100000 terms prints 100000 at rc 0, 150000 terms SIGSEGV on both
+3	POS's window overrun can match the haystack's NUL terminator; this	./dev/3	0	0	yes	pos('a'||'00'x,'aa') 2 vs 0; the overrun itself is gone for every needle: pos('ab','aab',1,2) 2 vs 0, pos('ab','aaab',1,3) 3 vs 0, mutablebuffer pos 2 vs 0; lastpos and countstr unchanged. changestr crash shape (crash entry 3) not run
+4	SEPARATELY PRODUCED EQUAL STRINGS OR NUMBERS MAY OR MAY NOT BE ONE	./dev/4	0	0	no	same; stem_name (1 probes): pair 98.995 Unable to reference variable "ABC."; it must be an uninitialized local variable. | pair 98.995 Una
+9	A NATIVE CALL'S OLD MUTABLEBUFFER STORAGE OUTLIVES A COLLECTION	./dev/9	0	0	no	same over 5 runs each; forge liblent.so via added LD_LIBRARY_PATH entry
+10	A SIGNAL HALTS WHERE THE ORACLE DIES OR HANGS, AND WAKES WHAT THE	./dev/10	130,143	130,143	no	same; nohup + timeout -s SIGNAL 1 --preserve-status, not the standard wrapper; 130 and 143, 3 runs each
+12	A BLOCKING WAIT A SIGNAL DOES NOT END (ruling P60). OWNER: none.	./dev/12	158	158	no	same; timeout -s INT 1 --preserve-status to the group, not the standard wrapper; 98.923 rc 158, 3 runs each
+24	A CONTEXT KEPT FROM ANOTHER ACTIVITY'S CALL ANSWERS OR RAISES 98.983	./dev/24	0,137,139	0,137,139	no	same in all 21 members; forge libs via added LD_LIBRARY_PATH entry; call_f 256 on both, SIGSEGV and hang members alike
+25	A DO LOOP'S TO TEST AND BY'S DIRECTION TEST JUDGE A USER OPERATOR'S	./dev/25	0	0	no	same; ld_do-compare-computed-true (13 probes): pass | pass | pass | end
+26	`=` AT THE DEBUG PAUSE AFTER A DO WITH NO PASSES RUNS THE DO AGAIN	./dev/26	246	246	no	same; stdin was a file holding = and empty lines; 3 runs each
+27	A `.DebugInput` ANSWER THAT IS NOT A STRING IS READ AS `to_text` RENDERS	./dev/27	0	0	no	same; ran as command AN on both; no-value form not run, crash entry 31
+28	A PRIMITIVE'S NATIVE METHOD RUN ON AN OBJECT OF ANOTHER CLASS IS REFUSED	./dev/28	0,165	0,165	no	same; array/queue/enhanced print a pointer differing every run on both, compared as noise; table 0, scope empty, class id 91.999 identical; StackFrame crash shapes not run, crash entry 33
+29	A VALUE-LESS ENTRY-METHOD ASSIGNMENT IS REFUSED (Phase 6.1 Task 7).	./dev/29	0	0	no	same; plain (2 probes): 1 | String
+30	A USER `STRING` METHOD ANSWERING AN OBJECT WITH NO STRING VALUE IS	./dev/30	0,139,158,163,168,227,232,251	0,139,158,163,168,227,232,251	yes	lineout/queue/say rc 168 and 88.909 both, but stderr header 'Error 88 running REXX:' vs 'running <path> line 2:' (say: 'REXX line 365:'); pos('z',o) 1190 vs 342, each stable over 5 runs, garbage on both; other shapes equal; drop/expose (v) not run, crash entry 33
+32	A USER `NEW` REACHED THROUGH `ENHANCED` THAT ANSWERS ANOTHER OBJECT GETS	./dev/32	0	0	no	same; metaclass answering a non-class not run, crash entry 8
+34	A `..` IN A QUALIFIED NAME REMOVES THE COMPONENT BEFORE IT, AFTER A	./dev/34	0	0	no	same; q (1 probes): /a/b//../c             /a/b/c | /a/b///../c            /a/b/c | /a/b/.//../c           /a/b/c | /a/b//..      
+35	A `HANDLE:0`, `HANDLE:1` OR `HANDLE:2` STREAM READS AND WRITES THE	./dev/35	0,163	0,163	no	same; h5 QUERY SIZE is uninitialised memory on both, compared as noise; HANDLE: write not run, crash entry 12
+37	SYSSTEMSORT WRITES ITS SORTED VALUES BACK BY TAIL, WHERE THE ORACLE	./dev/37	0	0	no	same; stem_sort (1 probes): S.0 [S.1] [S.2]
+38	A DO OVER OR DO WITH HEADER WITH TO OR BY RAISES A KEYWORD ERROR,	./dev/38	207	207	no	same; h0 (4 probes): <stdout empty>, see stderr
+39	A LABEL SPELLED THEN AFTER IF OR WHEN RAISES 18.1 OR 18.2, WHERE THE	./dev/39	221	221	no	same; if (2 probes): <stdout empty>, see stderr
+41	AN ENCODED IMAGE WHOSE DECODED BYTES LACK THE TAG ANSWERS 3.903	./dev/41	243	243	no	same; image (1 probes): <stdout empty>, see stderr
+44	`MIN` WITH NO ARGUMENTS ROUNDS A WHOLE NUMBER TO NUMERIC DIGITS (Phase 9d).	./dev/44	0	0	no	same; min_noargs (19 probes): 1234 | 1.23E+3 | 1.23E+3
+45	`Bag~hasItem` WITH AN INDEX UNEQUAL TO THE ITEM ANSWERS 0 (Phase 9d).	./dev/45	0	0	no	same; nil (1 probes): The NIL object | The NIL object
+46	`LINEOUT` POSITIONING AND CLOSE ON A BINARY RECORD STREAM DO NOT CLEAR	./dev/46	0	0	no	same; clear (3 probes): 41414141424242424343434344444444 | 41414141424242422020202044444444
+47	A `DO` REPETITOR OR `FOR` COUNT WIDER THAN NUMERIC DIGITS RAISES 26.2	./dev/47	0	0	no	same; n_do-count-wide (4 probes): native: V[ran] | V[ran]
+48	A WRITE TO A TRANSIENT STREAM NEVER SEEKS (Phase 9d). OWNER: none.	./dev/48	0	0	no	same; s_transient-buffered-writes (1 probes): transient-buffered-writes native: O_both=READY: READY 1 1;CO_abc=0 READY 1 1;CO_de=2 ERROR 1 1;X=READY: UNKNOW
+49	READ AND WRITE POSITIONS ON A PERSISTENT STREAM FOLLOW THE	./dev/49	0	0	no	same; stale (3 probes): 4101 | 5400 | 5400 | 4101 101
+51	`.CONTEXT~RS` INSIDE AN INTERPRET EQUALS `.RS` (Phase 9d). OWNER: none.	./dev/51	0	0	no	same; context_rs (2 probes): in 1 0 4 | out 1 1 4 | in2 -1 1 1 1 | out2 -1 -1
+52	A REDIRECT TARGET'S ERROR IS RAISED WHATEVER THE COMMAND'S RETURN	./dev/52	0	0	no	same; ld_target-error-whatever-the-rc (1 probes): ran on 3
+53	NUMERIC RULES FOLLOW REXXREF WHERE BOTH INTERPRETERS' ANSWERS DEPART	./dev/53	0,221	0,221	no	same; n_fuzz-sign-differs (24 probes): native: V[0] | V[0]
+54	CHARS AND LINES ON A TRANSIENT STREAM TAKE NO INPUT (Phase 9d). OWNER:	./dev/54	0	0	no	same; transient (2 probes): devnull: chars 0 lines 0 loop ran 0 | fifo with data: chars 1 lines 1 1 | then charin de linein
+55	A STREAM OPENED WRITE READS NOTHING (Phase 9d). OWNER: none.	./dev/55	0	0	no	same; s_write-only-reads (1 probes): write-only-reads native: O_write_nobuffer=READY: READY 19 1;CI_1_3=n READY 19 4;LI_1=line1 READY 19 7;CH=12 RE
+56	LINE POSITIONS COUNT LINE ENDS FROM THE POSITION (Phase 9d). OWNER:	./dev/56	0	0	no	same; s_line-seek-relative-after-charin (2 probes): line-seek-relative-after-charin native: O_both_nobuffer=READY: READY 19 1;CI_6_1=line1| READY 19 7;S_+1_read_l
+57	QUERY POSITION ... LINE ANSWERS THE LINE THE POSITION IS IN (Phase 9d).	./dev/57	0	0	no	same; s_write-line-query (4 probes): write-line-query native: O_both_nobuffer=READY: READY 19 1;CP_8=0 READY 8 1;Q_write_line=3 READY 8 1; [line1|l
+58	LINES COUNT ANSWERS THE LINES THAT REMAIN (Phase 9d). OWNER: none.	./dev/58	0	0	no	same; s_lines-count-repeated (1 probes): lines-count-repeated native: O_both_nobuffer=READY: READY 19 1;CI_2_1=li READY 19 3;LC=3 READY 19 3;LC=2 READY
+59	A SEEK BELOW POSITION 1, OR OF A READ STREAM'S WRITE POSITION, FAILS	./dev/59	0	0	no	same; s_seek-invalid (1 probes): seek-invalid native: O_both_nobuffer=READY: READY 19 1;CI_4=line READY 19 5;S_-9_read=0 ERROR 19 -1;Q_read=-1 
+60	A CTRL-Z IN A STREAM IS DATA (Phase 9d). OWNER: none.	./dev/60	0	0	no	same; ctrlz (3 probes): both w 4 charout 0 |     61620A51 | both w 4 lineout 0 |     61620A780A | append w 4 lineout 0 |     61620A1A7
+61	ON A RECORD STREAM OPENED APPEND, LINEOUT COMPLETES THE RECORD AT THE	./dev/61	0	0	no	same; append_rec (1 probes): 0 | syn 93.0
+62	A READ PAST THE END IS NOTREADY (Phase 9d). OWNER: none.	./dev/62	0	0	no	same; s_charin-bounds (2 probes): charin-bounds native: O_both_nobuffer=READY: READY 19 1;CI_3_30= NOTREADY 19 1;CI_0_5= READY 19 5;CI_2=1| READ
+63	COPY OF A CLASS OBJECT, A REXXCONTEXT OR .REXXINFO RAISES 93.970 ON	./dev/63	0	0	no	same; copyrules (1 probes): plain 93.970 COPY method is not supported for object The Array class. | override copied Class | plain 93.970 C
+64	A FAILED TRAP HANDLER CALL UNDER SIGNAL ON SYNTAX SIGNALS AT ONCE	./dev/64	0	0	no	same; a (3 probes): line4 | s  40 4
+65	A RAISE RETURN OR EXIT VALUE IS THE CONDITION OBJECT'S RESULT	./dev/65	0	0	no	same; b (4 probes): mh hasResult 0 The NIL object
+66	A 16.1 FROM A SIGNAL TRAP INSIDE INTERPRET KEEPS THE PROGRAM FRAME'S	./dev/66	0	0	no	same; c (1 probes): sf PROGRAM 4 []
+67	A STARTED MESSAGE'S ERROR REPORT NAMES THE LINE THAT RAISED IT	./dev/67	214,252	214,252	no	race on both: started report says line 6 in 4/30 old and 7/30 new, line 3 otherwise; both rc 214; same outcome set. HALT form r2 same
+68	A STEM SUBCLASS'S UNKNOWN METHOD RUNS (Phase 9d). OWNER: none.	./dev/68	159	159	no	same; stem_unknown (1 probes): <stdout empty>, see stderr
+69	A ::CONSTANT EXPRESSION'S METHOD IS ITS OWN DIRECTIVE'S (Phase 9d).	./dev/69	0	0	no	same; q5d (4 probes): 0 1
+70	A VARIABLE LIST RUNS LEFT TO RIGHT (Phase 9d). OWNER: none.	./dev/70	0	0	no	same; drop_list_order (3 probes): LIT LIT
+71	.CONTEXT~VARIABLES LISTS A USE ARG ALIAS UNDER THE NAME IT IS	./dev/71	0	0	no	same; alias (1 probes): Q. | stem 0 1 1 | simple 0 1 1
+72	A VARIABLE REFERENCE'S STRING VALUE IS ITS REFERENCED VALUE'S	./dev/72	0,158,240	0,158,240	no	same in all 8 probes; cycle shapes not run, crash entries 59-61
+74	AN APPEND STREAM ON A WRITE-ONLY FILE WRITES AT THE END (Phase 9d).	./dev/74	0	0	no	same; a3 (1 probes): ERROR:13 ERROR:13 Permission denied | READY: | 0 | 0 | READY: | wo y|w1|w2| | big 5003 csz ze
+75	A CONDITION RAISED AGAIN WHILE ITS CALL ON TRAP IS DELAYED IS HELD	./dev/75	0	0	no	same; segfault shapes not run, crash entries 64 and 65
+76	AN INTERPRET TRANSLATION FAILURE'S PACKAGE IS THE RUNNING PACKAGE	./dev/76	0	0	no	same; interpret (1 probes): 35.1 0 1
+77	A STEM'S STRING VALUE IS ITS DEFAULT'S (Phase 9d). OWNER: none.	./dev/77	0	0	no	same; s2 (2 probes): say s. ""                    NOSTRING |7| Stem | say length(s.)               NOSTRING |7| Stem | say "<"||s.|
+78	A HASH LOOKUP OF THE IDENTICAL INDEX SENDS ITS == (Phase 9d).	./dev/78	0	0	no	same; idq (1 probes): second put same object | at same object | other object |   == called | 1
+79	AN APPEND STREAM'S WRITE POINTER STAYS OUT OF THE FILE AS IT WAS	./dev/79	0	0	no	same; s_append-extent (2 probes): append-extent native: O_both_append_nobuffer=READY: READY 19 1;S_=1_write=1 READY 1 1;S_=2_write_line=2 READY 
+80	THE FIRST SEEK OF AN UNOPENED TRANSIENT STREAM IS REFUSED (Phase	./dev/80	163	163	no	same; q4 (1 probes): seek 1 READY | type TRANSIENT | size 0 | pos 1 | open READY: TRANSIENT
+81	A STEM'S STRING SENDS STRING TO ITS DEFAULT (Phase 9d). OWNER:	./dev/81	0	0	no	same; b (2 probes): a Stem | a Stem | an Array | a Stem a Stem dflt | a Stem | a Stem | a NSTR | a Stem | a Stem | W. | an Array
+82	CLOSING LINEOUT PRESERVES FIFO BYTES (Phase 9d). OWNER: none.	./dev/82	0	0	no	same; close (1 probes): write 0 | close 1
+83	RAISE DESCRIPTION TAKES ITS REQUIRED STRING AT RAISE (Phase 9d).	./dev/83	0	0	no	same; timing (1 probes): before | handler | make | first description | make | second description
+84	REENTRANT TABLE REMOVAL KEEPS AN EMPTY COUNT AT ZERO (Phase 9d).	./dev/84	0	0	no	same; equality (1 probes): removed 1 items -1

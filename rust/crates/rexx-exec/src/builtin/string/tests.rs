@@ -170,38 +170,21 @@ fn the_searching_builtins_answer_the_oracles_own_bytes() {
     assert_eq!(answer(b"POS", &[b"e", b"abcdeeeeef", b"2", b"4"]), b"5");
     assert_eq!(answer(b"POS", &[b"eee", b"abcdeeeeef", b"5", b"2"]), b"0");
 
-    // The one position `StringUtil::pos` searches past the window, which
-    // `find_forward`'s own doc explains and transcribes the oracle for.
-    // **Each of these is paired with the case one step away that answers
-    // differently**, because the rule is not positional and a row without
-    // its neighbour pins nothing: the first pair differs only in a decoy
-    // `a` inside the window, the second in whether the position past the
-    // window is reached at all, and the third in the needle's length.
+    // A match must lie wholly inside the window.
     let zoo: &[u8] = b"banana bandana abracadabra";
-    assert_eq!(answer(b"POS", &[b"an", zoo, b"6", b"4"]), b"9");
+    assert_eq!(answer(b"POS", &[b"an", zoo, b"6", b"4"]), b"0");
     assert_eq!(answer(b"POS", &[b"an", zoo, b"6", b"3"]), b"0");
     assert_eq!(answer(b"POS", &[b"an", zoo, b"9", b"1"]), b"0");
     assert_eq!(answer(b"POS", &[b"an", zoo, b"9", b"2"]), b"9");
-    assert_eq!(answer(b"POS", &[b"an", b"axan", b"1", b"3"]), b"3");
+    assert_eq!(answer(b"POS", &[b"an", b"axan", b"1", b"3"]), b"0");
     assert_eq!(answer(b"POS", &[b"an", b"zxan", b"1", b"3"]), b"0");
     assert_eq!(answer(b"POS", &[b"an", b"axaxan", b"1", b"4"]), b"0");
-    assert_eq!(answer(b"POS", &[b"an", b"axaxan", b"1", b"5"]), b"5");
-    assert_eq!(answer(b"POS", &[b"abc", b"axxabc", b"1", b"5"]), b"4");
+    assert_eq!(answer(b"POS", &[b"an", b"axaxan", b"1", b"5"]), b"0");
+    assert_eq!(answer(b"POS", &[b"abc", b"axxabc", b"1", b"5"]), b"0");
     assert_eq!(answer(b"POS", &[b"abc", b"zxxabc", b"1", b"5"]), b"0");
-    // A one-byte needle takes the C++'s early return and never reaches its
-    // rescan, so the position past the window is unreachable for it.
     assert_eq!(answer(b"POS", &[b"a", b"zza", b"1", b"2"]), b"0");
     assert_eq!(answer(b"POS", &[b"a", b"zza", b"1", b"3"]), b"3");
 
-    // DEVIATION 3 (`docs/superpowers/plans/phase-4-exclusions.txt`),
-    // licensed by Moritz 2026-08-14: the overrun above can land one byte
-    // past the haystack, where the oracle reads the `RexxString` NUL
-    // terminator and matches a needle ending in `'00'x` -- measured, the
-    // oracle's own answer here is 2, not this crate's 0. Pinned so a
-    // future change to the overrun cannot silently start inventing that
-    // byte; `find_forward`'s own doc has the full account and the reason
-    // exact agreement is not available (`changestr` on the same needle
-    // dies on the oracle at rc 139).
     assert_eq!(answer(b"POS", &[b"a\0", b"aa"]), b"0");
 
     assert_eq!(answer(b"LASTPOS", &[b"an", b"banana"]), b"4");

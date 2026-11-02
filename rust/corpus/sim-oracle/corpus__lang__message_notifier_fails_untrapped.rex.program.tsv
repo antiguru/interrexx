@@ -1,3 +1,4 @@
-# The oracle's outcomes of corpus/lang/message_notifier_fails_untrapped.rex program, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of corpus/lang/message_notifier_fails_untrapped.rex program, 10 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 5	159	8d70e6ef8b45017b	rc 159, stdout 1 lines, stderr 6 lines
+5	159	ffd231105f1a69e9	rc 159, stdout 1 lines, stderr 6 lines

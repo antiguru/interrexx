@@ -298,27 +298,16 @@ fn dates_day_of_year_style_round_trips_regardless_of_the_current_year() {
     assert_eq!(output(b"say date('D','1','D')\n"), "1\n");
 }
 
-/// A day-of-year of `0` in every one of the five output styles this
-/// crate can answer without crashing -- [`Timestamp::year_day`]'s own
-/// doc has the C++ reading and the four cross-checked oracle
-/// transcripts (`B`/`W`/`F`/`T`) this reproduces, plus `D` itself,
-/// which is `0` on both sides trivially (a year-day of `0` read back
-/// as a year-day). The sixth consumer, `M`, is not measured against
-/// the oracle here at all -- it is a confirmed segfault there (rc 139,
-/// `monthNames[-1]` unlike `monthStarts[-1]`), and this crate's own
-/// answer for it is the deliberate divergence [`month_name`]'s own doc
-/// names, not something to reproduce.
+/// Day-of-year 0 is 40.19 for every output style, as on the oracle since
+/// r13250.
 #[test]
-fn date_day_of_year_zero_is_defined_across_five_output_styles() {
-    assert_eq!(output(b"say date('D','0','D')\n"), "0\n");
-    assert_eq!(output(b"say date('B','0','D')\n"), "739615\n");
-    assert_eq!(output(b"say date('W','0','D')\n"), "Wednesday\n");
-    assert_eq!(output(b"say date('F','0','D')\n"), "63902736000000000\n");
-    assert_eq!(output(b"say date('T','0','D')\n"), "1767139200\n");
-    // Not measured against the oracle -- it segfaults on this input
-    // (rc 139), which is not a value this test can pin. This crate's
-    // own answer is the empty string, never a panic.
-    assert_eq!(output(b"say date('M','0','D')\n"), "\n");
+fn date_day_of_year_zero_is_40_19() {
+    for style in ["D", "B", "W", "F", "T", "M"] {
+        let source = format!("say date('{style}','0','D')\n");
+        let (code, stderr) = failure(source.as_bytes());
+        assert_eq!(code, 216, "{source}");
+        assert!(stderr.contains("Error 40.19:"), "{source}: {stderr}");
+    }
 }
 
 /// A malformed or out-of-range conversion input is 40.19, never a wrong

@@ -39,7 +39,7 @@ const REFRESH_ENV: &str = "REXX_BIF_EXEMPT_REFRESH";
 /// `ootest/` is git-ignored and is an SVN working copy, not checked-in test
 /// data, so it can move with nothing in this repository changing; read it back
 /// with `svn info ootest`.
-const OOTEST_REVISION: &str = "r13178";
+const OOTEST_REVISION: &str = "r13347";
 
 fn gate_mode() -> bool {
     match env::var(GATE_ENV) {

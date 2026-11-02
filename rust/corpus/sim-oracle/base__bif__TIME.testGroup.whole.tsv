@@ -1,3 +1,4 @@
-# The oracle's outcomes of base/bif/TIME.testGroup whole, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/bif/TIME.testGroup whole, 35 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
+30	0	1cacfa60e6f6b0cc	pass, assertions 313, rc 0, last started TEST_TO_RESET_INVALID, failing []
 5	0	185fdba3a71b3c3a	pass, assertions 524, rc 0, last started TEST_9, failing []

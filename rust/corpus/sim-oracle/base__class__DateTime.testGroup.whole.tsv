@@ -1,3 +1,4 @@
-# The oracle's outcomes of base/class/DateTime.testGroup whole, 5 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/class/DateTime.testGroup whole, 35 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
+30	0	0effc25b655137d0	pass, assertions 633, rc 0, last started TEST_YEAR_ETC, failing []
 5	0	6e382c66ee332162	pass, assertions 629, rc 0, last started TEST_YEAR_ETC, failing []

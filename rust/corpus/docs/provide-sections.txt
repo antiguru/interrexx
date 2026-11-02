@@ -9,7 +9,7 @@
 # directions by `tests/extract_docs.rs`: a row that stops being derived
 # is as red as one that appears.
 #
-# derived-at: oodocs/rexxref/en-US r13198
+# derived-at: oodocs/rexxref/en-US r13347
 
 typcla	0	75	-	Types of Classes
 objcla	1	84	typcla	Object Classes
@@ -31,4 +31,4 @@ reqstr	1	723	xcremet	Required String Values
 concurr	1	816	xcremet	Concurrency
 classmeth	0	824	-	Overview of Classes Provided by Rexx
 chi	1	828	classmeth	The Class Hierarchy
-methodsbyclass	1	1006	classmeth	Class Library Notes
+methodsbyclass	1	1011	classmeth	Class Library Notes

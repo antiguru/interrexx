@@ -32,6 +32,10 @@ fn pinning_doc() -> PathBuf {
 const EXCLUDED_DIRS: &[(&str, &str)] = &[
     ("extensions/", "extension Phase 10 recompiles"),
     ("samples/", "sample Phase 10 recompiles"),
+    (
+        "base/class/CommandHandler.testGroup",
+        "CommandHandler, Phase 10",
+    ),
 ];
 
 /// A `::METHOD`, `::ROUTINE` or `::RESOURCE` of a group file.

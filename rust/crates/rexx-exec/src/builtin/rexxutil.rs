@@ -17,8 +17,7 @@ use crate::scheduler::ParkReason;
 use crate::semaphores::{SEM_POLL, SemaphoreKey, SemaphoreWait, WaitKind};
 use crate::{Failure, Interp, Loud};
 
-/// A raise the argument marshalling makes, which the oracle reports against
-/// the package with no line.
+/// A raise the argument marshalling makes, reported at the sending clause.
 pub(crate) fn marshalled(mut raised: Raised) -> Failure {
     raised.delivery.lineless = true;
     raised.delivery.internal_package = true;

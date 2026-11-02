@@ -646,10 +646,10 @@ fn monitor_halted(clause: &str) -> Ended {
         code: Some(252),
         stdout: "ready\n".to_string(),
         stderr: format!(
-            "  1457 *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" \
+            "  1459 *-* Method UNKNOWN with scope \"Monitor\" in package \"REXX\" \
              (no source available).\n\
              \x20    2 *-* {clause}\n\
-             Error 4 running REXX line 1457:  Program interrupted.\n\
+             Error 4 running REXX line 1459:  Program interrupted.\n\
              Error 4.1:  Program interrupted with HALT condition.\n"
         ),
     }

@@ -1,3 +1,4 @@
-# The oracle's outcomes of base/directives/METHOD.testGroup whole, 30 runs, written under REXX_SIM_ORACLE_REFRESH=1.
+# The oracle's outcomes of base/directives/METHOD.testGroup whole, 35 runs, written under REXX_SIM_ORACLE_REFRESH=1.
 # count, status, digest of the compared descriptors, key.
 30	0	4b55355acd6bc85a	pass, assertions 232, rc 0, last started TEST_DELEGATE_TWICE, failing []
+5	0	b9d967e406c8dce0	pass, assertions 232, rc 0, last started TEST_DELEGATE_TWICE, failing []

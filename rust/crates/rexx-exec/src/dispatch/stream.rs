@@ -51,8 +51,7 @@ fn require_mut(interp: &mut Interp, receiver: ObjRef) -> Result<&mut StreamState
 /// class defines `makeString` writes what the method returns.
 /// The refusal's own `Compiled method` traceback line comes from the dispatch
 /// layer, not from here -- measured, blaming it at this site as well puts the
-/// line in twice. It is a marshalling raise: measured, oracle,
-/// `.stdout~lineout(.nil)` is `Error 88 running REXX:`.
+/// line in twice. It is a marshalling raise.
 fn write_text(interp: &mut Interp, value: ObjRef) -> Result<Vec<u8>, Failure> {
     let Some(text) = interp.blamed_string_conversion(value)? else {
         let mut raised = Raised::argument_needs_a_string_value(1);
@@ -194,9 +193,7 @@ pub(super) fn handle_set(
     };
     let (min, max) = (i64::from(i32::MIN), i64::from(i32::MAX));
     let Some(descriptor) = number.filter(|number| (min..=max).contains(number)) else {
-        // A marshalling raise, reported against the REXX package with no
-        // line: measured, oracle, `.Stream~new('HANDLE:x')` is `Error 88
-        // running REXX:`.
+        // A marshalling raise, reported at the sending clause.
         let found = interp.string_value_text(value)?;
         let mut raised =
             Raised::native_argument_outside_range(1, i128::from(min), i128::from(max), &found);
@@ -1798,9 +1795,7 @@ fn declared_only(args: &[Option<ObjRef>], arity: usize) -> Result<(), Failure> {
     Ok(())
 }
 
-/// A marshalling raise is reported against the REXX package with no line:
-/// measured, oracle, `.Stream~new('f.txt')~lineIn(.nil)` is `Error 88 running
-/// REXX:`.
+/// A marshalling raise is reported at the sending clause.
 fn marshalling(raised: &mut Raised) {
     raised.delivery.lineless = true;
     raised.delivery.internal_package = true;
