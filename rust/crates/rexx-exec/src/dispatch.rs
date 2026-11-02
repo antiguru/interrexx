@@ -90,6 +90,9 @@ pub(crate) mod stream;
 // `.Alarm`'s and `.Ticker`'s `LIBRARY REXX` entry points.
 mod time_support;
 
+// `.RexxQueue`'s entry points.
+pub(crate) mod queue_methods;
+
 // `EventSemaphore`'s and `MutexSemaphore`'s methods.
 mod semaphore;
 use semaphore::{

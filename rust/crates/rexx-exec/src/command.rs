@@ -845,6 +845,7 @@ impl Interp {
             context.begin(self)?;
         }
         self.hand_over_output();
+        self.share_session_queue();
         let switch_mode = self.child_switch_mode();
         let ends = [
             !io.is_some_and(IoContext::redirects_output),

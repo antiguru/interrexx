@@ -1957,46 +1957,24 @@ fn an_unknown_sent_by_hand_converts_its_argument_list() {
     );
 }
 
-/// An entry the oracle's own directory holds and this crate does not build
-/// is a refusal, not `.nil` -- and the refusal is per directory, because
-/// the oracle answers `.nil` for a `.local` name asked of `.environment`.
+/// `.local`'s `STDQUE` is the session queue on every read, as on the oracle
+/// (measured, rc 0, each line below).
 #[test]
-fn a_directory_entry_the_oracle_has_and_this_crate_does_not_is_loud() {
-    // **`.environment` has none left**, which is why `.local`'s is the
-    // only one asked about. Each read below answers or compares
-    // `STDQUE`'s item.
-    for source in [
-        "say .local['STDQUE']\n",
-        "say .context~package~findClass('stdque')\n",
-        "say .local~entry('stdque')\n",
-        "say .local~stdque\n",
-        "say .local~allItems~items\n",
-        "say .local~supplier~index\n",
-        "say .local~hasItem('x')\n",
-        "say .local~index('x')\n",
-        "say .local~removeItem('x')\n",
-        "say .local~remove('STDQUE')\n",
-        "say .local~removeEntry('stdque')\n",
-        "do n over .local~allItems; end\n",
-    ] {
-        let (code, stdout, stderr) = run_source(source);
-        assert_eq!(
-            (code, stdout.as_str(), stderr.as_str()),
-            (
-                120,
-                "",
-                "rexx-exec: directory entry \"STDQUE\" is not implemented (Phase 10 Rxapi)\n"
-            ),
-            "{source:?}"
-        );
-    }
+fn local_stdque_answers_the_session_queue_on_every_read() {
     assert_eq!(
-        run_source("say .stdque\n"),
+        run_source(
+            "say .local['STDQUE']\n\
+             say .context~package~findClass('stdque')\n\
+             say .local~entry('stdque')\n\
+             say .local~stdque\n\
+             say .local~allItems~items .local~index(.stdque) .stdque~class\n\
+             say .local~remove('STDQUE') .local~hasIndex('STDQUE')\n"
+        ),
         (
-            120,
-            String::new(),
-            "rexx-exec: environment symbol \".STDQUE\" is not implemented (Phase 10 Rxapi)\n"
-                .to_string()
+            0,
+            "SESSION\nSESSION\nSESSION\nSESSION\n10 STDQUE The RexxQueue class\nSESSION 0\n"
+                .to_string(),
+            String::new()
         )
     );
     // The adjacent successes, each the oracle's own answer: the index and

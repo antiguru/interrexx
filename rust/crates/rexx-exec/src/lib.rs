@@ -47,6 +47,9 @@ mod stem;
 mod queue;
 use queue::Queue;
 
+// The process's connection to the API service.
+mod rxapi_client;
+
 // What a command line supplies to a top-level program: the one argument string
 // it can carry, how a list of words becomes that string, and where `.input`
 // reads from.
@@ -2442,7 +2445,7 @@ impl Interp {
             output_route: None,
             collect_at: COLLECT_FLOOR,
             bytes_due: COLLECT_BYTES_FLOOR,
-            queue: Queue::new(),
+            queue: Queue::new(rxapi_client::session().inherited()),
             // Nothing to read, which is what makes it impossible for a unit
             // test to reach the harness's own standard input: only `execute`
             // ever replaces this, and only from an `Invocation` that named a

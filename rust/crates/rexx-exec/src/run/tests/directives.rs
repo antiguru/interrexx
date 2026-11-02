@@ -220,27 +220,19 @@ fn every_directive_this_crate_can_install_leaves_the_program_alone() {
     }
 }
 
-/// The refusals Task 21 leaves where the oracle answers, asserted here
-/// because nothing else can assert them.
+/// `defineMethods` over `.local` refuses an entry that is not a method source,
+/// as the oracle does (measured, rc 163).
 #[test]
-fn the_refusals_this_task_leaves_where_the_oracle_answers_still_fire() {
-    let cases: &[(&[u8], &str)] = &[(
-        b".K~defineMethods(.local)\n::class K\n",
-        "a directory whose entries this crate does not fill is not implemented (Phase 10 Rxapi)",
-    )];
-    for (source, message) in cases {
-        let outcome = routine_program(source);
-        assert_eq!(
-            outcome.exit_code,
-            crate::NOT_IMPLEMENTED_EXIT,
-            "{message}: exit code"
-        );
-        assert_eq!(
-            String::from_utf8_lossy(&outcome.stderr),
-            format!("rexx-exec: {message}\n"),
-            "{message}: stderr"
-        );
-    }
+fn define_methods_over_local_refuses_a_non_method_entry() {
+    let outcome = routine_program(b".K~defineMethods(.local)\n::class K\n");
+    assert_eq!(outcome.exit_code, 163);
+    assert!(
+        String::from_utf8_lossy(&outcome.stderr).contains(
+            "Error 93.974:  The method source argument must be a string, array, or method object."
+        ),
+        "{}",
+        String::from_utf8_lossy(&outcome.stderr)
+    );
 }
 
 /// Every directive form whose installation this crate **cannot** perform

@@ -290,55 +290,65 @@ static LIBRARY_REXX_METHODS: &[NativeExternal] = &[
         Arity::Fixed(0),
         super::stream::uninit,
     ),
-    deferred(
+    scoped(
         "rexx_create_queue",
         Family::Queue,
-        Owner::Phase10(Deferral::Rxapi),
+        Arity::Fixed(1),
+        super::queue_methods::create,
     ),
-    deferred(
+    scoped(
         "rexx_open_queue",
         Family::Queue,
-        Owner::Phase10(Deferral::Rxapi),
+        Arity::Fixed(1),
+        super::queue_methods::open,
     ),
-    deferred(
+    scoped(
         "rexx_queue_exists",
         Family::Queue,
-        Owner::Phase10(Deferral::Rxapi),
+        Arity::Fixed(1),
+        super::queue_methods::exists,
     ),
-    deferred(
+    scoped(
         "rexx_delete_queue",
         Family::Queue,
-        Owner::Phase10(Deferral::Rxapi),
+        Arity::Fixed(1),
+        super::queue_methods::delete,
     ),
-    deferred(
+    scoped(
         "rexx_query_queue",
         Family::Queue,
-        Owner::Phase10(Deferral::Rxapi),
+        Arity::Fixed(0),
+        super::queue_methods::query,
     ),
-    deferred(
+    scoped(
         "rexx_push_queue",
         Family::Queue,
-        Owner::Phase10(Deferral::Rxapi),
+        Arity::Fixed(1),
+        super::queue_methods::push,
     ),
-    deferred(
+    scoped(
         "rexx_queue_queue",
         Family::Queue,
-        Owner::Phase10(Deferral::Rxapi),
+        Arity::Fixed(1),
+        super::queue_methods::queue,
     ),
-    deferred(
+    scoped(
         "rexx_pull_queue",
         Family::Queue,
-        Owner::Phase10(Deferral::Rxapi),
+        Arity::Fixed(0),
+        super::queue_methods::pull,
     ),
-    deferred(
+    scoped(
         "rexx_linein_queue",
         Family::Queue,
-        Owner::Phase10(Deferral::Rxapi),
+        Arity::Fixed(0),
+        super::queue_methods::linein,
     ),
-    deferred(
+    scoped(
         "rexx_clear_queue",
         Family::Queue,
-        Owner::Phase10(Deferral::Rxapi),
+        Arity::Fixed(0),
+        super::queue_methods::clear,
     ),
     implemented(
         "file_separator",

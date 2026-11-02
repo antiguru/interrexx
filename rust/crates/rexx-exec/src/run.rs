@@ -2390,11 +2390,29 @@ impl Interp {
             None => Vec::new(),
         };
         self.trace_result(self.activity.clause_state.current_value_indent, &line);
-        match keyword {
-            QueueKeyword::Push => self.queue.push(line),
-            QueueKeyword::Queue => self.queue.queue(line),
-        }
-        Ok(())
+        let Some(queue) = self.local_route(b"STDQUE")? else {
+            match keyword {
+                QueueKeyword::Push => self.queue.push(line),
+                QueueKeyword::Queue => self.queue.queue(line),
+            }
+            return Ok(());
+        };
+        let message: &[u8] = match keyword {
+            QueueKeyword::Push => b"PUSH",
+            QueueKeyword::Queue => b"QUEUE",
+        };
+        let frame = self.roots.activity_mut().push_frame();
+        self.roots.activity_mut().push_temp(queue);
+        let line = self.text(&line);
+        self.roots.activity_mut().push_temp(line);
+        let caller = self.caller();
+        let sent = pinned!(
+            self,
+            crate::pinning::PinKind::PullWrapper,
+            self.send_message(queue, message, None, &[Some(line)], caller)
+        );
+        self.roots.activity_mut().pop_frame(frame);
+        sent.map(drop)
     }
 
     /// Assigns `value` to the variable, whole stem, or one verbatim-keyed

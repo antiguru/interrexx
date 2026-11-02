@@ -4,7 +4,7 @@
 
 use rustc_hash::FxHashMap;
 
-use rexx_core::{BehaviourId, Body, Deferral, NativeObject, ObjRef, Owner};
+use rexx_core::{BehaviourId, Body, NativeObject, ObjRef, Owner};
 
 use crate::dispatch::hash;
 use crate::plan::{ClassPackage, Package, ProgramId};
@@ -227,24 +227,6 @@ static ORACLE_LOCAL: &[&str] = &[
     "ERROR",
 ];
 
-/// Whether [`Interp::mint_local_directory`] builds this name: every
-/// [`ORACLE_LOCAL`] name but `STDQUE`, which is a `RexxQueue` over the
-/// external-queue API the RXAPI daemon serves.
-fn minted_local_name(name: &[u8]) -> bool {
-    matches!(
-        name,
-        b"STDIN"
-            | b"STDOUT"
-            | b"STDERR"
-            | b"INPUT"
-            | b"OUTPUT"
-            | b"ERROR"
-            | b"DEBUGINPUT"
-            | b"TRACEOUTPUT"
-            | b"SYSCARGS"
-    )
-}
-
 /// `.environment` and `.local`, and the classes the other reflection names are
 /// built from.
 pub(crate) struct EnvironmentModel {
@@ -253,7 +235,7 @@ pub(crate) struct EnvironmentModel {
     /// crate does not build, one per owner. A write replaces one in place,
     /// which keeps the oracle's order. The owner is `None` for the entries the
     /// library bootstrap fills, which no program reads unfilled.
-    owed: [(ObjRef, Option<Owner>); 2],
+    owed: [(ObjRef, Option<Owner>); 1],
     /// A reading of `.local`'s pool and of `.environment`'s, in that order,
     /// from an earlier lookup; one that is not current is read again.
     views: [Option<hash::StoreView>; 2],
@@ -374,10 +356,7 @@ impl Interp {
         // Every object below is rooted the instant it exists and before the
         // next allocation, which can collect.
         let frame = self.roots.activity_mut().push_frame();
-        let mut owed = [
-            (ObjRef::NIL, None),
-            (ObjRef::NIL, Some(Owner::Phase10(Deferral::Rxapi))),
-        ];
+        let mut owed: [(ObjRef, Option<Owner>); 1] = [(ObjRef::NIL, None)];
         for (at, (held, owner)) in owed.iter_mut().enumerate() {
             let rendered = match owner {
                 Some(owner) => format!("an entry owed by {}", owner.label()),
@@ -467,12 +446,7 @@ impl Interp {
         // before any program runs; `Interp::mint_local_directory` does the
         // same once the classes it needs exist.
         for name in ORACLE_LOCAL {
-            let owner = if minted_local_name(name.as_bytes()) {
-                owed[0].0
-            } else {
-                owed[1].0
-            };
-            self.put_interpreter_entry(local, name.as_bytes(), owner);
+            self.put_interpreter_entry(local, name.as_bytes(), owed[0].0);
         }
         self.roots.activity_mut().pop_frame(frame);
 
@@ -569,8 +543,7 @@ impl Interp {
     ///
     /// # Errors
     /// The condition a searched directory's `UNKNOWN` method raised, and
-    /// [`Loud`] for an entry this crate does not build, except `.local`'s
-    /// owed queue, which answers none.
+    /// [`Loud`] for an entry this crate does not build.
     pub(crate) fn class_in_program(
         &mut self,
         program: ProgramId,
@@ -604,9 +577,8 @@ impl Interp {
             &env_seam::Access::Resolve,
         )? {
             hash::DirectoryEntry::Found(found) => Ok(Some(found)),
-            // `.STDQUE` is owed with an owner. It is a queue, which no class search answers.
-            hash::DirectoryEntry::Owed(Some(_)) | hash::DirectoryEntry::Absent => Ok(None),
-            hash::DirectoryEntry::Owed(None) => Err(Loud::environment_entry(bare, None).into()),
+            hash::DirectoryEntry::Absent => Ok(None),
+            hash::DirectoryEntry::Owed(owner) => Err(Loud::environment_entry(bare, owner).into()),
         }
     }
 
@@ -901,7 +873,7 @@ impl Interp {
 
     /// The `.local` entries `LocalServer~initInstance` builds before any
     /// program runs (`CoreClasses.orx:987`): the command-line words, then the
-    /// streams and monitors, each stored as it is built. `STDQUE` stays owed.
+    /// streams and monitors, and the session queue, each stored as it is built.
     ///
     /// **Here rather than when the directory is built**, because the embedded
     /// bootstrap evaluates `.environment` while it installs
@@ -1027,6 +999,19 @@ impl Interp {
                 return;
             }
         }
+        let Some(queue_class) = self.rexx_package_class(b"REXXQUEUE") else {
+            return;
+        };
+        let session = self.text(b"SESSION");
+        self.roots.activity_mut().push_temp(session);
+        let caller = self.caller();
+        let Ok(Some(queue)) =
+            self.send_message(queue_class, b"NEW", None, &[Some(session)], caller)
+        else {
+            return;
+        };
+        self.roots.activity_mut().push_temp(queue);
+        let _ = self.set_directory_entry(EnvScope::Local, b"STDQUE", queue);
     }
 
     /// Writes `name` into `scope`'s directory, through the same seam a read
