@@ -79,6 +79,22 @@ pub struct Invocation {
     /// The register frame arena's block size.
     frame_block: FrameBlock,
     switch_mode: Option<SwitchMode>,
+    /// What an embedding's `RexxStart` passes in place of the command line's
+    /// one string: each argument, `None` an omitted one.
+    arguments: Option<Vec<Option<Vec<u8>>>>,
+    /// How the program is called, `PARSE SOURCE`'s second word.
+    start: StartType,
+    /// The initial `ADDRESS` environment, or `None` for the platform's.
+    address: Option<Vec<u8>>,
+}
+
+/// How an embedding calls a program (`RXCOMMAND`, `RXSUBROUTINE`,
+/// `RXFUNCTION`, `api/rexx.h`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StartType {
+    Command,
+    Subroutine,
+    Function,
 }
 
 /// Where a test sets `SLICE` itself in place of the timer (spec 2026-09-29
@@ -154,6 +170,31 @@ impl Invocation {
             default_options: None,
             frame_block: FrameBlock::DEFAULT,
             switch_mode: None,
+            arguments: None,
+            start: StartType::Command,
+            address: None,
+        }
+    }
+
+    /// The same invocation, passing `arguments` (`None` an omitted one), as
+    /// `RexxStart` does, in place of one argument string.
+    pub fn with_arguments(self, arguments: Vec<Option<Vec<u8>>>) -> Invocation {
+        Invocation {
+            arguments: Some(arguments),
+            ..self
+        }
+    }
+
+    /// The same invocation, calling the program as `start` says.
+    pub fn with_start(self, start: StartType) -> Invocation {
+        Invocation { start, ..self }
+    }
+
+    /// The same invocation, with `address` the initial `ADDRESS` environment.
+    pub fn with_address(self, address: Vec<u8>) -> Invocation {
+        Invocation {
+            address: Some(address),
+            ..self
         }
     }
 
@@ -278,6 +319,9 @@ impl Invocation {
             default_options: self.default_options,
             frame_block: self.frame_block,
             switch_mode: self.switch_mode,
+            arguments: self.arguments,
+            start: self.start,
+            address: self.address,
         }
     }
 }
@@ -295,6 +339,9 @@ pub(crate) struct InvocationParts {
     pub(crate) words: Vec<Vec<u8>>,
     pub(crate) words_base: Option<usize>,
     pub(crate) default_options: Option<(Vec<u8>, i64)>,
+    pub(crate) arguments: Option<Vec<Option<Vec<u8>>>>,
+    pub(crate) start: StartType,
+    pub(crate) address: Option<Vec<u8>>,
     pub(crate) frame_block: FrameBlock,
     pub(crate) switch_mode: Option<SwitchMode>,
 }

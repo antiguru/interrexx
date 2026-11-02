@@ -94,9 +94,10 @@ fn library_path(with_testbinaries: bool) -> OsString {
 
 /// `rexx` running `arguments` from `cwd` against the service in `api`, with `library_path`.
 fn rexx(arguments: &[&str], cwd: &Path, api: &Path, library_path: OsString) -> Command {
-    let path = std::env::join_paths(std::iter::once(bin_dir()).chain(std::env::split_paths(
-        &std::env::var_os("PATH").unwrap_or_default(),
-    )))
+    // The test drivers (`rexxinstance`) after `rexx`'s own directory.
+    let path = std::env::join_paths([bin_dir(), testbinaries().to_path_buf()].into_iter().chain(
+        std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()),
+    ))
     .expect("a PATH");
     let mut command = Command::new("timeout");
     command
@@ -427,4 +428,54 @@ fn the_c_api_and_the_program_share_the_session_queue() {
         stdout,
         "count 0 1\npull 0 from rexx\nadd 0 1\nline from c\n"
     );
+}
+
+/// `RexxStart` in process (`RexxStart`, an extension's native method calling it) and from the
+/// `rexxinstance` driver (`ProcessRexxStart`): arguments, an omitted one, the call type, the
+/// initial environment, a classic subcommand handler using the variable pool, and a syntax
+/// error's negated number. Only the system-exit tests fail; exits are not implemented.
+#[test]
+fn rexx_start_runs_programs_in_process_and_from_a_driver() {
+    for group in ["RexxStart", "ProcessRexxStart"] {
+        let outcome = run_group("API/oo", group, library_path(true));
+        assert_pass(
+            &outcome,
+            &[
+                "TESTCALLRETURN",
+                "TESTCALLTYPE",
+                "TESTINITIALADDRESS",
+                "TESTCLASSICSUBCOMHANDLER",
+                "TESTSYNTAXERROR",
+            ],
+        );
+        let others: Vec<&String> = outcome
+            .failed
+            .iter()
+            .filter(|test| !test.contains("EXIT"))
+            .collect();
+        assert!(others.is_empty(), "{group}: {others:?}");
+    }
+}
+
+/// Review Focus 2: `RexxStart` called twice in one process, then from two activities at once,
+/// each in an interpreter of its own. Matches the oracle.
+#[test]
+fn rexx_start_runs_twice_and_from_two_activities_at_once() {
+    let tester =
+        std::fs::read_to_string(repository().join("ootest/ooRexx/API/oo/INVOCATIONTester.cls"))
+            .expect("INVOCATIONTester.cls");
+    let stdout = run_program(
+        "rexx-start-twice",
+        "say .InvocationTester~new~callRexxStart('calc.rex', .array~of(5))\n\
+         say .InvocationTester~new~callRexxStart('calc.rex', .array~of(6))\n\
+         a = .InvocationTester~new~start('callRexxStart', 'calc.rex', .array~of(3))\n\
+         b = .InvocationTester~new~start('callRexxStart', 'calc.rex', .array~of(4))\n\
+         say a~result b~result\n\
+         ::requires 'INVOCATIONTester.cls'\n",
+        &[
+            ("calc.rex", "do 100000; end\nreturn arg(1) * 2 arg()\n"),
+            ("INVOCATIONTester.cls", &tester),
+        ],
+    );
+    assert_eq!(stdout, "10 1\n12 1\n6 1 8 1\n");
 }

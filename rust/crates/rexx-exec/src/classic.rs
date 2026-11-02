@@ -110,8 +110,8 @@ impl Interp {
         if redirected {
             return Err(Raised::redirection_not_supported(environment).into());
         }
-        let (called, flags) = entry.call_subcom(command);
-        self.sync_api_changes();
+        let (called, flags) =
+            self.run_classic_handler(environment, &[], || Some(entry.call_subcom(command)))?;
         let text = match (called.rc, called.value) {
             (0, Some(value)) => value,
             (0, None) => b"0".to_vec(),

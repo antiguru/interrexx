@@ -52,12 +52,13 @@ mod rxapi_client;
 pub use rxapi_client::use_api_service;
 pub mod capi;
 mod classic;
+pub mod embedding;
 
 // What a command line supplies to a top-level program: the one argument string
 // it can carry, how a list of words becomes that string, and where `.input`
 // reads from.
 mod invocation;
-pub use invocation::{Invocation, ProgramInput, Sinks, SwitchMode, join_command_line};
+pub use invocation::{Invocation, ProgramInput, Sinks, StartType, SwitchMode, join_command_line};
 pub use rexx_core::FrameBlock;
 pub use sim::{
     ClockOrigin, Decision, Knobs, Order, Policy, Replay, SIM_CHILD_ENV, SimConfig, SimReport,
@@ -364,6 +365,11 @@ const EXIT_VALUE_ROOT: &str = "the program's exit value";
 #[derive(Debug)]
 pub struct Outcome {
     pub exit_code: i32,
+    /// The string the program returned or exited with, `None` for none.
+    pub result: Option<Vec<u8>>,
+    /// The error number of the condition the program ended on untrapped, or
+    /// `None` where it ended otherwise.
+    pub error: Option<i32>,
     pub stdout: Vec<u8>,
     pub stderr: Vec<u8>,
     /// What the run cost in stack. Task 11 reads this to set the
@@ -2484,10 +2490,34 @@ impl Interp {
 
     /// Loads `program`, runs its main body in a fresh activation, and tears
     /// the activation down again.
+    #[cfg(test)]
     fn run(&mut self, program: Program) -> Result<Option<ObjRef>, Failure> {
+        self.run_as_started(program, StartType::Command, None)
+    }
+
+    /// [`Interp::run`] as an embedding starts it: called as `start` says,
+    /// with `address` the initial environment.
+    fn run_as_started(
+        &mut self,
+        program: Program,
+        start: StartType,
+        address: Option<Vec<u8>>,
+    ) -> Result<Option<ObjRef>, Failure> {
         let program = Rc::new(program);
         let program_id = self.load_program(Rc::clone(&program));
-        self.run_loaded(program, program_id, CallType::Command, None, None)
+        let call_type = match start {
+            StartType::Command => CallType::Command,
+            StartType::Subroutine => CallType::Subroutine,
+            StartType::Function => CallType::Function,
+        };
+        let address = address.map(|name| {
+            let name: Rc<[u8]> = Rc::from(name);
+            crate::activation::AddressState {
+                current: Some(Rc::clone(&name)),
+                alternate: Some(name),
+            }
+        });
+        self.run_loaded(program, program_id, call_type, address, None)
     }
 
     /// Loads `program` and translates its directives, running none of its
@@ -4102,6 +4132,8 @@ fn parse_failure_outcome(path: &[u8], rejected: &rexx_parse::Rejected) -> Outcom
     }];
     Outcome {
         exit_code: raised.exit_code(),
+        result: None,
+        error: Some(i32::from(raised.number)),
         stdout: Vec::new(),
         stderr: raised.report(&ClauseSite {
             path,
@@ -4125,9 +4157,12 @@ fn parse_failure_outcome(path: &[u8], rejected: &rexx_parse::Rejected) -> Outcom
 #[cold]
 #[inline(never)]
 fn unrestorable_outcome(raised: Raised) -> Outcome {
+    let number = i32::from(raised.number);
     let (stderr, exit_code) = launcher::positionless(raised);
     Outcome {
         exit_code,
+        result: None,
+        error: Some(number),
         stdout: Vec::new(),
         stderr,
         stack: StackSpan::default(),
@@ -4220,6 +4255,7 @@ fn execute_as(
         .activity_mut()
         .set_frame_block(parts.frame_block);
     let (argument, deadline, switch_mode) = (parts.argument, parts.deadline, parts.switch_mode);
+    let (arguments, start, address) = (parts.arguments, parts.start, parts.address);
     interp.input = Input::new(parts.input);
     interp.standard_transient = parts.standard_transient;
     if let Some(sinks) = &parts.sinks {
@@ -4257,7 +4293,18 @@ fn execute_as(
     // demand -- and running it first leaves nothing of this program's to keep
     // reachable across the allocation it does.
     let result = interp.bootstrap_library().and_then(|()| {
-        if let Some(argument) = argument {
+        if let Some(arguments) = &arguments {
+            let mut values = Vec::with_capacity(arguments.len());
+            for argument in arguments {
+                values.push(argument.as_deref().map(|bytes| {
+                    let value = interp.text(bytes);
+                    // Rooted as the one argument below is.
+                    interp.roots.activity_mut().push_temp(value);
+                    value
+                }));
+            }
+            interp.activity.call_context.arguments = Rc::from(values);
+        } else if let Some(argument) = argument {
             let value = interp.text(&argument);
             // Rooted with a `push_temp` taken before `run`, which is what makes it
             // outlive every clause: `Op::Clause`'s region truncates the
@@ -4282,7 +4329,9 @@ fn execute_as(
         match (entry, program) {
             (_, Err(rejected)) => Err(interp.raise_parse_failure(&rejected, None)),
             (Entry::Translate, Ok(program)) => interp.translate(program),
-            (Entry::Run | Entry::CollectEveryAlloc, Ok(program)) => interp.run(program),
+            (Entry::Run | Entry::CollectEveryAlloc, Ok(program)) => {
+                interp.run_as_started(program, start, address)
+            }
         }
     });
     // The whole echo stack, innermost first: the levels `seal_site_level`
@@ -4297,6 +4346,16 @@ fn execute_as(
     // as a whole value, and every other call above this one only reads or
     // takes a single field, never the whole struct.
     let refused_main = matches!(result, Err(Failure::Loud(_) | Failure::Slice));
+    let error = match &result {
+        Err(Failure::Raised(raised)) => Some(i32::from(raised.number)),
+        _ => None,
+    };
+    let returned = match &result {
+        Ok(Some(value)) | Err(Failure::Exited(Some(value))) => {
+            interp.string_value_text(*value).ok()
+        }
+        _ => None,
+    };
     let mut exit_code = match result {
         // `Failure::Exited` is not a failure -- it is `EXIT` (or falling off
         // the routine's own end) reached through `ExprKind::Call`'s
@@ -4403,6 +4462,8 @@ fn execute_as(
 
     let outcome = Outcome {
         exit_code,
+        result: returned,
+        error,
         stdout: std::mem::take(&mut interp.out),
         stderr: std::mem::take(&mut interp.trace),
         stack,

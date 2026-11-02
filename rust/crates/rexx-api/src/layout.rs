@@ -182,6 +182,14 @@ pub struct CONSTRXSTRING {
     pub strptr: *const c_char,
 }
 
+/// `RXSYSEXIT` (`api/rexx.h:198-201`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXSYSEXIT {
+    pub sysexit_name: *const c_char,
+    pub sysexit_code: c_int,
+}
+
 /// `SHVBLOCK` (`api/rexx.h:212-220`).
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
