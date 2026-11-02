@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 /// The ooTest revision every absolute literal below was measured at. Named in
 /// each failure message so a red count is diagnosable as `svn up` rather than
 /// as a regression in this repository.
-const OOTEST_REVISION: &str = "r13178";
+const OOTEST_REVISION: &str = "r13347";
 
 /// What a red absolute-literal test most likely means, appended to every such
 /// failure.
@@ -78,7 +78,7 @@ const PER_GROUP: &[(&str, usize, usize, usize)] = &[
     ("D2C", 50, 50, 0),
     ("D2X", 57, 57, 0),
     ("DATATYPE", 9, 6, 0),
-    ("DATE", 763, 716, 0),
+    ("DATE", 768, 720, 0),
     ("DELSTR", 87, 79, 0),
     ("DELWORD", 69, 65, 0),
     ("DIGITS", 20, 5, 0),
@@ -99,7 +99,7 @@ const PER_GROUP: &[(&str, usize, usize, usize)] = &[
     ("MAX", 16, 16, 0),
     ("MIN", 12, 12, 0),
     ("OVERLAY", 62, 62, 0),
-    ("POS", 93, 69, 0),
+    ("POS", 70, 44, 0),
     ("QUALIFY", 21, 2, 0),
     ("QUEUED", 5, 1, 0),
     ("RANDOM", 3, 0, 0),
@@ -113,12 +113,12 @@ const PER_GROUP: &[(&str, usize, usize, usize)] = &[
     ("STRIP", 110, 83, 0),
     ("SUBSTR", 64, 64, 0),
     ("SUBWORD", 130, 122, 0),
-    ("SYMBOL", 28, 28, 0),
-    ("TIME", 217, 122, 0),
+    ("SYMBOL", 46, 46, 0),
+    ("TIME", 262, 137, 0),
     ("TRANSLATE", 27, 27, 0),
     ("TRUNC", 39, 39, 0),
     ("UPPER", 5, 5, 0),
-    ("VALUE", 67, 40, 0),
+    ("VALUE", 69, 42, 0),
     ("VAR", 0, 0, 0),
     ("VERIFY", 86, 84, 0),
     ("WORD", 60, 56, 0),
@@ -129,7 +129,7 @@ const PER_GROUP: &[(&str, usize, usize, usize)] = &[
     ("X2B", 49, 49, 0),
     ("X2C", 31, 31, 0),
     ("X2D", 66, 66, 0),
-    ("XRANGE", 83, 51, 0),
+    ("XRANGE", 87, 51, 0),
 ];
 
 /// Conservation, per group and in total. The property the whole extractor is
@@ -175,7 +175,7 @@ fn base_bif_yields_the_measured_counts() {
     let raises: usize = measured.iter().map(|r| r.3).sum();
     assert_eq!(
         (calls, rows, raises, calls - rows),
-        (6293, 4999, 186, 1294),
+        (6344, 5013, 186, 1331),
         "the totals moved.{}",
         provenance()
     );
@@ -188,20 +188,20 @@ fn the_drop_reasons_account_for_every_call_outside_the_population() {
         (DropReason::OutsideTestMethod, 2, 2),
         (DropReason::RoutineBody, 1, 5),
         (DropReason::InsideComment, 3, 25),
-        (DropReason::ContinuedLine, 0, 0),
+        (DropReason::ContinuedLine, 2, 2),
         (DropReason::NotAClause, 0, 0),
         (DropReason::UnparsedCallShape, 0, 0),
         (DropReason::ExpectedRaise, 189, 195),
-        (DropReason::MessageSend, 101, 418),
-        (DropReason::UnsupportedStatement, 112, 467),
+        (DropReason::MessageSend, 103, 420),
+        (DropReason::UnsupportedStatement, 121, 487),
         (DropReason::NumericNotConstant, 9, 14),
         (DropReason::UnresolvedFixture, 121, 121),
         (DropReason::InFileRoutine, 1, 1),
-        (DropReason::NoValueUnderOptions, 10, 28),
+        (DropReason::NoValueUnderOptions, 14, 38),
         (DropReason::OtherExpectation, 0, 0),
         (DropReason::NonUtf8Source, 6, 11),
         (DropReason::SideEffectingAssertion, 1, 6),
-        (DropReason::ClockDependent, 1, 1),
+        (DropReason::ClockDependent, 4, 4),
     ];
     assert_eq!(
         EXPECTED.len(),
@@ -236,7 +236,7 @@ fn the_drop_reasons_account_for_every_call_outside_the_population() {
         provenance()
     );
     let dropped: usize = measured.values().map(|v| v.1).sum();
-    assert_eq!(dropped, 1294, "the drop total moved.{}", provenance());
+    assert_eq!(dropped, 1331, "the drop total moved.{}", provenance());
 }
 
 /// A real lower bound on the rows side, so that conservation cannot be

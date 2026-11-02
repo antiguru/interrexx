@@ -3,7 +3,7 @@
 # `test type NAME` rows are the ones `suite_rows::derived_rows` derives from
 # the group files, and `the_row_files_hold_only_checked_rows`
 # (`tests/suite.rs`) asserts each is present.
-# ootest revision 13178
+# ootest revision 13347
 base/rexxutil/platform/windows/SysBootDrive	TESTBOOTDRIVE	NotRun	restrictOS line 43
 base/rexxutil/platform/windows/SysBootDrive	TESTBOOTDRIVE2	NotRun	restrictOS line 43
 base/rexxutil/platform/windows/SysCurPos	TESTCURPOS	NotRun	restrictOS line 43

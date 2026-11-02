@@ -2,7 +2,7 @@
 # would actually make it pass. One `GROUP::METHOD<TAB>unblocked_by` per line;
 # lines starting with # are comments.
 #
-# Measured at ooTest r13178. This is the committed set
+# Measured at ooTest r13347. This is the committed set
 # `keyword_assertions.rs` polices in both directions: a body here that starts
 # passing is as red as a body not here that starts failing, so an improvement
 # shows up in a diff rather than being quietly absorbed.

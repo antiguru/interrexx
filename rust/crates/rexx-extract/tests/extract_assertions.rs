@@ -436,8 +436,8 @@ fn base_expressions_yields_the_measured_row_and_blocked_counts() {
         total_dropped += out.blocked.iter().map(|b| b.dropped).sum::<usize>();
         rows_by_group.insert(group_name, out.rows.len());
     }
-    assert_eq!(total_rows, 4259);
-    assert_eq!(total_dropped, 10);
+    assert_eq!(total_rows, 4267);
+    assert_eq!(total_dropped, 13);
     assert_eq!(rows_by_group["PRECEDENCE"], 1226);
     assert_eq!(rows_by_group["CONCATENATION"], 388);
     assert_eq!(rows_by_group["MULTIPLICATION"], 1048);
@@ -482,7 +482,7 @@ fn base_expressions_expect_syntax_conversion_counts() {
         total_raising += raising;
         raising_by_group.insert(group_name, raising);
     }
-    assert_eq!(total_rows, 4259, "conversion must not change the row count");
+    assert_eq!(total_rows, 4267, "conversion must not change the row count");
     assert_eq!(total_raising, 184);
     assert_eq!(raising_by_group["DIVISION"], 60);
     assert_eq!(raising_by_group["EXPONENT"], 6);

@@ -127,6 +127,10 @@ pub const CONSTRUCTION: &[(&str, &str)] = &[
     ("CLASS", "93.901"),
     ("COLLECTION", "new"),
     ("COLUMNCOMPARATOR", "93.901"),
+    ("COMMANDCONTEXT", "93.901"),
+    ("COMMANDHANDLER", "new"),
+    ("COMMANDINPUT", "93.901"),
+    ("COMMANDOUTPUT", "93.901"),
     ("COMPARABLE", "new"),
     ("COMPARATOR", "new"),
     ("DATETIME", "new"),
@@ -146,6 +150,7 @@ pub const CONSTRUCTION: &[(&str, &str)] = &[
     ("MONITOR", "new"),
     ("MUTABLEBUFFER", "new"),
     ("MUTEXSEMAPHORE", "new"),
+    ("NATIVECOMMANDHANDLER", "97.2"),
     ("NUMERICCOMPARATOR", "new"),
     ("OBJECT", "new"),
     ("ORDERABLE", "new"),
@@ -268,36 +273,36 @@ pub const UNCONSTRUCTIBLE: &[(&str, usize, usize, &str, Status)] = &[
     ),
     (
         "Pointer",
-        6910,
-        6910,
+        7844,
+        7844,
         "can only be created using the native code application programming interfaces.",
         Status::Unreachable,
     ),
     (
         "RexxContext",
-        7545,
-        7545,
+        8479,
+        8479,
         "They cannot be directly created by the user.",
         Status::NotCovered,
     ),
     (
         "RexxInfo",
-        7942,
-        7942,
+        8876,
+        8876,
         "other instances cannot be created or copied.",
         Status::NotCovered,
     ),
     (
         "StackFrame",
-        9407,
-        9407,
+        10341,
+        10341,
         "StackFrame instances cannot be directly created by the user.",
         Status::NotCovered,
     ),
     (
         "VariableReference",
-        12556,
-        12557,
+        13490,
+        13491,
         "Calling the new method to create a VariableReference instance is not allowed.",
         Status::NotCovered,
     ),
@@ -316,6 +321,10 @@ const OPERATOR_PLACEHOLDERS: &[(&str, &str)] = &[("(abuttal)", ""), ("(blank)", 
 /// methods of its own. Both classes carrying it still receive method rows,
 /// from the mixin sets their tables `xi:include`.
 const NO_OWN_METHODS: &str = "(no class or instance methods)";
+
+/// Classes whose table lists its methods as plain `<methodname>` text, with
+/// no section for a row to cite.
+const UNLINKED_METHOD_TABLES: &[&str] = &["clsCommandInput", "clsCommandOutput"];
 
 /// One book, comment-blanked, with its section index.
 pub struct Book {
@@ -501,7 +510,9 @@ pub fn method_rows(
             listed.extend(listed_members(text, &href, 0));
         }
         assert!(
-            !listed.is_empty() || head.contains(NO_OWN_METHODS),
+            !listed.is_empty()
+                || head.contains(NO_OWN_METHODS)
+                || UNLINKED_METHOD_TABLES.contains(&id.as_str()),
             "{}:{} -- {id}'s class table names no methods and does not say {NO_OWN_METHODS:?}",
             book.name,
             section.open_line
@@ -756,12 +767,12 @@ pub fn class_methods_header(stamp: &str) -> Vec<String> {
         "the override cites the member rather than the section.".into(),
         String::new(),
         "clsDateTime's constructor entry is the worked case: the member at".into(),
-        "utilityclasses.xml:1281 displays `new (Inherited Class Method)` and".into(),
+        "utilityclasses.xml:2076 displays `new (Inherited Class Method)` and".into(),
         "points at mthDateTimeInit, whose title is `init`. So `DateTime init`".into(),
-        "cites the section at :1775 and `DateTime new` cites the member at".into(),
-        ":1281. Measured, .DateTime~hasMethod(\"NEW\") is 1 with the instance arm".into(),
+        "cites the section at :2570 and `DateTime new` cites the member at".into(),
+        ":2076. Measured, .DateTime~hasMethod(\"NEW\") is 1 with the instance arm".into(),
         "0, and .DateTime~hasMethod(\"INIT\") and .DateTime~new~hasMethod(\"INIT\")".into(),
-        "are both 1. clsTimeSpan is the same shape at :10492.".into(),
+        "are both 1. clsTimeSpan is the same shape at :11426.".into(),
         String::new(),
         "An xrefstyle that neither renders the title nor is one the extractor".into(),
         "has decided about is a hard error, not a fallback to the title: the".into(),

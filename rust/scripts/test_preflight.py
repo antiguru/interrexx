@@ -39,8 +39,8 @@ def main(argv):
         print("Run from the checkout root:\n"
               "  memcap 8G cmake -S . -B build -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release\n"
               "  memcap 8G cmake --build build --target rxregexp rxmath orxmethod orxfunction rxsock -j4\n"
-              "  svn checkout -r 13178 https://svn.code.sf.net/p/oorexx/code-0/test/trunk ootest\n"
-              "  svn checkout -r 13198 https://svn.code.sf.net/p/oorexx/code-0/docs/trunk/rexxref oodocs/rexxref\n"
+              "  svn checkout -r 13347 https://svn.code.sf.net/p/oorexx/code-0/test/trunk ootest\n"
+              "  svn checkout -r 13347 https://svn.code.sf.net/p/oorexx/code-0/docs/trunk/rexxref oodocs/rexxref\n"
               "Keep these checkout-local libraries separate from the read-only oracle build.\n"
               "Then rerun: python3 rust/scripts/test_preflight.py", file=sys.stderr)
         return 1
