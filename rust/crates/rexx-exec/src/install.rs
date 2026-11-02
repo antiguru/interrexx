@@ -5,7 +5,7 @@ use crate::activation::{Activation, CallType, MethodIdentity};
 use crate::clause::SavedClauseState;
 use crate::directives::{
     AnnotatedSite, FileClasses, annotation_target, attribute_dictionary_keys, class_install_order,
-    class_members, directive_clause, directive_gap, member_dictionary_keys, method_dictionary_keys,
+    class_members, directive_clause, member_dictionary_keys, method_dictionary_keys,
     unresolved_external,
 };
 use crate::error::{Failure, FailureSite, Raised};
@@ -64,7 +64,7 @@ impl Interp {
         // targets, the `::OPTIONS` settings and the `EXTERNAL` libraries. The
         // parser has already refused what the declarations alone decide
         // (duplicate names, a misplaced `::CONSTANT` expression, a missing
-        // `::ANNOTATE` target). See the table above `directive_gap` for the
+        // `::ANNOTATE` target). See the table in `directives.rs` for the
         // order this walk is the first of, and for every probe placing a form
         // in it.
         // The class a member directive's keys are claimed against, and the
@@ -323,7 +323,7 @@ impl Interp {
         // A `::REQUIRES` file is opened after the cycle check and before any
         // class is created -- measured, 43.901 against a file whose first
         // directive is a `::CLASS` that fails to resolve, and 98.911 against
-        // one whose classes form a cycle. See `directive_gap`.
+        // one whose classes form a cycle. See the table in `directives.rs`.
         self.load_required_packages(id, program)?;
 
         // **The failing-`::CONSTANT` blame target is the class the oracle
@@ -403,16 +403,6 @@ impl Interp {
                     &[environment::Annotated::InternalRoutine(index)],
                     &[(name, value)],
                 );
-            }
-        }
-
-        // The gap forms whose stage is after the classes are created; see
-        // the table above `directive_gap` for the probe behind each. Measured, `::options digits
-        // 12` beside a failing `::CLASS` is the oracle's `::CLASS` line, so
-        // this walk cannot move ahead of the pass above.
-        for directive in &program.directives {
-            if let Some(loud) = directive_gap(&directive.kind) {
-                return Err(loud.into());
             }
         }
 
@@ -1304,9 +1294,6 @@ impl Interp {
         attached: &[usize],
     ) -> Result<ObjRef, Failure> {
         let directive = &program.directives[index];
-        if let Some(loud) = directive_gap(&directive.kind) {
-            return Err(loud.into());
-        }
         let DirectiveKind::Class(class) = &directive.kind else {
             return Err(Loud::missing_body().into());
         };
@@ -2392,8 +2379,13 @@ impl Interp {
             return Ok((Vec::new(), None));
         }
         let refuse = |failure: Failure, echoes| ExternalRefusal { failure, echoes };
-        if let Some(loud) = directive_gap(kind) {
-            return Err(refuse(loud.into(), false));
+        if let DirectiveKind::Routine(routine) = kind
+            && let Some(spec) = routine.external.as_ref().filter(|spec| spec.registered)
+        {
+            let entry = spec.entry.as_deref().unwrap_or(&routine.name);
+            crate::builtin::registrations::register_function(&routine.name, &spec.library, entry);
+            let raised = Raised::external_routine_not_found(entry);
+            return Err(refuse(raised.into(), true));
         }
         if let Some(missing) = unresolved_external(kind) {
             let raised = Raised::external_method_not_found(&missing);
@@ -2421,7 +2413,7 @@ impl Interp {
     ///
     /// Answers the procedures it bound, and none for a directive whose
     /// `EXTERNAL` names the `REXX` package or none at all; those are
-    /// [`unresolved_external`]'s and [`directive_gap`]'s.
+    /// [`unresolved_external`]'s and the `REGISTERED` spelling's.
     fn resolve_directive_library(
         &mut self,
         kind: &DirectiveKind,

@@ -1056,26 +1056,6 @@ fn an_unresolvable_name_raises_43_1() {
     assert_eq!(outcome.stdout, b"");
 }
 
-/// The neighbouring case the one above cannot pin on its own: a builtin
-/// Phase 4 excludes **outright** is not "resolves to nothing", and must
-/// stay loud rather than joining it at 43.1. The oracle answers
-/// `RXQUEUE`, so a condition here would let a program expecting one pass
-/// against a gap.
-#[test]
-fn a_wholly_excluded_builtin_stays_loud_rather_than_raising_43_1() {
-    let outcome = crate::run_program(
-        "call-expr-excluded.rex",
-        b"say rxqueue('G')\n".to_vec(),
-        crate::Invocation::none(),
-    );
-    assert_eq!(outcome.exit_code, crate::NOT_IMPLEMENTED_EXIT);
-    assert_eq!(
-        String::from_utf8_lossy(&outcome.stderr),
-        "rexx-exec: routine \"RXQUEUE\" is not implemented (Phase 10 Rxapi)\n",
-        "the refusal names the phase the exclusion table gives it"
-    );
-}
-
 /// **`CallTarget::Literal` never searches the label table**, symmetric
 /// with `CALL "SUB"` (Task 3). Measured independently on the oracle in a
 /// clean directory (never the scratchpad root, which sits on the

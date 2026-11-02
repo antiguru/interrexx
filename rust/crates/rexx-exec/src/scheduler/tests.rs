@@ -705,7 +705,7 @@ fn a_refusal_after_main_ended_in_a_nested_round_is_reported() {
              ::method init\n  expose started done\n  started = 0\n  done = 0\n\
              ::method spin unguarded\n  self~started = 1\n  \
              interpret \"do while \\self~done; end\"\n  say 'spin ended'\n  \
-             x = rxqueue('G')\n  say 'spin after' x\n"
+             x = .CommandHandler~environments\n  say 'spin after' x\n"
         )
     };
     for (end, expected) in [
@@ -722,7 +722,8 @@ fn a_refusal_after_main_ended_in_a_nested_round_is_reported() {
             assert_eq!(outcome.exit_code, 120, "{end}: {}", stderr(&outcome));
             assert_eq!(
                 stderr(&outcome),
-                "rexx-exec: routine \"RXQUEUE\" is not implemented (Phase 10 Rxapi)\n"
+                "rexx-exec: the LIBRARY REXX entry point \"cmdhandler_environments\" is not \
+                 implemented (Phase 10 Embedding)\n"
             );
             let printed = stdout(&outcome);
             let mut lines: Vec<&str> = printed.lines().collect();

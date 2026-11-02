@@ -2116,23 +2116,17 @@ fn a_conversion_this_phase_does_not_model_is_loud_where_the_ones_it_models_answe
     }
 }
 
-/// **A `reqstr` context whose instruction this phase refuses stays
-/// refused**, which is the honest reading of the section's own list: it
-/// bounds the row set, and a row whose instruction is another phase's is
-/// outside it.
+/// **A `reqstr` command reaches a `RexxQueue` redirection target**: the command
+/// is the class's `makeString`, and its output lines are queued in order.
 #[test]
-fn a_reqstr_context_whose_instruction_is_another_phases_is_still_loud() {
+fn a_reqstr_command_writes_to_a_rexxqueue_target() {
     assert_eq!(
         run_source(
-            "address 'SYSTEM' .K with output using (.rexxqueue~new)\n::class K\n\
-             ::method makeString class\n  return 'true'\n"
+            "q = .rexxqueue~new\naddress 'SYSTEM' .K with output using (q)\n\
+             say rc q~queued q~pull\n::class K\n\
+             ::method makeString class\n  return 'echo hi; echo there'\n"
         ),
-        (
-            120,
-            String::new(),
-            "rexx-exec: an ADDRESS WITH RexxQueue redirection is not implemented (Phase 10 Rxapi)\n"
-                .to_string()
-        )
+        (0, "0 2 hi\n".to_string(), String::new())
     );
 }
 

@@ -56,17 +56,23 @@ pub(crate) fn rxfuncadd(
         LibraryLoad::Raised(failure) => return Err(failure),
         LibraryLoad::Missing | LibraryLoad::Version => {}
     }
+    register_function(&upper, &module, &procedure);
+    Ok(boolean(interp, true))
+}
+
+/// Registers `name` as `library`'s `procedure` with the service, whatever the outcome: the
+/// function then resolves only through a classic handler.
+pub(crate) fn register_function(name: &[u8], library: &[u8], procedure: &[u8]) {
     if let Ok(client) = rxapi_client::client() {
         let _ = client.call(Request::Register {
             registry: Registry::Function,
-            name: upper,
-            library: module,
-            procedure,
+            name: name.to_ascii_uppercase(),
+            library: library.to_vec(),
+            procedure: procedure.to_vec(),
             user_area: None,
             owner_only: true,
         });
     }
-    Ok(boolean(interp, true))
 }
 
 /// `RXFUNCQUERY(name)`: 0 where the function is loaded here or registered, 1 otherwise.

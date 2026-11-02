@@ -302,32 +302,30 @@ fn rows() -> Vec<Row> {
     rows
 }
 
-/// Whether `program` names `REGISTERED`, in any case: this crate refuses
-/// `EXTERNAL "REGISTERED"` with the `Rxapi` reason where the oracle's parser
-/// answers through rxapi.
-fn names_registered(program: &[u8]) -> bool {
-    program
-        .windows(b"REGISTERED".len())
-        .any(|window| window.eq_ignore_ascii_case(b"REGISTERED"))
-}
-
-/// Whether `row` is exempt from the agreement: an `install` row whose
-/// program names `REGISTERED`, which the oracle's parser resolves through
-/// rxapi. A translation row naming it is checked like any other.
-fn exempt(row: &Row) -> bool {
-    row.class == "install" && names_registered(&row.program)
-}
-
 /// Runs this crate's `rexxc FILE -s` on `program`, from a fresh directory
-/// below `root`.
+/// below `root`. A `REGISTERED` directive registers its function with the
+/// API service in `root`'s own service directory, which [`stop_service`]
+/// ends.
 fn compile(root: &Path, name: &str, program: &[u8]) -> std::process::Output {
     let dir = root.join(name);
     std::fs::create_dir_all(&dir).expect("a row directory");
     std::fs::write(dir.join("p.rex"), program).expect("the program");
     command(Path::new(env!("CARGO_BIN_EXE_rexxc")), &dir, false)
         .args(["p.rex", "-s"])
+        .env("REXX_API_DIR", root.join("api"))
         .output()
         .expect("rexxc starts")
+}
+
+/// Stops the API service [`compile`] may have started below `root`.
+fn stop_service(root: &Path) {
+    let rxapi = Path::new(env!("CARGO_BIN_EXE_rexxc")).with_file_name("rxapi");
+    if rxapi.is_file() {
+        let _ = Command::new(rxapi)
+            .arg("--stop")
+            .env("REXX_API_DIR", root.join("api"))
+            .output();
+    }
 }
 
 /// How this crate's `rexxc` answer for a row stands against the recorded one.
@@ -401,27 +399,14 @@ fn answer(root: &Path, row: &Row) -> Answer {
 #[test]
 fn rexxc_agrees_with_every_recorded_parse_error_row() {
     let rows = rows();
-    let (exempted, checked): (Vec<&Row>, Vec<&Row>) = rows.iter().partition(|row| exempt(row));
-    assert!(!exempted.is_empty(), "the exempt rows are found");
+    let checked: Vec<&Row> = rows.iter().collect();
     assert!(
-        checked.iter().any(|row| names_registered(&row.program)),
-        "a translation row naming REGISTERED is checked"
-    );
-    // An exempt row is one this crate refuses with the `Rxapi` reason, so an
-    // exemption wider than that refusal hides a row that would agree.
-    let exempt_root = scratch("tsv-exempt");
-    let unrefused: Vec<usize> = exempted
-        .par_iter()
-        .filter(|row| {
-            let output = compile(&exempt_root, &row.line.to_string(), &row.program);
-            !String::from_utf8_lossy(&output.stderr).contains("(Phase 10 Rxapi)")
-        })
-        .map(|row| row.line)
-        .collect();
-    std::fs::remove_dir_all(&exempt_root).expect("the exempt row directories are removed");
-    assert!(
-        unrefused.is_empty(),
-        "exempt rows not refused with the Rxapi reason, at lines {unrefused:?}"
+        checked.iter().any(|row| row.class == "install"
+            && row
+                .program
+                .windows(10)
+                .any(|w| w.eq_ignore_ascii_case(b"REGISTERED"))),
+        "an install row naming REGISTERED is checked"
     );
     assert!(
         checked
@@ -434,6 +419,7 @@ fn rexxc_agrees_with_every_recorded_parse_error_row() {
         .par_iter()
         .map(|row| (*row, answer(&root, row)))
         .collect();
+    stop_service(&root);
     std::fs::remove_dir_all(&root).expect("the row directories are removed");
     let mut deviations = Vec::new();
     let mut disagreements = Vec::new();
@@ -474,22 +460,25 @@ fn rexxc_agrees_with_every_recorded_parse_error_row() {
     );
 }
 
+/// `REGISTERED` registers the routine's name, then raises 90.999 for its
+/// entry point: this crate calls no classic function.
 #[test]
-fn registered_is_refused_with_the_rxapi_reason() {
+fn registered_registers_then_fails_to_resolve() {
     let program = b"::routine r external \"REGISTERED x y\"\n";
-    let recorded = rows();
     assert!(
-        recorded
-            .iter()
-            .any(|row| row.program == program && exempt(row)),
-        "the witness is a recorded, exempt row"
+        rows().iter().any(|row| row.program == program),
+        "the witness is a recorded row"
     );
     let root = scratch("registered");
     let output = compile(&root, "witness", program);
+    stop_service(&root);
     std::fs::remove_dir_all(&root).expect("the witness directory is removed");
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert_ne!(output.status.code(), Some(0), "{stderr}");
-    assert!(stderr.contains("(Phase 10 Rxapi)"), "{stderr}");
+    assert_eq!(output.status.code(), Some(166), "{stderr}");
+    assert!(
+        stderr.contains("Error 90.999:  Unable to find external routine \"y\"."),
+        "{stderr}"
+    );
 }
 
 #[test]

@@ -261,3 +261,20 @@ fn rxqueue_selects_and_manages_named_queues() {
         stderr(&output)
     );
 }
+
+/// A `REGISTERED` routine is registered before its entry point fails to resolve, so a later
+/// program finds the name registered.
+#[test]
+fn a_registered_routine_stays_registered_after_its_program_fails() {
+    let service = Service::new();
+    let first = service.run("say 'main ran'\n::routine foo6 external \"REGISTERED nosuchlib\"\n");
+    assert_eq!(stdout(&first), "");
+    assert!(
+        stderr(&first).contains("Error 90.999:  Unable to find external routine \"FOO6\"."),
+        "{}",
+        stderr(&first)
+    );
+    assert_eq!(first.status.code(), Some(166));
+    let second = service.run("say rxfuncquery('FOO6')\n");
+    assert_eq!(stdout(&second), "0\n", "{}", stderr(&second));
+}
