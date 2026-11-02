@@ -7,7 +7,7 @@ use rexx_rxapi::client::{Session, connect};
 use rexx_rxapi::message::code::NO_SERVICE;
 use rexx_rxapi::message::wire::PROTOCOL_VERSION;
 use rexx_rxapi::message::{Reply, Request};
-use rexx_rxapi::transport::unix::{Unix, service_dir};
+use rexx_rxapi::transport::unix::{Unix, service_dir, socket_path};
 use rexx_rxapi::transport::{CancelToken, Transport};
 
 pub(crate) use rexx_rxapi::client::{SESSION_VARIABLE, session_value};
@@ -62,7 +62,11 @@ pub(crate) fn running_client() -> Option<&'static ApiClient> {
     if !connections_allowed() {
         return None;
     }
-    let transport = Unix::connect_version(&service_dir(), PROTOCOL_VERSION).ok()?;
+    let dir = service_dir();
+    if !socket_path(&dir, PROTOCOL_VERSION).exists() {
+        return None;
+    }
+    let transport = Unix::connect_version(&dir, PROTOCOL_VERSION).ok()?;
     let client = ApiClient {
         transport,
         session: session_handle(),

@@ -11,7 +11,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use rexx_core::{Body, Decoded, Deferral, ObjRef, Owner};
+use rexx_core::{Body, Decoded, ObjRef};
 use rexx_parse::{AddressIo, Expr, OutputOption, Redirection, SymbolId};
 
 use crate::activation::{ActivationId, IoConfigs};
@@ -77,6 +77,8 @@ enum Target {
     /// An `OrderedCollection`: `EMPTY`, then one `APPEND` per line, so the
     /// class's own methods decide what that means.
     Collection { object: ObjRef, append: bool },
+    /// A `RexxQueue`, one `QUEUE` per line (`RexxQueueOutputTarget::writeLine`).
+    Queue { object: ObjRef },
     /// An open stream, one `LINEOUT` per line.
     ///
     /// `qualified` is `Some` for a `STREAM name` target, which this opened and
@@ -119,6 +121,7 @@ impl Target {
         match self {
             Target::Stem { object, .. }
             | Target::Collection { object, .. }
+            | Target::Queue { object }
             | Target::Stream { object, .. } => *object,
         }
     }
@@ -619,9 +622,6 @@ impl Interp {
         if self.is_stem_object(object) {
             return self.stem_input_lines(object);
         }
-        if self.is_rexx_queue(object) {
-            return Err(Loud::redirection("RexxQueue", Owner::Phase10(Deferral::Rxapi)).into());
-        }
         if self.is_stream_object(object) {
             return self.read_stream_lines(object);
         }
@@ -715,7 +715,7 @@ impl Interp {
             if optioned {
                 return Err(Raised::queue_target_option().into());
             }
-            return Err(Loud::redirection("RexxQueue", Owner::Phase10(Deferral::Rxapi)).into());
+            return Ok(Target::Queue { object });
         }
         if self.is_stream_object(object) {
             if optioned {
@@ -803,7 +803,7 @@ impl Interp {
                 Ok(1)
             }
             // Opened, and truncated for `REPLACE`, where it was resolved.
-            Target::Stream { .. } => Ok(1),
+            Target::Stream { .. } | Target::Queue { .. } => Ok(1),
         }
     }
 
@@ -833,6 +833,10 @@ impl Interp {
                 Target::Stream { object, .. } => {
                     let caller = self.caller();
                     self.send_message(object, b"LINEOUT", None, &[Some(value)], caller)?;
+                }
+                Target::Queue { object } => {
+                    let caller = self.caller();
+                    self.send_message(object, b"QUEUE", None, &[Some(value)], caller)?;
                 }
             }
             next += 1;
@@ -1081,8 +1085,7 @@ impl Interp {
             )
     }
 
-    /// Whether `value` is a `RexxQueue`, which a redirection accepts and this
-    /// crate has no queues to give it -- Phase 10's.
+    /// Whether `value` is a `RexxQueue`.
     fn is_rexx_queue(&mut self, value: ObjRef) -> bool {
         self.is_instance_of_rexx_class(value, b"REXXQUEUE")
     }

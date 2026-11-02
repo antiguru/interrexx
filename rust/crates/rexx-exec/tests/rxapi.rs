@@ -50,7 +50,7 @@ impl Service {
         .expect("a PATH");
         let mut command = Command::new("timeout");
         command
-            .arg("60")
+            .args(["-k", "5", "60"])
             .arg(REXX)
             .arg(&file)
             .current_dir(self.root.join("work"))
@@ -164,4 +164,100 @@ fn a_killed_daemon_gives_a_clean_error() {
         stderr(&output)
     );
     assert_eq!(output.status.code(), Some(0));
+}
+
+/// Review Focus 3: a halt ends a wait on an empty external queue, and the queue still works.
+#[test]
+fn a_halt_ends_a_queue_wait_and_leaves_the_queue_usable() {
+    let service = Service::new();
+    let output = service.run(
+        "q = .RexxQueue~create('HALTQ')\n\
+         call rxqueue 'set', q\n\
+         '(sleep 1; kill -INT $PPID) &'\n\
+         signal on halt\n\
+         line = linein('QUEUE:')\n\
+         say 'not halted' line\n\
+         exit\n\
+         halt: say 'halted' condition('c')\n\
+         queue 'after'\n\
+         say queued() linein('QUEUE:')\n\
+         say .RexxQueue~delete(q)\n",
+    );
+    assert_eq!(
+        stdout(&output),
+        "halted HALT\n1 after\n0\n",
+        "{}",
+        stderr(&output)
+    );
+    assert_eq!(output.status.code(), Some(0));
+}
+
+/// Review Focus 4: a function one program registers is registered for the next.
+#[test]
+fn a_registration_outlives_its_program() {
+    let service = Service::new();
+    let first = service.run("say rxfuncadd('NOFN', 'nosuchlib') rxfuncquery('NOFN')\n");
+    assert_eq!(stdout(&first), "1 0\n", "{}", stderr(&first));
+    let second = service.run("say rxfuncquery('NOFN') rxfuncquery('OTHERFN')\n");
+    assert_eq!(stdout(&second), "0 1\n", "{}", stderr(&second));
+}
+
+/// A macro one program adds is found by the next, before or after external files as ordered.
+#[test]
+fn macros_reach_later_programs() {
+    let service = Service::new();
+    std::fs::write(
+        service.root.join("work/mm.rex"),
+        "parse source s; say 'mac' s; return arg(1)*2\n",
+    )
+    .expect("the macro source is written");
+    let first = service.run(
+        "say SysAddRexxMacro('PMAC', 'mm.rex') SysQueryRexxMacro('PMAC')\n\
+         say pmac(21)\n\
+         say SysReorderRexxMacro('PMAC', 'A') SysQueryRexxMacro('pmac')\n\
+         say SysSaveRexxMacroSpace('saved.mac')\n\
+         say SysDropRexxMacro('PMAC') '['SysQueryRexxMacro('PMAC')']' SysDropRexxMacro('PMAC')\n\
+         say SysLoadRexxMacroSpace('saved.mac') SysQueryRexxMacro('PMAC')\n\
+         say SysAddRexxMacro('NOPE', 'nofile.rex')\n",
+    );
+    assert_eq!(
+        stdout(&first),
+        "0 B\nmac LINUX FUNCTION PMAC\n42\n0 A\n0\n0 [] 2\n0 A\n7\n",
+        "{}",
+        stderr(&first)
+    );
+    let second = service.run(
+        "say SysQueryRexxMacro('PMAC') pmac(5)\n\
+         say SysClearRexxMacroSpace() '['SysQueryRexxMacro('PMAC')']'\n",
+    );
+    assert_eq!(
+        stdout(&second),
+        "mac LINUX FUNCTION PMAC\nA 10\n0 []\n",
+        "{}",
+        stderr(&second)
+    );
+}
+
+/// `RXQUEUE` creates, selects, opens and deletes named queues. A selected name reads back in
+/// upper case.
+#[test]
+fn rxqueue_selects_and_manages_named_queues() {
+    let service = Service::new();
+    let output = service.run(
+        "say rxqueue('get')\n\
+         n = rxqueue('create')\n\
+         say rxqueue('exists', n) rxqueue('set', n)\n\
+         queue 'x'; say queued() (rxqueue('get') == translate(n))\n\
+         say (rxqueue('set', 'SESSION') == translate(n)) rxqueue('get') queued()\n\
+         say rxqueue('delete', n) rxqueue('exists', n)\n\
+         say rxqueue('create', 'pq1') rxqueue('open', 'pq1') rxqueue('delete', 'pq1')\n\
+         say rxqueue('Open', 'pq1') rxqueue('d', 'pq1')\n\
+         say rxqueue('delete', 'session') rxqueue('exists', 'session')\n",
+    );
+    assert_eq!(
+        stdout(&output),
+        "SESSION\n1 SESSION\n1 1\n1 SESSION 0\n0 0\npq1 0 0\n0 0\n5 1\n",
+        "{}",
+        stderr(&output)
+    );
 }

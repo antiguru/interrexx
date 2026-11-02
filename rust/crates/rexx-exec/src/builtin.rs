@@ -26,6 +26,8 @@ pub(crate) mod datetime;
 /// (`classes/StringClass.cpp:1084`) -- and [`numeric::sign_of`] is what keeps
 /// the builtin and the method from coming to disagree.
 pub(crate) mod numeric;
+pub(crate) mod queues;
+pub(crate) mod registrations;
 
 /// The builtins that read or move the interpreter's own platform state, and
 /// the bodies of the `REXX` package's three internal routines, which are the
@@ -433,6 +435,30 @@ const IMPLEMENTED: &[Builtin] = &[
         min: 2,
         max: Some(3),
         run: string::right,
+    },
+    Builtin {
+        name: b"RXFUNCADD",
+        min: 2,
+        max: Some(3),
+        run: registrations::rxfuncadd,
+    },
+    Builtin {
+        name: b"RXFUNCDROP",
+        min: 1,
+        max: Some(1),
+        run: registrations::rxfuncdrop,
+    },
+    Builtin {
+        name: b"RXFUNCQUERY",
+        min: 1,
+        max: Some(1),
+        run: registrations::rxfuncquery,
+    },
+    Builtin {
+        name: b"RXQUEUE",
+        min: 1,
+        max: Some(2),
+        run: queues::rxqueue,
     },
     Builtin {
         name: b"SIGN",

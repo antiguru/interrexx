@@ -622,16 +622,6 @@ impl Loud {
         }
     }
 
-    /// An `ADDRESS ... WITH` redirection whose target this crate accepts in
-    /// the grammar and does not yet build. `owner` is the phase that owes it,
-    /// which is not always this one: a `RexxQueue` target waits on the queues
-    /// themselves.
-    fn redirection(what: &str, owner: Owner) -> Loud {
-        Loud {
-            message: owned_message(&format!("an ADDRESS WITH {what} redirection"), Some(owner)),
-        }
-    }
-
     /// An `ADDRESS` environment no handler answers that a held native
     /// package's loader registers through the classic subcommand API
     /// (`RexxRegisterSubcomExe`), which this crate does not implement.
@@ -2568,15 +2558,40 @@ impl Interp {
         else {
             return Err(Raised::executable_file_unreadable(&resolved).into());
         };
-        let parsed = Rc::new(self.parse_file(text, &resolved)?);
+        self.enter_program_text(name, &resolved, text, arguments, call_type)
+    }
+
+    /// Enters the macro `name` names, from the image the service holds now.
+    pub(crate) fn enter_macro(
+        &mut self,
+        name: &[u8],
+        arguments: Vec<Option<ObjRef>>,
+        call_type: CallType,
+    ) -> Result<Option<ObjRef>, Failure> {
+        let Some(image) = crate::builtin::rexxutil::macros::macro_image(name) else {
+            return Err(Raised::routine_not_found(name).into());
+        };
+        self.enter_program_text(name, name, image, arguments, call_type)
+    }
+
+    /// Parses `text`, the program `resolved` names, and runs it as the external routine `name`
+    /// with `arguments`, merging what it makes public into the caller's package.
+    fn enter_program_text(
+        &mut self,
+        name: &[u8],
+        resolved: &[u8],
+        text: Vec<u8>,
+        arguments: Vec<Option<ObjRef>>,
+        call_type: CallType,
+    ) -> Result<Option<ObjRef>, Failure> {
+        let parsed = Rc::new(self.parse_file(text, resolved)?);
         let caller = self
             .running_activation()
             .map(|activation| activation.program_id);
         let program_id = self.load_program(Rc::clone(&parsed));
         // Its own path, so the callee's `PARSE SOURCE`, `~package~name` and
         // traceback name the file rather than the program that called it.
-        self.required_paths
-            .insert(program_id, resolved.as_slice().into());
+        self.required_paths.insert(program_id, resolved.into());
         let address = self.activation().address.clone();
         let settings = self.activation().settings.clone();
         let saved = std::mem::replace(

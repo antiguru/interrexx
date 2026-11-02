@@ -3,5 +3,6 @@
 pub mod client;
 pub mod core;
 pub mod daemon;
+pub mod macro_file;
 pub mod message;
 pub mod transport;

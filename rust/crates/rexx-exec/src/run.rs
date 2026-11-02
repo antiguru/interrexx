@@ -216,6 +216,10 @@ pub(crate) enum Resolved {
     /// hand out an index. The second search is stats only, against a call that
     /// re-reads and re-parses the file anyway.
     External,
+    /// A macro the service's macrospace holds under this name, searched before the internal
+    /// packages' routines or after the external file search as its position says. Its image is
+    /// fetched again where it is entered.
+    Macro,
     /// Nothing answers this name. **Not an error here**: the security
     /// manager's `CALL` checkpoint runs before 43.1 is reported
     /// (`RexxActivation::externalCall`, `execution/RexxActivation.cpp:3077`
@@ -246,6 +250,7 @@ impl Resolved {
                 | Resolved::Internal(_)
                 | Resolved::LibraryRoutine(_)
                 | Resolved::External
+                | Resolved::Macro
         )
     }
 
