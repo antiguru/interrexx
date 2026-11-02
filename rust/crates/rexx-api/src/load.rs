@@ -12,9 +12,11 @@ use crate::ffi::{
 };
 use crate::invoke::MAX_NATIVE_ARGUMENTS;
 use crate::layout::{
-    CONSTRXSTRING, PackageHook, RXSTRING, RexxCallContext_, RexxExitContext_,
-    RexxIORedirectorContext_, RexxMethodContext_, RexxMethodEntry, RexxObjectPtr, RexxPackageEntry,
-    RexxRoutineEntry, RexxStringObject, RexxThreadContext_, ValueDescriptor, ValueUnion,
+    CONSTRXSTRING, ExitFlags, PackageHook, RXCMDHST_PARM, RXFNCCAL_PARM, RXMSQPSH_PARM,
+    RXOFNCCAL_PARM, RXSIOSAY_PARM, RXSTRING, RXVALCALL_PARM, RXVARNOVALUE_PARM, RexxCallContext_,
+    RexxExitContext_, RexxIORedirectorContext_, RexxMethodContext_, RexxMethodEntry, RexxObjectPtr,
+    RexxPackageEntry, RexxRoutineEntry, RexxStringObject, RexxThreadContext_, ValueDescriptor,
+    ValueUnion,
 };
 use crate::values::{ARGUMENT_TERMINATOR, ResultRead, Written};
 use std::ffi::{CStr, c_char, c_int, c_void};
@@ -1494,6 +1496,516 @@ unsafe fn take_result(result: &RXSTRING, buffer: *mut u8) -> Option<Vec<u8>> {
         unsafe { libc::free(result.strptr.cast()) };
     }
     Some(value)
+}
+
+/// `RexxContextExitHandler` (`api/oorexxapi.h:179`): an exit an embedding names in
+/// `RexxCreateInterpreter`'s `DIRECT_EXITS` option.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ContextExit(std::ptr::NonNull<c_void>);
+
+// SAFETY: as `ClassicEntry`'s: the address names code the embedding keeps mapped while an
+// interpreter may call it.
+unsafe impl Send for ContextExit {}
+// SAFETY: as `Send`; the address is never written through.
+unsafe impl Sync for ContextExit {}
+
+impl ContextExit {
+    /// The handler at `address`, or `None` for null.
+    ///
+    /// # Safety
+    /// A non-null `address` is a `RexxContextExitHandler`, mapped for as long as an interpreter
+    /// may call it.
+    #[must_use]
+    pub unsafe fn new(address: *mut c_void) -> Option<ContextExit> {
+        std::ptr::NonNull::new(address).map(ContextExit)
+    }
+}
+
+/// A system exit's handler (`ExitHandler`, `concurrency/ExitHandler.hpp`): a classic
+/// `RexxExitHandler` a registration resolved, or a context handler.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ExitHandler {
+    Registered(ClassicEntry),
+    Context(ContextExit),
+}
+
+/// The exit function codes (`api/rexxapidefs.h:171-207`).
+pub mod exit_code {
+    use std::ffi::c_int;
+
+    /// `RXENDLST`.
+    pub const END: c_int = 0;
+    /// `RXFNC`.
+    pub const FNC: c_int = 2;
+    /// `RXCMD`.
+    pub const CMD: c_int = 3;
+    /// `RXMSQ`.
+    pub const MSQ: c_int = 4;
+    /// `RXSIO`.
+    pub const SIO: c_int = 5;
+    /// `RXHLT`.
+    pub const HLT: c_int = 7;
+    /// `RXTRC`.
+    pub const TRC: c_int = 8;
+    /// `RXINI`.
+    pub const INI: c_int = 9;
+    /// `RXTER`.
+    pub const TER: c_int = 10;
+    /// `RXEXF`.
+    pub const EXF: c_int = 12;
+    /// `RXNOVAL`.
+    pub const NOVAL: c_int = 13;
+    /// `RXVALUE`.
+    pub const VALUE: c_int = 14;
+    /// `RXOFNC`.
+    pub const OFNC: c_int = 15;
+    /// `RXNOOFEXITS`: one more than the largest code.
+    pub const COUNT: usize = 16;
+
+    /// The name `Error_System_service_service` reports for `code`
+    /// (`Activity::callExit`'s `exitName`).
+    #[must_use]
+    pub fn name(code: c_int) -> &'static str {
+        match code {
+            FNC => "RXFNC",
+            CMD => "RXCMD",
+            MSQ => "RXMSQ",
+            SIO => "RXSIO",
+            HLT => "RXHLT",
+            TRC => "RXTRC",
+            INI => "RXINI",
+            TER => "RXTER",
+            EXF => "RXEXF",
+            NOVAL => "RXNOVAL",
+            VALUE => "RXVALUE",
+            OFNC => "RXOFNC",
+            _ => "",
+        }
+    }
+}
+
+/// One exit call's inputs, by the block it fills (`api/rexx.h:489-654`). `O` is an object as
+/// the caller holds it: an object-valued block carries it as a handle.
+#[derive(Debug)]
+pub enum ExitRequest<'a, O> {
+    /// `RXFNC`/`RXFNCCAL`: each argument a string, `None` an omitted one.
+    Function {
+        name: &'a [u8],
+        subroutine: bool,
+        queue: &'a [u8],
+        arguments: &'a [Option<&'a [u8]>],
+    },
+    /// `RXOFNC`/`RXOFNCCAL`, or with `scripting` `RXEXF`/`RXEXFCAL`.
+    ObjectFunction {
+        scripting: bool,
+        name: &'a [u8],
+        subroutine: bool,
+        arguments: Vec<O>,
+    },
+    /// `RXCMD`/`RXCMDHST`.
+    Command {
+        address: &'a [u8],
+        command: &'a [u8],
+    },
+    /// `RXMSQ`/`RXMSQPLL`.
+    Pull,
+    /// `RXMSQ`/`RXMSQPSH`.
+    Push { line: &'a [u8], lifo: bool },
+    /// `RXMSQ`/`RXMSQSIZ`.
+    QueueSize,
+    /// `RXMSQ`/`RXMSQNAM`.
+    QueueName { name: &'a [u8] },
+    /// `RXSIO`/`RXSIOSAY`.
+    Say { line: &'a [u8] },
+    /// `RXSIO`/`RXSIOTRC`.
+    Trace { line: &'a [u8] },
+    /// `RXSIO`/`RXSIOTRD`.
+    TerminalRead,
+    /// `RXSIO`/`RXSIODTR`.
+    DebugRead,
+    /// `RXHLT`/`RXHLTTST`.
+    HaltTest,
+    /// `RXHLT`/`RXHLTCLR`.
+    HaltClear,
+    /// `RXTRC`/`RXTRCTST`.
+    TraceTest,
+    /// `RXINI`/`RXINIEXT`.
+    Initialization,
+    /// `RXTER`/`RXTEREXT`.
+    Termination,
+    /// `RXNOVAL`/`RXNOVALCALL`.
+    Novalue { name: O },
+    /// `RXVALUE`/`RXVALUECALL`.
+    Value { selector: O, name: O, value: O },
+}
+
+impl<'a, O> ExitRequest<'a, O> {
+    /// The function and subfunction codes.
+    #[must_use]
+    pub fn codes(&self) -> (c_int, c_int) {
+        use exit_code::{CMD, EXF, FNC, HLT, INI, MSQ, NOVAL, OFNC, SIO, TER, TRC, VALUE};
+        match self {
+            ExitRequest::Function { .. } => (FNC, 1),
+            ExitRequest::ObjectFunction { scripting, .. } => {
+                (if *scripting { EXF } else { OFNC }, 1)
+            }
+            ExitRequest::Command { .. } => (CMD, 1),
+            ExitRequest::Pull => (MSQ, 1),
+            ExitRequest::Push { .. } => (MSQ, 2),
+            ExitRequest::QueueSize => (MSQ, 3),
+            ExitRequest::QueueName { .. } => (MSQ, 20),
+            ExitRequest::Say { .. } => (SIO, 1),
+            ExitRequest::Trace { .. } => (SIO, 2),
+            ExitRequest::TerminalRead => (SIO, 3),
+            ExitRequest::DebugRead => (SIO, 4),
+            ExitRequest::HaltClear => (HLT, 1),
+            ExitRequest::HaltTest => (HLT, 2),
+            ExitRequest::TraceTest => (TRC, 1),
+            ExitRequest::Initialization => (INI, 1),
+            ExitRequest::Termination => (TER, 1),
+            ExitRequest::Novalue { .. } => (NOVAL, 1),
+            ExitRequest::Value { .. } => (VALUE, 1),
+        }
+    }
+
+    /// The same request with each object converted by `convert`.
+    pub fn map<P>(self, mut convert: impl FnMut(O) -> P) -> ExitRequest<'a, P> {
+        match self {
+            ExitRequest::Function {
+                name,
+                subroutine,
+                queue,
+                arguments,
+            } => ExitRequest::Function {
+                name,
+                subroutine,
+                queue,
+                arguments,
+            },
+            ExitRequest::ObjectFunction {
+                scripting,
+                name,
+                subroutine,
+                arguments,
+            } => ExitRequest::ObjectFunction {
+                scripting,
+                name,
+                subroutine,
+                arguments: arguments.into_iter().map(convert).collect(),
+            },
+            ExitRequest::Command { address, command } => ExitRequest::Command { address, command },
+            ExitRequest::Pull => ExitRequest::Pull,
+            ExitRequest::Push { line, lifo } => ExitRequest::Push { line, lifo },
+            ExitRequest::QueueSize => ExitRequest::QueueSize,
+            ExitRequest::QueueName { name } => ExitRequest::QueueName { name },
+            ExitRequest::Say { line } => ExitRequest::Say { line },
+            ExitRequest::Trace { line } => ExitRequest::Trace { line },
+            ExitRequest::TerminalRead => ExitRequest::TerminalRead,
+            ExitRequest::DebugRead => ExitRequest::DebugRead,
+            ExitRequest::HaltTest => ExitRequest::HaltTest,
+            ExitRequest::HaltClear => ExitRequest::HaltClear,
+            ExitRequest::TraceTest => ExitRequest::TraceTest,
+            ExitRequest::Initialization => ExitRequest::Initialization,
+            ExitRequest::Termination => ExitRequest::Termination,
+            ExitRequest::Novalue { name } => ExitRequest::Novalue {
+                name: convert(name),
+            },
+            ExitRequest::Value {
+                selector,
+                name,
+                value,
+            } => {
+                let selector = convert(selector);
+                let name = convert(name);
+                ExitRequest::Value {
+                    selector,
+                    name,
+                    value: convert(value),
+                }
+            }
+        }
+    }
+}
+
+/// What a handler that answered `RXEXIT_HANDLED` left in its block.
+#[derive(Debug, Default)]
+pub struct ExitReply<O> {
+    /// The block's flag word, its first bit field in bit 0: `rxfferr`, `rxffnfnd`; `rxfcfail`,
+    /// `rxfcerr`; `rxfhhalt`; `rxftrace`.
+    pub flags: u32,
+    /// The string it returned, `None` where it left a null pointer.
+    pub text: Option<Vec<u8>>,
+    /// The object it returned.
+    pub object: O,
+    /// `rxmsq_size`.
+    pub size: usize,
+}
+
+/// How an exit call ended (`Activity::callExit`).
+#[derive(Debug)]
+pub enum ExitOutcome<O> {
+    /// `RXEXIT_HANDLED`.
+    Handled(ExitReply<O>),
+    /// `RXEXIT_NOT_HANDLED`, or any other positive return code.
+    NotHandled,
+    /// `RXEXIT_RAISE_ERROR`, or any other negative return code.
+    Failed,
+    /// A `Throw` member of its context unwound it, its condition recorded.
+    Unwound,
+}
+
+impl<O> ExitOutcome<O> {
+    /// The same outcome with its object converted by `convert`.
+    pub fn map<P>(self, convert: impl FnOnce(O) -> P) -> ExitOutcome<P> {
+        match self {
+            ExitOutcome::Handled(reply) => ExitOutcome::Handled(ExitReply {
+                flags: reply.flags,
+                text: reply.text,
+                object: convert(reply.object),
+                size: reply.size,
+            }),
+            ExitOutcome::NotHandled => ExitOutcome::NotHandled,
+            ExitOutcome::Failed => ExitOutcome::Failed,
+            ExitOutcome::Unwound => ExitOutcome::Unwound,
+        }
+    }
+}
+
+/// `RexxExitHandler` (`api/rexx.h:657`).
+type ExitFunction = unsafe extern "C-unwind" fn(c_int, c_int, *mut c_char) -> c_int;
+
+/// `RexxContextExitHandler` (`api/oorexxapi.h:179`).
+type ContextExitFunction =
+    unsafe extern "C-unwind" fn(*mut RexxExitContext_, c_int, c_int, *mut c_char) -> c_int;
+
+impl ExitHandler {
+    /// Calls the handler with `request`'s block, as `ExitHandler::call` does
+    /// (`concurrency/ExitHandler.cpp`), a context handler with `exit`; answers how it ended
+    /// and what it wrote back. Each string it is handed is NUL-terminated beyond its length,
+    /// and a result buffer is `DEFRXSTRING` bytes, which it may replace with a block `free`
+    /// releases.
+    pub(crate) fn call(
+        self,
+        exit: *mut RexxExitContext_,
+        request: ExitRequest<'_, RexxObjectPtr>,
+    ) -> ExitOutcome<RexxObjectPtr> {
+        let (code, subcode) = request.codes();
+        let mut buffer = vec![0u8; DEFAULT_RESULT_BUFFER];
+        let at = buffer.as_mut_ptr();
+        let returned = |length: usize| RXSTRING {
+            strlength: length,
+            strptr: at.cast(),
+        };
+        let string = |bytes: &[u8]| CONSTRXSTRING {
+            strlength: bytes.len() - 1,
+            strptr: bytes.as_ptr().cast(),
+        };
+        let mut reply = ExitReply {
+            flags: 0,
+            text: None,
+            object: std::ptr::null_mut(),
+            size: 0,
+        };
+        let rc = match request {
+            ExitRequest::Function {
+                name,
+                subroutine,
+                queue,
+                arguments,
+            } => {
+                let name = terminated(name);
+                let queue = terminated(queue);
+                let held: Vec<Option<Vec<u8>>> = arguments
+                    .iter()
+                    .map(|argument| argument.map(terminated))
+                    .collect();
+                let mut argv: Vec<CONSTRXSTRING> = held
+                    .iter()
+                    .map(|argument| match argument {
+                        Some(bytes) => string(bytes),
+                        None => CONSTRXSTRING {
+                            strlength: 0,
+                            strptr: std::ptr::null(),
+                        },
+                    })
+                    .collect();
+                argv.reserve(1);
+                let mut block = RXFNCCAL_PARM {
+                    rxfnc_flags: if subroutine { 4 } else { 0 },
+                    rxfnc_name: name.as_ptr().cast(),
+                    rxfnc_namel: short_length(&name),
+                    rxfnc_que: queue.as_ptr().cast(),
+                    rxfnc_quel: short_length(&queue),
+                    rxfnc_argc: u16::try_from(argv.len()).unwrap_or(u16::MAX),
+                    rxfnc_argv: argv.as_ptr(),
+                    rxfnc_retc: returned(DEFAULT_RESULT_BUFFER),
+                };
+                let rc = self.invoke(exit, code, subcode, (&raw mut block).cast());
+                reply.flags = block.rxfnc_flags;
+                // SAFETY: the handler left `rxfnc_retc` addressing `buffer` or a block of its own.
+                reply.text = unsafe { take_result(&block.rxfnc_retc, at) };
+                rc
+            }
+            ExitRequest::ObjectFunction {
+                name,
+                subroutine,
+                mut arguments,
+                ..
+            } => {
+                let name = terminated(name);
+                let mut block = RXOFNCCAL_PARM {
+                    rxfnc_flags: if subroutine { 4 } else { 0 },
+                    rxfnc_name: string(&name),
+                    rxfnc_argc: arguments.len(),
+                    rxfnc_argv: arguments.as_mut_ptr(),
+                    rxfnc_retc: std::ptr::null_mut(),
+                };
+                let rc = self.invoke(exit, code, subcode, (&raw mut block).cast());
+                reply.flags = block.rxfnc_flags;
+                reply.object = block.rxfnc_retc;
+                rc
+            }
+            ExitRequest::Command { address, command } => {
+                let address = terminated(address);
+                let command = terminated(command);
+                let mut block = RXCMDHST_PARM {
+                    rxcmd_flags: 0,
+                    rxcmd_address: address.as_ptr().cast(),
+                    rxcmd_addressl: short_length(&address),
+                    rxcmd_dll: std::ptr::null(),
+                    rxcmd_dll_len: 0,
+                    rxcmd_command: string(&command),
+                    rxcmd_retc: returned(DEFAULT_RESULT_BUFFER),
+                };
+                let rc = self.invoke(exit, code, subcode, (&raw mut block).cast());
+                reply.flags = block.rxcmd_flags;
+                // SAFETY: as for a function's result.
+                reply.text = unsafe { take_result(&block.rxcmd_retc, at) };
+                rc
+            }
+            ExitRequest::Pull
+            | ExitRequest::TerminalRead
+            | ExitRequest::DebugRead
+            | ExitRequest::QueueName { .. } => {
+                let mut block = match request {
+                    ExitRequest::QueueName { name } => {
+                        if name.len() >= buffer.len() {
+                            buffer.resize(name.len() + 1, 0);
+                        }
+                        buffer[..name.len()].copy_from_slice(name);
+                        RXSTRING {
+                            strlength: name.len(),
+                            strptr: buffer.as_mut_ptr().cast(),
+                        }
+                    }
+                    _ => returned(DEFAULT_RESULT_BUFFER),
+                };
+                let at = block.strptr.cast::<u8>();
+                let rc = self.invoke(exit, code, subcode, (&raw mut block).cast());
+                // SAFETY: as for a function's result.
+                reply.text = unsafe { take_result(&block, at) };
+                rc
+            }
+            ExitRequest::Push { line, lifo } => {
+                let line = terminated(line);
+                let mut block = RXMSQPSH_PARM {
+                    rxmsq_flags: u32::from(lifo),
+                    rxmsq_value: string(&line),
+                };
+                self.invoke(exit, code, subcode, (&raw mut block).cast())
+            }
+            ExitRequest::QueueSize => {
+                let mut size: usize = 0;
+                let rc = self.invoke(exit, code, subcode, (&raw mut size).cast());
+                reply.size = size;
+                rc
+            }
+            ExitRequest::Say { line } | ExitRequest::Trace { line } => {
+                let line = terminated(line);
+                let mut block = RXSIOSAY_PARM {
+                    rxsio_string: string(&line),
+                };
+                self.invoke(exit, code, subcode, (&raw mut block).cast())
+            }
+            ExitRequest::HaltTest | ExitRequest::HaltClear | ExitRequest::TraceTest => {
+                let mut flags: ExitFlags = 0;
+                let rc = self.invoke(exit, code, subcode, (&raw mut flags).cast());
+                reply.flags = flags;
+                rc
+            }
+            ExitRequest::Initialization | ExitRequest::Termination => {
+                self.invoke(exit, code, subcode, std::ptr::null_mut())
+            }
+            ExitRequest::Novalue { name } => {
+                let mut block = RXVARNOVALUE_PARM {
+                    variable_name: name.cast(),
+                    value: std::ptr::null_mut(),
+                };
+                let rc = self.invoke(exit, code, subcode, (&raw mut block).cast());
+                reply.object = block.value;
+                rc
+            }
+            ExitRequest::Value {
+                selector,
+                name,
+                value,
+            } => {
+                let mut block = RXVALCALL_PARM {
+                    selector: selector.cast(),
+                    variable_name: name.cast(),
+                    value,
+                };
+                let rc = self.invoke(exit, code, subcode, (&raw mut block).cast());
+                reply.object = block.value;
+                rc
+            }
+        };
+        match rc {
+            None => ExitOutcome::Unwound,
+            Some(0) => ExitOutcome::Handled(reply),
+            Some(rc) if rc < 0 => ExitOutcome::Failed,
+            Some(_) => ExitOutcome::NotHandled,
+        }
+    }
+
+    /// Calls the handler with the codes and `block`, answering its return code, or `None`
+    /// where a `Throw` member unwound it.
+    fn invoke(
+        self,
+        exit: *mut RexxExitContext_,
+        code: c_int,
+        subcode: c_int,
+        block: *mut c_void,
+    ) -> Option<c_int> {
+        // SAFETY: a `Registered` entry is a `RexxExitHandler` and a `Context` one a
+        // `RexxContextExitHandler`, as their constructors' callers guaranteed, mapped while an
+        // interpreter may call them. `block` addresses the parameter block of the kind `code`
+        // and `subcode` name, live for the call, or is null where that kind has none; `exit`
+        // is the call's live exit context.
+        let called = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
+            match self {
+                ExitHandler::Registered(entry) => {
+                    let handler = std::mem::transmute::<*mut c_void, ExitFunction>(entry.address());
+                    handler(code, subcode, block.cast())
+                }
+                ExitHandler::Context(handler) => {
+                    let handler =
+                        std::mem::transmute::<*mut c_void, ContextExitFunction>(handler.0.as_ptr());
+                    handler(exit, code, subcode, block.cast())
+                }
+            }
+        }));
+        match called {
+            Ok(rc) => Some(rc),
+            Err(payload) if payload.is::<crate::ffi::Thrown>() => None,
+            Err(payload) => std::panic::resume_unwind(payload),
+        }
+    }
+}
+
+/// A terminated string's length as a block's `unsigned short` length member.
+fn short_length(terminated: &[u8]) -> u16 {
+    u16::try_from(terminated.len() - 1).unwrap_or(u16::MAX)
 }
 
 /// Libraries a classic registration loaded, held open for the process's life: an entry point

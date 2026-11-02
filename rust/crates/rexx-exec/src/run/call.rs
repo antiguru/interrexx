@@ -1091,11 +1091,24 @@ impl Interp {
                 | Resolved::Macro
                 | Resolved::Registered
                 | Resolved::Unresolved
-        ) && let Some(handled) = self.call_checkpoint(name, &arguments[from..])?
-        {
-            return Ok(Begun::Done(Ended::Returned(handled)));
+        ) {
+            if let Some(handled) = self.call_checkpoint(name, &arguments[from..])? {
+                return Ok(Begun::Done(Ended::Returned(handled)));
+            }
+            // The function exits next (`RexxActivation::externalCall` steps 2a and 2b).
+            if self.exits.is_some()
+                && let Some(handled) = self.function_exits(name, call_type, &arguments[from..])?
+            {
+                return Ok(Begun::Done(Ended::Returned(handled)));
+            }
         }
         if let Resolved::Unresolved = resolved {
+            // The scripting exit, after every search (step 4).
+            if self.exits.is_some()
+                && let Some(handled) = self.scripting_exit(name, call_type, &arguments[from..])?
+            {
+                return Ok(Begun::Done(Ended::Returned(handled)));
+            }
             return Err(Raised::routine_not_found(name).into());
         }
         if let Resolved::Library(program) = resolved {
@@ -1393,6 +1406,20 @@ impl Interp {
             saved_context,
             stack: LentStack::Kept,
         });
+        // A routine is a program-level call, which runs the initialization exit before its
+        // first clause (`RexxActivation::run`); its failure ends the call there.
+        if matches!(entered, Entered::Routine(_))
+            && self.calls_program_exits()
+            && let Err(failure) = self.initialization_exit()
+        {
+            return match self.finish_call(Err(failure)) {
+                Err(failure) => Err(failure),
+                Ok(_) => Err(Loud::scheduler_inconsistency(
+                    "a failed initialization exit ended its call normally",
+                )
+                .into()),
+            };
+        }
         Ok(Begun::Entered)
     }
 
@@ -1411,6 +1438,19 @@ impl Interp {
         }) = self.activity.call_tails.pop()
         else {
             return Err(Loud::op_not_driven("a call with no saved level state").into());
+        };
+        // A routine that returned or exited runs the termination exit while its variables are
+        // live (`RexxActivation::exitFrom`, `implicitExit`); its failure is the call's.
+        let ended = if kind == TailKind::Routine
+            && self.calls_program_exits()
+            && matches!(ended, Ok(_) | Err(Failure::Exited(_)))
+        {
+            match self.termination_exit() {
+                Ok(()) => ended,
+                Err(failure) => Err(failure),
+            }
+        } else {
+            ended
         };
         if let Err(failure) = &ended {
             self.capture_activation_frame(failure);

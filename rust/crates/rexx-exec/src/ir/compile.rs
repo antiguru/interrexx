@@ -179,6 +179,26 @@ pub(crate) fn compile(
     plan: &Plan,
     trace: ChunkTrace,
 ) -> Result<Chunk, ChunkTooLarge> {
+    compile_settled(body, plan, trace, true)
+}
+
+/// [`compile`] for a body whose trace setting can change from outside it between any two of
+/// its clauses -- an embedding's trace exit turns tracing on at a clause boundary -- so no
+/// clause's setting is settled and every echo keeps its run-time gate.
+pub(crate) fn compile_unsettled(
+    body: &CodeBody,
+    plan: &Plan,
+    trace: ChunkTrace,
+) -> Result<Chunk, ChunkTooLarge> {
+    compile_settled(body, plan, trace, false)
+}
+
+fn compile_settled(
+    body: &CodeBody,
+    plan: &Plan,
+    trace: ChunkTrace,
+    settled: bool,
+) -> Result<Chunk, ChunkTooLarge> {
     #[cfg(test)]
     count_compile_call();
 
@@ -190,9 +210,17 @@ pub(crate) fn compile(
     // [`super::trace_flow::Setting::Disagrees`] or
     // [`super::trace_flow::Setting::Unknown`], which keep the echoes and keep
     // their run-time gate.
-    let settings = super::trace_flow::analyse(body, plan, trace);
+    let settings = if settled {
+        super::trace_flow::analyse(body, plan, trace)
+    } else {
+        vec![super::trace_flow::Setting::Unknown; body.instructions.len()].into_boxed_slice()
+    };
+    // An unsettled body widens rather than narrows: its echoes stay where the analysis would
+    // have dropped them.
     #[cfg(debug_assertions)]
-    assert_analysis_only_narrows(plan, trace, &settings);
+    if settled {
+        assert_analysis_only_narrows(plan, trace, &settings);
+    }
 
     let len = body.instructions.len();
     let mut ops: Vec<Op> = Vec::with_capacity(len);

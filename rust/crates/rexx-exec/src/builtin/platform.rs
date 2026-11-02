@@ -329,6 +329,13 @@ pub(crate) fn value_selector(
     if selector.eq_ignore_ascii_case(b"ENVIRONMENT") {
         return process_environment(interp, &name, new);
     }
+    // The value exit's pass at a selector nothing here knows (`BUILTIN(VALUE)`).
+    if interp.exits.is_some()
+        && let (Some(selector), Some(variable)) = (arg(args, 3), arg(args, 1))
+        && let Some(value) = interp.value_exit(selector, variable, new)?
+    {
+        return Ok(value.unwrap_or(ObjRef::NIL));
+    }
     Err(Raised::syntax(40, 914, vec![selector.to_vec()]).into())
 }
 

@@ -363,6 +363,12 @@ impl Interp {
     /// `.local~DEBUGINPUT`, an absent entry or a `.nil` answer read as the
     /// null string. A condition the send raises is the pause's failure.
     fn debug_input_line(&mut self) -> Result<Vec<u8>, Failure> {
+        // The I/O exit's first pass (`Activity::traceInput`).
+        if self.exits.is_some()
+            && let Some(line) = self.debug_read_exit()?
+        {
+            return Ok(line);
+        }
         let Some(route) = self.local_route(b"DEBUGINPUT")? else {
             return Ok(Vec::new());
         };

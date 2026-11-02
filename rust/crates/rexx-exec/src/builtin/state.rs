@@ -88,6 +88,12 @@ pub(crate) fn queued(
     _name: &[u8],
     _args: Args<'_>,
 ) -> Result<ObjRef, Failure> {
+    // The queue exit's first pass (`BUILTIN(QUEUED)`).
+    if interp.exits.is_some()
+        && let Some(size) = interp.queue_size_exit()?
+    {
+        return Ok(interp.text(size.to_string().as_bytes()));
+    }
     let Some(queue) = interp.local_route(b"STDQUE")? else {
         let count = interp.queue.len();
         return Ok(interp.text(count.to_string().as_bytes()));

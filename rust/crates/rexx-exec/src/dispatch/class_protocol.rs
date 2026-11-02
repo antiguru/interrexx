@@ -416,7 +416,7 @@ pub(crate) fn method_in_package(
     // `generateMethod` installs them as `generateRoutine` does; see
     // [`compile_routine_source`].
     if !parsed.directives.is_empty() {
-        return interp.install_executable(parsed, name, false, parent, |interp, id| {
+        return interp.install_executable(parsed, name, false, parent, false, |interp, id| {
             interp.compiled_method_names.insert(id, name.into());
         });
     }
@@ -474,7 +474,7 @@ pub(crate) fn routine_in_package(
     parent: Option<ObjRef>,
 ) -> Result<ObjRef, Failure> {
     if !parsed.directives.is_empty() {
-        return interp.install_executable(parsed, name, true, parent, |interp, id| {
+        return interp.install_executable(parsed, name, true, parent, false, |interp, id| {
             interp.compiled_method_names.insert(id, name.into());
         });
     }

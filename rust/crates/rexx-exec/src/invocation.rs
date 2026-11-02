@@ -86,6 +86,9 @@ pub struct Invocation {
     start: StartType,
     /// The initial `ADDRESS` environment, or `None` for the platform's.
     address: Option<Vec<u8>>,
+    /// The system exits an embedding's `RexxStart` names: each a function code and the name
+    /// of a registered exit handler.
+    exits: Vec<(std::ffi::c_int, Vec<u8>)>,
 }
 
 /// How an embedding calls a program (`RXCOMMAND`, `RXSUBROUTINE`,
@@ -173,6 +176,7 @@ impl Invocation {
             arguments: None,
             start: StartType::Command,
             address: None,
+            exits: Vec::new(),
         }
     }
 
@@ -196,6 +200,12 @@ impl Invocation {
             address: Some(address),
             ..self
         }
+    }
+
+    /// The same invocation, with the system exits `exits` names, each a function code and the
+    /// name of a registered exit handler.
+    pub fn with_exits(self, exits: Vec<(std::ffi::c_int, Vec<u8>)>) -> Invocation {
+        Invocation { exits, ..self }
     }
 
     /// The same invocation, resolving relative paths against `directory`.
@@ -322,6 +332,7 @@ impl Invocation {
             arguments: self.arguments,
             start: self.start,
             address: self.address,
+            exits: self.exits,
         }
     }
 }
@@ -342,6 +353,7 @@ pub(crate) struct InvocationParts {
     pub(crate) arguments: Option<Vec<Option<Vec<u8>>>>,
     pub(crate) start: StartType,
     pub(crate) address: Option<Vec<u8>>,
+    pub(crate) exits: Vec<(std::ffi::c_int, Vec<u8>)>,
     pub(crate) frame_block: FrameBlock,
     pub(crate) switch_mode: Option<SwitchMode>,
 }

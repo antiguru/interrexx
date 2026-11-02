@@ -9,8 +9,8 @@ use rexx_core::ObjRef;
 use crate::ffi::{CallContext, Contexts, MethodContext, RedirectorContext};
 use crate::layout::ValueDescriptor;
 use crate::load::{
-    CommandHandler, HeldMethod, HeldRoutine, Hook, Library, NativeMethodEntry, NativeRoutineEntry,
-    ROUTINE_CLASSIC_STYLE,
+    CommandHandler, ExitHandler, ExitOutcome, ExitRequest, HeldMethod, HeldRoutine, Hook, Library,
+    NativeMethodEntry, NativeRoutineEntry, ROUTINE_CLASSIC_STYLE,
 };
 use crate::redirect::Redirector;
 use crate::values::{
@@ -200,6 +200,37 @@ pub fn command(
         return Err(Failure::UnfilledSlot { entry });
     }
     Ok(cx.conversion().host.resolve(answered))
+}
+
+/// Run the system exit `handler` for `request`, with the exit context `contexts` links
+/// (`ExitHandlerDispatcher::run` and `ContextExitHandlerDispatcher::run`,
+/// `interpreter/concurrency/ExitHandler.cpp`). Each object `request` carries is handed as a
+/// handle of the call's frame, `None` a null one, and an object the handler answers is
+/// resolved, `None` for a null or a handle this call does not hold. A condition a context
+/// handler raised, a `Throw` member's included, is left on `cx`, as [`method`] leaves one.
+///
+/// # Errors
+/// [`Failure::UnfilledSlot`] for the first interface member the handler reached that this
+/// phase has not written, which also forgets any condition it raised.
+pub fn exit(
+    handler: ExitHandler,
+    contexts: &mut Contexts<'_, '_>,
+    cx: &Activation<'_>,
+    request: ExitRequest<'_, Option<ObjRef>>,
+) -> Result<ExitOutcome<Option<ObjRef>>, Failure> {
+    let request = {
+        let mut conversion = cx.conversion();
+        let locals = conversion.host.locals();
+        request.map(|object| object.map_or(std::ptr::null_mut(), |object| locals.register(object)))
+    };
+    let exit = contexts.exit();
+    let (outcome, refused) =
+        crate::layout::recording_refusals(|| handler.call(exit.as_ptr(), request));
+    if let Some(entry) = refused {
+        cx.clear_pending();
+        return Err(Failure::UnfilledSlot { entry });
+    }
+    Ok(outcome.map(|object| cx.conversion().host.resolve(object)))
 }
 
 /// A native call's declared result type and the descriptor array its stub is

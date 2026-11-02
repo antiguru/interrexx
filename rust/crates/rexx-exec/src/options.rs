@@ -579,7 +579,7 @@ impl Interp {
         let name = b"PackageSettingsFromOptionsDirectiveString";
         let parsed = self.parse_file(text.to_vec(), name)?;
         let mut compiled = None;
-        self.install_executable(parsed, name, true, None, |_, id| compiled = Some(id))?;
+        self.install_executable(parsed, name, true, None, false, |_, id| compiled = Some(id))?;
         Ok(compiled
             .and_then(|id| self.program_data(id)?.options.clone())
             .unwrap_or_default())

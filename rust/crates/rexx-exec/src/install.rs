@@ -1913,12 +1913,13 @@ impl Interp {
     /// executable a file's own text becomes.
     ///
     /// `parent` is the package the loaded file resolves names through, and
-    /// `None` is the caller's own.
+    /// `None` is the caller's own. `program` as [`Interp::install_executable`]'s.
     pub(crate) fn new_file_executable(
         &mut self,
         name: &[u8],
         routine: bool,
         parent: Option<ObjRef>,
+        program: bool,
     ) -> Result<ObjRef, Failure> {
         // **Read through the interpreter's own directory, recorded under the
         // name as given.** `Invocation::with_directory` is what a caller
@@ -1941,7 +1942,7 @@ impl Interp {
                 .map(|program| self.package_object(Package::Program(program)))
                 .transpose()?,
         };
-        self.install_executable(parsed, name, routine, parent, |interp, id| {
+        self.install_executable(parsed, name, routine, parent, program, |interp, id| {
             interp.required_paths.insert(id, name.into());
         })
     }
@@ -1951,12 +1952,16 @@ impl Interp {
     /// becomes the executable, its directives install into a package of its
     /// own whose parent is `parent`, and `record` names that package. A
     /// routine restored from an image keeps the name the image gives it.
+    /// `program` says the source is a program `CallProgram` runs
+    /// (`LanguageParser::createProgram`), which installs where it runs and calls no stub
+    /// routine to install here.
     pub(crate) fn install_executable(
         &mut self,
         parsed: Program,
         name: &[u8],
         routine: bool,
         parent: Option<ObjRef>,
+        program_run: bool,
         record: impl FnOnce(&mut Self, ProgramId),
     ) -> Result<ObjRef, Failure> {
         let Program {
@@ -2027,12 +2032,14 @@ impl Interp {
         // requires by calling an empty routine of the package, which traces
         // its `>I>` and `<I<` under the package's `::OPTIONS TRACE`. The main
         // body built here is that empty routine.
-        if program.directives.iter().any(|directive| {
-            matches!(
-                directive.kind,
-                DirectiveKind::Class(_) | DirectiveKind::Requires(_)
-            )
-        }) {
+        if !program_run
+            && program.directives.iter().any(|directive| {
+                matches!(
+                    directive.kind,
+                    DirectiveKind::Class(_) | DirectiveKind::Requires(_)
+                )
+            })
+        {
             self.run_install_stub(Rc::clone(&program), id, running)?;
         }
         let class = if routine {

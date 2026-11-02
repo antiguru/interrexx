@@ -190,6 +190,94 @@ pub struct RXSYSEXIT {
     pub sysexit_code: c_int,
 }
 
+/// `RexxContextExit` (`api/oorexxapi.h:183-187`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RexxContextExit {
+    pub handler: *mut c_void,
+    pub sysexit_code: c_int,
+}
+
+/// The flag word that begins an exit's parameter block: the C bit fields
+/// (`RXFNC_FLAGS` and its siblings, `api/rexx.h:489-641`), the first field
+/// in bit 0.
+pub type ExitFlags = u32;
+
+/// `RXFNCCAL_PARM` (`api/rexx.h:495-504`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXFNCCAL_PARM {
+    pub rxfnc_flags: ExitFlags,
+    pub rxfnc_name: *const c_char,
+    pub rxfnc_namel: u16,
+    pub rxfnc_que: *const c_char,
+    pub rxfnc_quel: u16,
+    pub rxfnc_argc: u16,
+    pub rxfnc_argv: *const CONSTRXSTRING,
+    pub rxfnc_retc: RXSTRING,
+}
+
+/// `RXOFNCCAL_PARM` and `RXEXFCAL_PARM` (`api/rexx.h:515-539`), which share
+/// one shape.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXOFNCCAL_PARM {
+    pub rxfnc_flags: ExitFlags,
+    pub rxfnc_name: CONSTRXSTRING,
+    pub rxfnc_argc: usize,
+    pub rxfnc_argv: *mut RexxObjectPtr,
+    pub rxfnc_retc: RexxObjectPtr,
+}
+
+/// `RXCMDHST_PARM` (`api/rexx.h:548-556`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXCMDHST_PARM {
+    pub rxcmd_flags: ExitFlags,
+    pub rxcmd_address: *const c_char,
+    pub rxcmd_addressl: u16,
+    pub rxcmd_dll: *const c_char,
+    pub rxcmd_dll_len: u16,
+    pub rxcmd_command: CONSTRXSTRING,
+    pub rxcmd_retc: RXSTRING,
+}
+
+/// `RXMSQPSH_PARM` (`api/rexx.h:573-576`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXMSQPSH_PARM {
+    pub rxmsq_flags: ExitFlags,
+    pub rxmsq_value: CONSTRXSTRING,
+}
+
+/// `RXSIOSAY_PARM` and `RXSIOTRC_PARM` (`api/rexx.h:596-606`). The blocks
+/// of one `RXSTRING` (`RXMSQPLL_PARM`, `RXMSQNAM_PARM`, `RXSIOTRD_PARM`,
+/// `RXSIODTR_PARM`), of one `size_t` (`RXMSQSIZ_PARM`) and of one flag word
+/// (`RXHLTTST_PARM`, `RXTRCTST_PARM`) are that member alone.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXSIOSAY_PARM {
+    pub rxsio_string: CONSTRXSTRING,
+}
+
+/// `RXVALCALL_PARM` (`api/rexx.h:650-654`); `RXVARNOVALUE_PARM` is its last
+/// two members.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXVALCALL_PARM {
+    pub selector: RexxStringObject,
+    pub variable_name: RexxStringObject,
+    pub value: RexxObjectPtr,
+}
+
+/// `RXVARNOVALUE_PARM` (`api/rexx.h:644-647`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXVARNOVALUE_PARM {
+    pub variable_name: RexxStringObject,
+    pub value: RexxObjectPtr,
+}
+
 /// `SHVBLOCK` (`api/rexx.h:212-220`).
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]

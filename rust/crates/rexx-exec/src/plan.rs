@@ -945,7 +945,11 @@ impl Interp {
         }
         let chunk = match self.chunks.get(&(key, trace)) {
             Some(chunk) => Rc::clone(chunk),
-            None => match crate::ir::compile(body, plan, trace) {
+            None => match if self.clause_exits {
+                crate::ir::compile_unsettled(body, plan, trace)
+            } else {
+                crate::ir::compile(body, plan, trace)
+            } {
                 Ok(chunk) => {
                     let chunk = Rc::new(chunk);
                     self.chunks.insert((key, trace), Rc::clone(&chunk));

@@ -518,6 +518,10 @@ impl Interp {
                 let caller_ref = self.caller();
                 self.send_message(notify, b"APPEND", None, &[Some(object)], caller_ref)?;
             }
+            // The I/O exit's first pass (`Activity::traceOutput`).
+            if self.exits.is_some() && self.trace_exit(line)? {
+                return Ok(Delivered::KeptBack);
+            }
             // `Activity::traceOutput`: the option the object was made under.
             let index = self.text(b"OPTION");
             self.roots.activity_mut().push_temp(index);

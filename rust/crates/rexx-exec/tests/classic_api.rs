@@ -554,28 +554,22 @@ fn the_c_api_and_the_program_share_the_session_queue() {
 
 /// `RexxStart` in process (`RexxStart`, an extension's native method calling it) and from the
 /// `rexxinstance` driver (`ProcessRexxStart`): arguments, an omitted one, the call type, the
-/// initial environment, a classic subcommand handler using the variable pool, and a syntax
-/// error's negated number. Only the system-exit tests fail; exits are not implemented.
+/// initial environment, a classic subcommand handler using the variable pool, a syntax
+/// error's negated number, and every system exit, registered in the process or from a library.
+/// The oracle's counts: `RexxStart` 20 tests and 60 assertions, `ProcessRexxStart` 20 and 59,
+/// none failing.
 #[test]
 fn rexx_start_runs_programs_in_process_and_from_a_driver() {
-    for group in ["RexxStart", "ProcessRexxStart"] {
+    for (group, assertions) in [("RexxStart", 60), ("ProcessRexxStart", 59)] {
         let outcome = run_group("API/oo", group, library_path(true));
-        assert_pass(
-            &outcome,
-            &[
-                "TESTCALLRETURN",
-                "TESTCALLTYPE",
-                "TESTINITIALADDRESS",
-                "TESTCLASSICSUBCOMHANDLER",
-                "TESTSYNTAXERROR",
-            ],
+        assert!(
+            outcome.failed.is_empty() && outcome.ran == 20 && outcome.assertions == assertions,
+            "{group}: {:?} failed, {} ran, {} assertions:\n{}",
+            outcome.failed,
+            outcome.ran,
+            outcome.assertions,
+            outcome.stdout
         );
-        let others: Vec<&String> = outcome
-            .failed
-            .iter()
-            .filter(|test| !test.contains("EXIT"))
-            .collect();
-        assert!(others.is_empty(), "{group}: {others:?}");
     }
 }
 
@@ -606,36 +600,23 @@ fn rexx_start_runs_twice_and_from_two_activities_at_once() {
 /// the running one) and from the `rexxinstance` driver (`ProcessInvocation`): an instance
 /// created, a program called through its thread context with arguments, its result or its
 /// condition decoded, and the instance terminated; the call type, the initial environment,
-/// direct, redirecting and registered command environments, a classic subcommand handler, and
-/// the instance's own search path and extensions. Exits are not implemented, and `rxmath`, which
-/// `TestLoadLibrary` loads, is not on the library path the harness gives.
+/// direct, redirecting and registered command environments, a classic subcommand handler, the
+/// instance's own search path and extensions, and every system exit, as context exits and as
+/// registered ones. The oracle's counts: `INVOCATION` 55 tests and 295 assertions,
+/// `ProcessInvocation` 54 and 284. `TestLoadLibrary` alone fails, one assertion short: it loads
+/// `rxmath`, which is not on the library path the harness gives.
 #[test]
 fn the_invocation_groups_run_programs_in_instances() {
-    for (group, handlers) in [
-        (
-            "INVOCATION",
-            &["TESTDIRECTCOMMANDHANDLER", "TESTREDIRECTINGCOMMANDHANDLER"][..],
-        ),
-        ("ProcessInvocation", &["TESTCOMMANDHANDLER"][..]),
-    ] {
+    for (group, ran, assertions) in [("INVOCATION", 55, 294), ("ProcessInvocation", 54, 283)] {
         let outcome = run_group("API/oo", group, library_path(true));
-        let mut expected = vec![
-            "TESTCALLRETURN",
-            "TESTCALLTYPE",
-            "TESTINITIALADDRESS",
-            "TESTSYNTAXERROR",
-            "TESTSUBCOMHANDLER",
-            "TESTCLASSICSUBCOMHANDLER",
-            "TESTPATHHANDLER",
-        ];
-        expected.extend(handlers);
-        assert_pass(&outcome, &expected);
-        let others: Vec<&String> = outcome
-            .failed
-            .iter()
-            .filter(|test| !test.contains("EXIT") && *test != "TESTLOADLIBRARY")
-            .collect();
-        assert!(others.is_empty(), "{group}: {others:?}");
+        let failed: Vec<&str> = outcome.failed.iter().map(String::as_str).collect();
+        assert!(
+            failed == ["TESTLOADLIBRARY"] && outcome.ran == ran && outcome.assertions == assertions,
+            "{group}: {failed:?} failed, {} ran, {} assertions:\n{}",
+            outcome.ran,
+            outcome.assertions,
+            outcome.stdout
+        );
     }
 }
 

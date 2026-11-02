@@ -15,6 +15,8 @@ pub struct Start {
     pub arguments: Vec<Option<Vec<u8>>>,
     pub environment: Option<Vec<u8>>,
     pub start: StartType,
+    /// The system exits, each a function code and the name of a registered exit handler.
+    pub exits: Vec<(std::ffi::c_int, Vec<u8>)>,
 }
 
 /// What `RexxStart` answers: its return code, negative an error number, the
@@ -61,7 +63,8 @@ pub fn rexx_start(start: Start) -> Started {
             own_descriptors: true,
         })
         .with_arguments(start.arguments)
-        .with_start(start.start);
+        .with_start(start.start)
+        .with_exits(start.exits);
     if let Some(environment) = start.environment {
         invocation = invocation.with_address(environment);
     }
@@ -70,10 +73,11 @@ pub fn rexx_start(start: Start) -> Started {
     let _ = std::io::stdout().flush();
     let _ = std::io::stderr().write_all(&outcome.stderr);
     if let Some(number) = outcome.error {
+        // Measured, the oracle's `rc` is the negated error number too.
         return Started {
             code: -number,
             result: None,
-            short: 0,
+            short: i16::try_from(-number).unwrap_or(0),
         };
     }
     let short = outcome
@@ -109,6 +113,10 @@ pub struct InstanceOptions {
     /// `EXTERNAL_CALL_EXTENSIONS`, split at its commas: tried before the
     /// default extensions.
     pub external_call_extensions: Vec<Vec<u8>>,
+    /// `REGISTERED_EXITS`: each a function code and the name of a registered exit handler.
+    pub registered_exits: Vec<(std::ffi::c_int, Vec<u8>)>,
+    /// `DIRECT_EXITS`: each a function code and its context handler.
+    pub context_exits: Vec<(std::ffi::c_int, rexx_api::load::ContextExit)>,
 }
 
 /// Where an instance has got to, under [`Shared::state`].

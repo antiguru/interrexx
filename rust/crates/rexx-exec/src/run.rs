@@ -394,7 +394,7 @@ pub(crate) enum ReturnKeyword {
 }
 
 /// Which end of the queue a line lands on, for [`Interp::queue_evaluated`].
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum QueueKeyword {
     Push,
     Queue,
@@ -1804,6 +1804,10 @@ impl Interp {
             None => Vec::new(),
         };
         self.trace_result(self.activity.clause_state.current_value_indent, &line);
+        // The I/O exit's first pass (`Activity::callSayExit`).
+        if self.exits.is_some() && self.say_exit(&line)? {
+            return Ok(());
+        }
         // `Activity::sayOutput` (`concurrency/Activity.cpp:3214`): `.OUTPUT`
         // gets the line as a `SAY` message and its reply is dropped; an entry
         // that is missing **or holds `.nil`** takes the buffer instead.
@@ -2399,6 +2403,10 @@ impl Interp {
             None => Vec::new(),
         };
         self.trace_result(self.activity.clause_state.current_value_indent, &line);
+        // The queue exit's first pass (`Activity::queue`).
+        if self.exits.is_some() && self.push_exit(&line, keyword == QueueKeyword::Push)? {
+            return Ok(());
+        }
         let Some(queue) = self.local_route(b"STDQUE")? else {
             match keyword {
                 QueueKeyword::Push => self.queue.push(line),

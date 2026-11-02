@@ -356,6 +356,22 @@ impl Interp {
                 self.novalue_hooked.set(Some(Ok(())));
                 value
             }
+            // The `NOVALUE` exit's pass, once the hook has answered none: a value it gives is
+            // the variable's from then on (`RexxActivation::handleNovalueEvent`).
+            Ok(None) if self.exits.is_some() => match self.novalue_exit(derived) {
+                Ok(Some(value)) => {
+                    let value = value.unwrap_or(ObjRef::NIL);
+                    let name = self.derived_name_text(derived);
+                    self.assign_by_name(&name, value);
+                    self.novalue_hooked.set(Some(Ok(())));
+                    value
+                }
+                Ok(None) => derived,
+                Err(failure) => {
+                    self.novalue_hooked.set(Some(Err(failure)));
+                    derived
+                }
+            },
             Ok(None) => derived,
             Err(failure) => {
                 self.novalue_hooked.set(Some(Err(failure)));

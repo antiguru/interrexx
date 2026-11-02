@@ -7,8 +7,8 @@
 use std::ffi::{c_char, c_int, c_short, c_void};
 
 use rexx_api::layout::{
-    CONSTRXSTRING, RXSTRING, RXSYSEXIT, RexxInstance_, RexxReturnCode, RexxStemObject,
-    RexxThreadContext_, SHVBLOCK, ValueDescriptor,
+    CONSTRXSTRING, RXSTRING, RXSYSEXIT, RexxContextExit, RexxInstance_, RexxReturnCode,
+    RexxStemObject, RexxThreadContext_, SHVBLOCK, ValueDescriptor,
 };
 
 /// `RXARI_NOT_FOUND`.
@@ -17,16 +17,63 @@ const TARGET_NOT_FOUND: RexxReturnCode = 1;
 /// `RXENDLST`, which ends a list of system exits.
 const END_OF_EXITS: c_int = 0;
 
+/// The entries of an `RXSYSEXIT` list up to its `RXENDLST`, each a function code and a name.
+///
+/// # Safety
+/// A non-null `list` is such a list, each name before the end NUL-terminated or null.
+unsafe fn registered_exits(list: *const RXSYSEXIT) -> Vec<(c_int, Vec<u8>)> {
+    let mut out = Vec::new();
+    if list.is_null() {
+        return out;
+    }
+    let mut at = list;
+    // SAFETY: the caller's guarantee, entry by entry.
+    unsafe {
+        while (*at).sysexit_code != END_OF_EXITS {
+            out.push((
+                (*at).sysexit_code,
+                text_of((*at).sysexit_name).unwrap_or_default(),
+            ));
+            at = at.add(1);
+        }
+    }
+    out
+}
+
+/// The entries of a `RexxContextExit` list up to its `RXENDLST`, each a function code and its
+/// handler; a null handler installs nothing.
+///
+/// # Safety
+/// A non-null `list` is such a list, each handler before the end a `RexxContextExitHandler`
+/// the caller keeps callable while the instance lives.
+unsafe fn context_exits(list: *const RexxContextExit) -> Vec<(c_int, rexx_api::load::ContextExit)> {
+    let mut out = Vec::new();
+    if list.is_null() {
+        return out;
+    }
+    let mut at = list;
+    // SAFETY: the caller's guarantee, entry by entry.
+    unsafe {
+        while (*at).sysexit_code != END_OF_EXITS {
+            if let Some(handler) = rexx_api::load::ContextExit::new((*at).handler) {
+                out.push(((*at).sysexit_code, handler));
+            }
+            at = at.add(1);
+        }
+    }
+    out
+}
+
 /// `RexxStart`: the program `name`, or the in-store source `instore[0]`, run with `argc`
 /// arguments in an interpreter of its own, called as `call_type` says, with `environment` the
-/// initial `ADDRESS`. The result goes into `result`'s buffer where it fits, else a block
-/// `RexxFreeMemory` releases. System exits are refused.
+/// initial `ADDRESS` and the system exits `exits` names. The result goes into `result`'s buffer
+/// where it fits, else a block `RexxFreeMemory` releases.
 ///
 /// # Safety
 /// Every pointer is null or what `api/rexx.h` declares: `argv` holds `argc` strings each
 /// readable for its length (a null `strptr` an omitted argument), `name` and `environment` are
-/// NUL-terminated, `instore` holds two strings, `exits` is a list ending `RXENDLST`, and `rc`
-/// and `result` are writable.
+/// NUL-terminated, `instore` holds two strings, `exits` is a list ending `RXENDLST` whose names
+/// are NUL-terminated, and `rc` and `result` are writable.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn RexxStart(
     argc: usize,
@@ -39,12 +86,8 @@ pub unsafe extern "C" fn RexxStart(
     rc: *mut c_short,
     result: *mut RXSTRING,
 ) -> c_int {
-    // SAFETY: a non-null list begins with an `RXSYSEXIT`, whose second member is its code.
-    if !exits.is_null() && unsafe { exits.cast::<RXSYSEXIT>().read() }.sysexit_code != END_OF_EXITS
-    {
-        eprintln!("RexxStart's system exits are not implemented (Phase 10 Embedding)");
-        return -1;
-    }
+    // SAFETY: the caller's guarantee.
+    let exits = unsafe { registered_exits(exits.cast()) };
     // SAFETY: the caller's guarantee for each string.
     let text = |strptr: *const c_char, length: usize| unsafe {
         std::slice::from_raw_parts(strptr.cast::<u8>(), length).to_vec()
@@ -76,6 +119,7 @@ pub unsafe extern "C" fn RexxStart(
         arguments,
         environment: c_text(environment).filter(|environment| !environment.is_empty()),
         start,
+        exits,
     });
     if !rc.is_null() {
         // SAFETY: the caller's guarantee.
@@ -306,6 +350,8 @@ unsafe fn instance_options(options: *const RexxOption) -> rexx_exec::embedding::
                         );
                     }
                 }
+                b"RegisteredExits" => read.registered_exits.extend(registered_exits(word.cast())),
+                b"DirectExits" => read.context_exits.extend(context_exits(word.cast())),
                 b"RegisteredEnvironments" => {
                     for (registered, name) in entries(word.cast()) {
                         let registered = text_of(registered.cast()).unwrap_or_default();

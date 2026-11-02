@@ -807,6 +807,12 @@ impl Interp {
         command: &[u8],
         io: Option<&IoContext>,
     ) -> Result<Commanded, Failure> {
+        // The command exit has the first pass (`RexxActivation::command`).
+        if self.exits.is_some()
+            && let Some(outcome) = self.command_exit(environment, command)?
+        {
+            return Ok(Commanded::Done(outcome));
+        }
         let registered = self
             .command_handlers
             .get(environment.to_ascii_uppercase().as_slice())

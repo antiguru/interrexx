@@ -4901,11 +4901,45 @@ pub mod classic {
         if kept < value.len() { TRUNCATED } else { 0 }
     }
 
+    /// Hands a variable pool answer back as the oracle's `copyValue` does: into the caller's
+    /// buffer of `*strlength` bytes -- `length` is not its size -- with a NUL after the value
+    /// where the buffer has room for one, truncated to it (`RXSHV_TRUNC`, `*strlength` left at
+    /// the buffer's size), or into a fresh block where the caller gave none. `*length` is the
+    /// value's whole length in every case.
+    ///
+    /// # Safety
+    /// A non-null `*strptr` addresses `*strlength` writable bytes.
+    unsafe fn give_pool(
+        strptr: &mut *mut c_char,
+        strlength: &mut usize,
+        length: &mut usize,
+        value: &[u8],
+    ) -> u8 {
+        *length = value.len();
+        if strptr.is_null() {
+            // SAFETY: as `give`'s own allocation.
+            return unsafe { give(strptr, strlength, &mut value.len(), value) };
+        }
+        let capacity = *strlength;
+        let kept = value.len().min(capacity);
+        // SAFETY: the caller's buffer holds `capacity` bytes.
+        unsafe { std::ptr::copy_nonoverlapping(value.as_ptr(), strptr.cast::<u8>(), kept) };
+        if kept < value.len() {
+            return TRUNCATED;
+        }
+        if capacity > kept {
+            // SAFETY: `kept < capacity`, inside the caller's buffer.
+            unsafe { strptr.add(kept).write(0) };
+        }
+        *strlength = kept;
+        0
+    }
+
     /// One block's request, answering its `shvret`.
     ///
     /// # Safety
     /// The block's strings are as `api/rexx.h` asks: `shvname` readable for
-    /// its length, and a non-null fetch buffer writable for `shvvaluelen`.
+    /// its length, and a non-null fetch buffer writable for its `strlength`.
     unsafe fn serve(activation: &Activation<'_>, block: &mut SHVBLOCK) -> u8 {
         // SAFETY: the caller's guarantee.
         let name = unsafe { bytes(block.shvname.strptr, block.shvname.strlength) };
@@ -4932,9 +4966,9 @@ pub mod classic {
                 };
                 let mut strptr = block.shvname.strptr.cast_mut();
                 // SAFETY: a non-null name buffer is the caller's, of
-                // `shvnamelen` bytes.
+                // `shvname.strlength` bytes.
                 let mut ret = unsafe {
-                    give(
+                    give_pool(
                         &mut strptr,
                         &mut block.shvname.strlength,
                         &mut block.shvnamelen,
@@ -4944,7 +4978,7 @@ pub mod classic {
                 block.shvname.strptr = strptr;
                 // SAFETY: as above, for the value buffer.
                 ret |= unsafe {
-                    give(
+                    give_pool(
                         &mut block.shvvalue.strptr,
                         &mut block.shvvalue.strlength,
                         &mut block.shvvaluelen,
@@ -4966,7 +5000,7 @@ pub mod classic {
                 if fetching && let Some(value) = value {
                     // SAFETY: the caller's guarantee for a fetch buffer.
                     ret |= unsafe {
-                        give(
+                        give_pool(
                             &mut block.shvvalue.strptr,
                             &mut block.shvvalue.strlength,
                             &mut block.shvvaluelen,

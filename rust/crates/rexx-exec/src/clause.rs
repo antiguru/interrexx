@@ -388,6 +388,17 @@ impl Interp {
             // delivers nothing.
             return Ok(ClauseOutcome::Ran(ran));
         };
+        // The halt and trace exits, ahead of the conditions the boundary
+        // delivers (`RexxActivation::processClauseBoundary`); their failure
+        // is the clause's.
+        if self.clause_exits {
+            if let Some(value) = value.rooted() {
+                self.roots.activity_mut().push_temp(value);
+            }
+            if let Err(failure) = self.run_clause_exits() {
+                return Ok(ClauseOutcome::Ran(Err(failure)));
+            }
+        }
         if self.activity.pending_traps.is_empty() {
             return Ok(ClauseOutcome::Ran(ran));
         }

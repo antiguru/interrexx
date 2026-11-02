@@ -72,6 +72,62 @@ impl Interp {
         }
     }
 
+    /// Runs the system exit `handler` for `request` in a native frame of its own whose call
+    /// opens the variable pool to the running activation, as `Activity::run` runs an
+    /// `ExitHandlerDispatcher` or a `ContextExitHandlerDispatcher`
+    /// (`concurrency/ExitHandler.cpp`). A condition a context handler raised is raised once it
+    /// has returned, as `NativeActivation::checkConditions` raises one.
+    ///
+    /// # Errors
+    /// The condition the handler raised, and [`Loud`] for an interface member it reached that
+    /// this phase has not written.
+    pub(crate) fn run_exit(
+        &mut self,
+        handler: rexx_api::load::ExitHandler,
+        request: rexx_api::load::ExitRequest<'_, Option<ObjRef>>,
+    ) -> Result<rexx_api::load::ExitOutcome<Option<ObjRef>>, Failure> {
+        self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, b"", &[], None);
+        pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
+        let mut strings = CStringPool::new();
+        let thread = self.thread_context();
+        let (answered, pending) = {
+            let frame = self.native_token();
+            let activation = Activation::new(Conversion {
+                host: self.into(),
+                strings: &mut strings,
+            });
+            activation.set_frame(frame);
+            activation.open_variable_pool();
+            let answered = thread.enter(&activation, |contexts| {
+                rexx_api::invoke::exit(handler, contexts, &activation, request)
+            });
+            (answered, activation.pending())
+        };
+        let popped = self.pop_native_frame();
+        pin_leave!(self);
+        if let Some(number) = pending {
+            return Err(condition_of(number));
+        }
+        let outcome = match answered {
+            Ok(outcome) => outcome,
+            Err(rexx_api::values::Failure::Raised) => {
+                return Err(popped
+                    .raised
+                    .expect("a host answering Raised holds the condition it raised"));
+            }
+            Err(refused) => return Err(self.refusal(refused, true, false)),
+        };
+        if let rexx_api::load::ExitOutcome::Handled(reply) = &outcome
+            && let Some(object) = reply.object
+        {
+            self.roots.activity_mut().push_temp(object);
+        }
+        if let Some(raised) = popped.raised {
+            self.raise_held_condition(raised, popped.additional, popped.result, None)?;
+        }
+        Ok(outcome)
+    }
+
     /// One `RexxVariablePool` request against the running activation.
     pub(crate) fn pool_request(&mut self, request: PoolRequest<'_>) -> PoolAnswer {
         match request {

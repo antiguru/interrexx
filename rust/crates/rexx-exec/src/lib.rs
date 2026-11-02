@@ -53,6 +53,7 @@ pub use rxapi_client::use_api_service;
 pub mod capi;
 mod classic;
 pub mod embedding;
+mod exits;
 
 // What a command line supplies to a top-level program: the one argument string
 // it can carry, how a list of words becomes that string, and where `.input`
@@ -1653,6 +1654,13 @@ struct Interp {
     /// An embedding instance's `REGISTERED_ENVIRONMENTS`: the classic
     /// subcommand handler an upper-cased environment name is served by.
     pub(crate) subcom_aliases: FxHashMap<Vec<u8>, Vec<u8>>,
+    /// The system exits an embedding installed (`RexxStart`'s exit list, or
+    /// `RexxCreateInterpreter`'s `REGISTERED_EXITS` and `DIRECT_EXITS`), `None` where it
+    /// installed none.
+    pub(crate) exits: Option<Box<crate::exits::Exits>>,
+    /// Whether the halt or the trace exit is installed and so runs at each clause boundary
+    /// (`Activity::queryTrcHlt`).
+    pub(crate) clause_exits: bool,
     /// An embedding instance's `EXTERNAL_CALL_PATH` and
     /// `EXTERNAL_CALL_EXTENSIONS`, which every external search uses.
     pub(crate) call_search: require::Instance,
@@ -2448,6 +2456,8 @@ impl Interp {
             leave_next_native: false,
             default_address: None,
             subcom_aliases: FxHashMap::default(),
+            exits: None,
+            clause_exits: false,
             call_search: require::Instance::default(),
             kept_strings: rustc_hash::FxHashMap::default(),
             kept_names: rustc_hash::FxHashMap::default(),
@@ -3061,16 +3071,41 @@ impl Interp {
         // `exit 5`, and a bare `return` there exits 0. `Ended` keeps the two
         // apart because a *callee* has to tell them apart, not because the
         // program's own exit value ever depends on which arrived.
-        let exit = if nested {
-            pinned!(
-                self,
-                crate::pinning::PinKind::Program,
-                self.run_activation()
-            )
+        // A program is a program-level call: the initialization exit before its first clause,
+        // and the termination exit once it has returned or exited, its variables still live
+        // (`RexxActivation::run`, `exitFrom`, `implicitExit`). An embedding instance's own root
+        // program runs neither.
+        let program_exits = if nested {
+            self.calls_program_exits()
         } else {
-            self.run_activity_root()
-        }
-        .map(Ended::value);
+            self.main_calls_program_exits()
+        };
+        let initialized = if program_exits {
+            self.initialization_exit()
+        } else {
+            Ok(())
+        };
+        let exit = match initialized {
+            Err(failure) => Err(failure),
+            Ok(()) => if nested {
+                pinned!(
+                    self,
+                    crate::pinning::PinKind::Program,
+                    self.run_activation()
+                )
+            } else {
+                self.run_activity_root()
+            }
+            .map(Ended::value),
+        };
+        let exit = if program_exits && matches!(exit, Ok(_) | Err(Failure::Exited(_))) {
+            match self.termination_exit() {
+                Ok(()) => exit,
+                Err(failure) => Err(failure),
+            }
+        } else {
+            exit
+        };
         if own_level && let Err(failure) = &exit {
             self.capture_activation_frame(failure);
         }
@@ -3510,6 +3545,9 @@ impl Interp {
             leave_next_native: _,
             default_address: _,
             subcom_aliases: _,
+            // Entry points, not objects.
+            exits: _,
+            clause_exits: _,
             call_search: _,
             // Copies keyed by object, dropped with it rather than keeping it.
             kept_strings: _,
@@ -4320,6 +4358,7 @@ fn execute_kept(
         .set_frame_block(parts.frame_block);
     let (argument, deadline, switch_mode) = (parts.argument, parts.deadline, parts.switch_mode);
     let (arguments, start, address) = (parts.arguments, parts.start, parts.address);
+    let exits = parts.exits;
     interp.input = Input::new(parts.input);
     interp.standard_transient = parts.standard_transient;
     if let Some(sinks) = &parts.sinks {
@@ -4384,6 +4423,9 @@ fn execute_kept(
         }
         if let Some((directive, count)) = default_options {
             interp.send_default_options(&directive, count)?;
+        }
+        if !exits.is_empty() {
+            interp.install_exits(&exits, &[], false);
         }
         // After the bootstrap, so `SwitchMode::AtClause` counts this program's
         // clauses alone.
@@ -4616,13 +4658,17 @@ pub(crate) fn run_instance(
         for library in &options.load_libraries {
             interp.load_library(library);
         }
+        interp.install_exits(&options.registered_exits, &options.context_exits, true);
         let library = rexx_api::load::embedding_library(embedding::wait_in_root);
         interp.register_library(INSTANCE_LIBRARY, Ok(Some(library)));
         let thread = interp.thread_context();
         thread.set_application_data(options.application_data);
         started(thread.address(), interp.timer.inbox());
         interp.leave_next_native = true;
-        interp.run_as_started(program, StartType::Command, None)
+        let program = Rc::new(program);
+        let program_id = interp.load_program(Rc::clone(&program));
+        interp.set_instance_root(program_id);
+        interp.run_loaded(program, program_id, CallType::Command, None, None)
     });
     let mut stderr = Vec::new();
     if let Err(Failure::Loud(loud)) = &result {

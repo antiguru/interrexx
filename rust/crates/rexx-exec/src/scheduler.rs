@@ -2520,6 +2520,10 @@ impl Interp {
             description: description.clone(),
             ..Raised::condition(std::borrow::Cow::Borrowed("HALT"))
         };
+        // A trap taking the halt calls the halt exit's clear (`RexxActivation::trap`).
+        if self.exits.is_some() && self.trap_for(b"HALT").is_some() {
+            self.halt_clear_exit()?;
+        }
         match self.trap_for(b"HALT") {
             Some(trap) if trap.call => {
                 let object = self.build_condition_object(&raised, Some(true))?;
