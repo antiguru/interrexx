@@ -4661,14 +4661,17 @@ pub(crate) fn run_instance(
     interp.out_lines = stdout_terminal;
     interp.out_bound = OUTPUT_BOUND;
     interp.say_bound = if stdout_terminal { 0 } else { OUTPUT_BOUND };
+    // After what the embedding C program wrote through stdio, as the oracle orders them.
     interp.sinks = Some(Sinks {
         stdout: Box::new(|bytes| {
             use std::io::Write;
+            signal::flush_c_streams();
             let mut stdout = std::io::stdout();
             stdout.write_all(bytes).and_then(|()| stdout.flush())
         }),
         stderr: Box::new(|bytes| {
             use std::io::Write;
+            signal::flush_c_streams();
             std::io::stderr().write_all(bytes)
         }),
         stdout_terminal,

@@ -37,6 +37,16 @@ pub(crate) fn current_thread() -> usize {
     thread as usize
 }
 
+/// Flushes the C library's output streams, so that what a C program embedding the interpreter
+/// wrote through stdio before a program's output lands before it, as on the oracle, also where
+/// standard output is a file and stdio holds it back.
+pub(crate) fn flush_c_streams() {
+    // SAFETY: `fflush(NULL)` flushes every open output stream, each under its own lock.
+    unsafe {
+        libc::fflush(std::ptr::null_mut());
+    }
+}
+
 /// Installs the handlers, once per process, with `wake` as the socket they
 /// write to.
 pub(crate) fn install(wake: RawFd) {

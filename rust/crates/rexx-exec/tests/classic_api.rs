@@ -758,6 +758,42 @@ fn an_embedders_registered_library_serves_its_programs() {
     );
 }
 
+/// A C program's stdio output and the output of the programs it runs with `RexxStart` land in
+/// the order they were written, with standard output and error sent to files, where stdio holds
+/// the C program's lines back until something flushes them. Measured on the oracle with the same
+/// driver; ours wrote every C line on standard output after all of Rexx's. (Sent to one file, the
+/// oracle also puts a program's `SAY` before its later `.STDERR` line; ours hands a redirected
+/// standard output over in blocks, Deviation 40.)
+#[test]
+fn c_stdio_and_rexx_output_keep_their_order_in_files() {
+    let binary = driver("stdio");
+    let dir = scratch().join("driver-stdio");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("the driver's directory");
+    let (out, err) = (dir.join("out.txt"), dir.join("err.txt"));
+    let api = scratch().join("api-stdio");
+    let status = Command::new("timeout")
+        .args(["-k", "5", "60"])
+        .arg(binary)
+        .current_dir(&dir)
+        .env("REXX_API_DIR", &api)
+        .stdin(Stdio::null())
+        .stdout(std::fs::File::create(&out).expect("the output file"))
+        .stderr(std::fs::File::create(&err).expect("the error file"))
+        .status()
+        .expect("the driver runs");
+    stop_service(&api);
+    assert!(status.success(), "{status:?}");
+    assert_eq!(
+        std::fs::read_to_string(&out).expect("the output"),
+        "c one\nrexx one\nc two\nrexx two\nrexx three\nc three\nc four\n"
+    );
+    assert_eq!(
+        std::fs::read_to_string(&err).expect("the error output"),
+        "c err one\nrexx err one\nrexx err two\n"
+    );
+}
+
 /// Review Focus 4: a thread the instance never saw attaches, calls a program through the
 /// context it is given, and detaches; `Terminate`, called while that thread is attached but
 /// idle, returns without waiting for it, and its later `DetachThread` is harmless. The order

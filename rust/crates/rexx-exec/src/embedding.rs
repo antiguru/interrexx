@@ -130,8 +130,10 @@ fn load(name: &[u8], instore: Option<Instore>) -> Result<Loaded, (Vec<u8>, i32)>
     }
 }
 
-/// Writes a run's output to this process's standard output and error.
+/// Writes a run's output to this process's standard output and error, after what the C
+/// program wrote through stdio.
 fn write_outcome(outcome: &crate::Outcome) {
+    crate::signal::flush_c_streams();
     let _ = std::io::stdout().write_all(&outcome.stdout);
     let _ = std::io::stdout().flush();
     let _ = std::io::stderr().write_all(&outcome.stderr);
@@ -201,11 +203,16 @@ pub fn rexx_start(start: Start) -> Started {
     let mut invocation = Invocation::none()
         .with_input(ProgramInput::Stdin)
         .with_sinks(Sinks {
+            // After what the C program wrote through stdio, as the oracle orders them.
             stdout: Box::new(|bytes| {
+                crate::signal::flush_c_streams();
                 let mut stdout = std::io::stdout();
                 stdout.write_all(bytes).and_then(|()| stdout.flush())
             }),
-            stderr: Box::new(|bytes| std::io::stderr().write_all(bytes)),
+            stderr: Box::new(|bytes| {
+                crate::signal::flush_c_streams();
+                std::io::stderr().write_all(bytes)
+            }),
             stdout_terminal: std::io::stdout().is_terminal(),
             own_descriptors: true,
         })
