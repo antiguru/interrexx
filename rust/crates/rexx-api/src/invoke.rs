@@ -158,7 +158,7 @@ pub fn hook(
 ) -> Result<(), Failure> {
     let ((), refused) = crate::layout::recording_refusals(|| library.run_hook(hook, contexts));
     if let Some(entry) = refused {
-        cx.clear_pending();
+        cx.clear_sticky();
         return Err(Failure::UnfilledSlot { entry });
     }
     Ok(())
@@ -196,7 +196,7 @@ pub fn command(
         handler.call(&exit, address.cast(), command.cast(), &mut io)
     });
     if let Some(entry) = refused {
-        cx.clear_pending();
+        cx.clear_sticky();
         return Err(Failure::UnfilledSlot { entry });
     }
     Ok(cx.conversion().host.resolve(answered))
@@ -227,7 +227,7 @@ pub fn exit(
     let (outcome, refused) =
         crate::layout::recording_refusals(|| handler.call(exit.as_ptr(), request));
     if let Some(entry) = refused {
-        cx.clear_pending();
+        cx.clear_sticky();
         return Err(Failure::UnfilledSlot { entry });
     }
     Ok(outcome.map(|object| cx.conversion().host.resolve(object)))
@@ -413,7 +413,7 @@ pub fn finish(cx: &Activation<'_>, completion: Completion) -> Result<Option<ObjR
     if let Some(entry) = refused {
         // Ahead of the result and of any condition the extension raised
         // during the call, before the refused member or after it.
-        cx.clear_pending();
+        cx.clear_sticky();
         return Err(Failure::UnfilledSlot { entry });
     }
 

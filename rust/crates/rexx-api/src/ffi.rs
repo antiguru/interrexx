@@ -1351,7 +1351,7 @@ unsafe fn innermost_activation<'a>(
 fn raise_invalid_thread(running: &Reached<'_>) {
     if running.abandoned || running.is_busy() {
         if running.pending().is_none() {
-            running.raise(INVALID_THREAD);
+            running.stick(INVALID_THREAD);
         }
         return;
     }

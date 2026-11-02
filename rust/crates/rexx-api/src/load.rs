@@ -822,6 +822,45 @@ pub unsafe extern "C-unwind" fn foreign_in_callback(
     std::ptr::null_mut()
 }
 
+/// `FOREIGNTHEN(object, message, other, message2, after)`: [`foreign_in_callback`], and then,
+/// through the call's thread context, `ClearCondition` where `after` is `CLEAR` or
+/// `RaiseException0` of 40.1 where it is `RAISE`: a later member that would drop the 98.983 the
+/// foreign callback left on the call, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn foreign_then(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 7] = [
+        code::REXX_OBJECT_PTR,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `foreign_in_callback`'s, whose four arguments lead this signature's five;
+    // `after` is a NUL-terminated string for the call.
+    unsafe {
+        foreign_in_callback(context, arguments);
+        let thread = (*context).threadContext;
+        match std::ffi::CStr::from_ptr((*arguments.add(5)).value.value_CSTRING).to_bytes() {
+            b"CLEAR" => ((*(*thread).functions).ClearCondition)(thread),
+            b"RAISE" => ((*(*thread).functions).RaiseException0)(thread, 40001),
+            _ => {}
+        }
+    }
+    std::ptr::null_mut()
+}
+
 /// `SENDFROMANOTHERTHREAD(object, message)`: sends `message` to `object`
 /// through the call's thread context from a thread of its own, which it
 /// waits for, answering whether the send answered nothing: a callback from

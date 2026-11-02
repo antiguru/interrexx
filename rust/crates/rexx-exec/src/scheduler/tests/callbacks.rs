@@ -55,6 +55,7 @@ fn library() -> rexx_api::load::Library {
         ("SETTHROUGH", rexx_api::load::set_through),
         ("NAPTHENSET", rexx_api::load::nap_then_set),
         ("FOREIGNINCALLBACK", rexx_api::load::foreign_in_callback),
+        ("FOREIGNTHEN", rexx_api::load::foreign_then),
         (
             "SENDFROMANOTHERTHREAD",
             rexx_api::load::send_from_another_thread,
@@ -219,6 +220,26 @@ fn a_foreign_callback_while_the_calls_thread_is_in_a_callback_raises_98_983() {
          ::class loud\n::method speak\n  say 'spoke'\n  return 1\n");
     assert_eq!(ran.outcome.exit_code, 0, "{}", ran.stderr());
     assert_eq!(ran.stdout(), "trapped 98.983\nspun\n");
+}
+
+/// The 98.983 a foreign callback leaves on the call is sticky (queue item 2): the call's own
+/// `ClearCondition` afterwards does not drop it, and its own raise afterwards does not replace
+/// it.
+#[test]
+fn a_foreign_callbacks_98_983_survives_a_later_clear_or_raise() {
+    for after in ["CLEAR", "RAISE"] {
+        let ran = run(&format!(
+            "m = .t~new~start('spin')\nsignal on syntax\n\
+             call FOREIGNTHEN .w~new, 'WAIT', .loud~new, 'SPEAK', '{after}'\nsay 'unreached'\n\
+             syntax:\nsay 'trapped' condition('o')~code\nsay m~result\n\
+             ::requires 'callbacktest' LIBRARY\n::class t\n::method spin\n  \
+             do i = 1 to 2000000\n  end\n  return 'spun'\n\
+             ::class w\n::method wait\n  call SysSleep 0.5\n  return 1\n\
+             ::class loud\n::method speak\n  say 'spoke'\n  return 1\n"
+        ));
+        assert_eq!(ran.outcome.exit_code, 0, "{after}: {}", ran.stderr());
+        assert_eq!(ran.stdout(), "trapped 98.983\nspun\n", "{after}");
+    }
 }
 
 /// A callback whose call's activity a pinned waiter waits for is answered by
