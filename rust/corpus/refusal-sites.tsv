@@ -250,7 +250,7 @@ Loud	parse_trigger_operand	body	crates/rexx-exec/src/lib.rs:860	off-send-surface
 Raised	power_exponent_not_whole	body	crates/rexx-exec/src/error.rs:186	off-send-surface	-	-	-
 Raised	private_method	send	crates/rexx-exec/src/error.rs:1604	agrees	yes	97.2	.K~new~p over ::method p private
 Raised	procedure_out_of_place	body	crates/rexx-exec/src/error.rs:546	off-send-surface	-	-	-
-Raised	queue_failure	send	crates/rexx-exec/src/dispatch/queue_methods.rs:183	agrees	yes	48.1	queue 'x' after the API service was killed under the program (rxapi.rs a_killed_daemon_gives_a_clean_error): 48.1 SYSTEM QUEUE (RXAPI_NORXAPI) on both
+Raised	queue_failure	body+send	crates/rexx-exec/src/dispatch/queue_methods.rs:183	agrees	yes	48.1	queue 'x' after the API service was killed under the program (rxapi.rs a_killed_daemon_gives_a_clean_error): 48.1 SYSTEM QUEUE (RXAPI_NORXAPI) on both
 Raised	queue_target_option	body	crates/rexx-exec/src/error.rs:723	off-send-surface	-	-	-
 Raised	raise_syntax_condition	body	crates/rexx-exec/src/run/raised.rs:84	off-send-surface	-	-	-
 Raised	raised_available_not_logical	body	crates/rexx-exec/src/run/raised.rs:59	off-send-surface	-	-	-
