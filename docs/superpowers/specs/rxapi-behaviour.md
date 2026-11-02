@@ -815,13 +815,22 @@ These settle where interrexx departs from, or chooses among, the behaviour above
 2. **The daemon binary is named `rxapi`** and prints what `rxapi.testGroup` relies on.
 3. **The macrospace file layout is interrexx's own.** Compiled images are engine-specific. A file the
    oracle wrote is refused with the return code for an invalid file.
-4. **A session queue goes when no connection uses it and it is empty.** One holding lines counts for
-   the daemon's exit rule, so `cmd | rxqueue` still delivers after `rxqueue` exits.
+4. **A session queue goes when no connection uses it, whatever it holds.** A connection uses a
+   session queue once it touches it or attaches to it. Before its first command or child process
+   the interpreter connects and attaches to its session queue, moving any lines it holds, even when
+   it holds none, and keeps that connection for its life. So `cmd | rxqueue` delivers to a running
+   program after `rxqueue` exits. There is no shutdown message: the connection closing, on a clean
+   exit or when the kernel closes a crashed process's socket, is the only signal, and the queue
+   goes with it. `echo x | rxqueue` from a plain shell loses its lines when `rxqueue` disconnects.
+   Session queues do not count for the daemon's exit rule.
 5. **Registrations stay owner-only,** as observed. A daemon holding them stays up.
 6. **Timestamps** keep the observed zero-based `month` and years-since-1900 `year`.
 7. **A blocked pull ends when its connection closes,** and the queue stays usable. The observed
    undeletable queue and daemon death are oracle defects and are not reproduced.
-8. **Process id reuse** cannot arise, because identity is the connection and never the process id.
+8. **Process id reuse** cannot reach registrations or blocked pulls, whose identity is the
+   connection. Session handles are process ids, so a later process with the same id would share an
+   earlier one's queue, but by Resolution 4 only while a process using that queue is still
+   connected.
 9. **The start timeout is 5 seconds,** not the observed two: a client gives up on a service it
    started after that, and the first call returns 1004.
 10. **`rxapi --stop` with nothing running** exits 0 and prints nothing.
@@ -829,3 +838,11 @@ These settle where interrexx departs from, or chooses among, the behaviour above
     that removes a reference does.
 12. **A listed macro save past 256 MiB** of image bytes returns `RXMACRO_NO_STORAGE` (1), unless
     the macrospace itself holds more, so listing each macro once always fits.
+13. **The service directory** is the first of `REXX_API_DIR`, `$XDG_RUNTIME_DIR/interrexx` and a
+    private directory under the temp directory whose socket path the platform can bind. When a set
+    `REXX_API_DIR` is passed over, each process choosing a directory prints one line on standard
+    error naming it and the reason.
+14. **A command without a service** still runs when the interpreter's session queue is empty: the
+    queue stays in process and the child is not given `RXQUEUESESSION`, so its `rxqueue` reports
+    the service missing itself. When the queue holds lines, the command raises 48.1 with
+    `RXAPI_NORXAPI`, as other queue operations do.

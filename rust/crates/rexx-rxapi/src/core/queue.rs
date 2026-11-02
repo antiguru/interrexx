@@ -314,16 +314,12 @@ impl Queues {
         self.sessions.retain(|_, session| {
             session.queue.waiters.retain(keeps);
             session.users.remove(&connection);
-            !session.users.is_empty() || !session.queue.items.is_empty()
+            !session.users.is_empty()
         });
     }
 
-    /// No named queue, and no session queue holding lines.
+    /// No named queue. A session queue lasts only while a connection uses it.
     pub(super) fn hold_nothing(&self) -> bool {
         self.named.is_empty()
-            && self
-                .sessions
-                .values()
-                .all(|session| session.queue.items.is_empty())
     }
 }

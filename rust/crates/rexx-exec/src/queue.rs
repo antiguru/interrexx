@@ -9,8 +9,9 @@ use rexx_rxapi::message::code::{OK, QUEUE_BAD_NAME, QUEUE_EMPTY};
 use rexx_rxapi::message::{FIFO, LIFO, NO_WAIT, Reply, Request, WAIT};
 use rexx_rxapi::transport::CancelToken;
 
-use crate::Interp;
+use crate::dispatch::queue_methods::queue_failure;
 use crate::rxapi_client::{self, SESSION_VARIABLE};
+use crate::{Failure, Interp};
 
 /// A `lineIn` waiting for a line of `name`, with the service's pull where the queue is named.
 pub(crate) struct QueueWait {
@@ -56,10 +57,7 @@ impl RemoteWait {
 enum Sharing {
     /// In process: no other process has its handle.
     Local,
-    /// A child was given the handle while the queue held no line, so nothing connected. A
-    /// service running now may hold lines a child added; with none running, there are none.
-    Handed,
-    /// In the service.
+    /// In the service, which this process's connection keeps it in.
     Remote,
 }
 
@@ -171,19 +169,9 @@ fn call_status(request: Request) -> u64 {
 }
 
 impl Interp {
-    /// Whether `name` reaches the session queue still held in process. A handed queue becomes
-    /// remote once a service is running, with any line held here moved behind its own.
-    pub(crate) fn queue_is_local(&mut self, name: &[u8]) -> bool {
-        if !is_session(name) {
-            return false;
-        }
-        if self.queue.sharing == Sharing::Handed
-            && let Some(client) = rxapi_client::running_client()
-        {
-            move_lines(client, &mut self.queue.lines);
-            self.queue.sharing = Sharing::Remote;
-        }
-        self.queue.sharing != Sharing::Remote
+    /// Whether `name` reaches the session queue still held in process.
+    pub(crate) fn queue_is_local(&self, name: &[u8]) -> bool {
+        is_session(name) && self.queue.sharing == Sharing::Local
     }
 
     /// The session handle a request carries.
@@ -228,7 +216,7 @@ impl Interp {
     }
 
     /// `RexxQueryQueue(name)`'s count, 0 on any failure.
-    pub(crate) fn queue_count(&mut self, name: &[u8]) -> u64 {
+    pub(crate) fn queue_count(&self, name: &[u8]) -> u64 {
         if self.queue_is_local(name) {
             return self.queue.len() as u64;
         }
@@ -381,19 +369,24 @@ impl Interp {
         None
     }
 
-    /// Makes the session queue reachable from a child about to start: its lines move to the
-    /// service, and the child inherits the handle. Nothing connects while it holds no line.
-    pub(crate) fn share_session_queue(&mut self) {
-        if self.queue.sharing != Sharing::Remote {
-            if self.queue.lines.is_empty() {
-                self.queue.sharing = Sharing::Handed;
-            } else if let Ok(client) = rxapi_client::client() {
-                move_lines(client, &mut self.queue.lines);
-                self.queue.sharing = Sharing::Remote;
+    /// Makes the session queue reachable from a child about to start: this process connects,
+    /// which keeps the queue in the service while its connection lives, any line held here moves
+    /// there, and the child inherits the handle. Without a service an empty queue stays here and
+    /// the child gets no handle; a queue holding lines raises 48.1, as any queue operation does.
+    pub(crate) fn share_session_queue(&mut self) -> Result<(), Failure> {
+        if self.queue.sharing == Sharing::Local {
+            match rxapi_client::client() {
+                Ok(client) => {
+                    move_lines(client, &mut self.queue.lines);
+                    self.queue.sharing = Sharing::Remote;
+                }
+                Err(_) if self.queue.lines.is_empty() => return Ok(()),
+                Err(status) => return Err(queue_failure(status).into()),
             }
         }
         let value = rxapi_client::session_value(Self::session());
         self.env_set(SESSION_VARIABLE.as_bytes(), Some(value));
+        Ok(())
     }
 }
 

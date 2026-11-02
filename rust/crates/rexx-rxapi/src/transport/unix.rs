@@ -39,25 +39,55 @@ pub fn lock_path(dir: &Path, version: u32) -> PathBuf {
 }
 
 /// The service directory for this user: `REXX_API_DIR`, else `$XDG_RUNTIME_DIR/interrexx`, else a
-/// directory of this user's under the temp directory.
+/// directory of this user's under the temp directory. A candidate whose socket path the platform
+/// cannot bind is passed over, and a passed-over `REXX_API_DIR` is reported once on standard
+/// error.
 pub fn service_dir() -> PathBuf {
-    choose_dir(
+    let (dir, skipped) = choose_dir(
         std::env::var_os("REXX_API_DIR"),
         std::env::var_os("XDG_RUNTIME_DIR"),
         &std::env::temp_dir(),
         rustix::process::getuid().as_raw(),
-    )
+    );
+    if let Some(skipped) = skipped {
+        static WARNED: std::sync::Once = std::sync::Once::new();
+        WARNED.call_once(|| {
+            use std::io::Write;
+            let _ = writeln!(
+                io::stderr(),
+                "rxapi: REXX_API_DIR {} is not used: its socket path is too long",
+                skipped.display()
+            );
+        });
+    }
+    dir
 }
 
-fn choose_dir(api: Option<OsString>, xdg: Option<OsString>, temp: &Path, uid: u32) -> PathBuf {
-    let set = |value: Option<OsString>| value.filter(|value| !value.is_empty());
-    if let Some(api) = set(api) {
-        return PathBuf::from(api);
-    }
-    if let Some(xdg) = set(xdg) {
-        return Path::new(&xdg).join("interrexx");
-    }
-    temp.join(format!("interrexx-{uid}"))
+/// Whether a socket in `dir` has a path the platform can bind.
+fn socket_fits(dir: &Path) -> bool {
+    let socket = socket_path(dir, PROTOCOL_VERSION);
+    let socket = std::path::absolute(&socket).unwrap_or(socket);
+    rustix::net::SocketAddrUnix::new(socket.as_path()).is_ok()
+}
+
+/// The directory, and `REXX_API_DIR`'s value where it was set and passed over.
+fn choose_dir(
+    api: Option<OsString>,
+    xdg: Option<OsString>,
+    temp: &Path,
+    uid: u32,
+) -> (PathBuf, Option<PathBuf>) {
+    let set = |value: Option<OsString>| value.filter(|value| !value.is_empty()).map(PathBuf::from);
+    let api = set(api);
+    let fallback = temp.join(format!("interrexx-{uid}"));
+    let chosen = api
+        .iter()
+        .cloned()
+        .chain(set(xdg).map(|xdg| xdg.join("interrexx")))
+        .find(|dir| socket_fits(dir))
+        .unwrap_or(fallback);
+    let skipped = api.filter(|api| *api != chosen);
+    (chosen, skipped)
 }
 
 /// Creates `dir` if needed and insists it is a `0700` directory of this user, answering its
@@ -374,8 +404,12 @@ impl Drop for Unix {
 mod tests {
     use super::*;
 
-    fn dir(api: Option<&str>, xdg: Option<&str>) -> PathBuf {
+    fn chosen(api: Option<&str>, xdg: Option<&str>) -> (PathBuf, Option<PathBuf>) {
         choose_dir(api.map(Into::into), xdg.map(Into::into), Path::new("/t"), 7)
+    }
+
+    fn dir(api: Option<&str>, xdg: Option<&str>) -> PathBuf {
+        chosen(api, xdg).0
     }
 
     #[test]
@@ -384,6 +418,29 @@ mod tests {
         assert_eq!(dir(None, Some("/x")), Path::new("/x/interrexx"));
         assert_eq!(dir(None, None), Path::new("/t/interrexx-7"));
         assert_eq!(dir(Some(""), Some("")), Path::new("/t/interrexx-7"));
+    }
+
+    /// A candidate whose socket path cannot be bound is passed over for the next, and a
+    /// passed-over `REXX_API_DIR` is named for the warning.
+    #[test]
+    fn a_directory_too_long_for_a_socket_is_passed_over() {
+        let long = format!("/{}", "d".repeat(120));
+        let long_xdg = format!("/{}", "x".repeat(120));
+        assert_eq!(chosen(Some("/a"), Some("/x")), (PathBuf::from("/a"), None));
+        assert_eq!(
+            chosen(Some(&long), Some("/x")),
+            (PathBuf::from("/x/interrexx"), Some(PathBuf::from(&long)))
+        );
+        assert_eq!(
+            chosen(Some(&long), Some(&long_xdg)),
+            (PathBuf::from("/t/interrexx-7"), Some(PathBuf::from(&long)))
+        );
+        assert_eq!(
+            chosen(None, Some(&long_xdg)),
+            (PathBuf::from("/t/interrexx-7"), None)
+        );
+        let fits = format!("/{}", "d".repeat(80));
+        assert_eq!(chosen(Some(&fits), None), (PathBuf::from(&fits), None));
     }
 
     /// A listener in a private directory, which `uid` here is never the owner of.

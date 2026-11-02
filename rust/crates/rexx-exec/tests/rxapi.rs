@@ -212,7 +212,11 @@ fn a_session_wait_survives_the_queue_moving_to_the_service() {
 #[test]
 fn character_builtins_refuse_the_queue() {
     let service = Service::new();
-    for call in ["chars('QUEUE:')", "charin('queue:')", "charout('QUEUE:', 'x')"] {
+    for call in [
+        "chars('QUEUE:')",
+        "charin('queue:')",
+        "charout('QUEUE:', 'x')",
+    ] {
         let output = service.run(&format!(
             "signal on syntax\nsay {call}\nexit\n\
              syntax: say condition('o')~code condition('o')~message\n"
@@ -243,6 +247,118 @@ fn tests_reach_only_private_services() {
             target.display()
         );
     }
+}
+
+/// Whether the daemon in `service` exits within five seconds.
+#[expect(
+    clippy::disallowed_methods,
+    reason = "a real daemon's real exit, polled"
+)]
+fn daemon_exits(service: &Service) -> bool {
+    (0..100).any(|_| {
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        !service.has_socket()
+    })
+}
+
+/// Resolution 4: a session queue goes with its last connection, lines and all. A program that
+/// queued lines and ran a command leaves nothing for a later program given its handle, and the
+/// daemon exits.
+#[test]
+fn a_session_queue_goes_with_its_program() {
+    let service = Service::new();
+    let first =
+        service.run("queue 'leaked1'; queue 'leaked2'\n'echo $RXQUEUESESSION > handle.txt'\n");
+    assert_eq!(first.status.code(), Some(0), "{}", stderr(&first));
+    assert!(
+        daemon_exits(&service),
+        "the program's queue kept the daemon up"
+    );
+    let handle = std::fs::read_to_string(service.root.join("work/handle.txt"))
+        .expect("the command wrote the handle");
+    let second = service
+        .command("say queued()\n")
+        .env("RXQUEUESESSION", handle.trim())
+        .output()
+        .expect("rexx runs");
+    assert_eq!(stdout(&second), "0\n", "{}", stderr(&second));
+}
+
+/// The kernel closing a killed program's connection is the only signal the service gets, and it
+/// is enough: the queue goes and the daemon exits.
+#[test]
+fn a_killed_programs_session_queue_goes() {
+    let service = Service::new();
+    let output = service.run("queue 'x'\n'true'\nqueue 'y'\n'kill -9 $PPID'\nsay 'survived'\n");
+    assert_eq!(stdout(&output), "", "{}", stderr(&output));
+    assert!(
+        daemon_exits(&service),
+        "the killed program's queue kept the daemon up"
+    );
+}
+
+/// `rxqueue` run with no program behind it uses a queue only its own connection held, so its
+/// lines go when it disconnects and leave no daemon.
+#[test]
+fn an_orphan_rxqueue_leaves_no_daemon() {
+    let service = Service::new();
+    let mut rxqueue = Command::new(bin_dir().join("rxqueue"));
+    rxqueue
+        .env("REXX_API_DIR", service.api())
+        .env_remove("RXQUEUESESSION")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null());
+    let mut child = rxqueue.spawn().expect("rxqueue runs");
+    std::io::Write::write_all(child.stdin.as_mut().expect("a pipe"), b"orphan\n").expect("written");
+    drop(child.stdin.take());
+    assert!(child.wait().expect("rxqueue ends").success());
+    assert!(daemon_exits(&service), "the orphan line kept the daemon up");
+}
+
+/// Without a service, a command still runs when the session queue is empty, and its child gets
+/// no handle; with lines to hand over, the command raises 48.1 as any queue operation does.
+#[test]
+fn a_command_without_a_service() {
+    let service = Service::new();
+    std::fs::write(service.api(), "not a directory").expect("a file in the way");
+    let empty = service.run("'echo [$RXQUEUESESSION]'\nsay rc\n");
+    assert_eq!(stdout(&empty), "[]\n0\n", "{}", stderr(&empty));
+    assert_eq!(empty.status.code(), Some(0));
+    let held = service.run(
+        "signal on syntax\nqueue 'line'\n'true'\nsay 'ran'\nexit\n\
+         syntax: say condition('o')~code condition('o')~message\n",
+    );
+    assert_eq!(
+        stdout(&held),
+        "48.1 Failure in system service: SYSTEM QUEUE (RXAPI_NORXAPI).\n",
+        "{}",
+        stderr(&held)
+    );
+}
+
+/// A `REXX_API_DIR` too long for a socket path is passed over for the next candidate, with one
+/// warning from each process that chose a directory.
+#[test]
+fn a_service_directory_too_long_for_a_socket_is_passed_over() {
+    let service = Service::new();
+    let long = service.root.join("d".repeat(120));
+    let runtime = service.root.join("runtime");
+    let output = service
+        .command("'printf \"x\\n\" | rxqueue'\nsay queued()\n")
+        .env("REXX_API_DIR", &long)
+        .env("XDG_RUNTIME_DIR", &runtime)
+        .output()
+        .expect("rexx runs");
+    let _ = Command::new(bin_dir().join("rxapi"))
+        .arg("--stop")
+        .env("REXX_API_DIR", runtime.join("interrexx"))
+        .output();
+    assert_eq!(stdout(&output), "1\n", "{}", stderr(&output));
+    let warning = format!(
+        "rxapi: REXX_API_DIR {} is not used: its socket path is too long\n",
+        long.display()
+    );
+    assert_eq!(stderr(&output), warning.repeat(2));
 }
 
 /// Review Focus 4: a function one program registers is registered for the next.
