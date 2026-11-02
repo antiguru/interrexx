@@ -30,8 +30,6 @@ static WAKE: AtomicI32 = AtomicI32::new(-1);
 
 static INSTALL: Once = Once::new();
 
-/// Installs the handlers, once per process, with `wake` as the socket they
-/// write to.
 /// The calling thread's `pthread_t`, the `thread_id_t` the classic API names threads by.
 pub(crate) fn current_thread() -> usize {
     // SAFETY: `pthread_self` has no preconditions.
@@ -39,6 +37,8 @@ pub(crate) fn current_thread() -> usize {
     thread as usize
 }
 
+/// Installs the handlers, once per process, with `wake` as the socket they
+/// write to.
 pub(crate) fn install(wake: RawFd) {
     INSTALL.call_once(|| {
         WAKE.store(wake, Ordering::Release);
