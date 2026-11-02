@@ -258,8 +258,15 @@ pub const ROW_10_GROUPS: &[&str] = &[
 ];
 
 /// The [`ROW_10_GROUPS`] Phase 10 has delivered: they pass, so the roadmap no longer owes them
-/// and they hold no `group` row.
-pub const ROW_10_DELIVERED: &[&str] = &["API/classic/CLASSIC", "API/classic/RexxCallBack"];
+/// and they hold no `group` row. Their `reaching_rxapi` rows stay with the suite harness.
+pub const ROW_10_DELIVERED: &[&str] = &[
+    "API/classic/CLASSIC",
+    "API/classic/RexxCallBack",
+    "API/oo/INVOCATION",
+    "API/oo/ProcessInvocation",
+    "API/oo/ProcessRexxStart",
+    "API/oo/RexxStart",
+];
 
 /// The `utilities` groups ruling R1 makes Phase 10's.
 pub const R1_GROUPS: &[&str] = &[
