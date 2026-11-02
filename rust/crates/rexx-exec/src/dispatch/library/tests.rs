@@ -742,12 +742,13 @@ fn a_programs_end_runs_its_librarys_unloader() {
         crate::install::offer_library(b"hooked", || {
             rexx_api::load::hooks_only(Some(program_loader), Some(program_unloader))
         });
-        crate::execute(
+        let outcome = crate::execute(
             "hooked.rex",
             b"say 'main'\n::requires 'hooked' LIBRARY\n".to_vec(),
             false,
             crate::Invocation::none(),
-        )
+        );
+        (outcome, None)
     });
     assert_eq!(
         (

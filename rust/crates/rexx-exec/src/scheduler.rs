@@ -1502,6 +1502,18 @@ impl Interp {
         }
     }
 
+    /// Serves what the calls still in flight post once the run has ended --
+    /// a pool thread's recall to end its call, a completion, a command's
+    /// end -- until none is in flight, then drops the interpreter.
+    pub(crate) fn wind_down(mut self) {
+        while self.activities.in_flight() {
+            let posted = self.timer.idle();
+            self.file_completions(posted);
+        }
+        #[cfg(test)]
+        WOUND_DOWN.with_borrow_mut(|wound| *wound += 1);
+    }
+
     /// Files the completions posted since the last drain.
     pub(crate) fn drain_completions(&mut self) {
         let posted = self.timer.drain();
@@ -2746,6 +2758,12 @@ fn request_halt(target: &mut Activity, description: Option<Vec<u8>>) -> Option<b
         trace_failure: None,
     });
     Some(true)
+}
+
+#[cfg(test)]
+thread_local! {
+    /// How many interpreters this thread wound down after their run.
+    pub(crate) static WOUND_DOWN: std::cell::RefCell<u64> = const { std::cell::RefCell::new(0) };
 }
 
 #[cfg(test)]

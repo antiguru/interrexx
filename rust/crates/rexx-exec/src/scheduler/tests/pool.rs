@@ -193,6 +193,8 @@ pub(super) struct Ran {
     pub(super) thread: ThreadId,
     pub(super) takes: u64,
     pub(super) abandoned: usize,
+    /// How many interpreters the run's thread wound down after their run.
+    pub(super) wound_down: u64,
 }
 
 impl Ran {
@@ -271,6 +273,7 @@ pub(super) fn run_shaped(source: &str, shape: Shape) -> std::thread::Result<Ran>
                 thread: std::thread::current().id(),
                 takes: crate::dispatch::library::callback_takes(),
                 abandoned: crate::scheduler::abandoned_held(),
+                wound_down: crate::scheduler::WOUND_DOWN.with_borrow(|wound| *wound),
             }
         })
         .expect("the interpreter thread")
@@ -694,4 +697,23 @@ fn threads_beyond_the_bound_end_after_their_jobs() {
         std::thread::sleep(Duration::from_millis(10));
     }
     assert_eq!(pool.threads(), 1);
+}
+
+/// Queue item 3: a run that ends, here at its deadline, while main's native call runs on a pool
+/// thread keeps its interpreter until that call has ended -- the pool thread's recall to end it
+/// is served -- and then drops it, where it used to leak it with the pool thread left waiting.
+#[test]
+fn a_run_ending_with_a_call_in_flight_serves_the_call_then_drops_the_interpreter() {
+    let ran = run_shaped(
+        "t = .t~new~start('spin')\ncall NAP\nsay 'after'\n\
+         ::requires 'pooltest' LIBRARY\n::class t\n::method spin\n  do forever; end\n",
+        Shape {
+            deadline: Duration::from_millis(50),
+            ..SHAPE
+        },
+    )
+    .expect("the run did not panic");
+    assert_eq!(ran.exits, 1, "{}", ran.stderr());
+    assert_eq!(ran.stdout(), "");
+    assert_eq!(ran.wound_down, 1, "{}", ran.stderr());
 }

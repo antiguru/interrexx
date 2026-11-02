@@ -128,7 +128,8 @@ struct Shared {
     state: std::sync::Mutex<State>,
     changed: std::sync::Condvar,
     inbox: std::sync::OnceLock<crate::sync::Arc<crate::timer::Inbox<crate::timer::Posted>>>,
-    thread: std::sync::Mutex<Option<std::thread::JoinHandle<crate::Outcome>>>,
+    /// What the interpreter thread left unwritten, once it has ended.
+    outcome: std::sync::Mutex<Option<crate::Outcome>>,
 }
 
 impl Shared {
@@ -187,7 +188,7 @@ pub fn create_instance(options: InstanceOptions) -> Option<usize> {
         .stack_size(crate::INTERPRETER_STACK_BYTES)
         .spawn(move || {
             crate::signal::receive();
-            let outcome = crate::run_instance(
+            let (outcome, kept) = crate::run_instance(
                 options,
                 Box::new(move |context, inbox| {
                     let _ = starting.inbox.set(inbox);
@@ -197,15 +198,18 @@ pub fn create_instance(options: InstanceOptions) -> Option<usize> {
                         .push((context, starting));
                 }),
             );
+            *ending
+                .outcome
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(outcome);
             ending.state().ended = true;
             ending.changed.notify_all();
-            outcome
+            if let Some(interp) = kept {
+                interp.wind_down();
+            }
         })
         .ok()?;
-    *shared
-        .thread
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(spawned);
+    drop(spawned);
     let mut state = shared.state();
     while state.context.is_none() && !state.ended {
         state = shared.wait(state);
@@ -247,16 +251,21 @@ pub(crate) fn wait_in_root(context: usize) {
     }
 }
 
-/// Joins the instance's interpreter thread and writes what it left unwritten.
+/// Waits for the instance's interpreter thread to end its run, and writes
+/// what it left unwritten. A call still in flight then is served on that
+/// thread, which ends after it.
 fn end(shared: &Shared) {
-    let thread = shared
-        .thread
+    let mut state = shared.state();
+    while !state.ended {
+        state = shared.wait(state);
+    }
+    drop(state);
+    let outcome = shared
+        .outcome
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
         .take();
-    if let Some(thread) = thread
-        && let Ok(outcome) = thread.join()
-    {
+    if let Some(outcome) = outcome {
         let _ = std::io::stdout().write_all(&outcome.stdout);
         let _ = std::io::stdout().flush();
         let _ = std::io::stderr().write_all(&outcome.stderr);

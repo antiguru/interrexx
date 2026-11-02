@@ -3922,10 +3922,10 @@ pub fn run_program(path: &str, text: Vec<u8>, invocation: Invocation) -> Outcome
 pub fn run_program_named(path: &[u8], text: Vec<u8>, invocation: Invocation) -> Outcome {
     let path = path.to_vec();
     on_interpreter_thread(move || {
-        execute_on(
+        execute_kept(
             &path,
             text,
-            false,
+            Entry::Run,
             invocation,
             Some(INTERPRETER_STACK_BYTES),
         )
@@ -3938,7 +3938,7 @@ pub fn run_program_named(path: &[u8], text: Vec<u8>, invocation: Invocation) -> 
 pub fn translate_program(path: &[u8], text: Vec<u8>) -> Outcome {
     let path = path.to_vec();
     on_interpreter_thread(move || {
-        execute_as(
+        execute_kept(
             &path,
             text,
             Entry::Translate,
@@ -3958,7 +3958,7 @@ pub(crate) fn run_program_on_stack(
 ) -> Outcome {
     let path = path.as_bytes().to_vec();
     on_thread_of(stack, move || {
-        execute_on(&path, text, false, invocation, Some(stack))
+        execute_kept(&path, text, Entry::Run, invocation, Some(stack))
     })
 }
 
@@ -3975,7 +3975,13 @@ pub fn run_program_collect_every_alloc(
 ) -> Outcome {
     let path = path.as_bytes().to_vec();
     on_interpreter_thread(move || {
-        execute_on(&path, text, true, invocation, Some(INTERPRETER_STACK_BYTES))
+        execute_kept(
+            &path,
+            text,
+            Entry::CollectEveryAlloc,
+            invocation,
+            Some(INTERPRETER_STACK_BYTES),
+        )
     })
 }
 
@@ -4110,23 +4116,39 @@ fn report_late_failures(
 }
 
 /// Runs `body` on a thread with `INTERPRETER_STACK_BYTES` of stack.
-fn on_interpreter_thread(body: impl FnOnce() -> Outcome + Send + 'static) -> Outcome {
+fn on_interpreter_thread(
+    body: impl FnOnce() -> (Outcome, Option<Interp>) + Send + 'static,
+) -> Outcome {
     on_thread_of(INTERPRETER_STACK_BYTES, body)
 }
 
-/// Runs `body` on a thread with `stack` bytes of stack.
-fn on_thread_of(stack: usize, body: impl FnOnce() -> Outcome + Send + 'static) -> Outcome {
+/// Runs `body` on a thread with `stack` bytes of stack and answers its
+/// outcome as soon as it has one. An interpreter `body` hands back still has
+/// calls in flight: it stays on that thread, serving them, and is dropped
+/// once they have ended ([`Interp::wind_down`]), while the caller goes on.
+fn on_thread_of(
+    stack: usize,
+    body: impl FnOnce() -> (Outcome, Option<Interp>) + Send + 'static,
+) -> Outcome {
+    let (deliver, delivered) = std::sync::mpsc::channel();
     let interpreter = std::thread::Builder::new()
         .name("rexx-interp".to_string())
         .stack_size(stack)
-        .spawn(|| {
+        .spawn(move || {
             signal::receive();
-            body()
+            let (outcome, kept) = body();
+            let _ = deliver.send(outcome);
+            if let Some(interp) = kept {
+                interp.wind_down();
+            }
         })
         .expect("spawning the interpreter thread");
-    match interpreter.join() {
+    match delivered.recv() {
         Ok(outcome) => outcome,
-        Err(panic) => std::panic::resume_unwind(panic),
+        Err(_) => match interpreter.join() {
+            Err(panic) => std::panic::resume_unwind(panic),
+            Ok(()) => unreachable!("the interpreter thread ended without an outcome"),
+        },
     }
 }
 
@@ -4212,6 +4234,7 @@ enum Entry {
 
 /// Everything that happens on the interpreter thread: parse, run, report.
 /// `stack` is the thread's stack size, where known.
+#[cfg(test)]
 fn execute_on(
     path: &[u8],
     text: Vec<u8>,
@@ -4227,7 +4250,9 @@ fn execute_on(
     execute_as(path, text, entry, invocation, stack)
 }
 
-/// [`execute_on`] for any [`Entry`].
+/// [`execute_on`] for any [`Entry`]; an interpreter left with calls in
+/// flight serves them on this thread before this returns.
+#[cfg(test)]
 fn execute_as(
     path: &[u8],
     text: Vec<u8>,
@@ -4235,6 +4260,24 @@ fn execute_as(
     invocation: Invocation,
     stack: Option<usize>,
 ) -> Outcome {
+    let (outcome, kept) = execute_kept(path, text, entry, invocation, stack);
+    if let Some(interp) = kept {
+        interp.wind_down();
+    }
+    outcome
+}
+
+/// [`execute_as`], answering the interpreter with the outcome where a call is
+/// still in flight: a pool thread still running a call ends it under the
+/// baton, through this interpreter's state, which therefore outlives the
+/// run until [`Interp::wind_down`] has served that end.
+fn execute_kept(
+    path: &[u8],
+    text: Vec<u8>,
+    entry: Entry,
+    invocation: Invocation,
+    stack: Option<usize>,
+) -> (Outcome, Option<Interp>) {
     let probe = 0u8;
     let base = &raw const probe as usize;
     // `rexxc` translates its input as source, an image included: measured,
@@ -4244,7 +4287,7 @@ fn execute_as(
     } else {
         match compiled::program_source(text, path) {
             Ok(source) => source,
-            Err(raised) => return unrestorable_outcome(raised),
+            Err(raised) => return (unrestorable_outcome(raised), None),
         }
     };
     // A rejected source that passed an `EXTERNAL`'s resolution point needs an
@@ -4252,7 +4295,7 @@ fn execute_as(
     let program = match rexx_parse::program_from(source) {
         Ok(program) => Ok(program),
         Err(rejected) if rejected.binds.is_empty() => {
-            return parse_failure_outcome(path, &rejected);
+            return (parse_failure_outcome(path, &rejected), None);
         }
         Err(rejected) => Err(rejected),
     };
@@ -4501,12 +4544,8 @@ fn execute_as(
             SharingReport { bootstrap, program }
         },
     };
-    // A pool thread still running a call ends it under the baton, through
-    // this interpreter's state, which therefore outlives the run.
-    if interp.activities.in_flight() {
-        std::mem::forget(interp);
-    }
-    outcome
+    let kept = interp.activities.in_flight().then_some(interp);
+    (outcome, kept)
 }
 
 /// The program an embedding instance's root activity runs: the native call
@@ -4529,7 +4568,7 @@ const INSTANCE_LIBRARY: &[u8] = b"REXXEMBEDDING";
 pub(crate) fn run_instance(
     options: embedding::InstanceOptions,
     started: Box<dyn FnOnce(usize, crate::sync::Arc<timer::Inbox<timer::Posted>>) + Send>,
-) -> Outcome {
+) -> (Outcome, Option<Interp>) {
     use rexx_api::callbacks::Surface as _;
     let probe = 0u8;
     let base = &raw const probe as usize;
@@ -4615,10 +4654,8 @@ pub(crate) fn run_instance(
         #[cfg(feature = "sharing")]
         sharing: SharingReport::default(),
     };
-    if interp.activities.in_flight() {
-        std::mem::forget(interp);
-    }
-    outcome
+    let kept = interp.activities.in_flight().then_some(interp);
+    (outcome, kept)
 }
 
 #[cfg(test)]

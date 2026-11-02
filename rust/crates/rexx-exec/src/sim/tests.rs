@@ -677,13 +677,14 @@ fn corrupted(
         .with_switch_mode(sim(spec));
     crate::on_interpreter_thread(move || {
         crate::scheduler::CORRUPTION.with(|asked| asked.set(corruption));
-        crate::execute_on(
+        let outcome = crate::execute_on(
             b"/tmp/sim.rex",
             source.as_bytes().to_vec(),
             false,
             invocation,
             Some(crate::INTERPRETER_STACK_BYTES),
-        )
+        );
+        (outcome, None)
     })
 }
 
