@@ -822,3 +822,10 @@ These settle where interrexx departs from, or chooses among, the behaviour above
 7. **A blocked pull ends when its connection closes,** and the queue stays usable. The observed
    undeletable queue and daemon death are oracle defects and are not reproduced.
 8. **Process id reuse** cannot arise, because identity is the connection and never the process id.
+9. **The start timeout is 5 seconds,** not the observed two: a client gives up on a service it
+   started after that, and the first call returns 1004.
+10. **`rxapi --stop` with nothing running** exits 0 and prints nothing.
+11. **A drop with a library that removes no reference** returns 10 when references remain, as one
+    that removes a reference does.
+12. **A listed macro save past 256 MiB** of image bytes returns `RXMACRO_NO_STORAGE` (1), unless
+    the macrospace itself holds more, so listing each macro once always fits.
