@@ -4688,6 +4688,10 @@ pub(crate) fn run_instance(
                 .subcom_aliases
                 .insert(name.to_ascii_uppercase(), registered);
         }
+        for (name, package) in options.registered_libraries {
+            let library = package.into_library(&String::from_utf8_lossy(&name));
+            interp.register_library(&name, library);
+        }
         for library in &options.load_libraries {
             interp.load_library(library);
         }

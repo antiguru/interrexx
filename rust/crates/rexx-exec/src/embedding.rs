@@ -358,6 +358,9 @@ pub struct InstanceOptions {
     pub registered_environments: Vec<(Vec<u8>, Vec<u8>)>,
     /// `LOAD_REQUIRED_LIBRARY`.
     pub load_libraries: Vec<Vec<u8>>,
+    /// `REGISTER_LIBRARY`: each a package name and its table, registered before any
+    /// `LOAD_REQUIRED_LIBRARY` is loaded.
+    pub registered_libraries: Vec<(Vec<u8>, rexx_api::load::SentPackage)>,
     /// `EXTERNAL_CALL_PATH`: searched after the current directory.
     pub external_call_path: Option<Vec<u8>>,
     /// `EXTERNAL_CALL_EXTENSIONS`, split at its commas: tried before the

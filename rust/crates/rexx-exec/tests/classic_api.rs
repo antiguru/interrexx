@@ -741,6 +741,23 @@ fn a_registration_reaches_rexx_start_in_every_link_order() {
     }
 }
 
+/// `RexxCreateInterpreter`'s `REGISTER_LIBRARY` option: the embedder's package table serves a
+/// program's `::requires 'mylib' LIBRARY`, and then a program without the directive. An unknown
+/// option name ends the list, so an `INITIAL_ADDRESS_ENVIRONMENT` after it is not read, where
+/// alone it is. Measured on the oracle with the same driver; ours dropped the library option and
+/// raised Error 43.1, and read options past an unknown one.
+#[test]
+fn an_embedders_registered_library_serves_its_programs() {
+    let output = run_driver("reglib", &[("address.rex", "return address()\n")], &[]);
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "requires: fromlib\nplain: fromlib\nafter unknown: sh\nknown: ELSEWHERE\n",
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
 /// Review Focus 4: a thread the instance never saw attaches, calls a program through the
 /// context it is given, and detaches; `Terminate`, called while that thread is attached but
 /// idle, returns without waiting for it, and its later `DetachThread` is harmless. The order

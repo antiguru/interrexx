@@ -366,6 +366,13 @@ struct NamedEntry {
     name: *const c_char,
 }
 
+/// `RexxLibraryPackage` (`api/oorexxapi.h`): a package's name and its table.
+#[repr(C)]
+struct RexxLibraryPackage {
+    registered_name: *const c_char,
+    table: *const rexx_api::layout::RexxPackageEntry,
+}
+
 /// The bytes of a NUL-terminated string, or `None` for a null pointer.
 ///
 /// # Safety
@@ -443,7 +450,18 @@ unsafe fn instance_options(options: *const RexxOption) -> rexx_exec::embedding::
                         read.registered_environments.push((name, registered));
                     }
                 }
-                _ => {}
+                b"RegisterLibrary" => {
+                    let package = word.cast::<RexxLibraryPackage>();
+                    if !package.is_null() {
+                        let name = text_of((*package).registered_name).unwrap_or_default();
+                        let table = rexx_api::load::SentPackage::new((*package).table);
+                        read.registered_libraries.push((name, table));
+                    }
+                }
+                // An unknown name ends the list: the oracle's `processOptions` returns at it
+                // (`runtime/InterpreterInstance.cpp:866-870`), leaving the options after it unread,
+                // and creates the instance all the same.
+                _ => break,
             }
             at = at.add(1);
         }

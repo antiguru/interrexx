@@ -2141,6 +2141,35 @@ impl SentCommandHandler {
     }
 }
 
+/// An embedding's `REGISTER_LIBRARY` package table on its way to the thread of the interpreter
+/// that registers it.
+#[derive(Debug)]
+pub struct SentPackage(*const RexxPackageEntry);
+
+// SAFETY: the table is static data of the embedding's image, which the interpreter only reads,
+// on whichever thread it runs.
+unsafe impl Send for SentPackage {}
+
+impl SentPackage {
+    /// The package table at `entry`, null for none.
+    ///
+    /// # Safety
+    /// As [`registered`] asks of `entry`.
+    #[must_use]
+    pub unsafe fn new(entry: *const RexxPackageEntry) -> SentPackage {
+        SentPackage(entry)
+    }
+
+    /// The library the table describes, as [`registered`] answers for `name`.
+    ///
+    /// # Errors
+    /// As [`registered`].
+    pub fn into_library(self, name: &str) -> Result<Option<Library>, Refused> {
+        // SAFETY: `new`'s caller guaranteed the table.
+        unsafe { registered(self.0, name) }
+    }
+}
+
 impl CommandHandler {
     /// The handler at `entry_point`, of the environment type `kind`, or
     /// `None` for a null address or a type the header does not define, which
