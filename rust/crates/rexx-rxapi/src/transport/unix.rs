@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 use rustix::net::sockopt::socket_peercred;
 use rustix::net::{SendFlags, send};
 
-use super::{Transport, TransportError};
+use super::{CancelToken, Transport, TransportError};
 use crate::message::wire::{self, PROTOCOL_VERSION};
 use crate::message::{Reply, Request};
 
@@ -325,8 +325,16 @@ fn handshake(stream: &UnixStream, version: u32) -> Result<(), ConnectFailure> {
 }
 
 impl Transport for Unix {
-    fn call(&self, request: Request) -> Result<Reply, TransportError> {
+    fn call_cancellable(
+        &self,
+        request: Request,
+        token: &CancelToken,
+    ) -> Result<Reply, TransportError> {
         let lost = || TransportError::Unavailable("the connection is closed".to_owned());
+        let mut started = token.started();
+        if started.cancelled {
+            return Ok(Reply::Cancelled);
+        }
         let (sender, receiver) = mpsc::channel();
         let call = {
             let mut calls = lock_calls(&self.calls);
@@ -338,10 +346,12 @@ impl Transport for Unix {
             calls.waiting.insert(call, sender);
             call
         };
+        started.call = Some(call);
         if self.send(call, &wire::encode_request(&request)).is_err() {
             lock_calls(&self.calls).waiting.remove(&call);
             return Err(lost());
         }
+        drop(started);
         receiver.recv().map_err(|_| lost())
     }
 }

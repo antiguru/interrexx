@@ -132,6 +132,8 @@ pub enum Request {
         name: Option<Vec<u8>>,
         wait: u64,
     },
+    /// Ends the caller's pull `call`, which answers `Cancelled`. Any other call is left alone.
+    CancelPull { call: u64 },
     /// A library registration, `RexxRegister*Dll`. `owner_only` is `RXSUBCOM_NONDROP`; the
     /// function registry always treats it as set.
     Register {
@@ -226,4 +228,6 @@ pub enum Reply {
         status: u64,
         macros: Vec<Macro>,
     },
+    /// A pull ended by `CancelPull`.
+    Cancelled,
 }

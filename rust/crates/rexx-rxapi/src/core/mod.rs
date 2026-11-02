@@ -83,6 +83,7 @@ impl Core {
                 name,
                 wait,
             } => return self.queues.pull(client, session, name, wait),
+            Request::CancelPull { call } => self.queues.cancel(client.call(call)),
             Request::Register {
                 registry,
                 name,

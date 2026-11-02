@@ -9,7 +9,7 @@ use std::io::{self, Read};
 use super::{Item, Macro, Registered, Registry, Reply, Request, Timestamp};
 
 /// Bumped on any change here; it names the socket.
-pub const PROTOCOL_VERSION: u32 = 1;
+pub const PROTOCOL_VERSION: u32 = 2;
 
 const HELLO_MAGIC: [u8; 4] = *b"RXAP";
 /// Length of a `hello`.
@@ -427,6 +427,10 @@ pub fn encode_request(request: &Request) -> Vec<u8> {
             out.optional(names, |encoder, names| encoder.names(names));
             out.macros(macros);
         }
+        Request::CancelPull { call } => {
+            out.tag(21);
+            out.number(*call);
+        }
     }
     out.0
 }
@@ -519,6 +523,9 @@ pub fn decode_command(bytes: &[u8]) -> Result<Command, Malformed> {
             names: input.optional(Decoder::names)?,
             macros: input.macros()?,
         },
+        21 => Request::CancelPull {
+            call: input.number()?,
+        },
         STOP => return input.finished(Command::Stop),
         _ => return Err(Malformed),
     };
@@ -585,6 +592,7 @@ pub fn encode_reply(reply: &Reply) -> Vec<u8> {
             out.number(*status);
             out.macros(macros);
         }
+        Reply::Cancelled => out.tag(9),
     }
     out.0
 }
@@ -638,6 +646,7 @@ pub fn decode_reply(bytes: &[u8]) -> Result<Reply, Malformed> {
             status: input.number()?,
             macros: input.macros()?,
         },
+        9 => Reply::Cancelled,
         _ => return Err(Malformed),
     };
     input.finished(reply)
@@ -754,6 +763,7 @@ mod tests {
                 names: Some(Vec::new()),
                 macros: vec![entry.clone(), entry],
             },
+            Request::CancelPull { call: u64::MAX },
         ]
     }
 
@@ -821,6 +831,7 @@ mod tests {
                     position: 0,
                 }],
             },
+            Reply::Cancelled,
         ]
     }
 
@@ -865,8 +876,8 @@ mod tests {
 
     #[test]
     fn unknown_tags_are_malformed() {
-        assert_eq!(decode_command(&[21]), Err(Malformed));
-        assert_eq!(decode_reply(&[9]), Err(Malformed));
+        assert_eq!(decode_command(&[22]), Err(Malformed));
+        assert_eq!(decode_reply(&[10]), Err(Malformed));
     }
 
     #[test]

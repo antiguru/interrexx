@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 
-use super::{Transport, TransportError};
+use super::{CancelToken, Transport, TransportError};
 use crate::core::{ClientId, Core, Outcome};
 use crate::message::{Reply, Request};
 
@@ -70,11 +70,21 @@ impl Default for Direct {
 }
 
 impl Transport for Direct {
-    fn call(&self, request: Request) -> Result<Reply, TransportError> {
+    fn call_cancellable(
+        &self,
+        request: Request,
+        token: &CancelToken,
+    ) -> Result<Reply, TransportError> {
+        let mut started = token.started();
+        if started.cancelled {
+            return Ok(Reply::Cancelled);
+        }
         let id = ClientId::connection(self.connection)
             .call(self.next_call.fetch_add(1, Ordering::Relaxed));
+        started.call = Some(id.call);
         let mut state = self.hub.state();
         let outcome = state.core.handle(id, request);
+        drop(started);
         let ready = state.core.take_ready();
         if !ready.is_empty() {
             state.replies.extend(ready);
@@ -177,6 +187,38 @@ mod tests {
                 }),
             })
         );
+    }
+
+    #[test]
+    fn a_cancelled_pull_returns_and_the_client_stays_usable() {
+        let client = Arc::new(Direct::new());
+        open(&client);
+        let token = CancelToken::default();
+        let blocked = {
+            let (client, token) = (Arc::clone(&client), token.clone());
+            std::thread::spawn(move || {
+                loop {
+                    open(&client);
+                    let reply = client.call_cancellable(pull(), &token);
+                    let gap = Reply::Pulled {
+                        status: QUEUE_NOT_REGISTERED,
+                        item: None,
+                    };
+                    if reply != Ok(gap) {
+                        return reply;
+                    }
+                }
+            })
+        };
+        while delete(&client) != Reply::Status(QUEUE_ACCESS) {
+            std::thread::yield_now();
+            open(&client);
+        }
+
+        client.cancel(&token).expect("direct calls do not fail");
+
+        assert_eq!(blocked.join().expect("the puller"), Ok(Reply::Cancelled));
+        assert_eq!(delete(&client), Reply::Status(OK));
     }
 
     #[test]

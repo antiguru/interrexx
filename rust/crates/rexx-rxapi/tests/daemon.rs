@@ -14,7 +14,7 @@ use rexx_rxapi::message::code::*;
 use rexx_rxapi::message::wire::{self, PROTOCOL_VERSION};
 use rexx_rxapi::message::{FIFO, NO_WAIT, Registry, Reply, Request, Timestamp, WAIT};
 use rexx_rxapi::transport::unix::{Unix, lock_path, prepare_dir, socket_path};
-use rexx_rxapi::transport::{Transport, TransportError};
+use rexx_rxapi::transport::{CancelToken, Transport, TransportError};
 use rustix::process::{Pid, Resource, Rlimit, getrlimit, prlimit};
 
 const DAEMON: &str = env!("CARGO_BIN_EXE_rxapi");
@@ -140,11 +140,19 @@ fn wait_until_parked(client: &impl Transport, queue: &str) {
 }
 
 fn blocking_pull(client: &impl Transport, queue: &str) -> Result<Reply, TransportError> {
+    cancellable_pull(client, queue, &CancelToken::default())
+}
+
+fn cancellable_pull(
+    client: &impl Transport,
+    queue: &str,
+    token: &CancelToken,
+) -> Result<Reply, TransportError> {
     loop {
         client.call(Request::OpenQueue {
             name: Some(queue.as_bytes().to_vec()),
         })?;
-        let reply = client.call(pull_request(queue))?;
+        let reply = client.call_cancellable(pull_request(queue), token)?;
         let gap = Reply::Pulled {
             status: QUEUE_NOT_REGISTERED,
             item: None,
@@ -660,6 +668,63 @@ fn an_item_handed_to_a_closed_waiter_stays_in_the_queue() {
     let service = ServiceDir::new();
     let mut child = spawn_child("child_closes_waiters_under_adds", &service);
     assert!(child.wait().expect("the child").success());
+}
+
+/// The `lineIn` wait a signal must end, on a connection other threads go on using.
+#[test]
+fn a_cancelled_pull_returns_and_leaves_the_connection_and_queue_usable() {
+    let service = ServiceDir::new();
+    let client = Arc::new(service.connect());
+    open(&*client, "q");
+    let token = CancelToken::default();
+    let blocked = {
+        let (client, token) = (Arc::clone(&client), token.clone());
+        std::thread::spawn(move || cancellable_pull(&*client, "q", &token))
+    };
+    wait_until_parked(&*client, "q");
+
+    client.cancel(&token).expect("the cancel is delivered");
+
+    eventually("the pull returns", || blocked.is_finished());
+    let reply = blocked.join().expect("the puller");
+    assert_eq!(reply, Ok(Reply::Cancelled));
+    assert_eq!(
+        client.call(add_request("q", b"later")).expect("a reply"),
+        Reply::Status(OK)
+    );
+    assert_eq!(take_now(&*client, "q").as_deref(), Some(&b"later"[..]));
+    assert_eq!(delete(&*client, "q"), Reply::Status(OK));
+}
+
+#[test]
+fn a_token_cancelled_first_stops_its_call_starting() {
+    let service = ServiceDir::new();
+    let client = service.connect();
+    open(&client, "q");
+    let token = CancelToken::default();
+
+    client.cancel(&token).expect("nothing to deliver");
+
+    assert_eq!(
+        client.call_cancellable(pull_request("q"), &token),
+        Ok(Reply::Cancelled)
+    );
+    assert_eq!(delete(&client, "q"), Reply::Status(OK), "nothing parked");
+}
+
+#[test]
+fn a_cancel_after_the_reply_is_harmless() {
+    let service = ServiceDir::new();
+    let client = service.connect();
+    open(&client, "q");
+    client.call(add_request("q", b"a")).expect("a reply");
+    let token = CancelToken::default();
+
+    let reply = client.call_cancellable(pull_request("q"), &token);
+    client.cancel(&token).expect("a no-op");
+
+    assert_eq!(pulled_data(reply.expect("a reply")), b"a");
+    assert_eq!(delete(&client, "q"), Reply::Status(OK));
 }
 
 #[test]

@@ -274,6 +274,19 @@ impl Queues {
         }
     }
 
+    /// Ends `client`'s parked pull, if it has one.
+    pub(super) fn cancel(&mut self, client: ClientId) -> Reply {
+        let sessions = self.sessions.values_mut().map(|session| &mut session.queue);
+        for queue in self.named.values_mut().chain(sessions) {
+            if let Some(at) = queue.waiters.iter().position(|waiter| *waiter == client) {
+                queue.waiters.remove(at);
+                self.ready.push((client, Reply::Cancelled));
+                break;
+            }
+        }
+        Reply::Status(OK)
+    }
+
     /// Puts back an item a pull of `name` could not deliver. A queue that is gone keeps nothing.
     pub(super) fn restore(&mut self, session: u64, name: Option<Vec<u8>>, item: Item) {
         let queue = match target(name) {

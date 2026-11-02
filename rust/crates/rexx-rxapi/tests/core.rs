@@ -34,6 +34,7 @@ fn status(core: &mut Core, client: ClientId, request: Request) -> u64 {
         | Reply::MacroPosition { status, .. }
         | Reply::MacroImage { status, .. }
         | Reply::Macros { status, .. } => status,
+        Reply::Cancelled => panic!("a cancel is not a status"),
     }
 }
 
@@ -579,6 +580,64 @@ fn a_killed_blocked_client_leaves_its_queue_deletable() {
         "the next item stays in the queue"
     );
     assert_eq!(delete(&mut core, Some("q")), OK);
+}
+
+fn cancel(core: &mut Core, connection: u64, call: u64) -> Reply {
+    reply(core, client(connection), Request::CancelPull { call })
+}
+
+#[test]
+fn a_cancelled_pull_leaves_the_queue_and_takes_no_later_item() {
+    let mut core = Core::new();
+    open(&mut core, "q");
+    let parked = client(2).call(7);
+    assert_eq!(core.handle(parked, pull(Some("q"), WAIT)), Outcome::Parked);
+    assert_eq!(delete(&mut core, Some("q")), QUEUE_ACCESS);
+
+    assert_eq!(cancel(&mut core, 2, 7), Reply::Status(OK));
+
+    assert_eq!(core.take_ready(), [(parked, Reply::Cancelled)]);
+    status(&mut core, client(1), add(Some("q"), "kept", FIFO));
+    assert!(core.take_ready().is_empty(), "it takes no later item");
+    assert_eq!(
+        count(&mut core, Some("q")),
+        Reply::QueueCount {
+            status: OK,
+            count: Some(1)
+        }
+    );
+    assert_eq!(delete(&mut core, Some("q")), OK);
+}
+
+#[test]
+fn a_cancel_works_on_a_session_queue() {
+    let mut core = Core::new();
+    let parked = client(2).call(1);
+    assert_eq!(core.handle(parked, pull(None, WAIT)), Outcome::Parked);
+
+    assert_eq!(cancel(&mut core, 2, 1), Reply::Status(OK));
+
+    assert_eq!(core.take_ready(), [(parked, Reply::Cancelled)]);
+}
+
+#[test]
+fn a_cancel_ends_only_that_call_of_that_connection() {
+    let mut core = Core::new();
+    open(&mut core, "q");
+    let (one, two, other) = (client(2).call(1), client(2).call(2), client(3).call(1));
+    for waiter in [one, two, other] {
+        assert_eq!(core.handle(waiter, pull(Some("q"), WAIT)), Outcome::Parked);
+    }
+
+    assert_eq!(cancel(&mut core, 2, 1), Reply::Status(OK));
+    assert_eq!(cancel(&mut core, 2, 99), Reply::Status(OK), "no such call");
+    assert_eq!(cancel(&mut core, 4, 1), Reply::Status(OK), "not its call");
+
+    assert_eq!(core.take_ready(), [(one, Reply::Cancelled)]);
+    status(&mut core, client(1), add(Some("q"), "a", FIFO));
+    status(&mut core, client(1), add(Some("q"), "b", FIFO));
+    let ready: Vec<ClientId> = core.take_ready().into_iter().map(|(id, _)| id).collect();
+    assert_eq!(ready, [two, other]);
 }
 
 fn item(data: &str) -> Item {
