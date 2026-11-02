@@ -1,4 +1,6 @@
-**OPEN for Moritz's ruling, queued 2026-11-02 by Phase 10 PR 1.**
+**CLOSED 2026-11-02 by Phase 10 PR 2.** Moritz granted one `unsafe` function (design doc, Decisions): `rexx-rxapi/src/descriptors.rs`, pinned in `unsafe_sites.rs`; the test is un-ignored.
+
+Queued 2026-11-02 by Phase 10 PR 1.
 
 # The started daemon keeps descriptors a client left inheritable
 

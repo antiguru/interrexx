@@ -2113,5 +2113,20 @@
   "source": "Phase 9d Task 8.7c review",
   "status": "open",
   "crate": "Renders the item."
+ },
+ {
+  "id": "halt-during-queue-linein-loses-queue",
+  "added": "2026-11-02",
+  "title": "A HALT during linein('QUEUE:') on an empty named queue leaves the queue unusable",
+  "category": "wrong result",
+  "area": "rxapi queues",
+  "severity": "hang",
+  "repro": "q = .RexxQueue~create('HALTQ'); call rxqueue 'set', q; '(sleep 1; kill -INT $PPID) &'; signal on halt; line = linein('QUEUE:'); exit; halt: queue 'after'; say queued() linein('QUEUE:') -- run with a private XDG_RUNTIME_DIR, under timeout",
+  "oracle": "After the HALT, queued() is 0 although a line was just queued, linein('QUEUE:') answers The NIL object, a second Error 4.1 is raised, and the process then hangs (timeout rc 124).",
+  "expected": "The HALT raises once; the queued line is counted and read back; the program ends.",
+  "cause": "",
+  "source": "Phase 10 PR 2 implementer; reproduced 2026-11-02 at r13346",
+  "status": "open",
+  "crate": "Raises HALT once, then queued() is 1 and linein answers 'after' (rexx-exec tests/rxapi.rs a_halt_ends_a_queue_wait_and_leaves_the_queue_usable)."
  }
 ]
