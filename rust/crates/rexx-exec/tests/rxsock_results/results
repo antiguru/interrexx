@@ -981,3 +981,35 @@ SMTPERRNO [][][] 0 0 127.0.0.l
 myhost
 97.1 Object "myhost" does not understand message "NAME".
 [stderr]
+
+# The interpreter's own descriptors (the timer's wake socket the signal
+# handler writes to, its deadline timer) sit at 1000 and above and are not
+# a program's to close: closing every lower number and refilling it with
+# sockets leaves a later HALT trapped, and closing the interpreter's numbers
+# fails as for a closed one (PR 4 review I3). Measured on the oracle, which
+# holds nothing at 1000 to 1003.
+program
+call on halt name caught
+say SockClose(1000) SockClose(1001) SockClose(1002) SockSock_Errno() SysClose(1003) SysGeterrno()
+do n = 3 to 999
+  call SockClose n
+end
+do 24
+  call SockSocket 'AF_INET', 'SOCK_DGRAM', 0
+end
+call SysKill SysGetpid(), 2
+call SysSleep 0.3
+say 'after'
+exit
+caught:
+  say 'halt trapped'
+  return
+::requires 'rxsock' LIBRARY
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+-1 -1 -1 9 -1 9
+halt trapped
+after
+[stderr]

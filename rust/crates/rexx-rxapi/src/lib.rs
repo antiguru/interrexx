@@ -6,4 +6,5 @@ pub mod daemon;
 mod descriptors;
 pub mod macro_file;
 pub mod message;
+pub mod reserved;
 pub mod transport;

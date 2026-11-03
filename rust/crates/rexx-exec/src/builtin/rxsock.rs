@@ -682,7 +682,12 @@ pub(crate) fn socket_new(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result
 pub(crate) fn close(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 1)?;
     let fd = int(interp, args, 1)?;
-    let closed = nix::unistd::close(fd).map_err(nix_os);
+    // The interpreter's own descriptors are not the program's to close.
+    let closed = if rexx_rxapi::reserved::is_reserved(fd) {
+        Err(libc::EBADF)
+    } else {
+        nix::unistd::close(fd).map_err(nix_os)
+    };
     Ok(code(interp, closed))
 }
 

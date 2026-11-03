@@ -10,6 +10,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex, MutexGuard};
+
+use crate::reserved::{Reserved, reserve};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
@@ -218,8 +220,8 @@ fn lock_calls(calls: &Mutex<Calls>) -> MutexGuard<'_, Calls> {
 }
 
 /// Delivers replies until the connection ends, then fails every call in flight.
-fn read_replies(mut stream: UnixStream, calls: SharedCalls) {
-    while let Ok(Some((call, body))) = wire::read_frame(&mut stream) {
+fn read_replies(stream: Reserved<UnixStream>, calls: SharedCalls) {
+    while let Ok(Some((call, body))) = wire::read_frame(&mut &*stream) {
         let Ok(reply) = wire::decode_reply(&body) else {
             break;
         };
@@ -263,7 +265,7 @@ impl ConnectFailure {
 /// Concurrent calls share it, tagged by call number, so its one identity owns every registration
 /// the process makes. When the connection fails it stays failed.
 pub struct Unix {
-    stream: Mutex<UnixStream>,
+    stream: Mutex<Reserved<UnixStream>>,
     calls: SharedCalls,
     reader: Option<JoinHandle<()>>,
 }
@@ -317,14 +319,15 @@ impl Unix {
 
     /// Connects to the service in the private `dir`, which must run as `uid`.
     fn attempt(dir: &Path, version: u32, uid: u32) -> Result<Unix, ConnectFailure> {
-        let stream =
-            UnixStream::connect(socket_path(dir, version)).map_err(ConnectFailure::Absent)?;
+        let stream = reserve(
+            UnixStream::connect(socket_path(dir, version)).map_err(ConnectFailure::Absent)?,
+        );
         let peer = peer_uid(&stream).map_err(ConnectFailure::Absent)?;
         if peer != uid {
             return Err(ConnectFailure::Foreign { uid: peer });
         }
         handshake(&stream, version)?;
-        let reader_stream = stream.try_clone().map_err(ConnectFailure::Absent)?;
+        let reader_stream = reserve(stream.try_clone().map_err(ConnectFailure::Absent)?);
         let calls = SharedCalls::default();
         let reader = {
             let calls = Arc::clone(&calls);

@@ -729,7 +729,7 @@ different option: set returns 0 and a later get returns 1. Any other name gives 
 | `SockSock_Errno()` | the thread's C `errno` now (unspecified at program start: observed 25 or 29 depending on the host and on where standard output goes); see the errno bullet under "Rulings" |
 | `SockPSock_Errno([text])` | writes `RxSOCK Error: ` + text + newline to standard error and returns `""` |
 | `SockSocket(domain, type, protocol)` | Blanks are stripped and comparison is caseless. `domain` must be `AF_INET`. `type` must be `SOCK_STREAM`, `SOCK_DGRAM` or `SOCK_RAW`. `protocol` must be `IPPROTO_UDP`, `IPPROTO_TCP` or the exact text `0`. Anything else (`AF_INET6`, `6`) is a routine failure. Returns the new descriptor or −1: `('AF_INET','SOCK_DGRAM','IPPROTO_TCP')` gives −1 with `EPROTONOSUPPORT`, and unprivileged `SOCK_RAW` gives −1. |
-| `SockClose(s)`, `SockSoClose(s)` | `close()`. Returns 0 or −1 (`SockClose(9999)` gives −1, `errno` `9`). |
+| `SockClose(s)`, `SockSoClose(s)` | `close()`. Returns 0 or −1 (`SockClose(9999)` gives −1, `errno` `9`). The interpreter's own descriptors sit at 1000 and above (`rexx_rxapi::reserved`); every rxsock and rxunixsys routine answers `errno` `9` for one of them, as for a closed number. |
 | `SockShutDown(s, how)` | `shutdown()`. `how` is 0, 1 or 2. Returns 0 or −1. |
 | `SockListen(s, backlog)` | `listen()`. Returns 0 or −1. |
 | `SockBind(s, addrstem)`, `SockConnect(s, addrstem)` | Returns 0 or −1. A blocking connect waits. |

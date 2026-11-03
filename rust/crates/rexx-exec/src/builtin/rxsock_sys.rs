@@ -22,9 +22,10 @@ fn errno() -> i32 {
 }
 
 /// `EBADF` unless `fd` names an open descriptor of this process, as
-/// `fcntl(F_GETFD)` finds it; a negative number names none.
+/// `fcntl(F_GETFD)` finds it; a negative number names none, and neither does
+/// one of the interpreter's own (`rexx_rxapi::reserved`).
 fn check_open(fd: RawFd) -> Os<()> {
-    if fd < 0 {
+    if fd < 0 || rexx_rxapi::reserved::is_reserved(fd) {
         return Err(libc::EBADF);
     }
     // SAFETY: `fcntl(F_GETFD)` takes no pointer and changes nothing; it reads
@@ -45,14 +46,19 @@ pub(crate) fn with_socket<T>(
 ) -> Os<T> {
     check_open(fd)?;
     // SAFETY: `borrow_raw` asks that `fd` be open, and not -1, for as long as
-    // the borrow lives. `check_open` has just found it open (so it is not -1),
-    // and the borrow lives only for `call`, which its higher-ranked lifetime
-    // keeps from storing it. Nothing in `rxsock` closes a descriptor while it
-    // is borrowed: `SockClose` closes by number in a call of its own. A
-    // thread outside the interpreter that closes the number during `call`
-    // makes the call act on a closed or reused number, which is what the
-    // oracle's C does too; the call reads and writes no memory through the
-    // descriptor, so that is not undefined behaviour.
+    // the borrow lives. `check_open` has just found it open (so it is not -1)
+    // and not one of the interpreter's own descriptors, which no Rust object
+    // of this process but `rexx_rxapi::reserved`'s holders owns; the borrow
+    // lives only for `call`, which its higher-ranked lifetime keeps from
+    // storing it. The number can still be closed while it is borrowed: by
+    // another interpreter thread's `SockClose` or `SysClose` of the same
+    // number, or by code outside the interpreter. The descriptor is then the
+    // program's, owned by no Rust object, so no object's descriptor is
+    // closed under it; and `call` only passes the number to system calls
+    // through `rustix` and `nix`, which read and write no memory through it.
+    // A closed or reused number makes the call fail with `EBADF` or act on
+    // the descriptor now under it, as the oracle's C does; that is a wrong
+    // answer to a racing program, not undefined behaviour.
     let socket = unsafe { BorrowedFd::borrow_raw(fd) };
     call(socket)
 }
