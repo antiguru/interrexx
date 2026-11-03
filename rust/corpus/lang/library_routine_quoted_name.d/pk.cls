@@ -1,1 +1,1 @@
-::routine 'zq' public external "LIBRARY rxmath"
+::routine 'zq' public external "LIBRARY rxmathc"

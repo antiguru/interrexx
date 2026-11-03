@@ -1,2 +1,2 @@
 ::class J
-::method does external "LIBRARY rxregexp RegExp_Match"
+::method does external "LIBRARY rxregexpc RegExp_Match"

@@ -6,6 +6,6 @@ r = .Re~new('[')
 say 'never printed' r
 
 ::class Re subclass Object
-::method init external "LIBRARY rxregexp RegExp_Init"
-::method uninit external "LIBRARY rxregexp RegExp_Uninit"
-::method doparse external "LIBRARY rxregexp RegExp_Parse"
+::method init external "LIBRARY rxregexpc RegExp_Init"
+::method uninit external "LIBRARY rxregexpc RegExp_Uninit"
+::method doparse external "LIBRARY rxregexpc RegExp_Parse"

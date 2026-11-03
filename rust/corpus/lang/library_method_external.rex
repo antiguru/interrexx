@@ -19,11 +19,11 @@ say 'find' r~find('zzaab')
 say 'findpos' r~where
 
 ::class Re subclass Object
-::method init external "LIBRARY rxregexp RegExp_Init"
-::method uninit external "LIBRARY rxregexp RegExp_Uninit"
-::method doparse external "LIBRARY rxregexp RegExp_Parse"
-::method does external "LIBRARY rxregexp RegExp_Match"
-::method find external "LIBRARY rxregexp RegExp_Pos"
+::method init external "LIBRARY rxregexpc RegExp_Init"
+::method uninit external "LIBRARY rxregexpc RegExp_Uninit"
+::method doparse external "LIBRARY rxregexpc RegExp_Parse"
+::method does external "LIBRARY rxregexpc RegExp_Match"
+::method find external "LIBRARY rxregexpc RegExp_Pos"
 ::method where
   expose !POS
   return !POS

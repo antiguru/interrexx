@@ -5,4 +5,4 @@
    same through a function call, a CALL and an assignment. */
 r = .Routine~newFile('r.rex', .context~package)
 r~call
-::requires 'rxmath' LIBRARY
+::requires 'rxmathc' LIBRARY

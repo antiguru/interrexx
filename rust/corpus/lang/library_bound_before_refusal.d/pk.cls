@@ -1,5 +1,5 @@
-::routine sq public external "LIBRARY rxmath RxCalcSqrt"
+::routine sq public external "LIBRARY rxmathc RxCalcSqrt"
 ::class Re public
-::method doparse external "LIBRARY rxregexp RegExp_Parse"
-::method missing external "LIBRARY rxregexp NoSuchEntry"
-::method pos external "LIBRARY rxregexp RegExp_Pos"
+::method doparse external "LIBRARY rxregexpc RegExp_Parse"
+::method missing external "LIBRARY rxregexpc NoSuchEntry"
+::method pos external "LIBRARY rxregexpc RegExp_Pos"

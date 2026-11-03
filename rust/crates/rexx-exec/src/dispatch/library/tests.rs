@@ -184,8 +184,8 @@ fn a_version_refused_library_raises_once_and_is_held() {
 /// which does fail under that edit.
 #[test]
 fn a_library_call_answers_the_same_under_a_collection_at_every_allocation() {
-    let path =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/lang/library_method_external.rex");
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../corpus/lang/library_method_external_rust.rex");
     let text = std::fs::read(&path).expect("the corpus witness is readable");
     let invocation = || {
         crate::Invocation::none().with_environment(vec![(
@@ -472,7 +472,7 @@ fn a_loaded_library_outlives_the_finaliser_sweep() {
 #[test]
 fn the_native_finaliser_answers_the_same_under_a_collection_at_every_allocation() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../corpus/lang/library_uninit_collected.rex");
+        .join("../../corpus/lang/library_uninit_collected_rust.rex");
     let text = std::fs::read(&path).expect("the corpus witness is readable");
     let invocation = || {
         crate::Invocation::none().with_environment(vec![(

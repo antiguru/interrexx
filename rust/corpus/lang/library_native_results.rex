@@ -25,7 +25,7 @@ say 'pointerstring' t~pointerstringarg(t~pointerstringvalue) t~nullpointerstring
   t~pointerstringarg('0x0') (t~pointerstringvalue~left(2) == '0x')
 exit
 ::requires 'orxfunction' LIBRARY
-::requires 'rxmath' LIBRARY
+::requires 'rxmathc' LIBRARY
 ::class T
 ::method float external "LIBRARY orxmethod TestFloatArg"
 ::method double external "LIBRARY orxmethod TestDoubleArg"

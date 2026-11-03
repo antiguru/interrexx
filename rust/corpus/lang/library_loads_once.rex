@@ -4,11 +4,11 @@
    loadExternalRoutine answer .nil for a library that is not there and for a
    procedure it does not export. */
 say 'requires ran'
-say 'load' .context~package~loadLibrary('rxregexp')
-say 'again' .context~package~loadLibrary('rxregexp')
+say 'load' .context~package~loadLibrary('rxregexpc')
+say 'again' .context~package~loadLibrary('rxregexpc')
 say 'absent' .context~package~loadLibrary('zorkolib')
-say 'method' .Method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Parse')~class~id
-say 'nomethod' .Method~loadExternalMethod('m', 'LIBRARY rxregexp NoSuchEntry')
+say 'method' .Method~loadExternalMethod('m', 'LIBRARY rxregexpc RegExp_Parse')~class~id
+say 'nomethod' .Method~loadExternalMethod('m', 'LIBRARY rxregexpc NoSuchEntry')
 say 'nolib' .Method~loadExternalMethod('m', 'LIBRARY zorkolib RegExp_Parse')
-say 'noroutine' .Routine~loadExternalRoutine('r', 'LIBRARY rxregexp NoSuchRoutine')
-::requires 'rxregexp' LIBRARY
+say 'noroutine' .Routine~loadExternalRoutine('r', 'LIBRARY rxregexpc NoSuchRoutine')
+::requires 'rxregexpc' LIBRARY

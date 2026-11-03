@@ -1,1 +1,1 @@
-::requires 'rxmath' LIBRARY
+::requires 'rxmathc' LIBRARY

@@ -159,8 +159,9 @@ pub fn prepare_run_directory(dir: &Path, sidecar: &Sidecar) -> PathBuf {
     }
 }
 
-/// The sidecar's overrides with `{run}` resolved against the run directory and
-/// `{oraclelib}` against the oracle's own library directory.
+/// The sidecar's overrides with `{run}` resolved against the run directory,
+/// `{oraclelib}` against the oracle's own library directory and
+/// `{instruments}` against [`instrument_directory`].
 ///
 /// `{oraclelib}` is what a program loading one of the oracle's compiled
 /// extensions needs: the process loader read `LD_LIBRARY_PATH` before this
@@ -175,14 +176,61 @@ pub fn resolved_environment(sidecar: &Sidecar, dir: &Path) -> Vec<(String, Strin
         .environment
         .iter()
         .map(|(name, value)| {
-            (
-                name.clone(),
-                value
-                    .replace("{run}", &run)
-                    .replace("{oraclelib}", &oracle_lib),
-            )
+            let mut value = value
+                .replace("{run}", &run)
+                .replace("{oraclelib}", &oracle_lib);
+            if value.contains("{instruments}") {
+                let instruments = instrument_directory().to_string_lossy().into_owned();
+                value = value.replace("{instruments}", &instruments);
+            }
+            (name.clone(), value)
         })
         .collect()
+}
+
+/// The C instruments [`instrument_directory`] holds: the oracle's own
+/// `librxmath.so` and `librxregexp.so` under names that are not `rxmath` and
+/// `rxregexp`.
+///
+/// This crate answers `rxmath` and `rxregexp` with libraries of its own before
+/// any `dlopen`, so a program naming them no longer reaches the shared-library
+/// path on this side. A program that is about that path names `rxmathc` or
+/// `rxregexpc` instead, and both sides `dlopen` the same oracle binary through
+/// the link.
+pub const INSTRUMENTS: &[(&str, &str)] = &[
+    ("librxmathc.so", "librxmath.so"),
+    ("librxregexpc.so", "librxregexp.so"),
+];
+
+/// A directory under the target directory holding a symbolic link per
+/// [`INSTRUMENTS`] row into the oracle's library directory, made on first use.
+///
+/// A link rather than a copy, so that it cannot go stale against a rebuilt
+/// oracle. A link already there pointing elsewhere (an oracle root moved
+/// between runs) is replaced; one another test process made first is kept.
+pub fn instrument_directory() -> PathBuf {
+    static MADE: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    MADE.get_or_init(|| {
+        let directory = Path::new(env!("CARGO_TARGET_TMPDIR")).join("corpus-instruments");
+        fs::create_dir_all(&directory)
+            .unwrap_or_else(|e| panic!("cannot create {}: {e}", directory.display()));
+        let oracle_lib = super::oracle::oracle_root().join("lib");
+        for (link, original) in INSTRUMENTS {
+            let target = oracle_lib.join(original);
+            let link = directory.join(link);
+            if fs::read_link(&link).ok().as_deref() == Some(target.as_path()) {
+                continue;
+            }
+            let staged = directory.join(format!(".{}.{}", std::process::id(), original));
+            let _ = fs::remove_file(&staged);
+            std::os::unix::fs::symlink(&target, &staged)
+                .unwrap_or_else(|e| panic!("cannot link {}: {e}", staged.display()));
+            fs::rename(&staged, &link)
+                .unwrap_or_else(|e| panic!("cannot place {}: {e}", link.display()));
+        }
+        directory
+    })
+    .clone()
 }
 
 /// The in-process interpreter's invocation for one run from `directory`:

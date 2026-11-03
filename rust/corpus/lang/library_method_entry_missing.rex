@@ -2,4 +2,4 @@
    the directive's own line is blamed at install time and the prolog does not
    run. */
 say 'the prolog ran'
-::method x external "LIBRARY rxregexp NoSuchEntry"
+::method x external "LIBRARY rxregexpc NoSuchEntry"

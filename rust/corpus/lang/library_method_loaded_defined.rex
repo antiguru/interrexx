@@ -1,13 +1,13 @@
 /* A loadExternalMethod answer runs when a class defines it, through define and
    through defineMethods, and a missing argument to one no directive has bound
    is reported at the sending clause. */
-.K~define('DOES', .Method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Match'))
-.K~define('INIT', .Method~loadExternalMethod('i', 'LIBRARY rxregexp RegExp_Init'))
+.K~define('DOES', .Method~loadExternalMethod('m', 'LIBRARY rxregexpc RegExp_Match'))
+.K~define('INIT', .Method~loadExternalMethod('i', 'LIBRARY rxregexpc RegExp_Init'))
 k = .K~new('a*b')
 say 'define' k~does('aab') k~does('abc')
 methods = .directory~new
-methods['DOES'] = .Method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Match')
-methods['INIT'] = .Method~loadExternalMethod('i', 'LIBRARY rxregexp RegExp_Init')
+methods['DOES'] = .Method~loadExternalMethod('m', 'LIBRARY rxregexpc RegExp_Match')
+methods['INIT'] = .Method~loadExternalMethod('i', 'LIBRARY rxregexpc RegExp_Init')
 .J~defineMethods(methods)
 j = .J~new('x+')
 say 'defineMethods' j~does('xx') j~does('y')

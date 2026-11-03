@@ -1,2 +1,2 @@
 ::class K
-::method m external "LIBRARY rxmath RxCalcSqrt"
+::method m external "LIBRARY rxmathc RxCalcSqrt"

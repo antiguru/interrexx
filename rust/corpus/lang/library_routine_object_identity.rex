@@ -10,12 +10,12 @@ a = p~findRoutine('RXCALCSQRT')
 say 'library findRoutine' (a~identityHash == p~findRoutine('RXCALCSQRT')~identityHash)
 say 'library importedRoutines' (p~importedRoutines['RXCALCSQRT']~identityHash == a~identityHash)
 say 'library another package' (midpackage()~findRoutine('RXCALCSQRT')~identityHash == a~identityHash)
-d = .Routine~loadExternalRoutine('x', 'LIBRARY rxmath RxCalcSqrt')
-e = .Routine~loadExternalRoutine('y', 'LIBRARY rxmath rxcalcsqrt')
+d = .Routine~loadExternalRoutine('x', 'LIBRARY rxmathc RxCalcSqrt')
+e = .Routine~loadExternalRoutine('y', 'LIBRARY rxmathc rxcalcsqrt')
 say 'loadExternalRoutine' (d~identityHash == a~identityHash) (e~identityHash == d~identityHash) d~call(16)
 say 'distinct objects' (.object~new~identityHash == .object~new~identityHash)
 c = p~findRoutine('PUBR')
 say 'routine findRoutine' (c~identityHash == p~findRoutine('PUBR')~identityHash)
 say 'routine importedRoutines' (p~importedRoutines['PUBR']~identityHash == c~identityHash)
-::requires 'rxmath' LIBRARY
+::requires 'rxmathc' LIBRARY
 ::requires 'mid.cls'

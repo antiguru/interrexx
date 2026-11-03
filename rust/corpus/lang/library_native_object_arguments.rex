@@ -134,7 +134,7 @@ notpointer:
   return
 
 ::requires 'orxfunction' LIBRARY
-::requires 'rxmath' LIBRARY
+::requires 'rxmathc' LIBRARY
 ::class K
 ::class MA
 ::method makearray

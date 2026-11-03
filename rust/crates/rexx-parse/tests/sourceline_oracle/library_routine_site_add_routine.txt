@@ -14,7 +14,7 @@ do i = 1 to 2
   say 'call' i result
   if i = 1 then p~addRoutine('EXT2', .routine~new('x', 'return "added" arg(1)'))
 end
-x = p~loadLibrary('rxmath')
+x = p~loadLibrary('rxmathc')
 do i = 1 to 2
   say 'library' i RxCalcSqrt(16)
   if i = 1 then p~addPublicRoutine('RXCALCSQRT', .routine~new('x', 'return "public" arg(1)'))

@@ -1,2 +1,2 @@
 ::routine loadit public
-  return .context~package~loadLibrary('rxmath')
+  return .context~package~loadLibrary('rxmathc')

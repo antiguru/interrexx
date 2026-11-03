@@ -8,6 +8,6 @@ say 'main' RxCalcSqrt(16) .context~package~findRoutine('RxCalcSqrt')~call(25)
 say 'library first' libfirst()
 say 'public first' pubfirst()
 ::requires 'pub.cls'
-::requires 'rxmath' LIBRARY
+::requires 'rxmathc' LIBRARY
 ::requires 'libfirst.cls'
 ::requires 'pubfirst.cls'

@@ -14,7 +14,7 @@ do i = 1 to 2
 end
 exit
 loadit: procedure
-  x = .context~package~loadLibrary('rxmath')
+  x = .context~package~loadLibrary('rxmathc')
   return arg(1)
 addext:
   if arg(1) = 2 then .context~package~addRoutine('EXT', .routine~new('x', 'return "added" arg(1)'))

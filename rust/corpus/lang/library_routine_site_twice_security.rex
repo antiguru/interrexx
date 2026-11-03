@@ -1,6 +1,6 @@
 /* The security manager's CALL checkpoint names a library routine and an
    internal routine on every call from one expression call site. */
-say 'load' .context~package~loadLibrary('rxmath')
+say 'load' .context~package~loadLibrary('rxmathc')
 g = .Routine~newFile('global.rex')
 say 'declined' g~setSecurityManager(.Audit~new)
 g~call

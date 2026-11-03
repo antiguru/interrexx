@@ -13,4 +13,4 @@ end
 say 'fresh' RxCalcSqrt(16)
 r = .Routine~newFile('r.rex', .context~package)
 r~call
-::requires 'rxmath' LIBRARY
+::requires 'rxmathc' LIBRARY

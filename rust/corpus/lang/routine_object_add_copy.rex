@@ -27,4 +27,4 @@ p~addRoutine('M1', .Method~new('m', 'nop'))
 say 'method added'
 exit
 syntax: say 'method' condition('o')~code
-::requires 'rxmath' LIBRARY
+::requires 'rxmathc' LIBRARY

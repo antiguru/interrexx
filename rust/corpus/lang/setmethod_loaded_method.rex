@@ -3,6 +3,6 @@
 say .t~new~go
 ::class t
 ::method go
-  self~setMethod('POS', .Method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Pos'))
+  self~setMethod('POS', .Method~loadExternalMethod('m', 'LIBRARY rxregexpc RegExp_Pos'))
   say 'set'
   return self~pos()

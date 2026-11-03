@@ -1,4 +1,4 @@
-::requires 'rxmath' LIBRARY
+::requires 'rxmathc' LIBRARY
 ::routine inner public
   nop
   return RxCalcSqrt(2, 'x')
