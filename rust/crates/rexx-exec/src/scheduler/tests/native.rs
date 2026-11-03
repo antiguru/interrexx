@@ -31,6 +31,24 @@ fn counted(source: &str, stress: bool, invocation: Invocation) -> Counted {
     counted_watch(source, stress, invocation, None)
 }
 
+/// A directory holding `librxsockc.so`, a link to the checkout build's C
+/// `librxsock.so` under a name this crate does not answer with its own Rust
+/// `rxsock`, so that a program naming `rxsockc` makes a native call.
+fn c_rxsock_directory(build: &std::path::Path) -> std::path::PathBuf {
+    let directory =
+        std::env::temp_dir().join(format!("rexx-native-instruments-{}", std::process::id()));
+    std::fs::create_dir_all(&directory).expect("an instrument directory");
+    let link = directory.join("librxsockc.so");
+    if std::fs::read_link(&link).is_err() {
+        let staged = directory.join(format!(".librxsockc.{:?}", std::thread::current().id()));
+        let _ = std::fs::remove_file(&staged);
+        std::os::unix::fs::symlink(build.join("librxsock.so"), &staged)
+            .expect("a link to librxsock.so");
+        let _ = std::fs::rename(&staged, &link);
+    }
+    directory
+}
+
 fn counted_watch(
     source: &str,
     stress: bool,
@@ -41,9 +59,11 @@ fn counted_watch(
         .join("../../../build/lib")
         .canonicalize()
         .expect("checkout-local build/lib missing: run python3 rust/scripts/test_preflight.py");
+    let instruments = c_rxsock_directory(&directory);
+    let path = std::env::join_paths([directory, instruments]).expect("a library path");
     let invocation = invocation.with_environment(vec![(
         b"LD_LIBRARY_PATH".to_vec(),
-        directory.into_os_string().into_encoded_bytes(),
+        path.into_encoded_bytes(),
     )]);
     let text = source.as_bytes().to_vec();
     std::thread::Builder::new()
@@ -286,9 +306,10 @@ fn a_native_call_in_the_simulation_mode_spawns_no_pool_thread() {
     assert_eq!(sim_run.spawned, 0);
 }
 
-/// A server activity blocks in `SockAccept`, which main's later connect
-/// ends. In the simulation mode the accept runs on the baton, main never
-/// connects, and the call is interrupted and refused after `block=`.
+/// A server activity blocks in the C `SockAccept` (`rxsockc`, the build's
+/// `librxsock.so`), which main's later connect ends. In the simulation mode
+/// the accept runs on the baton, main never connects, and the call is
+/// interrupted and refused after `block=`.
 #[test]
 fn a_native_call_only_another_activity_can_end_is_refused_after_its_bound() {
     let source = |port: u32| {
@@ -300,13 +321,13 @@ fn a_native_call_only_another_activity_can_end_is_refused_after_its_bound() {
          t = .srv~new~start('ACCEPT', s)\ncall SysSleep 0.1\n\
          c = SockSocket('AF_INET', 'SOCK_STREAM', 0)\nsay 'connect' SockConnect(c, 'addr.')\n\
          say 'got' t~result\ncall SockClose c; call SockClose s\n\
-         ::routine SockSocket public external \"LIBRARY rxsock SockSocket\"\n\
-         ::routine SockSetSockOpt public external \"LIBRARY rxsock SockSetSockOpt\"\n\
-         ::routine SockBind public external \"LIBRARY rxsock SockBind\"\n\
-         ::routine SockListen public external \"LIBRARY rxsock SockListen\"\n\
-         ::routine SockAccept public external \"LIBRARY rxsock SockAccept\"\n\
-         ::routine SockConnect public external \"LIBRARY rxsock SockConnect\"\n\
-         ::routine SockClose public external \"LIBRARY rxsock SockClose\"\n\
+         ::routine SockSocket public external \"LIBRARY rxsockc SockSocket\"\n\
+         ::routine SockSetSockOpt public external \"LIBRARY rxsockc SockSetSockOpt\"\n\
+         ::routine SockBind public external \"LIBRARY rxsockc SockBind\"\n\
+         ::routine SockListen public external \"LIBRARY rxsockc SockListen\"\n\
+         ::routine SockAccept public external \"LIBRARY rxsockc SockAccept\"\n\
+         ::routine SockConnect public external \"LIBRARY rxsockc SockConnect\"\n\
+         ::routine SockClose public external \"LIBRARY rxsockc SockClose\"\n\
          ::class srv\n::method accept\n  use arg s\n  a = SockAccept(s)\n  return a > 0\n"
         )
     };
@@ -340,6 +361,35 @@ fn a_native_call_only_another_activity_can_end_is_refused_after_its_bound() {
         took >= std::time::Duration::from_millis(500),
         "took {took:?}"
     );
+}
+
+/// The same server and client over this crate's Rust `rxsock`: its accept
+/// parks its activity rather than blocking the baton, so in the simulation
+/// mode too main connects and the run ends normally
+/// (`extensions-behaviour.md`: `SockAccept` blocks only the calling
+/// activity).
+#[test]
+fn the_rust_rxsock_accept_waits_without_holding_up_main_in_the_simulation_mode() {
+    let port = 30_000 + 2 * (std::process::id() % 5_000);
+    let source = format!(
+        "s = SockSocket('AF_INET', 'SOCK_STREAM', 0)\n\
+         addr.family = 'AF_INET'; addr.port = {port}; addr.addr = '127.0.0.1'\n\
+         call SockSetSockOpt s, 'SOL_SOCKET', 'SO_REUSEADDR', 1\n\
+         say 'bind' SockBind(s, 'addr.') 'listen' SockListen(s, 1)\n\
+         t = .srv~new~start('ACCEPT', s)\ncall SysSleep 0.1\n\
+         c = SockSocket('AF_INET', 'SOCK_STREAM', 0)\nsay 'connect' SockConnect(c, 'addr.')\n\
+         say 'got' t~result\ncall SockClose c; call SockClose s\n\
+         ::requires 'rxsock' LIBRARY\n\
+         ::class srv\n::method accept\n  use arg s\n  a = SockAccept(s)\n  return a > 0\n"
+    );
+    let config = crate::SimConfig::parse("sim:1,block=0.5").expect("a sim spec");
+    let run = counted(
+        &source,
+        false,
+        bounded().with_switch_mode(SwitchMode::Sim(config)),
+    );
+    assert_eq!(run.outcome.exit_code, 0, "{}", run.stderr());
+    assert_eq!(run.stdout(), "bind 0 listen 0\nconnect 0\ngot 1\n");
 }
 
 /// Completed native calls repeat under a deterministic schedule. The watch
