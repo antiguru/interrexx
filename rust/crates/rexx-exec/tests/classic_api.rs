@@ -757,6 +757,8 @@ fn run_driver(name: &str, files: &[(&str, &str)], arguments: &[&str]) -> std::pr
 }
 
 /// Runs `binary`, a driver, as `name` from a directory holding `files`, with `arguments`.
+/// glibc's allocator fills freed blocks with a pattern (`MALLOC_PERTURB_`), so a driver reading
+/// memory the interpreter freed reads that pattern rather than whatever was there before.
 fn run_binary(
     binary: &Path,
     name: &str,
@@ -776,6 +778,7 @@ fn run_binary(
         .args(arguments)
         .current_dir(&dir)
         .env("REXX_API_DIR", &api)
+        .env("MALLOC_PERTURB_", "165")
         .stdin(Stdio::null())
         .output()
         .expect("the driver runs");
@@ -901,6 +904,29 @@ fn a_foreign_thread_attaches_and_terminate_does_not_wait_for_it() {
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
         "attach 1 result 42\nterminating\nterminated\ndetaching\n",
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+/// A thread still attached when its instance terminates detaches afterwards, then calls through
+/// the instance it was handed, and the creating thread terminates the instance again: the thread
+/// context, the instance and the tables they link outlive `Terminate`, with the heap churned
+/// between. Before, `Terminate` freed the root context's allocation and its function table, and
+/// the late `DetachThread` called through freed memory (SIGSEGV). The output is the oracle's,
+/// measured with the same driver.
+#[test]
+fn an_attached_threads_context_and_instance_outlive_terminate() {
+    let output = run_driver(
+        "attach_after",
+        &[("double.rex", "parse arg n\nreturn n * 2\n")],
+        &["double.rex"],
+    );
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "attach 1 result 42\nterminating\nterminated\ndetaching\ndetached\n\
+         version through the instance ok\nterminated again\n",
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );

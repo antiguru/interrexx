@@ -593,7 +593,9 @@ impl<'a> RedirectorContext<'a> {
 /// Its callbacks reach the innermost native call in flight, which is what
 /// `contextToActivation` does for a thread context
 /// (`interpreter/concurrency/Activity.hpp:458`). A clone addresses the same
-/// context; the allocation lives until the last clone is dropped.
+/// context; the allocation lives until the last clone is dropped, unless it
+/// is kept ([`ThreadContext::keep`], `AttachThread`), when it lives for the
+/// rest of the process.
 #[derive(Clone)]
 pub struct ThreadContext {
     home: Rc<Home>,
@@ -669,10 +671,16 @@ struct Home(NonNull<Thread>);
 
 impl Drop for Home {
     fn drop(&mut self) {
+        let raw = self.0.as_ptr();
+        // SAFETY: the allocation is live until this drop frees it; the flag
+        // is read through its own field.
+        if unsafe { (*raw).kept.load(std::sync::atomic::Ordering::Acquire) } {
+            return;
+        }
         // SAFETY: the pointer came from `Box::into_raw` in
         // `ThreadContext::new`, and only this `Home`, which is not `Clone`,
         // frees it.
-        drop(unsafe { Box::from_raw(self.0.as_ptr()) });
+        drop(unsafe { Box::from_raw(raw) });
     }
 }
 
@@ -683,6 +691,12 @@ struct Thread {
     instance: Owned<RexxInstance_, Innermost>,
     table: ThreadTable,
     innermost: Innermost,
+    /// The allocation, and the table it links, are never freed: a thread
+    /// other than the interpreter's holds the context or its instance and
+    /// may call through them after the interpreter has ended
+    /// (`DetachThread` after `Terminate`). Set by [`ThreadContext::keep`]
+    /// and by `AttachThread`.
+    kept: std::sync::atomic::AtomicBool,
 }
 
 /// The innermost native call in flight on this context, null where none is,
@@ -844,6 +858,7 @@ impl ThreadContext {
             },
             table: table.clone(),
             innermost: Innermost(Cell::new(std::ptr::null()), table.requester.clone()),
+            kept: std::sync::atomic::AtomicBool::new(false),
         }));
         // SAFETY: `raw` is the allocation just made and nothing else addresses
         // it yet. Every link is taken from `raw` itself, so its provenance is
@@ -862,6 +877,20 @@ impl ThreadContext {
                 NonNull::new(raw).expect("Box::into_raw answers a non-null pointer"),
             )),
         }
+    }
+
+    /// Keeps this context's allocation, the instance it links and the
+    /// table it links for the rest of the process, as an embedding's root
+    /// context is kept: the thread that created the instance, and any thread
+    /// still attached when it terminates, call through them afterwards.
+    pub fn keep(&self) {
+        let raw = self.home.0.as_ptr();
+        // SAFETY: the allocation is live while `self` is; the flag is atomic.
+        unsafe {
+            (*raw)
+                .kept
+                .store(true, std::sync::atomic::Ordering::Release)
+        };
     }
 
     /// The address an extension is handed, as a number.
@@ -4341,7 +4370,9 @@ unsafe fn context_of_thread(thread: *mut Thread) -> *mut RexxThreadContext_ {
 /// instance's context, which a thread running a native call of its activity
 /// already has. Any other thread is attached to it, so its callbacks reach
 /// that activity's innermost call, until it detaches: every attached thread
-/// shares the one activity, its calls serialized by the baton.
+/// shares the one activity, its calls serialized by the baton. The context is
+/// kept, so a `DetachThread` after the interpreter has ended reads live
+/// memory and finds the thread attached.
 ///
 /// # Safety
 /// `instance` is an instance a live [`ThreadContext`] links, and a non-null
@@ -4356,6 +4387,13 @@ unsafe extern "C" fn attach_thread(
     let context = unsafe { context_of_thread(thread) };
     // SAFETY: as above.
     if !unsafe { runs_here(thread) } {
+        // SAFETY: as above; the flag is atomic, and set before this thread
+        // is handed the context it keeps past the interpreter's end.
+        unsafe {
+            (*thread)
+                .kept
+                .store(true, std::sync::atomic::Ordering::Release)
+        };
         attach_here(context as usize);
     }
     if !attached.is_null() {

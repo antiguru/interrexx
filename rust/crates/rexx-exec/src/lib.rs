@@ -4702,6 +4702,7 @@ pub(crate) fn run_instance(
         let library = rexx_api::load::embedding_library(embedding::wait_in_root);
         interp.register_library(INSTANCE_LIBRARY, Ok(Some(library)));
         let thread = interp.thread_context();
+        thread.keep();
         thread.set_application_data(options.application_data);
         started(thread.address(), interp.timer.inbox());
         interp.leave_next_native = true;
