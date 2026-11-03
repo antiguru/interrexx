@@ -1115,9 +1115,17 @@ impl Raised {
         Raised::syntax(93, 918, vec![index.to_vec()])
     }
 
-    /// 98.975: a sort or a spread subscript met an array with a hole in it.
+    /// 98.975: a sort or an index list met an array with a hole in it.
     pub(crate) fn missing_array_element(position: usize) -> Raised {
         Raised::syntax(98, 975, vec![position.to_string().into_bytes()])
+    }
+
+    /// 93.939: an `Array` given as an index list has more than one
+    /// dimension. Measured, oracle rc 0 under a trap, through
+    /// `(1,2)~at(.array~new(2,2))`: `Method argument 1 must have a
+    /// single-dimensional array value.`
+    pub(crate) fn index_list_not_single_dimensional(position: usize) -> Raised {
+        Raised::syntax(93, 939, vec![position.to_string().into_bytes()])
     }
 
     /// 93.954: a method that only works on a single-dimensional array was
@@ -2034,12 +2042,14 @@ impl From<Raised> for Failure {
 }
 
 impl Failure {
-    /// Whether a native call this left re-raises it in its caller: a SYNTAX
-    /// condition other than one its boundary raised for itself
-    /// ([`Delivery::lineless`]).
+    /// Whether a native call this left re-raises it in its caller: any SYNTAX
+    /// condition, one its boundary raised for itself
+    /// ([`Delivery::lineless`]) too. Bug #2116 (r13324) moved
+    /// `processArguments` inside the `try` of `NativeActivation::run` and
+    /// `callNativeRoutine`, so an argument refusal is trapped by the
+    /// activation and re-raised by `checkConditions` like any other error.
     pub(crate) fn reraised_by_native_call(&self) -> bool {
-        matches!(self, Failure::Raised(raised)
-            if raised.condition == "SYNTAX" && !raised.delivery.lineless)
+        matches!(self, Failure::Raised(raised) if raised.condition == "SYNTAX")
     }
 }
 

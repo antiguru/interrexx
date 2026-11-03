@@ -1,0 +1,20 @@
+count 19
+/* RaiseCondition with no result object, through orxmethod's
+   TestRaiseCondition, which returns 0 after the raise: since bug #2130
+   (r13339) the call answers the value the native code returned, untrapped
+   and under CALL ON alike, and the condition object still has no RESULT.
+   One with a result object answers that object instead. */
+t = .T~new
+t~rc('USER FOO'); say 'untrapped' var('result') result
+call on user bar name handler
+say 'callon' t~rc('USER BAR')
+say 'callon result' t~rc('USER BAR', , , 'r1')
+call on notready name handler
+say 'notready' t~rc('NOTREADY', 'd')
+say 'after'
+exit
+handler:
+  say 'handler' condition('c') '['condition('d')']' condition('o')~hasIndex('RESULT')
+  return 'fromhandler'
+::class T
+::method rc external "LIBRARY orxmethod TestRaiseCondition"

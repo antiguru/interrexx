@@ -278,13 +278,9 @@ impl Surface for Interp {
 
     fn set_mutable_buffer_capacity(&mut self, buffer: ObjRef, capacity: usize) -> Option<POINTER> {
         let state = self.lent_buffer(buffer)?;
-        // `MutableBuffer::setCapacity` (`:292`), which asks `ensureCapacity`
-        // for the difference over the capacity and not over the length.
-        let mut grown = 0;
-        if capacity > state.capacity {
-            let added = capacity - state.capacity;
-            grown = state.ensure_capacity(added).unwrap_or(0);
-        }
+        // `MutableBuffer::setCapacity` (`:292`), which since bug #2092
+        // (r13247) asks `ensureCapacity` for the difference over the length.
+        let grown = state.set_capacity(capacity).unwrap_or(0);
         let reserved = state.capacity;
         let address = state.writable().0.cast();
         let shrunk = reserved - state.capacity;

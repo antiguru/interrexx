@@ -813,6 +813,17 @@ impl BufferState {
         Ok(0)
     }
 
+    /// `MutableBuffer::setCapacity`: room for `length` bytes in all. Only a
+    /// length past the capacity grows it, by [`Self::ensure_capacity`] for
+    /// the bytes beyond the contents, so the doubling rule still applies.
+    /// Answers how far the capacity grew.
+    pub fn set_capacity(&mut self, length: usize) -> Result<usize, TryReserveError> {
+        if length > self.capacity {
+            return self.ensure_capacity(length.saturating_sub(self.bytes.len()));
+        }
+        Ok(0)
+    }
+
     /// The bytes' address, writable up to the capacity answered with it.
     ///
     /// A copy's `Vec` holds only its length, so the allocation is grown to

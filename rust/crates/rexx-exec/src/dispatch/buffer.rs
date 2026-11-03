@@ -1442,6 +1442,24 @@ fn grow_buffer(
     buffer_state_mut(interp, receiver)
 }
 
+/// The receiver's state with room for `length` bytes in all
+/// ([`BufferState::set_capacity`], `MutableBuffer::setCapacity`), the growth
+/// charged as [`grow_buffer`] charges it. `overlay`, `replaceAt`, `[]=` and
+/// the two `changeStr`s size by this since bug #2092 (r13247): before it they
+/// asked `ensureCapacity` for the whole result on top of the contents.
+fn grow_buffer_to(
+    interp: &mut Interp,
+    receiver: ObjRef,
+    length: usize,
+) -> Result<&mut BufferState, Failure> {
+    let state = buffer_state_mut(interp, receiver)?;
+    let grown = state
+        .set_capacity(length)
+        .map_err(|_| Failure::from(Raised::system_resources()))?;
+    interp.charge_growth(grown);
+    buffer_state_mut(interp, receiver)
+}
+
 /// `changeStr`'s arguments: needle, replacement, and a count defaulting to
 /// every occurrence.
 pub(super) fn changestr_arguments(
@@ -1602,9 +1620,9 @@ fn native_mutable_buffer_insert(
 }
 
 /// `MutableBuffer::overlay` (`classes/MutableBufferClass.cpp:493`): the
-/// position is 1-based and defaults to 1, and the capacity is raised for the
-/// position plus the overlay length rather than for the result; answers the
-/// receiver.
+/// position is 1-based and defaults to 1, and the capacity is raised to the
+/// position plus the overlay length rather than to the result's length;
+/// answers the receiver.
 fn native_mutable_buffer_overlay(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1614,8 +1632,8 @@ fn native_mutable_buffer_overlay(
     let (new, begin, length, pad) = overlay_arguments(interp, args)?;
     let mut out = interp.take_result_buffer();
     let overlay_length = length.unwrap_or(new.len());
-    let added = begin.saturating_add(overlay_length);
-    let state = grow_buffer(interp, receiver, added)?;
+    let needed = begin.saturating_add(overlay_length);
+    let state = grow_buffer_to(interp, receiver, needed)?;
     crate::builtin::string::overlay_bytes(&mut out, &state.bytes, &new, begin, length, pad)?;
     replace_buffer_contents(state, &out);
     interp.give_result_buffer(out);
@@ -1638,7 +1656,7 @@ fn buffer_replace_at(
     let mut out = interp.take_result_buffer();
     let held = buffer_state_mut(interp, receiver)?.bytes.len();
     let (replaced, final_length) = replace_at_plan(held, begin, length, new.len());
-    let state = grow_buffer(interp, receiver, final_length)?;
+    let state = grow_buffer_to(interp, receiver, final_length)?;
     out.try_reserve(final_length)
         .map_err(|_| Failure::from(Raised::system_resources()))?;
     replace_at_bytes(&mut out, &state.bytes, &new, begin, replaced, pad)?;
@@ -1684,7 +1702,7 @@ fn native_mutable_buffer_changestr(
         if matches > 0 {
             let growth = matches.saturating_mul(replacement.len() - needle.len());
             let result_length = state.bytes.len().saturating_add(growth);
-            state = grow_buffer(interp, receiver, result_length)?;
+            state = grow_buffer_to(interp, receiver, result_length)?;
         }
     }
     crate::builtin::string::changestr_bytes(&mut out, &state.bytes, &needle, &replacement, limit)?;
@@ -1695,10 +1713,10 @@ fn native_mutable_buffer_changestr(
 
 /// `MutableBuffer::caselessChangeStr` (`classes/MutableBufferClass.cpp:1136`):
 /// `CHANGESTR`'s three length branches with the search folded, and the same
-/// capacity rule -- only the growing branch calls `ensureCapacity`, and what
-/// it passes is the result's own length. Measured, oracle rc 0:
+/// capacity rule -- only the growing branch calls `setCapacity`, with the
+/// result's own length. Measured, oracle rc 0:
 /// `.MutableBuffer~new('aBc', 10)~caselessChangeStr('B', copies('q', 40))`
-/// reads `42 45`, where a buffer built at the 256 default reads `404 512`.
+/// reads `42 42`.
 fn native_mutable_buffer_caselesschangestr(
     interp: &mut Interp,
     _cleared: Cleared,
@@ -1714,7 +1732,7 @@ fn native_mutable_buffer_caselesschangestr(
         if matches > 0 {
             let growth = matches.saturating_mul(replacement.len() - needle.len());
             let result_length = state.bytes.len().saturating_add(growth);
-            state = grow_buffer(interp, receiver, result_length)?;
+            state = grow_buffer_to(interp, receiver, result_length)?;
         }
     }
     crate::builtin::string::caseless_changestr_bytes(

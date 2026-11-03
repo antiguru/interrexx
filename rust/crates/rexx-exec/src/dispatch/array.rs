@@ -148,10 +148,9 @@ pub(super) fn array_position(
 ) -> Result<Option<usize>, Failure> {
     let spread;
     let subscripts = match args {
-        [Some(only)] => match interp.array_slots(*only) {
-            Some(slots) => {
-                let items = slots.iter().flatten().count();
-                spread = slots[..items].to_vec();
+        [Some(only)] => match index_list(interp, *only, index_use.arg_position())? {
+            Some(list) => {
+                spread = list;
                 &spread[..]
             }
             None => args,
@@ -164,6 +163,29 @@ pub(super) fn array_position(
         }
         _ => single_dimension_position(interp, receiver, subscripts, index_use),
     }
+}
+
+/// A lone `Array` argument read as the subscript list it stands for, or
+/// `None` for any other argument (`classes/ArrayClass.cpp:1226`-`:1239`). The
+/// list is every slot of a single-dimensional array, so a hole in it is
+/// 98.975 naming the hole, and an array of more dimensions is 93.939 naming
+/// `position`. Bug #2085 (r13264) made it so; before it the list was the
+/// array's first `items` slots, holes and all.
+pub(super) fn index_list(
+    interp: &Interp,
+    value: ObjRef,
+    position: usize,
+) -> Result<Option<Vec<Option<ObjRef>>>, Failure> {
+    let Some((slots, dimensions)) = interp.array_body(value) else {
+        return Ok(None);
+    };
+    if dimensions.is_some_and(|dimensions| dimensions.len() != 1) {
+        return Err(Raised::index_list_not_single_dimensional(position).into());
+    }
+    if let Some(hole) = slots.iter().position(Option::is_none) {
+        return Err(Raised::missing_array_element(hole + 1).into());
+    }
+    Ok(Some(slots.to_vec()))
 }
 
 /// `ArrayClass::validateSingleDimensionIndex` (`classes/ArrayClass.cpp:1258`).
@@ -191,9 +213,9 @@ fn single_dimension_position(
                 }
             }
         }
-        // Only the spread above can produce this: an argument list of its own
-        // drops a trailing omission, so `~at(,)` arrives as no argument at all
-        // and is 93.901 above.
+        // [`index_list`] refuses a list with a hole, and an argument list of
+        // its own drops a trailing omission, so `~at(,)` arrives as no
+        // argument at all and is 93.901 above.
         [None] => Err(Raised::missing_array_element(1).into()),
         _ => {
             if array_is_fixed_dimension(interp, receiver)? {
