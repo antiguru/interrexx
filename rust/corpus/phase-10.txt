@@ -76,3 +76,12 @@ lang/library_uninit_twice_rust.rex
 lang/package_library_binder_kept_rust.rex
 lang/routine_object_add_copy_rust.rex
 lang/setmethod_loaded_method_rust.rex
+
+# PR 4: a SYNTAX condition a library call ends with -- the boundary's refusal
+# of an argument, or a raise in the argument's conversion -- is re-raised in
+# its caller, for routines as library_string_argument.rex shows for methods;
+# the C instrument and the Rust library.
+lang/library_routine_string_argument.rex
+lang/library_routine_string_argument_rust.rex
+lang/library_refusal_reraised.rex
+lang/library_refusal_reraised_rust.rex

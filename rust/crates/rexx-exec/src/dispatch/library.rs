@@ -394,8 +394,26 @@ impl Interp {
             });
         }
         match popped.raised {
-            Some(failure) => Err(failure),
+            Some(failure) => {
+                self.reraise_in_caller(&failure);
+                Err(failure)
+            }
             None => Ok(answered),
+        }
+    }
+
+    /// Marks `failure`, a condition a native call ended with, as re-raised in
+    /// the call's caller when it is a `SYNTAX` condition, as
+    /// [`Interp::raise_held_condition`] does: its POSITION, PROGRAM, PACKAGE
+    /// and report line become the caller's clause's, PROPAGATED is 1, and its
+    /// traceback keeps the raising line. Measured, oracle, over `RxCalcSqrt`
+    /// (by name and through `::routine ... external`), `RegExp_Match` and
+    /// `RegExp_Parse`: the boundary's refusal of an argument (88.921, 88.909)
+    /// and a raise in the argument's MAKESTRING (40.1) alike
+    /// (`lang/library_refusal_reraised.rex`, `lang/library_string_argument.rex`).
+    fn reraise_in_caller(&mut self, failure: &Failure) {
+        if !matches!(failure, Failure::Raised(held) if held.condition != "SYNTAX") {
+            self.activity.native_reraise = true;
         }
     }
 
@@ -431,6 +449,7 @@ impl Interp {
         match popped.raised {
             None => Ok(answered),
             Some(failure) => {
+                self.reraise_in_caller(&failure);
                 self.blame_native_routine(name, program, args, ran, code);
                 Err(failure)
             }
@@ -791,16 +810,24 @@ impl Interp {
         trapped: Option<ObjRef>,
     ) -> Result<Option<ObjRef>, Failure> {
         match answered {
-            Err(Refused::Raised) => Err(popped
-                .raised
-                .expect("a host answering Raised holds the condition it raised")),
+            Err(Refused::Raised) => {
+                let raised = popped
+                    .raised
+                    .expect("a host answering Raised holds the condition it raised");
+                self.reraise_in_caller(&raised);
+                Err(raised)
+            }
             Ok(value) => match popped.raised {
                 None => Ok(value),
                 Some(raised) => {
                     self.raise_held_condition(raised, popped.additional, popped.result, trapped)
                 }
             },
-            Err(refused) => Err(self.refusal(refused, packaged, popped.method)),
+            Err(refused) => {
+                let failure = self.refusal(refused, packaged, popped.method);
+                self.reraise_in_caller(&failure);
+                Err(failure)
+            }
         }
     }
 
