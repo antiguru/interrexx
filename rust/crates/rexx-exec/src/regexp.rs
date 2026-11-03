@@ -50,6 +50,30 @@ enum Node {
     Count(Box<Node>, u32),
 }
 
+impl Node {
+    /// The number of automaton states [`Builder::build`] makes for this
+    /// node, saturated.
+    fn size(&self) -> u64 {
+        match self {
+            Node::Set(_) => 1,
+            Node::Concat(nodes) => nodes
+                .iter()
+                .fold(0, |sum, node| sum.saturating_add(node.size())),
+            Node::Alternate(left, right) => {
+                left.size().saturating_add(right.size()).saturating_add(1)
+            }
+            Node::Star(inner) | Node::Plus(inner) => inner.size().saturating_add(1),
+            Node::Count(inner, count) => inner.size().saturating_mul(u64::from(*count)),
+        }
+    }
+}
+
+/// The most states a pattern may compile to: about 40 MB of automaton and
+/// thread sets. A count past it is compile error 5 at its `{` (Deviation 87);
+/// measured, the oracle answers `a{10000000}` and crashes on `a{2000000000}`
+/// and on `((a{1000}){1000}){1000}`.
+const STATE_BUDGET: u64 = 2_000_000;
+
 /// A compile error: its code (1 to 6) and the position `!POS` reports.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(crate) struct CompileError {
@@ -73,6 +97,9 @@ fn ends_term(byte: u8) -> bool {
 struct Parser<'a> {
     pattern: &'a [u8],
     at: usize,
+    /// The index of the last `{` parsed, which a pattern over the state
+    /// budget is blamed on.
+    last_count: Option<usize>,
 }
 
 impl Parser<'_> {
@@ -133,9 +160,16 @@ impl Parser<'_> {
                 if count < 2 {
                     return Err(self.error(ILLEGAL_NUMBER, open));
                 }
-                self.at = open + length + 2;
                 let count = u32::try_from(count).expect("a positive int");
-                Ok(Node::Count(Box::new(atom), count))
+                let node = Node::Count(Box::new(atom), count);
+                // Deviation 87: compiling always terminates, so a count whose
+                // copies would pass the budget is an illegal number.
+                if node.size() > STATE_BUDGET {
+                    return Err(self.error(ILLEGAL_NUMBER, open));
+                }
+                self.last_count = Some(open);
+                self.at = open + length + 2;
+                Ok(node)
             }
             _ => Ok(atom),
         }
@@ -345,11 +379,23 @@ pub(crate) fn compile(pattern: &[u8]) -> Result<(Regex, usize), CompileError> {
     let mut parser = Parser {
         pattern: &pattern[..end],
         at: 0,
+        last_count: None,
     };
     let node = parser.expression()?;
+    // Only a count multiplies states; without one the automaton is linear
+    // in the pattern.
+    if let Some(open) = parser.last_count
+        && node.size() > STATE_BUDGET
+    {
+        return Err(CompileError {
+            code: ILLEGAL_NUMBER,
+            position: open,
+        });
+    }
     let mut builder = Builder {
         states: Vec::new(),
         sets: Vec::new(),
+        shared: std::collections::HashMap::new(),
     };
     let accept = builder.push(State::Accept);
     debug_assert_eq!(accept, ACCEPT);
@@ -369,6 +415,9 @@ pub(crate) fn compile(pattern: &[u8]) -> Result<(Regex, usize), CompileError> {
 struct Builder {
     states: Vec<State>,
     sets: Vec<ByteSet>,
+    /// Each distinct set's index in `sets`, so the copies a count makes
+    /// share one.
+    shared: std::collections::HashMap<ByteSet, u32>,
 }
 
 impl Builder {
@@ -382,8 +431,15 @@ impl Builder {
     fn build(&mut self, node: &Node, next: u32) -> u32 {
         match node {
             Node::Set(set) => {
-                let index = u32::try_from(self.sets.len()).expect("below 2^32 sets");
-                self.sets.push(*set);
+                let index = match self.shared.get(set) {
+                    Some(index) => *index,
+                    None => {
+                        let index = u32::try_from(self.sets.len()).expect("below 2^32 sets");
+                        self.sets.push(*set);
+                        self.shared.insert(*set, index);
+                        index
+                    }
+                };
                 self.push(State::Byte { set: index, next })
             }
             Node::Concat(nodes) => nodes
@@ -600,5 +656,45 @@ impl Regex {
             Some(j) => (k + 1, k + j + 1),
             None => (k + 1, k + longest),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CompileError, ILLEGAL_NUMBER, STATE_BUDGET, compile};
+
+    /// A count whose copies would pass the budget is error 5 at its `{`,
+    /// found before anything is built; nested counts multiply.
+    #[test]
+    fn counts_past_the_budget_are_illegal_numbers() {
+        for (pattern, open) in [
+            ("a{2000000000}", 1),
+            ("a{2147483647}", 1),
+            ("((a{1000}){1000}){1000}", 17),
+            ("x(a{50000}){50000}", 11),
+            ("a{1500000}b{1500000}", 11),
+        ] {
+            assert_eq!(
+                compile(pattern.as_bytes()).err(),
+                Some(CompileError {
+                    code: ILLEGAL_NUMBER,
+                    position: open
+                }),
+                "{pattern}"
+            );
+        }
+    }
+
+    /// Counts within the budget compile and match as before, the copies
+    /// sharing one byte set.
+    #[test]
+    fn counts_within_the_budget_compile() {
+        let (regex, consumed) = compile(b"(a{1000}){1000}").expect("within the budget");
+        assert_eq!(consumed, 15);
+        assert_eq!(regex.sets.len(), 1);
+        assert!(regex.states.len() as u64 <= STATE_BUDGET + 1);
+        let subject = vec![b'a'; 1_000_000];
+        assert_eq!(regex.match_maximal(&subject), (true, 1_000_000));
+        assert!(!regex.match_maximal(&subject[1..]).0);
     }
 }

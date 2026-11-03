@@ -3162,8 +3162,11 @@ DEVIATIONS -- permanent, chosen
      `aa`). A repeated sub-expression that can match the empty string
      (`(a*)*`) and a set range ending at '7F'x never terminate and grow
      memory. This crate's rxregexp implements the pattern language as
-     documented and always terminates. The ooTest rxregexp group passes
-     either way; the cases are recorded in
+     documented and always terminates. Compiling terminates too: a count
+     whose copies would take the automaton past 2,000,000 states is compile
+     error 5 (PR 4 review I1; measured, the oracle crashes on `a{2000000000}`
+     and `((a{1000}){1000}){1000}` and answers `a{10000000}`). The ooTest
+     rxregexp group passes either way; the cases are recorded in
      docs/superpowers/records/oracle-defects/defects.json.
 
  88. EXTENSION CALLS THAT CRASH THE ORACLE RAISE A CONDITION (Phase 10).

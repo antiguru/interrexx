@@ -104,3 +104,43 @@ fn repeated_empty_matches_and_a_range_to_7f_answer_in_bounded_time_and_memory() 
     let grown = peak_kib().saturating_sub(baseline);
     assert!(grown < 64 * 1024, "the peak grew by {grown} KiB");
 }
+
+/// A count whose copies would pass the automaton's state budget is compile
+/// error 5 at its `{` (Deviation 87), answered before anything is built:
+/// `new` raises 38, `parse` returns 5, and the object then matches
+/// everything. The oracle crashes on each of these (measured). A count
+/// within the budget answers as before.
+#[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "the bound is on the real run's wall time"
+)]
+fn huge_and_nested_counts_answer_in_bounded_time_and_memory() {
+    let source = "do p over 'a{2000000000}', '((a{1000}){1000}){1000}', 'a{2147483647}', 'b(a{50000}){50000}'\n\
+           r = .RegularExpression~new\n\
+           say r~parse(p) r~position r~match('aa') r~position make(p)\n\
+         end\n\
+         r = .RegularExpression~new('(a{1000}){100}')\n\
+         say r~match(copies('a', 100000)) r~position r~match(copies('a', 99999)) r~position\n\
+         exit\n\
+         make: procedure\n\
+           use arg p\n\
+           signal on syntax name refused\n\
+           r = .RegularExpression~new(p)\n\
+           return 'made'\n\
+         refused:\n\
+           return condition('o')~code\n\
+         ::requires 'rxregexp.cls'\n";
+    run(program(10));
+    let baseline = peak_kib();
+    let started = Instant::now();
+    let answered = run(source.to_owned());
+    let took = started.elapsed();
+    assert_eq!(
+        answered,
+        "5 1 1 0 38.0\n5 17 1 0 38.0\n5 1 1 0 38.0\n5 11 1 0 38.0\n1 100000 0 99999\n"
+    );
+    assert!(took < Duration::from_secs(30), "took {took:?}");
+    let grown = peak_kib().saturating_sub(baseline);
+    assert!(grown < 64 * 1024, "the peak grew by {grown} KiB");
+}

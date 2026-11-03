@@ -351,7 +351,7 @@ atom       ::= "?" | "\" byte | "[" set "]" | "(" expression ")" | literal
 | 2 | missing `)` | where `)` was expected (`a(b`→3, `ab(c\|d`→6) |
 | 3 | illegal set | just after `[` when the set's contents are bad (`[a-]`→1, `[]a]`→1, `[\`→1, `abc[]`→4). After the contents when `]` is missing (`[a`→2, `ab[c`→4, `[:alpha:`→8). |
 | 4 | unexpected end | after the `\` for a trailing escape (`\`→1, `ab\`→3). The index of `{` for a missing `}` (`ab{2`→2). |
-| 5 | illegal number | index of `{` (`ab{0}`→2, `a{1}`→1) |
+| 5 | illegal number | index of `{` (`ab{0}`→2, `a{1}`→1). Also a count whose copies would take the automaton past 2,000,000 states (Deviation 87): `a{2000000000}`→1, `((a{1000}){1000}){1000}`→17; where only the sum of several counts passes it, the last `{`. |
 | 6 | bad class name | just after `[` (`ab[:foo:]`→3, `[:alphaxxxxxxxxxxxxxxxxx:]`→1) |
 
 ### The position after parse
