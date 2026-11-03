@@ -1,5 +1,5 @@
-/* A native method's refusal of its argument is reported against the package
-   its EXTERNAL directive was written in, with no line: an integer out of its type's range is 88.907. */
+/* A native method's refusal of its argument is reported against the calling
+   line, below the method's compiled frame: an integer out of its type's range is 88.907. */
 say 'before'
 t = .T~new
 say t~int8(128)

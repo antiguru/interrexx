@@ -1316,6 +1316,8 @@ mod row_checks {
         "base/class/RexxQueue",
         "extensions/json/json",
         "extensions/rxmath/RxMath",
+        "extensions/platform/unix/rxunixsys/SysUnix",
+        "extensions/platform/windows/rxwinsys/Clipboard",
         "API/oo/RexxStart",
         "utilities/rxapi",
         "base/rexxutil/platform/unix/tilde",
@@ -1331,7 +1333,11 @@ mod row_checks {
         ),
         (
             EXCLUSIONS,
-            "extensions/rxmath/RxMath\tTEST_NAN\tPhase 10 Extension\tgroup",
+            "extensions/platform/windows/rxwinsys/Clipboard\tTEST_01CREATE\tPhase 10 Extension\tgroup",
+        ),
+        (
+            EXCLUSIONS,
+            "extensions/platform/unix/rxunixsys/SysUnix\tTEST_SYSCRYPT\tPhase 10 Extension\theld: neither engine provides SysCrypt; it fails on the oracle too",
         ),
         (
             EXCLUSIONS,
@@ -1363,6 +1369,22 @@ mod row_checks {
         (
             EXCLUSIONS,
             "extensions/json/json\tTEST_INVALID_EMPTY\tPhase 10 Extension\tgroup",
+        ),
+        (
+            EXCLUSIONS,
+            "extensions/rxmath/RxMath\tTEST_NAN\tPhase 10 Extension\tgroup",
+        ),
+        (
+            EXCLUSIONS,
+            "extensions/platform/unix/rxunixsys/SysUnix\tTEST_SYSCRYPT\tPhase 10 Extension\theld: it is hard",
+        ),
+        (
+            EXCLUSIONS,
+            "extensions/platform/unix/rxunixsys/SysUnix\tTEST_SYSCRYPT\tPhase 10 Rxapi\theld: neither engine provides SysCrypt; it fails on the oracle too",
+        ),
+        (
+            EXCLUSIONS,
+            "extensions/platform/unix/rxunixsys/SysUnix\tTEST_SYSSTAT_SIZE\tPhase 10 Extension\theld: neither engine provides SysCrypt; it fails on the oracle too",
         ),
         (
             EXCLUSIONS,

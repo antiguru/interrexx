@@ -62,13 +62,24 @@ fn check_phase_10(row: &Row, reason: Deferral, context: &Context) -> Result<(), 
             None => Err("the roadmap does not make the group Phase 10's".to_string()),
         };
     }
+    if let Some(why) = row.reason.strip_prefix("held: ") {
+        return if reason == Deferral::Extension
+            && HELD_EXTENSION_TESTS.contains(&(row.group.as_str(), row.test.as_str(), why))
+        {
+            Ok(())
+        } else {
+            Err("HELD_EXTENSION_TESTS holds no such Phase 10 Extension test".to_string())
+        };
+    }
     match row.refusal() {
         Some(text) if refusal_carries(text, reason) => Ok(()),
         Some(text) => Err(format!(
             "the refusal does not carry Phase 10 {}: {text}",
             reason.name()
         )),
-        None => Err("the reason is not reaching_rxapi, group or `refusal: TEXT`".to_string()),
+        None => Err(
+            "the reason is not reaching_rxapi, group, `held: WHY` or `refusal: TEXT`".to_string(),
+        ),
     }
 }
 

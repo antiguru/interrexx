@@ -72,6 +72,15 @@ of a `MIT OR Apache-2.0` project. Interrexx therefore ships no C++ of its own at
 * **The started daemon closes inherited descriptors through one `unsafe` function** (2026-11-02): at
   daemon start-up it closes every descriptor above 2 except its own lock file and listener, pinned in
   `unsafe_sites.rs`. Chosen over adding `nix` and over dropping the requirement.
+* **The extensions reach the OS through safe crates** (2026-11-03): no new `unsafe`; what `rustix`
+  does not cover goes through `nix`, `dns-lookup`, `if-addrs` or equivalents.
+* **`SysSignal` and `SysKill` go through `src/signal.rs`** (2026-11-03): two functions join the
+  module already granted `unsafe` for the interpreter's own signal handling, `set_disposition`
+  (`signal()` with `SIG_DFL` or `SIG_IGN`) and `send` (`kill()` with the raw number). `SysSignal`
+  changes the disposition.
+* **One granted `unsafe` module for `rxsock`** (2026-11-03): `rexx-exec/src/builtin/rxsock_sys.rs`
+  borrows a descriptor number for one call after an `fcntl(F_GETFD)` check, and makes raw
+  `getsockopt` and `setsockopt` calls, pinned in `unsafe_sites.rs`.
 
 ## The clean room
 
