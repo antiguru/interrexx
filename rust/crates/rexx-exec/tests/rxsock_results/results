@@ -200,6 +200,55 @@ SockRecv(c, 'v', 0) '['v']'                                  => 0 [] | 0 | 0
 SockSelect(,,,0)                                             => 0 | 0 | 0
 [stderr]
 
+# The options rustix and nix do not name, by raw number as C ints:
+# SO_DEBUG, SO_RCVLOWAT, SO_SNDLOWAT and SO_USELOOPBACK (64 on Linux); a
+# negative or closed descriptor answers EBADF.
+program
+c = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_DEBUG', 'v') v"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_DEBUG', 1)"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 5)"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'so_rcvlowat', 'v') v"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', ' 7x')"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 'v') v"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 5)"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 1)"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v"
+call t "SockGetSockOpt(9999, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v"
+call t "SockSetSockOpt(9999, 'SOL_SOCKET', 'SO_DEBUG', 1)"
+call t "SockGetSockOpt(-1, 'SOL_SOCKET', 'SO_DEBUG', 'v') v"
+call t "SockListen(-1, 1)"
+exit
+t: procedure expose c
+  drop errno h_errno
+  interpret 'r = ' arg(1)
+  say left(arg(1), 60) '=>' r '|' errno '|' h_errno
+  return
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_DEBUG', 'v') v           => 0 0 | 0 | 0
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_DEBUG', 1)               => -1 | 13 | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v        => 0 1 | 0 | 0
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 5)            => 0 | 0 | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'so_rcvlowat', 'v') v        => 0 5 | 0 | 0
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', ' 7x')        => 0 | 0 | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v        => 0 7 | 0 | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 'v') v        => 0 1 | 0 | 0
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 5)            => -1 | ENOPROTOOPT | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v     => 0 0 | 0 | 0
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 1)         => 0 | 0 | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v     => 0 1 | 0 | 0
+SockGetSockOpt(9999, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v     => -1 0 | 9 | 0
+SockSetSockOpt(9999, 'SOL_SOCKET', 'SO_DEBUG', 1)            => -1 | 9 | 0
+SockGetSockOpt(-1, 'SOL_SOCKET', 'SO_DEBUG', 'v') v          => -1 0 | 9 | 0
+SockListen(-1, 1)                                            => -1 | 9 | 0
+[stderr]
+
 # SockSock_Errno: a failing call's errno; a success leaves it, and a host
 # lookup sets it to 0 first. Before any call it is 0 (Rulings, errno: the
 # oracle reports the errno its own console I/O left).

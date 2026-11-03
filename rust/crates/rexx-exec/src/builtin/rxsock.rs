@@ -1,10 +1,10 @@
 //! The `rxsock` extension library, run in Rust: the IPv4 socket routines
 //! `docs/superpowers/specs/extensions-behaviour.md` ("rxsock") describes.
 //!
-//! A socket is its descriptor number, as on the oracle. Each call reaches the
-//! socket through a descriptor of its own for the same open socket, which
-//! `pidfd_getfd` on this process's own pidfd makes ([`socket`]), so every OS
-//! call goes through `rustix` or `nix` with no `unsafe`. Most routines set
+//! A socket is its descriptor number, as on the oracle. Each call borrows the
+//! number for the call ([`rxsock_sys::with_socket`]) and makes its OS calls
+//! through `rustix` or `nix` on the borrow; the options neither names go
+//! through [`rxsock_sys`]'s raw `getsockopt` and `setsockopt`. Most routines set
 //! `errno` and `h_errno` in the caller's variables ([`report`]); the `errno`
 //! is also kept on the activity for `SockSock_Errno`.
 //!
@@ -16,7 +16,7 @@
 mod hosts;
 
 use std::net::{Ipv4Addr, SocketAddrV4};
-use std::os::fd::{IntoRawFd as _, OwnedFd};
+use std::os::fd::{BorrowedFd, IntoRawFd as _};
 use std::time::{Duration, Instant};
 
 use rexx_api::callbacks::Surface as _;
@@ -26,14 +26,12 @@ use rustix::event::{PollFd, PollFlags};
 use rustix::net::{RecvFlags, SendFlags};
 
 use super::rxmath::{check_arity, double_argument, required};
+use super::rxsock_sys::{self, Os, with_socket, with_sockets};
 use super::rxunixsys::{c_string, failed, int, number};
 use crate::scheduler::ParkReason;
 use crate::{Failure, Interp};
 
 type Result<T> = std::result::Result<T, Failure>;
-
-/// An OS call's outcome: its value, or the `errno` it failed with.
-type Os<T> = std::result::Result<T, i32>;
 
 const EINTR: i32 = 4;
 const EBADF: i32 = 9;
@@ -132,25 +130,8 @@ fn code(interp: &mut Interp, result: Os<()>) -> ObjRef {
     answer(interp, result.map(|()| 0))
 }
 
-/// A descriptor of this process's own for the socket numbered `fd`: the
-/// same open socket, as `pidfd_getfd` duplicates it. `EBADF` where `fd`
-/// names nothing, a negative one included. The pidfd is closed before this answers, so that a
-/// descriptor the call then makes takes the lowest number free, as on the
-/// oracle.
-fn socket(fd: i32) -> Os<OwnedFd> {
-    if fd < 0 {
-        return Err(EBADF);
-    }
-    let own = rustix::process::pidfd_open(
-        rustix::process::getpid(),
-        rustix::process::PidfdFlags::empty(),
-    )
-    .map_err(os)?;
-    rustix::process::pidfd_getfd(&own, fd, rustix::process::PidfdGetfdFlags::empty()).map_err(os)
-}
-
 /// Whether the socket blocks: its descriptor is not in non-blocking mode.
-fn blocks(fd: &OwnedFd) -> bool {
+fn blocks(fd: BorrowedFd<'_>) -> bool {
     rustix::fs::fcntl_getfl(fd).is_ok_and(|flags| !flags.contains(rustix::fs::OFlags::NONBLOCK))
 }
 
@@ -488,21 +469,21 @@ enum Pending {
 /// The readiness of `polls` now, each entry's received events; `None` where
 /// any descriptor is invalid.
 fn poll_now(polls: &[(i32, PollFlags)]) -> Option<Vec<PollFlags>> {
-    let mut owned = Vec::with_capacity(polls.len());
-    for (fd, _) in polls {
-        owned.push(socket(*fd).ok()?);
-    }
-    let mut fds: Vec<PollFd<'_>> = owned
-        .iter()
-        .zip(polls)
-        .map(|(fd, (_, events))| PollFd::new(fd, *events))
-        .collect();
-    let zero = rustix::time::Timespec {
-        tv_sec: 0,
-        tv_nsec: 0,
-    };
-    rustix::event::poll(&mut fds, Some(&zero)).ok()?;
-    Some(fds.iter().map(PollFd::revents).collect())
+    let numbers: Vec<i32> = polls.iter().map(|(fd, _)| *fd).collect();
+    with_sockets(&numbers, |sockets| {
+        let mut fds: Vec<PollFd<'_>> = sockets
+            .iter()
+            .zip(polls)
+            .map(|(fd, (_, events))| PollFd::new(fd, *events))
+            .collect();
+        let zero = rustix::time::Timespec {
+            tv_sec: 0,
+            tv_nsec: 0,
+        };
+        rustix::event::poll(&mut fds, Some(&zero)).map_err(os)?;
+        Ok(fds.iter().map(PollFd::revents).collect())
+    })
+    .ok()
 }
 
 /// Whether `revents` answers a wait for `events`, as `select` reads it:
@@ -593,7 +574,7 @@ fn resume(interp: &mut Interp, receiver: ObjRef) -> Result<Option<ObjRef>> {
             finish_accept(interp, fd, target.as_ref())
         }
         Pending::Connect { fd, to } => {
-            let result = socket(fd).and_then(|socket| finish_connect(&socket, to));
+            let result = with_socket(fd, |socket| finish_connect(socket, to));
             code(interp, result)
         }
         Pending::Recv {
@@ -709,14 +690,14 @@ pub(crate) fn shutdown(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<O
     check_arity(args, 2)?;
     let fd = int(interp, args, 1)?;
     let how = int(interp, args, 2)?;
-    let result = socket(fd).and_then(|socket| {
+    let result = with_socket(fd, |socket| {
         let how = match how {
             0 => rustix::net::Shutdown::Read,
             1 => rustix::net::Shutdown::Write,
             2 => rustix::net::Shutdown::Both,
             _ => return Err(EINVAL),
         };
-        rustix::net::shutdown(&socket, how).map_err(os)
+        rustix::net::shutdown(socket, how).map_err(os)
     });
     Ok(code(interp, result))
 }
@@ -725,7 +706,9 @@ pub(crate) fn listen(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
     check_arity(args, 2)?;
     let fd = int(interp, args, 1)?;
     let backlog = int(interp, args, 2)?;
-    let result = socket(fd).and_then(|socket| rustix::net::listen(&socket, backlog).map_err(os));
+    let result = with_socket(fd, |socket| {
+        rustix::net::listen(socket, backlog).map_err(os)
+    });
     Ok(code(interp, result))
 }
 
@@ -736,10 +719,10 @@ pub(crate) fn bind(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRe
         return Ok(number(interp, 0));
     };
     let address = read_address(interp, &stem);
-    let result = socket(fd).and_then(|socket| match target(address) {
-        Target::Inet(v4) => rustix::net::bind(&socket, &v4).map_err(os),
+    let result = with_socket(fd, |socket| match target(address) {
+        Target::Inet(v4) => rustix::net::bind(socket, &v4).map_err(os),
         Target::Unspec(v4) if v4.ip().is_unspecified() => {
-            rustix::net::bind(&socket, &v4).map_err(os)
+            rustix::net::bind(socket, &v4).map_err(os)
         }
         Target::Unspec(_) | Target::Other => Err(EAFNOSUPPORT),
     });
@@ -755,39 +738,39 @@ pub(crate) fn connect(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
         return Ok(number(interp, 0));
     };
     let address = read_address(interp, &stem);
-    let socket = match socket(fd) {
-        Ok(socket) => socket,
-        Err(errno) => return Ok(answer(interp, Err(errno))),
-    };
-    let v4 = match target(address) {
-        Target::Inet(v4) => v4,
-        Target::Unspec(_) => {
-            let result = rustix::net::connect_unspec(&socket).map_err(os);
-            return Ok(code(interp, result));
+    // Ok(Some(to)) for a connection under way, which the call waits for.
+    let begun = with_socket(fd, |socket| {
+        let v4 = match target(address) {
+            Target::Inet(v4) => v4,
+            Target::Unspec(_) => {
+                return rustix::net::connect_unspec(socket)
+                    .map(|()| None)
+                    .map_err(os);
+            }
+            Target::Other => return Err(EAFNOSUPPORT),
+        };
+        if !blocks(socket) {
+            return rustix::net::connect(socket, &v4).map(|()| None).map_err(os);
         }
-        Target::Other => return Ok(answer(interp, Err(EAFNOSUPPORT))),
-    };
-    if !blocks(&socket) {
-        let result = rustix::net::connect(&socket, &v4).map_err(os);
-        return Ok(code(interp, result));
-    }
-    let flags = rustix::fs::fcntl_getfl(&socket).map_err(os);
-    let started = flags.and_then(|flags| {
-        rustix::fs::fcntl_setfl(&socket, flags | rustix::fs::OFlags::NONBLOCK).map_err(os)?;
-        let connected = rustix::net::connect(&socket, &v4).map_err(os);
-        let _ = rustix::fs::fcntl_setfl(&socket, flags);
-        connected
+        let flags = rustix::fs::fcntl_getfl(socket).map_err(os)?;
+        rustix::fs::fcntl_setfl(socket, flags | rustix::fs::OFlags::NONBLOCK).map_err(os)?;
+        let connected = rustix::net::connect(socket, &v4).map_err(os);
+        let _ = rustix::fs::fcntl_setfl(socket, flags);
+        match connected {
+            Err(EINPROGRESS) => Ok(Some(v4)),
+            result => result.map(|()| None),
+        }
     });
-    match started {
-        Err(EINPROGRESS) => {
+    match begun {
+        Ok(Some(to)) => {
             let wait = SocketWait {
                 polls: vec![(fd, PollFlags::OUT)],
                 deadline: None,
-                op: Pending::Connect { fd, to: v4 },
+                op: Pending::Connect { fd, to },
             };
             park(interp, wait, &[])
         }
-        result => Ok(code(interp, result)),
+        result => Ok(code(interp, result.map(|_| ()))),
     }
 }
 
@@ -795,7 +778,7 @@ pub(crate) fn connect(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
 /// without blocking, which answers `EISCONN` for one made and the error for
 /// one refused, and which disconnects the failed socket as a blocking
 /// connect does (its local address goes back to 0.0.0.0).
-fn finish_connect(socket: &OwnedFd, to: SocketAddrV4) -> Os<()> {
+fn finish_connect(socket: BorrowedFd<'_>, to: SocketAddrV4) -> Os<()> {
     let flags = rustix::fs::fcntl_getfl(socket).map_err(os)?;
     rustix::fs::fcntl_setfl(socket, flags | rustix::fs::OFlags::NONBLOCK).map_err(os)?;
     let connected = rustix::net::connect(socket, &to);
@@ -817,7 +800,9 @@ pub(crate) fn accept(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
         },
         None => (None, false),
     };
-    let ready = socket(fd).map(|socket| !blocks(&socket) || any_ready(&[(fd, PollFlags::IN)]));
+    let ready = with_socket(fd, |socket| {
+        Ok(!blocks(socket) || any_ready(&[(fd, PollFlags::IN)]))
+    });
     if ready == Ok(false) {
         let wait = SocketWait {
             polls: vec![(fd, PollFlags::IN)],
@@ -840,16 +825,18 @@ pub(crate) fn accept(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
 /// An accept whose stem names nothing: the connection is accepted and its
 /// descriptor lost, and the call answers 0 without setting `errno`.
 fn accept_lost(interp: &mut Interp, fd: i32) -> ObjRef {
-    if let Ok(socket) = socket(fd)
-        && let Ok(accepted) = rustix::net::accept(&socket)
-    {
-        let _ = accepted.into_raw_fd();
-    }
+    let _ = with_socket(fd, |socket| {
+        rustix::net::accept(socket)
+            .map(|accepted| {
+                let _ = accepted.into_raw_fd();
+            })
+            .map_err(os)
+    });
     number(interp, 0)
 }
 
 fn finish_accept(interp: &mut Interp, fd: i32, stem: Option<&Stem>) -> ObjRef {
-    let accepted = socket(fd).and_then(|socket| rustix::net::acceptfrom(&socket).map_err(os));
+    let accepted = with_socket(fd, |socket| rustix::net::acceptfrom(socket).map_err(os));
     let (result, peer) = match accepted {
         Ok((accepted, peer)) => (Ok(i64::from(accepted.into_raw_fd())), peer),
         Err(errno) => (Err(errno), None),
@@ -867,9 +854,9 @@ fn name_of(interp: &mut Interp, args: &[Option<ObjRef>], peer: bool) -> Result<O
     let Some(stem) = stem_argument(interp, args, 2)? else {
         return Ok(number(interp, 0));
     };
-    let named = socket(fd).and_then(|socket| match peer {
-        true => rustix::net::getpeername(&socket).map_err(os),
-        false => rustix::net::getsockname(&socket).map(Some).map_err(os),
+    let named = with_socket(fd, |socket| match peer {
+        true => rustix::net::getpeername(socket).map_err(os),
+        false => rustix::net::getsockname(socket).map(Some).map_err(os),
     });
     let (result, address) = match named {
         Ok(address) => (Ok(()), address),
@@ -1044,8 +1031,8 @@ pub(crate) fn send(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRe
     let bytes = data(interp, args, 2)?;
     let flags = optional_string(interp, args, 3)?.unwrap_or_default();
     let flags = send_flags(&flags, true);
-    let sent = socket(fd).and_then(|socket| {
-        rustix::net::send(&socket, &bytes, flags)
+    let sent = with_socket(fd, |socket| {
+        rustix::net::send(socket, &bytes, flags)
             .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
             .map_err(os)
     });
@@ -1070,16 +1057,16 @@ pub(crate) fn send_to(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
     };
     let flags = send_flags(&flags, false);
     let address = read_address(interp, &stem);
-    let sent = socket(fd).and_then(|socket| {
+    let sent = with_socket(fd, |socket| {
         let count = match target(address) {
             Target::Inet(v4) | Target::Unspec(v4) => {
-                rustix::net::sendto(&socket, &bytes, flags, &v4)
+                rustix::net::sendto(socket, &bytes, flags, &v4)
             }
             Target::Other
-                if rustix::net::sockopt::socket_type(&socket)
+                if rustix::net::sockopt::socket_type(socket)
                     == Ok(rustix::net::SocketType::STREAM) =>
             {
-                rustix::net::send(&socket, &bytes, flags)
+                rustix::net::send(socket, &bytes, flags)
             }
             Target::Other => return Err(EAFNOSUPPORT),
         };
@@ -1130,17 +1117,16 @@ fn receive(interp: &mut Interp, args: &[Option<ObjRef>], from: bool) -> Result<O
     }
     let flags = recv_flags(&flags);
     let waits = !flags.contains(RecvFlags::OOB)
-        && socket(fd).is_ok_and(|socket| blocks(&socket))
+        && with_socket(fd, |socket| Ok(blocks(socket))).unwrap_or(false)
         && !any_ready(&[(fd, PollFlags::IN)]);
     if waits {
-        let deadline = socket(fd)
-            .ok()
-            .and_then(|socket| {
-                rustix::net::sockopt::socket_timeout(&socket, rustix::net::sockopt::Timeout::Recv)
-                    .ok()
-                    .flatten()
-            })
-            .map(|timeout| interp.now() + timeout);
+        let deadline = with_socket(fd, |socket| {
+            rustix::net::sockopt::socket_timeout(socket, rustix::net::sockopt::Timeout::Recv)
+                .map_err(os)
+        })
+        .ok()
+        .flatten()
+        .map(|timeout| interp.now() + timeout);
         let wait = SocketWait {
             polls: vec![(fd, PollFlags::IN)],
             deadline,
@@ -1167,11 +1153,11 @@ fn finish_recv(
     from: Option<&Stem>,
 ) -> ObjRef {
     let mut buffer = vec![0; len.min(RECV_MOST)];
-    let received = socket(fd).and_then(|socket| match from {
-        Some(_) => rustix::net::recvfrom(&socket, &mut buffer[..], flags)
+    let received = with_socket(fd, |socket| match from {
+        Some(_) => rustix::net::recvfrom(socket, &mut buffer[..], flags)
             .map(|(_, count, address)| (count, address))
             .map_err(os),
-        None => rustix::net::recv(&socket, &mut buffer[..], flags)
+        None => rustix::net::recv(socket, &mut buffer[..], flags)
             .map(|(_, count)| (count, None))
             .map_err(os),
     });
@@ -1234,11 +1220,10 @@ fn check_level(interp: &Interp, level: &[u8]) -> Result<()> {
     }
 }
 
-/// An option no safe call reads or sets: `SO_DEBUG`, `SO_RCVLOWAT`,
-/// `SO_SNDLOWAT` and the raw `SO_USELOOPBACK` number. Refused loudly.
-fn unreachable_option(option: i32) -> Failure {
-    crate::Loud::unsupported_socket_option(option).into()
-}
+/// The options neither `rustix` nor `nix` names, read and set by number as
+/// C `int`s: `SO_DEBUG`, `SO_RCVLOWAT`, `SO_SNDLOWAT` and the number 64
+/// `SO_USELOOPBACK` passes.
+const RAW_OPTIONS: [i32; 4] = [1, 18, 19, 64];
 
 fn timeval_millis(seconds: i64, micros: i64) -> i64 {
     seconds * 1000 + micros / 1000
@@ -1254,16 +1239,17 @@ pub(crate) fn get_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resu
     let var = c_string(interp, args, 4)?;
     check_level(interp, &level)?;
     let option = option_number(&option);
-    let socket = socket(fd);
     let bool_of = |result: nix::Result<bool>| result.map(|on| i64::from(on).to_string());
     let read: Os<String> = match option {
         None => Err(ENOPROTOOPT),
-        Some(number @ (1 | 18 | 19 | 64)) => return Err(unreachable_option(number)),
-        Some(option) => socket.and_then(|socket| {
+        Some(option) if RAW_OPTIONS.contains(&option) => with_socket(fd, |socket| {
+            rxsock_sys::get_int_option(socket, libc::SOL_SOCKET, option).map(|on| on.to_string())
+        }),
+        Some(option) => with_socket(fd, |socket| {
             match option {
                 2 => bool_of(getsockopt(&socket, sockopt::ReuseAddr)),
                 3 => {
-                    return rustix::net::sockopt::socket_type(&socket)
+                    return rustix::net::sockopt::socket_type(socket)
                         .map(|kind| {
                             match kind {
                                 rustix::net::SocketType::STREAM => "STREAM",
@@ -1329,18 +1315,20 @@ pub(crate) fn set_sock_opt(interp: &mut Interp, args: &[Option<ObjRef>]) -> Resu
     let option = match option_number(&option) {
         None => return Ok(answer(interp, Err(ENOPROTOOPT))),
         Some(3 | 4) => return Ok(number(interp, -1)),
-        Some(number @ (1 | 18 | 19 | 64)) => return Err(unreachable_option(number)),
         Some(option) => option,
     };
     let numeric = atoi(&value);
     let on = numeric != 0;
-    let result = socket(fd).and_then(|socket| {
+    let result = with_socket(fd, |socket| {
         #[expect(
             clippy::cast_sign_loss,
             reason = "C passes the int, which the kernel reads unsigned"
         )]
         let size = numeric as u32 as usize;
         let set = match option {
+            option if RAW_OPTIONS.contains(&option) => {
+                return rxsock_sys::set_int_option(socket, libc::SOL_SOCKET, option, numeric);
+            }
             2 => setsockopt(&socket, sockopt::ReuseAddr, &on),
             5 => setsockopt(&socket, sockopt::DontRoute, &on),
             6 => setsockopt(&socket, sockopt::Broadcast, &on),
@@ -1402,13 +1390,14 @@ pub(crate) fn ioctl(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjR
         let Some(on) = on else {
             return Err(failed(interp));
         };
-        let result =
-            socket(fd).and_then(|socket| rustix::io::ioctl_fionbio(&socket, on != 0).map_err(os));
+        let result = with_socket(fd, |socket| {
+            rustix::io::ioctl_fionbio(socket, on != 0).map_err(os)
+        });
         return Ok(code(interp, result));
     }
     if command.eq_ignore_ascii_case(b"FIONREAD") {
         let var = c_string(interp, args, 3)?;
-        let read = socket(fd).and_then(|socket| rustix::io::ioctl_fionread(&socket).map_err(os));
+        let read = with_socket(fd, |socket| rustix::io::ioctl_fionread(socket).map_err(os));
         let count = *read.as_ref().unwrap_or(&0);
         let count = number(interp, i128::from(count));
         interp.roots.activity_mut().push_temp(count);

@@ -632,20 +632,6 @@ impl Loud {
         }
     }
 
-    /// An `rxsock` socket option that no safe call reads or sets: `SO_DEBUG`,
-    /// `SO_RCVLOWAT`, `SO_SNDLOWAT` and the raw number `SO_USELOOPBACK`
-    /// passes (64). Neither `rustix` nor `nix` offers them, and this crate
-    /// adds no `unsafe` (PR 4 plan, Global Constraints).
-    #[cold]
-    pub(crate) fn unsupported_socket_option(option: i32) -> Loud {
-        Loud {
-            message: owned_message(
-                &format!("the rxsock socket option numbered {option}, which no safe call reaches"),
-                None,
-            ),
-        }
-    }
-
     /// An `ADDRESS` environment no handler answers that a held native
     /// package's loader registers through the classic subcommand API
     /// (`RexxRegisterSubcomExe`), which this crate does not implement.

@@ -33,10 +33,16 @@ fn counted(source: &str, stress: bool, invocation: Invocation) -> Counted {
 
 /// A directory holding `librxsockc.so`, a link to the checkout build's C
 /// `librxsock.so` under a name this crate does not answer with its own Rust
-/// `rxsock`, so that a program naming `rxsockc` makes a native call.
+/// `rxsock`, so that a program naming `rxsockc` makes a native call. It is
+/// kept in the target directory beside this test binary (a unit test has no
+/// `CARGO_TARGET_TMPDIR`), where it outlives the run and `cargo clean`
+/// removes it.
 fn c_rxsock_directory(build: &std::path::Path) -> std::path::PathBuf {
-    let directory =
-        std::env::temp_dir().join(format!("rexx-native-instruments-{}", std::process::id()));
+    let directory = std::env::current_exe()
+        .expect("this test binary")
+        .parent()
+        .expect("its directory")
+        .join("rexx-native-instruments");
     std::fs::create_dir_all(&directory).expect("an instrument directory");
     let link = directory.join("librxsockc.so");
     if std::fs::read_link(&link).is_err() {

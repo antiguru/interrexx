@@ -67,12 +67,13 @@ chrono = { version = "0.4.45", default-features = false, features = ["clock", "s
 # writable open handle where a read-only file's stamp is still the owner's to
 # set; `uname`, for `SysVersion`; and `tcsetattr`, for `SysGetKey`'s
 # terminal mode. `event` and `time` are the timer thread's `poll` and Linux
-# `timerfd`. `net` and `process`'s `pidfd_getfd` are `rxsock`'s sockets,
-# each reached by number through a descriptor of this process's own. Each
+# `timerfd`. `net` is `rxsock`'s sockets, each borrowed by number for one
+# call (`src/builtin/rxsock_sys.rs`). Each
 # feature is a leaf here: they gate their modules and pull no further crate.
 rustix = { version = "1.1.4", features = ["event", "fs", "net", "param", "process", "system", "termios", "time"] }
 # `sigaction` and the async-signal-safe `write` the signal module needs
-# (D-U3, `src/signal.rs`). Already in the graph through `std`'s users.
+# (D-U3, `src/signal.rs`), and `fcntl`, `getsockopt` and `setsockopt` for
+# `src/builtin/rxsock_sys.rs`. Already in the graph through `std`'s users.
 libc = "0.2.186"
 # The zone `SysGetFileDateTime` and `SysSetFileDateTime` convert through: the
 # program's own `TZ` resolved as glibc resolves it, and each local time
