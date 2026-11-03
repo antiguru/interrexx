@@ -13,9 +13,15 @@
 //!   a ruling the case's comment names: the oracle crashes (Deviation 88), or
 //!   reports an `errno` of its own I/O (Rulings, errno).
 //!
+//! Each case gets an API service of its own, stopped after it, so that a
+//! registration `RxFuncAdd` made in one case (or a failed run) is not seen
+//! by the next.
+//!
 //! Recording: `RXUNIXSYS_RECORD=1 REWRITE=1` runs `eval` and `program`
-//! cases on the oracle (`REXX_ORACLE_ROOT`) instead, with an `XDG_RUNTIME_DIR`
-//! of the scratch directory's, and `ruled` cases on this crate.
+//! cases on the oracle (`REXX_ORACLE_ROOT`) instead, each with an
+//! `XDG_RUNTIME_DIR` of its own under the scratch directory, and `ruled`
+//! cases on this crate. The oracle's `rxapi` daemons it starts are left
+//! running and are the recorder's to stop.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -57,17 +63,20 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
     let program = program.replace("{dir}", &dir.display().to_string());
     let path = dir.join("probe.rex");
     std::fs::write(&path, &program).expect("the program");
+    let api = root.join(format!("api{name}"));
+    let _ = std::fs::remove_dir_all(&api);
+    std::fs::create_dir_all(&api).expect("a service directory");
     let mut command;
     if oracle {
         let oracle_root = Path::new(env!("REXX_ORACLE_ROOT"));
         command = Command::new(oracle_root.join("bin/rexx"));
         command
             .env("LD_LIBRARY_PATH", oracle_root.join("lib"))
-            .env("XDG_RUNTIME_DIR", &root);
+            .env("XDG_RUNTIME_DIR", &api);
     } else {
         command = Command::new(env!("CARGO_BIN_EXE_rexx"));
         command
-            .env("REXX_API_DIR", root.join("api"))
+            .env("REXX_API_DIR", &api)
             .env_remove("LD_LIBRARY_PATH");
     }
     let output = command
@@ -78,6 +87,13 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
         .stdin(Stdio::null())
         .output()
         .expect("rexx runs");
+    if !oracle {
+        let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
+            .arg("--stop")
+            .env("REXX_API_DIR", &api)
+            .output();
+        let _ = std::fs::remove_dir_all(&api);
+    }
     let _ = std::fs::remove_dir_all(&dir);
     (
         output.status.code().unwrap_or(-1),
@@ -110,9 +126,5 @@ fn rxunixsys_answers_as_the_oracle_does() {
             }
         });
     });
-    let _ = Command::new(Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi"))
-        .arg("--stop")
-        .env("REXX_API_DIR", scratch().join("api"))
-        .output();
     assert!(cases > 0, "no case ran");
 }
