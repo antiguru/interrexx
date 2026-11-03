@@ -2,5 +2,5 @@
    the load onwards, at a call site that found the file before it. */
 do i = 1 to 2
   say i RxCalcSqrt(16)
-  if i = 1 then say 'load' .context~package~loadLibrary('rxmath')
+  if i = 1 then say 'load' .context~package~loadLibrary('rxmathc')
 end

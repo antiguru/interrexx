@@ -1,0 +1,423 @@
+# The description's worked examples (extensions-behaviour.md, "Worked examples"); each output line is parse rc@position, match@position, pos@position.
+probe
+max	abc	abc
+max	abc	xabc
+min	abc	ab
+max	a*	
+max	b+	abbbc
+min	b+	abbbc
+max	ab+	abbbbb
+min	ab+	abbbbb
+max	a|b	b
+max	a|b	xbx
+max	ab|cd	abd
+max	(a|b){3}	abba
+max	a{2}*	aaaa
+max	a)	a
+max	a(b	ab
+max	[a-%e9]	%ea
+max	[a-%e9]	%e9
+max	a	a%00b
+min	a	a%00b
+max	?*foo	xfooxxxxxxfoo
+min	?*foo	xfooxxxxxxfo
+max	(a|ab)(c|bcd)	abcd
+max	x(ab|c){2}y	xabcy
+max	(ab|cd)*e	abcde
+max	a+b+	xaabbbyab
+max	("[^"]*" *, *)*"[^"]*"	" " ," " ," " ," " ," " ," " ," " ," " ," " ," " ," " ," " ," " ," " ," " ," " ," " ," " ," " ," " ," "final"
+----
+0@3 1@3 1@3
+0@3 0@0 2@4
+0@3 0@2 0@0
+0@2 1@0 1@0
+0@2 0@0 2@4
+0@2 0@0 2@2
+0@3 1@6 1@6
+0@3 1@2 1@2
+0@3 1@1 1@1
+0@3 0@0 2@2
+0@5 0@2 1@2
+0@8 0@3 1@3
+0@4 0@2 1@2
+0@1 1@1 1@1
+2@3 1@0 1@0
+0@5 1@1 1@1
+0@5 0@0 0@0
+0@1 1@2 1@2
+0@1 1@1 1@1
+0@5 1@13 1@13
+0@5 1@4 1@4
+0@13 1@4 1@4
+0@11 1@5 1@5
+0@9 1@5 1@5
+0@4 0@0 2@6
+0@22 0@103 1@103
+
+# NUL bytes: one ends a pattern; in a subject, MAXIMAL match and pos stop at one.
+probe
+max	a?b	a%00b
+min	a?b	a%00b
+max	?	%00
+max	[^a]	%00
+max	a*	aa%00
+max	a*	aa%00a
+min	b	a%00b
+min	%00	x
+max	ab	ab%00c
+max	b	ab%00b
+max	b	xa%00yy
+max	a	xa%00yy
+min	a	xa%00yy
+max	a*	%00
+max	a	%00a
+max	a+	aa%00aa
+max	ab	a%00
+max	a(b|%00)	a
+max	ab	%00
+min	ab	%00
+max	abc	ab%00
+max	a?c	a%00x
+min	a?c	a%00x
+----
+0@3 1@3 1@3
+0@3 1@3 1@3
+0@1 1@1 1@1
+0@4 1@1 1@1
+0@2 1@3 1@3
+0@2 1@3 1@3
+0@1 0@0 3@3
+1@0 1@0 1@0
+0@2 1@3 1@3
+0@1 0@0 2@3
+0@1 0@0 0@0
+0@1 0@0 2@3
+0@1 0@0 2@2
+0@2 1@1 1@1
+0@1 0@0 2@2
+0@2 1@3 1@3
+0@2 0@1 0@0
+1@4 1@0 1@0
+0@2 0@0 0@0
+0@2 0@0 0@0
+0@3 0@2 0@0
+0@3 0@2 0@0
+0@3 0@2 0@0
+
+# Literals, quantifiers, trailing text and counts read as atoi reads them.
+probe
+max	a.c	abc
+max	a.c	a.c
+max	a**	aaa
+max	a{2}{2}	aa
+max	ab*+c	abbb
+max	x)	x
+max	a{ 3}	aaa
+max	a{3x}	aaa
+max	a{4294967298}	aa
+max	a{-4294967294}	aa
+max	\n	n
+max	\*	*
+max	abc{2}x	abccx
+min	abcd	abcx
+max	abc	ab
+----
+0@3 0@1 0@0
+0@3 1@3 1@3
+0@2 1@3 1@3
+0@4 1@2 1@2
+0@3 1@4 1@4
+0@1 1@1 1@1
+0@5 1@3 1@3
+0@5 1@3 1@3
+0@13 1@2 1@2
+0@14 1@2 1@2
+0@2 1@1 1@1
+0@2 1@1 1@1
+0@7 1@5 1@5
+0@4 0@3 0@0
+0@3 0@2 0@0
+
+# Compile errors and their positions; after one, everything matches.
+probe
+max	*	a
+max	(	a
+max	()	a
+max	a|	a
+max	|a	a
+max	(A|+)	a
+max	A({})	a
+max	ab(c|)	a
+max	a|b|	a
+max	a(b	a
+max	ab(c|d	a
+max	[a-]	a
+max	[]a]	a
+max	[\	a
+max	abc[]	a
+max	[a	a
+max	ab[c	a
+max	[:alpha:	a
+max	\	a
+max	ab\	a
+max	ab{2	a
+max	ab{0}	a
+max	a{1}	a
+max	a{-1}	a
+max	ab[:foo:]	a
+max	[:alphaxxxxxxxxxxxxxxxxx:]	a
+max	[:alpha]	a
+max	[:alpha	a
+max	[^]	a
+max	[a-	a
+max	[a:]	a
+max		a
+min	)	a
+----
+1@0 1@0 1@0
+1@1 1@0 1@0
+1@1 1@0 1@0
+1@2 1@0 1@0
+1@0 1@0 1@0
+1@3 1@0 1@0
+1@2 1@0 1@0
+1@5 1@0 1@0
+1@4 1@0 1@0
+2@3 1@0 1@0
+2@6 1@0 1@0
+3@1 1@0 1@0
+3@1 1@0 1@0
+3@1 1@0 1@0
+3@4 1@0 1@0
+3@2 1@0 1@0
+3@4 1@0 1@0
+3@8 1@0 1@0
+4@1 1@0 1@0
+4@3 1@0 1@0
+4@2 1@0 1@0
+5@2 1@0 1@0
+5@1 1@0 1@0
+5@1 1@0 1@0
+6@3 1@0 1@0
+6@1 1@0 1@0
+6@1 1@0 1@0
+6@1 1@0 1@0
+3@1 1@0 1@0
+3@1 1@0 1@0
+6@1 1@0 1@0
+1@0 1@0 1@0
+1@0 1@0 1@0
+
+# Sets: classes, negation, ranges by signed byte.
+probe
+max	[:Alpha:]	Q
+max	[:alpha:-z]	;
+max	[:alpha:-z]	:
+max	[\--/]	.
+max	[\--/]	-
+max	[c-a]	a
+max	[c-a]	b
+max	[a-c-e]	d
+max	[a-\]]	\
+max	[a-\]]	^
+max	[^-a]	-
+max	[^-a]	b
+max	[^:cntrl:%20-%7e%80-%ff]	a
+max	x[^:cntrl:%20-%7e%80-%ff]	x
+max	[^:cntrl:%20-%7e%80-%ff]	a
+max	[a-%e9]	%00
+max	[a-%e9]	b
+max	[:digit::xdigit:]	f
+max	[:blank:]	%09
+max	[:space:]	%0b
+max	[:cntrl:]	%7f
+max	[:print:]	%7f
+max	[:graph:]	%20
+max	[:punct:]	_
+max	[:alpha:]	%e9
+max	[:upper::lower:]+	aBc
+max	[([|*?^]+	(*|?^[
+----
+0@9 1@1 1@1
+0@11 1@1 1@1
+0@11 0@0 0@0
+0@6 1@1 1@1
+0@6 1@1 1@1
+0@5 0@0 0@0
+0@5 1@1 1@1
+0@7 1@1 1@1
+0@5 0@0 0@0
+0@5 1@1 1@1
+0@5 0@0 0@0
+0@5 1@1 1@1
+0@16 0@0 0@0
+0@17 0@1 0@0
+0@16 0@0 0@0
+0@5 1@1 1@1
+0@5 0@0 0@0
+0@17 1@1 1@1
+0@9 1@1 1@1
+0@9 1@1 1@1
+0@9 1@1 1@1
+0@9 0@0 0@0
+0@9 0@0 0@0
+0@9 1@1 1@1
+0@9 0@0 0@0
+0@17 1@3 1@3
+0@9 1@6 1@6
+
+# Deviation 87: the grammar's language, where the oracle departs from it (D4, D5) or never answers (D2, D11). These expectations are this crate's; the comments give the oracle's.
+# Oracle (D4): a*b|c matches ac; a*|b and [ab]*|c match their subjects; d(a*b|c) matches dac.
+deviation
+max	a*b|c	ac
+max	a*|b	ab
+max	[ab]*|c	ac
+max	d(a*b|c)	dac
+----
+0@5 0@1 2@2
+0@4 0@1 1@1
+0@7 0@1 1@1
+0@8 0@2 0@0
+
+# Oracle (D5): X+Y* behaves as XY*, so each of these fails to match.
+deviation
+max	a+c*	aa
+max	(a|b)+c*	aa
+max	(ab)+c*	abab
+max	b+c*	bbcc
+----
+0@4 1@2 1@2
+0@8 1@2 1@2
+0@7 1@4 1@4
+0@4 1@4 1@4
+
+# Oracle (D11): match and pos never return. Oracle (D2): a range ending at '7F'x never compiles.
+deviation
+max	(a*)*	aaab
+max	(a*)*b	aaab
+min	(a*)+	aaab
+max	(a*b*)*	abba
+max	((a)*)*	aaa
+max	[%01-%7f]	a
+max	[%01-%7f]	%80
+max	[a-%7f]	%7f
+----
+0@5 0@3 1@3
+0@6 1@4 1@4
+0@5 1@0 1@0
+0@7 1@4 1@4
+0@7 1@3 1@3
+0@5 1@1 1@1
+0@5 0@0 0@0
+0@5 1@1 1@1
+
+# Deviation 88: a method with no pattern compiled, or after uninit, raises 93.900 where the oracle crashes (D1, D3). Oracle: SIGSEGV.
+ours
+r = .RegularExpression~new
+say r~position
+call try r, 'match', 'x'
+call try r, 'pos', 'x'
+say r~parse('ab') r~match('ab') r~position
+p = .RegularExpression~new('a')
+p~uninit
+p~uninit
+call try p, 'match', 'a'
+call try p, 'pos', 'a'
+call try p, 'parse', 'a'
+exit
+try: procedure
+  use arg object, message, argument
+  signal on syntax
+  say object~send(message, argument)
+  return
+syntax:
+  say message condition('o')~code condition('o')~message
+  return
+::requires 'rxregexp.cls'
+----
+rc 0
+[stdout]
+!POS
+match 93.900 RegularExpression has no pattern; give one to new or parse.
+pos 93.900 RegularExpression has no pattern; give one to new or parse.
+0 1 2
+match 93.900 RegularExpression has been uninitialized.
+pos 93.900 RegularExpression has been uninitialized.
+parse 93.900 RegularExpression has been uninitialized.
+[stderr]
+
+# The methods' argument rules, as condition code and secondary message.
+program
+call try .RegularExpression, "new", .array~of('a', 'MAXIMUM')
+call try .RegularExpression, "new", .array~of('a', '')
+call try .RegularExpression, "new", .array~of('a', 'CURRENT')
+call try .RegularExpression, "new", .array~of('')
+call try .RegularExpression, "new", .array~of('(', 'bad')
+call try .RegularExpression, "new", .array~of('a', 'minimal', 3)
+call try .RegularExpression, "new", .array~of('a', 'Minimal')
+r = .RegularExpression~new('ab')
+say 'position' r~position
+call try r, 'parse', .array~new
+call try r, 'parse', .array~of('a', 'x')
+call try r, 'parse', .array~of('a', '')
+call try r, 'parse', .array~of('a', 'MINIMAL', 1)
+call try r, 'parse', .array~of('', 'current')
+call try r, 'match', .array~new
+call try r, 'match', .array~of('a', 'b')
+call try r, 'pos', .array~new
+call try r, 'pos', .array~of('a', 'b')
+call try r, 'position', .array~of(1)
+say r~parse('b+', 'MINIMAL') r~pos('abbbc') r~position
+say r~parse('b+') r~pos('abbbc') r~position
+say r~parse('b+', 'current') r~match('bbb') r~position
+say r~parse('b+', 'maximal') r~pos('abbbc') r~position r~match('bbb') r~position
+exit
+try: procedure
+  use arg receiver, message, arguments
+  signal on syntax
+  answer = receiver~sendWith(message, arguments)
+  say message 'answered' answer~class~id
+  return
+syntax:
+  say message condition('o')~code condition('o')~message
+  return
+::requires 'rxregexp.cls'
+----
+rc 0
+[stdout]
+new 93.0 The NIL object
+new 93.0 The NIL object
+new 93.0 The NIL object
+new 38.0 The NIL object
+new 38.0 The NIL object
+new 88.922 Too many arguments in invocation; 2 expected.
+new answered RegularExpression
+position !POS
+parse 88.901 Missing argument; argument 1 is required.
+parse 93.0 The NIL object
+parse 93.0 The NIL object
+parse 88.922 Too many arguments in invocation; 2 expected.
+parse answered String
+match 88.901 Missing argument; argument 1 is required.
+match 88.922 Too many arguments in invocation; 1 expected.
+pos 88.901 Missing argument; argument 1 is required.
+pos 88.922 Too many arguments in invocation; 1 expected.
+position 93.902 Too many arguments in invocation of method; 0 expected.
+0 2 2
+0 2 2
+0 1 1
+0 2 4 1 3
+[stderr]
+
+# An untrapped compile error in new.
+program
+r = .RegularExpression~new('a(')
+::requires 'rxregexp.cls'
+----
+rc 218
+[stdout]
+[stderr]
+       *-* Compiled method "INIT" with scope "RegularExpression".
+       *-* Compiled method "NEW" with scope "Object".
+     1 *-* r = .RegularExpression~new('a(')
+Error 38 running probe.rex line 1:  Invalid template or pattern.

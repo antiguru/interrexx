@@ -1,1 +1,1 @@
-::routine sq external "LIBRARY rxmath RxCalcSqrt"
+::routine sq external "LIBRARY rxmathc RxCalcSqrt"

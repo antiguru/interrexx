@@ -164,6 +164,17 @@ pub(crate) struct Activity {
     /// How many of the levels that `RAISE PROPAGATE` leaves are still to be
     /// left, which add no frame and no origin: the object has its frames.
     pub(crate) reraise_leaving: usize,
+    /// What `SysGeterrno` answers: the `errno` the last failing OS call of
+    /// the `rxunixsys` library made on this activity, 0 before any
+    /// (`extensions-behaviour.md`, Rulings, errno). The interpreter's own I/O
+    /// does not touch it.
+    pub(crate) rxunixsys_errno: i32,
+    /// What `SockSock_Errno` answers: the `errno` the last OS call of the
+    /// `rxsock` library made on this activity, 0 for a success or before any
+    /// (`extensions-behaviour.md`, Rulings, errno).
+    pub(crate) rxsock_errno: i32,
+    /// An `rxsock` call waiting for its sockets, which its park polls.
+    pub(crate) socket_wait: Option<Box<crate::builtin::rxsock::SocketWait>>,
     /// How many level boundaries a `RAISE PROPAGATE` still crosses below the
     /// level whose trap took the condition, which seal no site: the trapping
     /// level's own site is the one the propagate restored.
@@ -470,6 +481,9 @@ impl Activity {
             native_frames_owed: Vec::new(),
             reraised_object: None,
             reraise_leaving: 0,
+            rxunixsys_errno: 0,
+            rxsock_errno: 0,
+            socket_wait: None,
             propagate_absorb: 0,
             pending_result: None,
             pending_rc: None,
@@ -628,6 +642,9 @@ impl Activity {
             native_frames_owed,
             reraised_object,
             reraise_leaving: _,
+            rxunixsys_errno: _,
+            rxsock_errno: _,
+            socket_wait: _,
             propagate_absorb: _,
             pending_result,
             pending_rc,

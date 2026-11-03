@@ -1,0 +1,9 @@
+/* With a required package's EXTERNAL directive binding the same procedure, a
+   defined loadExternalMethod answer's refusal names the calling line. */
+.K~define('DOES', .Method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Match'))
+.K~define('INIT', .Method~loadExternalMethod('i', 'LIBRARY rxregexp RegExp_Init'))
+k = .K~new('a*b')
+say 'start'
+say k~does()
+::requires 'pk.cls'
+::class K

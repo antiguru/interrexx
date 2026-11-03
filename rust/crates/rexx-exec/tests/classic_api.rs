@@ -68,28 +68,41 @@ fn testbinaries() -> &'static Path {
     })
 }
 
+/// `hostemu` and `orxncurses`, built once by `scripts/build-extensions.sh` from the shared
+/// objects cargo left beside this test.
+fn extensions() -> &'static Path {
+    static BUILT: OnceLock<PathBuf> = OnceLock::new();
+    BUILT.get_or_init(|| {
+        let deps = std::env::current_exe()
+            .expect("the test's path")
+            .parent()
+            .expect("the deps directory")
+            .to_path_buf();
+        let out = scratch().join("extensions");
+        let output = Command::new(repository().join("scripts/build-extensions.sh"))
+            .arg("--libs")
+            .arg(&deps)
+            .arg("--out")
+            .arg(&out)
+            .output()
+            .expect("the build script runs");
+        assert!(
+            output.status.success(),
+            "build-extensions.sh failed:\n{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        out
+    })
+}
+
 /// The library search path a run gets: the compiled test libraries where `with_testbinaries`,
-/// then a directory holding only the oracle's `rxregexp`, the C extension the framework itself
-/// loads, so no other library of the oracle's is found.
+/// and otherwise none. The framework's own `rxregexp.cls` and `rxregexp` are this crate's.
 fn library_path(with_testbinaries: bool) -> OsString {
-    static FRAMEWORK: OnceLock<PathBuf> = OnceLock::new();
-    let framework = FRAMEWORK.get_or_init(|| {
-        let dir = scratch().join("framework-libraries");
-        std::fs::create_dir_all(&dir).expect("the framework's library directory");
-        let link = dir.join("librxregexp.so");
-        let _ = std::fs::remove_file(&link);
-        std::os::unix::fs::symlink(
-            PathBuf::from(env!("REXX_ORACLE_ROOT")).join("lib/librxregexp.so"),
-            &link,
-        )
-        .expect("the rxregexp link");
-        dir
-    });
     let mut directories = Vec::new();
     if with_testbinaries {
         directories.push(testbinaries().to_path_buf());
     }
-    directories.push(framework.clone());
     std::env::join_paths(directories).expect("a library path")
 }
 
@@ -142,6 +155,11 @@ fn count(stdout: &str, label: &str) -> usize {
 /// Runs `group` of `dir` through `testOORexx.rex`, from a fresh copy of the framework and the
 /// group's directory, with `library_path`.
 fn run_group(dir: &str, group: &str, library_path: OsString) -> Outcome {
+    run_group_in(dir, group, library_path, &[])
+}
+
+/// [`run_group`] with `env` added to the run's environment.
+fn run_group_in(dir: &str, group: &str, library_path: OsString, env: &[(&str, &Path)]) -> Outcome {
     let ootest = repository().join("ootest");
     let run = scratch().join(format!("run-{group}"));
     let _ = std::fs::remove_dir_all(&run);
@@ -163,20 +181,16 @@ fn run_group(dir: &str, group: &str, library_path: OsString) -> Outcome {
     for file in ["testOORexx.rex", "worker.rex", "ooTest.frm"] {
         copy(&ootest.join(file), &run);
     }
-    copy(
-        &repository().join("third_party/ooRexx/extensions/rxregexp/rxregexp.cls"),
-        &run,
-    );
     let api = scratch().join(format!("api-{group}"));
     let group_file = format!("ooRexx/{dir}/{group}.testGroup");
-    let output = rexx(
+    let mut command = rexx(
         &["testOORexx.rex", "-f", &group_file, "-U", "-V", "2"],
         &run,
         &api,
         library_path,
-    )
-    .output()
-    .expect("rexx runs");
+    );
+    command.envs(env.iter().copied());
+    let output = command.output().expect("rexx runs");
     stop_service(&api);
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
     assert!(
@@ -677,15 +691,15 @@ fn rexx_start_runs_twice_and_from_two_activities_at_once() {
 /// direct, redirecting and registered command environments, a classic subcommand handler, the
 /// instance's own search path and extensions, and every system exit, as context exits and as
 /// registered ones. The oracle's counts: `INVOCATION` 55 tests and 295 assertions,
-/// `ProcessInvocation` 54 and 284. `TestLoadLibrary` alone fails, one assertion short: it loads
-/// `rxmath`, which is not on the library path the harness gives.
+/// `ProcessInvocation` 54 and 284, which this crate matches with no failure: `TestLoadLibrary`
+/// loads `rxmath`, which it runs in Rust.
 #[test]
 fn the_invocation_groups_run_programs_in_instances() {
-    for (group, ran, assertions) in [("INVOCATION", 55, 294), ("ProcessInvocation", 54, 283)] {
+    for (group, ran, assertions) in [("INVOCATION", 55, 295), ("ProcessInvocation", 54, 284)] {
         let outcome = run_group("API/oo", group, library_path(true));
         let failed: Vec<&str> = outcome.failed.iter().map(String::as_str).collect();
         assert!(
-            failed == ["TESTLOADLIBRARY"] && outcome.ran == ran && outcome.assertions == assertions,
+            failed.is_empty() && outcome.ran == ran && outcome.assertions == assertions,
             "{group}: {failed:?} failed, {} ran, {} assertions:\n{}",
             outcome.ran,
             outcome.assertions,
@@ -1019,6 +1033,29 @@ fn the_classic_family_answers_as_the_oracle_does() {
     );
 }
 
+/// `RexxSetHalt` naming the thread a native function runs on, from a thread the function starts
+/// and joins, in a program `CallProgram` runs (no `RexxStart`): it answers 0 and the function's
+/// activity is halted at its next clause (PR 4 review M6). Before, only a halt naming the calling
+/// thread reached a native call, and this one answered 1 and halted nothing. Standard output is
+/// the oracle's, measured with the same driver built against it.
+#[test]
+fn a_halt_from_another_thread_reaches_a_native_calls_activity() {
+    let output = run_driver(
+        "otherhalt",
+        &[(
+            "other.rex",
+            "signal on halt\nx = otherhalt()\nsay 'after' x\nreturn 'not halted'\n\
+             halt: return 'halted' x\n",
+        )],
+        &[],
+    );
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "halt from another thread=0\nresult halted back\n"
+    );
+}
+
 /// `callrexx1`, the classic sample (`samples/api/classic/unix/callrexx`), built against our
 /// libraries and run from a copy of its directory with every prompt answered: each `RexxStart`
 /// answers as on the oracle -- results the program returns into a null, a large enough and a
@@ -1218,3 +1255,185 @@ Error 3.901:  Failure during initialization: Program "nothere.rex" was not found
      3 *-* y = selftrace(1)
        >>>   "0"
 "#;
+
+/// The `rxmath` and `rxregexp` extension groups, on this crate's Rust libraries and its own
+/// `rxregexp.cls`, with nothing on the library path: the oracle's counts, recorded from the full
+/// checkout on 2026-11-03 (PR 4 plan, "Oracle targets").
+#[test]
+fn the_rust_extension_library_groups_match_the_oracles_counts() {
+    for (dir, group, ran, assertions) in [
+        ("extensions/rxmath", "RxMath", 289, 478),
+        ("extensions/rxregexp", "rxregexp", 33, 11741),
+    ] {
+        let outcome = run_group(dir, group, library_path(false));
+        assert_eq!(
+            (outcome.ran, outcome.assertions, outcome.failed.len()),
+            (ran, assertions, 0),
+            "{group}:\n{}",
+            outcome.stdout
+        );
+    }
+}
+
+/// The `rxsock` group on this crate's Rust library and its own `socket.cls`: the oracle's
+/// counts, recorded from the full checkout on 2026-11-03 (PR 4 plan, "Oracle targets"). Its
+/// client and server activities talk over loopback port 8083.
+#[test]
+fn the_rxsock_group_matches_the_oracles_counts() {
+    let outcome = run_group("extensions/rxsock", "socketClass", library_path(false));
+    assert_eq!(
+        (outcome.ran, outcome.assertions, outcome.failed.len()),
+        (23, 114, 0),
+        "{}",
+        outcome.stdout
+    );
+}
+
+/// `PATH` for a run of an extension group: `rexx`'s directory, then `packages`, then the
+/// system's.
+fn path_with(packages: &[&str]) -> PathBuf {
+    let extensions = repository().join("third_party/ooRexx/extensions");
+    std::env::join_paths(
+        [bin_dir()]
+            .into_iter()
+            .chain(packages.iter().map(|dir| extensions.join(dir)))
+            .chain(std::env::split_paths(
+                &std::env::var_os("PATH").unwrap_or_default(),
+            )),
+    )
+    .expect("a PATH")
+    .into()
+}
+
+/// The groups of the two C++ extensions `scripts/build-extensions.sh` compiles from their own
+/// sources against this workspace's libraries, and of the pure-Rexx `logicalwrapper.cls`: the
+/// oracle's counts, recorded from the full checkout on 2026-11-03 (PR 4 plan, "Oracle
+/// targets"). The packages they require (`ncurses.cls`, `logicalwrapper.cls`, `json.cls`,
+/// `yaml.cls`) are read from their source directories, the files the oracle installs.
+/// `hostemu`'s `TEST_HI` halts the program from the `HostEmu` handler through `RexxSetHalt` on
+/// its own thread.
+#[test]
+fn the_built_extension_groups_match_the_oracles_counts() {
+    let libraries = std::env::join_paths([extensions()]).expect("a library path");
+    assert!(
+        extensions().join("liborxncurses.so").is_file(),
+        "orxncurses was not built: this host has no ncurses headers"
+    );
+    for (dir, group, packages, ran, assertions) in [
+        ("extensions/hostemu", "hostemu", &[][..], 16, 33),
+        (
+            "extensions/platform/unix/ncurses",
+            "ncurses",
+            &["orxncurses"][..],
+            1,
+            4,
+        ),
+        (
+            "extensions/logicalwrapper",
+            "LogicalWrapper",
+            &["logicalwrapper", "json", "yaml"][..],
+            16,
+            50,
+        ),
+    ] {
+        let path = path_with(packages);
+        let outcome = run_group_in(dir, group, libraries.clone(), &[("PATH", &path)]);
+        assert_eq!(
+            (outcome.ran, outcome.assertions, outcome.failed.len()),
+            (ran, assertions, 0),
+            "{group}:\n{}",
+            outcome.stdout
+        );
+    }
+}
+
+/// Review Focus 5: the build's check refuses an extension whose `librexx.so.4` the loader finds
+/// in the oracle's `lib` directory, first on `LD_LIBRARY_PATH`, rather than passing against
+/// C++. A build of its own has its `librexx.so.4` removed after, so the loader, finding nothing
+/// on the recorded search path, goes on to `LD_LIBRARY_PATH`; the same check of the intact
+/// build under the same environment passes, the recorded search path winning.
+#[test]
+fn the_extension_check_refuses_the_oracles_librexx() {
+    let oracle_lib = repository().join("third_party/oracle/lib");
+    let script = |arguments: &[&std::ffi::OsStr]| {
+        Command::new(repository().join("scripts/build-extensions.sh"))
+            .args(arguments)
+            .env("LD_LIBRARY_PATH", &oracle_lib)
+            .output()
+            .expect("the build script runs")
+    };
+    let passing = script(&[
+        "--check-only".as_ref(),
+        "--out".as_ref(),
+        extensions().as_os_str(),
+    ]);
+    assert!(passing.status.success(), "{passing:?}");
+    let deps = std::env::current_exe()
+        .expect("the test's path")
+        .parent()
+        .expect("the deps directory")
+        .to_path_buf();
+    let out = scratch().join("extensions-without-librexx");
+    let _ = std::fs::remove_dir_all(&out);
+    let built = script(&[
+        "--libs".as_ref(),
+        deps.as_os_str(),
+        "--out".as_ref(),
+        out.as_os_str(),
+    ]);
+    assert!(built.status.success(), "{built:?}");
+    for name in ["librexx.so.4", "librexx.so"] {
+        std::fs::remove_file(out.join(name)).expect("the library is removed");
+    }
+    let refused = script(&["--check-only".as_ref(), "--out".as_ref(), out.as_os_str()]);
+    let _ = std::fs::remove_dir_all(&out);
+    let stderr = String::from_utf8_lossy(&refused.stderr);
+    assert!(!refused.status.success(), "{refused:?}");
+    assert!(
+        stderr.contains("resolves librexx.so.4 outside")
+            && stderr.contains(&oracle_lib.join("librexx.so.4").display().to_string()),
+        "{stderr}"
+    );
+}
+
+/// The `rxunixsys` group on this crate's Rust library: the oracle's counts and failing tests,
+/// recorded from the full checkout on 2026-11-03 (PR 4 plan, "Oracle targets"). `TEST_SYSCRYPT`
+/// fails on both, which provide no `SysCrypt` (Rulings). The six `TEST_SYSSTAT_*` failures are
+/// the group's `socket` constant, `$XDG_RUNTIME_DIR/.ooRexx-...service`: the oracle's `rxapi`
+/// socket, which this crate's service, under `REXX_API_DIR`, does not create. The run is given
+/// an empty `XDG_RUNTIME_DIR` so that the path is absent whatever the host runs; measured, with
+/// a socket there both engines pass those six, 30 / 176 / 0 + 1. `TEST_WORDEXP` passes on the
+/// oracle and fails here, where `SysWordexp` is refused (Deviation 90): 30 / 138 / 8 here
+/// against the oracle's 30 / 139 / 7.
+#[test]
+fn the_rxunixsys_group_matches_the_oracle_but_for_the_refused_wordexp() {
+    let runtime = scratch().join("rxunixsys-runtime");
+    let _ = std::fs::remove_dir_all(&runtime);
+    std::fs::create_dir_all(&runtime).expect("a runtime directory");
+    let outcome = run_group_in(
+        "extensions/platform/unix/rxunixsys",
+        "SysUnix",
+        library_path(false),
+        &[("XDG_RUNTIME_DIR", &runtime)],
+    );
+    let failed: Vec<&str> = outcome.failed.iter().map(String::as_str).collect();
+    assert_eq!(
+        (outcome.ran, outcome.assertions, failed),
+        (
+            30,
+            138,
+            vec![
+                "TEST_SYSCRYPT",
+                "TEST_SYSSTAT_DEVICE",
+                "TEST_SYSSTAT_IDS",
+                "TEST_SYSSTAT_INODE",
+                "TEST_SYSSTAT_NUMBERLINKS",
+                "TEST_SYSSTAT_PERMISSIONS",
+                "TEST_SYSSTAT_SIZE",
+                "TEST_WORDEXP",
+            ]
+        ),
+        "{}",
+        outcome.stdout
+    );
+}

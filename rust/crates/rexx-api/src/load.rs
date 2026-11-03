@@ -324,6 +324,43 @@ pub fn routines_only(routines: &[(&str, TypedRoutine)]) -> Library {
     }
 }
 
+/// A library named `package` whose tables name `routines` and `methods` and
+/// carry no address, for an extension library the interpreter runs in its own
+/// code: the interpreter loads, binds and reports it as any library, and runs
+/// its own body where a row of it is called. Answers `false` to
+/// [`NativeRoutineEntry::has_entry_point`] and
+/// [`NativeMethodEntry::has_entry_point`] for every row.
+#[must_use]
+pub fn names_only(package: &str, routines: &[&str], methods: &[&str]) -> Library {
+    let mapping = Mapping::new(None);
+    Library {
+        name: Some(package.as_bytes().to_vec()),
+        version: None,
+        methods: methods
+            .iter()
+            .map(|name| NativeMethodEntry {
+                style: 1,
+                name: name.as_bytes().to_vec(),
+                entry_point: std::ptr::null_mut(),
+                mapping: Arc::clone(&mapping),
+            })
+            .collect(),
+        routines: routines
+            .iter()
+            .map(|name| NativeRoutineEntry {
+                style: ROUTINE_TYPED_STYLE,
+                name: name.as_bytes().to_vec(),
+                entry_point: std::ptr::null_mut(),
+                mapping: Arc::clone(&mapping),
+            })
+            .collect(),
+        loader: None,
+        unloader: None,
+        mapping,
+        thread: None,
+    }
+}
+
 /// What an embedding instance's root activity waits in, set once per process.
 static EMBEDDING_WAIT: std::sync::OnceLock<fn(usize)> = std::sync::OnceLock::new();
 

@@ -138,7 +138,8 @@ pub fn read_lossy(path: &Path) -> String {
     String::from_utf8_lossy(&read_bytes(path)).into_owned()
 }
 
-/// Each `::METHOD` and `::ROUTINE` of `text`, lower-cased, with its body.
+/// Each `::METHOD` and `::ROUTINE` of `text`, lower-cased, with its body, and each `::CONSTANT`
+/// with its expression.
 pub fn directive_bodies(text: &str) -> Vec<(String, String)> {
     let mut bodies: Vec<(String, String)> = Vec::new();
     let mut current: Option<(String, String)> = None;
@@ -148,13 +149,18 @@ pub fn directive_bodies(text: &str) -> Vec<(String, String)> {
             bodies.extend(current.take());
             let mut parts = directive.split_whitespace();
             let kind = parts.next().unwrap_or("").to_ascii_lowercase();
+            let name = parts
+                .next()
+                .unwrap_or("")
+                .trim_matches(['\'', '"'])
+                .to_ascii_lowercase();
             if kind == "method" || kind == "routine" {
-                let name = parts
-                    .next()
-                    .unwrap_or("")
-                    .trim_matches(['\'', '"'])
-                    .to_ascii_lowercase();
                 current = Some((name, String::new()));
+            } else if kind == "constant" {
+                // `::CONSTANT session (.RexxQueue~new)`: its expression is its body, so a test
+                // that names the constant reaches what the expression reaches.
+                let expression = parts.collect::<Vec<_>>().join(" ").to_ascii_lowercase();
+                bodies.push((name, expression + "\n"));
             }
         } else if let Some((_, body)) = current.as_mut() {
             body.push_str(&line.to_ascii_lowercase());
@@ -273,7 +279,8 @@ pub fn copy_tree(from: &Path, to: &Path) {
 
 /// Empties `run` and lays the framework and `dir` (below `ootest/ooRexx`)
 /// into it. `rxregexp.cls`, which `ooTest.frm` requires, sits beside the
-/// driver.
+/// driver: this crate's own package, which the oracle runs over its own
+/// library.
 pub fn fresh_copy(run: &Path, dir: &str) {
     fresh_copy_from(run, &groups_root(), dir);
 }
@@ -293,7 +300,7 @@ pub fn fresh_copy_from(run: &Path, root: &Path, dir: &str) {
     }
     without_rxfuncquery(&run.join("ooTest.frm"));
     fs::copy(
-        worktree().join("third_party/ooRexx/extensions/rxregexp/rxregexp.cls"),
+        worktree().join("rust/crates/rexx-exec/packages/rxregexp.cls"),
         run.join("rxregexp.cls"),
     )
     .expect("cannot copy rxregexp.cls");

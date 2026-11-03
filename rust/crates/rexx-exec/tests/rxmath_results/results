@@ -1,0 +1,522 @@
+# The description's formatting table (extensions-behaviour.md, "Result formatting").
+eval digits=9
+RxCalcSqrt(3)
+RxCalcSqrt(3,16)
+RxCalcSqrt(25,16)
+RxCalcPower(10,9)
+RxCalcPower(10,8)
+RxCalcPower(10,20)
+RxCalcPower(10,-5)
+RxCalcPower(10,-20)
+RxCalcSqrt(1e-20,16)
+RxCalcPower(6.13,3,1)
+RxCalcSqrt(90.25,1)
+RxCalcPower(1.05,1,2)
+RxCalcPower(0.125,1,2)
+RxCalcPower(0.15,1,1)
+RxCalcSqrt(99.8001,2)
+RxCalcPower(2,100,16)
+RxCalcPower(2,1023)
+RxCalcExp(-700)
+RxCalcExp(-745.2)
+RxCalcExp(-746)
+RxCalcSin(3.14159265358979,16,'r')
+RxCalcSqrt('2.0000000001', 16)
+----
+1.73205081
+1.732050807568877
+5
+1.00000000E+9
+100000000
+1E+20
+0.00001
+1E-20
+0.0000000001000000000000000
+2E+2
+1E+1
+1.1
+0.13
+0.2
+10
+1.267650600228229E+30
+8.98846567E+307
+9.85967654E-305
+0
+0
+0.000000000000003231089148865173
+1.414213562408450
+
+# Precision defaults to NUMERIC DIGITS, capped at 16.
+eval digits=5
+RxCalcSqrt(2,10)
+RxCalcExp(20)
+RxCalcPi()
+RxCalcSqrt(2)
+RxCalcLog(10)
+----
+1.414213562
+4.8517E+8
+3.1416
+1.4142
+2.3026
+
+eval digits=1
+RxCalcPi()
+RxCalcSqrt(2)
+RxCalcExp(1)
+RxCalcPower(2,10)
+RxCalcPower(-2,10)
+RxCalcLog10(12345)
+----
+3
+1
+3
+1E+3
+1E+3
+4
+
+eval digits=12
+RxCalcPi()
+RxCalcExp(1)
+RxCalcLog(2)
+RxCalcLog10(2)
+RxCalcSinH(1)
+RxCalcCosH(1)
+RxCalcTanH(1)
+RxCalcPower(1.5,2.5)
+RxCalcExp(-1)
+----
+3.14159265359
+2.71828182846
+0.693147180560
+0.301029995664
+1.17520119364
+1.54308063482
+0.761594155956
+2.75567596063
+0.367879441171
+
+eval digits=20
+RxCalcPi()
+RxCalcSqrt(2)
+RxCalcExp(100)
+RxCalcLog(0.001)
+RxCalcPower(10,15)
+RxCalcPower(10,16)
+RxCalcPower(10,17)
+----
+3.141592653589793
+1.414213562373095
+2.688117141816136E+43
+-6.907755278982137
+1000000000000000
+1.000000000000000E+16
+1.000000000000000E+17
+
+eval digits=9 form=ENGINEERING
+RxCalcPower(10,10)
+RxCalcExp(30)
+RxCalcPower(10,-12)
+----
+1.00000000E+10
+1.06864746E+13
+0.000000000001
+
+# Special values and IEEE results.
+eval digits=9
+RxCalcSqrt(-1)
+RxCalcPower(-2, 5.1)
+RxCalcPower(0,-1)
+RxCalcPower(0,0)
+RxCalcPower(-8,1/3)
+RxCalcLog(-1)
+RxCalcLog(0)
+RxCalcLog10(0)
+RxCalcArcSin(2)
+RxCalcArcCos(-1.5)
+RxCalcSqrt('nan')
+RxCalcSin('nan')
+RxCalcExp('-infinity')
+RxCalcArcTan('+infinity')
+RxCalcExp(709.8)
+RxCalcPower(2,1024)
+RxCalcSqrt('1e400')
+RxCalcSqrt('1e-400')
+RxCalcSin('+infinity')
+RxCalcPower(-0.0, 1)
+RxCalcTanH('-infinity')
+----
+nan
+nan
++infinity
+1
+nan
+nan
+-infinity
+-infinity
+nan
+nan
+nan
+nan
+0
+90
++infinity
++infinity
++infinity
+0
+nan
+0
+-1
+
+# Number arguments are read as strtod reads their text.
+eval digits=9
+RxCalcPower(' -4', 1)
+RxCalcPower('- 4', 1)
+RxCalcPower(' 9 ', 1)
+RxCalcPower('4.', 1)
+RxCalcPower('.4e1', 1)
+RxCalcSqrt(4,' 3 ')
+RxCalcSqrt(2,'16.0')
+RxCalcSqrt(2,1e3)
+RxCalcSqrt(4,,)
+RxCalcPi(5,)
+----
+-4
+0
+9
+4
+4
+2
+1.414213562373095
+1.414213562373095
+2
+3.1416
+
+# Degrees, grades and radians.
+eval digits=9
+RxCalcSin(180)
+RxCalcCos(90)
+RxCalcTan(90)
+RxCalcTan(270)
+RxCalcCotan(180)
+RxCalcCotan(-180)
+RxCalcCotan(0,,'R')
+RxCalcSin(-30)
+RxCalcSin(390)
+RxCalcTan(-45)
+RxCalcCotan(45)
+RxCalcCotan(90)
+RxCalcTan(45,16)
+RxCalcSin(30,16)
+RxCalcSin(1e20)
+RxCalcSin(12)
+RxCalcSin(100,,'g')
+RxCalcCos(200,,'g')
+RxCalcSin(12,,'g')
+RxCalcSin(1,,'radxx')
+RxCalcCos(1,,'r')
+RxCalcTan(1,,'R')
+RxCalcCos(60,16)
+RxCalcSin(135,16)
+RxCalcSin(225,16)
+RxCalcCos(300,16)
+RxCalcTan(315,16)
+RxCalcCotan(330,16)
+RxCalcSin(-720.5,16)
+RxCalcCos(-1000,16)
+RxCalcTan(150,16,'G')
+RxCalcCotan(375,16,'g')
+RxCalcSin(5e-324,16)
+RxCalcSin(1e-300,16)
+----
+0
+0
++infinity
+-infinity
+-infinity
++infinity
++infinity
+-0.5
+0.5
+-1
+1
+0
+0.9999999999999999
+0.5
+-0.984807753
+0.207911691
+1
+-1
+0.187381315
+0.841470985
+0.540302306
+1.55740772
+0.5
+0.7071067811865475
+-0.7071067811865475
+0.5
+-0.9999999999999999
+-1.732050807568877
+-0.008726535498373935
+0.1736481776669303
+-0.9999999999999999
+-2.414213562373095
+0
+1.745329251994330E-302
+
+eval digits=9
+RxCalcArcSin(1)
+RxCalcArcSin(1,,'g')
+RxCalcArcSin(1,,'r')
+RxCalcArcCos(-1)
+RxCalcArcSin(.5,16)
+RxCalcArcTan(.1526,,'g')
+RxCalcArcTan(1,16)
+RxCalcArcCos(0.5,16)
+RxCalcArcSin(-0.7071067811865476,16)
+RxCalcArcTan(-3,16,'G')
+----
+90
+100
+1.57079633
+180
+30
+9.64044525
+45
+60
+-44.99999998488434
+-79.51672353008665
+
+# Errors, as code and secondary message.
+raises
+RxCalcSqrt()
+RxCalcSqrt(3,0)
+RxCalcSqrt(3,-1)
+RxCalcSqrt(3,1.5)
+RxCalcSqrt(3,'abc')
+RxCalcSqrt('abc')
+RxCalcSqrt('NAN')
+RxCalcSqrt('Infinity')
+RxCalcSqrt('inf')
+RxCalcSqrt('-nan')
+RxCalcSqrt(1,2,3)
+RxCalcPi(1,2)
+RxCalcSin(1,2,3,4)
+RxCalcSin(1,2,'q')
+RxCalcSin(1,,'')
+RxCalcSin('nan',,'x')
+RxCalcSin('x',0,'x')
+RxCalcSin(1,0,'x')
+RxCalcPower(2)
+RxCalcPower(,2)
+MathDropFuncs(1)
+MathLoadFuncs(1,2)
+----
+88.901 Missing argument; argument 1 is required.
+88.905 Argument 2 must be a positive whole number; found "0".
+88.905 Argument 2 must be a positive whole number; found "-1".
+88.905 Argument 2 must be a positive whole number; found "1.5".
+88.905 Argument 2 must be a positive whole number; found "abc".
+88.921 Argument 1 must be a valid double value; found "abc".
+88.921 Argument 1 must be a valid double value; found "NAN".
+88.921 Argument 1 must be a valid double value; found "Infinity".
+88.921 Argument 1 must be a valid double value; found "inf".
+88.921 Argument 1 must be a valid double value; found "-nan".
+88.922 Too many arguments in invocation; 2 expected.
+88.922 Too many arguments in invocation; 1 expected.
+88.922 Too many arguments in invocation; 3 expected.
+88.916 Argument 3 must be one of D, R, or G; found "q".
+88.916 Argument 3 must be one of D, R, or G; found "".
+88.916 Argument 3 must be one of D, R, or G; found "x".
+88.921 Argument 1 must be a valid double value; found "x".
+88.905 Argument 2 must be a positive whole number; found "0".
+88.901 Missing argument; argument 2 is required.
+88.901 Missing argument; argument 1 is required.
+88.922 Too many arguments in invocation; 0 expected.
+88.922 Too many arguments in invocation; 1 expected.
+
+# The banner, and the routines callable once loaded.
+program
+call RxFuncAdd 'MathLoadFuncs', 'rxmath', 'MathLoadFuncs'
+say '['MathLoadFuncs('x')']'
+say '['MathLoadFuncs()']'
+say '['MathDropFuncs()']'
+say RxCalcSqrt(16)
+----
+----
+rc 0
+[stdout]
+rxmath 1.2 - REXX mathematical function library
+Copyright (c) 2005-2021 Rexx Language Association.
+All rights reserved.
+
+[]
+[]
+[]
+4
+[stderr]
+----
+----
+
+# Nothing is callable before the library loads.
+program
+say RxFuncQuery('RxCalcSqrt')
+say RxCalcSqrt(4)
+----
+rc 213
+[stdout]
+1
+[stderr]
+     2 *-* say RxCalcSqrt(4)
+Error 43 running probe.rex line 2:  Routine not found.
+Error 43.1:  Could not find routine "RXCALCSQRT".
+
+# RxFuncAdd of any name loads the whole library, and answers whether the name is one of its routines.
+program
+say RxFuncAdd('Zork', 'rxmath')
+say RxCalcSqrt(4) RxFuncQuery('RxCalcCos') RxFuncQuery('RXCALCARCTAN') RxFuncQuery('Zork')
+say RxFuncAdd('RxCalcSqrt', 'rxmath') RxFuncAdd('RxCalcCos', 'rxmath', 'Whatever')
+say RxCalcSinh(1) RxCalcSINH(1)
+----
+rc 0
+[stdout]
+1
+2 0 0 1
+0 0
+1.17520119 1.17520119
+[stderr]
+
+# The procedure argument is ignored, so an alias is not found.
+program
+say RxFuncAdd('MySqrt', 'rxmath', 'RxCalcSqrt')
+say MySqrt(9)
+----
+rc 213
+[stdout]
+1
+[stderr]
+     2 *-* say MySqrt(9)
+Error 43 running probe.rex line 2:  Routine not found.
+Error 43.1:  Could not find routine "MYSQRT".
+
+# Review Focus 2: MathLoadFuncs registers nothing the load did not, and RxFuncDrop of one leaves every routine callable.
+program
+say RxFuncAdd('MathLoadFuncs', 'rxmath', 'MathLoadFuncs')
+call MathLoadFuncs
+names = 'MathLoadFuncs MathDropFuncs RxCalcPi RxCalcSqrt RxCalcExp RxCalcLog RxCalcLog10 RxCalcSinH RxCalcCosH RxCalcTanH RxCalcPower RxCalcSin RxCalcCos RxCalcTan RxCalcCotan RxCalcArcSin RxCalcArcCos RxCalcArcTan'
+do n over names~subwords
+  q = RxFuncQuery(n)
+  select
+    when n = 'RxCalcPi' then v = RxCalcPi(4)
+    when n = 'RxCalcPower' then v = RxCalcPower(0.5, 2, 4)
+    when n~left(6) = 'RxCalc' then interpret 'v =' n'(0.5, 4)'
+    otherwise v = '-'
+  end
+  say n q v
+end
+say RxFuncDrop('RxCalcTanH') RxFuncQuery('RxCalcTanH') RxCalcTanH(1) RxCalcCosH(1)
+say RxFuncDrop('RxCalcCosH') RxCalcCosH(1)
+----
+rc 0
+[stdout]
+0
+MathLoadFuncs 0 -
+MathDropFuncs 0 -
+RxCalcPi 0 3.142
+RxCalcSqrt 0 0.7071
+RxCalcExp 0 1.649
+RxCalcLog 0 -0.6931
+RxCalcLog10 0 -0.3010
+RxCalcSinH 0 0.5211
+RxCalcCosH 0 1.128
+RxCalcTanH 0 0.4621
+RxCalcPower 0 0.25
+RxCalcSin 0 0.008727
+RxCalcCos 0 1.000
+RxCalcTan 0 0.008727
+RxCalcCotan 0 114.6
+RxCalcArcSin 0 30
+RxCalcArcCos 0 60
+RxCalcArcTan 0 26.57
+1 0 0.761594156 1.54308063
+1 1.54308063
+[stderr]
+
+# Package~loadLibrary loads it; the name is case-sensitive.
+program
+say .context~package~loadLibrary('RXMATH')
+say .context~package~loadLibrary('rxmath')
+say RxCalcExp(1)
+----
+rc 0
+[stdout]
+0
+1
+2.71828183
+[stderr]
+
+# ::requires LIBRARY loads it; the name is case-sensitive.
+program
+say RxCalcPi()
+::requires 'rxmath' LIBRARY
+----
+rc 0
+[stdout]
+3.14159265
+[stderr]
+
+program
+say 'never'
+::requires 'RXMATH' LIBRARY
+----
+rc 158
+[stdout]
+[stderr]
+     2 *-* ::requires 'RXMATH' LIBRARY
+Error 98 running probe.rex line 2:  Execution error.
+Error 98.903:  Unable to load library "RXMATH".
+
+# An EXTERNAL routine bound to one routine loads the whole library.
+program
+say sq(9) RxCalcPower(2, 8)
+::routine sq external "LIBRARY rxmath RxCalcSqrt"
+----
+rc 0
+[stdout]
+3 256
+[stderr]
+
+program
+say 'never'
+::routine sq external "LIBRARY rxmath NoSuchRoutine"
+----
+rc 166
+[stdout]
+[stderr]
+     2 *-* ::routine sq external "LIBRARY rxmath NoSuchRoutine"
+Error 90 running probe.rex line 2:  External name not found.
+Error 90.999:  Unable to find external routine "NoSuchRoutine".
+
+# Loaded routines are found after the program's own routines.
+program
+say RxFuncAdd('RxCalcSqrt', 'rxmath') RxCalcSqrt(9)
+exit
+RxCalcSqrt: return 'mine'
+----
+rc 0
+[stdout]
+0 mine
+[stderr]
+
+# A failure traceback names the compiled routine.
+program
+call RxFuncAdd 'RxCalcSqrt', 'rxmath'
+say RxCalcSqrt(2, 'x')
+----
+rc 168
+[stdout]
+[stderr]
+       *-* Compiled routine "RXCALCSQRT".
+     2 *-* say RxCalcSqrt(2, 'x')
+Error 88 running probe.rex line 2:  Invalid argument.
+Error 88.905:  Argument 2 must be a positive whole number; found "x".

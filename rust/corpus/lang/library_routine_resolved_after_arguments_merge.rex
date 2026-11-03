@@ -14,4 +14,4 @@ step:
   return arg(1)
 ::routine foo
   return 'main' arg(1)
-::requires 'rxmath' LIBRARY
+::requires 'rxmathc' LIBRARY

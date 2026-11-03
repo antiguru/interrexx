@@ -1,8 +1,8 @@
 count 59
 -- A condition trapped after a native level: the native frame's context, and
 -- POSITION and PROGRAM from the first frame with a package -- none for a
--- built-in method, the caller for a condition a native call re-raises, and
--- the native frame itself, which has no line, for a raise its boundary made.
+-- built-in method, and the caller for a condition a native call re-raises,
+-- which a raise its boundary made is as well.
 call t1
 call t2
 call t3

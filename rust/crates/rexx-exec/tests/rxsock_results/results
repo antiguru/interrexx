@@ -1,0 +1,1101 @@
+# Loading (extensions-behaviour.md, "Loading"): not loaded by default; a
+# package library by every route; SockLoadFuncs and SockDropFuncs answer
+# the null string and write nothing.
+program
+say rxfuncquery('SockSocket')
+signal on syntax
+say SockSocket('AF_INET', 'SOCK_STREAM', 0)
+syntax: say condition('o')~code condition('o')~message
+say .context~package~loadLibrary('RXSOCK') .context~package~loadLibrary('rxsock')
+say rxfuncquery('SockSocket') rxfuncquery('socksoclose') rxfuncquery('SockPSock_Errno')
+say rxfuncadd('SockLoadFuncs', 'rxsock', 'SockLoadFuncs')
+say '['SockLoadFuncs()']['SockLoadFuncs('x')']['SockDropFuncs()']'
+say SockVersion()
+----
+rc 0
+[stdout]
+1
+43.1 Could not find routine "SOCKSOCKET".
+0 1
+0 0 0
+0
+[][][]
+5.3.0
+[stderr]
+
+# Argument conversion: arity, omitted arguments, 32-bit integers, doubles,
+# strings with no string value, and the routine failures of bad names.
+eval
+SockVersion(1)
+SockInit(1)
+SockSock_Errno(1)
+SockGetHostId(1)
+SockGetHostName(1)
+SockLoadFuncs(1, 2)
+SockDropFuncs(1)
+SockPSock_Errno(1, 2)
+SockClose()
+SockClose(,)
+SockClose('x')
+SockClose(1.5)
+SockClose(2147483648)
+SockClose(' 99999 ')
+SockSoClose(99999)
+SockSend(99999)
+SockSend(99999, .object~new)
+SockSend(99999, 'x', 'MSG_OOB', 1)
+SockRecv(99999, 'v')
+SockRecv(99999, 'v', 'x')
+SockRecv(99999, 'v', -1)
+SockShutDown(99999, 'x')
+SockShutDown(99999, 0)
+SockListen(99999, 'x')
+SockListen(99999, 1)
+SockSelect(, , , 'x')
+SockSelect(, , , , 1)
+SockSelect(, , , 0)
+SockGetHostByAddr('127.0.0.1', 'g.', 'x')
+SockGetHostByAddr('127.0.0.1')
+SockSendTo(99999, 'x')
+SockSendTo(99999, 'x', 'a', 'b', 'c')
+SockRecvFrom(99999, 'v', 1)
+SockRecvFrom(99999, 'v', 1, 'a', 'b', 'c')
+SockAccept(99999, 'x.', 1)
+SockAccept()
+SockBind(99999)
+SockSocket()
+SockSocket('AF_INET', 'SOCK_STREAM')
+SockSocket(, 'SOCK_STREAM', '0')
+SockSocket('AF_INET6', 'SOCK_STREAM', '0')
+SockSocket('AF_INET', 'SOCK_SEQPACKET', '0')
+SockSocket('AF_INET', 'SOCK_STREAM', '6')
+SockGetSockOpt(99999, 'IPPROTO_TCP', 'SO_TYPE', 'v')
+SockSetSockOpt(99999, 'IPPROTO_TCP', 'SO_TYPE', 1)
+SockIoctl(99999, 'FIONBIO', 'x')
+SockIoctl(99999, 'FIONBIO', 1)
+SockIoctl(99999, 'FIONREAD', 'v')
+SockIoctl(99999, 'BOGUS', 1)
+----
+ERR 88.922 Too many arguments in invocation; 0 expected.
+ERR 88.922 Too many arguments in invocation; 0 expected.
+ERR 88.922 Too many arguments in invocation; 0 expected.
+ERR 88.922 Too many arguments in invocation; 0 expected.
+ERR 88.922 Too many arguments in invocation; 0 expected.
+ERR 88.922 Too many arguments in invocation; 1 expected.
+ERR 88.922 Too many arguments in invocation; 0 expected.
+ERR 88.922 Too many arguments in invocation; 1 expected.
+ERR 88.901 Missing argument; argument 1 is required.
+ERR 88.901 Missing argument; argument 1 is required.
+ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "x".
+ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "1.5".
+ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "2147483648".
+"-1"
+"-1"
+ERR 88.901 Missing argument; argument 2 is required.
+ERR 88.909 Argument 2 must have a string value.
+ERR 88.922 Too many arguments in invocation; 3 expected.
+ERR 88.901 Missing argument; argument 3 is required.
+ERR 88.907 Argument 3 must be in the range -2147483648 to 2147483647; found "x".
+ERR 40.1 External routine "SOCKRECV" failed.
+ERR 88.907 Argument 2 must be in the range -2147483648 to 2147483647; found "x".
+"-1"
+ERR 88.907 Argument 2 must be in the range -2147483648 to 2147483647; found "x".
+"-1"
+ERR 88.921 Argument 4 must be a valid double value; found "x".
+ERR 88.922 Too many arguments in invocation; 4 expected.
+"0"
+ERR 88.907 Argument 3 must be in the range -2147483648 to 2147483647; found "x".
+ERR 88.901 Missing argument; argument 2 is required.
+ERR 88.901 Missing argument; argument 3 is required.
+ERR 88.922 Too many arguments in invocation; 4 expected.
+ERR 88.901 Missing argument; argument 4 is required.
+ERR 88.922 Too many arguments in invocation; 5 expected.
+ERR 88.922 Too many arguments in invocation; 2 expected.
+ERR 88.901 Missing argument; argument 1 is required.
+ERR 88.901 Missing argument; argument 2 is required.
+ERR 88.901 Missing argument; argument 1 is required.
+ERR 88.901 Missing argument; argument 3 is required.
+ERR 88.901 Missing argument; argument 1 is required.
+ERR 40.1 External routine "SOCKSOCKET" failed.
+ERR 40.1 External routine "SOCKSOCKET" failed.
+ERR 40.1 External routine "SOCKSOCKET" failed.
+ERR 40.1 External routine "SOCKGETSOCKOPT" failed.
+ERR 40.1 External routine "SOCKSETSOCKOPT" failed.
+ERR 40.1 External routine "SOCKIOCTL" failed.
+"-1"
+"-1"
+"-1"
+
+# errno and h_errno: set by most routines, symbolically for the socket
+# errors and in decimal for the rest; not by SockVersion, SockSock_Errno,
+# SockGetHostId, the loaders, a stem argument that names no stem, an
+# unknown ioctl, or SO_TYPE and SO_ERROR set.
+program
+c = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+call t "SockVersion()"
+call t "SockInit()"
+call t "SockGetHostName() \== ''"
+call t "SockGetHostId() \== ''"
+call t "SockDropFuncs()"
+call t "SockLoadFuncs()"
+call t "SockClose(9999)"
+call t "SockSoClose(9999)"
+call t "SockSocket('AF_INET','SOCK_STREAM','0') > 0"
+call t "SockSocket(' af_inet ', ' sock_dgram ', ' ipproto_udp ') > 0"
+call t "SockSocket('AF_INET', 'SOCK_DGRAM', 'IPPROTO_TCP')"
+call t "SockGetHostByName('127.1', 'h.')"
+call t "SockGetHostByAddr('127.0.0.1', 'h.', 7)"
+call t "SockGetHostByAddr('127.0.0.1', 'h.', 10)"
+call t "SockGetSockName(c, 'h.')"
+call t "SockGetSockName(c, '1h.')"
+call t "SockGetSockName(c, '')"
+call t "SockGetPeerName(c, 'h.')"
+call t "SockIoctl(c, 'bogus', 1)"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_TYPE', 1)"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_ERROR', 1)"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_BOGUS', 1)"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_BOGUS', 'v') v"
+call t "SockSend(c, 'x')"
+call t "SockShutDown(c, 0)"
+call t "SockShutDown(c, 5)"
+call t "SockRecv(c, 'v', 0) '['v']'"
+call t "SockSelect(,,,0)"
+exit
+t: procedure expose c
+  drop errno h_errno
+  interpret 'r = ' arg(1)
+  say left(arg(1), 60) '=>' r '|' errno '|' h_errno
+  return
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+SockVersion()                                                => 5.3.0 | ERRNO | H_ERRNO
+SockInit()                                                   => 0 | 0 | 0
+SockGetHostName() \== ''                                     => 1 | 0 | 0
+SockGetHostId() \== ''                                       => 1 | ERRNO | H_ERRNO
+SockDropFuncs()                                              =>  | ERRNO | H_ERRNO
+SockLoadFuncs()                                              =>  | ERRNO | H_ERRNO
+SockClose(9999)                                              => -1 | 9 | 0
+SockSoClose(9999)                                            => -1 | 9 | 0
+SockSocket('AF_INET','SOCK_STREAM','0') > 0                  => 1 | 0 | 0
+SockSocket(' af_inet ', ' sock_dgram ', ' ipproto_udp ') > 0 => 1 | 0 | 0
+SockSocket('AF_INET', 'SOCK_DGRAM', 'IPPROTO_TCP')           => -1 | EPROTONOSUPPORT | 0
+SockGetHostByName('127.1', 'h.')                             => 1 | 0 | 0
+SockGetHostByAddr('127.0.0.1', 'h.', 7)                      => 0 | EAFNOSUPPORT | 0
+SockGetHostByAddr('127.0.0.1', 'h.', 10)                     => 0 | EAFNOSUPPORT | 0
+SockGetSockName(c, 'h.')                                     => 0 | 0 | 0
+SockGetSockName(c, '1h.')                                    => 0 | ERRNO | H_ERRNO
+SockGetSockName(c, '')                                       => 0 | ERRNO | H_ERRNO
+SockGetPeerName(c, 'h.')                                     => -1 | ENOTCONN | 0
+SockIoctl(c, 'bogus', 1)                                     => -1 | ERRNO | H_ERRNO
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_TYPE', 1)                => -1 | ERRNO | H_ERRNO
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_ERROR', 1)               => -1 | ERRNO | H_ERRNO
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_BOGUS', 1)               => -1 | ENOPROTOOPT | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_BOGUS', 'v') v           => -1 0 | ENOPROTOOPT | 0
+SockSend(c, 'x')                                             => -1 | 32 | 0
+SockShutDown(c, 0)                                           => -1 | ENOTCONN | 0
+SockShutDown(c, 5)                                           => -1 | 22 | 0
+SockRecv(c, 'v', 0) '['v']'                                  => 0 [] | 0 | 0
+SockSelect(,,,0)                                             => 0 | 0 | 0
+[stderr]
+
+# The options rustix and nix do not name, by raw number as C ints:
+# SO_DEBUG, SO_RCVLOWAT, SO_SNDLOWAT and SO_USELOOPBACK (64 on Linux); a
+# negative or closed descriptor answers EBADF.
+program
+c = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_DEBUG', 'v') v"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_DEBUG', 1)"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 5)"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'so_rcvlowat', 'v') v"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', ' 7x')"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 'v') v"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 5)"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v"
+call t "SockSetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 1)"
+call t "SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v"
+call t "SockGetSockOpt(9999, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v"
+call t "SockSetSockOpt(9999, 'SOL_SOCKET', 'SO_DEBUG', 1)"
+call t "SockGetSockOpt(-1, 'SOL_SOCKET', 'SO_DEBUG', 'v') v"
+call t "SockListen(-1, 1)"
+exit
+t: procedure expose c
+  drop errno h_errno
+  interpret 'r = ' arg(1)
+  say left(arg(1), 60) '=>' r '|' errno '|' h_errno
+  return
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_DEBUG', 'v') v           => 0 0 | 0 | 0
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_DEBUG', 1)               => -1 | 13 | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v        => 0 1 | 0 | 0
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 5)            => 0 | 0 | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'so_rcvlowat', 'v') v        => 0 5 | 0 | 0
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', ' 7x')        => 0 | 0 | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v        => 0 7 | 0 | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 'v') v        => 0 1 | 0 | 0
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_SNDLOWAT', 5)            => -1 | ENOPROTOOPT | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v     => 0 0 | 0 | 0
+SockSetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 1)         => 0 | 0 | 0
+SockGetSockOpt(c, 'SOL_SOCKET', 'SO_USELOOPBACK', 'v') v     => 0 1 | 0 | 0
+SockGetSockOpt(9999, 'SOL_SOCKET', 'SO_RCVLOWAT', 'v') v     => -1 0 | 9 | 0
+SockSetSockOpt(9999, 'SOL_SOCKET', 'SO_DEBUG', 1)            => -1 | 9 | 0
+SockGetSockOpt(-1, 'SOL_SOCKET', 'SO_DEBUG', 'v') v          => -1 0 | 9 | 0
+SockListen(-1, 1)                                            => -1 | 9 | 0
+[stderr]
+
+# SockSock_Errno: a failing call's errno; a success leaves it, and a host
+# lookup sets it to 0 first. Before any call it is 0 (Rulings, errno: the
+# oracle reports the errno its own console I/O left).
+ruled
+say SockSock_Errno()
+call SockShutDown 9999, 2
+say SockSock_Errno()
+call SockVersion
+say SockSock_Errno()
+c = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+call SockShutDown c, 2
+say SockSock_Errno()
+call SockIoctl c, 'FIONBIO', 0
+say SockSock_Errno()
+call SockGetHostByName '127.1', 'h.'
+say SockSock_Errno()
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+0
+9
+9
+107
+107
+0
+[stderr]
+
+# Stem arguments: a stem object, `name`, `name.` and `name.tail` (whose
+# tail prefixes every element, a trailing dot kept); a name that is no stem
+# answers 0 at once. Address stems: family AF_INET or a number, port modulo
+# 65536, addresses in inet_addr's classic forms, 255.255.255.255 for
+# invalid text, and the all-zero address where an element is unset.
+program
+l = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+a.family = ' af_inet '; a.port = 0; a.addr = ' 127.1 '
+say 'bind' SockBind(l, 'a') errno
+say 'name' SockGetSockName(l, 'b.!') b.!family b.!addr (b.!port > 0)
+say 'name' SockGetSockName(l, 'c.x') c.xfamily c.xaddr (c.xport = b.!port)
+say 'name' SockGetSockName(l, 'q.ab.') q.ab.family q.ab.addr
+s.!family = 1
+say 'name' SockGetSockName(l, s.) s.!family s.family s.addr
+say 'name' SockGetSockName(l, '1abc') SockGetSockName(l, '')
+say 'listen' SockListen(l, 5)
+c = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+t.family = 2; t.port = b.!port + 65536; t.addr = '0x7f.0.1'
+say 'connect' SockConnect(c, 't.') errno
+s = SockAccept(l, 'p.')
+say 'accept' (s > 0) p.family p.addr
+d = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+t.family = 'AF_INET'; t.port = 1; t.addr = 'junk'
+say 'connect' SockConnect(d, 't.') errno
+t.family = 5; t.addr = '127.0.0.1'
+say 'connect' SockConnect(d, 't.') errno
+drop t.addr
+say 'connect' SockConnect(d, 't.') errno
+e = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+z.family = 0; z.port = 0; z.addr = '0.0.0.0'
+say 'bind0' SockBind(e, 'z.') errno
+z.addr = '127.0.0.1'
+say 'bind0' SockBind(SockSocket('AF_INET', 'SOCK_STREAM', '0'), 'z.') errno
+z.family = 7
+say 'bind7' SockBind(SockSocket('AF_INET', 'SOCK_STREAM', '0'), 'z.') errno
+f = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+say 'refused' SockConnect(f, 'a.') errno
+say 'unbound' SockGetSockName(f, 'u.') u.family u.addr
+say 'unconnected' SockGetPeerName(f, 'u.') errno
+say SockClose(c) SockClose(s) SockClose(l) SockClose(d) SockClose(e) SockClose(f)
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+bind 0 0
+name 0 2 127.0.0.1 1
+name 0 2 127.0.0.1 1
+name 0 2 127.0.0.1
+name 0 1 2 127.0.0.1
+name 0 0
+listen 0
+connect 0 0
+accept 1 2 127.0.0.1
+connect -1 ENETUNREACH
+connect -1 EAFNOSUPPORT
+connect 0 0
+bind0 0 0
+bind0 -1 EAFNOSUPPORT
+bind7 -1 EAFNOSUPPORT
+refused -1 ECONNREFUSED
+unbound 0 2 0.0.0.0
+unconnected -1 ENOTCONN
+0 0 0 0 0 0
+[stderr]
+
+# The stream data path: NULs kept, MSG_PEEK, FIONREAD into a variable,
+# a compound variable as the target, FIONBIO's EWOULDBLOCK, end of file
+# after a shutdown, EPIPE without dying, and a negative length.
+program
+l = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
+call SockBind l, 'a.'; call SockGetSockName l, 'a.'; call SockListen l, 5
+c = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+call SockConnect c, 'a.'
+s = SockAccept(l)
+say 'send' SockSend(c, 'hello'||'00'x||'x') errno
+call SysSleep 0.1
+say 'recv' SockRecv(s, 'buf', 3) c2x(buf) errno
+say 'peek' SockRecv(s, 'buf', 100, 'msg_peek bogus') c2x(buf)
+say 'ioctl' SockIoctl(s, 'fionread', 'n') n
+say 'recv' SockRecv(s, 'x.y', 100) c2x(x.y)
+say 'nbio' SockIoctl(s, 'FIONBIO', ' 1 ') errno
+say 'recv' SockRecv(s, 'buf', 100) '['buf']' errno
+say 'shut' SockShutDown(c, 1) errno
+say 'recv' SockRecv(s, 'buf', 100) '['buf']' errno
+say 'close' SockClose(s)
+call SysSleep 0.1
+say 'send' SockSend(c, 'more') errno
+call SysSleep 0.1
+say 'send' SockSend(c, 'more') errno
+signal on syntax
+say 'recv' SockRecv(c, 'buf', -1)
+syntax: say 'ERR' condition('o')~code condition('o')~message
+say SockClose(c) SockClose(l)
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+send 7 0
+recv 3 68656C 0
+peek 4 6C6F0078
+ioctl 0 4
+recv 4 6C6F0078
+nbio 0 0
+recv -1 [] EWOULDBLOCK
+shut 0 0
+recv 0 [] 0
+close 0
+send -1 32
+send -1 32
+ERR 40.1 External routine "SOCKRECV" failed.
+0 0
+[stderr]
+
+# Datagrams: SockSendTo with and without flags, SockRecvFrom with the
+# sender's address, MSG_PEEK, and flags given as the null string.
+program
+d = SockSocket('AF_INET', 'SOCK_DGRAM', 'IPPROTO_UDP')
+e = SockSocket('AF_INET', 'SOCK_DGRAM', '0')
+da.family = 2; da.port = 0; da.addr = '127.0.0.1'
+call SockBind d, 'da.'; call SockGetSockName d, 'dn.'
+say 'sendto' SockSendTo(e, 'dgram', 'dn.') errno
+say 'sendto' SockSendTo(e, 'dgram2', 'MSG_DONTROUTE', 'dn.') errno
+say 'recvfrom' SockRecvFrom(d, 'v', 100, 'f.') v f.family f.addr (f.port > 0)
+say 'recvfrom' SockRecvFrom(d, 'v', 3, 'MSG_PEEK', 'f.') v
+say 'recvfrom' SockRecvFrom(d, 'v', 100, '', 'f.') v
+z.family = 0; z.port = 0; z.addr = 0
+say 'sendto' SockSendTo(e, 'x', 'z.') errno
+z.family = 7
+say 'sendto' SockSendTo(e, 'x', 'z.') errno
+say SockClose(d) SockClose(e)
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+sendto 5 0
+sendto 6 0
+recvfrom 5 dgram 2 127.0.0.1 1
+recvfrom 3 dgr
+recvfrom 6 dgram2
+sendto -1 22
+sendto -1 EAFNOSUPPORT
+0 0
+[stderr]
+
+# SockSelect: each set rewritten with its ready sockets in order, elements
+# above the new count left; a timeout rewrites nothing; a negative timeout
+# is 0; a set whose count is not a whole number, that names no stem, or
+# whose name has a tail, takes no part; a closed descriptor answers -1 with
+# errno 9, one past the descriptor table is never ready; the sockets
+# written back are numbers.
+program
+l = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
+call SockBind l, 'a.'; call SockGetSockName l, 'a.'; call SockListen l, 5
+c = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+call SockConnect c, 'a.'
+s = SockAccept(l)
+r.0 = 3; r.1 = s; r.2 = c; r.3 = l; r.4 = 'keep'
+w.0 = 2; w.1 = s; w.2 = c
+say 'sel' SockSelect('r.', 'w.', , 0) r.0 r.4 w.0 (w.1 = s) (w.2 = c) errno
+r.0 = 2; r.1 = s; r.2 = c
+say 'sel' SockSelect('r.', , , 0.2) r.0 (r.1 = s) (r.2 = c) errno
+call SockSend c, 'x'
+r.0 = 2; r.1 = s; r.2 = c
+say 'sel' SockSelect('r.', , , ) r.0 (r.1 = s) errno
+r.0 = 2; r.1 = c; r.2 = s
+say 'sel' SockSelect('r.', , , -5) r.0 (r.1 = s)
+r.0 = 'x'; r.1 = s
+say 'sel' SockSelect('r.', '', , 0) r.0 (r.1 = s)
+q.x0 = 1; q.x1 = s; q.0 = 1; q.1 = s
+say 'sel' SockSelect('q.x', , , 0) q.x0
+say 'sel' SockSelect('q', , , 0) q.0
+z. = .stem~new; z.0 = 1; z.1 = s
+say 'sel' SockSelect(z., , , 0) z.0
+e.0 = 1; e.1 = 50
+say 'sel' SockSelect(, , 'e.', 0) errno e.0 e.1
+e.0 = 1; e.1 = 9999
+say 'sel' SockSelect(, , 'e.', 0) errno e.0 e.1
+e.0 = ' 1 '; e.1 = ' 1.0 '
+say 'sel' SockSelect(, 'e.', , 0) errno e.0 e.1
+say SockClose(c) SockClose(s) SockClose(l)
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+sel 2 0 keep 2 1 1 0
+sel 0 2 1 1 0
+sel 1 1 1 0
+sel 1 1 1
+sel 0 x 1
+sel 0 1
+sel 1 1
+sel 1 1
+sel -1 9 1 50
+sel 0 0 1 9999
+sel 1 0 1 1
+0 0 0
+[stderr]
+
+# SockSelect with an entry that is not a number: the oracle ends with
+# SIGSEGV (D7); this crate raises 40.1 (Deviation 88).
+ruled
+w.0 = 2; w.1 = 1; w.2 = 'z'
+signal on syntax
+call SockSelect , 'w.', , 0
+say 'not raised'
+exit
+syntax: say condition('o')~code condition('o')~message
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+40.1 External routine "SOCKSELECT" failed.
+[stderr]
+
+# Socket options: booleans, the linger pair (16-bit halves, missing words
+# 0), the timeouts in milliseconds, buffer sizes doubled, SO_TYPE's names,
+# a leading decimal integer for the value, and failures' variable values.
+program
+c = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+call t "SockGetSockOpt(c,'sol_socket','so_keepalive','v') v"
+call t "SockSetSockOpt(c,'sol_socket','so_keepalive','1') SockGetSockOpt(c,'SOL_SOCKET','so_keepalive','v') v"
+call t "SockSetSockOpt(c,'sol_socket','so_reuseaddr','7') SockGetSockOpt(c,'SOL_SOCKET','so_reuseaddr','v') v"
+call t "SockSetSockOpt(c,'sol_socket','so_oobinline','1') SockGetSockOpt(c,'SOL_SOCKET','so_oobinline','v') v"
+call t "SockSetSockOpt(c,'sol_socket','so_dontroute','1') SockGetSockOpt(c,'SOL_SOCKET','so_dontroute','v') v"
+call t "SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_LINGER','1 7 junk') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_LINGER','0 3') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_LINGER','65537') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_LINGER','') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v"
+call t "SockGetSockOpt(c,'sol_socket','SO_RCVTIMEO','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_RCVTIMEO','2000') SockGetSockOpt(c,'sol_socket','SO_RCVTIMEO','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_SNDTIMEO','-2000') SockGetSockOpt(c,'sol_socket','SO_SNDTIMEO','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_SNDTIMEO','-5') errno"
+call t "SockSetSockOpt(c,'sol_socket','SO_RCVBUF','5000x') SockGetSockOpt(c,'SOL_SOCKET','so_rcvbuf','v') v"
+call t "SockSetSockOpt(c,'sol_socket','SO_SNDBUF','abc') errno"
+call t "SockGetSockOpt(c,'SOL_SOCKET','so_type','v') v"
+call t "SockGetSockOpt(c,'SOL_SOCKET','so_error','v') v"
+call t "SockGetSockOpt(9999,'SOL_SOCKET','so_type','v') v errno"
+call t "SockGetSockOpt(9999,'SOL_SOCKET','so_rcvbuf','v') v errno"
+call t "SockGetSockOpt(c,'SOL_SOCKET','bogus','v') v errno"
+d = SockSocket('AF_INET', 'SOCK_DGRAM', '0')
+call t "SockGetSockOpt(d,'SOL_SOCKET','so_type','v') v"
+call t "SockSetSockOpt(d,'sol_socket','so_broadcast','1') SockGetSockOpt(d,'SOL_SOCKET','so_broadcast','v') v"
+exit
+t: procedure expose c d
+  drop errno
+  interpret 'r = ' arg(1)
+  say left(arg(1), 100) '=>' r
+  return
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+SockGetSockOpt(c,'sol_socket','so_keepalive','v') v                                                  => 0 0
+SockSetSockOpt(c,'sol_socket','so_keepalive','1') SockGetSockOpt(c,'SOL_SOCKET','so_keepalive','v')  => 0 0 1
+SockSetSockOpt(c,'sol_socket','so_reuseaddr','7') SockGetSockOpt(c,'SOL_SOCKET','so_reuseaddr','v')  => 0 0 1
+SockSetSockOpt(c,'sol_socket','so_oobinline','1') SockGetSockOpt(c,'SOL_SOCKET','so_oobinline','v')  => 0 0 1
+SockSetSockOpt(c,'sol_socket','so_dontroute','1') SockGetSockOpt(c,'SOL_SOCKET','so_dontroute','v')  => 0 0 1
+SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v                                                     => 0 0 0
+SockSetSockOpt(c,'sol_socket','SO_LINGER','1 7 junk') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') => 0 0 1 7
+SockSetSockOpt(c,'sol_socket','SO_LINGER','0 3') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v    => 0 0 0 7
+SockSetSockOpt(c,'sol_socket','SO_LINGER','65537') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v  => 0 0 1 0
+SockSetSockOpt(c,'sol_socket','SO_LINGER','') SockGetSockOpt(c,'SOL_SOCKET','so_linger','v') v       => 0 0 0 0
+SockGetSockOpt(c,'sol_socket','SO_RCVTIMEO','v') v                                                   => 0 0
+SockSetSockOpt(c,'sol_socket','SO_RCVTIMEO','2000') SockGetSockOpt(c,'sol_socket','SO_RCVTIMEO','v') => 0 0 2000
+SockSetSockOpt(c,'sol_socket','SO_SNDTIMEO','-2000') SockGetSockOpt(c,'sol_socket','SO_SNDTIMEO','v' => 0 0 0
+SockSetSockOpt(c,'sol_socket','SO_SNDTIMEO','-5') errno                                              => -1 33
+SockSetSockOpt(c,'sol_socket','SO_RCVBUF','5000x') SockGetSockOpt(c,'SOL_SOCKET','so_rcvbuf','v') v  => 0 0 10000
+SockSetSockOpt(c,'sol_socket','SO_SNDBUF','abc') errno                                               => 0 0
+SockGetSockOpt(c,'SOL_SOCKET','so_type','v') v                                                       => 0 STREAM
+SockGetSockOpt(c,'SOL_SOCKET','so_error','v') v                                                      => 0 0
+SockGetSockOpt(9999,'SOL_SOCKET','so_type','v') v errno                                              => -1 UNKNOWN 9
+SockGetSockOpt(9999,'SOL_SOCKET','so_rcvbuf','v') v errno                                            => -1 0 9
+SockGetSockOpt(c,'SOL_SOCKET','bogus','v') v errno                                                   => -1 0 ENOPROTOOPT
+SockGetSockOpt(d,'SOL_SOCKET','so_type','v') v                                                       => 0 DGRAM
+SockSetSockOpt(d,'sol_socket','so_broadcast','1') SockGetSockOpt(d,'SOL_SOCKET','so_broadcast','v')  => 0 0 1
+[stderr]
+
+# Host lookups that do not depend on the host's names: a numeric name is
+# its own address, an invalid one and the null string find nothing, and a
+# domain other than AF_INET answers EAFNOSUPPORT. A lookup that finds
+# nothing sets errno to C's errno, which an invalid numeric name leaves as
+# the interpreter's own I/O left it, so those are not shown.
+program
+say SockGetHostByName('127.1', 'h.') h.name h.addrtype h.addr h.addr.0 h.addr.1 h.alias.0
+say SockGetHostByName('1.2.3.4.5', 'h2.') h2.name
+say SockGetHostByName('', 'h3.')
+say SockGetHostByAddr('127.0.0.1', 'h4.', 7) errno h4.name
+say SockGetHostByName('127.1', '') SockGetHostByName('127.1', '1abc')
+say SockGetHostByName('127.0.0.1', 'q.ab.') q.ab.name q.ab.addr
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+1 127.1 AF_INET 127.0.0.1 1 127.0.0.1 0
+0 H2.NAME
+0
+0 EAFNOSUPPORT H4.NAME
+0 0
+1 127.0.0.1 127.0.0.1
+[stderr]
+
+# SockPSock_Errno writes to standard error.
+program
+say '['SockPSock_Errno('hi there')']'
+call SockPSock_Errno
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+[]
+[stderr]
+RxSOCK Error: hi there
+RxSOCK Error: 
+
+# Blocking calls block only their own activity: an accept and then a
+# receive wait in a second activity while the first runs, connects and
+# sends (extensions-behaviour.md, "SockAccept, SockRecv ... block only the
+# calling activity").
+program
+l = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
+call SockBind l, 'a.'; call SockGetSockName l, 'a.'; call SockListen l, 1
+m = .waiter~new~start('serve', l)
+call SysSleep 0.3
+say 'main runs while the accept waits'
+c = SockSocket('AF_INET', 'SOCK_STREAM', '0')
+r = SockConnect(c, 'a.')
+call SysSleep 0.3
+say 'connect' r
+say 'main runs while the receive waits'
+r = SockSend(c, 'hello')
+call SysSleep 0.3
+say 'send' r
+say 'result' m~result
+say SockClose(c) SockClose(l)
+::requires 'rxsock' LIBRARY
+::class waiter
+::method serve
+  use arg l
+  s = SockAccept(l)
+  say 'accepted' (s > 0)
+  n = SockRecv(s, 'buf', 100)
+  say 'received' n buf errno
+  call SockClose s
+  return buf
+----
+rc 0
+[stdout]
+main runs while the accept waits
+accepted 1
+connect 0
+main runs while the receive waits
+received 5 hello 0
+send 5
+result hello
+0 0
+[stderr]
+
+# A select with a timeout and a receive under SO_RCVTIMEO wait out their
+# time and answer as the OS calls do, and another activity runs meanwhile.
+program
+d = SockSocket('AF_INET', 'SOCK_DGRAM', '0')
+a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
+call SockBind d, 'a.'
+m = .ticker~new~start('tick')
+r.0 = 1; r.1 = d
+say 'select' SockSelect('r.', , , 0.3) r.0 (r.1 = d)
+call SockSetSockOpt d, 'SOL_SOCKET', 'SO_RCVTIMEO', 300
+say 'recv' SockRecv(d, 'v', 10) '['v']' errno
+say 'ticks' m~result
+::requires 'rxsock' LIBRARY
+::class ticker
+::method tick
+  do i = 1 to 3
+    call SysSleep 0.05
+  end
+  return i - 1
+----
+rc 0
+[stdout]
+select 0 1 1
+recv -1 [] EWOULDBLOCK
+ticks 3
+[stderr]
+
+# socket.cls against a local listener (PR 4 plan, Review Focus 4): connect,
+# send, receive and close, no descriptor left open by the session, and a
+# refused connection answered as -1 with errno ECONNREFUSED, by StreamSocket
+# as NOTREADY.
+program
+call SysFileTree '/proc/self/fd/*', 'before.', 'O'
+server = .Socket~new
+say 'reuse' server~setOption('SO_REUSEADDR', 1)
+say 'bind' server~bind(.InetAddress~new('127.0.0.1', 0))
+port = server~getSockName~port
+say 'listen' server~listen(1)
+m = .echo~new~start('serve', server)
+client = .Socket~new
+say 'connect' client~connect(.InetAddress~new('localhost', port)) client~errno
+say 'send' client~send('ping')
+say 'recv' client~recv(100)
+say 'peer' client~getPeerName~address (client~getPeerName~port = port) client~getPeerName~family
+say 'close' client~close client~string
+say 'close' client~close client~errno
+say 'served' m~result
+say 'close' server~close
+call SysFileTree '/proc/self/fd/*', 'after.', 'O'
+say 'leaked' after.0 - before.0
+refused = .Socket~new
+say 'refused' refused~connect(.InetAddress~new('127.0.0.1', port)) refused~errno
+say 'closed' refused~close
+s = .StreamSocket~new('127.0.0.1', port)
+say 'stream' s~open s~state '['s~description']' (s~string = '127.0.0.1:'port)
+say 'lineout' s~lineOut('x') s~lineIn s~charIn
+::requires 'socket.cls'
+::requires 'streamsocket.cls'
+::class echo
+::method serve
+  use arg server
+  connection = server~accept
+  data = connection~recv(100)
+  connection~send(data)
+  connection~close
+  return data
+----
+rc 0
+[stdout]
+reuse 0
+bind 0
+listen 0
+connect 0 0
+send 4
+recv ping
+peer 127.0.0.1 1 AF_INET
+close 0 -1
+close -1 9
+served ping
+close 0
+leaked 0
+refused -1 ECONNREFUSED
+closed 0
+stream NOTREADY: ECONNREFUSED NOTREADY [NOTREADY: ECONNREFUSED] 1
+lineout 0  
+[stderr]
+
+# socket.cls's argument errors and its class methods.
+eval-packages
+.Socket~new('AF_INET6')
+.Socket~new(0)
+.Socket~new(1.5)
+.Socket~new('AF_INET6', 'SOCK_STREAM')
+.Socket~new(, 'SOCK_SEQPACKET')
+.Socket~new(, , 6)
+.Socket~new(, , 'ipproto_udp')~string > 0
+.Socket~new(1, 2, 3, 4)
+.Socket~new~errno
+.Socket~new~getOption
+.Socket~new~getOption('bogus')
+.Socket~new~getOption('so_keepalive', '')
+.Socket~new~getOption('so_type')
+.Socket~new~getOption('so_linger')
+.Socket~new~setOption
+.Socket~new~setOption(, .true)
+.Socket~new~setOption('so_keepalive', '')
+.Socket~new~setOption('so_keepalive', .true)
+.Socket~new~setOption('so_type', 0)
+.Socket~new~setOption('so_error', 0)
+.Socket~new~setOption('SO_LINGER', '1 5')
+.Socket~new~bind('127.0.0.1')
+.Socket~new~connect(.object~new)
+.Socket~new~listen(-1)
+.Socket~new~listen('x')
+.Socket~new~recv(-1)
+.Socket~new~recv(0)
+.Socket~new~recvFrom(0, .InetAddress~new('127.0.0.1', 1))
+.Socket~new~recvFrom(5, 'x')
+.Socket~new~select(.array~new, .array~new, .array~new)
+.Socket~new~select('x', .array~new, .array~new, 0)
+.Socket~new~select(.array~new, .array~new, .array~new, 0)
+.Socket~new~ioctl('FIONREAD', 'x')
+.Socket~new~ioctl('bogus', 1)
+.Socket~new~getPeerName
+.Socket~new~getSockName~address
+.Socket~new~getSockName~family
+.Socket~gethostbyname
+.Socket~gethostbyaddr('127.0.0.1', 1)
+.Socket~gethostid('x')
+.Socket~gethostbyaddr('127.0.0.1')~name
+.Socket~gethostbyname('127.1')~address
+.InetAddress~new('127.0.0.1')
+.InetAddress~new('127.0.0.1', 1, 'AF_INET', 4)
+.InetAddress~new('127.0.0.1', 70000)
+.InetAddress~new('127.0.0.1', 'x')
+.InetAddress~new('127.0.0.1', 1, 'af_inet6')
+.InetAddress~new('127.0.0.1', 1, 'af_inet')~family
+.InetAddress~new('1.2.3.4.5', 1)~address
+.InetAddress~new('INADDR_any', 1)~address
+.InetAddress~new('127.0.0.1', ' 80 ')~port
+.HostInfo~new('')
+.HostInfo~new('a', 'b')
+.HostInfo~new('127.1')~addr
+.HostInfo~new('127.1')~alias
+.HostInfo~new('no.such.invalid')~address
+.HostInfo~new('no.such.invalid')~addr
+.HostInfo~new('127.1')~makeStem['!ADDR.0']
+----
+ERR 88.905 Argument socket must be a positive whole number; found "AF_INET6".
+ERR 88.905 Argument socket must be a positive whole number; found "0".
+ERR 88.905 Argument socket must be a positive whole number; found "1.5".
+ERR 93.914 Method argument domain must be one of AF_INET; found "AF_INET6".
+ERR 93.914 Method argument type must be one of SOCK_STREAM
+SOCK_DGRAM
+SOCK_RAW; found "SOCK_SEQPACKET".
+ERR 93.914 Method argument protocol must be one of 0
+IPPROTO_UDP
+IPPROTO_TCP; found "6".
+"0"
+ERR 93.902 Too many arguments in invocation of method; 3 expected.
+"0"
+ERR 93.901 Not enough arguments for method; 1 expected.
+ERR 93.914 Method argument 1 must be one of SO_DEBUG
+SO_REUSEADDR
+SO_TYPE
+SO_ERROR
+SO_DONTROUTE
+SO_BROADCAST
+SO_SNDBUF
+SO_RCVBUF
+SO_KEEPALIVE
+SO_OOBINLINE
+SO_LINGER
+SO_RCVLOWAT
+SO_SNDLOWAT
+SO_RCVTIMEO
+SO_SNDTIMEO
+SO_USELOOPBACK; found "BOGUS".
+ERR 93.902 Too many arguments in invocation of method; 1 expected.
+"STREAM"
+"0 0"
+ERR 93.901 Not enough arguments for method; 2 expected.
+ERR 93.903 Missing argument in method; argument 1 is required.
+ERR 93.907 Method argument 2 must be a positive whole number; found "".
+"0"
+"The NIL object"
+"The NIL object"
+"0"
+ERR 88.914 Argument hostaddr must be an instance of the INETADDRESS class.
+ERR 88.914 Argument hostaddr must be an instance of the INETADDRESS class.
+ERR 88.904 The backlog argument must be zero or a positive whole number; found "-1".
+ERR 88.904 The backlog argument must be zero or a positive whole number; found "x".
+ERR 88.911 Argument length is an invalid length value; found "-1".
+"The NIL object"
+ERR 88.905 Argument length must be a positive whole number; found "0".
+ERR 88.914 Argument address must be an instance of the INETADDRESS class.
+ERR 93.901 Not enough arguments for method; 4 expected.
+ERR 88.914 Argument reads must be an instance of the Array class.
+"0"
+"0"
+"The NIL object"
+"The NIL object"
+"0.0.0.0"
+"AF_INET"
+ERR 93.901 Not enough arguments for method; 1 expected.
+ERR 93.902 Too many arguments in invocation of method; 1 expected.
+ERR 93.902 Too many arguments in invocation of method; 0 expected.
+"127.0.0.1"
+"127.0.0.1"
+ERR 93.901 Not enough arguments for method; 2 expected.
+ERR 93.902 Too many arguments in invocation of method; 3 expected.
+ERR 88.907 Argument port must be in the range 0 to 65535; found "70000".
+ERR 88.907 Argument port must be in the range 0 to 65535; found "x".
+ERR 93.914 Method argument family must be one of AF_INET; found "AF_INET6".
+"AF_INET"
+"1.2.3.4.5"
+"INADDR_any"
+" 80 "
+ERR 93.901 Not enough arguments for method; 1 expected.
+ERR 93.902 Too many arguments in invocation of method; 1 expected.
+Array[1]: 127.0.0.1
+Array[0]: 
+"HOSTINFO.!ADDR"
+Array[0]: 
+"1"
+
+# streamsocket.cls without a connection: a refused open, the stream methods
+# that raise, and a write or read that first opens and fails.
+program
+s = .StreamSocket~new('127.0.0.1', 1)
+say s~state '['s~description']' s~string s~chars s~lines
+say s~lineOut('x') '['s~lineIn']' '['s~charIn(, 2)']' s~charOut('y')
+say s~open
+say s~close
+signal on syntax name e1
+s~arrayIn
+e1: say condition('o')~code condition('o')~message
+signal on syntax name e2
+s~lineIn(, 2)
+e2: say condition('o')~code condition('o')~message
+signal on syntax name e3
+s~charIn(, -1)
+e3: say condition('o')~code condition('o')~message
+signal on syntax name e4
+s = .StreamSocket~new('x')
+e4: say condition('o')~code condition('o')~message
+say '['s~lineIn(, 0)']'
+::requires 'streamsocket.cls'
+----
+rc 0
+[stdout]
+READY [READY:] 127.0.0.1:1 0 0
+0 [] [] 0
+NOTREADY: ECONNREFUSED
+READY: ECONNREFUSED
+93.963 Call to unsupported or unimplemented method.
+93.908 Method argument 2 must not exceed 1; found "&3".
+93.906 Method argument 2 must be zero or a positive whole number; found "-1".
+93.914 Method argument 1 must be one of a Socket class instance; found "x".
+[]
+[stderr]
+
+# mime.cls: a part's string byte for byte, its headers only where set, a
+# lone period doubled, and a multipart's boundary and part layout.
+program
+p = .mimepart~new
+say c2x(p~string)
+say c2x(p~crlf) c2x(.mimepart~crlf)
+p~addContent('one')
+p~addContent('.')
+p~addContent('..')
+p~encoding = '7bit'; p~id = '<id>'; p~description = 'desc'; p~disposition = 'inline'
+say p~string~changeStr('0d0a'x, '|')
+q = .mimepart~new('')
+say q~string~changeStr('0d0a'x, '|')
+m = .mimemultipart~new
+say m~type m~encoding '['m~id']'
+text = m~string
+parse var text 'boundary="' boundary '"'
+say text~changeStr(boundary, 'B')~changeStr('0d0a'x, '|')
+say boundary~left(22) boundary~right(2) (boundary~length > 26)
+m~addPart(p)
+m~addPart(.mimepart~new('text/html'))
+text = m~string
+parse var text 'boundary="' boundary '"'
+say text~changeStr(boundary, 'B')~changeStr('0d0a'x, '|')
+signal on syntax
+m~addPart(.mimemultipart~new)
+syntax: say condition('o')~code condition('o')~message
+::requires 'mime.cls'
+----
+rc 0
+[stdout]
+4D494D452D56657273696F6E3A20312E300D0A436F6E74656E742D547970653A20746578742F706C61696E0D0A0D0A0D0A
+0D0A 0D0A
+MIME-Version: 1.0|Content-Type: text/plain|Content-Transfer-Encoding: 7bit|Content-ID: <id>|Content-Description: desc|Content-Disposition: inline||one|..|..||
+MIME-Version: 1.0|||
+multipart/mixed  []
+MIME-Version: 1.0|Content-Type: multipart/mixed; boundary="B"||
+===ooRexx=Mime=Part=== == 1
+MIME-Version: 1.0|Content-Type: multipart/mixed; boundary="B"||--B|MIME-Version: 1.0|Content-Type: text/plain|Content-Transfer-Encoding: 7bit|Content-ID: <id>|Content-Description: desc|Content-Disposition: inline||one|..|..|||--B|MIME-Version: 1.0|Content-Type: text/html||||--B--|
+93.948 Method argument MIMEPART must be of the &2 class.
+[stderr]
+
+# smtp.cls without a server: its defaults, the content setter, and a
+# refused connection.
+program
+msg = .smtpmsg~new
+say '['msg~from']['msg~subject']['msg~content']' msg~recipients~items
+msg~content = 'plain'
+say msg~content
+msg~content = .mimepart~new
+say msg~content~changeStr('0d0a'x, '|')
+signal on syntax name e1
+msg~content = .object~new
+e1: say condition('o')~code condition('o')~message
+m = .smtp~new
+say m~smtperrno '['m~authid']['m~password']['m~response']' m~cmdresponse~items m~debug m~localhost
+say m~connect('127.0.0.1:1') m~cmdresponse~toString('L', '|') '['m~smtperrno']'
+say m~connect('127.0.0.1:x')
+signal on syntax name e2
+m~send('x')
+e2: say condition('o')~code condition('o')~message
+m~localhost = 'myhost'
+say m~localhost
+signal on syntax name e3
+m~connect('127.0.0.1:1')
+e3: say condition('o')~code condition('o')~message
+::requires 'smtp.cls'
+----
+rc 0
+[stdout]
+[][][] 0
+plain
+MIME-Version: 1.0|Content-Type: text/plain|||
+93.948 Method argument MIMEPART must be of the MIMEMULTIPART class.
+SMTPERRNO [][][] 0 0 127.0.0.l
+-1 |EHLO 127.0.0.l| [   ]
+-1
+93.948 Method argument 1 must be of the SMTPMsg class.
+myhost
+97.1 Object "myhost" does not understand message "NAME".
+[stderr]
+
+# The interpreter's own descriptors (the timer's wake socket the signal
+# handler writes to, its deadline timer) sit at 1000 and above and are not
+# a program's to close: closing every lower number and refilling it with
+# sockets leaves a later HALT trapped, and closing the interpreter's numbers
+# fails as for a closed one (PR 4 review I3). Measured on the oracle, which
+# holds nothing at 1000 to 1003.
+program
+call on halt name caught
+say SockClose(1000) SockClose(1001) SockClose(1002) SockSock_Errno() SysClose(1003) SysGeterrno()
+do n = 3 to 999
+  call SockClose n
+end
+do 24
+  call SockSocket 'AF_INET', 'SOCK_DGRAM', 0
+end
+call SysKill SysGetpid(), 2
+call SysSleep 0.3
+say 'after'
+exit
+caught:
+  say 'halt trapped'
+  return
+::requires 'rxsock' LIBRARY
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+-1 -1 -1 9 -1 9
+halt trapped
+after
+[stderr]
+
+# A blocking accept waits no longer than the socket's SO_RCVTIMEO and a
+# blocking connect no longer than its SO_SNDTIMEO (PR 4 review I2): -1 with
+# EAGAIN, and -1 with EINPROGRESS while the connection goes on (a listener
+# with backlog 0 holds one connection, so the second cannot complete).
+program
+s = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
+call SockBind s, 'a.'
+call SockListen s, 0
+call SockGetSockName s, 'a.'
+say SockSetSockOpt(s, 'SOL_SOCKET', 'SO_RCVTIMEO', 500)
+t = time('r')
+say SockAccept(s) SockSock_Errno() (time('e') >= 0.45) (time('e') < 2)
+c0 = SockSocket('AF_INET', 'SOCK_STREAM', 0); say SockConnect(c0, 'a.')
+c = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+say SockSetSockOpt(c, 'SOL_SOCKET', 'SO_SNDTIMEO', 500)
+t = time('r')
+say SockConnect(c, 'a.') SockSock_Errno() (time('e') >= 0.45) (time('e') < 2)
+say SockConnect(c, 'a.') SockSock_Errno()
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+0
+-1 11 1 1
+0
+0
+-1 115 1 1
+-1 114
+[stderr]
+
+# SIGINT during a blocked SockSend raises HALT on the SockSend line (PR 4
+# review M1).
+program
+s = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
+call SockBind s, 'a.'
+call SockListen s, 1
+call SockGetSockName s, 'a.'
+c = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+call SockConnect c, 'a.'
+'(sleep 0.5; kill -INT' SysGetpid()') >/dev/null 2>&1 &'
+n = SockSend(c, copies('x', 50000000))
+say 'sent' (n > 0)
+say 'next clause'
+::requires 'rxsock' LIBRARY
+::requires 'rxunixsys' LIBRARY
+----
+rc 252
+[stdout]
+[stderr]
+     9 *-* n = SockSend(c, copies('x', 50000000))
+Error 4 running {dir}/probe.rex line 9:  Program interrupted.
+Error 4.1:  Program interrupted with HALT condition.
+
+# Two activities accepting on one listening socket: each connection reaches
+# one of them, and the other waits on (PR 4 review M3).
+program
+s = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
+call SockBind s, 'a.'
+call SockListen s, 5
+call SockGetSockName s, 'a.'
+r1 = .acceptor~new~start('take', s)
+r2 = .acceptor~new~start('take', s)
+call SysSleep 0.3
+c1 = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+say 'first' SockConnect(c1, 'a.')
+call SysSleep 0.3
+c2 = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+say 'second' SockConnect(c2, 'a.')
+say 'accepted' (r1~result > 0) (r2~result > 0)
+::class acceptor
+::method take
+  use arg s
+  return SockAccept(s)
+::requires 'rxsock' LIBRARY
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+first 0
+second 0
+accepted 1 1
+[stderr]

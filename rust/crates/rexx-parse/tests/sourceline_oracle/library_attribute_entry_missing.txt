@@ -3,4 +3,4 @@ count 5
    the accessor's own prefix, and the getter is the one reported first. */
 say 'the prolog ran'
 ::class k
-::attribute at external "LIBRARY rxregexp NoSuchGet"
+::attribute at external "LIBRARY rxregexpc NoSuchGet"

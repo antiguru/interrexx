@@ -3,8 +3,8 @@ count 28
    hands its package on as the new code's parent. A loadExternal* answer no
    directive has bound has no package: the new code still runs, and a bound
    one's package is the parent a later routine call resolves through. */
-m = .Method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Pos')
-r = .Routine~loadExternalRoutine('r', 'LIBRARY rxmath RxCalcPower')
+m = .Method~loadExternalMethod('m', 'LIBRARY rxregexpc RegExp_Pos')
+r = .Routine~loadExternalRoutine('r', 'LIBRARY rxmathc RxCalcPower')
 say 'unbound method package' show(m)
 p = .Package~new('fromsource', 'say "prolog under an unbound method"', m)
 say 'package answered' p~class

@@ -83,6 +83,13 @@ impl Interp {
         else {
             return Err(Loud::library_procedure_gone().into());
         };
+        if !entry.has_entry_point()
+            && let Some(body) = crate::extensions::method_body(&binding.library, &entry.name)
+        {
+            return self
+                .run_rust_method(body, owner, resolution, receiver, name, args, reserved)
+                .map(Started::Ran);
+        }
         let held = HeldCall::Method(entry.held(), resolution.method);
         let exits = self.leaves_driver();
         self.push_native_frame(owner, resolution.scope, Some(receiver), name, args, None);
@@ -311,12 +318,17 @@ impl Interp {
         args: &[Option<ObjRef>],
         executable: crate::RoutineObject,
     ) -> Result<Started<Option<ObjRef>>, Failure> {
-        let Some(entry) = self
-            .library_code_routine(code)
-            .and_then(|(library, index)| library.routine_at(index))
-        else {
+        let Some((library, index)) = self.library_code_routine(code) else {
             return Err(Loud::library_procedure_gone().into());
         };
+        let Some(entry) = library.routine_at(index) else {
+            return Err(Loud::library_procedure_gone().into());
+        };
+        if !entry.has_entry_point()
+            && let Some(body) = crate::extensions::routine_body(library, &entry.name)
+        {
+            return self.run_rust_routine(body, code, name, args, executable);
+        }
         let held = HeldCall::Routine(entry.held());
         let exits = self.leaves_driver();
         self.leave_next_native = false;
@@ -332,6 +344,117 @@ impl Interp {
         };
         self.end_library_routine(answered, pending, name, program, args)
             .map(Started::Ran)
+    }
+
+    /// [`Interp::run_library_method`] for a method of a library this crate
+    /// runs in Rust: the same frame, pin and guard as a native call, around
+    /// `body` in place of the stub.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the native call's own inputs, which run_library_method passes through"
+    )]
+    fn run_rust_method(
+        &mut self,
+        body: crate::extensions::MethodBody,
+        owner: ObjRef,
+        resolution: Resolution,
+        receiver: ObjRef,
+        name: &[u8],
+        args: &[Option<ObjRef>],
+        reserved: bool,
+    ) -> Result<Option<ObjRef>, Failure> {
+        self.push_native_frame(owner, resolution.scope, Some(receiver), name, args, None);
+        pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
+        let packaged = self.external_package_path(resolution.method).is_some();
+        self.native_frame_mut().packaged = packaged;
+        self.native_frame_mut().reserved = reserved;
+        // A failure is held on the frame as a callback's condition is, which
+        // settles the sends it ended where the call returns.
+        let answered = match body(self, receiver, resolution.scope, args) {
+            Ok(value) => {
+                if let Some(value) = value {
+                    self.roots.activity_mut().push_temp(value);
+                }
+                value
+            }
+            Err(failure) => {
+                self.hold_native_condition(failure);
+                None
+            }
+        };
+        let popped = self.pop_native_frame();
+        pin_leave!(self);
+        self.collect_under_stress();
+        if popped.reserved {
+            self.release_guard(crate::guards::GuardKey {
+                object: receiver,
+                scope: resolution.scope,
+            });
+        }
+        match popped.raised {
+            Some(failure) => {
+                self.reraise_in_caller(&failure);
+                Err(failure)
+            }
+            None => Ok(answered),
+        }
+    }
+
+    /// Marks `failure`, a condition a native call ended with, as re-raised in
+    /// the call's caller when it is a `SYNTAX` condition, as
+    /// [`Interp::raise_held_condition`] does: its POSITION, PROGRAM, PACKAGE
+    /// and report line become the caller's clause's, PROPAGATED is 1, and its
+    /// traceback keeps the raising line. Measured, oracle, over `RxCalcSqrt`
+    /// (by name and through `::routine ... external`), `RegExp_Match` and
+    /// `RegExp_Parse`: the boundary's refusal of an argument (88.921, 88.909)
+    /// and a raise in the argument's MAKESTRING (40.1) alike
+    /// (`lang/library_refusal_reraised.rex`, `lang/library_string_argument.rex`).
+    fn reraise_in_caller(&mut self, failure: &Failure) {
+        if !matches!(failure, Failure::Raised(held) if held.condition != "SYNTAX") {
+            self.activity.native_reraise = true;
+        }
+    }
+
+    /// [`Interp::run_library_routine`] for a routine of a library this crate
+    /// runs in Rust, blamed as a native routine is. A body that parked its
+    /// activity ([`Interp::park_rust_routine`]) answers `Entered`, its frame
+    /// gone: its continuation answers the call once the activity wakes.
+    fn run_rust_routine(
+        &mut self,
+        body: crate::extensions::RoutineBody,
+        code: usize,
+        name: &[u8],
+        args: &[Option<ObjRef>],
+        executable: crate::RoutineObject,
+    ) -> Result<Started<Option<ObjRef>>, Failure> {
+        self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, name, args, Some(code));
+        self.native_frame_mut().executable = executable;
+        pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
+        let program = self.library_code_program(code);
+        self.native_frame_mut().packaged = program.is_some();
+        let answered = match body(self, args) {
+            Ok(value) => {
+                self.roots.activity_mut().push_temp(value);
+                Some(value)
+            }
+            Err(failure) => {
+                self.hold_native_condition(failure);
+                None
+            }
+        };
+        let (ran, code) = (self.native_frame().executable, self.native_frame().code);
+        let popped = self.pop_native_frame();
+        pin_leave!(self);
+        self.collect_under_stress();
+        match popped.raised {
+            None if self.activity.native_park.is_some() => Ok(Started::Entered),
+            None => Ok(Started::Ran(answered)),
+            Some(failure) => {
+                self.reraise_in_caller(&failure);
+                self.blame_native_routine(name, program, args, ran, code);
+                Err(failure)
+            }
+        }
     }
 
     /// What a library routine answers once its stub has returned `answered`,
@@ -384,6 +507,7 @@ impl Interp {
     ) -> Option<(Result<Option<ObjRef>, Refused>, Option<usize>)> {
         let mut strings = CStringPool::new();
         let thread = self.thread_context();
+        let inbox = self.timer.inbox();
         let frame = self.native_token();
         if !exits {
             let stress = self.stress_collect;
@@ -396,6 +520,7 @@ impl Interp {
             if matches!(held, HeldCall::Routine(_)) {
                 activation.open_variable_pool();
             }
+            let _reachable = crate::embedding::OtherRun::enter(inbox);
             let answered = thread.enter(&activation, |contexts| match &held {
                 HeldCall::Method(held, _) => {
                     invoke::held_method(held, &contexts.method(), &activation, args)
@@ -552,6 +677,7 @@ impl Interp {
         pin_enter!(self, crate::pinning::PinKind::LibraryEntry);
         let mut strings = CStringPool::new();
         let thread = self.thread_context();
+        let inbox = self.timer.inbox();
         let (ran, pending) = {
             let frame = self.native_token();
             let activation = Activation::new(Conversion {
@@ -559,6 +685,7 @@ impl Interp {
                 strings: &mut strings,
             });
             activation.set_frame(frame);
+            let _reachable = crate::embedding::OtherRun::enter(inbox);
             let ran = thread.enter(&activation, |contexts| {
                 invoke::hook(library, hook, contexts, &activation)
             });
@@ -598,6 +725,7 @@ impl Interp {
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
         let mut strings = CStringPool::new();
         let thread = self.thread_context();
+        let inbox = self.timer.inbox();
         let (answered, pending) = {
             let frame = self.native_token();
             let activation = Activation::new(Conversion {
@@ -605,6 +733,7 @@ impl Interp {
                 strings: &mut strings,
             });
             activation.set_frame(frame);
+            let _reachable = crate::embedding::OtherRun::enter(inbox);
             let answered = thread.enter(&activation, |contexts| {
                 invoke::command(handler, contexts, &activation, address, issued, redirector)
             });
@@ -688,16 +817,24 @@ impl Interp {
         trapped: Option<ObjRef>,
     ) -> Result<Option<ObjRef>, Failure> {
         match answered {
-            Err(Refused::Raised) => Err(popped
-                .raised
-                .expect("a host answering Raised holds the condition it raised")),
+            Err(Refused::Raised) => {
+                let raised = popped
+                    .raised
+                    .expect("a host answering Raised holds the condition it raised");
+                self.reraise_in_caller(&raised);
+                Err(raised)
+            }
             Ok(value) => match popped.raised {
                 None => Ok(value),
                 Some(raised) => {
                     self.raise_held_condition(raised, popped.additional, popped.result, trapped)
                 }
             },
-            Err(refused) => Err(self.refusal(refused, packaged, popped.method)),
+            Err(refused) => {
+                let failure = self.refusal(refused, packaged, popped.method);
+                self.reraise_in_caller(&failure);
+                Err(failure)
+            }
         }
     }
 
@@ -1232,6 +1369,7 @@ impl OffBaton {
         thread: &rexx_api::ffi::ThreadContext,
         post: impl FnOnce(Completion),
     ) -> Option<usize> {
+        let inbox = host.timer.inbox();
         let OffBaton {
             held,
             native,
@@ -1248,6 +1386,7 @@ impl OffBaton {
         if matches!(held, HeldCall::Routine(_)) {
             activation.open_variable_pool();
         }
+        let _reachable = crate::embedding::OtherRun::enter(inbox);
         thread.enter(&activation, |contexts| post(held.call(native, contexts)));
         activation.pending()
     }
@@ -1333,6 +1472,7 @@ impl PooledCall {
             if matches!(held, HeldCall::Routine(_)) {
                 activation.open_variable_pool();
             }
+            let _reachable = crate::embedding::OtherRun::enter(Arc::clone(&self.inbox));
             let (completion, ended) = thread.enter(&activation, |contexts| {
                 drop(entered);
                 let completion = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -1947,7 +2087,7 @@ impl Interp {
     /// and so runs a class's own `defaultName`, and which falls back to the
     /// default name where that send raises, as message substitution does
     /// (`interpreter/concurrency/Activity.cpp:1300-1306`).
-    fn native_found(&mut self, object: ObjRef) -> Vec<u8> {
+    pub(crate) fn native_found(&mut self, object: ObjRef) -> Vec<u8> {
         let sends = match self.heap.get(object).map(|held| &held.body) {
             // A state that renders its own `stringValue` answers without a
             // send, which is the arm `Interp::to_text` takes for one; every
@@ -2068,7 +2208,7 @@ fn double_literal(number: &Number) -> String {
 /// (`interpreter/classes/NumberStringClass.cpp:4073`) as its string value:
 /// `%.*g` at two digits past the precision, capped at sixteen, then rounded
 /// to the precision and formatted at it.
-fn double_text(value: f64, precision: usize) -> Vec<u8> {
+pub(crate) fn double_text(value: f64, precision: usize) -> Vec<u8> {
     if value.is_nan() {
         return b"nan".to_vec();
     }

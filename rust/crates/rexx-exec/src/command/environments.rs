@@ -118,11 +118,9 @@ pub(crate) enum Resolved {
     /// A handler object written in Rexx.
     Rexx(ObjRef),
     Native(NativeKind),
-    /// Nothing; `removed` where `.CommandHandler~deregister` took the last
-    /// handler from a name the built-in or an extension's handler answered.
-    Unknown {
-        removed: bool,
-    },
+    /// Nothing, a name `.CommandHandler~deregister` took the last handler
+    /// from included.
+    Unknown,
 }
 
 /// The instance's command environments beyond the native table
@@ -215,9 +213,9 @@ impl Interp {
             return match stack.last() {
                 None => match self.classic_subcom(environment) {
                     Some(entry) => Resolved::Native(NativeKind::Classic(entry)),
-                    None => Resolved::Unknown { removed: true },
+                    None => Resolved::Unknown,
                 },
-                Some(Entry::Unresolved) => Resolved::Unknown { removed: true },
+                Some(Entry::Unresolved) => Resolved::Unknown,
                 Some(Entry::Rexx(object)) => Resolved::Rexx(*object),
                 Some(Entry::Native(at)) => {
                     Resolved::Native(self.environments.natives[*at].kind.clone())
@@ -226,7 +224,7 @@ impl Interp {
         }
         match self.native_environment(environment) {
             Some(kind) => Resolved::Native(kind),
-            None => Resolved::Unknown { removed: false },
+            None => Resolved::Unknown,
         }
     }
 

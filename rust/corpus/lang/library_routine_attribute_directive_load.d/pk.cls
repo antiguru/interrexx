@@ -1,2 +1,2 @@
 ::class K
-::attribute a get external "LIBRARY rxmath RxCalcSqrt"
+::attribute a get external "LIBRARY rxmathc RxCalcSqrt"

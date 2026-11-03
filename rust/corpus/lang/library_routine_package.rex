@@ -2,16 +2,16 @@
    whatever spelling of the entry a loadExternalRoutine or a ::ROUTINE asks
    for: its package is .nil until a directive binds the entry, and the first
    binder's afterwards, for a later binder's own routine too. */
-early = .Routine~loadExternalRoutine('r', 'LIBRARY rxmath RxCalcSqrt')
+early = .Routine~loadExternalRoutine('r', 'LIBRARY rxmathc RxCalcSqrt')
 say 'loaded before binding' show(early)
 p = .context~package~loadPackage('pk.cls')
 say 'the same object after pk.cls binds another spelling' show(early)
 say 'pk.cls routine' show(p~findRoutine('SQ'))
 p2 = .context~package~loadPackage('pk2.cls')
 say 'pk2.cls routine' show(p2~findRoutine('SQ'))
-say 'loaded as pk.cls spells it' show(.Routine~loadExternalRoutine('r', 'LIBRARY rxmath RXCALCSQRT'))
-say 'loaded in lower case' show(.Routine~loadExternalRoutine('r', 'LIBRARY rxmath rxcalcsqrt'))
-say 'another entry' show(.Routine~loadExternalRoutine('r', 'LIBRARY rxmath RxCalcPower'))
+say 'loaded as pk.cls spells it' show(.Routine~loadExternalRoutine('r', 'LIBRARY rxmathc RXCALCSQRT'))
+say 'loaded in lower case' show(.Routine~loadExternalRoutine('r', 'LIBRARY rxmathc rxcalcsqrt'))
+say 'another entry' show(.Routine~loadExternalRoutine('r', 'LIBRARY rxmathc RxCalcPower'))
 exit
 
 show: procedure

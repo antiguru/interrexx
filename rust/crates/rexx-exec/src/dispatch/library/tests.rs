@@ -34,7 +34,7 @@ fn open_rxregexp() -> rexx_api::load::Library {
 /// An interpreter started with an `LD_LIBRARY_PATH` naming that
 /// directory. The process variable is not touched: this is the
 /// interpreter's copy, which is the one the search reads.
-fn interp_that_can_see_rxregexp() -> Interp {
+fn interp_that_can_see_the_build_libraries() -> Interp {
     let mut interp = Interp::new();
     interp.adopt_environment(vec![(
         b"LD_LIBRARY_PATH".to_vec(),
@@ -45,6 +45,10 @@ fn interp_that_can_see_rxregexp() -> Interp {
     interp
 }
 
+/// `external_routines` is the instrument: `rxregexp` and `rxmath` no longer
+/// open a shared object, since this crate runs them in Rust, and no other test
+/// in this process opens it, so the process loader does not hold it already.
+///
 /// **One resolution path, and the assertion is on the side effect rather
 /// than on the answer.** Two `Loaded` answers would look alike whether or
 /// not the second one re-opened the library, and so would two answers
@@ -53,11 +57,11 @@ fn interp_that_can_see_rxregexp() -> Interp {
 /// happened once.
 #[test]
 fn a_library_named_twice_is_opened_once() {
-    let mut interp = interp_that_can_see_rxregexp();
-    let LibraryLoad::Loaded(first) = interp.resolve_library(b"rxregexp") else {
-        panic!("librxregexp.so did not load from the worktree's build directory");
+    let mut interp = interp_that_can_see_the_build_libraries();
+    let LibraryLoad::Loaded(first) = interp.resolve_library(b"external_routines") else {
+        panic!("libexternal_routines.so did not load from the worktree's build directory");
     };
-    let LibraryLoad::Loaded(second) = interp.resolve_library(b"rxregexp") else {
+    let LibraryLoad::Loaded(second) = interp.resolve_library(b"external_routines") else {
         panic!("the second resolve did not load");
     };
     assert_eq!(
@@ -88,13 +92,16 @@ fn the_search_path_is_what_makes_the_name_resolve() {
     let mut bare = Interp::new();
     bare.adopt_environment(Vec::new());
     assert!(
-        matches!(bare.resolve_library(b"rxregexp"), LibraryLoad::Missing),
-        "librxregexp.so is on the process loader's own path, so the test above \
+        matches!(
+            bare.resolve_library(b"external_routines"),
+            LibraryLoad::Missing
+        ),
+        "libexternal_routines.so is on the process loader's own path, so the test above \
          is not reading the directory it supplies"
     );
-    let mut seeing = interp_that_can_see_rxregexp();
+    let mut seeing = interp_that_can_see_the_build_libraries();
     assert!(matches!(
-        seeing.resolve_library(b"rxregexp"),
+        seeing.resolve_library(b"external_routines"),
         LibraryLoad::Loaded(_)
     ));
 }
@@ -112,12 +119,12 @@ fn a_search_directory_written_after_the_start_is_not_searched() {
     late.adopt_environment(Vec::new());
     late.env_set(b"LD_LIBRARY_PATH", Some(directory));
     assert!(matches!(
-        late.resolve_library(b"rxregexp"),
+        late.resolve_library(b"external_routines"),
         LibraryLoad::Missing
     ));
-    let mut early = interp_that_can_see_rxregexp();
+    let mut early = interp_that_can_see_the_build_libraries();
     assert!(matches!(
-        early.resolve_library(b"rxregexp"),
+        early.resolve_library(b"external_routines"),
         LibraryLoad::Loaded(_)
     ));
 }
@@ -177,8 +184,8 @@ fn a_version_refused_library_raises_once_and_is_held() {
 /// which does fail under that edit.
 #[test]
 fn a_library_call_answers_the_same_under_a_collection_at_every_allocation() {
-    let path =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/lang/library_method_external.rex");
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../corpus/lang/library_method_external_rust.rex");
     let text = std::fs::read(&path).expect("the corpus witness is readable");
     let invocation = || {
         crate::Invocation::none().with_environment(vec![(
@@ -431,7 +438,7 @@ fn a_held_library_is_not_replaced_by_a_later_answer() {
 /// `UNINIT` is an address inside the mapping.
 #[test]
 fn a_loaded_library_outlives_the_finaliser_sweep() {
-    let mut interp = interp_that_can_see_rxregexp();
+    let mut interp = interp_that_can_see_the_build_libraries();
     let LibraryLoad::Loaded(library) = interp.resolve_library(b"rxregexp") else {
         panic!("librxregexp.so did not load from the worktree's build directory");
     };
@@ -465,7 +472,7 @@ fn a_loaded_library_outlives_the_finaliser_sweep() {
 #[test]
 fn the_native_finaliser_answers_the_same_under_a_collection_at_every_allocation() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../corpus/lang/library_uninit_collected.rex");
+        .join("../../corpus/lang/library_uninit_collected_rust.rex");
     let text = std::fs::read(&path).expect("the corpus witness is readable");
     let invocation = || {
         crate::Invocation::none().with_environment(vec![(

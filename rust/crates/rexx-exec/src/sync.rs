@@ -18,6 +18,9 @@ pub(crate) use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 pub(crate) use std::thread;
 
 use std::sync::PoisonError;
+
+#[cfg(not(all(loom, test)))]
+use rexx_rxapi::reserved::{Reserved, reserve};
 use std::time::{Duration, Instant};
 
 /// Locks `mutex`. A panic that poisoned it left its state whole: every
@@ -39,10 +42,10 @@ pub(crate) fn wait<'a, T>(condvar: &Condvar, guard: MutexGuard<'a, T>) -> MutexG
 /// so a byte written while no timer thread reads stays until one does.
 #[cfg(not(all(loom, test)))]
 pub(crate) struct Wake {
-    reader: std::os::unix::net::UnixStream,
-    writer: std::os::unix::net::UnixStream,
+    reader: Reserved<std::os::unix::net::UnixStream>,
+    writer: Reserved<std::os::unix::net::UnixStream>,
     #[cfg(any(target_os = "linux", target_os = "android"))]
-    timer: std::os::fd::OwnedFd,
+    timer: Reserved<std::os::fd::OwnedFd>,
 }
 
 #[cfg(not(all(loom, test)))]
@@ -54,22 +57,26 @@ impl Wake {
             end.set_nonblocking(true)
                 .expect("a nonblocking wake socket");
         }
+        // Out of reach of a program's `SockClose(4)`: the signal handler
+        // writes to `writer` by number for the life of the process.
         Wake {
-            reader,
-            writer,
+            reader: reserve(reader),
+            writer: reserve(writer),
             #[cfg(any(target_os = "linux", target_os = "android"))]
-            timer: rustix::time::timerfd_create(
-                rustix::time::TimerfdClockId::Monotonic,
-                rustix::time::TimerfdFlags::NONBLOCK | rustix::time::TimerfdFlags::CLOEXEC,
-            )
-            .expect("the timer's deadline timer"),
+            timer: reserve(
+                rustix::time::timerfd_create(
+                    rustix::time::TimerfdClockId::Monotonic,
+                    rustix::time::TimerfdFlags::NONBLOCK | rustix::time::TimerfdFlags::CLOEXEC,
+                )
+                .expect("the timer's deadline timer"),
+            ),
         }
     }
 
     /// Wakes the timer. A full socket already holds a wake.
     pub(crate) fn notify(&self) {
         use std::io::Write;
-        let _ = (&self.writer).write(&[0]);
+        let _ = (&*self.writer).write(&[0]);
     }
 
     /// Blocks until a wake, `timeout`, or an interrupted poll, taking every
@@ -113,7 +120,7 @@ impl Wake {
                 timeout.as_ref(),
             );
         }
-        let _ = (&self.reader).read(&mut [0u8; 64]);
+        let _ = (&*self.reader).read(&mut [0u8; 64]);
     }
 
     /// Installs the signal handlers, writing to this socket.

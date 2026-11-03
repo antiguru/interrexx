@@ -632,20 +632,6 @@ impl Loud {
         }
     }
 
-    /// An `ADDRESS` environment no handler answers that a held native
-    /// package's loader registers through the classic subcommand API
-    /// (`RexxRegisterSubcomExe`), which this crate does not implement.
-    #[cold]
-    fn loader_environment(environment: &[u8]) -> Loud {
-        let shown = String::from_utf8_lossy(environment);
-        Loud {
-            message: owned_message(
-                &format!("ADDRESS environment \"{shown}\" a native package loader registers"),
-                Some(Owner::Phase10(rexx_core::Deferral::Extension)),
-            ),
-        }
-    }
-
     /// An operator whose **left** operand is an object that answers no
     /// operator message. No program reaches it: scout A's `spec-op.txt`
     /// probes, every dyadic and prefix operator on `.array`, `.local`,
@@ -1071,6 +1057,16 @@ pub(crate) mod internal_routines;
 /// Turning a name a program wrote into the path this interpreter opens, against
 /// the interpreter's own current directory rather than the process's.
 pub(crate) mod paths;
+
+/// The `rxregexp` pattern language and its matcher.
+pub(crate) mod regexp;
+
+/// The extension libraries this crate runs in Rust.
+pub(crate) mod extensions;
+
+/// The Rexx packages this crate ships, found by `::REQUIRES` after every
+/// search route.
+pub(crate) mod packages;
 
 /// Every internal-package routine name, for the test that re-derives them from
 /// the C++ tree.

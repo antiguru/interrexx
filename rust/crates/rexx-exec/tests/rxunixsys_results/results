@@ -1,0 +1,1039 @@
+# Loading (extensions-behaviour.md, "Loading"): not loaded by default; a
+# package library by every route; the Rexx names SysMkdirUnix and
+# SysRmdirUnix; no SysCrypt.
+program
+say rxfuncquery('SysGetpid')
+signal on syntax
+say SysGetpid()
+syntax: say condition('o')~code condition('o')~message
+say .context~package~loadLibrary('RXUNIXSYS')
+say .context~package~loadLibrary('rxunixsys')
+say rxfuncquery('SysGetpid') rxfuncquery('sysmkdirunix') rxfuncquery('SysRmdirUnix')
+say rxfuncquery('SysCrypt') rxfuncquery('SysMkdir') rxfuncquery('SysGettzname2')
+say rxfuncadd('SysGeterrnomsg', 'rxunixsys') rxfuncadd('SysCrypt', 'rxunixsys')
+say rxfuncdrop('SysGeterrnomsg') SysGeterrnomsg(2)
+----
+rc 0
+[stdout]
+1
+43.1 Could not find routine "SYSGETPID".
+0
+1
+0 0 0
+1 0 0
+0 1
+1 No such file or directory
+[stderr]
+
+program
+say rxfuncadd('SysGetppid', 'rxunixsys') SysGetsizeofptr()
+----
+rc 0
+[stdout]
+0 64
+[stderr]
+
+# Argument conversion: arity, omitted arguments, 32-bit integers (as the
+# string the native boundary requests: an Array's makeString), strings with
+# no string value, and a string cut at its first NUL.
+eval
+SysGetpid(1)
+SysGettzname1(1)
+SysUname('m', 'x')
+SysUmask()
+SysStat()
+SysStat('/dev/null')
+SysGetservbyname('http', 'tcp')
+SysGeterrnomsg()
+SysGeterrnomsg('x')
+SysGeterrnomsg(2147483648)
+SysGeterrnomsg(1.5)
+SysGeterrnomsg('')
+SysGeterrnomsg(' ')
+SysGeterrnomsg('0x1')
+SysGeterrnomsg(.nil)
+SysGeterrnomsg(.object~new)
+SysGeterrnomsg(.array~new)
+SysGeterrnomsg(' 12 ')
+SysGeterrnomsg('1e1')
+SysGeterrnomsg('1.0')
+SysGeterrnomsg('+5')
+SysGeterrnomsg('-0')
+SysGeterrnomsg(.array~of(5))
+SysGetpwuid('', 'n')
+SysStat(.nil, 'p')
+SysStat('/dev/null', .object~new)
+SysStat(.array~new, 'p')
+SysUname(.array~new)
+SysStat('/dev/null'||'00'x||'junk', 'p')
+SysStat('/dev/null', '00'x||'p')
+SysUname(,)
+SysGeterrnomsg(13,)
+----
+ERR 88.922 Too many arguments in invocation; 0 expected.
+ERR 88.922 Too many arguments in invocation; 0 expected.
+ERR 88.922 Too many arguments in invocation; 1 expected.
+ERR 88.901 Missing argument; argument 1 is required.
+ERR 88.901 Missing argument; argument 1 is required.
+ERR 88.901 Missing argument; argument 2 is required.
+ERR 88.901 Missing argument; argument 3 is required.
+ERR 88.901 Missing argument; argument 1 is required.
+ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "x".
+ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "2147483648".
+ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "1.5".
+ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "".
+ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found " ".
+ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "0x1".
+ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "The NIL object".
+ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "an Object".
+ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "an Array".
+"Out of memory"
+"No child processes"
+"Operation not permitted"
+"I/O error"
+"Ok"
+"I/O error"
+ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "".
+ERR 88.909 Argument 1 must have a string value.
+ERR 88.909 Argument 2 must have a string value.
+ERR 40.1 External routine "SYSSTAT" failed.
+ERR 40.1 External routine "SYSUNAME" failed.
+"crw-rw-rw-"
+ERR 40.1 External routine "SYSSTAT" failed.
+"Linux"
+"Permission denied"
+
+# SysGeterrnomsg's whole table, and what lies outside it.
+eval
+SysGeterrnomsg(-1)
+SysGeterrnomsg(-2147483647)
+SysGeterrnomsg(2147483647)
+SysGeterrnomsg(0)
+SysGeterrnomsg(1)
+SysGeterrnomsg(2)
+SysGeterrnomsg(3)
+SysGeterrnomsg(4)
+SysGeterrnomsg(5)
+SysGeterrnomsg(6)
+SysGeterrnomsg(7)
+SysGeterrnomsg(8)
+SysGeterrnomsg(9)
+SysGeterrnomsg(10)
+SysGeterrnomsg(11)
+SysGeterrnomsg(12)
+SysGeterrnomsg(13)
+SysGeterrnomsg(14)
+SysGeterrnomsg(15)
+SysGeterrnomsg(16)
+SysGeterrnomsg(17)
+SysGeterrnomsg(18)
+SysGeterrnomsg(19)
+SysGeterrnomsg(20)
+SysGeterrnomsg(21)
+SysGeterrnomsg(22)
+SysGeterrnomsg(23)
+SysGeterrnomsg(24)
+SysGeterrnomsg(25)
+SysGeterrnomsg(26)
+SysGeterrnomsg(27)
+SysGeterrnomsg(28)
+SysGeterrnomsg(29)
+SysGeterrnomsg(30)
+SysGeterrnomsg(31)
+SysGeterrnomsg(32)
+SysGeterrnomsg(33)
+SysGeterrnomsg(34)
+SysGeterrnomsg(35)
+SysGeterrnomsg(36)
+SysGeterrnomsg(37)
+SysGeterrnomsg(38)
+SysGeterrnomsg(39)
+SysGeterrnomsg(40)
+SysGeterrnomsg(41)
+SysGeterrnomsg(42)
+SysGeterrnomsg(43)
+SysGeterrnomsg(44)
+SysGeterrnomsg(45)
+SysGeterrnomsg(46)
+SysGeterrnomsg(47)
+SysGeterrnomsg(48)
+SysGeterrnomsg(49)
+SysGeterrnomsg(50)
+SysGeterrnomsg(51)
+SysGeterrnomsg(52)
+SysGeterrnomsg(53)
+SysGeterrnomsg(54)
+SysGeterrnomsg(55)
+SysGeterrnomsg(56)
+SysGeterrnomsg(57)
+SysGeterrnomsg(58)
+SysGeterrnomsg(59)
+SysGeterrnomsg(60)
+SysGeterrnomsg(61)
+SysGeterrnomsg(62)
+SysGeterrnomsg(63)
+SysGeterrnomsg(64)
+SysGeterrnomsg(65)
+SysGeterrnomsg(66)
+SysGeterrnomsg(67)
+SysGeterrnomsg(68)
+SysGeterrnomsg(69)
+SysGeterrnomsg(70)
+SysGeterrnomsg(71)
+SysGeterrnomsg(72)
+SysGeterrnomsg(73)
+SysGeterrnomsg(74)
+SysGeterrnomsg(75)
+SysGeterrnomsg(76)
+SysGeterrnomsg(77)
+SysGeterrnomsg(78)
+SysGeterrnomsg(79)
+SysGeterrnomsg(80)
+SysGeterrnomsg(81)
+SysGeterrnomsg(82)
+SysGeterrnomsg(83)
+SysGeterrnomsg(84)
+SysGeterrnomsg(85)
+SysGeterrnomsg(86)
+SysGeterrnomsg(87)
+SysGeterrnomsg(88)
+SysGeterrnomsg(89)
+SysGeterrnomsg(90)
+SysGeterrnomsg(91)
+SysGeterrnomsg(92)
+SysGeterrnomsg(93)
+SysGeterrnomsg(94)
+SysGeterrnomsg(95)
+SysGeterrnomsg(96)
+SysGeterrnomsg(97)
+SysGeterrnomsg(98)
+SysGeterrnomsg(99)
+SysGeterrnomsg(100)
+SysGeterrnomsg(101)
+SysGeterrnomsg(102)
+SysGeterrnomsg(103)
+SysGeterrnomsg(104)
+SysGeterrnomsg(105)
+SysGeterrnomsg(106)
+SysGeterrnomsg(107)
+SysGeterrnomsg(108)
+SysGeterrnomsg(109)
+SysGeterrnomsg(110)
+SysGeterrnomsg(111)
+SysGeterrnomsg(112)
+SysGeterrnomsg(113)
+SysGeterrnomsg(114)
+SysGeterrnomsg(115)
+SysGeterrnomsg(116)
+SysGeterrnomsg(117)
+SysGeterrnomsg(118)
+SysGeterrnomsg(119)
+SysGeterrnomsg(120)
+SysGeterrnomsg(121)
+SysGeterrnomsg(122)
+SysGeterrnomsg(123)
+SysGeterrnomsg(124)
+SysGeterrnomsg(125)
+SysGeterrnomsg(126)
+SysGeterrnomsg(127)
+SysGeterrnomsg(128)
+SysGeterrnomsg(129)
+SysGeterrnomsg(130)
+SysGeterrnomsg(131)
+SysGeterrnomsg(132)
+SysGeterrnomsg(133)
+----
+"Unknown"
+ERR 88.907 Argument 1 must be in the range -2147483648 to 2147483647; found "-2.14748365E+9".
+"Unknown"
+"Ok"
+"Operation not permitted"
+"No such file or directory"
+"No such process"
+"Interrupted system call"
+"I/O error"
+"No such device or address"
+"Argument list too long"
+"Exec format error"
+"Bad file number"
+"No child processes"
+"Try again"
+"Out of memory"
+"Permission denied"
+"Bad address"
+"Block device required"
+"Device or resource busy"
+"File exists"
+"Cross-device link"
+"No such device"
+"Not a directory"
+"Is a directory"
+"Invalid argument"
+"File table overflow"
+"Too many open files"
+"Not a typewriter"
+"Text file busy"
+"File too large"
+"No space left on device"
+"Illegal seek"
+"Read-only file system"
+"Too many links"
+"Broken pipe"
+"Math argument out of domain of func"
+"Math result not representable"
+"Resource deadlock would occur"
+"File name too long"
+"No record locks available"
+"Function not implemented"
+"Directory not empty"
+"Too many symbolic links encountered"
+"Operation would block"
+"No message of desired type"
+"Identifier removed"
+"Channel number out of range"
+"Level 2 not synchronized"
+"Level 3 halted"
+"Level 3 reset"
+"Link number out of range"
+"Protocol driver not attached"
+"No CSI structure available"
+"Level 2 halted"
+"Invalid exchange"
+"Invalid request descriptor"
+"Exchange full"
+"No anode"
+"Invalid request code"
+"Invalid slot"
+"Deadlock"
+"Bad font file format"
+"Device not a stream"
+"No data available"
+"Timer expired"
+"Out of streams resources"
+"Machine is not on the network"
+"Package not installed"
+"Object is remote"
+"Link has been severed"
+"Advertise error"
+"Srmount error"
+"Communication error on send"
+"Protocol error"
+"Multihop attempted"
+"RFS specific error"
+"Not a data message"
+"Value too large for defined data type"
+"Name not unique on network"
+"File descriptor in bad state"
+"Remote address changed"
+"Can not access a needed shared library"
+"Accessing a corrupted shared library"
+".lib section in a.out corrupted"
+"Attempting to link in too many shared libraries"
+"Cannot exec a shared library directly"
+"Illegal byte sequence"
+"Interrupted system call should be restarted"
+"Streams pipe error"
+"Too many users"
+"Socket operation on non-socket"
+"Destination address required"
+"Message too long"
+"Protocol wrong type for socket"
+"Protocol not available"
+"Protocol not supported"
+"Socket type not supported"
+"Operation not supported on transport endpoint"
+"Protocol family not supported"
+"Address family not supported by protocol"
+"Address already in use"
+"Cannot assign requested address"
+"Network is down"
+"Network is unreachable"
+"Network dropped connection because of reset"
+"Software caused connection abort"
+"Connection reset by peer"
+"No buffer space available"
+"Transport endpoint is already connected"
+"Transport endpoint is not connected"
+"Cannot send after transport endpoint shutdown"
+"Too many references: cannot splice"
+"Connection timed out"
+"Connection refused"
+"Host is down"
+"No route to host"
+"Operation already in progress"
+"Operation now in progress"
+"Stale NFS file handle"
+"Structure needs cleaning"
+"Not a XENIX named type file"
+"No XENIX semaphores available"
+"Is a named type file"
+"Remote I/O error"
+"Quota exceeded"
+"No medium found"
+"Wrong medium type"
+"Operation Canceled"
+"Required key not available"
+"Key has expired"
+"Key has been revoked"
+"Key was rejected by service"
+"Owner died"
+"State not recoverable"
+"Operation not possible due to RF-kill"
+"Unknown"
+
+# Constant and option-driven results.
+eval
+SysGetsizeofptr()
+SysUname()
+SysUname('s')
+SysUname('System')
+SysUname('')
+SysUname('x')
+SysGethostname() == SysUname('n')
+SysUname('N') == SysUname('node')
+SysGetpid()~datatype('W')
+SysGetppid()~datatype('W')
+SysGettid()~datatype
+SysGetuid() == SysGeteuid()
+SysGetgid() == SysGetegid()
+SysGetsid(0) == SysGetsid(SysGetpid())
+SysGetpgid(0) == SysGetpgrp()
+SysGetpgid(SysGetpid()) == SysGetpgrp()
+SysSignal(1)
+SysSignal(1, '')
+SysSignal(1, 'x')
+SysSignal(999, 'd')
+SysSignal(999, 'Ignore')
+----
+"64"
+"Linux"
+"Linux"
+"Linux"
+ERR 40.1 External routine "SYSUNAME" failed.
+ERR 40.1 External routine "SYSUNAME" failed.
+"1"
+"1"
+"1"
+"1"
+"NUM"
+"1"
+"1"
+"1"
+"1"
+"1"
+ERR 88.901 Missing argument; argument 2 is required.
+ERR 40.1 External routine "SYSSIGNAL" failed.
+ERR 40.1 External routine "SYSSIGNAL" failed.
+"0"
+"0"
+
+# SysStat: failures, a missing file, and /dev/null's fixed fields.
+eval
+SysStat('', 'x')
+SysStat('/nonexist', '')
+SysStat('/nonexist', 'q')
+SysStat('/nonexist', 'd')
+SysStat('/nonexist', 'p')
+SysStat('/dev/null', 'q')
+SysStat('/dev/null', 'xyzzy')
+SysStat('/dev/null', 'r')
+SysStat('/dev/null', 'RDEV')
+SysStat('/dev/null', 'p')
+SysStat('/dev/null', 's')
+SysStat('/', 'p')~left(1)
+SysStat('/dev/null', 'd')~datatype('W')
+SysStat('/dev/null', 'i')~datatype('W')
+SysStat('/dev/null', 'n')~datatype('W')
+SysStat('/', 'm')~length SysStat('/', 'a')~words SysStat('/', 'c')~wordlength(1)
+----
+ERR 40.1 External routine "SYSSTAT" failed.
+ERR 40.1 External routine "SYSSTAT" failed.
+""
+""
+""
+ERR 40.1 External routine "SYSSTAT" failed.
+ERR 40.1 External routine "SYSSTAT" failed.
+"259"
+"259"
+"crw-rw-rw-"
+"0"
+"d"
+"1"
+"1"
+"1"
+"19 2 10"
+
+# SysChmod's permission text.
+eval
+SysChmod('/nonexist', 'rwx')
+SysChmod('/nonexist', 'rwxrwxrwx')
+SysChmod('/nonexist', 'RWXrwxrwx')
+SysChmod('/nonexist', 'rwsrwSrwt')
+SysChmod('/nonexist', 'rwsrwSrwT')
+SysChmod('/nonexist', 'rwxrwxrws')
+SysChmod('/nonexist', 'rwtrwxrwx')
+SysChmod('/nonexist', 'rwxrwxrwxx')
+SysChmod('/nonexist', '---------')
+SysChmod('', 'rwxrwxrwx')
+----
+ERR 40.1 External routine "SYSCHMOD" failed.
+"-1"
+ERR 40.1 External routine "SYSCHMOD" failed.
+"-1"
+"-1"
+ERR 40.1 External routine "SYSCHMOD" failed.
+ERR 40.1 External routine "SYSCHMOD" failed.
+ERR 40.1 External routine "SYSCHMOD" failed.
+"-1"
+"-1"
+
+# Users and groups: root is uid 0 and gid 0 everywhere.
+eval
+SysGetpwnam('', 'n')
+SysGetpwnam('root', '')
+SysGetpwnam('root', 'x')
+SysGetpwnam('nosuchuserq', 'x')
+SysGetpwnam('nosuchuserq', 'n')
+SysGetpwnam('root', 'n')
+SysGetpwnam('root', 'Name')
+SysGetpwnam('root', 'u')
+SysGetpwnam('root', 'g')
+SysGetpwnam('root', 'd')
+SysGetpwnam('root', 'p')
+SysGetpwuid(0, 'n')
+SysGetpwuid(0, 'user')
+SysGetpwuid(0, 'group')
+SysGetpwuid(-5, 'n')
+SysGetpwuid(-1, 'q')
+SysGetpwuid(0, '')
+SysGetpwuid(0, 'q')
+SysGetgrnam('root', 'n')
+SysGetgrnam('root', 'g')
+SysGetgrnam('root', 'p')
+SysGetgrnam('root', 'm')~class
+SysGetgrnam('root', 'q')
+SysGetgrnam('nosuchgroupq', 'q')
+SysGetgrnam('', 'n')
+SysGetgrnam('root', '')
+SysGetgrgid(0, 'n')
+SysGetgrgid(0, 'GROUP')
+SysGetgrgid(0, 'pw')
+SysGetgrgid(0, '')
+SysGetgrgid(0, 'z')
+SysGetgrgid(2147483646, 'q')
+----
+ERR 40.1 External routine "SYSGETPWNAM" failed.
+ERR 40.1 External routine "SYSGETPWNAM" failed.
+ERR 40.1 External routine "SYSGETPWNAM" failed.
+""
+""
+"root"
+"root"
+"0"
+"0"
+"/root"
+""
+"root"
+"0"
+"0"
+""
+""
+ERR 40.1 External routine "SYSGETPWUID" failed.
+ERR 40.1 External routine "SYSGETPWUID" failed.
+"root"
+"0"
+""
+"The Array class"
+ERR 40.1 External routine "SYSGETGRNAM" failed.
+ERR 40.1 External routine "SYSGETGRNAM" failed.
+ERR 40.1 External routine "SYSGETGRNAM" failed.
+ERR 40.1 External routine "SYSGETGRNAM" failed.
+"root"
+"0"
+""
+ERR 40.1 External routine "SYSGETGRGID" failed.
+ERR 40.1 External routine "SYSGETGRGID" failed.
+ERR 40.1 External routine "SYSGETGRGID" failed.
+
+# Services: http is 80/tcp with the alias www.
+eval
+SysGetservbyname('http', 'tcp', 'p')
+SysGetservbyname('http', 'tcp', 'n')
+SysGetservbyname('www', 'tcp', 'n')
+SysGetservbyname('www', 'tcp', 'a')
+SysGetservbyname('http', 'tcp', '')
+SysGetservbyname('http', 'tcp', 'q')
+SysGetservbyname('nosuchsvc', 'tcp', 'q')
+SysGetservbyname('nosuchsvc', 'tcp', '')
+SysGetservbyname('', 'tcp', 'n')
+SysGetservbyname('http', '', 'n')
+SysGetservbyname('http', 'TCP', 'n')
+SysGetservbyname('HTTP', 'tcp', 'n')
+SysGetservbyport(80, 'tcp', 'n')
+SysGetservbyport(80, 'tcp', 'Port')
+SysGetservbyport(80, 'tcp', 'a')
+SysGetservbyport(0, 'tcp', 'n')
+SysGetservbyport(-1, 'tcp', 'n')
+SysGetservbyport(65535, 'tcp', 'n')
+SysGetservbyport(65534, 'tcp', 'n')
+SysGetservbyport(80, '', 'n')
+SysGetservbyport(80, 'tcp', '')
+SysGetservbyport(80, 'tcp', 'q')
+----
+"80"
+"http"
+"http"
+Array[1]: www
+ERR 40.1 External routine "SYSGETSERVBYNAME" failed.
+ERR 40.1 External routine "SYSGETSERVBYNAME" failed.
+""
+""
+ERR 40.1 External routine "SYSGETSERVBYNAME" failed.
+ERR 40.1 External routine "SYSGETSERVBYNAME" failed.
+""
+""
+"http"
+"80"
+Array[1]: www
+ERR 40.1 External routine "SYSGETSERVBYPORT" failed.
+ERR 40.1 External routine "SYSGETSERVBYPORT" failed.
+ERR 40.1 External routine "SYSGETSERVBYPORT" failed.
+""
+ERR 40.1 External routine "SYSGETSERVBYPORT" failed.
+ERR 40.1 External routine "SYSGETSERVBYPORT" failed.
+ERR 40.1 External routine "SYSGETSERVBYPORT" failed.
+
+# Deviation 90: SysWordexp is refused. It stays registered (RxFuncQuery
+# answers 0 once RxFuncAdd has registered it, as on the oracle), and every call raises the routine failure,
+# whose description says why: the PR 4 review's input, a plain pattern, a
+# command substitution of each form, plain words, empty text and no argument
+# alike. Nothing runs: the review's input and the substitutions would each
+# make a file, and none exists after.
+ruled
+call RxFuncAdd 'SysWordexp', 'rxunixsys', 'SysWordexp'
+say RxFuncQuery('SysWordexp')
+do text over '"${x-''}"; touch made1; "''}"', '*', '$(touch made2)', '`touch made3`', 'a b', ''
+  say try(text)
+end
+signal on syntax name none
+call SysWordexp
+none: say condition('o')~code condition('d')
+made = 0
+do n = 1 to 3
+  if stream('made'n, 'c', 'query exists') \== '' then made += 1
+end
+say 'made' made
+exit
+try: procedure
+  use arg text
+  signal on syntax name refused
+  return SysWordexp(text)~items
+refused:
+  return condition('o')~code condition('d')
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+0
+40.1 SysWordexp is refused (Deviation 90)
+40.1 SysWordexp is refused (Deviation 90)
+40.1 SysWordexp is refused (Deviation 90)
+40.1 SysWordexp is refused (Deviation 90)
+40.1 SysWordexp is refused (Deviation 90)
+40.1 SysWordexp is refused (Deviation 90)
+40.1 SysWordexp is refused (Deviation 90)
+made 0
+[stderr]
+
+# glibc's tzname for the program's TZ.
+program
+do tz over 'UTC', 'Europe/Berlin', 'XYZ3', 'XYZ3ABC', 'XYZ3ABC,M3.2.0,M11.1.0', '<+03>-3', 'AB3', 'XYZ', 'XYZ+3:30', 'XYZ-a', ':UTC', '/usr/share/zoneinfo/UTC', 'Nowhere/X'
+  call value 'TZ', tz, 'ENVIRONMENT'
+  say tz '['SysGettzname1()']['SysGettzname2()']'
+end
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+UTC [UTC][UTC]
+Europe/Berlin [CET][CEST]
+XYZ3 [XYZ][XYZ]
+XYZ3ABC [XYZ][ABC]
+XYZ3ABC,M3.2.0,M11.1.0 [XYZ][ABC]
+<+03>-3 [+03][+03]
+AB3 [][]
+XYZ [XYZ][]
+XYZ+3:30 [XYZ][XYZ]
+XYZ-a [XYZ][]
+:UTC [UTC][UTC]
+/usr/share/zoneinfo/UTC [UTC][UTC]
+Nowhere/X [Nowhere][]
+[stderr]
+
+# Files, in the case's own directory, which holds the file f and the
+# directory sub. Relative names are the program's directory's.
+program
+call directory '{dir}'
+call SysUmask 2
+say 'umask' SysUmask(18) SysUmask(18)
+say 'mkdir' SysMkdirUnix('m1', 511) SysStat('m1', 'p')
+say 'mkdir again' SysMkdirUnix('m1', 448) SysGeterrno()
+say 'rmdir' SysRmdirUnix('m1') '['SysStat('m1', 'p')']' SysGeterrno()
+say 'rmdir again' SysRmdirUnix('m1') SysGeterrno()
+say 'symlink' SysSymlink('f', 'ln') SysStat('ln', 'p') SysStat('ln', 's')
+say 'dangling' SysSymlink('nothere', 'dl') '['SysStat('dl', 'p')']' SysGeterrno()
+say 'link' SysLink('f', 'hl') SysStat('f', 'n') (SysStat('hl', 'i') = SysStat('f', 'i'))
+say 'link again' SysLink('f', 'hl') SysGeterrno()
+say 'unlink' SysUnlink('hl') SysUnlink('ln') SysUnlink('dl') SysStat('f', 'n')
+say 'unlink again' SysUnlink('hl') SysGeterrno()
+say 'chmod' SysChmod('f', 'rwsr-S--t') SysStat('f', 'p')
+say 'chmod' SysChmod('f', 'rw-r-----') SysStat('f', 'p')
+say 'chmod dir' SysChmod('sub', 'rwxr-x--T') SysStat('sub', 'p')
+say 'chmod none' SysChmod('nothere', 'rw-r-----') SysGeterrno()
+say 'access' SysAccess('f', 4) SysAccess('f', 1) SysGeterrno() SysAccess('nothere', 0) SysGeterrno()
+say 'access bad mode' SysAccess('f', 8) SysGeterrno()
+say 'euidaccess' SysEuidaccess('f', 2) SysEuidaccess('nothere', 0) SysGeterrno()
+say 'chown' SysChown('f', -1, -1) SysLchown('f', -1, -1) SysChown('nothere', -1, -1) SysGeterrno()
+say 'size' SysStat('f', 's') SysStat('f', 'Size') SysStat('sub', 'N') (SysStat('f', 'u') = SysGetuid()) (SysStat('f', 'g') = SysGetegid())
+say 'notdir' '['SysStat('f/x', 's')']' SysGeterrno() '['SysStat('f/x', 'q')']'
+d = SysGetdirlist('.')
+say 'dirlist' d~class d~items d~hasItem('.') d~hasItem('..') d~hasItem('f') d~hasItem('sub')
+say 'dirlist sub' SysGetdirlist('sub')~sort~toString('L', ',')
+say 'dirlist none' SysGetdirlist('nothere')~class SysGetdirlist('nothere')~items SysGeterrno()
+say 'dirlist file' SysGetdirlist('f')~items SysGeterrno()
+say 'close' SysClose(-1) SysGeterrno()
+say 'sticky' SysClose(-1) SysAccess('.', 0) SysMkdirUnix('m2', 448) SysRmdirUnix('m2') SysGeterrno()
+say 'kill self' SysKill(SysGetpid(), 0) SysKill(SysGetpid(), 999) SysGeterrno()
+say 'kill none' SysKill(2147483647, 0) SysGeterrno()
+say 'sid none' SysGetsid(2147483647) SysGeterrno() SysGetpgid(2147483647) SysGeterrno()
+say 'setpgid none' SysSetpgid(2147483647, 0) SysGeterrno() SysSetpgid(-1, 0) SysGeterrno()
+say 'own ids' SysSeteuid(SysGeteuid()) SysSetegid(SysGetegid()) SysSetgid(SysGetgid()) SysSetuid(SysGetuid())
+say 'chroot' SysChroot('sub') SysGeterrno() directory()
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+umask 2 18
+mkdir 0 drwxr-xr-x
+mkdir again -1 17
+rmdir 0 [] 2
+rmdir again -1 2
+symlink 0 -rw-rw-r-- 6
+dangling 0 [] 2
+link 0 2 1
+link again -1 17
+unlink 0 0 0 1
+unlink again -1 2
+chmod 0 -rwsr-S--t
+chmod 0 -rw-r-----
+chmod dir 0 drwxr-x--T
+chmod none -1 2
+access 0 -1 13 -1 2
+access bad mode -1 22
+euidaccess 0 -1 2
+chown 0 0 -1 2
+size 6 6 2 1 1
+notdir [] 20 []
+dirlist The Array class 5 1 1 1 1
+dirlist sub .,..
+dirlist none The Array class 0 2
+dirlist file 0 20
+close -1 9
+sticky -1 0 0 0 9
+kill self 0 -1 22
+kill none -1 3
+sid none -1 3 -1 3
+setpgid none -1 3 -1 22
+own ids 0 0 0 0
+chroot -1 2 /
+[stderr]
+
+# Extended attributes on the case's file, which starts with none in the
+# user namespace.
+program
+call directory '{dir}'
+initial = SysListxattr('f')
+say 'list' initial~class SysListxattr('nothere')~class '['SysListxattr('nothere')']' SysGeterrno()
+say 'set' SysSetxattr('f', 'user.a', 'v1') SysGetxattr('f', 'user.a')
+say 'missing' '['SysGetxattr('f', 'user.zz')']' SysGeterrno()
+say 'bad namespace' SysSetxattr('f', 'bad.a', 'v1') SysGeterrno()
+say 'listed' SysListxattr('f')~difference(initial)~toString('L', ',')
+say 'remove' SysRemovexattr('f', 'user.a') SysRemovexattr('f', 'user.a') SysGeterrno()
+say 'nul' SysSetxattr('f', 'user.n', 'a'||'00'x||'b') length(SysGetxattr('f', 'user.n'))
+say 'empty' SysSetxattr('f', 'user.e', '') '['SysGetxattr('f', 'user.e')']'
+say 'long' SysSetxattr('f', 'user.l', copies('x', 1000)) length(SysGetxattr('f', 'user.l'))
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+list The Array class The String class [] 2
+set 0 v1
+missing [] 61
+bad namespace -1 95
+listed user.a
+remove 0 -1 61
+nul 0 1
+empty 0 []
+long 0 1000
+[stderr]
+
+# Routine failures reach the caller as the oracle reports them.
+program
+say 1
+x = SysStat('', 'x')
+::requires 'rxunixsys' LIBRARY
+----
+rc 216
+[stdout]
+1
+[stderr]
+       *-* Compiled routine "SYSSTAT".
+     2 *-* x = SysStat('', 'x')
+Error 40 running {dir}/probe.rex line 2:  Incorrect call to routine.
+Error 40.1:  External routine "SYSSTAT" failed.
+
+program
+x = SysUmask('x')
+::requires 'rxunixsys' LIBRARY
+----
+rc 168
+[stdout]
+[stderr]
+       *-* Compiled routine "SYSUMASK".
+     1 *-* x = SysUmask('x')
+Error 88 running {dir}/probe.rex line 1:  Invalid argument.
+Error 88.907:  Argument 1 must be in the range -2147483648 to 2147483647; found "x".
+
+program
+x = SysStat(.nil, 'x')
+::requires 'rxunixsys' LIBRARY
+----
+rc 168
+[stdout]
+[stderr]
+       *-* Compiled routine "SYSSTAT".
+     1 *-* x = SysStat(.nil, 'x')
+Error 88 running {dir}/probe.rex line 1:  Invalid argument.
+Error 88.909:  Argument 1 must have a string value.
+
+program
+x = SysGetpid(1)
+::requires 'rxunixsys' LIBRARY
+----
+rc 168
+[stdout]
+[stderr]
+       *-* Compiled routine "SYSGETPID".
+     1 *-* x = SysGetpid(1)
+Error 88 running {dir}/probe.rex line 1:  Invalid argument.
+Error 88.922:  Too many arguments in invocation; 0 expected.
+
+# SysSignal and SysKill on this process. SIGINT, a halting signal the
+# interpreter handles, raises HALT at the SysKill's clause, before the
+# SysSleep after it sleeps.
+program
+call on halt name h
+say 'kill' SysKill(SysGetpid(), 2)
+call SysSleep 0.5
+say 'alive'
+exit
+h: say 'halted'; exit 3
+::requires 'rxunixsys' LIBRARY
+----
+rc 3
+[stdout]
+kill 0
+halted
+[stderr]
+
+# Ignored, SIGINT halts nothing.
+program
+call on halt name h
+say 'signal' SysSignal(2, 'Ignore')
+say 'kill' SysKill(SysGetpid(), 2)
+call SysSleep 0.5
+say 'alive'
+exit
+h: say 'halted'; exit 3
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+signal 0
+kill 0
+alive
+[stderr]
+
+# With its default action, SIGINT ends the process (rc -1: no exit status),
+# and what was said before it is written.
+program
+call on halt name h
+say 'signal' SysSignal(2, 'd')
+say 'kill' SysKill(SysGetpid(), 2)
+say 'alive'
+exit
+h: say 'halted'; exit 3
+::requires 'rxunixsys' LIBRARY
+----
+rc -1
+[stdout]
+signal 0
+[stderr]
+
+program
+call on halt name h
+say 'signal' SysSignal(15, 'D')
+say 'kill' SysKill(SysGetpid(), 15)
+say 'alive'
+exit
+h: say 'halted'; exit 3
+::requires 'rxunixsys' LIBRARY
+----
+rc -1
+[stdout]
+signal 0
+[stderr]
+
+# Real-time signals by number: ignored, then sent; then their default
+# action, which ends the process.
+program
+say 'signal' SysSignal(40, 'I')
+say 'kill' SysKill(SysGetpid(), 40)
+say 'signal' SysSignal(40, 'D')
+say 'kill' SysKill(SysGetpid(), 40)
+say 'alive'
+::requires 'rxunixsys' LIBRARY
+----
+rc -1
+[stdout]
+signal 0
+kill 0
+signal 0
+[stderr]
+
+# signal() refuses SIGKILL, SIGSTOP, glibc's reserved 32 and 33 and numbers
+# no signal has, answering 0 with EINVAL kept; kill() refuses a number no
+# signal has.
+program
+do sig over 9, 19, 32, 33, 0, 65, -1, 64, 1
+  call SysClose -1
+  say sig SysSignal(sig, 'i') SysGeterrno()
+end
+call SysClose -1
+say SysKill(SysGetpid(), 65) SysGeterrno() SysKill(SysGetpid(), -2) SysGeterrno()
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+9 0 22
+19 0 22
+32 0 22
+33 0 22
+0 0 22
+65 0 22
+-1 0 22
+64 0 9
+1 0 9
+-1 22 -1 22
+[stderr]
+
+# errno: immediately after a failing call it is that call's, and a success
+# leaves it. Rulings, errno: before any call of this library it is 0, and
+# the interpreter's own I/O (the SAYs here) does not change it; the oracle
+# answers 25 or 29 at start, by host and where standard output goes.
+ruled
+say SysGeterrno()
+r = SysUnlink('/nonexist/x'); e = SysGeterrno()
+say r e
+say SysGeterrno()
+say SysGetpid() > 0 SysGeterrno()
+call SysClose -1
+say SysGeterrno()
+say SysGetpwnam('root', 'u') SysGeterrno()
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+0
+-1 2
+2
+1
+9
+0 0
+[stderr]
+
+# errno is the activity's own: another thread starts at 0.
+ruled
+call SysClose -1
+say SysGeterrno()
+m = .t~new~start('run')
+say m~result
+say SysGeterrno()
+::class t
+::method run
+  reply SysGeterrno()
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+9
+0
+9
+[stderr]
+
+# Deviation 88: an unknown group crashes the oracle (D6); this crate raises
+# the routine failure.
+ruled
+signal on syntax name a
+say SysGetgrnam('nosuchgroupq', 'n')
+a: say condition('o')~code condition('o')~message
+signal on syntax name b
+say SysGetgrgid(2147483646, 'm')
+b: say condition('o')~code condition('o')~message
+x = SysGetgrnam('nosuchgroupq', 'p')
+::requires 'rxunixsys' LIBRARY
+----
+rc 216
+[stdout]
+40.1 External routine "SYSGETGRNAM" failed.
+40.1 External routine "SYSGETGRGID" failed.
+[stderr]
+       *-* Compiled routine "SYSGETGRNAM".
+     7 *-* x = SysGetgrnam('nosuchgroupq', 'p')
+Error 40 running {dir}/probe.rex line 7:  Incorrect call to routine.
+Error 40.1:  External routine "SYSGETGRNAM" failed.
+
+# With SIGCHLD ignored every child is reaped before the interpreter waits for
+# it: a command's return code is negative, with no FAILURE trace (PR 4 review
+# M2). The oracle's value is whatever its stack held (measured -35, -64, -100,
+# -112 across runs); this crate answers -ECHILD.
+program
+say SysSignal(17, 'I')
+'true'
+say rc < 0
+'exit 3'
+say rc < 0
+address system 'echo hello' with output stem o.
+say (rc < 0) o.0 o.1
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+0
+1
+1
+1 1 hello
+[stderr]
+
+# The value this crate answers for that return code.
+ruled
+say SysSignal(17, 'I')
+'true'
+say rc
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+0
+-10
+[stderr]

@@ -94,10 +94,9 @@ pub(super) fn collect(
     let ended = i32::try_from(running.id())
         .ok()
         .and_then(rustix::process::Pid::from_raw)
-        .and_then(|pid| {
-            rustix::process::pidfd_open(pid, rustix::process::PidfdFlags::empty()).ok()
-        });
-    let ended_reader = ended.as_ref();
+        .and_then(|pid| rustix::process::pidfd_open(pid, rustix::process::PidfdFlags::empty()).ok())
+        .map(rexx_rxapi::reserved::reserve);
+    let ended_reader = ended.as_deref();
     let mut out = Vec::new();
     let mut err = Vec::new();
     std::thread::scope(|scope| {
@@ -150,6 +149,12 @@ pub(super) fn collect(
     });
     let rc = match running.wait() {
         Ok(status) => exit_code(status),
+        // Reaped already, as every child is while `SysSignal(17, 'I')` has
+        // SIGCHLD ignored. The oracle reads the status `waitpid` left unset
+        // and answers a negative return code with no condition, its value
+        // whatever was on its stack (measured: -35, -64, -100, -112 across
+        // runs); this crate answers -ECHILD, the defined value of that kind.
+        Err(error) if error.raw_os_error() == Some(libc::ECHILD) => -libc::ECHILD,
         Err(_) => UNKNOWN_COMMAND,
     };
     Waited { rc, out, err }

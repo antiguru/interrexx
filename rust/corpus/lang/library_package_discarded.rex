@@ -2,7 +2,7 @@
    routines, unattached methods, resources or prolog it declared before the
    refusal: a library method it bound still names it as its package, and
    nothing it declared is found through it, as a context either. */
-early = .Method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Parse')
+early = .Method~loadExternalMethod('m', 'LIBRARY rxregexpc RegExp_Parse')
 say 'pk.cls' try('pk.cls')
 pkg = early~package
 say 'bound package' show(early)
@@ -21,7 +21,7 @@ say 'digits' pkg~digits
 say 'Package~new context' newpackage('call pkr', early)
 say 'newFile context' newfile('rf.cls', early)
 
-later = .Method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Pos')
+later = .Method~loadExternalMethod('m', 'LIBRARY rxregexpc RegExp_Pos')
 say 'pk2.cls' try('pk2.cls')
 pkg2 = later~package
 say 'bound package' show(later)

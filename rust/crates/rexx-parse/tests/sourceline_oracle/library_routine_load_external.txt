@@ -1,7 +1,7 @@
 count 9
 /* A loadExternalRoutine answer loads the library, which makes the entry
    callable by name, and the answer itself runs through call, callWith and []. */
-r = .Routine~loadExternalRoutine('r', 'LIBRARY rxmath RxCalcSqrt')
+r = .Routine~loadExternalRoutine('r', 'LIBRARY rxmathc RxCalcSqrt')
 say 'load' r~class~id
 say 'main' RxCalcSqrt(16)
 say 'call' r~call(16)

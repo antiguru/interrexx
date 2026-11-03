@@ -1270,6 +1270,7 @@ impl Interp {
         #[cfg(test)]
         self.note_cancelled_wait();
         self.activity.when_parked = false;
+        self.activity.socket_wait = None;
         self.activities.guards.withdraw(running);
         self.activity.guard_waits.retain(|wait| !wait.queued);
         self.activity.guarded_send = None;
@@ -2151,6 +2152,10 @@ impl Interp {
             {
                 let deadline = self.now() + crate::dispatch::queue_methods::WAIT_POLL;
                 Some(ParkReason::Sleep { deadline })
+            }
+            ParkReason::Sleep { .. } if !self.activity.woken_by_halt => {
+                crate::builtin::rxsock::wait_again(self)
+                    .map(|deadline| ParkReason::Sleep { deadline })
             }
             _ => None,
         }

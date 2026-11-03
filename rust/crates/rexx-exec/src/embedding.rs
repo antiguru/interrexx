@@ -326,11 +326,58 @@ fn classic_inbox(thread: usize) -> Option<ClassicInbox> {
         .map(|(_, inbox)| std::sync::Arc::clone(inbox))
 }
 
+/// The native calls in flight, each under the thread running it with its interpreter's inbox,
+/// innermost last.
+fn other_runs() -> std::sync::MutexGuard<'static, Vec<(usize, ClassicInbox)>> {
+    static RUNS: std::sync::Mutex<Vec<(usize, ClassicInbox)>> = std::sync::Mutex::new(Vec::new());
+    RUNS.lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// A native call in flight on this thread, reachable by `RexxSetHalt` from another thread
+/// until this is dropped.
+pub(crate) struct OtherRun(usize);
+
+impl OtherRun {
+    /// Registers the native call this thread is entering, of the interpreter whose inbox is
+    /// `inbox`.
+    pub(crate) fn enter(inbox: ClassicInbox) -> OtherRun {
+        let thread = crate::signal::current_thread();
+        other_runs().push((thread, inbox));
+        OtherRun(thread)
+    }
+}
+
+impl Drop for OtherRun {
+    fn drop(&mut self) {
+        let mut runs = other_runs();
+        if let Some(at) = runs.iter().rposition(|(thread, _)| *thread == self.0) {
+            runs.remove(at);
+        }
+    }
+}
+
 /// `RexxSetHalt` (`ActivityManager::haltActivity`): the run on `thread` halted at its next
-/// clause; `false` where no run is in flight there.
+/// clause; `false` where no run is in flight there. A `thread` no `RexxStart` run is on that is
+/// this thread halts the activity whose native call this thread runs, as a command handler that
+/// names its own thread reaches it (hostemu's `HI`); a native call on another thread has its
+/// interpreter halted as a `RexxStart` run is (measured: the oracle's halt reaches a native
+/// function's activity from a thread the function started).
 pub fn classic_halt(thread: usize) -> bool {
-    let Some(inbox) = classic_inbox(thread) else {
-        return false;
+    let current = crate::signal::current_thread();
+    let inbox = classic_inbox(thread).or_else(|| {
+        (thread != current)
+            .then(|| {
+                other_runs()
+                    .iter()
+                    .rev()
+                    .find(|(on, _)| *on == thread)
+                    .map(|(_, inbox)| std::sync::Arc::clone(inbox))
+            })
+            .flatten()
+    });
+    let Some(inbox) = inbox else {
+        return thread == current && rexx_api::ffi::classic::halt_calling();
     };
     inbox.post(crate::timer::Posted::Halt);
     inbox

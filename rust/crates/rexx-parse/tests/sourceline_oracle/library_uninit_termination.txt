@@ -6,8 +6,8 @@ r = .Sub~new('a*b')
 say 'live' r~probe~class~id
 
 ::class Re subclass Object
-::method init external "LIBRARY rxregexp RegExp_Init"
-::method uninit external "LIBRARY rxregexp RegExp_Uninit"
+::method init external "LIBRARY rxregexpc RegExp_Init"
+::method uninit external "LIBRARY rxregexpc RegExp_Uninit"
 ::method probe
   expose CSELF
   return CSELF

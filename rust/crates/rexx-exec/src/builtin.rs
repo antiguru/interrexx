@@ -34,6 +34,15 @@ pub(crate) mod registrations;
 /// same kind of code reached through a different table.
 pub(crate) mod platform;
 pub(crate) mod rexxutil;
+/// The `rxmath` extension library's routines, run in Rust.
+pub(crate) mod rxmath;
+/// The `rxsock` extension library's routines, run in Rust.
+pub(crate) mod rxsock;
+/// The `unsafe` `rxsock` is granted: descriptor borrows and raw socket
+/// options (Moritz, 2026-11-03).
+mod rxsock_sys;
+/// The `rxunixsys` extension library's routines, run in Rust.
+pub(crate) mod rxunixsys;
 pub(crate) mod state;
 /// Crate-visible because the builtins are not the only place this
 /// interpreter searches a haystack for a byte: a `PARSE` template's

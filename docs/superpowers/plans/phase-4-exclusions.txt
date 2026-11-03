@@ -3152,6 +3152,85 @@ DEVIATIONS -- permanent, chosen
      utilities/rxapi.testGroup TEST_RXAPI_LOCKED asserts both oracle
      behaviours, so it is licensed under this Deviation.
 
+ 87. RXREGEXP MATCHES ITS DOCUMENTED GRAMMAR (Phase 10). OWNER: none.
+
+     Ruled by Moritz 2026-11-03: "Grammar, record Deviation."
+     The oracle's rxregexp matcher answers some patterns wrongly: an
+     alternative that starts with a starred item matches as if the star
+     covered the whole alternation (`a*b|c` matches `ac`), and a plus
+     followed by a starred item loses a repetition (`a+c*` does not match
+     `aa`). A repeated sub-expression that can match the empty string
+     (`(a*)*`) and a set range ending at '7F'x never terminate and grow
+     memory. This crate's rxregexp implements the pattern language as
+     documented and always terminates. Compiling terminates too: a count
+     whose copies would take the automaton past 2,000,000 states is compile
+     error 5 (PR 4 review I1; measured, the oracle crashes on `a{2000000000}`
+     and `((a{1000}){1000}){1000}` and answers `a{10000000}`). The ooTest
+     rxregexp group passes either way; the cases are recorded in
+     docs/superpowers/records/oracle-defects/defects.json.
+
+ 88. EXTENSION CALLS THAT CRASH THE ORACLE RAISE A CONDITION (Phase 10).
+     OWNER: none.
+
+     Ruled by Moritz 2026-11-03: "Raise a Rexx error."
+     Four extension calls end the oracle with SIGSEGV: a RegularExpression
+     `match` or `pos` with no pattern compiled, any RegularExpression call
+     after an explicit `uninit`, SysGetgrnam or SysGetgrgid for a group that
+     does not exist, SockSelect with a non-numeric entry in a stem, and
+     SysWordexp of a word list wordexp rejects (`a;b`, `{a,b}`, an
+     unterminated quote; added 2026-11-03 under the same rule). This
+     crate raises a defined condition in each case instead of inventing a
+     result. The crashes are recorded in defects.json.
+
+ 89. REWRITTEN EXTENSION PACKAGES HAVE THEIR OWN LINE NUMBERS (Phase 10).
+     OWNER: none.
+
+     Ruled by Moritz 2026-11-03: "Accept, record Deviation."
+     rxregexp.cls, socket.cls, streamsocket.cls, mime.cls and smtp.cls are
+     rewritten under the clean-room rules (Phase 10 design, Decisions), so
+     their source lines differ from the oracle's. A traceback through a
+     condition raised inside one of them names this crate's line numbers;
+     messages, codes and results match the oracle.
+
+ 90. SYSWORDEXP IS REFUSED (Phase 10). OWNER: none.
+
+     Ruled by Moritz 2026-11-03: "Can we refuse the function for the
+     moment? It seems like a function we need to be careful with".
+     The oracle's SysWordexp calls wordexp with no flags, so command
+     substitution ($(...) and backquotes) runs a shell. This crate keeps
+     SysWordexp registered (RxFuncQuery answers 0 after RxFuncAdd, as on the
+     oracle), but every call raises 40.1 for the routine, description
+     "SysWordexp is refused (Deviation 90)"; it expands nothing and starts
+     no process. ooTest's SysUnix TEST_WORDEXP is held under this Deviation.
+     Found by the PR 4 review: handing the text to /bin/sh after a pre-check
+     ran commands the oracle's wordexp read as plain text. Moritz's earlier
+     direction ("Can we refuse subshell? Just keep the safe expansion
+     part?") is the queued item .superpowers/sdd/queued/
+     2026-11-03-syswordexp-without-commands.md.
+
+ 91. A COMMAND WHOSE CHILD WAS REAPED BEFORE THE WAIT ANSWERS -10 (Phase 10).
+     OWNER: none.
+
+     Ruled by Moritz 2026-11-03: "-10, new Deviation".
+     After SysSignal(17, 'I') the kernel reaps every child, so the wait for
+     a command's process answers ECHILD. The oracle then answers a negative
+     return code with no FAILURE trace whose value is unset stack (measured
+     -35, -64, -100, -112). This crate answers -10 (-ECHILD), an ERROR as
+     for a child a signal ended. A command whose child a concurrent SysWait
+     reaped first answers the same way. Found by the PR 4 review (M2).
+
+ 92. THE INTERPRETER'S OWN DESCRIPTORS ARE OUT OF A PROGRAM'S REACH
+     (Phase 10). OWNER: none.
+
+     Ruled by Moritz 2026-11-03: "New Deviation".
+     The timer's wake pair and deadline timerfd, the rxapi connection and a
+     running command's pidfd are moved at creation to the lowest free number
+     at or above 1000 (24 below the RLIMIT_NOFILE soft limit where that is
+     lower). SockClose, SysClose and every other rxsock call answer EBADF
+     for one of these numbers. On the oracle a program can close the
+     interpreter's own descriptors; here that closed the timer's wake socket
+     and left a halt undelivered. Found by the PR 4 review (I3).
+
 EXPRKIND OWNERSHIP -- the expression forms 4a/4b do not evaluate
 ---------------------------------------------------------------------
 

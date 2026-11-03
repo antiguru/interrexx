@@ -7,5 +7,5 @@
 resource line
 ::END
 ::class Re public
-::method doparse external "LIBRARY rxregexp RegExp_Parse"
-::method missing external "LIBRARY rxregexp NoSuchEntry"
+::method doparse external "LIBRARY rxregexpc RegExp_Parse"
+::method missing external "LIBRARY rxregexpc NoSuchEntry"
