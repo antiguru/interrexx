@@ -1513,8 +1513,6 @@ impl Interp {
             let posted = self.timer.idle();
             self.file_completions(posted);
         }
-        #[cfg(test)]
-        WOUND_DOWN.with_borrow_mut(|wound| *wound += 1);
     }
 
     /// Files the completions posted since the last drain.
@@ -2778,12 +2776,6 @@ fn request_halt(target: &mut Activity, description: Option<Vec<u8>>) -> Option<b
 
 #[cfg(test)]
 thread_local! {
-    /// How many interpreters this thread wound down after their run.
-    pub(crate) static WOUND_DOWN: std::cell::RefCell<u64> = const { std::cell::RefCell::new(0) };
-}
-
-#[cfg(test)]
-thread_local! {
     /// How many driver exits for a native call this thread has made.
     static NATIVE_EXITS: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
     /// How many abandoned calls' frames the last run on this thread still
@@ -3012,7 +3004,7 @@ pub(crate) fn take_scripted() -> Option<Scripted> {
 mod pool;
 pub(crate) use pool::{POOL_BOUND, POOL_STACK_BYTES, Pool, Worker, posting_panics};
 #[cfg(test)]
-pub(crate) use pool::{threads_beyond_bound, threads_spawned};
+pub(crate) use pool::{last_pool_held, threads_beyond_bound, threads_spawned};
 
 #[cfg(test)]
 #[expect(clippy::disallowed_methods, reason = "these tests time real runs")]

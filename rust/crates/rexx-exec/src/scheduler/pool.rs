@@ -86,7 +86,7 @@ impl Pool {
     /// An empty pool that keeps at most `bound` threads, each with `stack`
     /// bytes of stack.
     pub(crate) fn new(stack: usize, bound: usize) -> Pool {
-        Pool {
+        let pool = Pool {
             shared: Arc::new(Shared {
                 state: Mutex::new(State {
                     idle: Vec::new(),
@@ -98,7 +98,10 @@ impl Pool {
                 }),
             }),
             stack,
-        }
+        };
+        #[cfg(test)]
+        LAST_POOL.with_borrow_mut(|last| *last = Some(Arc::downgrade(&pool.shared)));
+        pool
     }
 
     /// The stack each thread gets.
@@ -222,6 +225,20 @@ pub(crate) fn threads_spawned() -> u64 {
 thread_local! {
     /// How many threads this thread has spawned beyond its pool's bound.
     static BEYOND: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+thread_local! {
+    /// The last pool this thread made, while it or one of its threads holds it.
+    static LAST_POOL: std::cell::RefCell<Option<std::sync::Weak<Shared>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Whether the last pool this thread made is still held, by its interpreter or by one of its
+/// threads: `None` where this thread made none.
+#[cfg(test)]
+pub(crate) fn last_pool_held() -> Option<bool> {
+    LAST_POOL.with_borrow(|last| last.as_ref().map(|pool| pool.strong_count() > 0))
 }
 
 /// [`BEYOND`]'s count.

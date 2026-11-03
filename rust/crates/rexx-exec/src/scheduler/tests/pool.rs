@@ -193,8 +193,10 @@ pub(super) struct Ran {
     pub(super) thread: ThreadId,
     pub(super) takes: u64,
     pub(super) abandoned: usize,
-    /// How many interpreters the run's thread wound down after their run.
-    pub(super) wound_down: u64,
+    /// Whether the run's interpreter was dropped once it had served its calls: its pool,
+    /// which the interpreter and each pool thread hold, was released within ten seconds of the
+    /// run's end. `None` where the run made no pool.
+    pub(super) pool_released: Option<bool>,
 }
 
 impl Ran {
@@ -273,11 +275,26 @@ pub(super) fn run_shaped(source: &str, shape: Shape) -> std::thread::Result<Ran>
                 thread: std::thread::current().id(),
                 takes: crate::dispatch::library::callback_takes(),
                 abandoned: crate::scheduler::abandoned_held(),
-                wound_down: crate::scheduler::WOUND_DOWN.with_borrow(|wound| *wound),
+                pool_released: pool_released(),
             }
         })
         .expect("the interpreter thread")
         .join()
+}
+
+/// Whether the last pool this thread made is released within ten seconds: its threads end on
+/// their own once the interpreter has dropped it.
+#[expect(clippy::disallowed_methods, reason = "this waits on real pool threads")]
+fn pool_released() -> Option<bool> {
+    let end = Instant::now() + Duration::from_secs(10);
+    loop {
+        match crate::scheduler::last_pool_held() {
+            Some(true) if Instant::now() < end => {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            held => return held.map(|held| !held),
+        }
+    }
 }
 
 const MEETING: &str = "m = .t~new~start('other')\ncall MEET\nsay 'main'\nsay m~result\n\
@@ -715,5 +732,5 @@ fn a_run_ending_with_a_call_in_flight_serves_the_call_then_drops_the_interpreter
     .expect("the run did not panic");
     assert_eq!(ran.exits, 1, "{}", ran.stderr());
     assert_eq!(ran.stdout(), "");
-    assert_eq!(ran.wound_down, 1, "{}", ran.stderr());
+    assert_eq!(ran.pool_released, Some(true), "{}", ran.stderr());
 }
