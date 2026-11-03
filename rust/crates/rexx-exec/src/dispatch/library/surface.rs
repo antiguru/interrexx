@@ -76,18 +76,24 @@ impl Surface for Interp {
         additional: Option<ObjRef>,
         result: Option<ObjRef>,
     ) {
+        let name = name.to_ascii_uppercase();
+        // `RaiseCondition` has no error number to give a `SYNTAX` condition.
+        if name == b"SYNTAX" {
+            self.hold_api_misuse(
+                b"RaiseCondition cannot raise a SYNTAX condition; use RaiseException or RaiseConditionObject",
+            );
+            return;
+        }
         let description = description.map(|text| self.unsent_string_value_text(text));
+        if let Some(escalated) = self.options_escalation(&name, description.as_deref(), result) {
+            self.hold_raised(escalated, None, None, None);
+            return;
+        }
         let raised = Raised {
             description,
-            ..Raised::condition(Cow::Owned(String::from_utf8_lossy(name).into_owned()))
+            ..Raised::condition(Cow::Owned(String::from_utf8_lossy(&name).into_owned()))
         };
-        let frame = self.native_frame_mut();
-        frame.raised = Some(raised.into());
-        frame.additional = additional;
-        frame.result = result;
-        frame.condition = None;
-        frame.callee = false;
-        frame.levels = None;
+        self.hold_raised(raised, additional, result, None);
     }
 
     fn has_condition(&mut self) -> bool {
@@ -803,53 +809,163 @@ impl Surface for Interp {
         self.set_external_trace(on);
     }
 
-    /// `Activity::raiseConditionObject`: the condition `condition` names,
-    /// with its description, additional and result, and `condition` itself
-    /// as the object `CONDITION('O')` answers; a `SYNTAX` one by its `CODE`.
+    /// `Activity::raiseConditionObject` (`concurrency/Activity.cpp:776`): the
+    /// condition a copy of `condition` describes, with its description,
+    /// additional information, result and `RC`; a `SYNTAX` one by its `CODE`,
+    /// with the `RC`, `ERRORTEXT` and `MESSAGE` that follow from it. An
+    /// object that describes no condition is 93.900.
     fn raise_condition_object(&mut self, condition: ObjRef) -> bool {
         if !Surface::is_of_class(self, condition, "Directory") {
             return false;
         }
-        let text = |interp: &mut Interp, name: &[u8]| {
-            Surface::directory_entry(interp, condition, name)
-                .map(|value| interp.unsent_string_value_text(value))
+        let entry =
+            |interp: &mut Interp, name: &[u8]| Surface::directory_entry(interp, condition, name);
+        let Some(name) = entry(self, b"CONDITION").filter(|&name| self.is_string(name)) else {
+            self.hold_api_misuse(b"the condition object has no CONDITION name");
+            return true;
         };
-        let name = text(self, b"CONDITION")
-            .unwrap_or_default()
-            .to_ascii_uppercase();
-        let description = text(self, b"DESCRIPTION");
+        let name = self.unsent_string_value_text(name).to_ascii_uppercase();
+        let description =
+            entry(self, b"DESCRIPTION").map(|text| self.unsent_string_value_text(text));
+        let additional = entry(self, b"ADDITIONAL");
+        let result = entry(self, b"RESULT");
         let raised = if name == b"SYNTAX" {
-            let code = text(self, b"CODE").unwrap_or_default();
-            let code = String::from_utf8_lossy(&code).into_owned();
-            let (major, minor) = code.split_once('.').unwrap_or((code.as_str(), "0"));
+            let code = entry(self, b"CODE")
+                .filter(|&code| self.is_string(code))
+                .map(|code| self.unsent_string_value_text(code))
+                .and_then(|code| valid_error_code(&code));
+            let Some((major, minor)) = code else {
+                self.hold_api_misuse(
+                    b"the CODE of a SYNTAX condition object must be a valid error number",
+                );
+                return true;
+            };
+            let substitutions = match additional {
+                None => Vec::new(),
+                Some(array) => match self.array_slots_of(array) {
+                    Some(items) if Surface::is_of_class(self, array, "Array") => items
+                        .into_iter()
+                        .map(|item| {
+                            item.map(|object| self.native_found(object))
+                                .unwrap_or_default()
+                        })
+                        .collect(),
+                    _ => {
+                        self.hold_api_misuse(
+                            b"the ADDITIONAL of a SYNTAX condition object must be an array",
+                        );
+                        return true;
+                    }
+                },
+            };
+            if rexx_inventory::errors::lookup(major, 0).is_none() {
+                let code = format!("{major}.{minor}").into_bytes();
+                self.hold_raised(Raised::syntax(98, 941, vec![code]), None, None, None);
+                return true;
+            }
             Raised {
                 description,
-                ..Raised::syntax(
-                    major.trim().parse().unwrap_or(0),
-                    minor.trim().parse().unwrap_or(0),
-                    Vec::new(),
-                )
+                ..Raised::syntax(major, minor, substitutions)
             }
         } else {
+            if let Some(escalated) = self.options_escalation(&name, description.as_deref(), result)
+            {
+                self.hold_raised(escalated, None, None, None);
+                return true;
+            }
+            let rc = entry(self, b"RC").map(|rc| self.unsent_string_value_text(rc));
             Raised {
                 description,
+                rc,
                 ..Raised::condition(Cow::Owned(String::from_utf8_lossy(&name).into_owned()))
             }
         };
-        let additional = Surface::directory_entry(self, condition, b"ADDITIONAL");
-        let result = Surface::directory_entry(self, condition, b"RESULT");
-        let frame = self.native_frame_mut();
-        frame.raised = Some(raised.into());
-        frame.additional = additional;
-        frame.result = result;
-        frame.condition = Some(condition);
-        frame.callee = false;
-        frame.levels = None;
+        self.hold_raised(raised, additional, result, None);
         true
     }
 }
 
+/// `validErrorCode` (`concurrency/Activity.cpp:740`): `code` as an error
+/// number, a major part from 1 to 99 and a minor part from 0 to 999.
+fn valid_error_code(code: &[u8]) -> Option<(u16, u16)> {
+    let whole =
+        |part: &[u8]| rexx_num::Number::parse_bytes(part).and_then(|number| number.int64_value(9));
+    let (major, minor) = match code.iter().position(|&byte| byte == b'.') {
+        Some(point) => (&code[..point], Some(&code[point + 1..])),
+        None => (code, None),
+    };
+    let major = u16::try_from(whole(major)?)
+        .ok()
+        .filter(|major| (1..100).contains(major))?;
+    let minor = match minor {
+        Some(minor) => u16::try_from(whole(minor)?)
+            .ok()
+            .filter(|&minor| minor < 1000)?,
+        None => 0,
+    };
+    Some((major, minor))
+}
+
 impl Interp {
+    /// Holds `raised` on the running native frame, with the objects its
+    /// condition object names, for the call to raise once it returns.
+    fn hold_raised(
+        &mut self,
+        raised: Raised,
+        additional: Option<ObjRef>,
+        result: Option<ObjRef>,
+        condition: Option<ObjRef>,
+    ) {
+        let frame = self.native_frame_mut();
+        frame.raised = Some(raised.into());
+        frame.additional = additional;
+        frame.result = result;
+        frame.condition = condition;
+        frame.callee = false;
+        frame.levels = None;
+    }
+
+    /// `Error_Incorrect_method_user_defined` (93.900) with `message`, which
+    /// the condition APIs raise for a request they cannot serve.
+    fn hold_api_misuse(&mut self, message: &[u8]) {
+        self.hold_raised(
+            Raised::syntax(93, 900, vec![message.to_vec()]),
+            None,
+            None,
+            None,
+        );
+    }
+
+    /// `Activity::checkConditionSyntaxOptions` (`concurrency/Activity.cpp:595`):
+    /// the `SYNTAX` error the calling activation's `::OPTIONS` make of the
+    /// condition `name` a native call raises, with its description and, for
+    /// `ERROR` and `FAILURE`, its result as the return code.
+    fn options_escalation(
+        &mut self,
+        name: &[u8],
+        description: Option<&[u8]>,
+        result: Option<ObjRef>,
+    ) -> Option<Raised> {
+        let options = matches!(
+            name,
+            b"ERROR" | b"FAILURE" | b"LOSTDIGITS" | b"NOSTRING" | b"NOTREADY"
+        );
+        if !options || self.native_callerless() || !self.condition_raises_syntax(name) {
+            return None;
+        }
+        let rc = match result {
+            Some(result) if matches!(name, b"ERROR" | b"FAILURE") => {
+                self.unsent_string_value_text(result)
+            }
+            _ => Vec::new(),
+        };
+        Some(crate::command::escalated(
+            name,
+            description.unwrap_or_default(),
+            &rc,
+        ))
+    }
+
     /// `buffer`'s state, lent to the innermost native call: its storage is
     /// not reallocated in place until that call ends.
     fn lent_buffer(&mut self, buffer: ObjRef) -> Option<&mut BufferState> {

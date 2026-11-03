@@ -829,7 +829,8 @@ impl Interp {
             Ok(value) => match popped.raised {
                 None => Ok(value),
                 Some(raised) => {
-                    self.raise_held_condition(raised, popped.additional, popped.result, trapped)
+                    let held = (raised, popped.additional, popped.result);
+                    self.raise_held_condition(held, value, trapped)
                 }
             },
             Err(refused) => {
@@ -843,15 +844,19 @@ impl Interp {
     /// A condition a callback raised and the extension did not clear, raised
     /// once the call has returned (`NativeActivation::checkConditions`,
     /// `:1787`): a `SYNTAX` condition as the call's failure; any other is
-    /// offered to the caller's trap, and the call answers its `RESULT` where
-    /// no `SIGNAL ON` takes it.
+    /// offered to the caller's trap, and the call answers the condition's
+    /// `RESULT` where no `SIGNAL ON` takes it, or else `returned`, what the
+    /// call itself returned. As with `RAISE`, an untrapped `HALT` or
+    /// `NOMETHOD` is an error. `held` is the condition with its
+    /// `ADDITIONAL` and `RESULT` objects.
     fn raise_held_condition(
         &mut self,
-        raised: Failure,
-        additional: Option<ObjRef>,
-        result: Option<ObjRef>,
+        held: (Failure, Option<ObjRef>, Option<ObjRef>),
+        returned: Option<ObjRef>,
         trapped: Option<ObjRef>,
     ) -> Result<Option<ObjRef>, Failure> {
+        let (raised, additional, result) = held;
+        let answer = result.or(returned);
         let condition = match &raised {
             Failure::Raised(held) if held.condition != "SYNTAX" => held.condition.to_string(),
             _ => {
@@ -886,14 +891,35 @@ impl Interp {
                     fragment_depth: self.activity.fragment_depth,
                     trace_failure: None,
                 });
-                Ok(result)
+                Ok(answer)
             }
             Some(_) => {
                 self.activity.pending_additional = additional;
                 self.activity.pending_result = result;
                 Err(raised)
             }
-            None => Ok(result),
+            None if condition == "HALT" => Err(Raised::halt().into()),
+            None if condition == "NOMETHOD" => {
+                let raised = match (additional, held.description.as_deref()) {
+                    (Some(receiver), Some(description)) => {
+                        // `Error_No_method_name`'s substitutions are the
+                        // receiver object itself and the message name.
+                        let name = self.text(description);
+                        self.roots.activity_mut().push_temp(name);
+                        let array = rexx_api::callbacks::Surface::new_array(
+                            self,
+                            &[Some(receiver), Some(name)],
+                        );
+                        self.roots.activity_mut().push_temp(array);
+                        let receiver = self.string_value_text(receiver)?;
+                        self.activity.pending_additional = Some(array);
+                        Raised::no_method(&receiver, description)
+                    }
+                    _ => Raised::syntax(97, 5, Vec::new()),
+                };
+                Err(raised.into())
+            }
+            None => Ok(answer),
         }
     }
 

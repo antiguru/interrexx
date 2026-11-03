@@ -2071,19 +2071,37 @@ impl Activation<'_> {
     /// `RaiseConditionObject`: a null or unknown handle is 93.911, one naming
     /// no directory 93.948, as the oracle's stub reports them.
     pub fn raise_condition_object(&self, handle: RexxObjectPtr) {
-        let Some(condition) = self.resolve(handle) else {
-            self.raise_syntax(93_911);
-            return;
-        };
-        let raised = self.with_surface("RexxThreadInterface.RaiseConditionObject", true, |cx| {
-            cx.host
-                .surface()
-                .expect("checked by with_surface")
-                .raise_condition_object(condition)
+        const SLOT: &str = "RexxThreadInterface.RaiseConditionObject";
+        let condition = self.resolve(handle);
+        self.with_surface(SLOT, (), |cx| {
+            // Each substitution held by this call while the array is made.
+            let argument = |cx: &mut Conversion<'_>, texts: &[&[u8]]| {
+                let items: Vec<Option<ObjRef>> = texts
+                    .iter()
+                    .map(|text| {
+                        let string = cx.host.new_string(text);
+                        cx.host.register_local(string);
+                        Some(string)
+                    })
+                    .collect();
+                let surface = cx.host.surface().expect("checked by with_surface");
+                surface.new_array(&items)
+            };
+            // `Error_Incorrect_method_null` and `Error_Incorrect_method_noclass`,
+            // naming argument 1 (and the Directory class).
+            let Some(condition) = condition else {
+                let substitutions = argument(cx, &[b"1"]);
+                let surface = cx.host.surface().expect("checked by with_surface");
+                surface.raise_exception(93_911, Some(substitutions));
+                return;
+            };
+            let surface = cx.host.surface().expect("checked by with_surface");
+            if !surface.raise_condition_object(condition) {
+                let substitutions = argument(cx, &[b"1", b"Directory"]);
+                let surface = cx.host.surface().expect("checked by with_surface");
+                surface.raise_exception(93_948, Some(substitutions));
+            }
         });
-        if !raised {
-            self.raise_syntax(93_948);
-        }
     }
 
     /// `ObjectToValue`: `handle` converted as `declared` asks, or `None`

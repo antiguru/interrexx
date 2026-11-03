@@ -1505,3 +1505,53 @@ fn decode_condition_info_gives_what_the_structure_declares() {
          SYNTAX | 41001 | 41 |  | array of 1 | 0\n"
     );
 }
+
+/// `RaiseCondition` and `RaiseConditionObject` as the oracle raises them: an untrapped `HALT`
+/// or `NOMETHOD` is an error, `SYNTAX` cannot be raised by name, the call answers the
+/// condition's `RESULT` or else its own return value, the object raised is a copy of the one
+/// given with its `RC` and what a `SYNTAX` code implies, the caller's `::OPTIONS ERROR SYNTAX`
+/// applies, and an object that describes no condition is 93.900. The expected output is the
+/// oracle's.
+#[test]
+fn raise_condition_and_raise_condition_object_raise_as_the_oracle_does() {
+    let stdout = run_program(
+        "raise-condition",
+        include_str!("classic_api/raise_condition.rex"),
+        &[("METHODPackage.cls", &method_package())],
+    );
+    assert_eq!(
+        stdout,
+        "haltX HALT | The NIL object | The NIL object | halt description | The NIL object | The NIL object | 1 | The NIL object | The NIL object\n\
+         nomX NOMETHOD | The NIL object | The NIL object |  | The NIL object | The NIL object | 1 | The NIL object | The NIL object\n\
+         haltS SYNTAX | 4.1 | 4 |  | array 1 HALT | The NIL object | 1 | Program interrupted. | Program interrupted with HALT condition.\n\
+         nomS SYNTAX | 97.5 | 97 |  | array 0 The NIL object | The NIL object | 1 | Object method not found. | An unhandled NOMETHOD condition has been raised.\n\
+         nomS2 SYNTAX | 97.1 | 97 |  | array 2 receiver | The NIL object | 1 | Object method not found. | Object \"an Array\" does not understand message \"FOO\".\n\
+         userS NIL\n\
+         continue 1\n\
+         syntaxX SYNTAX | 93.900 | 93 |  | array 1 RaiseCondition cannot raise a SYNTAX condition; use RaiseException or RaiseConditionObject | The NIL object | 1 | Incorrect call to method. | RaiseCondition cannot raise a SYNTAX condition; use RaiseException or RaiseConditionObject.\n\
+         ret1 0\n\
+         ret2 7\n\
+         ret3 0\n\
+         \x20 handler ran\n\
+         ret4 7\n\
+         \x20 handler ran\n\
+         rcoSyntax SYNTAX | 40.1 | 40 | the description | array 1 XYZ | The NIL object | 1 | Incorrect call to routine. | External routine \"XYZ\" failed.\n\
+         same 0 1\n\
+         rcoErr ERROR | The NIL object | 127 | a command | The NIL object | The NIL object | 1 | The NIL object | The NIL object\n\
+         rcErr ERROR | The NIL object | The NIL object | a command | The NIL object | The NIL object | 1 | The NIL object | The NIL object\n\
+         hand1 USER MINE | The NIL object | The NIL object | hand made | The NIL object | The NIL object | 1 | The NIL object | The NIL object\n\
+         hand2 SYNTAX | 40.1 | 40 |  | array 1 HAND | The NIL object | 1 | Incorrect call to routine. | External routine \"HAND\" failed.\n\
+         rcoHalt HALT | The NIL object | The NIL object | halt description | The NIL object | The NIL object | 1 | The NIL object | The NIL object\n\
+         rcoHaltS SYNTAX | 4.1 | 4 |  | array 1 HALT | The NIL object | 1 | Program interrupted. | Program interrupted with HALT condition.\n\
+         rcoNom NOMETHOD | The NIL object | The NIL object | NOSUCHMETHOD | an Object | The NIL object | 1 | The NIL object | The NIL object\n\
+         rcoNomS SYNTAX | 97.1 | 97 |  | array 2 an Object | The NIL object | 1 | Object method not found. | Object \"an Object\" does not understand message \"NOSUCHMETHOD\".\n\
+         opt1 SYNTAX | 98.970 | 98 |  | array 2 a command | The NIL object | 1 | Execution error. | External command \"a command\" ended with return code .\n\
+         opt2 NIL\n\
+         err1 SYNTAX | 93.911 | 93 |  | array 1 1 | The NIL object | 1 | Incorrect call to method. | Method argument 1 must not be null.\n\
+         err2 SYNTAX | 93.948 | 93 |  | array 2 1 | The NIL object | 1 | Incorrect call to method. | Method argument 1 must be of the Directory class.\n\
+         err3 SYNTAX | 93.900 | 93 |  | array 1 the condition object has no CONDITION name | The NIL object | 1 | Incorrect call to method. | the condition object has no CONDITION name.\n\
+         err4 SYNTAX | 93.900 | 93 |  | array 1 the CODE of a SYNTAX condition object must be a valid error number | The NIL object | 1 | Incorrect call to method. | the CODE of a SYNTAX condition object must be a valid error number.\n\
+         err5 SYNTAX | 93.900 | 93 |  | array 1 the CODE of a SYNTAX condition object must be a valid error number | The NIL object | 1 | Incorrect call to method. | the CODE of a SYNTAX condition object must be a valid error number.\n\
+         err6 SYNTAX | 93.900 | 93 |  | array 1 the ADDITIONAL of a SYNTAX condition object must be an array | The NIL object | 1 | Incorrect call to method. | the ADDITIONAL of a SYNTAX condition object must be an array.\n"
+    );
+}

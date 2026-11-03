@@ -465,7 +465,7 @@ fn exit_code(status: std::process::ExitStatus) -> i32 {
 /// for `FAILURE`, the `LOSTDIGITS`, `NOSTRING` and `NOTREADY` ones for a
 /// handler's condition of that name (`Activity::raiseCondition`,
 /// `concurrency/Activity.cpp:596-620`), and 98.970 for any other.
-fn escalated(condition: &[u8], description: &[u8], rc: &[u8]) -> Raised {
+pub(crate) fn escalated(condition: &[u8], description: &[u8], rc: &[u8]) -> Raised {
     match condition {
         b"FAILURE" => Raised::failure_syntax(description, rc),
         b"LOSTDIGITS" => Raised::lostdigits(description),
