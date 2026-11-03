@@ -20,7 +20,7 @@ const MAX_PRECISION: u64 = 16;
 
 /// 88.922 where more arguments were passed than `arity`. An omitted argument
 /// at the end does not count: measured, oracle, `RxCalcSqrt(4,,,,)` is `2`.
-fn check_arity(args: &[Option<ObjRef>], arity: usize) -> Result<(), Failure> {
+pub(crate) fn check_arity(args: &[Option<ObjRef>], arity: usize) -> Result<(), Failure> {
     let passed = args
         .iter()
         .rposition(Option::is_some)
@@ -32,7 +32,7 @@ fn check_arity(args: &[Option<ObjRef>], arity: usize) -> Result<(), Failure> {
 }
 
 /// The argument at `position`, 88.901 where it is omitted.
-fn required(args: &[Option<ObjRef>], position: usize) -> Result<ObjRef, Failure> {
+pub(crate) fn required(args: &[Option<ObjRef>], position: usize) -> Result<ObjRef, Failure> {
     args.get(position - 1)
         .copied()
         .flatten()

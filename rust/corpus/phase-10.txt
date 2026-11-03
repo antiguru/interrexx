@@ -85,3 +85,9 @@ lang/library_routine_string_argument.rex
 lang/library_routine_string_argument_rust.rex
 lang/library_refusal_reraised.rex
 lang/library_refusal_reraised_rust.rex
+
+# PR 4 Task 3: rxunixsys as this crate's Rust library. The program of the same
+# name without _rust names the oracle's C build through the rxunixsysc link
+# (sidecar.rs's INSTRUMENTS); this copy names rxunixsys, which this crate
+# answers before any dlopen: its loader registers no command environment.
+lang/command_library_environments_unregistered_rust.rex

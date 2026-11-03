@@ -36,6 +36,8 @@ pub(crate) mod platform;
 pub(crate) mod rexxutil;
 /// The `rxmath` extension library's routines, run in Rust.
 pub(crate) mod rxmath;
+/// The `rxunixsys` extension library's routines, run in Rust.
+pub(crate) mod rxunixsys;
 pub(crate) mod state;
 /// Crate-visible because the builtins are not the only place this
 /// interpreter searches a haystack for a byte: a `PARSE` template's

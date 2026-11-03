@@ -24,15 +24,15 @@ run directory and outside this repository's own build. It is named through an
 machine, it is loaded and never rebuilt, and it prints no address: a
 `.Pointer` renders differently on every run.
 
-**`rxmath` and `rxregexp` are this crate's own Rust libraries**, answered
-before any `dlopen`, so a program naming them tests those libraries against
-the oracle's shared ones and never reaches this crate's shared-library path.
-A program that is about that path names `rxmathc` or `rxregexpc` instead and
-puts `{instruments}` on its `LD_LIBRARY_PATH` after `{oraclelib}`: the
-harness's directory of links to the oracle's `librxmath.so` and
-`librxregexp.so` under those names (`INSTRUMENTS` in
-`crates/rexx-exec/tests/support/sidecar.rs`), so both sides load the same C
-binary. Each such program has a `_rust` copy naming the Rust library
+**`rxmath`, `rxregexp` and `rxunixsys` are this crate's own Rust libraries**,
+answered before any `dlopen`, so a program naming them tests those libraries
+against the oracle's shared ones and never reaches this crate's shared-library
+path. A program that is about that path names `rxmathc`, `rxregexpc` or
+`rxunixsysc` instead and puts `{instruments}` on its `LD_LIBRARY_PATH` after
+`{oraclelib}`: the harness's directory of links to the oracle's
+`librxmath.so`, `librxregexp.so` and `librxunixsys.so` under those names
+(`INSTRUMENTS` in `crates/rexx-exec/tests/support/sidecar.rs`), so both sides
+load the same C binary. Each such program has a `_rust` copy naming the Rust library
 (`phase-10.txt`).
 
 **The case that joins those last two, because nothing about the program says

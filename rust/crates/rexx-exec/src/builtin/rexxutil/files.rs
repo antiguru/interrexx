@@ -244,13 +244,13 @@ pub(crate) fn is_file_link(
 /// A local time's fields as `struct tm` holds them: the full year, the month
 /// from zero, and the rest as read.
 #[derive(Clone, Copy)]
-pub(super) struct CivilTime {
-    pub(super) year: i64,
-    pub(super) month0: i64,
-    pub(super) day: i64,
-    pub(super) hour: i64,
-    pub(super) minute: i64,
-    pub(super) second: i64,
+pub(crate) struct CivilTime {
+    pub(crate) year: i64,
+    pub(crate) month0: i64,
+    pub(crate) day: i64,
+    pub(crate) hour: i64,
+    pub(crate) minute: i64,
+    pub(crate) second: i64,
 }
 
 /// The zone the program's own `TZ` names, resolved as glibc's `tzset` does:
@@ -258,7 +258,7 @@ pub(super) struct CivilTime {
 /// directories or a path after `:`, anything else a POSIX rule, and what none
 /// of these reads, an empty `TZ` among them, is UTC. Read on every call, as
 /// `localtime` and `mktime` read it.
-pub(super) fn program_zone(interp: &Interp) -> tz::TimeZone {
+pub(crate) fn program_zone(interp: &Interp) -> tz::TimeZone {
     let named = match interp.env_get(b"TZ") {
         None => tz::TimeZone::local(),
         Some(text) => match std::str::from_utf8(text) {
@@ -275,7 +275,7 @@ fn zone_type(zone: &tz::TimeZone, seconds: i64) -> Option<tz::LocalTimeType> {
 }
 
 /// `localtime`: the reading of `seconds` since the epoch in `zone`.
-pub(super) fn local_time(zone: &tz::TimeZone, seconds: i64) -> Option<CivilTime> {
+pub(crate) fn local_time(zone: &tz::TimeZone, seconds: i64) -> Option<CivilTime> {
     let offset = i64::from(zone_type(zone, seconds)?.ut_offset());
     let at = chrono::DateTime::from_timestamp(seconds.checked_add(offset)?, 0)?;
     Some(CivilTime {

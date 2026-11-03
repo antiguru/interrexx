@@ -1,5 +1,5 @@
-//! The extension libraries this crate runs in Rust: `rxmath` and `rxregexp`
-//! (`docs/superpowers/specs/extensions-behaviour.md`).
+//! The extension libraries this crate runs in Rust: `rxmath`, `rxregexp` and
+//! `rxunixsys` (`docs/superpowers/specs/extensions-behaviour.md`).
 //!
 //! A program sees each as the oracle's shared library: [`Interp::resolve_library`]
 //! answers a library whose tables name the routines and methods with no
@@ -79,6 +79,65 @@ static LIBRARIES: &[RustLibrary] = &[
             ),
             ("RegExp_Pos", crate::dispatch::regexp_methods::pos),
         ],
+    },
+    RustLibrary {
+        name: "rxunixsys",
+        // The oracle's table order. `SysCrypt` is not provided (Rulings).
+        routines: &[
+            ("SysSignal", crate::builtin::rxunixsys::signal),
+            ("SysUname", crate::builtin::rxunixsys::uname),
+            ("SysSetsid", crate::builtin::rxunixsys::setsid),
+            ("SysGetsid", crate::builtin::rxunixsys::getsid),
+            ("SysSetuid", crate::builtin::rxunixsys::setuid),
+            ("SysGetuid", crate::builtin::rxunixsys::getuid),
+            ("SysSeteuid", crate::builtin::rxunixsys::seteuid),
+            ("SysGeteuid", crate::builtin::rxunixsys::geteuid),
+            ("SysSetgid", crate::builtin::rxunixsys::setgid),
+            ("SysGetgid", crate::builtin::rxunixsys::getgid),
+            ("SysSetegid", crate::builtin::rxunixsys::setegid),
+            ("SysGetegid", crate::builtin::rxunixsys::getegid),
+            ("SysSetpgrp", crate::builtin::rxunixsys::setpgrp),
+            ("SysGetpgrp", crate::builtin::rxunixsys::getpgrp),
+            ("SysSetpgid", crate::builtin::rxunixsys::setpgid),
+            ("SysGetpgid", crate::builtin::rxunixsys::getpgid),
+            ("SysGetpid", crate::builtin::rxunixsys::getpid),
+            ("SysGetppid", crate::builtin::rxunixsys::getppid),
+            ("SysGettid", crate::builtin::rxunixsys::gettid),
+            ("SysKill", crate::builtin::rxunixsys::kill),
+            ("SysSymlink", crate::builtin::rxunixsys::symlink),
+            ("SysLink", crate::builtin::rxunixsys::link),
+            ("SysUnlink", crate::builtin::rxunixsys::unlink),
+            ("SysChown", crate::builtin::rxunixsys::chown),
+            ("SysLchown", crate::builtin::rxunixsys::lchown),
+            ("SysChroot", crate::builtin::rxunixsys::chroot),
+            ("SysUmask", crate::builtin::rxunixsys::umask),
+            ("SysClose", crate::builtin::rxunixsys::close),
+            ("SysGetpwnam", crate::builtin::rxunixsys::getpwnam),
+            ("SysGetpwuid", crate::builtin::rxunixsys::getpwuid),
+            ("SysGetgrnam", crate::builtin::rxunixsys::getgrnam),
+            ("SysGetgrgid", crate::builtin::rxunixsys::getgrgid),
+            ("SysStat", crate::builtin::rxunixsys::stat),
+            ("SysAccess", crate::builtin::rxunixsys::access),
+            ("SysEuidaccess", crate::builtin::rxunixsys::euidaccess),
+            ("SysGetservbyname", crate::builtin::rxunixsys::getservbyname),
+            ("SysGetservbyport", crate::builtin::rxunixsys::getservbyport),
+            ("SysWordexp", crate::builtin::rxunixsys::wordexp),
+            ("SysSetxattr", crate::builtin::rxunixsys::setxattr),
+            ("SysGetxattr", crate::builtin::rxunixsys::getxattr),
+            ("SysListxattr", crate::builtin::rxunixsys::listxattr),
+            ("SysRemovexattr", crate::builtin::rxunixsys::removexattr),
+            ("SysGetsizeofptr", crate::builtin::rxunixsys::getsizeofptr),
+            ("SysGethostname", crate::builtin::rxunixsys::gethostname),
+            ("SysChmod", crate::builtin::rxunixsys::chmod),
+            ("SysGeterrno", crate::builtin::rxunixsys::geterrno),
+            ("SysGeterrnomsg", crate::builtin::rxunixsys::geterrnomsg),
+            ("SysMkdirUnix", crate::builtin::rxunixsys::mkdir),
+            ("SysRmdirUnix", crate::builtin::rxunixsys::rmdir),
+            ("SysGetdirlist", crate::builtin::rxunixsys::getdirlist),
+            ("SysGettzname1", crate::builtin::rxunixsys::gettzname1),
+            ("SysGettzname2", crate::builtin::rxunixsys::gettzname2),
+        ],
+        methods: &[],
     },
 ];
 

@@ -192,14 +192,15 @@ pub fn resolved_environment(sidecar: &Sidecar, dir: &Path) -> Vec<(String, Strin
 /// `librxmath.so` and `librxregexp.so` under names that are not `rxmath` and
 /// `rxregexp`.
 ///
-/// This crate answers `rxmath` and `rxregexp` with libraries of its own before
-/// any `dlopen`, so a program naming them no longer reaches the shared-library
-/// path on this side. A program that is about that path names `rxmathc` or
-/// `rxregexpc` instead, and both sides `dlopen` the same oracle binary through
-/// the link.
+/// This crate answers `rxmath`, `rxregexp` and `rxunixsys` with libraries of
+/// its own before any `dlopen`, so a program naming them no longer reaches the
+/// shared-library path on this side. A program that is about that path names
+/// `rxmathc`, `rxregexpc` or `rxunixsysc` instead, and both sides `dlopen` the
+/// same oracle binary through the link.
 pub const INSTRUMENTS: &[(&str, &str)] = &[
     ("librxmathc.so", "librxmath.so"),
     ("librxregexpc.so", "librxregexp.so"),
+    ("librxunixsysc.so", "librxunixsys.so"),
 ];
 
 /// A directory under the target directory holding a symbolic link per

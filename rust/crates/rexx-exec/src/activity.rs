@@ -164,6 +164,11 @@ pub(crate) struct Activity {
     /// How many of the levels that `RAISE PROPAGATE` leaves are still to be
     /// left, which add no frame and no origin: the object has its frames.
     pub(crate) reraise_leaving: usize,
+    /// What `SysGeterrno` answers: the `errno` the last failing OS call of
+    /// the `rxunixsys` library made on this activity, 0 before any
+    /// (`extensions-behaviour.md`, Rulings, errno). The interpreter's own I/O
+    /// does not touch it.
+    pub(crate) rxunixsys_errno: i32,
     /// How many level boundaries a `RAISE PROPAGATE` still crosses below the
     /// level whose trap took the condition, which seal no site: the trapping
     /// level's own site is the one the propagate restored.
@@ -470,6 +475,7 @@ impl Activity {
             native_frames_owed: Vec::new(),
             reraised_object: None,
             reraise_leaving: 0,
+            rxunixsys_errno: 0,
             propagate_absorb: 0,
             pending_result: None,
             pending_rc: None,
@@ -628,6 +634,7 @@ impl Activity {
             native_frames_owed,
             reraised_object,
             reraise_leaving: _,
+            rxunixsys_errno: _,
             propagate_absorb: _,
             pending_result,
             pending_rc,

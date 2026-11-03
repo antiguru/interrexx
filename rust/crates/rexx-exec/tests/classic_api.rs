@@ -127,6 +127,11 @@ fn count(stdout: &str, label: &str) -> usize {
 /// Runs `group` of `dir` through `testOORexx.rex`, from a fresh copy of the framework and the
 /// group's directory, with `library_path`.
 fn run_group(dir: &str, group: &str, library_path: OsString) -> Outcome {
+    run_group_in(dir, group, library_path, &[])
+}
+
+/// [`run_group`] with `env` added to the run's environment.
+fn run_group_in(dir: &str, group: &str, library_path: OsString, env: &[(&str, &Path)]) -> Outcome {
     let ootest = repository().join("ootest");
     let run = scratch().join(format!("run-{group}"));
     let _ = std::fs::remove_dir_all(&run);
@@ -150,14 +155,14 @@ fn run_group(dir: &str, group: &str, library_path: OsString) -> Outcome {
     }
     let api = scratch().join(format!("api-{group}"));
     let group_file = format!("ooRexx/{dir}/{group}.testGroup");
-    let output = rexx(
+    let mut command = rexx(
         &["testOORexx.rex", "-f", &group_file, "-U", "-V", "2"],
         &run,
         &api,
         library_path,
-    )
-    .output()
-    .expect("rexx runs");
+    );
+    command.envs(env.iter().copied());
+    let output = command.output().expect("rexx runs");
     stop_service(&api);
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
     assert!(
@@ -1217,4 +1222,43 @@ fn the_rust_extension_library_groups_match_the_oracles_counts() {
             outcome.stdout
         );
     }
+}
+
+/// The `rxunixsys` group on this crate's Rust library: the oracle's counts and failing tests,
+/// recorded from the full checkout on 2026-11-03 (PR 4 plan, "Oracle targets"). `TEST_SYSCRYPT`
+/// fails on both, which provide no `SysCrypt` (Rulings). The six `TEST_SYSSTAT_*` failures are
+/// the group's `socket` constant, `$XDG_RUNTIME_DIR/.ooRexx-...service`: the oracle's `rxapi`
+/// socket, which this crate's service, under `REXX_API_DIR`, does not create. The run is given
+/// an empty `XDG_RUNTIME_DIR` so that the path is absent whatever the host runs; measured, with
+/// a socket there both engines pass those six, 30 / 176 / 0 + 1.
+#[test]
+fn the_rxunixsys_group_matches_the_oracles_counts_and_failures() {
+    let runtime = scratch().join("rxunixsys-runtime");
+    let _ = std::fs::remove_dir_all(&runtime);
+    std::fs::create_dir_all(&runtime).expect("a runtime directory");
+    let outcome = run_group_in(
+        "extensions/platform/unix/rxunixsys",
+        "SysUnix",
+        library_path(false),
+        &[("XDG_RUNTIME_DIR", &runtime)],
+    );
+    let failed: Vec<&str> = outcome.failed.iter().map(String::as_str).collect();
+    assert_eq!(
+        (outcome.ran, outcome.assertions, failed),
+        (
+            30,
+            139,
+            vec![
+                "TEST_SYSCRYPT",
+                "TEST_SYSSTAT_DEVICE",
+                "TEST_SYSSTAT_IDS",
+                "TEST_SYSSTAT_INODE",
+                "TEST_SYSSTAT_NUMBERLINKS",
+                "TEST_SYSSTAT_PERMISSIONS",
+                "TEST_SYSSTAT_SIZE",
+            ]
+        ),
+        "{}",
+        outcome.stdout
+    );
 }

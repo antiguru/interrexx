@@ -6,8 +6,8 @@ address rxsock 'hello'
 say 'rxsock' rc .rs
 address RXSOCK 'hello'
 say 'RXSOCK' rc .rs
-address rxunixsys 'hello'
-say 'rxunixsys' rc .rs
+address rxunixsysc 'hello'
+say 'rxunixsysc' rc .rs
 address HostEmu 'hello'
 say 'HostEmu' rc .rs
 exit
@@ -15,4 +15,4 @@ failed:
   say 'failure' condition('d') rc
   return
 ::requires "rxsock" LIBRARY
-::requires "rxunixsys" LIBRARY
+::requires "rxunixsysc" LIBRARY
