@@ -136,6 +136,7 @@ use package::{native_package_local, native_package_name};
 // Running a procedure of a loaded shared library, and the `Host` the boundary
 // reaches this interpreter through.
 pub(crate) mod library;
+pub(crate) mod regexp_methods;
 
 // Array slot and subscript arithmetic, and `Array`'s primitive methods.
 mod array;

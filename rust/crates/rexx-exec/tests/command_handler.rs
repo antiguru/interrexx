@@ -27,7 +27,7 @@ fn scratch(name: &str) -> PathBuf {
 }
 
 /// `rexx` running `arguments` in `cwd` with a service of its own, which is
-/// stopped after; `library_path` is where the framework finds `rxregexp`.
+/// stopped after; `library_path`, where given, is the run's library path.
 fn run_rexx(arguments: &[&str], cwd: &Path, library_path: Option<&Path>) -> Output {
     let api = cwd.join("api");
     std::fs::create_dir_all(&api).expect("the service directory");
@@ -93,19 +93,8 @@ fn the_command_handler_group_passes_with_the_oracles_counts() {
     for file in ["testOORexx.rex", "worker.rex", "ooTest.frm"] {
         copy(&ootest.join(file), &run);
     }
-    copy(
-        &repository().join("third_party/ooRexx/extensions/rxregexp/rxregexp.cls"),
-        &run,
-    );
-    // The oracle's `rxregexp`, the C extension the framework loads, alone in
-    // a directory of its own.
-    let libraries = run.join("libraries");
-    std::fs::create_dir_all(&libraries).expect("the library directory");
-    std::os::unix::fs::symlink(
-        PathBuf::from(env!("REXX_ORACLE_ROOT")).join("lib/librxregexp.so"),
-        libraries.join("librxregexp.so"),
-    )
-    .expect("the rxregexp link");
+    // `ooTest.frm` requires `rxregexp.cls`, which this crate ships and runs:
+    // nothing is copied or put on a library path for it.
     let output = run_rexx(
         &[
             "testOORexx.rex",
@@ -116,7 +105,7 @@ fn the_command_handler_group_passes_with_the_oracles_counts() {
             "2",
         ],
         &run,
-        Some(&libraries),
+        None,
     );
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
     let counts = [

@@ -1,4 +1,4 @@
-//! The extension libraries this crate runs in Rust: `rxmath`
+//! The extension libraries this crate runs in Rust: `rxmath` and `rxregexp`
 //! (`docs/superpowers/specs/extensions-behaviour.md`).
 //!
 //! A program sees each as the oracle's shared library: [`Interp::resolve_library`]
@@ -41,30 +41,46 @@ impl RustLibrary {
 }
 
 /// Every library this crate runs in Rust.
-static LIBRARIES: &[RustLibrary] = &[RustLibrary {
-    name: "rxmath",
-    routines: &[
-        ("MathLoadFuncs", crate::builtin::rxmath::load_funcs),
-        ("MathDropFuncs", crate::builtin::rxmath::drop_funcs),
-        ("RxCalcPi", crate::builtin::rxmath::pi),
-        ("RxCalcSqrt", crate::builtin::rxmath::sqrt),
-        ("RxCalcExp", crate::builtin::rxmath::exp),
-        ("RxCalcLog", crate::builtin::rxmath::log),
-        ("RxCalcLog10", crate::builtin::rxmath::log10),
-        ("RxCalcSinH", crate::builtin::rxmath::sinh),
-        ("RxCalcCosH", crate::builtin::rxmath::cosh),
-        ("RxCalcTanH", crate::builtin::rxmath::tanh),
-        ("RxCalcPower", crate::builtin::rxmath::power),
-        ("RxCalcSin", crate::builtin::rxmath::sin),
-        ("RxCalcCos", crate::builtin::rxmath::cos),
-        ("RxCalcTan", crate::builtin::rxmath::tan),
-        ("RxCalcCotan", crate::builtin::rxmath::cotan),
-        ("RxCalcArcSin", crate::builtin::rxmath::arc_sin),
-        ("RxCalcArcCos", crate::builtin::rxmath::arc_cos),
-        ("RxCalcArcTan", crate::builtin::rxmath::arc_tan),
-    ],
-    methods: &[],
-}];
+static LIBRARIES: &[RustLibrary] = &[
+    RustLibrary {
+        name: "rxmath",
+        routines: &[
+            ("MathLoadFuncs", crate::builtin::rxmath::load_funcs),
+            ("MathDropFuncs", crate::builtin::rxmath::drop_funcs),
+            ("RxCalcPi", crate::builtin::rxmath::pi),
+            ("RxCalcSqrt", crate::builtin::rxmath::sqrt),
+            ("RxCalcExp", crate::builtin::rxmath::exp),
+            ("RxCalcLog", crate::builtin::rxmath::log),
+            ("RxCalcLog10", crate::builtin::rxmath::log10),
+            ("RxCalcSinH", crate::builtin::rxmath::sinh),
+            ("RxCalcCosH", crate::builtin::rxmath::cosh),
+            ("RxCalcTanH", crate::builtin::rxmath::tanh),
+            ("RxCalcPower", crate::builtin::rxmath::power),
+            ("RxCalcSin", crate::builtin::rxmath::sin),
+            ("RxCalcCos", crate::builtin::rxmath::cos),
+            ("RxCalcTan", crate::builtin::rxmath::tan),
+            ("RxCalcCotan", crate::builtin::rxmath::cotan),
+            ("RxCalcArcSin", crate::builtin::rxmath::arc_sin),
+            ("RxCalcArcCos", crate::builtin::rxmath::arc_cos),
+            ("RxCalcArcTan", crate::builtin::rxmath::arc_tan),
+        ],
+        methods: &[],
+    },
+    RustLibrary {
+        name: "rxregexp",
+        routines: &[],
+        methods: &[
+            ("RegExp_Init", crate::dispatch::regexp_methods::init),
+            ("RegExp_Uninit", crate::dispatch::regexp_methods::uninit),
+            ("RegExp_Parse", crate::dispatch::regexp_methods::parse),
+            (
+                "RegExp_Match",
+                crate::dispatch::regexp_methods::match_string,
+            ),
+            ("RegExp_Pos", crate::dispatch::regexp_methods::pos),
+        ],
+    },
+];
 
 /// The library `name` names, or `None` for a name this crate leaves to the
 /// shared-library search.

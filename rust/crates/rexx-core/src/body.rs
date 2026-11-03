@@ -186,6 +186,44 @@ pub enum NativeState {
     /// The package a `Method` or `Routine` subclass instance's code belongs
     /// to, which the instance keeps alive.
     Executable(ObjRef),
+    /// An extension library's own state for the instance, the block its C++
+    /// counterpart keeps behind `CSELF`. It holds no object.
+    Extension(ExtensionState),
+}
+
+/// The state an extension library keeps for an instance. Its type is the
+/// interpreter's own, so the heap reaches it through this trait alone.
+pub trait ExtensionFields: std::any::Any + std::fmt::Debug {
+    /// A copy of this state.
+    fn clone_fields(&self) -> Box<dyn ExtensionFields>;
+}
+
+/// An instance's [`ExtensionFields`]. Cloning it clones the fields.
+#[derive(Debug)]
+pub struct ExtensionState(Box<dyn ExtensionFields>);
+
+impl Clone for ExtensionState {
+    fn clone(&self) -> ExtensionState {
+        ExtensionState(self.0.clone_fields())
+    }
+}
+
+impl ExtensionState {
+    pub fn new(fields: Box<dyn ExtensionFields>) -> ExtensionState {
+        ExtensionState(fields)
+    }
+
+    /// The fields as `T`, or `None` for fields of another type.
+    pub fn downcast_ref<T: ExtensionFields>(&self) -> Option<&T> {
+        let fields: &dyn std::any::Any = &*self.0;
+        fields.downcast_ref()
+    }
+
+    /// [`ExtensionState::downcast_ref`] for a caller that changes them.
+    pub fn downcast_mut<T: ExtensionFields>(&mut self) -> Option<&mut T> {
+        let fields: &mut dyn std::any::Any = &mut *self.0;
+        fields.downcast_mut()
+    }
 }
 
 /// The state a `Package` object holds. Its fields are the interpreter's own
@@ -315,7 +353,8 @@ impl NativeState {
             | NativeState::Data(_)
             | NativeState::Text(_)
             | NativeState::Package(_)
-            | NativeState::Executable(_) => None,
+            | NativeState::Executable(_)
+            | NativeState::Extension(_) => None,
         }
     }
 
@@ -328,7 +367,8 @@ impl NativeState {
             | NativeState::Data(_)
             | NativeState::Text(_)
             | NativeState::Package(_)
-            | NativeState::Executable(_) => None,
+            | NativeState::Executable(_)
+            | NativeState::Extension(_) => None,
         }
     }
 
@@ -341,7 +381,8 @@ impl NativeState {
             | NativeState::Data(_)
             | NativeState::Text(_)
             | NativeState::Package(_)
-            | NativeState::Executable(_) => None,
+            | NativeState::Executable(_)
+            | NativeState::Extension(_) => None,
         }
     }
 
@@ -355,7 +396,8 @@ impl NativeState {
             | NativeState::Data(_)
             | NativeState::Text(_)
             | NativeState::Package(_)
-            | NativeState::Executable(_) => None,
+            | NativeState::Executable(_)
+            | NativeState::Extension(_) => None,
         }
     }
 
@@ -371,7 +413,8 @@ impl NativeState {
             | NativeState::Data(_)
             | NativeState::Text(_)
             | NativeState::Package(_)
-            | NativeState::Executable(_) => None,
+            | NativeState::Executable(_)
+            | NativeState::Extension(_) => None,
         }
     }
 
@@ -384,7 +427,8 @@ impl NativeState {
             | NativeState::Pointer(_)
             | NativeState::Text(_)
             | NativeState::Package(_)
-            | NativeState::Executable(_) => None,
+            | NativeState::Executable(_)
+            | NativeState::Extension(_) => None,
         }
     }
 
@@ -398,7 +442,8 @@ impl NativeState {
             | NativeState::Pointer(_)
             | NativeState::Text(_)
             | NativeState::Package(_)
-            | NativeState::Executable(_) => None,
+            | NativeState::Executable(_)
+            | NativeState::Extension(_) => None,
         }
     }
 
@@ -412,7 +457,8 @@ impl NativeState {
             | NativeState::Pointer(_)
             | NativeState::Data(_)
             | NativeState::Package(_)
-            | NativeState::Executable(_) => None,
+            | NativeState::Executable(_)
+            | NativeState::Extension(_) => None,
         }
     }
 
@@ -442,7 +488,8 @@ impl NativeState {
             | NativeState::Stream(_)
             | NativeState::Pointer(_)
             | NativeState::Data(_)
-            | NativeState::Text(_) => {}
+            | NativeState::Text(_)
+            | NativeState::Extension(_) => {}
         }
     }
 
@@ -460,7 +507,8 @@ impl NativeState {
             NativeState::Stream(_)
             | NativeState::Data(_)
             | NativeState::Package(_)
-            | NativeState::Executable(_) => false,
+            | NativeState::Executable(_)
+            | NativeState::Extension(_) => false,
         }
     }
 }

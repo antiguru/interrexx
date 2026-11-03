@@ -655,7 +655,17 @@ impl Interp {
             self.check_not_installing(loaded)?;
             return Ok(loaded);
         }
-        let resolved = match found.clone() {
+        // **A package this crate ships is found after every route**, so a
+        // program's own file of the same name wins, as one beside the
+        // oracle's program does over the copy in its `bin` directory.
+        let shipped = match &found {
+            Some(_) => None,
+            None => crate::packages::lookup(original),
+        };
+        let located = found
+            .clone()
+            .or_else(|| shipped.map(|package| package.path()));
+        let resolved = match located.clone() {
             Some(resolved) => {
                 let Some(checked) =
                     self.check_requires_access(manager, &resolved, &mut inherited)?
@@ -679,8 +689,12 @@ impl Interp {
         // `getRequiresFile` translates the name it was given, the manager's
         // replacement included, and an unreadable one is 3.1 naming it
         // (`LanguageParser::createPackage`).
-        let Ok(text) = std::fs::read(OsStr::from_bytes(&resolved)) else {
-            return Err(Raised::executable_file_unreadable(&resolved).into());
+        let text = match shipped {
+            Some(package) if located.as_deref() == Some(&resolved[..]) => package.source.to_vec(),
+            _ => match std::fs::read(OsStr::from_bytes(&resolved)) {
+                Ok(text) => text,
+                Err(_) => return Err(Raised::executable_file_unreadable(&resolved).into()),
+            },
         };
         let parsed = Rc::new(self.parse_file(text, &resolved)?);
         let required = self.load_program(Rc::clone(&parsed));

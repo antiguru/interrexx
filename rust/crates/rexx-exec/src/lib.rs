@@ -1072,8 +1072,15 @@ pub(crate) mod internal_routines;
 /// the interpreter's own current directory rather than the process's.
 pub(crate) mod paths;
 
+/// The `rxregexp` pattern language and its matcher.
+pub(crate) mod regexp;
+
 /// The extension libraries this crate runs in Rust.
 pub(crate) mod extensions;
+
+/// The Rexx packages this crate ships, found by `::REQUIRES` after every
+/// search route.
+pub(crate) mod packages;
 
 /// Every internal-package routine name, for the test that re-derives them from
 /// the C++ tree.

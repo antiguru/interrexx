@@ -69,27 +69,12 @@ fn testbinaries() -> &'static Path {
 }
 
 /// The library search path a run gets: the compiled test libraries where `with_testbinaries`,
-/// then a directory holding only the oracle's `rxregexp`, the C extension the framework itself
-/// loads, so no other library of the oracle's is found.
+/// and otherwise none. The framework's own `rxregexp.cls` and `rxregexp` are this crate's.
 fn library_path(with_testbinaries: bool) -> OsString {
-    static FRAMEWORK: OnceLock<PathBuf> = OnceLock::new();
-    let framework = FRAMEWORK.get_or_init(|| {
-        let dir = scratch().join("framework-libraries");
-        std::fs::create_dir_all(&dir).expect("the framework's library directory");
-        let link = dir.join("librxregexp.so");
-        let _ = std::fs::remove_file(&link);
-        std::os::unix::fs::symlink(
-            PathBuf::from(env!("REXX_ORACLE_ROOT")).join("lib/librxregexp.so"),
-            &link,
-        )
-        .expect("the rxregexp link");
-        dir
-    });
     let mut directories = Vec::new();
     if with_testbinaries {
         directories.push(testbinaries().to_path_buf());
     }
-    directories.push(framework.clone());
     std::env::join_paths(directories).expect("a library path")
 }
 
@@ -163,10 +148,6 @@ fn run_group(dir: &str, group: &str, library_path: OsString) -> Outcome {
     for file in ["testOORexx.rex", "worker.rex", "ooTest.frm"] {
         copy(&ootest.join(file), &run);
     }
-    copy(
-        &repository().join("third_party/ooRexx/extensions/rxregexp/rxregexp.cls"),
-        &run,
-    );
     let api = scratch().join(format!("api-{group}"));
     let group_file = format!("ooRexx/{dir}/{group}.testGroup");
     let output = rexx(
@@ -1218,3 +1199,22 @@ Error 3.901:  Failure during initialization: Program "nothere.rex" was not found
      3 *-* y = selftrace(1)
        >>>   "0"
 "#;
+
+/// The `rxmath` and `rxregexp` extension groups, on this crate's Rust libraries and its own
+/// `rxregexp.cls`, with nothing on the library path: the oracle's counts, recorded from the full
+/// checkout on 2026-11-03 (PR 4 plan, "Oracle targets").
+#[test]
+fn the_rust_extension_library_groups_match_the_oracles_counts() {
+    for (dir, group, ran, assertions) in [
+        ("extensions/rxmath", "RxMath", 289, 478),
+        ("extensions/rxregexp", "rxregexp", 33, 11741),
+    ] {
+        let outcome = run_group(dir, group, library_path(false));
+        assert_eq!(
+            (outcome.ran, outcome.assertions, outcome.failed.len()),
+            (ran, assertions, 0),
+            "{group}:\n{}",
+            outcome.stdout
+        );
+    }
+}
