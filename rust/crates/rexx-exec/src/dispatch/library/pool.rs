@@ -46,6 +46,7 @@ impl Interp {
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
         let mut strings = CStringPool::new();
         let thread = self.thread_context();
+        let inbox = self.timer.inbox();
         let (answered, pending) = {
             let frame = self.native_token();
             let activation = Activation::new(Conversion {
@@ -54,6 +55,7 @@ impl Interp {
             });
             activation.set_frame(frame);
             activation.open_variable_pool();
+            let _reachable = crate::embedding::OtherRun::enter(inbox);
             let answered = thread.enter(&activation, |_| call());
             (answered, activation.pending())
         };
@@ -90,6 +92,7 @@ impl Interp {
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
         let mut strings = CStringPool::new();
         let thread = self.thread_context();
+        let inbox = self.timer.inbox();
         let (answered, pending) = {
             let frame = self.native_token();
             let activation = Activation::new(Conversion {
@@ -98,6 +101,7 @@ impl Interp {
             });
             activation.set_frame(frame);
             activation.open_variable_pool();
+            let _reachable = crate::embedding::OtherRun::enter(inbox);
             let answered = thread.enter(&activation, |contexts| {
                 rexx_api::invoke::exit(handler, contexts, &activation, request)
             });

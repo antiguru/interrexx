@@ -1033,6 +1033,29 @@ fn the_classic_family_answers_as_the_oracle_does() {
     );
 }
 
+/// `RexxSetHalt` naming the thread a native function runs on, from a thread the function starts
+/// and joins, in a program `CallProgram` runs (no `RexxStart`): it answers 0 and the function's
+/// activity is halted at its next clause (PR 4 review M6). Before, only a halt naming the calling
+/// thread reached a native call, and this one answered 1 and halted nothing. Standard output is
+/// the oracle's, measured with the same driver built against it.
+#[test]
+fn a_halt_from_another_thread_reaches_a_native_calls_activity() {
+    let output = run_driver(
+        "otherhalt",
+        &[(
+            "other.rex",
+            "signal on halt\nx = otherhalt()\nsay 'after' x\nreturn 'not halted'\n\
+             halt: return 'halted' x\n",
+        )],
+        &[],
+    );
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "halt from another thread=0\nresult halted back\n"
+    );
+}
+
 /// `callrexx1`, the classic sample (`samples/api/classic/unix/callrexx`), built against our
 /// libraries and run from a copy of its directory with every prompt answered: each `RexxStart`
 /// answers as on the oracle -- results the program returns into a null, a large enough and a

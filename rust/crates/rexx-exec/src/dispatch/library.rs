@@ -507,6 +507,7 @@ impl Interp {
     ) -> Option<(Result<Option<ObjRef>, Refused>, Option<usize>)> {
         let mut strings = CStringPool::new();
         let thread = self.thread_context();
+        let inbox = self.timer.inbox();
         let frame = self.native_token();
         if !exits {
             let stress = self.stress_collect;
@@ -519,6 +520,7 @@ impl Interp {
             if matches!(held, HeldCall::Routine(_)) {
                 activation.open_variable_pool();
             }
+            let _reachable = crate::embedding::OtherRun::enter(inbox);
             let answered = thread.enter(&activation, |contexts| match &held {
                 HeldCall::Method(held, _) => {
                     invoke::held_method(held, &contexts.method(), &activation, args)
@@ -675,6 +677,7 @@ impl Interp {
         pin_enter!(self, crate::pinning::PinKind::LibraryEntry);
         let mut strings = CStringPool::new();
         let thread = self.thread_context();
+        let inbox = self.timer.inbox();
         let (ran, pending) = {
             let frame = self.native_token();
             let activation = Activation::new(Conversion {
@@ -682,6 +685,7 @@ impl Interp {
                 strings: &mut strings,
             });
             activation.set_frame(frame);
+            let _reachable = crate::embedding::OtherRun::enter(inbox);
             let ran = thread.enter(&activation, |contexts| {
                 invoke::hook(library, hook, contexts, &activation)
             });
@@ -721,6 +725,7 @@ impl Interp {
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
         let mut strings = CStringPool::new();
         let thread = self.thread_context();
+        let inbox = self.timer.inbox();
         let (answered, pending) = {
             let frame = self.native_token();
             let activation = Activation::new(Conversion {
@@ -728,6 +733,7 @@ impl Interp {
                 strings: &mut strings,
             });
             activation.set_frame(frame);
+            let _reachable = crate::embedding::OtherRun::enter(inbox);
             let answered = thread.enter(&activation, |contexts| {
                 invoke::command(handler, contexts, &activation, address, issued, redirector)
             });
@@ -1363,6 +1369,7 @@ impl OffBaton {
         thread: &rexx_api::ffi::ThreadContext,
         post: impl FnOnce(Completion),
     ) -> Option<usize> {
+        let inbox = host.timer.inbox();
         let OffBaton {
             held,
             native,
@@ -1379,6 +1386,7 @@ impl OffBaton {
         if matches!(held, HeldCall::Routine(_)) {
             activation.open_variable_pool();
         }
+        let _reachable = crate::embedding::OtherRun::enter(inbox);
         thread.enter(&activation, |contexts| post(held.call(native, contexts)));
         activation.pending()
     }
@@ -1464,6 +1472,7 @@ impl PooledCall {
             if matches!(held, HeldCall::Routine(_)) {
                 activation.open_variable_pool();
             }
+            let _reachable = crate::embedding::OtherRun::enter(Arc::clone(&self.inbox));
             let (completion, ended) = thread.enter(&activation, |contexts| {
                 drop(entered);
                 let completion = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
