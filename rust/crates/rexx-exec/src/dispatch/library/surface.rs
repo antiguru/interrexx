@@ -640,7 +640,7 @@ impl Surface for Interp {
     }
 
     fn load_package_source(&mut self, name: &[u8], lines: &[Vec<u8>]) -> Option<ObjRef> {
-        let loaded = self.package_from_source(name, lines, None);
+        let loaded = self.package_from_source(name, lines, None, true);
         let program = self.held(loaded)?;
         let package = self.package_object(Package::Program(program));
         self.held(package)
@@ -661,6 +661,12 @@ impl Surface for Interp {
                 Ok(rexx_parse::ProgramSource::from_lines(&borrowed))
             }
             BufferKind::Routine => crate::compiled::program_source(data.to_vec(), name),
+            // A package this instance already loaded under the name, from
+            // data or a file, is answered as it is.
+            BufferKind::Package if let Some(&program) = self.required_packages.get(name) => {
+                let package = self.package_object(Package::Program(program));
+                return Some(self.held(package));
+            }
             BufferKind::Package => match crate::compiled::restore(data) {
                 crate::compiled::Restore::Source => return None,
                 _ => crate::compiled::program_source(data.to_vec(), name),
@@ -1059,7 +1065,7 @@ impl Interp {
                 super::super::class_protocol::routine_in_package(self, name, parsed, None)
             }
             BufferKind::Package => self
-                .package_from_program(name, std::rc::Rc::new(parsed), None)
+                .package_from_program(name, std::rc::Rc::new(parsed), None, true)
                 .and_then(|program| self.package_object(Package::Program(program))),
         });
         self.held(built)

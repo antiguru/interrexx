@@ -1882,6 +1882,10 @@ struct Interp {
     /// the name as written and by the file it resolved to. An entry goes when
     /// its package object is collected.
     required_packages: FxHashMap<Box<[u8]>, ProgramId>,
+    /// The packages `LoadPackageFromData` loaded, which their
+    /// [`Interp::required_packages`] entries keep for as long as the
+    /// interpreter runs.
+    data_packages: Vec<ObjRef>,
     /// The programs whose first walk of [`Interp::install_directives`], which is
     /// this crate's translation, started and did not finish. The oracle gives
     /// the package of a translation that raised no routine, method or resource
@@ -2544,6 +2548,7 @@ impl Interp {
             program_path: Vec::new(),
             required_paths: FxHashMap::default(),
             required_packages: FxHashMap::default(),
+            data_packages: Vec::new(),
             untranslated: rustc_hash::FxHashSet::default(),
             translate_only: false,
             install_caller: None,
@@ -3635,6 +3640,7 @@ impl Interp {
             required_paths: _,
             // Weak: pruned in `Interp::collect_now`.
             required_packages: _,
+            data_packages,
             untranslated: _,
             translate_only: _,
             install_caller: _,
@@ -3662,6 +3668,7 @@ impl Interp {
         out.extend(stem_exposers.values().flatten().copied());
         out.extend(traced_variable.as_ref().and_then(|traced| traced.value));
         out.extend(global_references.roots());
+        out.extend(data_packages.iter().copied());
         out.extend(
             installing_managers
                 .iter()

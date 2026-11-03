@@ -1004,6 +1004,7 @@ impl Interp {
         name: &[u8],
         lines: &[Vec<u8>],
         parent: Option<ObjRef>,
+        requires: bool,
     ) -> Result<ProgramId, Failure> {
         let borrowed: Vec<&[u8]> = lines.iter().map(Vec::as_slice).collect();
         let source = match crate::compiled::lines_source(&borrowed, name) {
@@ -1017,16 +1018,23 @@ impl Interp {
             Ok(parsed) => Rc::new(parsed),
             Err(rejected) => return Err(self.raise_parse_failure(&rejected, Some(name))),
         };
-        self.package_from_program(name, parsed, parent)
+        self.package_from_program(name, parsed, parent, requires)
     }
 
     /// [`Interp::package_from_source`] past its parse: `parsed` loaded as a
-    /// package, its directives installed and its prologue run.
+    /// package, its directives installed and its prologue run. Where
+    /// `requires`, it is `LoadPackageFromData`'s, which a `::REQUIRES` of
+    /// `name` then finds: cached under `name` before its prologue runs, as
+    /// `InterpreterInstance::loadRequires` adds it
+    /// (`runtime/InterpreterInstance.cpp:1256`), and held for as long as the
+    /// interpreter runs, as `PackageManager::addToRequiresCache` holds a
+    /// package loaded from in-store data (bug 2108).
     pub(crate) fn package_from_program(
         &mut self,
         name: &[u8],
         parsed: Rc<Program>,
         parent: Option<ObjRef>,
+        requires: bool,
     ) -> Result<ProgramId, Failure> {
         let id = self.load_program(Rc::clone(&parsed));
         self.compiled_method_names.insert(id, name.into());
@@ -1035,9 +1043,14 @@ impl Interp {
         // resolves routines, and must already reach the context.
         // Built before the prologue, rooted as a temp of this frame: a package
         // the prologue builds would otherwise go with the prologue's frame.
-        self.package_object(Package::Program(id))?;
+        let package = self.package_object(Package::Program(id))?;
         if let Some(parent) = parent {
             self.set_package_parent(id, parent)?;
+        }
+        if requires {
+            self.required_paths.insert(id, name.into());
+            self.required_packages.insert(name.into(), id);
+            self.data_packages.push(package);
         }
         // Its prologue runs in the running activation, which `NUMERIC
         // INHERIT` inherits from. Measured: `.Package~new(name, source)` of an

@@ -1574,3 +1574,25 @@ fn new_array_refuses_a_size_above_the_largest_array() {
          5 ok 5\n"
     );
 }
+
+/// A package `LoadPackageFromData` loads is in the instance's `::REQUIRES` cache under its
+/// name, as `InterpreterInstance::loadRequires` adds it: a `::REQUIRES` of the name finds it
+/// with no file of that name, and a second load answers it without running anything. The
+/// expected output is the oracle's.
+#[test]
+fn load_package_from_data_is_found_by_requires() {
+    let stdout = run_program(
+        "package-from-data",
+        include_str!("classic_api/package_from_data.rex"),
+        &[("METHODPackage.cls", &method_package())],
+    );
+    assert_eq!(
+        stdout,
+        "1 bug2108-package-from-data.cls\n\
+         hi\n\
+         hi\n\
+         bug2108-package-from-data.cls 1\n\
+         other prologue\n\
+         other.cls\n"
+    );
+}
