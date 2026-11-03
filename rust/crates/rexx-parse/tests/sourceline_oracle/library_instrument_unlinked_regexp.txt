@@ -1,0 +1,8 @@
+count 7
+/* rxregexpc names the harness's link to the oracle's C rxregexp, which only
+   {instruments} on the library path finds. Without it neither side can
+   load the library: this crate does not answer rxregexpc with its own Rust
+   rxregexp, so the programs naming rxregexpc take the shared-library path. */
+say 'not reached' .rx~new
+::class rx
+::method init external "LIBRARY rxregexpc RegExp_Init"

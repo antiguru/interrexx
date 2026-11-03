@@ -91,3 +91,9 @@ lang/library_refusal_reraised_rust.rex
 # (sidecar.rs's INSTRUMENTS); this copy names rxunixsys, which this crate
 # answers before any dlopen: its loader registers no command environment.
 lang/command_library_environments_unregistered_rust.rex
+
+# PR 4 review M4: rxmathc and rxregexpc without {instruments} on the library
+# path refuse to load (98.903) on both sides, so the programs naming them
+# above take the C path and are not answered by this crate's Rust libraries.
+lang/library_instrument_unlinked_math.rex
+lang/library_instrument_unlinked_regexp.rex
