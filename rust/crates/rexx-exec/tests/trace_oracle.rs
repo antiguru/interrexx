@@ -443,6 +443,7 @@ const PREFIX_COVERAGE: &[(&str, Coverage)] = &[
 
 /// The phase subset files this file reads, in union order.
 const SUBSET_FILES: &[&str] = &[
+    "phase-10.txt",
     "phase-4a.txt",
     "phase-4b.txt",
     "phase-4c.txt",

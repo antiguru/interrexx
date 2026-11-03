@@ -40,6 +40,7 @@ fn read_subset(list_paths: &[&Path]) -> Vec<String> {
 
 /// The subset files this harness reads, in union order.
 const SUBSET_FILES: &[&str] = &[
+    "phase-10.txt",
     "phase-4a.txt",
     "phase-4b.txt",
     "phase-4c.txt",
