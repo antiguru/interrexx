@@ -1,0 +1,12 @@
+/* XRANGE with a character class followed by a range: since bug #2088
+ * (r13248) two arguments that are a class and a start byte keep the class,
+ * where the oracle's early return used to answer the range alone. A lone
+ * start/end pair still takes that early return, and a third argument
+ * changes nothing about either. */
+say c2x(xrange('blank', 'fe'x))
+say xrange('digit', 'z')~length xrange('digit', 'z')~left(11)
+say c2x(xrange('upper', ' ', ' '))~right(6)
+say xrange('alpha', 'z')~length
+say c2x(xrange('Cntrl', , '01'x))~right(8)
+say xrange('a', 'e') xrange('digit')
+say xrange('digit', 'a', 'c')

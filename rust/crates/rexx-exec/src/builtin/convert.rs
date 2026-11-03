@@ -977,10 +977,10 @@ pub(crate) fn xrange(
         };
         let length = usize::from(end.wrapping_sub(start)) + 1;
 
-        // The oracle's own early return, and it does not add what came
-        // before: measured, `xrange('digit','z')` is 134 bytes with no digits
-        // among them, where the three-argument form keeps them.
-        if count <= 2 {
+        // The oracle's own early return, taken only for a range that is
+        // the first and only piece since bug #2088 (r13248): before it
+        // `xrange('digit','z')` dropped the digits, and now it keeps them.
+        if count <= 2 && position == 2 {
             let mut out = buffer(interp, length)?;
             Piece::Range(start, length).write(&mut out);
             return Ok(interp.text_built(out));

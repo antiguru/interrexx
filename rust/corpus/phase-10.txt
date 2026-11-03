@@ -118,3 +118,6 @@ lang/library_callback_condition_returned.rex
 # PR 6: DATE and TIME conversions after bug #2089 (r13250): civil hour 0,
 # TIME('O') shifts off the calendar, ticks rounding down, '00'x separators.
 lang/date_time_conversion_refusals.rex
+# PR 6: XRANGE keeps a character class before a two-argument range (bug
+# #2088, r13248).
+lang/xrange_class_then_range.rex
