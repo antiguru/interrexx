@@ -129,3 +129,6 @@ lang/address_with_interpreted.rex
 # native level once the call has returned: a routine's frame, and the
 # package with no line (NativeActivation::checkConditions).
 lang/library_condition_reported_on_return.rex
+# PR 6: a finished clause's registers and an UNTIL's evaluation root nothing
+# (Moritz's ruling 2026-11-03, ooTest METHOD TEST_BUG_2108).
+lang/registers_cleared_at_clause_end.rex

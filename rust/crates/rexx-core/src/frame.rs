@@ -131,6 +131,14 @@ impl RegFrame<'_> {
         unsafe { (*self.base.as_ptr().add(index as usize)).set(value) }
     }
 
+    /// Writes [`ObjRef::NIL`] to every register from `from` to the end.
+    #[inline(always)]
+    pub fn clear_from(self, from: u16) {
+        for index in from..self.len {
+            self.set(index, ObjRef::NIL);
+        }
+    }
+
     /// How many registers this frame holds.
     pub fn len(self) -> u16 {
         self.len

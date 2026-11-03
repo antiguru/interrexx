@@ -638,6 +638,14 @@ pub(crate) struct Chunk {
     /// chunk and truncates them away on the way out, and `Interp::run_fragment`
     /// does the same for the chunk an `INTERPRET` compiles.
     pub(crate) registers: u16,
+    /// Instruction index -> the register top when its clause opens: every
+    /// register at or above it is dead there, because the allocator is a
+    /// stack and what an enclosing construct keeps live across its clauses
+    /// (a loop header's values, a `SELECT CASE` value) sits below it. The
+    /// driver clears them as the clause opens, so that no value a finished
+    /// clause computed stays rooted by its register (ruling 2026-11-03,
+    /// bug #2108's ooTest).
+    register_tops: Box<[u16]>,
     /// One entry per instruction, in instruction order, or **empty when this
     /// body's plan cannot supply every entry** -- a body planned without
     /// source has no line table, and a clause line or indent too wide for a
@@ -671,6 +679,17 @@ impl Chunk {
     /// shorter than the body it belongs to.
     fn op_at(&self, index: usize) -> Option<u32> {
         self.op_of.get(index).copied()
+    }
+
+    /// The register top of the clause at instruction index `index`
+    /// ([`Chunk::register_tops`]), or the whole file for an index past the
+    /// table, which clears nothing.
+    #[inline(always)]
+    pub(crate) fn register_top_at(&self, index: usize) -> u16 {
+        self.register_tops
+            .get(index)
+            .copied()
+            .unwrap_or(self.registers)
     }
 
     /// The clause at instruction index `index`'s own [`ClausePosition`] and

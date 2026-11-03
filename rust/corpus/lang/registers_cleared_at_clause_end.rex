@@ -1,0 +1,34 @@
+/* A value only a finished clause's temporaries held is garbage: neither the
+   IR's registers nor an UNTIL's evaluation keeps anything past the clause it
+   served. Each referent is held, once its clause is over, by a weak
+   reference alone, and garbage is made until it is cleared, bounded. The
+   first is left in a register a later clause, needing fewer, never
+   overwrites; the loops test their condition a few times before making any
+   garbage, so that the first collection comes after the condition held the
+   referent. */
+w = keep(1, 2, 3, 4, 5, 6, .WeakReference~new(.object~new))
+do 100
+  do 1000
+    x = .array~new(100)~fill(copies('x', 100))
+  end
+end
+say 'register' w~value~isNil
+
+u = .WeakReference~new(.object~new)
+do i = 1 to 500 until u~value~isNil
+  if i > 20 then do 1000
+    x = .array~new(100)~fill(copies('x', 100))
+  end
+end
+say 'until' u~value~isNil (i < 500)
+
+v = .WeakReference~new(.object~new)
+do i = 1 to 500 while \v~value~isNil
+  if i > 20 then do 1000
+    x = .array~new(100)~fill(copies('x', 100))
+  end
+end
+say 'while' v~value~isNil (i < 500)
+
+::routine keep
+  return arg(arg())
