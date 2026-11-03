@@ -129,8 +129,8 @@ struct Patch {
 enum Before {
     /// The end of an `IF`'s true branch: its clause boundary
     /// ([`Op::EndBranch`]), and the jump past the `ELSE`
-    /// when there is one to skip.
-    ThenEnd { resume: Option<usize> },
+    /// when there is one to skip. The `IF` is at `owner`.
+    ThenEnd { resume: Option<usize>, owner: usize },
     /// A `SELECT`'s [`Op::EnterOtherwise`], in front of the `OTHERWISE` marker
     /// whose branch it opens a frame over. The `SELECT` is at this index.
     EnterOtherwise(usize),
@@ -152,15 +152,17 @@ struct WhenInfo {
     /// `WHEN`, the `OTHERWISE`, or the `END` whose 7.3 is what "no `WHEN`
     /// matched and there is no `OTHERWISE`" means.
     false_target: usize,
-    /// Which of that instruction's two entries the scan wants. It is
-    /// [`PatchKind::Resume`] for an `OTHERWISE`, whose `op_of` is the
-    /// [`Op::EnterOtherwise`] that opens the frame, and [`PatchKind::Enter`]
-    /// for the other two, which have nothing in front of them.
+    /// Which of that instruction's entries the scan wants. It is
+    /// [`PatchKind::EnterOtherwise`] for an `OTHERWISE`, whose
+    /// [`Op::EnterOtherwise`] opens the frame, and [`PatchKind::Enter`] for the
+    /// other two. Neither runs the ops the branch before it owes there -- its
+    /// close, and the boundaries of the `IF`s it ends with -- because the scan
+    /// never entered that branch.
     false_kind: PatchKind,
 }
 
-/// Which op a jump to an instruction means, for the one instruction where
-/// the two differ: the `ELSE` a branch-end jump sits in front of.
+/// Which op a jump to an instruction means, for an instruction that has ops
+/// in front of its own ([`Before`]), each owed by a different construct.
 #[derive(Clone, Copy)]
 enum PatchKind {
     /// The instruction's own first op: run the instruction.
@@ -171,6 +173,15 @@ enum PatchKind {
     /// by falling off its end or by a nested construct's `Flow::Goto` landing
     /// exactly on the boundary -- skips the `ELSE` rather than running it.
     Resume,
+    /// The false path of the `IF` at this index, which [`emit_before`]
+    /// records as it emits that `IF`'s [`Before::ThenEnd`]: past that
+    /// boundary and the ones of the `IF`s nested in its true branch, and
+    /// short of every op an enclosing construct owes there.
+    IfFalse(usize),
+    /// The [`Op::EnterOtherwise`] of the `SELECT` at this index, which
+    /// [`emit_before`] records as it emits it: past the ops the last listed
+    /// `WHEN`'s branch owes in front of the `OTHERWISE`.
+    EnterOtherwise(usize),
 }
 
 /// Compiles `body` into a [`Chunk`], once, whole.
@@ -251,6 +262,11 @@ fn compile_settled(
     // enclosing scope so that every member clause's release leaves it alone,
     // and this is where that allocation ends.
     let mut release_at: Vec<Option<Mark>> = vec![None; len];
+    // Indexed by instruction, and recorded by `emit_before`: for an `IF`, the
+    // op its false path lands on (`PatchKind::IfFalse`), and for a `SELECT`
+    // with an `OTHERWISE`, that `OTHERWISE`'s `Op::EnterOtherwise`
+    // (`PatchKind::EnterOtherwise`).
+    let mut landing: Vec<Option<u32>> = vec![None; len];
 
     // Indexed by instruction: for an `END` that closes a repeating
     // `DO`/`LOOP`, that loop's own instruction index. Filled in at the header,
@@ -269,7 +285,7 @@ fn compile_settled(
         if let Some(mark) = release_at[index] {
             registers.release(mark);
         }
-        emit_before(&mut ops, &mut patches, &mut before[index])?;
+        emit_before(&mut ops, &mut patches, &mut landing, &mut before[index])?;
         first_op_of.push(op_index(&ops)?);
         // This clause's own answers, which is where a per-body `bool` used to
         // stand. The `>K>` op asks a different bit than the value echoes:
@@ -456,7 +472,7 @@ fn compile_settled(
                 patches.push(Patch {
                     op: jump,
                     target: targets.false_target,
-                    kind: PatchKind::Enter,
+                    kind: PatchKind::IfFalse(index),
                 });
                 registers.release(mark);
                 // Only when the false path lands on an `ELSE`: without one,
@@ -469,7 +485,10 @@ fn compile_settled(
                 // where control was going anyway is an op the driver would run
                 // for nothing.
                 let resume = (targets.resume != targets.false_target).then_some(targets.resume);
-                before[targets.false_target].push(Before::ThenEnd { resume });
+                before[targets.false_target].push(Before::ThenEnd {
+                    resume,
+                    owner: index,
+                });
             }
             // The `SELECT` clause is its `CASE` expression and nothing else,
             // which is the boundary `run.rs`'s own `Select` arm measured
@@ -540,7 +559,7 @@ fn compile_settled(
                         // `SELECT`'s: `otherwise_frame` gives that frame this
                         // same range.
                         before[select_end].push(Before::SelectBranchEnd);
-                        (*otherwise_index, PatchKind::Resume)
+                        (*otherwise_index, PatchKind::EnterOtherwise(index))
                     }
                     // Landing on the `END` is what makes 7.3 the `END`'s own
                     // clause rather than this `SELECT`'s.
@@ -1194,7 +1213,7 @@ fn compile_settled(
     }
     // A branch that ends at the body's own end still owes its boundary, and
     // there is no instruction iteration left to emit it in.
-    emit_before(&mut ops, &mut patches, &mut before[len])?;
+    emit_before(&mut ops, &mut patches, &mut landing, &mut before[len])?;
     // One entry past the last instruction, pushed after the loop above:
     // `run_bounded`'s absorption guard is inclusive, so a construct's
     // resume point can be `end`, one past its last instruction, and a table
@@ -1211,6 +1230,16 @@ fn compile_settled(
         let target = match patch.kind {
             PatchKind::Enter => first_op_of[patch.target],
             PatchKind::Resume => op_of[patch.target],
+            // Every `IF` pushed its `ThenEnd` at the instruction its false
+            // path targets, and every instruction's entries and the end
+            // one's were emitted above.
+            PatchKind::IfFalse(owner) => landing[owner]
+                .expect("an IF's ThenEnd is emitted at its false target before patching"),
+            // Likewise every `SELECT` with an `OTHERWISE` pushed its
+            // `EnterOtherwise` in front of it.
+            PatchKind::EnterOtherwise(select) => {
+                landing[select].expect("a SELECT's EnterOtherwise is emitted before patching")
+            }
         };
         match &mut ops[patch.op as usize] {
             Op::Jump { target: slot }
@@ -1799,6 +1828,7 @@ fn push_echo(ops: &mut Vec<Op>, echo: bool, index: u32) {
 fn emit_before(
     ops: &mut Vec<Op>,
     patches: &mut Vec<Patch>,
+    landing: &mut [Option<u32>],
     before: &mut [Before],
 ) -> Result<(), ChunkTooLarge> {
     before.reverse();
@@ -1815,17 +1845,30 @@ fn emit_before(
         Before::ThenEnd { .. } | Before::EnterOtherwise(_) => 1,
     });
     debug_assert!(
-        before
-            .iter()
-            .rev()
-            .skip(1)
-            .all(|entry| !matches!(entry, Before::ThenEnd { resume: Some(_) })),
+        before.iter().rev().skip(1).all(|entry| !matches!(
+            entry,
+            Before::ThenEnd {
+                resume: Some(_),
+                ..
+            }
+        )),
         "an op in front of an instruction carries a jump with more ops behind it, which \
          nothing would reach"
     );
+    // **Where an `IF` whose true branch ends here lands when its condition is
+    // false**: past its own boundary and those of the `IF`s nested in that
+    // branch, which come before it here, and short of everything else. A
+    // branch close in front of it is never skipped, because the `IF` is
+    // inside that branch and its false path ends the branch as surely as its
+    // true path does -- so then the false path lands where the true path
+    // falls, on the close, which leaves the `SELECT` before any boundary
+    // behind it runs. Past the close is the next `WHEN` or the `OTHERWISE`,
+    // with the branch's frame still open.
+    let start = op_index(ops)?;
+    let closes = matches!(before.first(), Some(Before::SelectBranchEnd));
     for entry in before.iter() {
         match entry {
-            Before::ThenEnd { resume } => {
+            Before::ThenEnd { resume, owner } => {
                 ops.push(Op::EndBranch);
                 if let Some(resume) = resume {
                     let op = op_index(ops)?;
@@ -1836,11 +1879,15 @@ fn emit_before(
                         kind: PatchKind::Resume,
                     });
                 }
+                landing[*owner] = Some(if closes { start } else { op_index(ops)? });
             }
             Before::SelectBranchEnd => ops.push(Op::EndWhen),
-            Before::EnterOtherwise(select) => ops.push(Op::EnterOtherwise {
-                select: instruction_index(*select)?,
-            }),
+            Before::EnterOtherwise(select) => {
+                landing[*select] = Some(op_index(ops)?);
+                ops.push(Op::EnterOtherwise {
+                    select: instruction_index(*select)?,
+                });
+            }
         }
     }
     Ok(())

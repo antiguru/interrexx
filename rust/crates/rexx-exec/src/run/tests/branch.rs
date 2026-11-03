@@ -718,3 +718,27 @@ fn a_select_nested_inside_an_ifs_then_branch_is_fully_resolved_before_resuming()
         b"abc\n".to_vec()
     );
 }
+
+/// A `WHEN` whose consequence is an `IF` with no `ELSE` and a false
+/// condition: the `IF`'s false path lands where the branch runs out, which
+/// has to close the branch and leave the `SELECT` rather than run the
+/// `OTHERWISE` or the next `WHEN`. Measured against the oracle: `after`
+/// alone, for each of the three things that can follow the branch.
+#[test]
+fn a_false_if_ending_a_whens_branch_leaves_the_select() {
+    for (follows, expected) in [
+        ("otherwise say 'other'", "after\n"),
+        ("when n = 1 then say 'second'", "after\n"),
+        ("", "after\n"),
+    ] {
+        let mut interp = Interp::new();
+        let source = format!(
+            "n = 1\nselect\n  when n = 0 then say 'zero'\n  when n = 1 then if n = 2 then say 'inner'\n  {follows}\nend\nsay 'after'"
+        );
+        assert_eq!(
+            say_output(&mut interp, source.as_bytes()),
+            expected.as_bytes().to_vec(),
+            "followed by `{follows}`"
+        );
+    }
+}

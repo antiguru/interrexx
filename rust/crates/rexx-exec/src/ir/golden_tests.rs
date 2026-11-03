@@ -879,9 +879,11 @@ fn a_condition_outside_the_native_set_stays_one_eval_expr() {
 /// **One `EndBranch` per `IF`, inner before outer.** Control leaves the inner
 /// branch first, and the oracle runs one synthetic end-of-branch instruction
 /// per branch rather than one per position -- so a handler delivered at the
-/// inner one that queues again has the outer one left to deliver it. Both
-/// `JumpUnless` targets are past both, because neither false path ran a
-/// branch.
+/// inner one that queues again has the outer one left to deliver it. The
+/// outer `IF`'s false path lands past both; the inner one's lands on the outer
+/// one's, because the inner `IF` is the outer branch and a false inner
+/// condition finishes it -- measured, a handler the inner `IF`'s condition
+/// queues and requeues is delivered before the clause after both.
 #[test]
 fn nested_ifs_reuse_their_registers() {
     let chunk =
@@ -898,7 +900,7 @@ fn nested_ifs_reuse_their_registers() {
          7: LoadConstant dst=0\n\
          8: LoadConstant dst=1\n\
          9: Binary op== lhs=0 rhs=1 dst=0\n\
-         10: ConditionJump index=2 reg=0 keyword=IF target=17\n\
+         10: ConditionJump index=2 reg=0 keyword=IF target=16\n\
          11: Clause index=3 end=12\n\
          12: Clause index=4 end=15\n\
          13: Const dst=0 konst=0\n\
@@ -944,7 +946,7 @@ fn a_select_with_an_otherwise_compiles_to_a_scan_chain_and_two_frames() {
          14: LoadConstant dst=0\n\
          15: LoadConstant dst=1\n\
          16: Binary op== lhs=0 rhs=1 dst=0\n\
-         17: ConditionJump index=4 reg=0 keyword=WHEN target=23\n\
+         17: ConditionJump index=4 reg=0 keyword=WHEN target=24\n\
          18: EnterWhen select=0 when=4\n\
          19: Clause index=5 end=20\n\
          20: Clause index=6 end=23\n\
