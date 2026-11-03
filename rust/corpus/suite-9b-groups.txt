@@ -12,6 +12,7 @@
 # equals it. Pass the list to the suite gate as REXX_SUITE_GROUPS, comma-joined.
 base/class/File
 base/keyword/ADDRESS
+base/rexxutil/Macrospace
 base/rexxutil/SysDumpVariables
 base/rexxutil/SysFileDateTime
 base/rexxutil/SysFileSearch

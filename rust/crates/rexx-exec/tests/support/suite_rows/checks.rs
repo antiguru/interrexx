@@ -12,7 +12,7 @@ pub fn check_row(row: &Row, context: &Context) -> Result<(), String> {
         return Err("the group file defines no such method".to_string());
     }
     match row.owner {
-        Owner::Phase10(reason) => check_phase_10(row, reason, context),
+        Owner::Phase10(reason) => check_phase_10(row, reason),
         Owner::Deviation(number) => {
             if context.deviations.contains(&number) {
                 Ok(())
@@ -42,19 +42,7 @@ pub fn check_row(row: &Row, context: &Context) -> Result<(), String> {
     }
 }
 
-fn check_phase_10(row: &Row, reason: Deferral, context: &Context) -> Result<(), String> {
-    if row.reason == "reaching_rxapi" {
-        return if reason != Deferral::Rxapi {
-            Err("a reaching_rxapi row is owned by Phase 10 Rxapi".to_string())
-        } else if context
-            .rxapi
-            .contains(&(row.group.clone(), row.test.clone()))
-        {
-            Ok(())
-        } else {
-            Err("reaching_rxapi does not rename it out".to_string())
-        };
-    }
+fn check_phase_10(row: &Row, reason: Deferral) -> Result<(), String> {
     if row.reason == "group" {
         return match phase_10_group(&row.group) {
             Some(found) if found == reason => Ok(()),
@@ -77,9 +65,7 @@ fn check_phase_10(row: &Row, reason: Deferral, context: &Context) -> Result<(), 
             "the refusal does not carry Phase 10 {}: {text}",
             reason.name()
         )),
-        None => Err(
-            "the reason is not reaching_rxapi, group, `held: WHY` or `refusal: TEXT`".to_string(),
-        ),
+        None => Err("the reason is not group, `held: WHY` or `refusal: TEXT`".to_string()),
     }
 }
 

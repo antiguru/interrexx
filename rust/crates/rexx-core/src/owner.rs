@@ -4,8 +4,6 @@
 /// Why a refusal is Phase 10's: D3's closed set.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Deferral {
-    /// It needs the RXAPI daemon.
-    Rxapi,
     /// It needs an extension library.
     Extension,
     /// It belongs to a row 10 native-API group.
@@ -13,17 +11,12 @@ pub enum Deferral {
 }
 
 impl Deferral {
-    pub const ALL: [Deferral; 3] = [
-        Deferral::Rxapi,
-        Deferral::Extension,
-        Deferral::Row10NativeApi,
-    ];
+    pub const ALL: [Deferral; 2] = [Deferral::Extension, Deferral::Row10NativeApi];
 
     /// The variant's name, as a refusal and the row files spell it.
     #[must_use]
     pub const fn name(self) -> &'static str {
         match self {
-            Deferral::Rxapi => "Rxapi",
             Deferral::Extension => "Extension",
             Deferral::Row10NativeApi => "Row10NativeApi",
         }
@@ -48,7 +41,6 @@ impl Owner {
     #[must_use]
     pub const fn label(self) -> &'static str {
         match self {
-            Owner::Phase10(Deferral::Rxapi) => "Phase 10 Rxapi",
             Owner::Phase10(Deferral::Extension) => "Phase 10 Extension",
             Owner::Phase10(Deferral::Row10NativeApi) => "Phase 10 Row10NativeApi",
         }
@@ -78,5 +70,6 @@ mod tests {
         }
         assert_eq!(Owner::named("Phase 10", None), None);
         assert_eq!(Owner::named("Phase 10", Some("Queue")), None);
+        assert_eq!(Owner::named("Phase 10", Some("Rxapi")), None);
     }
 }

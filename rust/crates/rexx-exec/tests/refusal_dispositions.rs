@@ -901,7 +901,7 @@ fn adjacent(r: u8) -> Failure {
     match r {
         0 => return Loud { message: String::new() }.into(),
         _ => Loud {
-            message: owned_message(\"t\", Some(Owner::Phase10(Deferral::Rxapi))),
+            message: owned_message(\"t\", Some(Owner::Phase10(Deferral::Row10NativeApi))),
         }
         .into(),
     }
@@ -911,9 +911,9 @@ fn hostemu() -> Loud {
         message: owned_message(\"s\", Some(Owner::Phase10(Deferral::Extension))),
     }
 }
-fn rxapi() -> Loud {
+fn native_api() -> Loud {
     Loud {
-        message: owned_message(\"r\", Some(Owner::Phase10(Deferral::Rxapi))),
+        message: owned_message(\"r\", Some(Owner::Phase10(Deferral::Row10NativeApi))),
     }
 }
 fn unknown() -> Loud {
@@ -934,8 +934,8 @@ fn unknown() -> Loud {
         Owner::Phase("Phase 10 Extension".to_string())
     );
     assert_eq!(
-        owners["rxapi"].0,
-        Owner::Phase("Phase 10 Rxapi".to_string())
+        owners["native_api"].0,
+        Owner::Phase("Phase 10 Row10NativeApi".to_string())
     );
     assert_eq!(owners["mutant_self"].0, Owner::None);
     assert_eq!(owners["mixed"].0, Owner::None);
@@ -952,7 +952,7 @@ optional\tLIMIT\t-\tDeviation 20
 mutant_self\tGUARD\t-\tprobe p4
 mixed\tGUARD\t-\tprobe p5
 unknown\tGUARD\t-\tprobe p6
-rxapi\tREHOME\tPhase 10\t\"the row's text\"
+native_api\tREHOME\tPhase 10\t\"the row's text\"
 ";
     assert!(
         problems(&owners, &[], &parse_table(table), &documents).is_empty(),

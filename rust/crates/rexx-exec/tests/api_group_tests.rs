@@ -12,9 +12,10 @@
 //! on both sides), so the whole run is where every test [`RECORDED`] does
 //! not name must pass. Gate-only.
 //!
-//! The invocation, the copy and the tests that reach rxapi are
-//! `support/group_runner.rs`'s ([`group_runner::reaching_rxapi`] derives the
-//! ones [`RECORDED`] must run on neither side).
+//! The invocation and the copy are `support/group_runner.rs`'s. This crate's
+//! side runs in this process on an API service of its own
+//! ([`private_service`]); the oracle's runs on its private
+//! `XDG_RUNTIME_DIR` (`support/oracle_runtime.rs`).
 
 #[path = "support/group_runner.rs"]
 mod group_runner;
@@ -41,8 +42,8 @@ const GROUPS: &[&str] = &["CONVERSION", "FUNCTION", "METHOD"];
 /// The tests this crate does not pass, as `GROUP.TEST`, each recorded with its
 /// cause and the phase that owns it in
 /// `docs/superpowers/plans/phase-4-exclusions.txt`; `false` for one that runs
-/// on neither side, which must be exactly the ones [`reaching_rxapi`] derives.
-const RECORDED: &[(&str, bool)] = &[("FUNCTION.TEST_REXXQUEUE", false)];
+/// on neither side.
+const RECORDED: &[(&str, bool)] = &[];
 
 /// The tests whose outcome, assertion count, stderr and exit status agree while
 /// a failure's or an error's detail differs, as `GROUP.TEST`, each recorded as
@@ -73,14 +74,36 @@ fn not_run() -> BTreeSet<String> {
         .collect()
 }
 
-/// Fails unless the tests the source says reach rxapi are exactly the ones
-/// [`RECORDED`] runs on neither side.
-fn assert_rxapi_tests_are_not_run() {
-    assert_eq!(
-        group_runner::reaching_rxapi(DIR, GROUPS),
-        not_run(),
-        "the tests reaching rxapi, derived from the group sources, against RECORDED's not-run entries"
-    );
+/// Points this process's API connection at a service of its own below the
+/// target directory, and starts a watcher that stops that service and removes
+/// its directory once this process has ended: a queue a test leaves behind
+/// would keep it running.
+fn private_service() {
+    static CHOSEN: std::sync::Once = std::sync::Once::new();
+    CHOSEN.call_once(|| {
+        let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
+            .join(format!("api-group-api-{}", std::process::id()));
+        let daemon = std::path::Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi");
+        assert!(
+            daemon.is_file(),
+            "{} is missing; run `cargo build --workspace --bins` first",
+            daemon.display()
+        );
+        assert!(rexx_exec::use_api_service(&dir, &daemon));
+        let _ = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(
+                "while kill -0 \"$0\" 2>/dev/null; do sleep 1; done; \
+                 REXX_API_DIR=\"$1\" \"$2\" --stop >/dev/null 2>&1; rm -rf \"$1\"",
+            )
+            .arg(std::process::id().to_string())
+            .arg(&dir)
+            .arg(&daemon)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+    });
 }
 
 #[test]
@@ -143,17 +166,12 @@ fn a_constant_holding_a_queue_reaches_rxapi_from_the_tests_naming_it() {
 }
 
 #[test]
-fn the_tests_reaching_rxapi_run_on_neither_side() {
-    assert_rxapi_tests_are_not_run();
-}
-
-#[test]
 fn every_test_of_the_phase_8_groups_passes_and_matches_the_oracle_but_the_recorded() {
     if !gate_mode() {
         eprintln!("api_group_tests: skipped without {GATE_ENV}");
         return;
     }
-    assert_rxapi_tests_are_not_run();
+    private_service();
     let exclusions =
         fs::read_to_string(worktree().join("docs/superpowers/plans/phase-4-exclusions.txt"))
             .expect("the exclusions file");
@@ -323,6 +341,7 @@ fn the_framework_ticker_runs_without_dash_u() {
             args.push("-U");
         }
         fresh_copy(&run, DIR);
+        private_service();
         runs.push(run_crate(&run, &args, SwitchMode::None));
     }
     fs::remove_dir_all(run.parent().expect("a parent")).expect("cannot remove the run directory");

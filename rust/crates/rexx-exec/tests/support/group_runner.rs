@@ -722,7 +722,7 @@ pub fn interpreter_bin(run: &Path) -> PathBuf {
 }
 
 /// Makes `at` a hard link to `ours`, or a copy where one cannot be made.
-fn place(at: &Path, ours: &str) {
+pub fn place(at: &Path, ours: &str) {
     let current = || {
         fs::metadata(at)
             .ok()

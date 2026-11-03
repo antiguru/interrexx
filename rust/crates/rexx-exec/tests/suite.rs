@@ -5,11 +5,11 @@
 //! comma-separated `dir/group` names it lists.
 //!
 //! Each side runs from its own copy: [`group_runner::fresh_copy_from`], the
-//! group file's namesakes elsewhere in the copy deleted, the tests
-//! [`group_runner::reaching_rxapi_in`] finds renamed out, and each test's start
-//! marked in [`marker`]'s file. A run of this crate that a refusal, a crash, a
-//! timeout or the memory cap ends has its last started test renamed out, and
-//! runs again.
+//! group file's namesakes elsewhere in the copy deleted, and each test's start
+//! marked in [`marker`]'s file. Each run has an API service of its own
+//! ([`private_service`]), stopped after it. A run of this crate that a
+//! refusal, a crash, a timeout or the memory cap ends has its last started test
+//! renamed out, and runs again.
 
 #[path = "suite/launch/mod.rs"]
 mod launch;
@@ -22,6 +22,8 @@ pub use launch::{
 mod diagnostics;
 #[path = "support/group_runner.rs"]
 mod group_runner;
+#[path = "suite/private_service.rs"]
+mod private_service;
 #[path = "suite/process_ownership/mod.rs"]
 mod process_ownership;
 #[path = "suite/selection/mod.rs"]
@@ -41,9 +43,10 @@ use std::time::Duration;
 
 use group_runner::{
     Ended, ProcessRun, VERBOSITY, crate_environment_with_path, failing, fresh_copy_from,
-    groups_root, interpreter_bin, mark_starts_in_file, reaching_rxapi_in, read_bytes, refusal,
-    renamed, run_process, set_environment, skip, source_test_names_in, started_in_file, worktree,
+    groups_root, interpreter_bin, mark_starts_in_file, place, read_bytes, refusal, renamed,
+    run_process, set_environment, skip, source_test_names_in, started_in_file, worktree,
 };
+use private_service::{PrivateService, Side, service_binaries};
 use suite_rows::{Context, Owner, Row, check_rows, group_path, read_rows, table_path};
 use support::oracle::{ORACLE_MEMORY_LIMIT_KIB, oracle_root};
 
@@ -299,14 +302,18 @@ pub fn resolve(name: &str, path: &str) -> Option<PathBuf> {
 }
 
 /// Whether the crate side's `path` resolves `rexx` and `rexxc` inside `bin`,
-/// and `bin` holds no ELF file but copies of this crate's `rexx` and `rexxc`.
+/// and `bin` holds no ELF file but copies of this crate's `rexx` and `rexxc`
+/// and of its [`service_binaries`].
 pub fn check_path(path: &str, bin: &Path) -> Result<(), String> {
     use std::os::unix::fs::MetadataExt as _;
     let identity = |path: &Path| fs::metadata(path).ok().map(|meta| (meta.dev(), meta.ino()));
-    let ours = [
-        Path::new(env!("CARGO_BIN_EXE_rexx")),
-        Path::new(env!("CARGO_BIN_EXE_rexxc")),
-    ];
+    let ours: Vec<PathBuf> = [
+        PathBuf::from(env!("CARGO_BIN_EXE_rexx")),
+        PathBuf::from(env!("CARGO_BIN_EXE_rexxc")),
+    ]
+    .into_iter()
+    .chain(service_binaries())
+    .collect();
     for entry in fs::read_dir(bin).map_err(|e| format!("cannot read {}: {e}", bin.display()))? {
         let file = entry.map_err(|e| e.to_string())?.path();
         if identity(&file).is_some()
@@ -340,6 +347,21 @@ pub fn check_path(path: &str, bin: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// [`interpreter_bin`] for the copy `run`, with the oracle's class files
+/// ([`lay_class_files`]) and this crate's [`service_binaries`] laid beside
+/// `rexx`, where `rexx` finds its daemon and a test its `rxqueue` and `rxsubcom`.
+pub fn crate_bin(run: &Path) -> PathBuf {
+    let bin = interpreter_bin(run);
+    lay_class_files(&bin);
+    for binary in service_binaries() {
+        place(
+            &bin.join(binary.file_name().expect("a file name")),
+            &binary.to_string_lossy(),
+        );
+    }
+    bin
+}
+
 /// Copies the oracle `bin`'s Rexx class files (`*.cls`) into the crate
 /// side's `bin`, so a program searching `PATH` for one finds it on both sides.
 fn lay_class_files(bin: &Path) {
@@ -356,21 +378,59 @@ fn lay_class_files(bin: &Path) {
 }
 
 /// The environment a crate run of the copy `run` gets: `PATH` is
-/// [`interpreter_bin`] and [`SYSTEM_PATH`], and [`extensions`] comes first on
-/// `LD_LIBRARY_PATH`, so `hostemu` and `orxncurses` load as built against this
-/// crate's libraries.
+/// [`interpreter_bin`], [`testbinaries`] and [`SYSTEM_PATH`], and
+/// [`testbinaries`] then [`extensions`] come first on `LD_LIBRARY_PATH`, so the
+/// native-API test libraries, `hostemu` and `orxncurses` load as built against
+/// this crate's libraries, not the oracle's. No `RXQUEUE` or `RXQUEUESESSION`
+/// is inherited.
 pub fn crate_side_environment(run: &Path) -> Vec<(Vec<u8>, Vec<u8>)> {
-    let mut environment =
-        crate_environment_with_path(run, SYSTEM_PATH.iter().map(PathBuf::from).collect());
+    let mut environment = crate_environment_with_path(
+        run,
+        std::iter::once(testbinaries().to_path_buf())
+            .chain(SYSTEM_PATH.iter().map(PathBuf::from))
+            .collect(),
+    );
+    environment.retain(|(name, _)| name != b"RXQUEUE" && name != b"RXQUEUESESSION");
     for (name, value) in &mut environment {
         if name == b"LD_LIBRARY_PATH" {
-            let mut first = extensions().as_os_str().as_encoded_bytes().to_vec();
+            let mut first = testbinaries().as_os_str().as_encoded_bytes().to_vec();
+            first.push(b':');
+            first.extend_from_slice(extensions().as_os_str().as_encoded_bytes());
             first.push(b':');
             first.append(value);
             *value = first;
         }
     }
     environment
+}
+
+/// ooRexx's native-API test libraries and drivers, built once by
+/// `scripts/build-testbinaries.sh` from the shared objects cargo left beside
+/// this test, as `classic_api.rs` builds them.
+pub fn testbinaries() -> &'static Path {
+    static BUILT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    BUILT.get_or_init(|| {
+        let deps = std::env::current_exe()
+            .expect("the test's path")
+            .parent()
+            .expect("the deps directory")
+            .to_path_buf();
+        let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("suite-testbinaries");
+        let output = Command::new(worktree().join("scripts/build-testbinaries.sh"))
+            .arg("--libs")
+            .arg(&deps)
+            .arg("--out")
+            .arg(&out)
+            .output()
+            .expect("the build script runs");
+        assert!(
+            output.status.success(),
+            "build-testbinaries.sh failed:\n{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        out
+    })
 }
 
 /// `hostemu` and `orxncurses`, built once by `scripts/build-extensions.sh`
@@ -500,22 +560,13 @@ fn driver_args(run: &Path, group_file: &Path) -> Vec<String> {
     ]
 }
 
-/// The renamed-out set a side starts from: the tests reaching rxapi and the
-/// caller's.
-fn left_out(
-    root: &Path,
-    dir: &str,
-    group: &str,
-    renamed_out: &BTreeSet<String>,
-) -> BTreeSet<String> {
-    let mut left_out = reaching_rxapi_in(root, dir, &[group]);
-    left_out.extend(
-        renamed_out
-            .iter()
-            .filter(|name| name.starts_with(&format!("{group}.")))
-            .cloned(),
-    );
-    left_out
+/// The renamed-out set a side starts from: the caller's tests of `group`.
+fn left_out(group: &str, renamed_out: &BTreeSet<String>) -> BTreeSet<String> {
+    renamed_out
+        .iter()
+        .filter(|name| name.starts_with(&format!("{group}.")))
+        .cloned()
+        .collect()
 }
 
 /// The framework's `Tests ran:` figure in `stdout`.
@@ -1185,14 +1236,14 @@ mod judging {
     fn a_row_whose_refusal_or_claim_the_run_contradicts_reddens_its_group() {
         let refused = row(
             "TEST_R",
-            Owner::Phase10(super::suite_rows::Deferral::Rxapi),
-            "refusal: rexx-exec: x (Phase 10 Rxapi)",
+            Owner::Phase10(super::suite_rows::Deferral::Extension),
+            "refusal: rexx-exec: x (Phase 10 Extension)",
         );
         let oracle = run(&["TEST_A"], &["TEST_A"], &["TEST_A"]);
         let mut ours = run(&["TEST_A"], &["TEST_A", "TEST_R"], &["TEST_A"]);
         ours.blocked.insert(
             "TEST_R".to_string(),
-            "rexx-exec: x (Phase 10 Rxapi)".to_string(),
+            "rexx-exec: x (Phase 10 Extension)".to_string(),
         );
         assert_eq!(judge(&oracle, &ours, &[&refused]), Vec::<String>::new());
         ours.blocked
@@ -1329,10 +1380,6 @@ mod row_checks {
     const PASSING: &[(&str, &str)] = &[
         (
             EXCLUSIONS,
-            "base/bif/RXQUEUE\tTEST_RXQUEUE_NOARG\tPhase 10 Rxapi\treaching_rxapi",
-        ),
-        (
-            EXCLUSIONS,
             "extensions/platform/windows/rxwinsys/Clipboard\tTEST_01CREATE\tPhase 10 Extension\tgroup",
         ),
         (
@@ -1341,7 +1388,7 @@ mod row_checks {
         ),
         (
             EXCLUSIONS,
-            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Rxapi\trefusal: rexx-exec: a queue is not implemented (Phase 10 Rxapi)",
+            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Extension\trefusal: rexx-exec: a queue is not implemented (Phase 10 Extension)",
         ),
         (
             LICENCES,
@@ -1380,7 +1427,7 @@ mod row_checks {
         ),
         (
             EXCLUSIONS,
-            "extensions/platform/unix/rxunixsys/SysUnix\tTEST_SYSCRYPT\tPhase 10 Rxapi\theld: neither engine provides SysCrypt; it fails on the oracle too",
+            "extensions/platform/unix/rxunixsys/SysUnix\tTEST_SYSCRYPT\tPhase 10 Row10NativeApi\theld: neither engine provides SysCrypt; it fails on the oracle too",
         ),
         (
             EXCLUSIONS,
@@ -1388,15 +1435,19 @@ mod row_checks {
         ),
         (
             EXCLUSIONS,
-            "base/bif/RXQUEUE\tTEST_RXQUEUE_NOARG\tPhase 10 Rxapi",
+            "base/bif/RXQUEUE\tTEST_RXQUEUE_NOARG\tPhase 10 Extension",
         ),
         (
             EXCLUSIONS,
             "base/bif/RXQUEUE\tTEST_RXQUEUE_NOARG\tPhase 10 Queue\treaching_rxapi",
         ),
         (
+            EXCLUSIONS,
+            "base/bif/RXQUEUE\tTEST_RXQUEUE_NOARG\tPhase 10 Rxapi\tgroup",
+        ),
+        (
             LICENCES,
-            "base/bif/RXQUEUE\tTEST_RXQUEUE_NOARG\tPhase 10 Rxapi\treaching_rxapi",
+            "extensions/platform/windows/rxwinsys/Clipboard\tTEST_01CREATE\tPhase 10 Extension\tgroup",
         ),
         (
             EXCLUSIONS,
@@ -1404,15 +1455,11 @@ mod row_checks {
         ),
         (
             EXCLUSIONS,
-            "base/bif/CHAROUT\tTEST_STDOUT_START\tPhase 10 Rxapi\treaching_rxapi",
+            "base/bif/CHAROUT\tTEST_NO_SUCH_TEST\tPhase 10 Extension\trefusal: rexx-exec: x (Phase 10 Extension)",
         ),
         (
             EXCLUSIONS,
-            "base/bif/CHAROUT\tTEST_NO_SUCH_TEST\tPhase 10 Rxapi\trefusal: rexx-exec: x (Phase 10 Rxapi)",
-        ),
-        (
-            EXCLUSIONS,
-            "base/bif/NO_SUCH_GROUP\tTEST_A\tPhase 10 Rxapi\trefusal: rexx-exec: x (Phase 10 Rxapi)",
+            "base/bif/NO_SUCH_GROUP\tTEST_A\tPhase 10 Extension\trefusal: rexx-exec: x (Phase 10 Extension)",
         ),
         (
             EXCLUSIONS,
@@ -1428,23 +1475,23 @@ mod row_checks {
         ),
         (
             EXCLUSIONS,
-            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Rxapi\trefusal: rexx-exec: Object~copy is not implemented (Phase 9)",
+            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Extension\trefusal: rexx-exec: Object~copy is not implemented (Phase 9)",
         ),
         (
             EXCLUSIONS,
-            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Rxapi\trefusal: rexx-exec: a queue is not implemented (Phase 10)",
+            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Extension\trefusal: rexx-exec: a queue is not implemented (Phase 10)",
         ),
         (
             EXCLUSIONS,
-            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Rxapi\trefusal: rexx-exec: a queue is not implemented (Phase 10 Extension)",
+            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Extension\trefusal: rexx-exec: a queue is not implemented (Phase 10 Row10NativeApi)",
         ),
         (
             EXCLUSIONS,
-            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Rxapi\trefusal: rexx-exec: a queue is not implemented (Phase 10 Rxapi2)",
+            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Extension\trefusal: rexx-exec: a queue is not implemented (Phase 10 Extension2)",
         ),
         (
             EXCLUSIONS,
-            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Rxapi\tit needs the daemon",
+            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Extension\tit needs the library",
         ),
         (
             LICENCES,
@@ -1539,15 +1586,10 @@ mod row_checks {
     }
 
     #[test]
-    fn the_rxapi_rows_are_reaching_rxapis_output() {
-        let context = context(&["base/bif/RXQUEUE", "base/bif/CHAROUT"]);
-        let renamed: Vec<String> = context
-            .rxapi
-            .iter()
-            .map(|(group, test)| format!("{group}\t{test}\tPhase 10 Rxapi\treaching_rxapi"))
-            .collect();
-        assert!(renamed.len() > 1, "RXQUEUE reaches rxapi");
-        let file = |lines: &[String]| {
+    fn a_test_with_two_rows_is_a_problem() {
+        let context = context(&["extensions/platform/windows/rxwinsys/Clipboard"]);
+        let line = "extensions/platform/windows/rxwinsys/Clipboard\tTEST_01CREATE\tPhase 10 Extension\tgroup";
+        let file = |lines: &[&str]| {
             let (_, rows, malformed) = parse_rows(
                 EXCLUSIONS,
                 &format!("# ootest revision 13178\n{}\n", lines.join("\n")),
@@ -1555,17 +1597,15 @@ mod row_checks {
             assert_eq!(malformed, Vec::<String>::new());
             check_rows(&rows, &context)
         };
-        assert_eq!(file(&renamed), Vec::<String>::new());
-        assert_eq!(file(&renamed[1..]).len(), 1, "a missing row");
-        let doubled = [renamed.clone(), renamed[..1].to_vec()].concat();
-        assert_eq!(file(&doubled).len(), 1, "a doubled row");
+        assert_eq!(file(&[line]), Vec::<String>::new());
+        assert_eq!(file(&[line, line]).len(), 1, "a doubled row");
     }
 
     #[test]
     fn a_file_without_its_revision_is_malformed() {
         let (_, _, problems) = parse_rows(
             EXCLUSIONS,
-            "base/bif/RXQUEUE\tTEST_RXQUEUE_NOARG\tPhase 10 Rxapi\treaching_rxapi\n",
+            "base/bif/RXQUEUE\tTEST_RXQUEUE_NOARG\tPhase 10 Extension\tgroup\n",
         );
         assert_eq!(problems.len(), 1, "{problems:?}");
     }
