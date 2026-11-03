@@ -1214,6 +1214,16 @@ impl Interp {
         }
     }
 
+    /// Whether `id` is the activation a `CallRoutine` or `CallProgram` call
+    /// in progress was made from, which the code that call runs does not
+    /// reach as its caller ([`crate::activity::ApiBase`]).
+    pub(crate) fn below_api_base(&self, id: ActivationId) -> bool {
+        self.activity
+            .api_bases
+            .last()
+            .is_some_and(|base| base.below == Some(id))
+    }
+
     /// The depth of the innermost activation that is not an internal call.
     pub(crate) fn first_non_internal_depth(&self) -> usize {
         self.frames()

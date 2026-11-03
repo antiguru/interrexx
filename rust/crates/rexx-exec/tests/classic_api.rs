@@ -1437,3 +1437,42 @@ fn the_rxunixsys_group_matches_the_oracle_but_for_the_refused_wordexp() {
         outcome.stdout
     );
 }
+
+/// `METHODPackage.cls`, the class ooTest's `API/oo/METHOD` group binds `orxmethod`'s methods in.
+fn method_package() -> String {
+    std::fs::read_to_string(repository().join("ootest/ooRexx/API/oo/METHODPackage.cls"))
+        .expect("METHODPackage.cls is readable")
+}
+
+/// `CallRoutine` runs its routine on a fresh activation stack, as `Activity::run` does for a
+/// dispatcher: the routine has no Rexx caller. A non-SYNTAX condition it `RAISE`s untrapped is
+/// kept for the native caller's `CheckCondition` and `GetConditionInfo` and goes no further; a
+/// native routine's frame has no context and its caller's variables do not exist; a condition
+/// object `GetConditionInfo` answers has the frames of the levels it left, which a later error
+/// does not inherit. The expected output is the oracle's.
+#[test]
+fn call_routine_runs_without_a_rexx_caller() {
+    let stdout = run_program(
+        "call-routine",
+        include_str!("classic_api/call_routine.rex"),
+        &[("METHODPackage.cls", &method_package())],
+    );
+    assert_eq!(
+        stdout,
+        "condition: r1 1 USER BOOM d1 a1\n\
+         condition: The NIL object 1 USER BOOM d2 The NIL object\n\
+         condition: The NIL object 1 USER BOOM d3 The NIL object\n\
+         condition: e4 1 USER BOOM d4 The NIL object\n\
+         condition: The NIL object 1 USER BOOM d5 The NIL object\n\
+         native: SYNTAX 88.907 3\n\
+         \x20 frame: ROUTINE 1 1\n\
+         \x20 frame: METHOD 0 1\n\
+         \x20 frame: PROGRAM 0 0\n\
+         rexx: SYNTAX 41.1 2 rr 3\n\
+         \x20 frame: ROUTINE 2 0\n\
+         \x20 frame: METHOD The NIL object 1\n\
+         \x20 frame: PROGRAM 20 0\n\
+         variables: The NIL object The NIL object The NIL object 0 0 0 144 mine\n\
+         syntax: 30 1\n"
+    );
+}

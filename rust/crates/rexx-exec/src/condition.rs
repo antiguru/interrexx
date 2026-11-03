@@ -421,12 +421,30 @@ impl Interp {
 
     /// [`Interp::build_condition_object`] for a condition the innermost
     /// native call raised, whose own frame leads `STACKFRAMES` and
-    /// `TRACEBACK` (`NativeActivation::createStackFrame`).
+    /// `TRACEBACK` (`NativeActivation::createStackFrame`). Where it is a
+    /// callback's failure, `levels` are the levels it left, whose frames lead
+    /// those, as `Activity::raiseException` builds the object at the raise.
     pub(crate) fn build_native_condition_object(
         &mut self,
         raised: &Raised,
+        levels: Option<&crate::run::FailureLevels>,
     ) -> Result<ObjRef, Failure> {
-        self.build_condition_object_from(raised, None, true, None)
+        let Some(levels) = levels else {
+            return self.build_condition_object_from(raised, None, true, None);
+        };
+        let frame = self.roots.activity_mut().push_frame();
+        let mut roots = Vec::new();
+        levels.object_roots(&mut roots);
+        for object in roots {
+            self.roots.activity_mut().push_temp(object);
+        }
+        let unwound = levels.unwound();
+        let object = match levels.reraised_object() {
+            Some(object) => self.reraise_condition_object(object, unwound.origin),
+            None => self.build_condition_object_from(raised, None, true, Some(&unwound)),
+        };
+        self.roots.activity_mut().pop_frame(frame);
+        object
     }
 
     /// [`Interp::build_native_condition_object`] for a `CALL ON` trap, which
@@ -484,7 +502,10 @@ impl Interp {
         // `generateProgramInformation` puts no `POSITION` where the frame it
         // takes the package from is native, which has no line.
         let reraised = unwound.is_some_and(|unwound| unwound.reraised);
+        // A level the condition left with a package of its own was where it
+        // was raised, and names the line.
         let packaged_native = native
+            && unwound_origin.is_none()
             && self
                 .activity
                 .native_handles

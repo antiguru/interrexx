@@ -417,6 +417,35 @@ pub(crate) struct FailureLevels {
     failed_sends: Vec<ObjRef>,
 }
 
+impl FailureLevels {
+    /// The levels a condition object built from these lists: their sites
+    /// and sealed frames, the innermost level with a package, and how the
+    /// failure travelled.
+    pub(crate) fn unwound(&self) -> crate::condition::Unwound<'_> {
+        crate::condition::Unwound {
+            sites: &self.sites,
+            frames: self.frames.clone(),
+            origin: self.origin,
+            propagated: self.propagated,
+            reraised: self.reraised,
+        }
+    }
+
+    /// The condition object a level re-raised, which a condition object
+    /// built from these levels is.
+    pub(crate) fn reraised_object(&self) -> Option<ObjRef> {
+        self.reraised_object
+    }
+
+    /// The objects these levels name, for a holder's roots.
+    pub(crate) fn object_roots(&self, out: &mut Vec<ObjRef>) {
+        out.extend(self.frame);
+        out.extend(self.frames.iter().copied());
+        out.extend(self.reraised_object);
+        out.extend(self.failed_sends.iter().copied());
+    }
+}
+
 impl Interp {
     // ---- the instruction loop, which is what this spike is for ----
 
@@ -3272,7 +3301,7 @@ impl Interp {
     /// The levels a failure has left, taken out with their objects pushed as
     /// temps of the frame in force, which must outlive the matching
     /// [`Interp::restore_failure_levels`].
-    fn take_failure_levels(&mut self) -> FailureLevels {
+    pub(crate) fn take_failure_levels(&mut self) -> FailureLevels {
         let activity = &mut self.activity;
         let kept = FailureLevels {
             site: activity.failure_site.take(),

@@ -1212,8 +1212,14 @@ struct Sender {
     /// `SIGNAL ON` trap takes the condition first.
     reply_issued: bool,
     /// The identity of the level at `depth`, unless that level is beyond a
-    /// `top` that has replied.
+    /// `top` that has replied or beyond a `CallRoutine` call's base.
     activation: Option<crate::activation::ActivationId>,
+    /// Whether the level at `depth` is the activation a `CallRoutine` or
+    /// `CallProgram` call was made from: the code it runs has no Rexx
+    /// caller, and the native code that made the call keeps the condition
+    /// (`RexxActivation::senderActivation`, `execution/RexxActivation.cpp:
+    /// 2766`, and `NativeActivation::trapRaised`).
+    api: bool,
 }
 
 impl Sender {

@@ -2229,6 +2229,16 @@ struct NativeFrame {
     result: Option<ObjRef>,
     /// The held condition's object, once a callback asked for it.
     condition: Option<ObjRef>,
+    /// Whether the held condition is one Rexx code a `CallRoutine` or
+    /// `CallProgram` call ran `RAISE`d with no Rexx caller to offer it to:
+    /// kept for `CheckCondition` and `GetConditionInfo`, and not raised again
+    /// when the call returns (`NativeActivation::setCalleeConditionInfo`,
+    /// `execution/NativeActivation.cpp:2739`).
+    callee: bool,
+    /// The levels the held condition left on the activity before it was
+    /// held, which its condition object lists and which go back on the
+    /// activity where the call raises it again.
+    levels: Option<crate::run::FailureLevels>,
     /// A routine's [`Interp::library_codes`] row, `None` for a method or a
     /// package hook.
     code: Option<usize>,
@@ -2242,6 +2252,12 @@ struct NativeFrame {
     lent: Vec<ObjRef>,
     /// The activation the call was made from.
     caller: Option<crate::activation::ActivationId>,
+    /// Whether the call has no calling activation whose context and
+    /// variables it reaches: none was running, or `caller` is the one a
+    /// `CallRoutine` call that runs it was made from
+    /// (`NativeActivation::accessCallerContext`,
+    /// `execution/NativeActivation.cpp:1789`).
+    callerless: bool,
     /// This native activation's number among its activity's, which is what
     /// rexx-api names the frame by.
     id: u32,
@@ -2281,6 +2297,9 @@ impl NativeFrame {
                 .into_iter()
                 .flatten(),
         );
+        if let Some(levels) = &self.levels {
+            levels.object_roots(out);
+        }
     }
 }
 

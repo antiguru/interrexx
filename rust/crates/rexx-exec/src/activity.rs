@@ -216,6 +216,9 @@ pub(crate) struct Activity {
     /// for as long as that send runs: the `RedirectionDispatcher` a condition
     /// raised straight into it meets, which takes it and ends the input.
     pub(crate) input_dispatch: Option<crate::activation::ActivationId>,
+    /// The `CallRoutine` and `CallProgram` calls in progress, innermost last:
+    /// each runs its code on a fresh activation stack, with no Rexx caller.
+    pub(crate) api_bases: Vec<ApiBase>,
     /// Whether the dispatcher took a condition during the current send.
     pub(crate) input_dispatch_trapped: bool,
     /// A SYNTAX condition the dispatcher took, which `RedirectionDispatcher::
@@ -358,6 +361,21 @@ pub(crate) struct Activity {
     pub(crate) sharing_tag: u32,
 }
 
+/// A `CallRoutine` or `CallProgram` call in progress. The oracle runs it under
+/// `Activity::run(ActivityDispatcher &)`, which starts a new activation stack
+/// (`concurrency/Activity.cpp:3565`): the code it runs has no Rexx caller, and
+/// the activations below the native code that called the API are out of its
+/// reach.
+pub(crate) struct ApiBase {
+    /// The activation running when the call was made, which the code the
+    /// call runs must not reach as its caller.
+    pub(crate) below: Option<crate::activation::ActivationId>,
+    /// The row in [`Activity::native_handles`] of the native call that made
+    /// it, which keeps a condition the code `RAISE`s for its
+    /// `CheckCondition` and `GetConditionInfo`.
+    pub(crate) native: usize,
+}
+
 /// A primitive method that is running Rexx code, which the oracle runs under
 /// an `InternalActivationFrame` (`concurrency/ActivationFrame.cpp:100`).
 pub(crate) struct MethodLevel {
@@ -498,6 +516,7 @@ impl Activity {
             failure_reraised: false,
             native_reraise: false,
             input_dispatch: None,
+            api_bases: Vec::new(),
             input_dispatch_trapped: false,
             input_dispatch_syntax: None,
             clause_line_override: None,
@@ -661,6 +680,8 @@ impl Activity {
             // Flags and an activation identity.
             native_reraise: _,
             input_dispatch: _,
+            // Activation identities and native rows.
+            api_bases: _,
             input_dispatch_trapped: _,
             // A condition, whose ADDITIONAL `pending_additional` roots.
             input_dispatch_syntax: _,

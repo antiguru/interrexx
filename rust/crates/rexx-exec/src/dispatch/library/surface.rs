@@ -25,6 +25,8 @@ impl Surface for Interp {
         frame.additional = None;
         frame.result = None;
         frame.condition = None;
+        frame.callee = false;
+        frame.levels = None;
     }
 
     fn new_array(&mut self, items: &[Option<ObjRef>]) -> ObjRef {
@@ -63,6 +65,8 @@ impl Surface for Interp {
         frame.additional = additional;
         frame.result = None;
         frame.condition = None;
+        frame.callee = false;
+        frame.levels = None;
     }
 
     fn raise_condition(
@@ -82,6 +86,8 @@ impl Surface for Interp {
         frame.additional = additional;
         frame.result = result;
         frame.condition = None;
+        frame.callee = false;
+        frame.levels = None;
     }
 
     fn has_condition(&mut self) -> bool {
@@ -97,9 +103,12 @@ impl Surface for Interp {
             return None;
         };
         let (raised, additional, result) = (raised.clone(), frame.additional, frame.result);
+        let levels = frame.levels.clone();
         self.activity.pending_additional = additional;
         self.activity.pending_result = result;
-        let object = self.build_native_condition_object(&raised).ok()?;
+        let object = self
+            .build_native_condition_object(&raised, levels.as_ref())
+            .ok()?;
         self.native_frame_mut().condition = Some(object);
         Some(object)
     }
@@ -360,6 +369,9 @@ impl Surface for Interp {
     }
 
     fn context_variable(&mut self, name: &[u8]) -> Option<ObjRef> {
+        if self.native_callerless() {
+            return None;
+        }
         let upper = name.to_ascii_uppercase();
         match classify(&upper) {
             SymbolKind::Bad => None,
@@ -383,6 +395,9 @@ impl Surface for Interp {
     }
 
     fn set_context_variable(&mut self, name: &[u8], value: ObjRef) {
+        if self.native_callerless() {
+            return;
+        }
         let upper = name.to_ascii_uppercase();
         match classify(&upper) {
             SymbolKind::Name => {
@@ -400,6 +415,9 @@ impl Surface for Interp {
     }
 
     fn drop_context_variable(&mut self, name: &[u8]) {
+        if self.native_callerless() {
+            return;
+        }
         let upper = name.to_ascii_uppercase();
         match classify(&upper) {
             SymbolKind::Name => {
@@ -417,7 +435,11 @@ impl Surface for Interp {
     }
 
     fn context_variables(&mut self) -> Option<ObjRef> {
-        match crate::dispatch::context::local_variables(self, 0) {
+        let listed = match self.native_callerless() {
+            true => crate::dispatch::hash::new_directory(self, 0),
+            false => crate::dispatch::context::local_variables(self, 0),
+        };
+        match listed {
             Ok(directory) => Some(directory),
             Err(failure) => {
                 self.hold_native_condition(failure);
@@ -505,6 +527,9 @@ impl Surface for Interp {
     fn variable_reference(&mut self, name: &[u8], object: bool) -> Option<ObjRef> {
         let upper = name.to_ascii_uppercase();
         if !matches!(classify(&upper), SymbolKind::Name | SymbolKind::Stem) {
+            return None;
+        }
+        if !object && self.native_callerless() {
             return None;
         }
         let home = if object {
@@ -667,12 +692,15 @@ impl Surface for Interp {
         self.roots.activity_mut().push_temp(routine);
         let (program, directive) = self.executable_sources.get(&routine)?.routine?;
         let installed = crate::InstalledRoutine { program, directive };
-        let answered = self.run_routine_as_program(installed, arguments.to_vec());
+        let answered =
+            self.on_api_base(|interp| interp.run_routine_as_program(installed, arguments.to_vec()));
         self.held(answered).flatten()
     }
 
     fn call_routine(&mut self, routine: ObjRef, arguments: Option<ObjRef>) -> Option<ObjRef> {
-        let answered = crate::dispatch::executable::call_routine_directly(self, routine, arguments);
+        let answered = self.on_api_base(|interp| {
+            crate::dispatch::executable::call_routine_directly(interp, routine, arguments)
+        });
         let answer = self.held(answered).flatten();
         if let Some(answer) = answer {
             self.roots.activity_mut().push_temp(answer);
@@ -815,6 +843,8 @@ impl Surface for Interp {
         frame.additional = additional;
         frame.result = result;
         frame.condition = Some(condition);
+        frame.callee = false;
+        frame.levels = None;
         true
     }
 }
@@ -933,6 +963,19 @@ impl Interp {
 }
 
 impl Interp {
+    /// Runs `run`, the code a `CallRoutine` or `CallProgram` call runs, on a
+    /// fresh activation stack ([`crate::activity::ApiBase`]).
+    fn on_api_base<T>(&mut self, run: impl FnOnce(&mut Interp) -> T) -> T {
+        let below = self.running_activation().map(|activation| activation.id);
+        let native = self.activity.native_handles.len() - 1;
+        self.activity
+            .api_bases
+            .push(crate::activity::ApiBase { below, native });
+        let ran = run(self);
+        self.activity.api_bases.pop();
+        ran
+    }
+
     /// The class `.name` resolves to from the calling activation, or `None`
     /// where it resolves to something that is not a class or the lookup
     /// raised, whose condition is then held for the native call.
