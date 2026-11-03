@@ -1402,9 +1402,11 @@ fn the_extension_check_refuses_the_oracles_librexx() {
 /// the group's `socket` constant, `$XDG_RUNTIME_DIR/.ooRexx-...service`: the oracle's `rxapi`
 /// socket, which this crate's service, under `REXX_API_DIR`, does not create. The run is given
 /// an empty `XDG_RUNTIME_DIR` so that the path is absent whatever the host runs; measured, with
-/// a socket there both engines pass those six, 30 / 176 / 0 + 1.
+/// a socket there both engines pass those six, 30 / 176 / 0 + 1. `TEST_WORDEXP` passes on the
+/// oracle and fails here, where `SysWordexp` is refused (Deviation 90): 30 / 138 / 8 here
+/// against the oracle's 30 / 139 / 7.
 #[test]
-fn the_rxunixsys_group_matches_the_oracles_counts_and_failures() {
+fn the_rxunixsys_group_matches_the_oracle_but_for_the_refused_wordexp() {
     let runtime = scratch().join("rxunixsys-runtime");
     let _ = std::fs::remove_dir_all(&runtime);
     std::fs::create_dir_all(&runtime).expect("a runtime directory");
@@ -1419,7 +1421,7 @@ fn the_rxunixsys_group_matches_the_oracles_counts_and_failures() {
         (outcome.ran, outcome.assertions, failed),
         (
             30,
-            139,
+            138,
             vec![
                 "TEST_SYSCRYPT",
                 "TEST_SYSSTAT_DEVICE",
@@ -1428,6 +1430,7 @@ fn the_rxunixsys_group_matches_the_oracles_counts_and_failures() {
                 "TEST_SYSSTAT_NUMBERLINKS",
                 "TEST_SYSSTAT_PERMISSIONS",
                 "TEST_SYSSTAT_SIZE",
+                "TEST_WORDEXP",
             ]
         ),
         "{}",

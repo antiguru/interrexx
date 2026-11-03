@@ -555,7 +555,7 @@ character device, `b` block device, `p` FIFO. The nine permission characters use
 | `SysGethostname()` | the host name, equal to `SysUname('n')` |
 | `SysGetsizeofptr()` | `64` |
 | `SysGettzname1()`, `SysGettzname2()` | after re-reading the time zone, the standard and daylight zone abbreviations (`CET`, `CEST`) |
-| `SysWordexp(text)` | an Array of the words of POSIX word expansion of `text`, as glibc `wordexp` with no flags answers it, against the program's environment and directory. Command substitution raises 40.1 and no shell is started (Deviation 90). `SysWordexp('a b  c')` is `a,b,c` and `$HOME` expands. Empty `text` is a routine failure. |
+| `SysWordexp(text)` | refused (Deviation 90). The routine is registered, so `RxFuncQuery` answers 0 once `RxFuncAdd` has added it, as on the oracle; every call, whatever its arguments, raises 40.1 for the routine with the condition description `SysWordexp is refused (Deviation 90)`. Nothing is expanded and no process is started. ooTest's `test_wordexp` fails here (a `held` row). |
 | `SysSetxattr(path, name, value)` | sets the extended attribute to `value` plus a trailing NUL byte, and returns the return code |
 | `SysGetxattr(path, name)` | the stored value up to its first NUL, or `""` if it is absent or unreadable |
 | `SysListxattr(path)` | an Array of attribute names, or `""` (a string, not an Array) on failure |

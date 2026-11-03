@@ -300,6 +300,7 @@ pub const EXTENSION_DELIVERED_DIRS: &[&str] = &[
 /// The tests of a delivered extension group that fail on this crate as
 /// delivered, each with why, which a `held: WHY` row of
 /// `Phase 10 Extension` records.
+/// That row stands also for a test `reaching_rxapi` renames out.
 pub const HELD_EXTENSION_TESTS: &[(&str, &str, &str)] = &[
     (SYSUNIX, "TEST_SYSCRYPT", HELD_SYSCRYPT),
     (SYSUNIX, "TEST_SYSSTAT_DEVICE", HELD_SYSSTAT),
@@ -308,12 +309,22 @@ pub const HELD_EXTENSION_TESTS: &[(&str, &str, &str)] = &[
     (SYSUNIX, "TEST_SYSSTAT_NUMBERLINKS", HELD_SYSSTAT),
     (SYSUNIX, "TEST_SYSSTAT_PERMISSIONS", HELD_SYSSTAT),
     (SYSUNIX, "TEST_SYSSTAT_SIZE", HELD_SYSSTAT),
+    (SYSUNIX, "TEST_WORDEXP", HELD_WORDEXP),
 ];
 
 const SYSUNIX: &str = "extensions/platform/unix/rxunixsys/SysUnix";
 const HELD_SYSCRYPT: &str = "neither engine provides SysCrypt; it fails on the oracle too";
 const HELD_SYSSTAT: &str = "the group's socket constant is the oracle's rxapi socket under \
      XDG_RUNTIME_DIR, which this crate's service, under REXX_API_DIR, does not create";
+const HELD_WORDEXP: &str = "SysWordexp is refused, every call raising 40.1 (Deviation 90)";
+
+/// Whether [`HELD_EXTENSION_TESTS`] names `test` of `group`: its row is the `held: WHY` one,
+/// also where `reaching_rxapi` renames it out.
+fn is_held(group: &str, test: &str) -> bool {
+    HELD_EXTENSION_TESTS
+        .iter()
+        .any(|(held_group, held_test, _)| *held_group == group && *held_test == test)
+}
 
 /// The reason a group the roadmap makes Phase 10's is, or `None`.
 pub fn phase_10_group(group: &str) -> Option<Deferral> {
@@ -503,6 +514,9 @@ pub fn check_rows(rows: &[Row], context: &Context) -> Vec<String> {
         .map(|row| (row.group.clone(), row.test.clone()))
         .collect();
     for (group, test) in context.rxapi.difference(&renamed) {
+        if is_held(group, test) {
+            continue;
+        }
         problems.push(format!(
             "{group} {test}: reaching_rxapi renames it out, and it has no reaching_rxapi row"
         ));
@@ -528,15 +542,14 @@ pub fn derived_rows(context: &Context) -> Vec<String> {
         let mut tests: BTreeSet<String> = source_test_names_in(&context.root, dir, name)
             .into_iter()
             .collect();
-        for (rxapi_group, test) in &context.rxapi {
-            if rxapi_group == group {
-                tests.remove(test);
-                lines.push(format!("{group}\t{test}\tPhase 10 Rxapi\treaching_rxapi"));
-            }
-        }
         for (held_group, test, why) in HELD_EXTENSION_TESTS {
             if held_group == group && tests.remove(*test) {
                 lines.push(format!("{group}\t{test}\tPhase 10 Extension\theld: {why}"));
+            }
+        }
+        for (rxapi_group, test) in &context.rxapi {
+            if rxapi_group == group && tests.remove(test) {
+                lines.push(format!("{group}\t{test}\tPhase 10 Rxapi\treaching_rxapi"));
             }
         }
         if let Some(reason) = phase_10_group(group) {

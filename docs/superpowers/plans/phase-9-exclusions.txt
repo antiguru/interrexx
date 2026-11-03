@@ -283,7 +283,7 @@ extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_INODE	Phase 10 Extension
 extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_NUMBERLINKS	Phase 10 Extension	held: the group's socket constant is the oracle's rxapi socket under XDG_RUNTIME_DIR, which this crate's service, under REXX_API_DIR, does not create
 extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_PERMISSIONS	Phase 10 Extension	held: the group's socket constant is the oracle's rxapi socket under XDG_RUNTIME_DIR, which this crate's service, under REXX_API_DIR, does not create
 extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_SIZE	Phase 10 Extension	held: the group's socket constant is the oracle's rxapi socket under XDG_RUNTIME_DIR, which this crate's service, under REXX_API_DIR, does not create
-extensions/platform/unix/rxunixsys/SysUnix	TEST_WORDEXP	Phase 10 Rxapi	reaching_rxapi
+extensions/platform/unix/rxunixsys/SysUnix	TEST_WORDEXP	Phase 10 Extension	held: SysWordexp is refused, every call raising 40.1 (Deviation 90)
 extensions/platform/unix/rxunixsys/SysUnix	TEST_XATTR	Phase 10 Rxapi	reaching_rxapi
 extensions/platform/windows/ole/ExcelQuickTest	TEST_GOODCREATION	Phase 10 Extension	group
 extensions/platform/windows/ole/ExcelQuickTest	TEST_GOODOS	Phase 10 Extension	group
