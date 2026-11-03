@@ -1,0 +1,18 @@
+count 17
+/* A WHEN that does not hold, followed by the OTHERWISE, where the WHEN's
+   branch ends with an IF. That IF's end-of-branch boundary sits in front of
+   the OTHERWISE, and the scan never entered the branch, so it must not run:
+   the condition g is queued at the WHEN's own boundary is delivered at the
+   OTHERWISE's, which SIGL names. */
+call on user zx name h
+call on user zy name g
+x = 1
+select
+  when raiser() then if x then say 'inner'
+  otherwise say 'other'
+end
+say 'after'
+exit
+raiser: raise user zx return 0
+h: say 'h sigl' sigl; raise user zy return
+g: say 'g sigl' sigl; return

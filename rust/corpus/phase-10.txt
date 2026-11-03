@@ -97,3 +97,14 @@ lang/command_library_environments_unregistered_rust.rex
 # above take the C path and are not answered by this crate's Rust libraries.
 lang/library_instrument_unlinked_math.rex
 lang/library_instrument_unlinked_regexp.rex
+
+# PR 5: a WHEN whose consequence is an IF with no ELSE and a false condition.
+# The IF's false jump skipped the branch's EndWhen and ran on into what
+# followed the branch; the Rexx Parser's Expressions.cls has the shape.
+lang/select_when_if_false.rex
+# A WHEN that does not hold, before the OTHERWISE: the scan skips the boundary
+# of the IF its branch ends with, which sits in front of the OTHERWISE too.
+lang/select_when_false_skips_branch_boundary.rex
+# An IF whose true branch is an IF with a false condition: the inner false
+# path lands on the outer IF's end-of-branch boundary, not past it.
+lang/if_nested_false_outer_boundary.rex

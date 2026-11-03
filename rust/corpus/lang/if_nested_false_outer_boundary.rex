@@ -1,0 +1,17 @@
+/* An IF that is another IF's true branch, with a false condition: the inner
+   IF's false path finishes the outer IF's branch, so the outer IF's
+   end-of-branch boundary still runs. The condition h queues at the inner
+   IF's own boundary is delivered there, before the clause after both. SIGL
+   is not printed: which line the oracle reports for that boundary is a
+   separate question. */
+call on user zx name h
+call on user zy name g
+x = 1
+if x = 1 then if raiser() then say 'inner'
+say 'after nested'
+if x = 1 then if x = 1 then if raiser() then say 'inner'
+say 'after nested three'
+exit
+raiser: raise user zx return 0
+h: say 'h ran'; raise user zy return
+g: say 'g ran'; return
