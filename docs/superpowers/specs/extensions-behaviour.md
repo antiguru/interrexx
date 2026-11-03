@@ -462,7 +462,7 @@ No routine raises because an OS call failed. The cause is read separately with `
 | `SysSetpgid(pid, pgid)` | return code |
 | `SysGetpgid(pid)` | `getpgid(pid)` |
 | `SysKill(pid, sig)` | `kill()` return code |
-| `SysSignal(sig, action)` | `action`'s first character, caselessly: `D` sets the default disposition for `sig` and `I` ignores it. The result is 0 even if `sig` is invalid. An empty or other action is a routine failure. |
+| `SysSignal(sig, action)` | `action`'s first character, caselessly: `D` sets the default disposition for `sig` and `I` ignores it. The result is 0 even if `sig` is invalid. An empty or other action is a routine failure. With SIGCHLD (17) ignored, a command's return code is negative with no FAILURE trace: the oracle's value is unset stack (measured −35, −64, −100, −112), this crate's −10 (−ECHILD). |
 | `SysUmask(mask)` | sets the mask and returns the previous mask in decimal (`SysUmask(18)` returns `2`, then `18`) |
 
 **Files**

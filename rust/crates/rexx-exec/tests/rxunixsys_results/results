@@ -2510,3 +2510,38 @@ rc 0
 1
 made 0
 [stderr]
+
+# With SIGCHLD ignored every child is reaped before the interpreter waits for
+# it: a command's return code is negative, with no FAILURE trace (PR 4 review
+# M2). The oracle's value is whatever its stack held (measured -35, -64, -100,
+# -112 across runs); this crate answers -ECHILD.
+program
+say SysSignal(17, 'I')
+'true'
+say rc < 0
+'exit 3'
+say rc < 0
+address system 'echo hello' with output stem o.
+say (rc < 0) o.0 o.1
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+0
+1
+1
+1 1 hello
+[stderr]
+
+# The value this crate answers for that return code.
+ruled
+say SysSignal(17, 'I')
+'true'
+say rc
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+0
+-10
+[stderr]

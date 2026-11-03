@@ -82,7 +82,7 @@ fn unquote_drops_quotes_and_escapes_one_byte() {
 }
 
 #[test]
-fn an_externally_reaped_child_maps_to_127_and_failure() {
+fn an_externally_reaped_child_answers_minus_echild_as_an_error() {
     use rustix::process::{Pid, WaitOptions, waitpid};
     let running = std::process::Command::new("python3")
         .args(["-c", "raise SystemExit(5)"])
@@ -96,10 +96,12 @@ fn an_externally_reaped_child_maps_to_127_and_failure() {
         .expect("status");
     assert_eq!(status.exit_status(), Some(5));
     let waited = collect(running, None, None, [true, true], None);
-    assert_eq!(waited.rc, 127);
+    assert_eq!(waited.rc, -libc::ECHILD);
+    // A negative return code, as for a child a signal ended: ERROR, which
+    // `TRACE NORMAL` does not show, not FAILURE.
     assert_eq!(
         CommandOutcome::of(waited.rc).status.condition(),
-        Some("FAILURE")
+        Some("ERROR")
     );
     assert!(waited.out.is_empty() && waited.err.is_empty());
 }
