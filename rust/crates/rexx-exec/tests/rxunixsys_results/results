@@ -608,7 +608,6 @@ eval
 SysWordexp('')
 SysWordexp('a b  c')
 SysWordexp('"a b" c')
-SysWordexp('$(echo x y)')
 SysWordexp('$((1+2))')
 SysWordexp('/nonexist/*')
 SysWordexp('${UNSETVARQ}')
@@ -617,20 +616,16 @@ SysWordexp('a#b #c')
 SysWordexp('  ')
 SysWordexp("'$UNSETVARQ'")
 SysWordexp('a"b"c')
-SysWordexp('`echo q`')
 SysWordexp('"a;b"')
 SysWordexp('a''b''')
 SysWordexp('${A:-def}')
-SysWordexp('$(exit 3)')
 SysWordexp('a'||'09'x||'b')
 SysWordexp('"(a)" ''{b}''')
-SysWordexp('$(echo "a;b")')
 SysWordexp('~root')
 ----
 ERR 40.1 External routine "SYSWORDEXP" failed.
 Array[3]: a|b|c
 Array[2]: a b|c
-Array[2]: x|y
 Array[1]: 3
 Array[1]: /nonexist/*
 Array[0]: 
@@ -639,14 +634,11 @@ Array[2]: a#b|#c
 Array[0]: 
 Array[1]: $UNSETVARQ
 Array[1]: abc
-Array[1]: q
 Array[1]: a;b
 Array[1]: ab
 Array[1]: def
-Array[0]: 
 Array[2]: a|b
 Array[2]: (a)|{b}
-Array[1]: a;b
 Array[1]: /root
 
 # SysWordexp reads the program's own environment and directory.
@@ -654,14 +646,12 @@ program
 call value 'RXQVAR', 'one two', 'ENVIRONMENT'
 say SysWordexp('$RXQVAR "$RXQVAR"')~toString('L', '|')
 say SysWordexp('f* su*')~toString('L', '|')
-say SysWordexp('$(cat f)')~toString('L', '|')
 ::requires 'rxunixsys' LIBRARY
 ----
 rc 0
 [stdout]
 one|two|one two
 f|sub
-hello
 [stderr]
 
 # glibc's tzname for the program's TZ.
@@ -1021,11 +1011,1293 @@ rc 216
 Error 40 running {dir}/probe.rex line 7:  Incorrect call to routine.
 Error 40.1:  External routine "SYSGETGRNAM" failed.
 
-# Deviation 88: a text wordexp refuses crashes the oracle (measured, SIGSEGV
-# for each); this crate raises the routine failure.
+# SysWordexp's expansions with no command substitution: quoting inside
+# parameter words, field splitting, tilde, arithmetic, patterns, and the
+# PR 4 review's input, which must not run `touch` (Deviation 90).
+program
+call setup
+do name over 'a.txt', 'b.txt', 'c d.txt', '.hidden', 'abc', '*star', 'sub/x.txt'
+  call lineout name, ''
+  call lineout name
+end
+call SysMkDir 'sub/deep'
+do text over .resources~cases
+  call setup
+  call show text
+end
+say 'PWNED' stream('PWNED', 'c', 'query exists') == ''
+exit
+show: procedure
+  use arg text
+  w = SysWordexp(text)
+  line = text '=>' w~items':'
+  do word over w
+    line = line'['word']'
+  end
+  wex = value('WEX', , 'ENVIRONMENT')
+  if wex \== '' then line = line 'WEX='wex
+  say line
+  return
+setup:
+  call value 'WEX', .nil, 'ENVIRONMENT'
+  call value 'IFS', .nil, 'ENVIRONMENT'
+  call value 'V', .nil, 'ENVIRONMENT'
+  call value 'W', .nil, 'ENVIRONMENT'
+  do pair over 'SET=value', 'EMPTY=', 'SP=a  b c', 'PAT=abc.def.ghi', 'NUM=7', "Q=it's", 'STAR=*.txt', 'BS=a\b', 'HOME=/home/tester'
+    parse var pair name '=' val
+    call value name, val, 'ENVIRONMENT'
+  end
+  return
+::requires 'rxunixsys' LIBRARY
+::resource cases
+a b  c
+"a b" c
+$SET
+${SET}
+$SP
+"$SP"
+x${SP}y
+${#SET}
+${#UNSET}
+$#
+$1
+$*
+$@
+"$@"
+$?
+$!
+$-
+${UNSET-def}
+${EMPTY-def}
+${EMPTY:-def}
+${SET:-def}
+${UNSET:+alt}
+${SET+alt}
+${EMPTY+alt}
+${EMPTY:+alt}
+${UNSET?}
+${UNSET?msg}
+${EMPTY?msg}
+${EMPTY:?msg}
+${SET:?msg}
+${WEX=new}
+${WEX:=new} $WEX
+${EMPTY:=new}
+${PAT%.*}
+${PAT%%.*}
+${PAT#*.}
+${PAT##*.}
+${PAT#abc}
+${PAT%[gh]i}
+${PAT#?}
+${PAT%\.ghi}
+${PAT%'.ghi'}
+${PAT%".ghi"}
+${UNSET-a b}
+${UNSET-"a b"}
+"${UNSET-a b}"
+${UNSET-'a b'}
+"${UNSET-'a b'}"
+"${x-'}"; touch PWNED; "'}"
+${x-'}'}
+${x-"}"}
+${UNSET-$SET}
+${UNSET-${SET}x}
+${UNSET-~}
+~
+~/x
+~root
+~root/x
+a~
+x=~
+~nosuchuserq
+"~"
+$((1+2))
+$((7/2))
+$((-7/2))
+$((7%3))
+$((2*3+4))
+$((2*(3+4)))
+$(( 1 + 2 ))
+$(($NUM+1))
+$((0x10))
+$((010))
+$((1<2))
+$((1==1))
+$((3-5))
+$(())
+$((9223372036854775807+1))
+$[1+2]
+*.txt
+"*.txt"
+'*.txt'
+\*.txt
+$STAR
+"$STAR"
+s*
+*
+.*
+[ab].txt
+?.txt
+nomatch*
+\*star
+*star
+a\ b
+a\\b
+'a\b'
+"a\b"
+"a\"b"
+"a\$b"
+"a\`b"
+$BS
+"$Q"
+$Q
+a#b #c
+#
+''
+""
+'' a
+a ''
+"" ""
+$EMPTY
+"$EMPTY"
+x$EMPTY
+$
+a$
+$ a
+${SE-T}
+$-x
+\$SET
+'$SET'
+a'b'c
+a'b c'd
+a"b c"d
+"a"'b'c
+a ${UNSET?} b
+a ${UNSET?msg} b
+${UNSET:?msg}
+a${UNSET?x}b
+$((7 % 3))
+$((1 2))
+$((+1))
+$((2*3%4))
+$(($EMPTY))
+$(((1)))
+$((-1))
+$((1 - -1))
+$((1--1))
+$((1+-1))
+$((2*-3))
+$((10/3*3))
+$((10-2-3))
+$((1+2*3))
+$((8/2/2))
+$((0x))
+$((1e3))
+$((09))
+$((  7  ))
+$((7)) x
+a$((1))b
+"$((1+1))"
+$((${NUM}*2))
+$((1 + (2 * 3) ))
+$((99999999999999999999))
+$[ 2*3 ]
+x:~
+a=b=~
+=~
+a=~/x
+a=~root
+a=x~
+a:~
+a=~:~
+~:~
+"x=~"
+x='~'
+~""
+~'root'
+~ro"ot"
+\~
+~$SET
+~/a b
+x$STAR
+$STAR*
+*$SET
+${STAR}
+"$EMPTY"x
+"a$EMPTY"
+"$EMPTY" a
+a "$EMPTY"
+"$EMPTY$EMPTY"
+'' "$EMPTY"
+"${EMPTY}"
+"${UNSET}"
+"$UNSET" b
+"$@" b
+"$*"
+${PAT%'*'}
+${PAT#"*"}
+${PAT#\*}
+${PAT%$SET}
+${PAT#a*}
+${PAT##a*}
+${PAT%%[.]*}
+${PAT#[!a]}
+${PAT#[^a]}
+${PAT#[a-c]}
+${UNSET%x}
+${#PAT}
+${#SP}
+"${#SP}"
+${SP}
+"$SP"x
+${UNSET-$SP}
+"${UNSET-$SP}"
+${UNSET:-"$SP"}
+${UNSET-a\ b}
+${UNSET-a\}b}
+${UNSET-{}
+"${UNSET?}"
+"${UNSET?}" a
+$EMPTY a
+a $EMPTY b
+${EMPTY-def} a
+"${UNSET:+alt}"
+"${UNSET:+alt}" a
+"${SET:+}" a
+"${UNSET-$EMPTY}" a
+"${UNSET-}" a
+"${UNSET:-$EMPTY}" a
+x "$EMPTY" y
+"$EMPTY$SET"
+"${EMPTY}"x
+a "$EMPTY"x b
+"""$EMPTY" a
+''"$EMPTY" a
+a"$EMPTY" b
+"${#EMPTY}"
+$((1+$EMPTY+2))
+a $(($EMPTY)) b
+$((${EMPTY}1))
+a=b:~
+a:b=c:~
+=:~
+~ro"ot"/x
+~a b
+~a\b
+~a$SET/x
+~root$SET
+~/$SET
+~/"a b"
+~:x
+a=~""
+${UNSET-"a\"b"}
+${UNSET-'a\b'}
+${UNSET-*.txt}
+"${UNSET-*.txt}"
+${UNSET-\*.txt}
+${UNSET-'*'.txt}
+${UNSET-a\b}
+${UNSET-a\\b}
+"${UNSET-a\ b}"
+"${UNSET-a\"b}"
+"${UNSET-"a b"}"
+${PAT%"$SET"}
+${PAT#'a'*}
+${PAT#a'*'}
+${UNSET-$}
+${SET-x y}
+"a"*
+a*'.txt'
+[a]*
+[
+a[
+[]
+sub/../a*
+\a*
+a\*
+*.TXT
+**
+[!a].txt
+[^a].txt
+${UNSET-"a"}
+${UNSET-"a"}x
+${UNSET-"a\b"}
+${UNSET-"a\"}
+${UNSET-a\"b}
+${UNSET-\"}
+${UNSET-"}"}x
+${UNSET-"a"b"c"}
+${UNSET-{a}}
+${UNSET-a{b}c}
+${UNSET-{}}
+${UNSET-"}
+${UNSET-"a}
+${UNSET-'a}
+${UNSET-$EMPTY} a
+"${UNSET-$EMPTY}"
+${PAT%$EMPTY}
+${UNSET-"$EMPTY"} a
+"${UNSET-a\}b}"
+"${UNSET-\"}"
+"${UNSET-\'}"
+${UNSET-a'b'"c"}
+${UNSET-$SET'x'}
+${UNSET-${UNSET2-in}}
+${UNSET-${UNSET2-'}'}}
+${UNSET-$((1+2))}
+${UNSET-\$SET}
+${UNSET-'$SET'}
+"${UNSET-'$SET'}"
+"${UNSET-\$SET}"
+${PAT#"a""b"}
+${PAT#'a'"b"}
+${PAT#\a}
+${PAT#'?'}
+${PAT%\}
+${PAT%"}"}
+${PAT%'g'*}
+"${PAT%.*}"
+"${PAT#'abc'}"
+"${PAT#"abc"}"
+"${PAT#\a}"
+"${PAT#'*'}"
+${SP%b*}
+"${SP%b*}"
+${SP#a }
+${#SET}x
+${#1}
+${#*}
+${#@}
+${#$}
+$#x
+$1x
+$12
+${12}
+${1}
+${*}
+${@}
+$@x
+x$@
+"x$@y"
+"$*x"
+${SET:-}
+${SET=}
+${UNSET=}
+${UNSET:=}
+${UNSET+}
+${WEX+a} ${WEX=b} $WEX
+${WEX=a b}
+${WEX='a b'} "$WEX"
+${WEX="$SET"}
+${WEX=~}
+${WEX=*.txt}
+${NUM=9}
+${EMPTY=x}
+${EMPTY:=x} $EMPTY
+~ro\ot
+~roo\t/x
+~=x
+~a*
+~*
+~a;b
+"a="~
+a=$EMPTY~
+a"="~
+a=""~
+x=a=~
+~/
+~root/
+~root:
+~root:x
+a=~root:~root
+${UNSET-'[a]'}
+${UNSET-"?"}
+${UNSET-'*'}*
+${UNSET-'a'}*
+${WEX='*'}
+${WEX=\*} $WEX
+${UNSET-'\'}
+${UNSET-"\\"}
+"${UNSET-"\$SET"}"
+${UNSET-"]"}
+${UNSET-'a]'}
+${UNSET-"\\*"}
+"*"*
+'['a]*
+["a"]*
+"["a]*
+a?[b
+*[
+[a-
+[a-b
+sub/[x]*
+[[:alpha:]].txt
+[a\]*
+\[a]*
+a\b*
+b""*
+"a$SET"b
+"$SET""$SET"
+"a\nb"
+"\\"
+"\'"
+'\'
+a\'b
+"'"
+'"'
+"a'b"
+"$"
+"$ "
+"${SET}"
+"{a,b}"
+'a;b'
+a\;b
+\(a\)
+"${EMPTY:-}" a
+"${SET:+$EMPTY}" a
+"${EMPTY-def}" a
+"${EMPTY%x}" a
+"${SET%value}" a
+"${SET#*}" a
+x$(($EMPTY)) b
+"x"$(($EMPTY)) b
+'x'"$EMPTY" b
+x"$EMPTY" b
+${UNSET?$SET}
+${UNSET%$EMPTY} a
+$((2147483647*2147483647*4))
+$((-9223372036854775807-1))
+$((1 + 2 3))
+$(((1 2)))
+$((0X1f))
+$((-0x10))
+$((08))
+$((7/ 2))
+$((7 /2))
+~root a=~root
+''~
+""~
+$EMPTY~
+a\=~
+a='='~
+x"$EMPTY""" b
+x${UNSET-$EMPTY} b
+''${UNSET-$EMPTY} b
+''$(($EMPTY)) b
+'' "${SET%value}"
+''"${SET%value}" b
+x"${SET%value}" b
+a b "$EMPTY" c
+x a=~
+x a=~/y
+a=~ b=~
+a=~root b=~root
+x a=b:~
+x ~
+x ~root
+a ''~
+x=~ a
+"" a=~
+a=~root:~root:~
+a=~root:~
+x x:~
+x''~
+a''~
+''~root
+''~/x
+'' ~
+""~x
+''$((1))
+'' $SET
+x""~
+''"$SET"
+''"x"
+''"${SET}"x
+''"$((1))"
+''$SET
+''"a$SET"
+"""$SET"
+''${#SET}
+''$1
+''"$@"
+''$@
+''${UNSET-x}
+''${UNSET}
+''$UNSET b
+''"$UNSET" b
+''${SET%v*}
+''~$SET
+$((1|2))
+$((1&2))
+$((1>2))
+$((1 # 2))
+$((1'2))
+$((1,2))
+$((1=2))
+${UNSET-a;b}
+${UNSET-a|b}
+${UNSET-a(b}
+${UNSET-a<b}
+${UNSET-a&b}
+"${UNSET-a;b}"
+${UNSET-'a;b'}
+${SET-a;b}
+${PAT%;}
+${UNSET-a)b}
+::END
+----
+rc 0
+[stdout]
+a b  c => 3:[a][b][c]
+"a b" c => 2:[a b][c]
+$SET => 1:[value]
+${SET} => 1:[value]
+$SP => 3:[a][b][c]
+"$SP" => 1:[a  b c]
+x${SP}y => 3:[xa][b][cy]
+${#SET} => 1:[5]
+${#UNSET} => 1:[0]
+$# => 1:[1]
+$1 => 1:[probe.rex]
+$* => 1:[probe.rex]
+$@ => 1:[probe.rex]
+"$@" => 1:[probe.rex]
+$? => 1:[$?]
+$! => 1:[$!]
+$- => 1:[$-]
+${UNSET-def} => 1:[def]
+${EMPTY-def} => 0:
+${EMPTY:-def} => 1:[def]
+${SET:-def} => 1:[value]
+${UNSET:+alt} => 0:
+${SET+alt} => 1:[alt]
+${EMPTY+alt} => 1:[alt]
+${EMPTY:+alt} => 0:
+${UNSET?} => 0:
+${UNSET?msg} => 0:
+${EMPTY?msg} => 0:
+${EMPTY:?msg} => 0:
+${SET:?msg} => 1:[value]
+${WEX=new} => 1:[new] WEX=new
+${WEX:=new} $WEX => 2:[new][new] WEX=new
+${EMPTY:=new} => 1:[new]
+${PAT%.*} => 1:[abc.def]
+${PAT%%.*} => 1:[abc]
+${PAT#*.} => 1:[def.ghi]
+${PAT##*.} => 1:[ghi]
+${PAT#abc} => 1:[.def.ghi]
+${PAT%[gh]i} => 1:[abc.def.g]
+${PAT#?} => 1:[bc.def.ghi]
+${PAT%\.ghi} => 1:[abc.def]
+${PAT%'.ghi'} => 1:[abc.def]
+${PAT%".ghi"} => 1:[abc.def]
+${UNSET-a b} => 2:[a][b]
+${UNSET-"a b"} => 2:[a][b]
+"${UNSET-a b}" => 1:[a b]
+${UNSET-'a b'} => 2:[a][b]
+"${UNSET-'a b'}" => 1:[a b]
+"${x-'}"; touch PWNED; "'}" => 1:[}"; touch PWNED; "]
+${x-'}'} => 1:[}]
+${x-"}"} => 1:[}]
+${UNSET-$SET} => 1:[value]
+${UNSET-${SET}x} => 1:[valuex]
+${UNSET-~} => 1:[/home/tester]
+~ => 1:[/home/tester]
+~/x => 1:[/home/tester/x]
+~root => 1:[/root]
+~root/x => 1:[/root/x]
+a~ => 1:[a~]
+x=~ => 1:[x=/home/tester]
+~nosuchuserq => 1:[~nosuchuserq]
+"~" => 1:[~]
+$((1+2)) => 1:[3]
+$((7/2)) => 1:[3]
+$((-7/2)) => 1:[-3]
+$((7%3)) => 1:[7]
+$((2*3+4)) => 1:[10]
+$((2*(3+4))) => 1:[14]
+$(( 1 + 2 )) => 1:[3]
+$(($NUM+1)) => 1:[8]
+$((0x10)) => 1:[16]
+$((010)) => 1:[8]
+$((1<2)) => 1:[1]
+$((1==1)) => 1:[1]
+$((3-5)) => 1:[-2]
+$(()) => 1:[0]
+$((9223372036854775807+1)) => 1:[-9223372036854775808]
+$[1+2] => 1:[3]
+*.txt => 3:[a.txt][b.txt][c d.txt]
+"*.txt" => 1:[*.txt]
+'*.txt' => 1:[*.txt]
+\*.txt => 1:[*.txt]
+$STAR => 1:[*.txt]
+"$STAR" => 1:[*.txt]
+s* => 1:[sub]
+* => 8:[*star][a.txt][abc][b.txt][c d.txt][f][probe.rex][sub]
+.* => 3:[.][..][.hidden]
+[ab].txt => 2:[a.txt][b.txt]
+?.txt => 2:[a.txt][b.txt]
+nomatch* => 1:[nomatch*]
+\*star => 1:[*star]
+*star => 1:[*star]
+a\ b => 1:[a b]
+a\\b => 1:[a\b]
+'a\b' => 1:[a\b]
+"a\b" => 1:[a\b]
+"a\"b" => 1:[a"b]
+"a\$b" => 1:[a$b]
+"a\`b" => 1:[a`b]
+$BS => 1:[a\b]
+"$Q" => 1:[it's]
+$Q => 1:[it's]
+a#b #c => 2:[a#b][#c]
+# => 1:[#]
+'' => 1:[]
+"" => 1:[]
+'' a => 2:[][a]
+a '' => 2:[a][]
+"" "" => 2:[][]
+$EMPTY => 0:
+"$EMPTY" => 0:
+x$EMPTY => 1:[x]
+$ => 1:[$]
+a$ => 1:[a$]
+$ a => 2:[$][a]
+${SE-T} => 1:[T]
+$-x => 1:[$-x]
+\$SET => 1:[$SET]
+'$SET' => 1:[$SET]
+a'b'c => 1:[abc]
+a'b c'd => 1:[ab cd]
+a"b c"d => 1:[ab cd]
+"a"'b'c => 1:[abc]
+a ${UNSET?} b => 2:[a][b]
+a ${UNSET?msg} b => 2:[a][b]
+${UNSET:?msg} => 0:
+a${UNSET?x}b => 1:[ab]
+$((7 % 3)) => 1:[7]
+$((1 2)) => 1:[1]
+$((+1)) => 1:[1]
+$((2*3%4)) => 1:[6]
+$(($EMPTY)) => 0:
+$(((1))) => 1:[1]
+$((-1)) => 1:[-1]
+$((1 - -1)) => 1:[2]
+$((1--1)) => 1:[2]
+$((1+-1)) => 1:[0]
+$((2*-3)) => 1:[-6]
+$((10/3*3)) => 1:[9]
+$((10-2-3)) => 1:[5]
+$((1+2*3)) => 1:[7]
+$((8/2/2)) => 1:[2]
+$((0x)) => 1:[0]
+$((1e3)) => 1:[1]
+$((09)) => 1:[0]
+$((  7  )) => 1:[7]
+$((7)) x => 2:[7][x]
+a$((1))b => 1:[a1b]
+"$((1+1))" => 1:[2]
+$((${NUM}*2)) => 1:[14]
+$((1 + (2 * 3) )) => 1:[7]
+$((99999999999999999999)) => 1:[9223372036854775807]
+$[ 2*3 ] => 1:[6]
+x:~ => 1:[x:~]
+a=b=~ => 1:[a=b=/home/tester]
+=~ => 1:[=/home/tester]
+a=~/x => 1:[a=/home/tester/x]
+a=~root => 1:[a=/root]
+a=x~ => 1:[a=x~]
+a:~ => 1:[a:~]
+a=~:~ => 1:[a=/home/tester:/home/tester]
+~:~ => 1:[/home/tester:~]
+"x=~" => 1:[x=~]
+x='~' => 1:[x=~]
+~"" => 1:[~""]
+~'root' => 1:[~'root']
+~ro"ot" => 1:[~ro"ot"]
+\~ => 1:[~]
+~$SET => 1:[~$SET]
+~/a b => 2:[/home/tester/a][b]
+x$STAR => 1:[x*.txt]
+$STAR* => 3:[a.txt][b.txt][c d.txt]
+*$SET => 1:[*value]
+${STAR} => 1:[*.txt]
+"$EMPTY"x => 0:
+"a$EMPTY" => 1:[a]
+"$EMPTY" a => 0:
+a "$EMPTY" => 1:[a]
+"$EMPTY$EMPTY" => 0:
+'' "$EMPTY" => 1:[]
+"${EMPTY}" => 0:
+"${UNSET}" => 1:[]
+"$UNSET" b => 2:[][b]
+"$@" b => 2:[probe.rex][b]
+"$*" => 1:[probe.rex]
+${PAT%'*'} => 1:[abc.def.ghi]
+${PAT#"*"} => 1:[abc.def.ghi]
+${PAT#\*} => 1:[abc.def.ghi]
+${PAT%$SET} => 1:[abc.def.ghi]
+${PAT#a*} => 1:[bc.def.ghi]
+${PAT##a*} => 0:
+${PAT%%[.]*} => 1:[abc]
+${PAT#[!a]} => 1:[abc.def.ghi]
+${PAT#[^a]} => 1:[abc.def.ghi]
+${PAT#[a-c]} => 1:[bc.def.ghi]
+${UNSET%x} => 0:
+${#PAT} => 1:[11]
+${#SP} => 1:[6]
+"${#SP}" => 1:[6]
+${SP} => 3:[a][b][c]
+"$SP"x => 1:[a  b cx]
+${UNSET-$SP} => 3:[a][b][c]
+"${UNSET-$SP}" => 1:[a  b c]
+${UNSET:-"$SP"} => 3:[a][b][c]
+${UNSET-a\ b} => 2:[a\][b]
+${UNSET-a\}b} => 1:[a\}b]
+${UNSET-{} => 1:[{}]
+"${UNSET?}" => 1:[]
+"${UNSET?}" a => 2:[][a]
+$EMPTY a => 1:[a]
+a $EMPTY b => 2:[a][b]
+${EMPTY-def} a => 1:[a]
+"${UNSET:+alt}" => 1:[]
+"${UNSET:+alt}" a => 2:[][a]
+"${SET:+}" a => 2:[][a]
+"${UNSET-$EMPTY}" a => 0:
+"${UNSET-}" a => 2:[][a]
+"${UNSET:-$EMPTY}" a => 0:
+x "$EMPTY" y => 1:[x]
+"$EMPTY$SET" => 0:
+"${EMPTY}"x => 0:
+a "$EMPTY"x b => 1:[a]
+"""$EMPTY" a => 1:[]
+''"$EMPTY" a => 1:[]
+a"$EMPTY" b => 2:[a][b]
+"${#EMPTY}" => 1:[0]
+$((1+$EMPTY+2)) => 1:[3]
+a $(($EMPTY)) b => 1:[a]
+$((${EMPTY}1)) => 0:
+a=b:~ => 1:[a=b:/home/tester]
+a:b=c:~ => 1:[a:b=c:/home/tester]
+=:~ => 1:[=:/home/tester]
+~ro"ot"/x => 1:[~ro"ot"/x]
+~a b => 2:[~a][b]
+~a\b => 1:[~ab]
+~a$SET/x => 1:[~a$SET/x]
+~root$SET => 1:[~root$SET]
+~/$SET => 1:[/home/tester/value]
+~/"a b" => 1:[/home/tester/a b]
+~:x => 1:[/home/tester:x]
+a=~"" => 1:[a=~""]
+${UNSET-"a\"b"} => 1:[a\"b}]
+${UNSET-'a\b'} => 1:[a\b]
+${UNSET-*.txt} => 1:[*.txt]
+"${UNSET-*.txt}" => 1:[*.txt]
+${UNSET-\*.txt} => 1:[\*.txt]
+${UNSET-'*'.txt} => 1:[\*.txt]
+${UNSET-a\b} => 1:[a\b]
+${UNSET-a\\b} => 1:[a\\b]
+"${UNSET-a\ b}" => 1:[a\ b]
+"${UNSET-a\"b}" => 1:[a\"b]
+"${UNSET-"a b"}" => 1:[a b]
+${PAT%"$SET"} => 1:[abc.def.ghi]
+${PAT#'a'*} => 1:[bc.def.ghi]
+${PAT#a'*'} => 1:[abc.def.ghi]
+${UNSET-$} => 1:[$]
+${SET-x y} => 1:[value]
+"a"* => 2:[a.txt][abc]
+a*'.txt' => 1:[a.txt]
+[a]* => 2:[a.txt][abc]
+[ => 1:[[]
+a[ => 1:[a[]
+[] => 1:[[]]
+sub/../a* => 2:[sub/../a.txt][sub/../abc]
+\a* => 2:[a.txt][abc]
+a\* => 1:[a*]
+*.TXT => 1:[*.TXT]
+** => 8:[*star][a.txt][abc][b.txt][c d.txt][f][probe.rex][sub]
+[!a].txt => 1:[b.txt]
+[^a].txt => 1:[b.txt]
+${UNSET-"a"} => 1:[a]
+${UNSET-"a"}x => 1:[ax]
+${UNSET-"a\b"} => 1:[a\b]
+${UNSET-"a\"} => 1:[a\"]
+${UNSET-a\"b} => 1:[a\"b]
+${UNSET-\"} => 1:[\"]
+${UNSET-"}"}x => 1:[}x]
+${UNSET-"a"b"c"} => 1:[abc]
+${UNSET-{a}} => 1:[{a}]
+${UNSET-a{b}c} => 1:[a{b}c]
+${UNSET-{}} => 1:[{}]
+${UNSET-"} => 1:[}]
+${UNSET-"a} => 1:[a}]
+${UNSET-'a} => 1:[a}]
+${UNSET-$EMPTY} a => 0:
+"${UNSET-$EMPTY}" => 0:
+${PAT%$EMPTY} => 0:
+${UNSET-"$EMPTY"} a => 0:
+"${UNSET-a\}b}" => 1:[a\}b]
+"${UNSET-\"}" => 1:[\"]
+"${UNSET-\'}" => 1:[\']
+${UNSET-a'b'"c"} => 1:[abc]
+${UNSET-$SET'x'} => 1:[valuex]
+${UNSET-${UNSET2-in}} => 1:[in]
+${UNSET-${UNSET2-'}'}} => 1:[}]
+${UNSET-$((1+2))} => 1:[3]
+${UNSET-\$SET} => 1:[\$SET]
+${UNSET-'$SET'} => 1:[value]
+"${UNSET-'$SET'}" => 1:[value]
+"${UNSET-\$SET}" => 1:[\$SET]
+${PAT#"a""b"} => 1:[c.def.ghi]
+${PAT#'a'"b"} => 1:[c.def.ghi]
+${PAT#\a} => 1:[bc.def.ghi]
+${PAT#'?'} => 1:[abc.def.ghi]
+${PAT%\} => 1:[abc.def.ghi]
+${PAT%"}"} => 1:[abc.def.ghi]
+${PAT%'g'*} => 1:[abc.def.]
+"${PAT%.*}" => 1:[abc.def]
+"${PAT#'abc'}" => 1:[.def.ghi]
+"${PAT#"abc"}" => 1:[.def.ghi]
+"${PAT#\a}" => 1:[bc.def.ghi]
+"${PAT#'*'}" => 1:[abc.def.ghi]
+${SP%b*} => 1:[a]
+"${SP%b*}" => 1:[a  ]
+${SP#a } => 2:[b][c]
+${#SET}x => 1:[5x]
+${#1} => 1:[9]
+${#*} => 1:[1]
+${#@} => 1:[1]
+${#$} => 1:[7]
+$#x => 1:[1x]
+$1x => 1:[probe.rexx]
+$12 => 1:[probe.rex2]
+${12} => 0:
+${1} => 1:[probe.rex]
+${*} => 1:[probe.rex]
+${@} => 1:[probe.rex]
+$@x => 1:[probe.rexx]
+x$@ => 1:[xprobe.rex]
+"x$@y" => 1:[xprobe.rexy]
+"$*x" => 1:[probe.rexx]
+${SET:-} => 1:[value]
+${SET=} => 1:[value]
+${UNSET=} => 0:
+${UNSET:=} => 0:
+${UNSET+} => 0:
+${WEX+a} ${WEX=b} $WEX => 2:[b][b] WEX=b
+${WEX=a b} => 2:[a][b] WEX=a b
+${WEX='a b'} "$WEX" => 3:[a][b][a b] WEX=a b
+${WEX="$SET"} => 1:[value] WEX=value
+${WEX=~} => 1:[/home/tester] WEX=/home/tester
+${WEX=*.txt} => 1:[*.txt] WEX=*.txt
+${NUM=9} => 1:[7]
+${EMPTY=x} => 0:
+${EMPTY:=x} $EMPTY => 2:[x][x]
+~ro\ot => 1:[~root]
+~roo\t/x => 1:[~root/x]
+~=x => 1:[~=x]
+~a* => 1:[~a*]
+~* => 1:[~*]
+~a;b => 1:[~a;b]
+"a="~ => 1:[a=/home/tester]
+a=$EMPTY~ => 1:[a=/home/tester]
+a"="~ => 1:[a=/home/tester]
+a=""~ => 1:[a=/home/tester]
+x=a=~ => 1:[x=a=/home/tester]
+~/ => 1:[/home/tester/]
+~root/ => 1:[/root/]
+~root: => 1:[/root:]
+~root:x => 1:[/root:x]
+a=~root:~root => 1:[a=/root:/root]
+${UNSET-'[a]'} => 0:
+${UNSET-"?"} => 0:
+${UNSET-'*'}* => 8:[*star][a.txt][abc][b.txt][c d.txt][f][probe.rex][sub]
+${UNSET-'a'}* => 8:[*star][a.txt][abc][b.txt][c d.txt][f][probe.rex][sub]
+${WEX='*'} => 1:[\*] WEX=\*
+${WEX=\*} $WEX => 2:[\*][\*] WEX=\*
+${UNSET-'\'} => 0:
+${UNSET-"\\"} => 0:
+"${UNSET-"\$SET"}" => 1:[]
+${UNSET-"]"} => 0:
+${UNSET-'a]'} => 0:
+${UNSET-"\\*"} => 0:
+"*"* => 8:[*star][a.txt][abc][b.txt][c d.txt][f][probe.rex][sub]
+'['a]* => 2:[a.txt][abc]
+["a"]* => 2:[a.txt][abc]
+"["a]* => 2:[a.txt][abc]
+a?[b => 1:[a?[b]
+*[ => 1:[*[]
+[a- => 1:[[a-]
+[a-b => 1:[[a-b]
+sub/[x]* => 1:[sub/x.txt]
+[[:alpha:]].txt => 2:[a.txt][b.txt]
+[a\]* => 2:[a.txt][abc]
+\[a]* => 2:[a.txt][abc]
+a\b* => 1:[abc]
+b""* => 1:[b.txt]
+"a$SET"b => 1:[avalueb]
+"$SET""$SET" => 1:[valuevalue]
+"a\nb" => 1:[a\nb]
+"\\" => 1:[\]
+"\'" => 1:[\']
+'\' => 1:[\]
+a\'b => 1:[a'b]
+"'" => 1:[']
+'"' => 1:["]
+"a'b" => 1:[a'b]
+"$" => 1:[$]
+"$ " => 1:[$ ]
+"${SET}" => 1:[value]
+"{a,b}" => 1:[{a,b}]
+'a;b' => 1:[a;b]
+a\;b => 1:[a;b]
+\(a\) => 1:[(a)]
+"${EMPTY:-}" a => 2:[][a]
+"${SET:+$EMPTY}" a => 0:
+"${EMPTY-def}" a => 2:[][a]
+"${EMPTY%x}" a => 0:
+"${SET%value}" a => 0:
+"${SET#*}" a => 2:[value][a]
+x$(($EMPTY)) b => 0:
+"x"$(($EMPTY)) b => 0:
+'x'"$EMPTY" b => 2:[x][b]
+x"$EMPTY" b => 2:[x][b]
+${UNSET?$SET} => 0:
+${UNSET%$EMPTY} a => 0:
+$((2147483647*2147483647*4)) => 1:[-17179869180]
+$((-9223372036854775807-1)) => 1:[-9223372036854775808]
+$((1 + 2 3)) => 1:[3]
+$(((1 2))) => 1:[1]
+$((0X1f)) => 1:[31]
+$((-0x10)) => 1:[-16]
+$((08)) => 1:[0]
+$((7/ 2)) => 1:[3]
+$((7 /2)) => 1:[3]
+~root a=~root => 2:[/root][a=~root]
+''~ => 2:[][/home/tester]
+""~ => 2:[][/home/tester]
+$EMPTY~ => 1:[/home/tester]
+a\=~ => 1:[a=/home/tester]
+a='='~ => 1:[a==/home/tester]
+x"$EMPTY""" b => 2:[x][b]
+x${UNSET-$EMPTY} b => 2:[x][b]
+''${UNSET-$EMPTY} b => 2:[][b]
+''$(($EMPTY)) b => 1:[]
+'' "${SET%value}" => 1:[]
+''"${SET%value}" b => 1:[]
+x"${SET%value}" b => 2:[x][b]
+a b "$EMPTY" c => 2:[a][b]
+x a=~ => 2:[x][a=~]
+x a=~/y => 2:[x][a=~/y]
+a=~ b=~ => 2:[a=/home/tester][b=~]
+a=~root b=~root => 2:[a=/root][b=~root]
+x a=b:~ => 2:[x][a=b:~]
+x ~ => 2:[x][/home/tester]
+x ~root => 2:[x][/root]
+a ''~ => 3:[a][][/home/tester]
+x=~ a => 2:[x=/home/tester][a]
+"" a=~ => 2:[][a=~]
+a=~root:~root:~ => 1:[a=/root:/root:/home/tester]
+a=~root:~ => 1:[a=/root:/home/tester]
+x x:~ => 2:[x][x:~]
+x''~ => 1:[x~]
+a''~ => 1:[a~]
+''~root => 2:[][/root]
+''~/x => 2:[][/home/tester/x]
+'' ~ => 2:[][/home/tester]
+""~x => 2:[][~x]
+''$((1)) => 2:[][1]
+'' $SET => 2:[][value]
+x""~ => 1:[x~]
+''"$SET" => 2:[][value]
+''"x" => 2:[][x]
+''"${SET}"x => 2:[][valuex]
+''"$((1))" => 2:[][1]
+''$SET => 2:[][value]
+''"a$SET" => 2:[][avalue]
+"""$SET" => 2:[][value]
+''${#SET} => 2:[][5]
+''$1 => 2:[][probe.rex]
+''"$@" => 2:[][probe.rex]
+''$@ => 2:[][probe.rex]
+''${UNSET-x} => 1:[]
+''${UNSET} => 1:[]
+''$UNSET b => 2:[][b]
+''"$UNSET" b => 1:[]
+''${SET%v*} => 1:[]
+''~$SET => 2:[][~$SET]
+$((1|2)) => 1:[1]
+$((1&2)) => 1:[1]
+$((1>2)) => 1:[1]
+$((1 # 2)) => 1:[1]
+$((1'2)) => 1:[1]
+$((1,2)) => 1:[1]
+$((1=2)) => 1:[1]
+${UNSET-a;b} => 0:
+${UNSET-a|b} => 0:
+${UNSET-a(b} => 0:
+${UNSET-a<b} => 0:
+${UNSET-a&b} => 0:
+"${UNSET-a;b}" => 1:[]
+${UNSET-'a;b'} => 0:
+${SET-a;b} => 1:[value]
+${PAT%;} => 1:[abc.def.ghi]
+${UNSET-a)b} => 0:
+0
+[stderr]
+UNSET: parameter null or not set
+UNSET: msg
+EMPTY: msg
+UNSET: parameter null or not set
+UNSET: msg
+UNSET: msg
+UNSET: x
+UNSET: parameter null or not set
+UNSET: parameter null or not set
+
+# Field splitting on the program's IFS, and tilde on its HOME: an `@NAME=value`
+# line sets a variable (`@-NAME` removes it) for the next text.
+program
+do name over 'a.txt', 'b.txt', 'c d.txt', '.hidden', 'abc', '*star', 'sub/x.txt'
+  call lineout name, ''
+  call lineout name
+end
+call SysMkDir 'sub/deep'
+call setup
+do line over .resources~cases
+  select
+    when line~startsWith('@-') then call value line~substr(3), .nil, 'ENVIRONMENT'
+    when line~startsWith('@') then do
+      parse var line '@' name '=' val
+      call value name, val, 'ENVIRONMENT'
+    end
+    otherwise
+      call show line
+      call setup
+  end
+end
+exit
+show: procedure
+  use arg text
+  w = SysWordexp(text)
+  line = text '=>' w~items':'
+  do word over w
+    line = line'['word']'
+  end
+  wex = value('WEX', , 'ENVIRONMENT')
+  if wex \== '' then line = line 'WEX='wex
+  say line
+  return
+setup:
+  call value 'WEX', .nil, 'ENVIRONMENT'
+  call value 'IFS', .nil, 'ENVIRONMENT'
+  call value 'V', .nil, 'ENVIRONMENT'
+  call value 'W', .nil, 'ENVIRONMENT'
+  do pair over 'SET=value', 'EMPTY=', 'SP=a  b c', 'PAT=abc.def.ghi', 'NUM=7', "Q=it's", 'STAR=*.txt', 'BS=a\b', 'HOME=/home/tester'
+    parse var pair name '=' val
+    call value name, val, 'ENVIRONMENT'
+  end
+  return
+::requires 'rxunixsys' LIBRARY
+::resource cases
+@IFS=:
+@V=a:b::c
+$V
+@IFS=:
+a b:c
+@IFS=:
+@V=a b
+$V
+@IFS=
+@V=a b
+$V
+@IFS= :
+@V= a :b: :c 
+$V
+@IFS=x
+@V=axxb
+$V
+@V= a  b 
+$V
+@V= a  b 
+"$V"
+@V= a 
+x${V}y
+@V=a 
+@W= b
+$V$W
+@V=a 
+$V""
+@V= a
+""$V
+@V=*.txt b?.txt
+$V
+@V=*.tx
+$V'*'
+@V=a b
+$V*
+@V=*
+$V*
+@V= a
+''$V
+@V= a
+x$V
+@V= a
+$V
+@V= b
+a $V
+@V=a 
+$V x
+@V=a 
+$V"x"
+@V=a 
+$V'x'
+@V=a
+@W= b
+$V$W
+@V=  
+""$V
+@V=  
+x$V
+@V=  
+x${V}y
+@V=a b
+x${V}y
+@IFS=:
+@V=:a:
+x${V}y
+@IFS=:
+@V=:a:
+$V
+@IFS=:
+@V=a::
+$V
+@IFS=:
+@V=a:
+$V$V
+@IFS=: 
+@V= :a: 
+x${V}y
+@IFS=: 
+@V= : a
+$V
+@IFS=:
+@V=:a
+''$V
+@IFS=
+@V= a 
+$V
+@IFS=
+@V= a 
+x${V}y
+@HOME=a b
+~
+@V=~
+$V
+@V=~
+a=$V
+@V=a b
+''$V
+@V=a  
+x$V
+@IFS=:
+@V=a:
+x${V}y
+@IFS= :
+@V=a :
+x${V}y
+@IFS= :
+@V=: a
+${V}y
+@V=a*
+${PAT#$V}
+@V=a*
+${PAT#"$V"}
+@HOME=
+~
+@HOME=/h/
+~/x
+::END
+----
+rc 0
+[stdout]
+$V => 4:[a][b][][c]
+a b:c => 2:[a][b:c]
+$V => 1:[a b]
+$V => 1:[a b]
+$V => 4:[a][b][][c]
+$V => 3:[a][][b]
+$V => 2:[a][b]
+"$V" => 1:[ a  b ]
+x${V}y => 1:[xay]
+$V$W => 1:[ab]
+$V"" => 1:[a]
+""$V => 2:[][a]
+$V => 2:[*.txt][b?.txt]
+$V'*' => 1:[*.tx*]
+$V* => 2:[a][b.txt]
+$V* => 8:[*star][a.txt][abc][b.txt][c d.txt][f][probe.rex][sub]
+''$V => 2:[][a]
+x$V => 1:[xa]
+$V => 1:[a]
+a $V => 2:[a][b]
+$V x => 2:[a][x]
+$V"x" => 1:[ax]
+$V'x' => 1:[ax]
+$V$W => 1:[ab]
+""$V => 1:[]
+x$V => 1:[x]
+x${V}y => 1:[xy]
+x${V}y => 2:[xa][by]
+x${V}y => 3:[x][a][y]
+$V => 2:[][a]
+$V => 2:[a][]
+$V$V => 2:[a][a]
+x${V}y => 3:[x][a][y]
+$V => 2:[][a]
+''$V => 3:[][][a]
+$V => 1:[ a ]
+x${V}y => 1:[x a y]
+~ => 1:[a b]
+$V => 1:[~]
+a=$V => 1:[a=~]
+''$V => 3:[][a][b]
+x$V => 1:[xa]
+x${V}y => 2:[xa][y]
+x${V}y => 2:[xa][y]
+${V}y => 2:[][ay]
+${PAT#$V} => 1:[bc.def.ghi]
+${PAT#"$V"} => 1:[bc.def.ghi]
+~ => 0:
+~/x => 1:[/h//x]
+[stderr]
+
+# Pathname expansion across directories, as the oracle answers it.
+eval
+SysWordexp('sub/*')
+SysWordexp('s*/')
+SysWordexp('./f')
+SysWordexp('*/')
+SysWordexp('sub/*/')
+SysWordexp('./s*')
+SysWordexp('/nonexist/*/x')
+SysWordexp('sub/../f*')
+----
+Array[1]: sub/*
+Array[1]: sub/
+Array[1]: ./f
+Array[1]: sub/
+Array[1]: sub/*
+Array[1]: ./sub
+Array[1]: /nonexist/*/x
+Array[1]: sub/../f
+
+# Deviation 88 and 90: text wordexp refuses (the oracle crashes) and every
+# command substitution (the oracle runs a shell) raise the routine failure.
 ruled
-do text over 'a;b', 'a|b', 'a&b', 'x > y', '(a)', '{a,b}', '"a', "'a", '`a', '$(', '${a', 'a\', 'a'||'0a'x||'b', '$((1/0))', '${UNSETVARQ?}'
-  say try(text)
+do text over .resources~cases
+  say try(text) text
 end
 exit
 try: procedure
@@ -1033,24 +2305,208 @@ try: procedure
   signal on syntax name refused
   return SysWordexp(text)~items
 refused:
-  return condition('o')~code condition('o')~message
+  return condition('o')~code
+::requires 'rxunixsys' LIBRARY
+::resource cases
+${#}
+"${x-'}"
+$((NUM+1))
+$((--1))
+$((-(2)))
+$((1/0))
+$((a))
+${}
+${SET
+${SET:}
+${SET!}
+${1SET}
+${SET:2}
+${SET:1:2}
+${SET/a/b}
+$((1+))
+$((1)+2)
+$((1)2)
+$(( ))
+$(("1"+2))
+$(('1'+2))
+$((1+$EMPTY))
+$((1+(2))
+$((- 1))
+$(($SP))
+$((NUM))
+$((\1))
+$[1
+$((1)
+$((1)))
+${UNSET-a}b}
+a\
+a'b
+"a
+a`b
+$(
+${
+x}
+}
+{
+a(b
+$(( $EMPTY))
+$(($SET))
+~a'b c'
+~"a b"
+${UNSET-"a\"b"}x
+${UNSET-{}x
+${UNSET-a
+${UNSET-{
+${UNSET-a\
+"${UNSET-"a\"b"}"
+"${UNSET-{}"
+"${UNSET-'a\'b'}"
+${##}
+${#-}
+${#?}
+${?}
+${-}
+${!}
+"`"
+"a\"
+a{b
+a}b
+$((1;2))
+${SET;}
+${SET:#v}
+${SET:%v}
+$(((-9223372036854775807-1)/-1))
+$((1{2))
+$((1}2))
+$((1;))
+$((;))
+$[1;2]
+$(echo x y)
+`echo q`
+$(exit 3)
+$(echo "a;b")
+$(cat f)
+"$(echo x)"
+${UNSET-$(echo x)}
+${SET+`echo x`}
+a$(true)b
+$( (echo x) )
+::END
+----
+rc 0
+[stdout]
+40.1 ${#}
+40.1 "${x-'}"
+40.1 $((NUM+1))
+40.1 $((--1))
+40.1 $((-(2)))
+40.1 $((1/0))
+40.1 $((a))
+40.1 ${}
+40.1 ${SET
+40.1 ${SET:}
+40.1 ${SET!}
+40.1 ${1SET}
+40.1 ${SET:2}
+40.1 ${SET:1:2}
+40.1 ${SET/a/b}
+40.1 $((1+))
+40.1 $((1)+2)
+40.1 $((1)2)
+40.1 $(( ))
+40.1 $(("1"+2))
+40.1 $(('1'+2))
+40.1 $((1+$EMPTY))
+40.1 $((1+(2))
+40.1 $((- 1))
+1 $(($SP))
+40.1 $((NUM))
+40.1 $((\1))
+40.1 $[1
+40.1 $((1)
+40.1 $((1)))
+40.1 ${UNSET-a}b}
+40.1 a\
+40.1 a'b
+40.1 "a
+40.1 a`b
+40.1 $(
+40.1 ${
+40.1 x}
+40.1 }
+40.1 {
+40.1 a(b
+40.1 $(( $EMPTY))
+1 $(($SET))
+40.1 ~a'b c'
+40.1 ~"a b"
+40.1 ${UNSET-"a\"b"}x
+40.1 ${UNSET-{}x
+40.1 ${UNSET-a
+40.1 ${UNSET-{
+40.1 ${UNSET-a\
+40.1 "${UNSET-"a\"b"}"
+40.1 "${UNSET-{}"
+40.1 "${UNSET-'a\'b'}"
+40.1 ${##}
+40.1 ${#-}
+40.1 ${#?}
+40.1 ${?}
+40.1 ${-}
+40.1 ${!}
+40.1 "`"
+40.1 "a\"
+40.1 a{b
+40.1 a}b
+40.1 $((1;2))
+40.1 ${SET;}
+40.1 ${SET:#v}
+40.1 ${SET:%v}
+40.1 $(((-9223372036854775807-1)/-1))
+40.1 $((1{2))
+40.1 $((1}2))
+40.1 $((1;))
+40.1 $((;))
+40.1 $[1;2]
+40.1 $(echo x y)
+40.1 `echo q`
+40.1 $(exit 3)
+40.1 $(echo "a;b")
+40.1 $(cat f)
+40.1 "$(echo x)"
+40.1 ${UNSET-$(echo x)}
+40.1 ${SET+`echo x`}
+40.1 a$(true)b
+40.1 $( (echo x) )
+[stderr]
+
+# Deviation 90: SysWordexp starts no process. Each command substitution
+# raises, and none of the files the commands would make exists after.
+ruled
+do text over '$(touch made1)', '`touch made2`', '"$(touch made3)"', '${X-$(touch made4)}', 'a$(touch made5)b', '"${x-''}"; touch made6; "''}"'
+  say try(text)
+end
+made = 0
+do n = 1 to 6
+  if stream('made'n, 'c', 'query exists') \== '' then made += 1
+end
+say 'made' made
+exit
+try: procedure
+  use arg text
+  signal on syntax name refused
+  return SysWordexp(text)~items
+refused:
+  return condition('o')~code
 ::requires 'rxunixsys' LIBRARY
 ----
 rc 0
 [stdout]
-40.1 External routine "SYSWORDEXP" failed.
-40.1 External routine "SYSWORDEXP" failed.
-40.1 External routine "SYSWORDEXP" failed.
-40.1 External routine "SYSWORDEXP" failed.
-40.1 External routine "SYSWORDEXP" failed.
-40.1 External routine "SYSWORDEXP" failed.
-40.1 External routine "SYSWORDEXP" failed.
-40.1 External routine "SYSWORDEXP" failed.
-40.1 External routine "SYSWORDEXP" failed.
-40.1 External routine "SYSWORDEXP" failed.
-40.1 External routine "SYSWORDEXP" failed.
-40.1 External routine "SYSWORDEXP" failed.
-40.1 External routine "SYSWORDEXP" failed.
-40.1 External routine "SYSWORDEXP" failed.
-40.1 External routine "SYSWORDEXP" failed.
+40.1
+40.1
+40.1
+40.1
+40.1
+1
+made 0
 [stderr]

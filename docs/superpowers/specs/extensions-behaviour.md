@@ -555,7 +555,7 @@ character device, `b` block device, `p` FIFO. The nine permission characters use
 | `SysGethostname()` | the host name, equal to `SysUname('n')` |
 | `SysGetsizeofptr()` | `64` |
 | `SysGettzname1()`, `SysGettzname2()` | after re-reading the time zone, the standard and daylight zone abbreviations (`CET`, `CEST`) |
-| `SysWordexp(text)` | an Array of the words of POSIX word expansion of `text`, with no flags. Command substitution is allowed. `SysWordexp('a b  c')` is `a,b,c` and `$HOME` expands. Empty `text` is a routine failure. |
+| `SysWordexp(text)` | an Array of the words of POSIX word expansion of `text`, as glibc `wordexp` with no flags answers it, against the program's environment and directory. Command substitution raises 40.1 and no shell is started (Deviation 90). `SysWordexp('a b  c')` is `a,b,c` and `$HOME` expands. Empty `text` is a routine failure. |
 | `SysSetxattr(path, name, value)` | sets the extended attribute to `value` plus a trailing NUL byte, and returns the return code |
 | `SysGetxattr(path, name)` | the stored value up to its first NUL, or `""` if it is absent or unreadable |
 | `SysListxattr(path)` | an Array of attribute names, or `""` (a string, not an Array) on failure |
