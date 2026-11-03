@@ -667,27 +667,22 @@ fn separator_errors_are_40_43_and_40_44() {
     );
 }
 
-/// A `0x00` byte, crossed against every one of `strchr`'s three uses in
-/// this builtin, exactly as `strchr_matches`' own doc claims -- each
-/// measured directly against the oracle. A NUL osep is rejected as
-/// "alphanumeric" (`strchr(ALPHANUM, 0)` finds `ALPHANUM`'s own
-/// terminator); a NUL *style* is "found" in `EINOSU` too, so it is
-/// treated as osep-compatible and falls through to be rejected by the
-/// final style switch instead (40.904, not 40.44); a NUL *style2* is
-/// "found" in `BDFLMTW`, which is the incompatible set, so that one
-/// really is 40.44. All three report `found "?"` -- the same
-/// control-byte placeholder a raw `0x01` gets, since this is the
-/// *report line's* own substitution, not something either raiser
-/// spells specially for a NUL.
+/// A `0x00` byte, crossed against the separator check and the two
+/// `strchr` style checks in this builtin, each measured directly against
+/// the oracle. Since bug #2089 (r13250) the separator check is `memchr`
+/// over `ALPHANUM`'s own length, so a NUL osep is a separator; a NUL
+/// *style* is still "found" in `EINOSU`, so it is treated as
+/// osep-compatible and falls through to be rejected by the final style
+/// switch instead (40.904, not 40.44); a NUL *style2* is "found" in
+/// `BDFLMTW`, which is the incompatible set, so that one really is 40.44.
+/// Both refusals report `found "?"` -- the same control-byte placeholder a
+/// raw `0x01` gets, since this is the *report line's* own substitution,
+/// not something either raiser spells specially for a NUL.
 #[test]
-fn a_nul_byte_is_handled_via_strchrs_own_terminator_quirk_at_all_three_sites() {
-    let (code, stderr) = failure(b"say date('S','20070922','S','00'x)\n");
-    assert_eq!(code, 216, "{stderr}");
-    assert!(
-        stderr.contains(
-            "DATE argument 4 must be a single non-alphanumeric character or the null string; found \"?\"."
-        ),
-        "{stderr}"
+fn a_nul_byte_separates_and_is_found_by_both_style_checks() {
+    assert_eq!(
+        output(b"say c2x(date('S','20070922','S','00'x))\n"),
+        "32303037003039003232\n"
     );
     let (code, stderr) = failure(b"call date '00'x,,,'-'\n");
     assert_eq!(code, 216, "{stderr}");

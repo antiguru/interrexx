@@ -170,17 +170,12 @@ impl Timestamp {
         time
     }
 
-    /// [`base_time`] adjusted by this timestamp's own [`time_zone_offset`]
-    /// -- `RexxDateTime::getUTCBaseTime`, and `TIME('E')`/`TIME('R')`'s own
-    /// unit.
-    fn utc_base_time(&self) -> i64 {
-        self.base_time() + self.time_zone_offset
-    }
-
     /// Seconds since 1970-01-01T00:00:00, negative before it
-    /// (`DATE('T')`/`TIME('T')`) -- `RexxDateTime::getUnixTime`.
+    /// (`DATE('T')`/`TIME('T')`) -- `RexxDateTime::getUnixTime`, which since
+    /// bug #2089 (r13250) rounds a negative count down rather than toward
+    /// zero.
     fn unix_time(&self) -> i64 {
-        (self.base_time() - UNIX_BASE_TIME) / MICROSECONDS
+        (self.base_time() - UNIX_BASE_TIME).div_euclid(MICROSECONDS)
     }
 
     /// Sets year/month/day from a day count since 0001-01-01, clearing every
@@ -330,11 +325,19 @@ impl Timestamp {
     /// `RexxDateTime::adjustTimeZone` (`TIME('O')`'s own input style): keeps
     /// this timestamp's UTC instant fixed while moving its own zone offset
     /// to `offset` microseconds from UTC, which is what shifts the local
-    /// wall-clock fields.
+    /// wall-clock fields. Since bug #2089 (r13250) the offset is local minus
+    /// UTC, and a shift past [`MAX_BASE_TIME`] or below zero is refused
+    /// with the timestamp left as it was.
     fn adjust_time_zone(&mut self, offset: i64) -> bool {
-        let base = self.utc_base_time();
-        if let Some(shifted) = base.checked_sub(offset) {
-            self.set_base_time(shifted);
+        let Some(shifted) = self
+            .base_time()
+            .checked_sub(self.time_zone_offset)
+            .and_then(|utc| utc.checked_add(offset))
+        else {
+            return false;
+        };
+        if !self.set_base_time(shifted) {
+            return false;
         }
         self.time_zone_offset = offset;
         true
@@ -503,7 +506,9 @@ impl Timestamp {
                         Some(b) if b.is_ascii_digit() => 2,
                         _ => 1,
                     };
-                    let Some(v) = get_number_capped(date, input, len, 12) else {
+                    // Hour 0 is no civil hour since bug #2089 (r13250).
+                    let Some(v) = get_number_capped(date, input, len, 12).filter(|&v| v != 0)
+                    else {
                         return false;
                     };
                     self.hours = v;
@@ -879,9 +884,8 @@ fn style_byte(
     }
 }
 
-/// `expression/BuiltinFunctions.hpp`'s own `ALPHANUM` macro, spelled out so
-/// [`check_separator`] can run the identical `strchr`-based membership test
-/// the oracle does, the `0`-byte quirk included -- see [`strchr_matches`].
+/// `expression/BuiltinFunctions.hpp`'s own `ALPHANUM` macro, spelled out for
+/// [`check_separator`]'s membership test.
 const ALPHANUM: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 /// Membership as the oracle's own `strchr(set, byte)` computes it, its
@@ -891,11 +895,10 @@ const ALPHANUM: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01
 /// contents. Every `strchr`-based membership test `BUILTIN(DATE)`/
 /// `BUILTIN(TIME)` runs therefore reports "found" for a `0` byte against
 /// *every* set, including one that itself carries no zero -- measured,
-/// three call sites at once, all rc 216 and none of them what
-/// `set.contains(&0)` alone would answer since none of [`ALPHANUM`],
-/// `"EINOSU"` or `"BDFLMTW"` contains a literal zero:
+/// two call sites, both rc 216 and neither what `set.contains(&0)` alone
+/// would answer since neither `"EINOSU"` nor `"BDFLMTW"` contains a literal
+/// zero:
 /// ```text
-/// date('S','20070922','S','00'x)     40.43   (the alphanumeric-set osep check)
 /// date('00'x,,,'-')                  40.904  (the EINOSU osep-compatibility check;
 ///                                              0 counts as "found", so as
 ///                                              "compatible", so parsing falls
@@ -910,14 +913,12 @@ fn strchr_matches(set: &[u8], byte: u8) -> bool {
 }
 
 /// A separator argument (`DATE`'s `osep`/`isep`): exactly one non-
-/// alphanumeric byte, or the null string. A `0x00` byte counts as
-/// alphanumeric here -- not because it is one, but because [`strchr_matches`]
-/// is what the oracle's own check actually computes.
+/// alphanumeric byte, or the null string. Since bug #2089 (r13250) the
+/// oracle tests membership with `memchr` over [`ALPHANUM`]'s own length, so
+/// a `0x00` byte is a valid separator -- unlike the style checks, which
+/// still use [`strchr_matches`].
 fn check_separator(name: &[u8], position: usize, sep: &[u8]) -> Result<(), Failure> {
-    let bad = sep.len() > 1
-        || sep
-            .first()
-            .is_some_and(|&byte| strchr_matches(ALPHANUM, byte));
+    let bad = sep.len() > 1 || sep.first().is_some_and(|byte| ALPHANUM.contains(byte));
     if bad {
         Err(Raised::separator_not_a_char(name, position, sep).into())
     } else {
@@ -1090,18 +1091,11 @@ pub(crate) fn time(
 
     match style {
         b'E' | b'R' => {
-            // **The raw clock, not [`Timestamp::utc_base_time`].** The anchor
-            // this is differenced against is [`Activation::cached_clock`],
-            // which is what [`real_clock_base_time`] returned -- so the
-            // reading has to be the same quantity or the difference carries
-            // the zone. `utc_base_time` is `base_time() + time_zone_offset`,
-            // faithful to `RexxDateTime::getUTCBaseTime`, and with the local
-            // calendar fields [`now`] now builds that is the UTC instant plus
-            // *twice* the offset. The oracle cancels it by differencing two
-            // values of its own formula; this cancels it by differencing two
-            // raw readings. Measured before the fix: `TIME('R')` in a callee
-            // leaked 14400.000001 seconds into the caller at UTC+2, which is
-            // two offsets, not one.
+            // **The raw clock.** The anchor this is differenced against is
+            // [`Activation::cached_clock`], which is what
+            // [`real_clock_base_time`] returned, so the reading is the same
+            // UTC quantity and the difference carries no zone -- what the
+            // oracle's `getUTCBaseTime` answers since bug #2089 (r13250).
             let reading = now_base_time(interp);
             let text = elapsed_reading(interp, reading, style == b'R');
             Ok(interp.text(&text))

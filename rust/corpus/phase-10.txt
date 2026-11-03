@@ -115,3 +115,6 @@ lang/array_index_list_refusals.rex
 # PR 6: RaiseCondition with no result object answers the value the native
 # code returned (bug #2130, r13339).
 lang/library_callback_condition_returned.rex
+# PR 6: DATE and TIME conversions after bug #2089 (r13250): civil hour 0,
+# TIME('O') shifts off the calendar, ticks rounding down, '00'x separators.
+lang/date_time_conversion_refusals.rex
