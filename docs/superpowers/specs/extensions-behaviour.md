@@ -737,6 +737,11 @@ different option: set returns 0 and a later get returns 1. Any other name gives 
 | `SockGetSockName(s, stem)`, `SockGetPeerName(s, stem)` | Returns 0 or −1. The stem is written even on failure (the oracle's values are unspecified; it showed `0`, `0`, `0.0.0.0`). An unconnected socket gives `ENOTCONN`. |
 | `SockGetHostByName(name, stem)` | 1 and fills the host stem, or 0 if not found |
 | `SockGetHostByAddr(addr, stem [, domain])` | `addr` is parsed like `ADDR`. `domain` defaults to 2 and other numbers are passed through. Returns 1 or 0. |
+
+This crate's two host lookups read `/etc/hosts` and then ask the resolver, in that order, whatever
+the host's `/etc/nsswitch.conf` says: they answer as the oracle does on a host whose `hosts:` line is
+`files dns`. An answer from the resolver fills no aliases (`ALIAS.0` is 0), since the resolver call
+this crate makes reports the canonical name and the addresses only.
 | `SockGetHostName()` | the host name, up to 255 bytes |
 | `SockGetHostId()` | dotted address of the first IPv4 interface address whose text does not begin `127`, in interface-list order. **Defect:** the last interface in the list is never examined, and if no address qualifies the result is unspecified (D9). `0.0.0.0` if the interface list cannot be read. `errno` is not set on success. |
 | `SockSend(s, data [, flags])` | sends the bytes, including NULs. Returns the count or −1. Writing to a closed peer gives −1 with `errno` `32`; the process does not die. |
