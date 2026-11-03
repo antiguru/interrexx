@@ -1,0 +1,9 @@
+# Phase 10 corpus subset -- witnesses for Phase 10's refusal dispositions.
+# The union with the other phase-*.txt files is what the harnesses read, not
+# this file alone.
+#
+# One path per line, relative to this directory (rust/corpus/). Lines starting
+# with # are comments; blank lines are ignored.
+
+# PR 3: missing_rexx_class's GUARD row (refusal-dispositions.tsv).
+lang/command_classes_survive_environment_removal.rex
