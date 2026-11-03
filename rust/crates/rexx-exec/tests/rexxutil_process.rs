@@ -77,8 +77,8 @@ fn pgid_is_the_parents_group() {
 }
 
 /// The command waiter and SysWait may each reap the command's child. Either
-/// winner is valid. Deterministic ECHILD/127 mapping is covered at collect's
-/// boundary by command::tests::an_externally_reaped_child_maps_to_127_and_failure.
+/// winner is valid. When SysWait wins, the command's wait answers ECHILD and
+/// its return code is -10 with no FAILURE (Deviation 91).
 #[test]
 fn competing_child_waiters_accept_either_valid_winner() {
     // Normal command RC tracing is unrelated to wait ownership.
@@ -118,7 +118,7 @@ fn competing_child_waiters_accept_either_valid_winner() {
     let mut lines: Vec<&str> = stdout.lines().collect();
     lines.sort_unstable();
     assert!(
-        lines == ["cmd rc 127", "failure 127", "ready 1", "wait 1280"]
+        lines == ["cmd rc -10", "ready 1", "wait 1280"]
             || lines == ["cmd rc 5", "ready 1", "wait -1"],
         "{stdout}"
     );

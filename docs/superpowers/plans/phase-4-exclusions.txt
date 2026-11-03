@@ -3216,7 +3216,8 @@ DEVIATIONS -- permanent, chosen
      a command's process answers ECHILD. The oracle then answers a negative
      return code with no FAILURE trace whose value is unset stack (measured
      -35, -64, -100, -112). This crate answers -10 (-ECHILD), an ERROR as
-     for a child a signal ended. Found by the PR 4 review (M2).
+     for a child a signal ended. A command whose child a concurrent SysWait
+     reaped first answers the same way. Found by the PR 4 review (M2).
 
  92. THE INTERPRETER'S OWN DESCRIPTORS ARE OUT OF A PROGRAM'S REACH
      (Phase 10). OWNER: none.
