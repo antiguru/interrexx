@@ -1555,3 +1555,22 @@ fn raise_condition_and_raise_condition_object_raise_as_the_oracle_does() {
          err6 SYNTAX | 93.900 | 93 |  | array 1 the ADDITIONAL of a SYNTAX condition object must be an array | The NIL object | 1 | Incorrect call to method. | the ADDITIONAL of a SYNTAX condition object must be an array.\n"
     );
 }
+
+/// `NewArray` with a size above the largest array is 93.959, as `new_array` raises it, where
+/// it sent `NEW` to `Array` and raised what that raises for the size. The expected output is
+/// the oracle's.
+#[test]
+fn new_array_refuses_a_size_above_the_largest_array() {
+    let stdout = run_program(
+        "new-array",
+        include_str!("classic_api/new_array.rex"),
+        &[("METHODPackage.cls", &method_package())],
+    );
+    assert_eq!(
+        stdout,
+        "2305843009213693953 93.959 An array cannot contain more than 100000000000000000 elements.\n\
+         2305843009213693952 93.959 An array cannot contain more than 100000000000000000 elements.\n\
+         18446744073709551615 93.959 An array cannot contain more than 100000000000000000 elements.\n\
+         5 ok 5\n"
+    );
+}

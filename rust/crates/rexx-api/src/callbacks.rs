@@ -1204,9 +1204,25 @@ impl Activation<'_> {
             .map_or(0, |dimensions| dimensions.max(1))
     }
 
-    /// `NewArray`: an array of that size and no items.
+    /// `NewArray`: an array of that size and no items, or 93.959 for a size
+    /// above `ArrayClass::MaxFixedArraySize`, as `new_array` raises it
+    /// (`classes/ArrayClass.cpp:183`).
     pub fn new_array_sized(&self, size: usize) -> RexxObjectPtr {
         const SLOT: &str = "RexxThreadInterface.NewArray";
+        /// `ArrayClass::MaxFixedArraySize` (`classes/ArrayClass.hpp:329`).
+        const MAX_FIXED_ARRAY_SIZE: usize = 100_000_000_000_000_000;
+        if size > MAX_FIXED_ARRAY_SIZE {
+            self.with_surface(SLOT, (), |cx| {
+                let limit = cx
+                    .host
+                    .new_string(MAX_FIXED_ARRAY_SIZE.to_string().as_bytes());
+                cx.host.register_local(limit);
+                let surface = cx.host.surface().expect("checked by with_surface");
+                let substitutions = surface.new_array(&[Some(limit)]);
+                surface.raise_exception(93_959, Some(substitutions));
+            });
+            return std::ptr::null_mut();
+        }
         let class = self.class(SLOT, "Array");
         self.send_for_handle(SLOT, class, b"NEW", &[Argument::Number(size)])
     }
