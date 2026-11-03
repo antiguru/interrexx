@@ -3173,7 +3173,9 @@ DEVIATIONS -- permanent, chosen
      Four extension calls end the oracle with SIGSEGV: a RegularExpression
      `match` or `pos` with no pattern compiled, any RegularExpression call
      after an explicit `uninit`, SysGetgrnam or SysGetgrgid for a group that
-     does not exist, and SockSelect with a non-numeric entry in a stem. This
+     does not exist, SockSelect with a non-numeric entry in a stem, and
+     SysWordexp of a word list wordexp rejects (`a;b`, `{a,b}`, an
+     unterminated quote; added 2026-11-03 under the same rule). This
      crate raises a defined condition in each case instead of inventing a
      result. The crashes are recorded in defects.json.
 
