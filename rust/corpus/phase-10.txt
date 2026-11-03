@@ -112,3 +112,6 @@ lang/if_nested_false_outer_boundary.rex
 # PR 6: an Array given alone as a subscript list is refused for a hole or a
 # second dimension (bug #2085, r13264), by every method that reads an index.
 lang/array_index_list_refusals.rex
+# PR 6: RaiseCondition with no result object answers the value the native
+# code returned (bug #2130, r13339).
+lang/library_callback_condition_returned.rex

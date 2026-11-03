@@ -826,9 +826,13 @@ impl Interp {
             }
             Ok(value) => match popped.raised {
                 None => Ok(value),
-                Some(raised) => {
-                    self.raise_held_condition(raised, popped.additional, popped.result, trapped)
-                }
+                Some(raised) => self.raise_held_condition(
+                    raised,
+                    popped.additional,
+                    popped.result,
+                    value,
+                    trapped,
+                ),
             },
             Err(refused) => {
                 let failure = self.refusal(refused, packaged, popped.method);
@@ -841,13 +845,15 @@ impl Interp {
     /// A condition a callback raised and the extension did not clear, raised
     /// once the call has returned (`NativeActivation::checkConditions`,
     /// `:1787`): a `SYNTAX` condition as the call's failure; any other is
-    /// offered to the caller's trap, and the call answers its `RESULT` where
-    /// no `SIGNAL ON` takes it.
+    /// offered to the caller's trap, and the call answers the condition's
+    /// `RESULT` where no `SIGNAL ON` takes it, or without one `returned`, the
+    /// value the native code returned (bug #2130, r13339).
     fn raise_held_condition(
         &mut self,
         raised: Failure,
         additional: Option<ObjRef>,
         result: Option<ObjRef>,
+        returned: Option<ObjRef>,
         trapped: Option<ObjRef>,
     ) -> Result<Option<ObjRef>, Failure> {
         let condition = match &raised {
@@ -884,14 +890,14 @@ impl Interp {
                     fragment_depth: self.activity.fragment_depth,
                     trace_failure: None,
                 });
-                Ok(result)
+                Ok(result.or(returned))
             }
             Some(_) => {
                 self.activity.pending_additional = additional;
                 self.activity.pending_result = result;
                 Err(raised)
             }
-            None => Ok(result),
+            None => Ok(result.or(returned)),
         }
     }
 
