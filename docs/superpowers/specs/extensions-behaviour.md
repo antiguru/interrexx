@@ -749,7 +749,12 @@ different option: set returns 0 and a later get returns 1. Any other name gives 
 | `SockSelect([reads], [writes], [excepts] [, timeout])` | see below |
 
 `SockAccept`, `SockRecv`, `SockRecvFrom`, `SockConnect` and `SockSelect` block only the calling
-activity; other activities keep running.
+activity; other activities keep running. A blocking socket's `SockAccept`, `SockRecv` and `SockRecvFrom` wait no
+longer than its `SO_RCVTIMEO`, and `SockConnect` no longer than its `SO_SNDTIMEO`: then
+`SockAccept` and the receives answer −1 with `errno` 11, and `SockConnect` −1 with `errno` 115,
+the connection going on (a second `SockConnect` gives `errno` 114). A `SockAccept` whose
+connection another accept took first waits on. A halting signal during a blocked `SockSend` or
+`SockSendTo` ends it, and HALT is raised on that clause.
 
 `SockGetSockOpt(s, level, option, var)`:
 

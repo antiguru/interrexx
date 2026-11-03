@@ -16,7 +16,7 @@
 mod hosts;
 
 use std::net::{Ipv4Addr, SocketAddrV4};
-use std::os::fd::{BorrowedFd, IntoRawFd as _};
+use std::os::fd::{BorrowedFd, IntoRawFd as _, OwnedFd};
 use std::time::{Duration, Instant};
 
 use rexx_api::callbacks::Surface as _;
@@ -34,6 +34,7 @@ use crate::{Failure, Interp};
 type Result<T> = std::result::Result<T, Failure>;
 
 const EINTR: i32 = 4;
+const EAGAIN: i32 = 11;
 const EBADF: i32 = 9;
 const EINVAL: i32 = 22;
 const EDOM: i32 = 33;
@@ -449,6 +450,8 @@ enum Pending {
         stem: Option<Vec<u8>>,
         /// The stem argument named no stem: the descriptor is lost.
         lost: bool,
+        /// The connection the wait's re-test took, once it has.
+        accepted: Option<Os<Accepted>>,
     },
     Connect {
         fd: i32,
@@ -511,11 +514,27 @@ fn any_ready(polls: &[(i32, PollFlags)]) -> bool {
 /// The running activity's socket wait, re-tested at its sleep's end: the
 /// next poll's time while it goes on, `None` once its sockets are ready or
 /// its deadline has passed.
-pub(crate) fn wait_again(interp: &Interp) -> Option<Instant> {
-    let wait = interp.activity.socket_wait.as_ref()?;
+pub(crate) fn wait_again(interp: &mut Interp) -> Option<Instant> {
     let now = interp.now();
-    if wait.deadline.is_some_and(|deadline| now >= deadline) || any_ready(&wait.polls) {
+    let wait = interp.activity.socket_wait.as_mut()?;
+    if wait.deadline.is_some_and(|deadline| now >= deadline) {
         return None;
+    }
+    if any_ready(&wait.polls) {
+        // A ready listening socket can lose its connection to another
+        // accept, in this process or another, before this one runs: the
+        // accept is tried here without blocking, and the wait goes on where
+        // it finds nothing.
+        let Pending::Accept { fd, accepted, .. } = &mut wait.op else {
+            return None;
+        };
+        match try_accept(*fd) {
+            Err(EAGAIN) => {}
+            result => {
+                *accepted = Some(result);
+                return None;
+            }
+        }
     }
     let next = now + WAIT_POLL;
     Some(wait.deadline.map_or(next, |deadline| deadline.min(next)))
@@ -566,15 +585,28 @@ fn resume(interp: &mut Interp, receiver: ObjRef) -> Result<Option<ObjRef>> {
             }
             answer(interp, Err(EINTR))
         }
-        Pending::Accept { fd, lost: true, .. } => accept_lost(interp, fd),
         Pending::Accept {
-            fd, stem: prefix, ..
+            fd,
+            stem: prefix,
+            lost,
+            accepted,
         } => {
+            // At the deadline, the one try answers `EAGAIN` where nothing
+            // came: measured, oracle, `SO_RCVTIMEO` 500 then `SockAccept`
+            // gives -1 with `errno` 11 after half a second.
+            let accepted = accepted.unwrap_or_else(|| try_accept(fd));
             let target = stem(interp, 0, prefix);
-            finish_accept(interp, fd, target.as_ref())
+            finish_accept(interp, accepted, target.as_ref(), lost)
         }
         Pending::Connect { fd, to } => {
-            let result = with_socket(fd, |socket| finish_connect(socket, to));
+            // Not writable is the deadline: measured, oracle, `SO_SNDTIMEO`
+            // 500 then a `SockConnect` that cannot complete gives -1 with
+            // `errno` 115 after half a second, and the connection goes on.
+            let result = if any_ready(&[(fd, PollFlags::OUT)]) {
+                with_socket(fd, |socket| finish_connect(socket, to))
+            } else {
+                Err(EINPROGRESS)
+            };
             code(interp, result)
         }
         Pending::Recv {
@@ -770,7 +802,7 @@ pub(crate) fn connect(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
         Ok(Some(to)) => {
             let wait = SocketWait {
                 polls: vec![(fd, PollFlags::OUT)],
-                deadline: None,
+                deadline: socket_deadline(interp, fd, rustix::net::sockopt::Timeout::Send),
                 op: Pending::Connect { fd, to },
             };
             park(interp, wait, &[])
@@ -805,43 +837,84 @@ pub(crate) fn accept(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Obj
         },
         None => (None, false),
     };
-    let ready = with_socket(fd, |socket| {
-        Ok(!blocks(socket) || any_ready(&[(fd, PollFlags::IN)]))
-    });
-    if ready == Ok(false) {
+    let blocking = with_socket(fd, |socket| Ok(blocks(socket))).unwrap_or(false);
+    // A blocking socket's accept is tried without blocking once it is
+    // ready, and waits again where another accept took the connection.
+    let accepted = match blocking && !any_ready(&[(fd, PollFlags::IN)]) {
+        true => None,
+        false => match try_accept(fd) {
+            Err(EAGAIN) if blocking => None,
+            result => Some(result),
+        },
+    };
+    let Some(accepted) = accepted else {
         let wait = SocketWait {
             polls: vec![(fd, PollFlags::IN)],
-            deadline: None,
+            deadline: socket_deadline(interp, fd, rustix::net::sockopt::Timeout::Recv),
             op: Pending::Accept {
                 fd,
                 stem: stem.as_ref().map(|stem| stem.prefix.clone()),
                 lost,
+                accepted: None,
             },
         };
         let kept = [stem.as_ref().map(|stem| stem.object)];
         return park(interp, wait, &kept);
-    }
+    };
+    Ok(finish_accept(interp, accepted, stem.as_ref(), lost))
+}
+
+/// An accepted connection and its peer's address.
+type Accepted = (OwnedFd, Option<rustix::net::SocketAddrAny>);
+
+/// `accept` on the socket numbered `fd` without blocking: a blocking socket
+/// is made non-blocking for the call.
+fn try_accept(fd: i32) -> Os<Accepted> {
+    with_socket(fd, |socket| {
+        let flags = rustix::fs::fcntl_getfl(socket).map_err(os)?;
+        let toggled = !flags.contains(rustix::fs::OFlags::NONBLOCK);
+        if toggled {
+            rustix::fs::fcntl_setfl(socket, flags | rustix::fs::OFlags::NONBLOCK).map_err(os)?;
+        }
+        let accepted = rustix::net::acceptfrom(socket).map_err(os);
+        if toggled {
+            let _ = rustix::fs::fcntl_setfl(socket, flags);
+        }
+        accepted
+    })
+}
+
+/// The deadline a socket's `SO_RCVTIMEO` (`Timeout::Recv`) or `SO_SNDTIMEO`
+/// (`Timeout::Send`) sets for a wait starting now; `None` where it is 0.
+fn socket_deadline(
+    interp: &Interp,
+    fd: i32,
+    which: rustix::net::sockopt::Timeout,
+) -> Option<Instant> {
+    with_socket(fd, |socket| {
+        rustix::net::sockopt::socket_timeout(socket, which).map_err(os)
+    })
+    .ok()
+    .flatten()
+    .map(|timeout| interp.now() + timeout)
+}
+
+/// An accept's answer: the new socket's number, or -1. With a stem it gets
+/// the peer's address, even on failure. Where the stem argument named no
+/// stem (`lost`), the connection's descriptor is lost and the call answers
+/// 0 without setting `errno`.
+fn finish_accept(
+    interp: &mut Interp,
+    accepted: Os<Accepted>,
+    stem: Option<&Stem>,
+    lost: bool,
+) -> ObjRef {
     if lost {
-        return Ok(accept_lost(interp, fd));
+        if let Ok((accepted, _)) = accepted {
+            let _ = accepted.into_raw_fd();
+        }
+        return number(interp, 0);
     }
-    Ok(finish_accept(interp, fd, stem.as_ref()))
-}
-
-/// An accept whose stem names nothing: the connection is accepted and its
-/// descriptor lost, and the call answers 0 without setting `errno`.
-fn accept_lost(interp: &mut Interp, fd: i32) -> ObjRef {
-    let _ = with_socket(fd, |socket| {
-        rustix::net::accept(socket)
-            .map(|accepted| {
-                let _ = accepted.into_raw_fd();
-            })
-            .map_err(os)
-    });
-    number(interp, 0)
-}
-
-fn finish_accept(interp: &mut Interp, fd: i32, stem: Option<&Stem>) -> ObjRef {
-    let accepted = with_socket(fd, |socket| rustix::net::acceptfrom(socket).map_err(os));
     let (result, peer) = match accepted {
         Ok((accepted, peer)) => (Ok(i64::from(accepted.into_raw_fd())), peer),
         Err(errno) => (Err(errno), None),
@@ -1036,12 +1109,19 @@ pub(crate) fn send(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRe
     let bytes = data(interp, args, 2)?;
     let flags = optional_string(interp, args, 3)?.unwrap_or_default();
     let flags = send_flags(&flags, true);
-    let sent = with_socket(fd, |socket| {
-        rustix::net::send(socket, &bytes, flags)
-            .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
-            .map_err(os)
+    // A blocking send takes a halting signal on this thread, which ends it,
+    // and the halt is served at this clause: measured, oracle, SIGINT during
+    // a blocked `SockSend` raises HALT on the `SockSend` line.
+    let sent = crate::signal::unblocked(|| {
+        with_socket(fd, |socket| {
+            rustix::net::send(socket, &bytes, flags)
+                .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
+                .map_err(os)
+        })
     });
-    Ok(answer(interp, sent))
+    let answered = answer(interp, sent);
+    interp.serve_signal_now();
+    Ok(answered)
 }
 
 /// `SockSendTo(s, data, addrstem)` or `SockSendTo(s, data, flags, addrstem)`.
@@ -1062,24 +1142,29 @@ pub(crate) fn send_to(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
     };
     let flags = send_flags(&flags, false);
     let address = read_address(interp, &stem);
-    let sent = with_socket(fd, |socket| {
-        let count = match target(address) {
-            Target::Inet(v4) | Target::Unspec(v4) => {
-                rustix::net::sendto(socket, &bytes, flags, &v4)
-            }
-            Target::Other
-                if rustix::net::sockopt::socket_type(socket)
-                    == Ok(rustix::net::SocketType::STREAM) =>
-            {
-                rustix::net::send(socket, &bytes, flags)
-            }
-            Target::Other => return Err(EAFNOSUPPORT),
-        };
-        count
-            .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
-            .map_err(os)
+    // As `SockSend`: a halting signal ends a blocked send at this clause.
+    let sent = crate::signal::unblocked(|| {
+        with_socket(fd, |socket| {
+            let count = match target(address) {
+                Target::Inet(v4) | Target::Unspec(v4) => {
+                    rustix::net::sendto(socket, &bytes, flags, &v4)
+                }
+                Target::Other
+                    if rustix::net::sockopt::socket_type(socket)
+                        == Ok(rustix::net::SocketType::STREAM) =>
+                {
+                    rustix::net::send(socket, &bytes, flags)
+                }
+                Target::Other => return Err(EAFNOSUPPORT),
+            };
+            count
+                .map(|count| i64::try_from(count).unwrap_or(i64::MAX))
+                .map_err(os)
+        })
     });
-    Ok(answer(interp, sent))
+    let answered = answer(interp, sent);
+    interp.serve_signal_now();
+    Ok(answered)
 }
 
 /// The most a receive reads in one call, whatever length it asks for.
@@ -1125,13 +1210,7 @@ fn receive(interp: &mut Interp, args: &[Option<ObjRef>], from: bool) -> Result<O
         && with_socket(fd, |socket| Ok(blocks(socket))).unwrap_or(false)
         && !any_ready(&[(fd, PollFlags::IN)]);
     if waits {
-        let deadline = with_socket(fd, |socket| {
-            rustix::net::sockopt::socket_timeout(socket, rustix::net::sockopt::Timeout::Recv)
-                .map_err(os)
-        })
-        .ok()
-        .flatten()
-        .map(|timeout| interp.now() + timeout);
+        let deadline = socket_deadline(interp, fd, rustix::net::sockopt::Timeout::Recv);
         let wait = SocketWait {
             polls: vec![(fd, PollFlags::IN)],
             deadline,
@@ -1560,4 +1639,25 @@ fn finish_select(interp: &mut Interp, sets: &[Option<Set>; 3]) -> ObjRef {
         }
     }
     answer(interp, Ok(i64::try_from(count).unwrap_or(i64::MAX)))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::os::fd::AsRawFd as _;
+
+    use super::{EAGAIN, blocks, try_accept, with_socket};
+
+    /// A blocking listening socket whose connection another accept took is
+    /// tried without blocking (PR 4 review M3): `EAGAIN` at once, the socket
+    /// left blocking, and a later connection accepted.
+    #[test]
+    fn an_accept_that_finds_no_connection_does_not_block() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("a listener");
+        let fd = listener.as_raw_fd();
+        assert_eq!(try_accept(fd).err(), Some(EAGAIN));
+        assert_eq!(with_socket(fd, |socket| Ok(blocks(socket))), Ok(true));
+        let _client = std::net::TcpStream::connect(listener.local_addr().expect("an address"))
+            .expect("a connection");
+        assert!(try_accept(fd).is_ok());
+    }
 }

@@ -1013,3 +1013,89 @@ rc 0
 halt trapped
 after
 [stderr]
+
+# A blocking accept waits no longer than the socket's SO_RCVTIMEO and a
+# blocking connect no longer than its SO_SNDTIMEO (PR 4 review I2): -1 with
+# EAGAIN, and -1 with EINPROGRESS while the connection goes on (a listener
+# with backlog 0 holds one connection, so the second cannot complete).
+program
+s = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
+call SockBind s, 'a.'
+call SockListen s, 0
+call SockGetSockName s, 'a.'
+say SockSetSockOpt(s, 'SOL_SOCKET', 'SO_RCVTIMEO', 500)
+t = time('r')
+say SockAccept(s) SockSock_Errno() (time('e') >= 0.45) (time('e') < 2)
+c0 = SockSocket('AF_INET', 'SOCK_STREAM', 0); say SockConnect(c0, 'a.')
+c = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+say SockSetSockOpt(c, 'SOL_SOCKET', 'SO_SNDTIMEO', 500)
+t = time('r')
+say SockConnect(c, 'a.') SockSock_Errno() (time('e') >= 0.45) (time('e') < 2)
+say SockConnect(c, 'a.') SockSock_Errno()
+::requires 'rxsock' LIBRARY
+----
+rc 0
+[stdout]
+0
+-1 11 1 1
+0
+0
+-1 115 1 1
+-1 114
+[stderr]
+
+# SIGINT during a blocked SockSend raises HALT on the SockSend line (PR 4
+# review M1).
+program
+s = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
+call SockBind s, 'a.'
+call SockListen s, 1
+call SockGetSockName s, 'a.'
+c = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+call SockConnect c, 'a.'
+'(sleep 0.5; kill -INT' SysGetpid()') >/dev/null 2>&1 &'
+n = SockSend(c, copies('x', 50000000))
+say 'sent' (n > 0)
+say 'next clause'
+::requires 'rxsock' LIBRARY
+::requires 'rxunixsys' LIBRARY
+----
+rc 252
+[stdout]
+[stderr]
+     9 *-* n = SockSend(c, copies('x', 50000000))
+Error 4 running {dir}/probe.rex line 9:  Program interrupted.
+Error 4.1:  Program interrupted with HALT condition.
+
+# Two activities accepting on one listening socket: each connection reaches
+# one of them, and the other waits on (PR 4 review M3).
+program
+s = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+a.family = 'AF_INET'; a.port = 0; a.addr = '127.0.0.1'
+call SockBind s, 'a.'
+call SockListen s, 5
+call SockGetSockName s, 'a.'
+r1 = .acceptor~new~start('take', s)
+r2 = .acceptor~new~start('take', s)
+call SysSleep 0.3
+c1 = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+say 'first' SockConnect(c1, 'a.')
+call SysSleep 0.3
+c2 = SockSocket('AF_INET', 'SOCK_STREAM', 0)
+say 'second' SockConnect(c2, 'a.')
+say 'accepted' (r1~result > 0) (r2~result > 0)
+::class acceptor
+::method take
+  use arg s
+  return SockAccept(s)
+::requires 'rxsock' LIBRARY
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+first 0
+second 0
+accepted 1 1
+[stderr]
