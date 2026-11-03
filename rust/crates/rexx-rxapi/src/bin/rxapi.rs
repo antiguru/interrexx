@@ -25,8 +25,12 @@ fn idle_grace() -> Duration {
 }
 
 fn main() -> ExitCode {
-    // Started by a client: the daemon is this process's child, which outlives it.
-    if let Some(started) = detach() {
+    // Started by a client: the daemon is this process's child, which outlives it. Only a start
+    // detaches; a stop with the variable in its environment still stops before it returns.
+    let stopping = std::env::args()
+        .skip(1)
+        .any(|argument| argument == "--stop");
+    if !stopping && let Some(started) = detach() {
         return match started {
             Ok(()) => ExitCode::SUCCESS,
             Err(error) => {

@@ -161,6 +161,25 @@ fn a_started_daemon_is_no_child_of_the_program() {
     assert_eq!(output.status.code(), Some(0));
 }
 
+/// `rxapi --stop` stops the service before it returns, also with `REXX_API_DETACH` in the
+/// environment, which only a client's start of the service sets: the stop is not handed to a
+/// detached process that reports success at once.
+#[test]
+fn a_stop_with_the_detach_variable_set_stops_before_it_returns() {
+    let service = Service::new();
+    let first = service.run("say rxfuncadd('NOFN', 'nosuchlib')\n");
+    assert_eq!(stdout(&first), "1\n", "{}", stderr(&first));
+    assert!(service.has_socket());
+    let stopped = Command::new(bin_dir().join("rxapi"))
+        .arg("--stop")
+        .env("REXX_API_DIR", service.api())
+        .env("REXX_API_DETACH", "1")
+        .output()
+        .expect("rxapi runs");
+    assert!(stopped.status.success(), "{stopped:?}");
+    assert!(!service.has_socket(), "the service still listens");
+}
+
 /// Review Focus 5: a daemon killed under a running program gives a clean error, not a hang or
 /// a panic.
 #[test]

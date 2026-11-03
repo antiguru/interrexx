@@ -288,6 +288,9 @@ impl Unix {
     fn start_and_connect(dir: &Path, daemon: &Path, uid: u32) -> Result<Unix, TransportError> {
         let deadline = now() + START_TIMEOUT;
         let mut next_start = now();
+        // A start that fails is retried until the deadline, as one whose service never answers
+        // is (Resolution 9); the error then names the failed start where there was one.
+        let mut failed_start = None;
         loop {
             let error = match Unix::attempt(dir, PROTOCOL_VERSION, uid) {
                 Ok(connected) => return Ok(connected),
@@ -296,10 +299,10 @@ impl Unix {
             };
             let time = now();
             if time >= deadline {
-                return Err(unavailable(&error));
+                return Err(failed_start.unwrap_or_else(|| unavailable(&error)));
             }
             if time >= next_start {
-                start_daemon(daemon, dir)?;
+                failed_start = start_daemon(daemon, dir).err();
                 next_start = time + RESPAWN_INTERVAL;
             }
             pause();
