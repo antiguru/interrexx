@@ -108,3 +108,7 @@ lang/select_when_false_skips_branch_boundary.rex
 # An IF whose true branch is an IF with a false condition: the inner false
 # path lands on the outer IF's end-of-branch boundary, not past it.
 lang/if_nested_false_outer_boundary.rex
+
+# PR 6: an Array given alone as a subscript list is refused for a hole or a
+# second dimension (bug #2085, r13264), by every method that reads an index.
+lang/array_index_list_refusals.rex

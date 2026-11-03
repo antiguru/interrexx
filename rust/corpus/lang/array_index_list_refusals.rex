@@ -1,0 +1,63 @@
+/* An Array given alone as a subscript is the subscript list, and since bug
+ * #2085 (r13264) the list is every slot of the array: a hole anywhere in it
+ * is 98.975 naming the hole, and an index array of two dimensions is 93.939
+ * naming the argument position -- 1 for at, hasIndex, remove, section and
+ * delete, 2 for put and insert, whose first argument is the item. Each
+ * method that reads an index reaches the same check, so each is sent here.
+ *
+ * The rows that answer are the contrast: a full list still names a slot, a
+ * one-slot list is the plain subscript, and a list too long for a
+ * single-dimensional receiver is still 93.926.
+ *
+ * The last send is untrapped so the 98.975 text and the frame line are
+ * compared as bytes. rc 158.
+ */
+
+signal on syntax name trapped
+a = (1,2)
+m = .array~new(2,2); m[1,1] = 'm11'; m[2,1] = 'm21'
+ix = .array~new(2,2)
+e5 = .array~new(5)
+n = 0
+
+next:
+n = n + 1
+select
+  when n = 1 then say n 'answered' a~at((1,))
+  when n = 2 then say n 'answered' a~at(ix)
+  when n = 3 then say n 'answered' a~at(.array~new)
+  when n = 4 then say n 'answered' a~at(e5)
+  when n = 5 then do; a~put('v', (1,)); say n 'put' a[1]; end
+  when n = 6 then do; a~put('v', ix); say n 'put' a[1]; end
+  when n = 7 then say n 'answered' m~at((2,1))
+  when n = 8 then say n 'answered' m~at((2,,1))
+  when n = 9 then say n 'answered' m~at(ix)
+  when n = 10 then say n 'answered' a~hasIndex((1,))
+  when n = 11 then say n 'answered' a~remove((1,))
+  when n = 12 then say n 'answered' a[(1,)]
+  when n = 13 then do; a[(1,)] = 'w'; say n 'assigned' a[1]; end
+  when n = 14 then say n 'answered' a~at((,1))
+  when n = 15 then say n 'answered' m~at((,1))
+  when n = 16 then say n 'answered' a~hasIndex(ix)
+  when n = 17 then say n 'answered' a~insert('i', (1,))~items
+  when n = 18 then say n 'answered' a~insert('i', ix)~items
+  when n = 19 then say n 'answered' a~section((1,))~items
+  when n = 20 then say n 'answered' a~section(ix)~items
+  when n = 21 then say n 'answered' a~delete((1,))
+  when n = 22 then say n 'answered' a~delete(.array~new(3))
+  when n = 23 then say n 'answered' a~insert('i', (1,2))~items
+  when n = 24 then say n 'answered' a~section((2,))
+  when n = 25 then say n 'answered' a~section(.array~of(2))~items
+  when n = 26 then say n 'answered' a~at((2,))
+  otherwise signal done
+end
+signal next
+
+trapped:
+say n 'raised' rc'.'condition('E')
+signal on syntax name trapped
+signal next
+
+done:
+signal off syntax
+say a~at((2,,1))

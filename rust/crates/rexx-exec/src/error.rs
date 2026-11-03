@@ -1115,9 +1115,17 @@ impl Raised {
         Raised::syntax(93, 918, vec![index.to_vec()])
     }
 
-    /// 98.975: a sort or a spread subscript met an array with a hole in it.
+    /// 98.975: a sort or an index list met an array with a hole in it.
     pub(crate) fn missing_array_element(position: usize) -> Raised {
         Raised::syntax(98, 975, vec![position.to_string().into_bytes()])
+    }
+
+    /// 93.939: an `Array` given as an index list has more than one
+    /// dimension. Measured, oracle rc 0 under a trap, through
+    /// `(1,2)~at(.array~new(2,2))`: `Method argument 1 must have a
+    /// single-dimensional array value.`
+    pub(crate) fn index_list_not_single_dimensional(position: usize) -> Raised {
+        Raised::syntax(93, 939, vec![position.to_string().into_bytes()])
     }
 
     /// 93.954: a method that only works on a single-dimensional array was

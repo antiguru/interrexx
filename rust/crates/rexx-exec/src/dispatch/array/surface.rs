@@ -492,20 +492,11 @@ fn single_subscript(
         let index = queue_index(interp, receiver, value, position)?;
         return super::positive_index(interp, index, position);
     }
-    let spread = match interp.array_slots(value) {
-        Some(slots) => {
-            let items = slots.iter().flatten().count();
-            slots[..items].to_vec()
-        }
-        None => Vec::new(),
-    };
+    let spread = super::index_list(interp, value, position)?.unwrap_or_default();
     match spread[..] {
         [] => Err(Raised::not_enough_method_arguments(position).into()),
         [Some(only)] => super::positive_index(interp, only, position),
-        [None] => {
-            position_in(interp, receiver, &[Some(value)], IndexUse::Get)?;
-            super::positive_index(interp, value, position)
-        }
+        [None] => Err(Raised::missing_array_element(1).into()),
         _ if super::array_is_fixed_dimension(interp, receiver)? => {
             Err(Raised::too_many_subscripts(1).into())
         }
