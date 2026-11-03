@@ -383,7 +383,7 @@ impl Interp {
     /// [`Interp::string_conversion`] with the `REQUEST` traceback line on it,
     /// for a caller inside a native method's own activation -- see
     /// [`Interp::blame_request`] for why the two frames stack there.
-    pub(super) fn blamed_string_conversion(
+    pub(crate) fn blamed_string_conversion(
         &mut self,
         value: ObjRef,
     ) -> Result<Option<ObjRef>, Failure> {

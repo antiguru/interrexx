@@ -34,6 +34,8 @@ pub(crate) mod registrations;
 /// same kind of code reached through a different table.
 pub(crate) mod platform;
 pub(crate) mod rexxutil;
+/// The `rxmath` extension library's routines, run in Rust.
+pub(crate) mod rxmath;
 pub(crate) mod state;
 /// Crate-visible because the builtins are not the only place this
 /// interpreter searches a haystack for a byte: a `PARSE` template's

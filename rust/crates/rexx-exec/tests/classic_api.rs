@@ -677,15 +677,15 @@ fn rexx_start_runs_twice_and_from_two_activities_at_once() {
 /// direct, redirecting and registered command environments, a classic subcommand handler, the
 /// instance's own search path and extensions, and every system exit, as context exits and as
 /// registered ones. The oracle's counts: `INVOCATION` 55 tests and 295 assertions,
-/// `ProcessInvocation` 54 and 284. `TestLoadLibrary` alone fails, one assertion short: it loads
-/// `rxmath`, which is not on the library path the harness gives.
+/// `ProcessInvocation` 54 and 284, which this crate matches with no failure: `TestLoadLibrary`
+/// loads `rxmath`, which it runs in Rust.
 #[test]
 fn the_invocation_groups_run_programs_in_instances() {
-    for (group, ran, assertions) in [("INVOCATION", 55, 294), ("ProcessInvocation", 54, 283)] {
+    for (group, ran, assertions) in [("INVOCATION", 55, 295), ("ProcessInvocation", 54, 284)] {
         let outcome = run_group("API/oo", group, library_path(true));
         let failed: Vec<&str> = outcome.failed.iter().map(String::as_str).collect();
         assert!(
-            failed == ["TESTLOADLIBRARY"] && outcome.ran == ran && outcome.assertions == assertions,
+            failed.is_empty() && outcome.ran == ran && outcome.assertions == assertions,
             "{group}: {failed:?} failed, {} ran, {} assertions:\n{}",
             outcome.ran,
             outcome.assertions,

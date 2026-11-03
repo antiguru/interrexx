@@ -107,19 +107,19 @@ fn a_lone_activitys_native_call_keeps_its_driver() {
 }
 
 /// Collecting at every allocation across driver exits whose calls build
-/// their answers during the call (`RxCalcSqrt` calls back
-/// `DoubleToObjectWithPrecision`): each answer is reached through the call's
-/// frame after the collections at the exit and before `finish`.
+/// their answers during the call (`TestGetArguments` calls back
+/// `GetArguments`): each answer is reached through the call's frame after
+/// the collections at the exit and before `finish`.
 #[test]
 fn collect_stress_across_a_native_calls_driver_exit() {
-    let source = "m = .t~new~start('work')\nsay RxCalcSqrt(16)\nsay m~result\n\
-                  ::requires 'rxmath' LIBRARY\n::class t\n::method work\n  \
-                  return RxCalcSqrt(2, 5)\n";
+    let source = "m = .t~new~start('work')\nsay TestGetArguments(16)[1]\nsay m~result\n\
+                  ::requires 'orxfunction' LIBRARY\n::class t\n::method work\n  \
+                  return TestGetArguments(2, 5)~items\n";
     let plain = counted(source, false, bounded());
     let stressed = counted(source, true, bounded());
     for run in [&plain, &stressed] {
         assert_eq!(run.outcome.exit_code, 0, "{}", run.stderr());
-        assert_eq!(run.stdout(), "4\n1.4142\n");
+        assert_eq!(run.stdout(), "16\n2\n");
         assert_eq!(run.exits, 2);
         assert!(run.takes >= 2, "{} callback takes", run.takes);
     }
@@ -346,8 +346,8 @@ fn a_native_call_only_another_activity_can_end_is_refused_after_its_bound() {
 /// outcome is supplied so host descheduling cannot change this control.
 #[test]
 fn completed_native_calls_repeat_independently_of_host_descheduling() {
-    let source = "t = .t~new~start('idle')\ns = 0\ndo i = 1 to 50\n  s = s + RxCalcSqrt(i, 4)\nend\n\
-                  say s t~result\n::requires 'rxmath' LIBRARY\n::class t\n::method idle\n  \
+    let source = "t = .t~new~start('idle')\ns = 0\ndo i = 1 to 50\n  s = s + TestIntArg(i)\nend\n\
+                  say s t~result\n::requires 'orxfunction' LIBRARY\n::class t\n::method idle\n  \
                   call SysSleep 1\n  return 'idle'\n";
     let config = crate::SimConfig::parse("sim:1,block=0.001").expect("a sim spec");
     let first = counted_watch(
@@ -432,7 +432,7 @@ fn a_failure_ending_a_native_park_abandons_the_call() {
 
 #[test]
 fn only_a_timed_out_native_watch_refuses_a_completed_call() {
-    let source = "t = .t~new~start('idle')\nsay RxCalcSqrt(4, 4) t~result\n::requires 'rxmath' LIBRARY\n::class t\n::method idle\nreturn 'idle'\n";
+    let source = "t = .t~new~start('idle')\nsay TestIntArg(2) t~result\n::requires 'orxfunction' LIBRARY\n::class t\n::method idle\nreturn 'idle'\n";
     for fired in [false, true] {
         let config = crate::SimConfig::parse("sim:1,block=0.001").unwrap();
         let run = counted_watch(

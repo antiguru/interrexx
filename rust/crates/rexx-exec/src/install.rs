@@ -2214,6 +2214,10 @@ impl Interp {
         if let Some(held) = self.libraries.get(name) {
             return LibraryLoad::Loaded(Rc::clone(held));
         }
+        // An extension library this crate runs in Rust, ahead of any search.
+        if let Some(library) = crate::extensions::library(name) {
+            return self.settle_library(name, Ok(Some(library.open())));
+        }
         #[cfg(test)]
         {
             self.library_open_attempts += 1;

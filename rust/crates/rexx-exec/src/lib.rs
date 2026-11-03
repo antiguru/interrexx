@@ -1072,6 +1072,9 @@ pub(crate) mod internal_routines;
 /// the interpreter's own current directory rather than the process's.
 pub(crate) mod paths;
 
+/// The extension libraries this crate runs in Rust.
+pub(crate) mod extensions;
+
 /// Every internal-package routine name, for the test that re-derives them from
 /// the C++ tree.
 pub fn internal_routine_names() -> Vec<&'static str> {

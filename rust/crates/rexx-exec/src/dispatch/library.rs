@@ -83,6 +83,13 @@ impl Interp {
         else {
             return Err(Loud::library_procedure_gone().into());
         };
+        if !entry.has_entry_point()
+            && let Some(body) = crate::extensions::method_body(&binding.library, &entry.name)
+        {
+            return self
+                .run_rust_method(body, owner, resolution, receiver, name, args, reserved)
+                .map(Started::Ran);
+        }
         let held = HeldCall::Method(entry.held(), resolution.method);
         let exits = self.leaves_driver();
         self.push_native_frame(owner, resolution.scope, Some(receiver), name, args, None);
@@ -311,12 +318,19 @@ impl Interp {
         args: &[Option<ObjRef>],
         executable: crate::RoutineObject,
     ) -> Result<Started<Option<ObjRef>>, Failure> {
-        let Some(entry) = self
-            .library_code_routine(code)
-            .and_then(|(library, index)| library.routine_at(index))
-        else {
+        let Some((library, index)) = self.library_code_routine(code) else {
             return Err(Loud::library_procedure_gone().into());
         };
+        let Some(entry) = library.routine_at(index) else {
+            return Err(Loud::library_procedure_gone().into());
+        };
+        if !entry.has_entry_point()
+            && let Some(body) = crate::extensions::routine_body(library, &entry.name)
+        {
+            return self
+                .run_rust_routine(body, code, name, args, executable)
+                .map(Started::Ran);
+        }
         let held = HeldCall::Routine(entry.held());
         let exits = self.leaves_driver();
         self.leave_next_native = false;
@@ -332,6 +346,95 @@ impl Interp {
         };
         self.end_library_routine(answered, pending, name, program, args)
             .map(Started::Ran)
+    }
+
+    /// [`Interp::run_library_method`] for a method of a library this crate
+    /// runs in Rust: the same frame, pin and guard as a native call, around
+    /// `body` in place of the stub.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the native call's own inputs, which run_library_method passes through"
+    )]
+    fn run_rust_method(
+        &mut self,
+        body: crate::extensions::MethodBody,
+        owner: ObjRef,
+        resolution: Resolution,
+        receiver: ObjRef,
+        name: &[u8],
+        args: &[Option<ObjRef>],
+        reserved: bool,
+    ) -> Result<Option<ObjRef>, Failure> {
+        self.push_native_frame(owner, resolution.scope, Some(receiver), name, args, None);
+        pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
+        let packaged = self.external_package_path(resolution.method).is_some();
+        self.native_frame_mut().packaged = packaged;
+        self.native_frame_mut().reserved = reserved;
+        // A failure is held on the frame as a callback's condition is, which
+        // settles the sends it ended where the call returns.
+        let answered = match body(self, receiver, resolution.scope, args) {
+            Ok(value) => {
+                if let Some(value) = value {
+                    self.roots.activity_mut().push_temp(value);
+                }
+                value
+            }
+            Err(failure) => {
+                self.hold_native_condition(failure);
+                None
+            }
+        };
+        let popped = self.pop_native_frame();
+        pin_leave!(self);
+        self.collect_under_stress();
+        if popped.reserved {
+            self.release_guard(crate::guards::GuardKey {
+                object: receiver,
+                scope: resolution.scope,
+            });
+        }
+        match popped.raised {
+            Some(failure) => Err(failure),
+            None => Ok(answered),
+        }
+    }
+
+    /// [`Interp::run_library_routine`] for a routine of a library this crate
+    /// runs in Rust, blamed as a native routine is.
+    fn run_rust_routine(
+        &mut self,
+        body: crate::extensions::RoutineBody,
+        code: usize,
+        name: &[u8],
+        args: &[Option<ObjRef>],
+        executable: crate::RoutineObject,
+    ) -> Result<Option<ObjRef>, Failure> {
+        self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, name, args, Some(code));
+        self.native_frame_mut().executable = executable;
+        pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
+        let program = self.library_code_program(code);
+        self.native_frame_mut().packaged = program.is_some();
+        let answered = match body(self, args) {
+            Ok(value) => {
+                self.roots.activity_mut().push_temp(value);
+                Some(value)
+            }
+            Err(failure) => {
+                self.hold_native_condition(failure);
+                None
+            }
+        };
+        let (ran, code) = (self.native_frame().executable, self.native_frame().code);
+        let popped = self.pop_native_frame();
+        pin_leave!(self);
+        self.collect_under_stress();
+        match popped.raised {
+            None => Ok(answered),
+            Some(failure) => {
+                self.blame_native_routine(name, program, args, ran, code);
+                Err(failure)
+            }
+        }
     }
 
     /// What a library routine answers once its stub has returned `answered`,
@@ -1947,7 +2050,7 @@ impl Interp {
     /// and so runs a class's own `defaultName`, and which falls back to the
     /// default name where that send raises, as message substitution does
     /// (`interpreter/concurrency/Activity.cpp:1300-1306`).
-    fn native_found(&mut self, object: ObjRef) -> Vec<u8> {
+    pub(crate) fn native_found(&mut self, object: ObjRef) -> Vec<u8> {
         let sends = match self.heap.get(object).map(|held| &held.body) {
             // A state that renders its own `stringValue` answers without a
             // send, which is the arm `Interp::to_text` takes for one; every
@@ -2068,7 +2171,7 @@ fn double_literal(number: &Number) -> String {
 /// (`interpreter/classes/NumberStringClass.cpp:4073`) as its string value:
 /// `%.*g` at two digits past the precision, capped at sixteen, then rounded
 /// to the precision and formatted at it.
-fn double_text(value: f64, precision: usize) -> Vec<u8> {
+pub(crate) fn double_text(value: f64, precision: usize) -> Vec<u8> {
     if value.is_nan() {
         return b"nan".to_vec();
     }
