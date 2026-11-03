@@ -68,6 +68,34 @@ fn testbinaries() -> &'static Path {
     })
 }
 
+/// `hostemu` and `orxncurses`, built once by `scripts/build-extensions.sh` from the shared
+/// objects cargo left beside this test.
+fn extensions() -> &'static Path {
+    static BUILT: OnceLock<PathBuf> = OnceLock::new();
+    BUILT.get_or_init(|| {
+        let deps = std::env::current_exe()
+            .expect("the test's path")
+            .parent()
+            .expect("the deps directory")
+            .to_path_buf();
+        let out = scratch().join("extensions");
+        let output = Command::new(repository().join("scripts/build-extensions.sh"))
+            .arg("--libs")
+            .arg(&deps)
+            .arg("--out")
+            .arg(&out)
+            .output()
+            .expect("the build script runs");
+        assert!(
+            output.status.success(),
+            "build-extensions.sh failed:\n{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        out
+    })
+}
+
 /// The library search path a run gets: the compiled test libraries where `with_testbinaries`,
 /// and otherwise none. The framework's own `rxregexp.cls` and `rxregexp` are this crate's.
 fn library_path(with_testbinaries: bool) -> OsString {
@@ -1235,6 +1263,109 @@ fn the_rxsock_group_matches_the_oracles_counts() {
         (23, 114, 0),
         "{}",
         outcome.stdout
+    );
+}
+
+/// `PATH` for a run of an extension group: `rexx`'s directory, then `packages`, then the
+/// system's.
+fn path_with(packages: &[&str]) -> PathBuf {
+    let extensions = repository().join("third_party/ooRexx/extensions");
+    std::env::join_paths(
+        [bin_dir()]
+            .into_iter()
+            .chain(packages.iter().map(|dir| extensions.join(dir)))
+            .chain(std::env::split_paths(
+                &std::env::var_os("PATH").unwrap_or_default(),
+            )),
+    )
+    .expect("a PATH")
+    .into()
+}
+
+/// The groups of the two C++ extensions `scripts/build-extensions.sh` compiles from their own
+/// sources against this workspace's libraries, and of the pure-Rexx `logicalwrapper.cls`: the
+/// oracle's counts, recorded from the full checkout on 2026-11-03 (PR 4 plan, "Oracle
+/// targets"). The packages they require (`ncurses.cls`, `logicalwrapper.cls`, `json.cls`,
+/// `yaml.cls`) are read from their source directories, the files the oracle installs.
+/// `hostemu`'s `TEST_HI` halts the program from the `HostEmu` handler through `RexxSetHalt` on
+/// its own thread.
+#[test]
+fn the_built_extension_groups_match_the_oracles_counts() {
+    let libraries = std::env::join_paths([extensions()]).expect("a library path");
+    assert!(
+        extensions().join("liborxncurses.so").is_file(),
+        "orxncurses was not built: this host has no ncurses headers"
+    );
+    for (dir, group, packages, ran, assertions) in [
+        ("extensions/hostemu", "hostemu", &[][..], 16, 33),
+        (
+            "extensions/platform/unix/ncurses",
+            "ncurses",
+            &["orxncurses"][..],
+            1,
+            4,
+        ),
+        (
+            "extensions/logicalwrapper",
+            "LogicalWrapper",
+            &["logicalwrapper", "json", "yaml"][..],
+            16,
+            50,
+        ),
+    ] {
+        let path = path_with(packages);
+        let outcome = run_group_in(dir, group, libraries.clone(), &[("PATH", &path)]);
+        assert_eq!(
+            (outcome.ran, outcome.assertions, outcome.failed.len()),
+            (ran, assertions, 0),
+            "{group}:\n{}",
+            outcome.stdout
+        );
+    }
+}
+
+/// Review Focus 5: the build's check refuses an extension whose `librexx.so.4` the loader finds
+/// in the oracle's `lib` directory, first on `LD_LIBRARY_PATH`, rather than passing against
+/// C++. A build of its own has its `librexx.so.4` removed after, so the loader, finding nothing
+/// on the recorded search path, goes on to `LD_LIBRARY_PATH`; the same check of the intact
+/// build under the same environment passes, the recorded search path winning.
+#[test]
+fn the_extension_check_refuses_the_oracles_librexx() {
+    let oracle_lib = repository().join("third_party/oracle/lib");
+    let script = |arguments: &[&std::ffi::OsStr]| {
+        Command::new(repository().join("scripts/build-extensions.sh"))
+            .args(arguments)
+            .env("LD_LIBRARY_PATH", &oracle_lib)
+            .output()
+            .expect("the build script runs")
+    };
+    let passing = script(&["--check-only".as_ref(), "--out".as_ref(), extensions().as_os_str()]);
+    assert!(passing.status.success(), "{passing:?}");
+    let deps = std::env::current_exe()
+        .expect("the test's path")
+        .parent()
+        .expect("the deps directory")
+        .to_path_buf();
+    let out = scratch().join("extensions-without-librexx");
+    let _ = std::fs::remove_dir_all(&out);
+    let built = script(&[
+        "--libs".as_ref(),
+        deps.as_os_str(),
+        "--out".as_ref(),
+        out.as_os_str(),
+    ]);
+    assert!(built.status.success(), "{built:?}");
+    for name in ["librexx.so.4", "librexx.so"] {
+        std::fs::remove_file(out.join(name)).expect("the library is removed");
+    }
+    let refused = script(&["--check-only".as_ref(), "--out".as_ref(), out.as_os_str()]);
+    let _ = std::fs::remove_dir_all(&out);
+    let stderr = String::from_utf8_lossy(&refused.stderr);
+    assert!(!refused.status.success(), "{refused:?}");
+    assert!(
+        stderr.contains("resolves librexx.so.4 outside")
+            && stderr.contains(&oracle_lib.join("librexx.so.4").display().to_string()),
+        "{stderr}"
     );
 }
 

@@ -4891,6 +4891,27 @@ pub mod classic {
         }
     }
 
+    /// `RexxSetHalt` aimed at this thread, which runs a native call of an activity no
+    /// `RexxStart` started: that call's activity halted at its next clause, as
+    /// `ActivityManager::haltActivity` finds the activity running on the thread named.
+    /// hostemu's `HI` command makes this call from its handler. `false` where this thread runs
+    /// no native call.
+    pub fn halt_calling() -> bool {
+        // SAFETY: as in `calling`.
+        let Some(calling) = (unsafe { CALLING.get().cast::<Entered<'_>>().as_ref() }) else {
+            return false;
+        };
+        // SAFETY: as in `calling`.
+        let activation = unsafe { &*calling.activation.cast::<Activation<'_>>() };
+        let held = activation.hold_baton();
+        let reached = Reached::checked(activation, held);
+        if reached.abandoned {
+            return false;
+        }
+        reached.halt(false);
+        true
+    }
+
     /// The bytes `string` addresses, empty for a null pointer.
     ///
     /// # Safety

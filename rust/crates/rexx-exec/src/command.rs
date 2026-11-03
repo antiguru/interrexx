@@ -802,9 +802,7 @@ impl Interp {
     /// included, as `InterpreterInstance::resolveCommandHandler` finds it. An
     /// environment no handler is registered for runs nothing and answers
     /// [`NOT_REGISTERED`] with a `FAILURE` -- measured, the command is
-    /// evaluated and never executed. An environment a held native package's
-    /// loader registers through the classic subcommand API is refused instead
-    /// ([`crate::Loud::loader_environment`]).
+    /// evaluated and never executed.
     ///
     /// `io`'s targets are begun before the handler runs
     /// (`CommandHandler::call`), so a target that cannot be begun stops the
@@ -847,13 +845,8 @@ impl Interp {
                     .map(Commanded::Done);
             }
             environments::Resolved::Native(NativeKind::System(handler)) => handler,
-            environments::Resolved::Unknown { removed: false }
-                if self.libraries.classic_environment(environment) =>
-            {
-                return Err(crate::Loud::loader_environment(environment).into());
-            }
             environments::Resolved::Native(NativeKind::Closed)
-            | environments::Resolved::Unknown { .. } => {
+            | environments::Resolved::Unknown => {
                 return Ok(Commanded::Done(CommandOutcome::of_failure(NOT_REGISTERED)));
             }
         };

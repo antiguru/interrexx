@@ -327,10 +327,13 @@ fn classic_inbox(thread: usize) -> Option<ClassicInbox> {
 }
 
 /// `RexxSetHalt` (`ActivityManager::haltActivity`): the run on `thread` halted at its next
-/// clause; `false` where no run is in flight there.
+/// clause; `false` where no run is in flight there. A `thread` no `RexxStart` run is on that is
+/// this thread halts the activity whose native call this thread runs, as a command handler that
+/// names its own thread reaches it (hostemu's `HI`).
 pub fn classic_halt(thread: usize) -> bool {
     let Some(inbox) = classic_inbox(thread) else {
-        return false;
+        return thread == crate::signal::current_thread()
+            && rexx_api::ffi::classic::halt_calling();
     };
     inbox.post(crate::timer::Posted::Halt);
     inbox

@@ -356,9 +356,49 @@ fn lay_class_files(bin: &Path) {
 }
 
 /// The environment a crate run of the copy `run` gets: `PATH` is
-/// [`interpreter_bin`] and [`SYSTEM_PATH`].
+/// [`interpreter_bin`] and [`SYSTEM_PATH`], and [`extensions`] comes first on
+/// `LD_LIBRARY_PATH`, so `hostemu` and `orxncurses` load as built against this
+/// crate's libraries.
 pub fn crate_side_environment(run: &Path) -> Vec<(Vec<u8>, Vec<u8>)> {
-    crate_environment_with_path(run, SYSTEM_PATH.iter().map(PathBuf::from).collect())
+    let mut environment =
+        crate_environment_with_path(run, SYSTEM_PATH.iter().map(PathBuf::from).collect());
+    for (name, value) in &mut environment {
+        if name == b"LD_LIBRARY_PATH" {
+            let mut first = extensions().as_os_str().as_encoded_bytes().to_vec();
+            first.push(b':');
+            first.append(value);
+            *value = first;
+        }
+    }
+    environment
+}
+
+/// `hostemu` and `orxncurses`, built once by `scripts/build-extensions.sh`
+/// from the shared objects cargo left beside this test.
+fn extensions() -> &'static Path {
+    static BUILT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    BUILT.get_or_init(|| {
+        let deps = std::env::current_exe()
+            .expect("the test's path")
+            .parent()
+            .expect("the deps directory")
+            .to_path_buf();
+        let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("suite-extensions");
+        let output = Command::new(worktree().join("scripts/build-extensions.sh"))
+            .arg("--libs")
+            .arg(&deps)
+            .arg("--out")
+            .arg(&out)
+            .output()
+            .expect("the build script runs");
+        assert!(
+            output.status.success(),
+            "build-extensions.sh failed:\n{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        out
+    })
 }
 
 /// The ootest checkout's svn revision, asserted equal to [`REVISION_FILE`]'s.
