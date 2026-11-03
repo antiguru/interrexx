@@ -624,39 +624,67 @@ impl Activation<'_> {
     pub fn decode_condition(&self, handle: RexxObjectPtr) -> Option<DecodedCondition> {
         let directory = self.resolve(handle)?;
         self.with_surface("RexxThreadInterface.DecodeConditionInfo", None, |cx| {
-            let mut entry = |name: &[u8]| {
-                let object = cx
-                    .host
-                    .surface()
-                    .expect("checked by with_surface")
-                    .directory_entry(directory, name)?;
-                Some((object, cx.host.register_local(object)))
-            };
+            let surface = cx.host.surface().expect("checked by with_surface");
+            let mut entry = |name: &[u8]| surface.directory_entry(directory, name);
+            let name = entry(b"CONDITION");
             let code = entry(b"CODE");
             let rc = entry(b"RC");
             let position = entry(b"POSITION");
-            let handle = |found: Option<(ObjRef, RexxObjectPtr)>| {
-                found.map_or(std::ptr::null_mut(), |(_, handle)| handle)
+            let (message, errortext, program) =
+                (entry(b"MESSAGE"), entry(b"ERRORTEXT"), entry(b"PROGRAM"));
+            let (description, additional) = (entry(b"DESCRIPTION"), entry(b"ADDITIONAL"));
+            // `RAISE` allows any object as the description and, but for
+            // `SYNTAX`, as the additional information: each is given only
+            // where it is of the type the structure declares.
+            let description = description.filter(|&object| surface.is_string(object));
+            let additional = additional.filter(|&object| surface.is_of_class(object, "Array"));
+            let mut handle = |found: Option<ObjRef>| {
+                found.map_or(std::ptr::null_mut(), |object| {
+                    cx.host.register_local(object)
+                })
             };
             let decoded = DecodedCondition {
                 code: 0,
                 rc: 0,
                 position: 0,
-                name: handle(entry(b"CONDITION")),
-                message: handle(entry(b"MESSAGE")),
-                errortext: handle(entry(b"ERRORTEXT")),
-                program: handle(entry(b"PROGRAM")),
-                description: handle(entry(b"DESCRIPTION")),
-                additional: handle(entry(b"ADDITIONAL")),
+                name: handle(name),
+                message: handle(message),
+                errortext: handle(errortext),
+                program: handle(program),
+                description: handle(description),
+                additional: handle(additional),
             };
-            let text = |found: Option<(ObjRef, RexxObjectPtr)>, cx: &mut Conversion<'_>| {
-                let (object, _) = found?;
-                let text = cx.host.string_value_text(object);
-                Some(text)
+            let text = |found: Option<ObjRef>, cx: &mut Conversion<'_>| {
+                Some(cx.host.string_value_text(found?))
+            };
+            let syntax = text(name, cx).is_some_and(|name| name == b"SYNTAX");
+            // Only a `SYNTAX` condition has an error code, and its `RC` is the
+            // error number; `ERROR` and `FAILURE` have a command's return
+            // code, any value, given where it is a whole number.
+            let (code, rc) = match syntax {
+                true => (
+                    text(code, cx).map_or(0, |code| message_number(&code)),
+                    text(rc, cx).map_or(0, |rc| message_number(&rc) / 1000),
+                ),
+                false => {
+                    let rc = rc
+                        .and_then(|rc| {
+                            cx.host
+                                .signed_integer(
+                                    rc,
+                                    -crate::values::MAX_WHOLENUMBER,
+                                    crate::values::MAX_WHOLENUMBER,
+                                )
+                                .ok()
+                                .flatten()
+                        })
+                        .map_or(0, |rc| rc as isize);
+                    (0, rc)
+                }
             };
             Some(DecodedCondition {
-                code: text(code, cx).map_or(0, |code| message_number(&code)),
-                rc: text(rc, cx).map_or(0, |rc| message_number(&rc) / 1000),
+                code,
+                rc,
                 position: text(position, cx)
                     .and_then(|position| std::str::from_utf8(&position).ok()?.parse().ok())
                     .unwrap_or(0),

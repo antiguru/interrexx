@@ -665,6 +665,7 @@ impl Interp {
                 self.activity.failure_site = site;
                 self.activity.pending_additional = None;
                 self.activity.pending_result = None;
+                self.activity.pending_description = None;
                 self.activity.pending_rc = None;
                 let traps = &mut self.activation_mut().traps;
                 match traps.get(raised.condition.as_bytes()) {

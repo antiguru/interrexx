@@ -63,8 +63,10 @@ impl Interp {
         // trapped gives `zd` where the same raise without the clause gives
         // the null string.
         let mut description: Option<Vec<u8>> = None;
+        let mut description_object = None;
         if let Some(expr) = &raise.description {
             let value = self.eval(code, expr)?;
+            description_object = Some(value);
             self.roots.activity_mut().push_temp(value);
             // The object on the line and its string value in the condition,
             // the same split the `rc` keyword above takes. Measured,
@@ -317,6 +319,7 @@ impl Interp {
                 // value, which the oracle drops (`RexxActivation::raise` passes
                 // its `result` member, `RexxActivation.cpp:1827`).
                 self.activity.pending_result = result;
+                self.activity.pending_description = description_object;
                 let object = self.build_condition_object(&queued, Some(true))?;
                 self.activity.pending_traps.push_back(PendingTrap {
                     condition: name,
@@ -366,6 +369,7 @@ impl Interp {
                 raised.additional = additional;
                 raised.delivery.search = sender.search();
                 self.activity.pending_result = result;
+                self.activity.pending_description = description_object;
                 Err(raised.into())
             }
             // Nothing traps it. `HALT` and `NOMETHOD` report; everything else
@@ -405,6 +409,7 @@ impl Interp {
                 // Built at the raise, as for a `CALL ON` trap: what the
                 // native caller's `GetConditionInfo` answers.
                 self.activity.pending_result = result;
+                self.activity.pending_description = description_object;
                 let object = self.build_condition_object(&held, None)?;
                 self.hold_callee_condition(held, object);
                 Ok(finish(result))

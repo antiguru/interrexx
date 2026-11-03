@@ -153,6 +153,12 @@ pub(crate) struct Activity {
     /// raise until the condition object is built, as
     /// [`Activity::pending_additional`] is.
     pub(crate) pending_result: Option<ObjRef>,
+    /// The object a trapped `RAISE` named for `DESCRIPTION`, held from the
+    /// raise until the condition object is built, as
+    /// [`Activity::pending_additional`] is: `RAISE` allows any object there,
+    /// and the condition object has it as it is, where `CONDITION('D')` has
+    /// its string value.
+    pub(crate) pending_description: Option<ObjRef>,
     /// The `RC` a condition a registered command handler raised carries, held
     /// as [`Activity::pending_additional`] is: an object where the entry's value
     /// is not a rendering of the command's code, `.nil` for an entry present
@@ -504,6 +510,7 @@ impl Activity {
             socket_wait: None,
             propagate_absorb: 0,
             pending_result: None,
+            pending_description: None,
             pending_rc: None,
             indent_offset: 0,
             activation_indent: 0,
@@ -666,6 +673,7 @@ impl Activity {
             socket_wait: _,
             propagate_absorb: _,
             pending_result,
+            pending_description,
             pending_rc,
             indent_offset: _,
             activation_indent: _,
@@ -749,6 +757,7 @@ impl Activity {
         blocked.object_roots(out);
         out.extend(native_frames_owed.iter().copied());
         out.extend(*pending_result);
+        out.extend(*pending_description);
         out.extend(*pending_rc);
         out.extend(*reraised_object);
         out.extend(*failure_frame);

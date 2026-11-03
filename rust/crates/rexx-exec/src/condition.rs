@@ -474,7 +474,10 @@ impl Interp {
         let condition = self.text(raised.condition.as_bytes());
         self.roots.activity_mut().push_temp(condition);
         entries.push((key::CONDITION, condition));
-        let description = self.text(raised.description.as_deref().unwrap_or(b""));
+        let description = match self.activity.pending_description.take() {
+            Some(object) => object,
+            None => self.text(raised.description.as_deref().unwrap_or(b"")),
+        };
         self.roots.activity_mut().push_temp(description);
         entries.push((key::DESCRIPTION, description));
         if let Some(call) = call {
