@@ -121,3 +121,7 @@ lang/date_time_conversion_refusals.rex
 # PR 6: XRANGE keeps a character class before a two-argument range (bug
 # #2088, r13248).
 lang/xrange_class_then_range.rex
+# PR 6: ADDRESS ... WITH set by INTERPRET is the running code's own, and its
+# stem and expressions are read through the fragment they came from (bug
+# #2131, r13342).
+lang/address_with_interpreted.rex

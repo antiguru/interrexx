@@ -284,7 +284,7 @@ impl Interp {
                     .into());
                 }
                 self.activation_mut().address.set_bytes(environment);
-                self.store_io_config(environment, address);
+                self.store_io_config(code, environment, address);
             }
             (None, Some(expression)) => {
                 let value = self.eval(code, expression)?;
@@ -308,7 +308,7 @@ impl Interp {
                     return Err(raised.into());
                 }
                 self.activation_mut().address.set_bytes(&text);
-                self.store_io_config(&text, address);
+                self.store_io_config(code, &text, address);
                 self.give_result_buffer(text);
             }
         }

@@ -118,7 +118,7 @@ pub(crate) struct DebugState {
 
 /// The `ADDRESS ... WITH` table an activation carries, keyed by the upcased
 /// environment name (`settings.ioConfigs`, a `StringTable`).
-pub(crate) type IoConfigs = NameMap<Box<[u8]>, Rc<rexx_parse::AddressIo>>;
+pub(crate) type IoConfigs = NameMap<Box<[u8]>, Rc<crate::redirect::StoredIo>>;
 
 impl AddressState {
     /// `ADDRESS env` / `ADDRESS VALUE expr`: the new target becomes current and
