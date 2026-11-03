@@ -846,6 +846,115 @@ rc 168
 Error 88 running {dir}/probe.rex line 1:  Invalid argument.
 Error 88.922:  Too many arguments in invocation; 0 expected.
 
+# SysSignal and SysKill on this process. SIGINT, a halting signal the
+# interpreter handles, raises HALT at the SysKill's clause, before the
+# SysSleep after it sleeps.
+program
+call on halt name h
+say 'kill' SysKill(SysGetpid(), 2)
+call SysSleep 0.5
+say 'alive'
+exit
+h: say 'halted'; exit 3
+::requires 'rxunixsys' LIBRARY
+----
+rc 3
+[stdout]
+kill 0
+halted
+[stderr]
+
+# Ignored, SIGINT halts nothing.
+program
+call on halt name h
+say 'signal' SysSignal(2, 'Ignore')
+say 'kill' SysKill(SysGetpid(), 2)
+call SysSleep 0.5
+say 'alive'
+exit
+h: say 'halted'; exit 3
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+signal 0
+kill 0
+alive
+[stderr]
+
+# With its default action, SIGINT ends the process (rc -1: no exit status),
+# and what was said before it is written.
+program
+call on halt name h
+say 'signal' SysSignal(2, 'd')
+say 'kill' SysKill(SysGetpid(), 2)
+say 'alive'
+exit
+h: say 'halted'; exit 3
+::requires 'rxunixsys' LIBRARY
+----
+rc -1
+[stdout]
+signal 0
+[stderr]
+
+program
+call on halt name h
+say 'signal' SysSignal(15, 'D')
+say 'kill' SysKill(SysGetpid(), 15)
+say 'alive'
+exit
+h: say 'halted'; exit 3
+::requires 'rxunixsys' LIBRARY
+----
+rc -1
+[stdout]
+signal 0
+[stderr]
+
+# Real-time signals by number: ignored, then sent; then their default
+# action, which ends the process.
+program
+say 'signal' SysSignal(40, 'I')
+say 'kill' SysKill(SysGetpid(), 40)
+say 'signal' SysSignal(40, 'D')
+say 'kill' SysKill(SysGetpid(), 40)
+say 'alive'
+::requires 'rxunixsys' LIBRARY
+----
+rc -1
+[stdout]
+signal 0
+kill 0
+signal 0
+[stderr]
+
+# signal() refuses SIGKILL, SIGSTOP, glibc's reserved 32 and 33 and numbers
+# no signal has, answering 0 with EINVAL kept; kill() refuses a number no
+# signal has.
+program
+do sig over 9, 19, 32, 33, 0, 65, -1, 64, 1
+  call SysClose -1
+  say sig SysSignal(sig, 'i') SysGeterrno()
+end
+call SysClose -1
+say SysKill(SysGetpid(), 65) SysGeterrno() SysKill(SysGetpid(), -2) SysGeterrno()
+::requires 'rxunixsys' LIBRARY
+----
+rc 0
+[stdout]
+9 0 22
+19 0 22
+32 0 22
+33 0 22
+0 0 22
+65 0 22
+-1 0 22
+64 0 9
+1 0 9
+-1 22 -1 22
+[stderr]
+
 # errno: immediately after a failing call it is that call's, and a success
 # leaves it. Rulings, errno: before any call of this library it is 0, and
 # the interpreter's own I/O (the SAYs here) does not change it; the oracle
@@ -912,9 +1021,8 @@ rc 216
 Error 40 running {dir}/probe.rex line 7:  Incorrect call to routine.
 Error 40.1:  External routine "SYSGETGRNAM" failed.
 
-# A text wordexp refuses crashes the oracle (measured, SIGSEGV for each);
-# this crate raises the routine failure (question for Moritz: Deviation 88's
-# rule extended to SysWordexp).
+# Deviation 88: a text wordexp refuses crashes the oracle (measured, SIGSEGV
+# for each); this crate raises the routine failure.
 ruled
 do text over 'a;b', 'a|b', 'a&b', 'x > y', '(a)', '{a,b}', '"a', "'a", '`a', '$(', '${a', 'a\', 'a'||'0a'x||'b', '$((1/0))', '${UNSETVARQ?}'
   say try(text)

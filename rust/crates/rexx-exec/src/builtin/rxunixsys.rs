@@ -300,45 +300,43 @@ pub(crate) fn getpgid(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<Ob
     Ok(value(interp, group))
 }
 
-/// `SysKill(pid, sig)`: `kill`. Signal 0 tests for the process. A number
-/// no signal has is `EINVAL`, as the kernel answers it; so are the real-time
-/// signals, which `nix`'s safe `Signal` cannot name.
+/// `SysKill(pid, sig)`: `kill` with the raw signal number, real-time
+/// signals included (`crate::signal::send`). Signal 0 tests for the process.
+/// The output written so far is handed over first, as before a command: the
+/// signal may end this process, whose `SAY`s the oracle has already written.
+/// A halting signal this process sent itself is served at once, as one a
+/// command's child sent is at the command's end: measured, oracle, `SysKill`
+/// of its own pid with SIGINT raises HALT before a following `SysSleep`
+/// sleeps.
 pub(crate) fn kill(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 2)?;
     let of = int(interp, args, 1)?;
     let signal = int(interp, args, 2)?;
-    let sent = match signal {
-        0 => nix::sys::signal::kill(pid(of), None).map_err(nix_errno),
-        _ => match nix::sys::signal::Signal::try_from(signal) {
-            Ok(signal) => nix::sys::signal::kill(pid(of), signal).map_err(nix_errno),
-            Err(error) => Err(nix_errno(error)),
-        },
-    };
+    interp.hand_over_output();
+    let sent = crate::signal::unblocked(|| crate::signal::send(of, signal)).map_err(Errno);
+    interp.serve_signal_now();
     Ok(code(interp, sent))
 }
 
-/// `SysSignal(sig, action)`: `D` (default) or `I` (ignore), by the action's
-/// first character caselessly, and 0 whatever `signal` answered.
-///
-/// The disposition is **not changed**: neither `rustix` nor `nix` sets one
-/// without `unsafe`, which this crate does not add. An invalid signal keeps
-/// `EINVAL` as the oracle's `signal` call leaves it.
+/// `SysSignal(sig, action)`: `D` sets the default action and `I` ignores the
+/// signal, by the action's first character caselessly
+/// (`crate::signal::set_disposition`); 0 whatever `signal` answered, its
+/// refusal's `errno` kept. It replaces the interpreter's own handler for a
+/// halting signal: measured, oracle and this crate alike, `SysKill` of the
+/// process with SIGINT raises HALT before, is ignored after
+/// `SysSignal(2, 'I')`, and ends the process (status 130) after
+/// `SysSignal(2, 'D')`.
 pub(crate) fn signal(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 2)?;
     let signal = int(interp, args, 1)?;
     let action = c_string(interp, args, 2)?;
-    if !matches!(option(&action), Some(b'D' | b'I')) {
-        return Err(failed(interp));
-    }
-    let catchable = nix::sys::signal::Signal::try_from(signal).is_ok_and(|signal| {
-        !matches!(
-            signal,
-            nix::sys::signal::Signal::SIGKILL | nix::sys::signal::Signal::SIGSTOP
-        )
-    });
-    if !catchable && !(34..=64).contains(&signal) {
-        interp.activity.rxunixsys_errno = nix::errno::Errno::EINVAL as i32;
-    }
+    let ignore = match option(&action) {
+        Some(b'D') => false,
+        Some(b'I') => true,
+        _ => return Err(failed(interp)),
+    };
+    let set = crate::signal::set_disposition(signal, ignore).map_err(Errno);
+    kept(interp, set);
     Ok(number(interp, 0))
 }
 

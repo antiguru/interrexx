@@ -268,6 +268,39 @@ impl Interrupter {
     }
 }
 
+/// `signal(number, SIG_IGN)` where `ignore`, else `signal(number, SIG_DFL)`,
+/// for `rxunixsys`'s `SysSignal`: the `errno` of a refusal. It replaces any
+/// action, the halting signals' handlers included, so a SIGINT after
+/// `SysSignal(2, 'I')` is ignored and after `SysSignal(2, 'D')` ends the
+/// process, as on the oracle.
+pub(crate) fn set_disposition(number: i32, ignore: bool) -> Result<(), i32> {
+    let action = if ignore { libc::SIG_IGN } else { libc::SIG_DFL };
+    // SAFETY: `SIG_IGN` and `SIG_DFL` install no code; `signal` checks the
+    // number itself.
+    let previous = unsafe { libc::signal(number, action) };
+    if previous == libc::SIG_ERR {
+        return Err(last_errno());
+    }
+    Ok(())
+}
+
+/// `kill(pid, number)` with the raw signal number, the real-time signals
+/// included, for `rxunixsys`'s `SysKill`: the `errno` of a refusal.
+pub(crate) fn send(pid: i32, number: i32) -> Result<(), i32> {
+    // SAFETY: `kill` takes plain integers and has no precondition.
+    if unsafe { libc::kill(pid, number) } != 0 {
+        return Err(last_errno());
+    }
+    Ok(())
+}
+
+/// The `errno` the call before left.
+fn last_errno() -> i32 {
+    std::io::Error::last_os_error()
+        .raw_os_error()
+        .unwrap_or(libc::EINVAL)
+}
+
 /// Whether a signal arrived since the last call.
 pub(crate) fn take_pending() -> bool {
     PENDING

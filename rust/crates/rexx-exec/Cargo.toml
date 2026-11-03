@@ -81,11 +81,12 @@ tz-rs = "0.7.3"
 # The `rxunixsys` calls `rustix` does not make safely: the process-wide
 # `setuid`, `seteuid`, `setgid`, `setegid` and `setgroups` glibc broadcasts to
 # every thread (rustix's are per thread), the password and group databases
-# through NSS, `getsid`/`getpgid`/`setpgid`/`kill` with any raw pid (rustix's
-# `Pid` is positive), and `close` of a descriptor number. 0.29 is the last
-# release whose `close` takes a raw descriptor; later ones take an owned one,
-# which no safe code can make from a number.
-nix = { version = "0.29.0", default-features = false, features = ["process", "signal", "user"] }
+# through NSS, `getsid`/`getpgid`/`setpgid` with any raw pid (rustix's `Pid`
+# is positive), and `close` of a descriptor number. `SysSignal` and `SysKill`
+# go through `src/signal.rs`. 0.29 is the last release whose `close` takes a
+# raw descriptor; later ones take an owned one, which no safe code can make
+# from a number.
+nix = { version = "0.29.0", default-features = false, features = ["process", "user"] }
 
 [features]
 # The pinned-park counter, `src/pinning.rs`.
