@@ -1596,3 +1596,33 @@ fn load_package_from_data_is_found_by_requires() {
          other.cls\n"
     );
 }
+
+fn function_package() -> String {
+    std::fs::read_to_string(repository().join("ootest/ooRexx/API/oo/FUNCTIONPackage.cls"))
+        .expect("FUNCTIONPackage.cls is readable")
+}
+
+/// `::OPTIONS ERROR SYNTAX` turns only an `ERROR` a command handler raises into 98.970, as
+/// `RexxActivation::command` tests it: any other condition the handler raises is raised as
+/// itself, trapped or ignored, and meets only its own `::OPTIONS` -- `NOTREADY SYNTAX` makes a
+/// handler's `NOTREADY` 98.974. The expected output is the oracle's.
+#[test]
+fn error_syntax_escalates_only_a_handler_error() {
+    let stdout = run_program(
+        "handler-condition-options",
+        include_str!("classic_api/handler_condition_options.rex"),
+        &[("FUNCTIONPackage.cls", &function_package())],
+    );
+    assert_eq!(
+        stdout,
+        "1 USER FOO 7\n\
+         \x20 handler USER FOO\n\
+         2 after 7\n\
+         3 7\n\
+         4 7\n\
+         5 7\n\
+         6 SYNTAX 98.974\n\
+         7 SYNTAX 98.970\n\
+         8 7\n"
+    );
+}
