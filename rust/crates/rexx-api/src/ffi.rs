@@ -6086,8 +6086,9 @@ mod tests {
                         .cast::<u8>()
                         .write_bytes(7, (table.BufferLength)(thread, buffer));
                     let grown = (table.NewMutableBuffer)(thread, 2);
-                    // `ensureCapacity` is asked for the difference over the
-                    // capacity, six, which over an empty buffer is six.
+                    // `setCapacity` asks `ensureCapacity` for the difference
+                    // over the length (bug #2092, r13247): eight over an
+                    // empty buffer, more than twice the two it holds.
                     let data = (table.SetMutableBufferCapacity)(thread, grown, 8).cast::<u8>();
                     (table.SetMutableBufferLength)(thread, grown, 6);
                     std::ptr::copy_nonoverlapping(b"mutabl".as_ptr(), data, 6);
@@ -6109,7 +6110,7 @@ mod tests {
         let contents = state.buffer().expect("a mutable buffer");
         assert_eq!(
             (&contents.bytes[..], contents.capacity),
-            (&b"mutabl"[..], 6)
+            (&b"mutabl"[..], 8)
         );
     }
 
