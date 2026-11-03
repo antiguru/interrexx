@@ -10,3 +10,6 @@
 # SDD scratch; ledgers are force-added.
 /.superpowers/
 __pycache__/
+
+# The fetched corpus, see scripts/fetch-corpus.sh: never committed.
+/corpus/
