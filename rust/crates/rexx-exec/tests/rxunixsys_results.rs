@@ -24,6 +24,7 @@
 //! cases on this crate. The oracle's `rxapi` daemons it starts are left
 //! running and are the recorder's to stop.
 
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -61,6 +62,9 @@ fn run(name: usize, program: &str, oracle: bool) -> (i32, String, String) {
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("sub")).expect("a case directory");
     std::fs::write(dir.join("f"), b"hello\n").expect("a case file");
+    // The recorded modes are the file's own, not the inherited umask's.
+    std::fs::set_permissions(dir.join("f"), PermissionsExt::from_mode(0o664))
+        .expect("the case file's mode");
     let program = program.replace("{dir}", &dir.display().to_string());
     let path = dir.join("probe.rex");
     std::fs::write(&path, &program).expect("the program");

@@ -674,6 +674,7 @@ Nowhere/X [Nowhere][]
 # directory sub. Relative names are the program's directory's.
 program
 call directory '{dir}'
+call SysUmask 2
 say 'umask' SysUmask(18) SysUmask(18)
 say 'mkdir' SysMkdirUnix('m1', 511) SysStat('m1', 'p')
 say 'mkdir again' SysMkdirUnix('m1', 448) SysGeterrno()
