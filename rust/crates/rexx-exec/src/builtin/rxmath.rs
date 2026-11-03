@@ -41,7 +41,7 @@ pub(crate) fn required(args: &[Option<ObjRef>], position: usize) -> Result<ObjRe
 
 /// A floating argument: a Rexx number, read as C's `strtod` reads its text,
 /// or exactly `nan`, `+infinity` or `-infinity`. 88.921 for anything else.
-fn double_argument(
+pub(crate) fn double_argument(
     interp: &mut Interp,
     args: &[Option<ObjRef>],
     position: usize,

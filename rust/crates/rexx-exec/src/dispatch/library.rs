@@ -327,9 +327,7 @@ impl Interp {
         if !entry.has_entry_point()
             && let Some(body) = crate::extensions::routine_body(library, &entry.name)
         {
-            return self
-                .run_rust_routine(body, code, name, args, executable)
-                .map(Started::Ran);
+            return self.run_rust_routine(body, code, name, args, executable);
         }
         let held = HeldCall::Routine(entry.held());
         let exits = self.leaves_driver();
@@ -418,7 +416,9 @@ impl Interp {
     }
 
     /// [`Interp::run_library_routine`] for a routine of a library this crate
-    /// runs in Rust, blamed as a native routine is.
+    /// runs in Rust, blamed as a native routine is. A body that parked its
+    /// activity ([`Interp::park_rust_routine`]) answers `Entered`, its frame
+    /// gone: its continuation answers the call once the activity wakes.
     fn run_rust_routine(
         &mut self,
         body: crate::extensions::RoutineBody,
@@ -426,7 +426,7 @@ impl Interp {
         name: &[u8],
         args: &[Option<ObjRef>],
         executable: crate::RoutineObject,
-    ) -> Result<Option<ObjRef>, Failure> {
+    ) -> Result<Started<Option<ObjRef>>, Failure> {
         self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, name, args, Some(code));
         self.native_frame_mut().executable = executable;
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
@@ -447,7 +447,8 @@ impl Interp {
         pin_leave!(self);
         self.collect_under_stress();
         match popped.raised {
-            None => Ok(answered),
+            None if self.activity.native_park.is_some() => Ok(Started::Entered),
+            None => Ok(Started::Ran(answered)),
             Some(failure) => {
                 self.reraise_in_caller(&failure);
                 self.blame_native_routine(name, program, args, ran, code);

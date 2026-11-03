@@ -28,10 +28,28 @@ impl Shipped {
 }
 
 /// Every shipped package.
-static SHIPPED: &[Shipped] = &[Shipped {
-    name: "rxregexp.cls",
-    source: include_bytes!("../packages/rxregexp.cls"),
-}];
+static SHIPPED: &[Shipped] = &[
+    Shipped {
+        name: "rxregexp.cls",
+        source: include_bytes!("../packages/rxregexp.cls"),
+    },
+    Shipped {
+        name: "socket.cls",
+        source: include_bytes!("../packages/socket.cls"),
+    },
+    Shipped {
+        name: "streamsocket.cls",
+        source: include_bytes!("../packages/streamsocket.cls"),
+    },
+    Shipped {
+        name: "mime.cls",
+        source: include_bytes!("../packages/mime.cls"),
+    },
+    Shipped {
+        name: "smtp.cls",
+        source: include_bytes!("../packages/smtp.cls"),
+    },
+];
 
 /// The shipped package a `::REQUIRES` of `name` finds: its file name, or that
 /// name without the `.cls` the search appends, as written or in lower case,

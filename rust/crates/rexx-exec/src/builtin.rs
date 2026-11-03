@@ -36,6 +36,8 @@ pub(crate) mod platform;
 pub(crate) mod rexxutil;
 /// The `rxmath` extension library's routines, run in Rust.
 pub(crate) mod rxmath;
+/// The `rxsock` extension library's routines, run in Rust.
+pub(crate) mod rxsock;
 /// The `rxunixsys` extension library's routines, run in Rust.
 pub(crate) mod rxunixsys;
 pub(crate) mod state;

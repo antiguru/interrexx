@@ -1,5 +1,5 @@
-//! The extension libraries this crate runs in Rust: `rxmath`, `rxregexp` and
-//! `rxunixsys` (`docs/superpowers/specs/extensions-behaviour.md`).
+//! The extension libraries this crate runs in Rust: `rxmath`, `rxregexp`,
+//! `rxsock` and `rxunixsys` (`docs/superpowers/specs/extensions-behaviour.md`).
 //!
 //! A program sees each as the oracle's shared library: [`Interp::resolve_library`]
 //! answers a library whose tables name the routines and methods with no
@@ -79,6 +79,46 @@ static LIBRARIES: &[RustLibrary] = &[
             ),
             ("RegExp_Pos", crate::dispatch::regexp_methods::pos),
         ],
+    },
+    RustLibrary {
+        name: "rxsock",
+        routines: &[
+            ("SockDropFuncs", crate::builtin::rxsock::drop_funcs),
+            (
+                "SockGetHostByAddr",
+                crate::builtin::rxsock::get_host_by_addr,
+            ),
+            (
+                "SockGetHostByName",
+                crate::builtin::rxsock::get_host_by_name,
+            ),
+            ("SockGetHostId", crate::builtin::rxsock::get_host_id),
+            ("SockGetHostName", crate::builtin::rxsock::get_host_name),
+            ("SockInit", crate::builtin::rxsock::init),
+            ("SockSocket", crate::builtin::rxsock::socket_new),
+            ("SockClose", crate::builtin::rxsock::close),
+            ("SockSoClose", crate::builtin::rxsock::close),
+            ("SockShutDown", crate::builtin::rxsock::shutdown),
+            ("SockListen", crate::builtin::rxsock::listen),
+            ("SockBind", crate::builtin::rxsock::bind),
+            ("SockConnect", crate::builtin::rxsock::connect),
+            ("SockAccept", crate::builtin::rxsock::accept),
+            ("SockGetSockName", crate::builtin::rxsock::get_sock_name),
+            ("SockGetPeerName", crate::builtin::rxsock::get_peer_name),
+            ("SockSend", crate::builtin::rxsock::send),
+            ("SockSendTo", crate::builtin::rxsock::send_to),
+            ("SockRecv", crate::builtin::rxsock::recv),
+            ("SockRecvFrom", crate::builtin::rxsock::recv_from),
+            ("SockGetSockOpt", crate::builtin::rxsock::get_sock_opt),
+            ("SockSetSockOpt", crate::builtin::rxsock::set_sock_opt),
+            ("SockIoctl", crate::builtin::rxsock::ioctl),
+            ("SockSelect", crate::builtin::rxsock::select),
+            ("SockSock_Errno", crate::builtin::rxsock::sock_errno),
+            ("SockPSock_Errno", crate::builtin::rxsock::psock_errno),
+            ("SockVersion", crate::builtin::rxsock::version),
+            ("SockLoadFuncs", crate::builtin::rxsock::load_funcs),
+        ],
+        methods: &[],
     },
     RustLibrary {
         name: "rxunixsys",

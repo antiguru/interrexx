@@ -3201,6 +3201,30 @@ impl Interp {
         })
     }
 
+    /// [`Interp::park_routine_with`] for the body of a routine of a library
+    /// this crate runs in Rust (`crate::extensions`). Where nothing but the
+    /// routine's own frame pins the activity, the park is recorded for the
+    /// root driver and the routine's call answers `Entered` once the body
+    /// returns (`run_rust_routine`), so that the other activities run while
+    /// this one waits; otherwise the wait is pinned.
+    pub(crate) fn park_rust_routine(
+        &mut self,
+        reason: crate::scheduler::ParkReason,
+        resume: NativeResume,
+        receiver: ObjRef,
+    ) -> Result<ObjRef, Failure> {
+        if self.activity.pin_depth == 1 && !self.activity.resuming {
+            self.activity.native_park = Some(Box::new(NativePark {
+                reason,
+                resume,
+                receiver,
+                thens: Vec::new(),
+            }));
+            return Ok(receiver);
+        }
+        self.park_routine_with(reason, resume, receiver)
+    }
+
     /// `park`'s primitive methods, run once their activity has woken: the
     /// continuation, or `failure` in its place, then each method's work after
     /// it.

@@ -189,17 +189,18 @@ pub fn resolved_environment(sidecar: &Sidecar, dir: &Path) -> Vec<(String, Strin
 }
 
 /// The C instruments [`instrument_directory`] holds: the oracle's own
-/// `librxmath.so` and `librxregexp.so` under names that are not `rxmath` and
-/// `rxregexp`.
+/// `librxmath.so`, `librxregexp.so`, `librxsock.so` and `librxunixsys.so`
+/// under names that are not `rxmath`, `rxregexp`, `rxsock` and `rxunixsys`.
 ///
-/// This crate answers `rxmath`, `rxregexp` and `rxunixsys` with libraries of
-/// its own before any `dlopen`, so a program naming them no longer reaches the
-/// shared-library path on this side. A program that is about that path names
-/// `rxmathc`, `rxregexpc` or `rxunixsysc` instead, and both sides `dlopen` the
-/// same oracle binary through the link.
+/// This crate answers `rxmath`, `rxregexp`, `rxsock` and `rxunixsys` with
+/// libraries of its own before any `dlopen`, so a program naming them no
+/// longer reaches the shared-library path on this side. A program that is
+/// about that path names `rxmathc`, `rxregexpc`, `rxsockc` or `rxunixsysc`
+/// instead, and both sides `dlopen` the same oracle binary through the link.
 pub const INSTRUMENTS: &[(&str, &str)] = &[
     ("librxmathc.so", "librxmath.so"),
     ("librxregexpc.so", "librxregexp.so"),
+    ("librxsockc.so", "librxsock.so"),
     ("librxunixsysc.so", "librxunixsys.so"),
 ];
 

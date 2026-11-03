@@ -1224,6 +1224,20 @@ fn the_rust_extension_library_groups_match_the_oracles_counts() {
     }
 }
 
+/// The `rxsock` group on this crate's Rust library and its own `socket.cls`: the oracle's
+/// counts, recorded from the full checkout on 2026-11-03 (PR 4 plan, "Oracle targets"). Its
+/// client and server activities talk over loopback port 8083.
+#[test]
+fn the_rxsock_group_matches_the_oracles_counts() {
+    let outcome = run_group("extensions/rxsock", "socketClass", library_path(false));
+    assert_eq!(
+        (outcome.ran, outcome.assertions, outcome.failed.len()),
+        (23, 114, 0),
+        "{}",
+        outcome.stdout
+    );
+}
+
 /// The `rxunixsys` group on this crate's Rust library: the oracle's counts and failing tests,
 /// recorded from the full checkout on 2026-11-03 (PR 4 plan, "Oracle targets"). `TEST_SYSCRYPT`
 /// fails on both, which provide no `SysCrypt` (Rulings). The six `TEST_SYSSTAT_*` failures are

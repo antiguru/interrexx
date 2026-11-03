@@ -2,10 +2,10 @@
    environment named after one of them is unregistered, rc 30 and FAILURE,
    as is HostEmu while the hostemu package is not loaded. */
 call on failure name failed
-address rxsock 'hello'
-say 'rxsock' rc .rs
-address RXSOCK 'hello'
-say 'RXSOCK' rc .rs
+address rxsockc 'hello'
+say 'rxsockc' rc .rs
+address RXSOCKC 'hello'
+say 'RXSOCKC' rc .rs
 address rxunixsysc 'hello'
 say 'rxunixsysc' rc .rs
 address HostEmu 'hello'
@@ -14,5 +14,5 @@ exit
 failed:
   say 'failure' condition('d') rc
   return
-::requires "rxsock" LIBRARY
+::requires "rxsockc" LIBRARY
 ::requires "rxunixsysc" LIBRARY

@@ -67,9 +67,10 @@ chrono = { version = "0.4.45", default-features = false, features = ["clock", "s
 # writable open handle where a read-only file's stamp is still the owner's to
 # set; `uname`, for `SysVersion`; and `tcsetattr`, for `SysGetKey`'s
 # terminal mode. `event` and `time` are the timer thread's `poll` and Linux
-# `timerfd`. Each feature is a leaf here: they gate their modules and pull
-# no further crate.
-rustix = { version = "1.1.4", features = ["event", "fs", "param", "process", "system", "termios", "time"] }
+# `timerfd`. `net` and `process`'s `pidfd_getfd` are `rxsock`'s sockets,
+# each reached by number through a descriptor of this process's own. Each
+# feature is a leaf here: they gate their modules and pull no further crate.
+rustix = { version = "1.1.4", features = ["event", "fs", "net", "param", "process", "system", "termios", "time"] }
 # `sigaction` and the async-signal-safe `write` the signal module needs
 # (D-U3, `src/signal.rs`). Already in the graph through `std`'s users.
 libc = "0.2.186"
@@ -86,7 +87,17 @@ tz-rs = "0.7.3"
 # go through `src/signal.rs`. 0.29 is the last release whose `close` takes a
 # raw descriptor; later ones take an owned one, which no safe code can make
 # from a number.
-nix = { version = "0.29.0", default-features = false, features = ["process", "user"] }
+#
+# `rxsock` takes the socket options whose values `rustix` reshapes (`SO_LINGER`
+# with its seconds when off, the timeouts and buffer sizes as the kernel's
+# numbers) from `socket`, and the interface list `SockGetHostId` reads from
+# `net` (`getifaddrs`).
+nix = { version = "0.29.0", default-features = false, features = ["net", "process", "socket", "user"] }
+# The resolver half of `rxsock`'s host lookups: `getaddrinfo` with the
+# canonical name and `getnameinfo`, which glibc's `gethostbyname` and
+# `gethostbyaddr` reach the DNS through and which no safe crate offers
+# directly (`src/builtin/rxsock/hosts.rs`).
+dns-lookup = "2"
 
 [features]
 # The pinned-park counter, `src/pinning.rs`.

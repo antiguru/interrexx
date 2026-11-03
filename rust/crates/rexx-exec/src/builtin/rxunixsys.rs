@@ -25,13 +25,17 @@ use crate::{Failure, Interp};
 type Result<T> = std::result::Result<T, Failure>;
 
 /// `Error 40.1: External routine "NAME" failed.`, NAME the routine as called.
-fn failed(interp: &Interp) -> Failure {
+pub(super) fn failed(interp: &Interp) -> Failure {
     Raised::routine_failed(&interp.native_frame().name.to_ascii_uppercase()).into()
 }
 
 /// A string argument as C reads it: the string value the native boundary
 /// requests, 88.909 where there is none, cut at its first NUL.
-fn c_string(interp: &mut Interp, args: &[Option<ObjRef>], position: usize) -> Result<Vec<u8>> {
+pub(super) fn c_string(
+    interp: &mut Interp,
+    args: &[Option<ObjRef>],
+    position: usize,
+) -> Result<Vec<u8>> {
     let value = required(args, position)?;
     let Some(text) = interp.blamed_string_conversion(value)? else {
         return Err(Raised::native_argument_needs_a_string_value(position).into());
@@ -45,7 +49,7 @@ fn c_string(interp: &mut Interp, args: &[Option<ObjRef>], position: usize) -> Re
 
 /// A 32-bit integer argument: 88.907 for anything that is not a whole number
 /// from -2147483648 to 2147483647.
-fn int(interp: &mut Interp, args: &[Option<ObjRef>], position: usize) -> Result<i32> {
+pub(super) fn int(interp: &mut Interp, args: &[Option<ObjRef>], position: usize) -> Result<i32> {
     let value = required(args, position)?;
     let number = match value.decode() {
         Decoded::SmallInt(number) => Some(number),
@@ -71,7 +75,7 @@ fn option(text: &[u8]) -> Option<u8> {
 }
 
 /// A whole number as the routine's answer.
-fn number(interp: &mut Interp, value: impl Into<i128>) -> ObjRef {
+pub(super) fn number(interp: &mut Interp, value: impl Into<i128>) -> ObjRef {
     let value = value.into();
     match i64::try_from(value).ok().and_then(ObjRef::small_int) {
         Some(small) => small,
