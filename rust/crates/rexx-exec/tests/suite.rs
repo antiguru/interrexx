@@ -1328,6 +1328,46 @@ fn only_a_record_of_every_group_at_the_recorded_revision_is_a_full_run() {
     assert!(full_run_record("# ootest revision 13178\ngroup\ttest\n", "13178").is_err());
 }
 
+/// The expected set is what the group runs: the test methods of the classes
+/// the file adds (`~add`, `~addWithSuite`, `~addWithCollection`) and of their
+/// superclasses in the file, and not those of a class whose `add` is
+/// commented out (r13347's `TIME.testGroup`), nor of one never added.
+#[test]
+fn the_expected_set_is_the_classes_the_group_adds() {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("expected-set-adds");
+    std::fs::create_dir_all(root.join("base")).expect("a group directory");
+    std::fs::write(
+        root.join("base/G.testGroup"),
+        "parse source . . fileSpec\n\
+         group = .TestGroup~new(fileSpec)\n\
+         group~add(.G.fast.testGroup)\n\
+         --group~add(.G.long.testGroup)\n\
+         /* group~add(.G.block.testGroup) */\n\
+         group~addWithSuite(.G.suited.testGroup, .GSuite)\n\
+         return group\n\
+         ::requires 'ooTest.frm'\n\
+         ::class G.base subclass ooTestCase\n\
+         ::method test_inherited\n\
+         ::class G.fast.testGroup subclass G.base public\n\
+         ::method test_fast\n\
+         ::class G.long.testGroup subclass ooTestCase public\n\
+         ::method test_long\n\
+         ::class G.block.testGroup subclass ooTestCase public\n\
+         ::method test_block\n\
+         ::class G.suited.testGroup subclass ooTestCase public\n\
+         ::method test_suited\n\
+         ::class G.unadded subclass ooTestCase public\n\
+         ::method test_unadded\n\
+         ::class GSuite subclass ooTestSuite public\n",
+    )
+    .expect("the group file");
+    let expected: BTreeSet<String> = ["TEST_FAST", "TEST_INHERITED", "TEST_SUITED"]
+        .into_iter()
+        .map(String::from)
+        .collect();
+    assert_eq!(expected_set_in(&root, "base", "G"), expected);
+}
+
 /// Each owner's check, on rows each of which passes or fails it.
 mod row_checks {
     use std::collections::BTreeSet;

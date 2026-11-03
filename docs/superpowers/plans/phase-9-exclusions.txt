@@ -114,7 +114,6 @@ extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETLOGNAMES06	Phase 10
 extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETNUMBER01	Phase 10 Extension	group
 extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETNUMBER02	Phase 10 Extension	group
 extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETNUMBER03	Phase 10 Extension	group
-extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETNUMBER04	Phase 10 Extension	group
 extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_INITCODE_ATTRIBUTE	Phase 10 Extension	group
 extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_ISFULL01	Phase 10 Extension	group
 extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_ISFULL02	Phase 10 Extension	group
@@ -138,8 +137,5 @@ extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_OPEN02	Phase 10 Extens
 extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_OPEN03	Phase 10 Extension	group
 extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_OPEN04	Phase 10 Extension	group
 extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_OPEN_CLOSE	Phase 10 Extension	group
-extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_READRECORDS01	Phase 10 Extension	group
-extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_READRECORDS02	Phase 10 Extension	group
 extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_READRECORDS03	Phase 10 Extension	group
 extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_READRECORDS05	Phase 10 Extension	group
-extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_READRECORDS06	Phase 10 Extension	group
