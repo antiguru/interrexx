@@ -4941,25 +4941,31 @@ pub mod classic {
     /// The block's strings are as `api/rexx.h` asks: `shvname` readable for
     /// its length, and a non-null fetch buffer writable for its `strlength`.
     unsafe fn serve(activation: &Activation<'_>, block: &mut SHVBLOCK) -> u8 {
-        // SAFETY: the caller's guarantee.
-        let name = unsafe { bytes(block.shvname.strptr, block.shvname.strlength) };
-        // SAFETY: as above, for a set's value.
-        let value = unsafe { bytes(block.shvvalue.strptr, block.shvvalue.strlength) };
+        // The name is read only for the codes that take one, and the value only for a set: for
+        // `RXSHV_NEXTV` and a fetch they are the caller's output buffers, which may hold no
+        // initialised bytes.
         let request = match block.shvcode {
-            0 | 3 => PoolRequest::Set {
-                name,
-                symbolic: block.shvcode == 3,
-                value,
-            },
-            1 | 4 => PoolRequest::Fetch {
-                name,
-                symbolic: block.shvcode == 4,
-            },
-            2 | 5 => PoolRequest::Drop {
-                name,
-                symbolic: block.shvcode == 5,
-            },
-            7 => PoolRequest::Private { name },
+            code @ (0..=5 | 7) => {
+                // SAFETY: the caller's guarantee.
+                let name = unsafe { bytes(block.shvname.strptr, block.shvname.strlength) };
+                match code {
+                    0 | 3 => PoolRequest::Set {
+                        name,
+                        symbolic: code == 3,
+                        // SAFETY: as above, for a set's value.
+                        value: unsafe { bytes(block.shvvalue.strptr, block.shvvalue.strlength) },
+                    },
+                    1 | 4 => PoolRequest::Fetch {
+                        name,
+                        symbolic: code == 4,
+                    },
+                    2 | 5 => PoolRequest::Drop {
+                        name,
+                        symbolic: code == 5,
+                    },
+                    _ => PoolRequest::Private { name },
+                }
+            }
             6 => {
                 let Some((name, value)) = activation.pool_next() else {
                     return LAST_VARIABLE;
