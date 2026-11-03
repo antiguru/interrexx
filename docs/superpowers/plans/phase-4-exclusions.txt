@@ -3189,6 +3189,18 @@ DEVIATIONS -- permanent, chosen
      condition raised inside one of them names this crate's line numbers;
      messages, codes and results match the oracle.
 
+ 90. SYSWORDEXP RUNS NO COMMANDS (Phase 10). OWNER: none.
+
+     Ruled by Moritz 2026-11-03: "Can we refuse subshell? Just keep the
+     safe expansion part?"
+     The oracle's SysWordexp calls wordexp with no flags, so command
+     substitution ($(...) and backquotes) runs a shell. This crate expands
+     words itself (field splitting, quote removal, tilde, parameter and
+     arithmetic expansion, pathname globbing) and never starts a shell; text
+     containing command substitution raises 40.1 for the routine. Found by
+     the PR 4 review: handing the text to /bin/sh after a pre-check ran
+     commands the oracle's wordexp read as plain text.
+
 EXPRKIND OWNERSHIP -- the expression forms 4a/4b do not evaluate
 ---------------------------------------------------------------------
 
