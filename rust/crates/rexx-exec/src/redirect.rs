@@ -180,6 +180,12 @@ impl IoContext {
         Some(buffer)
     }
 
+    /// Every input line, gathered before the command started, or `None`
+    /// with no input redirected.
+    pub(crate) fn input_lines(&self) -> Option<Vec<Vec<u8>>> {
+        self.input.clone()
+    }
+
     /// The streams a redirecting command handler reads and writes.
     pub(crate) fn redirector(&self) -> rexx_api::redirect::Redirector {
         rexx_api::redirect::Redirector::new(
@@ -396,7 +402,7 @@ fn whole_lines(carry: &mut Vec<u8>) -> Vec<Vec<u8>> {
 /// `printf "a\nb"` gives two, `printf "a\r\nb\r\n"` gives two whose first is
 /// one byte long, `printf "a\0b\n"` gives one of three bytes, and
 /// `printf ""` gives none.
-fn split_lines(bytes: &[u8]) -> Vec<Vec<u8>> {
+pub(crate) fn split_lines(bytes: &[u8]) -> Vec<Vec<u8>> {
     let mut lines = Vec::new();
     let mut at = 0;
     while at < bytes.len() {

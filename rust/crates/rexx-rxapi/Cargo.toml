@@ -12,6 +12,8 @@ test-direct = []
 [dependencies]
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
 rustix = { version = "1.1.4", features = ["fs", "net", "process"] }
+# `classic_procedure`: `rxsubcom LOAD` loads a registration's library and finds its handler.
+rexx-api = { path = "../rexx-api" }
 
 [lints]
 workspace = true

@@ -17,5 +17,9 @@ rexx-core = { path = "../rexx-core" }
 # 2026-09-14).
 libloading = "0.9.0"
 
+# `free`, which releases a result block a classic handler allocated in place of the buffer it
+# was handed (`load.rs`).
+libc = "0.2.186"
+
 [lints]
 workspace = true

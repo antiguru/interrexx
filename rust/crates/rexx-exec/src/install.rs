@@ -951,9 +951,10 @@ impl Interp {
                 .find(|(held, _)| held == wanted)
                 .map(|(_, value)| value.as_slice())
         };
-        require::search(
+        require::search_with(
             program,
             name,
+            &self.call_search,
             variable(b"REXX_PATH"),
             variable(b"PATH"),
             self.cwd_bytes(),
@@ -1912,12 +1913,13 @@ impl Interp {
     /// executable a file's own text becomes.
     ///
     /// `parent` is the package the loaded file resolves names through, and
-    /// `None` is the caller's own.
+    /// `None` is the caller's own. `program` as [`Interp::install_executable`]'s.
     pub(crate) fn new_file_executable(
         &mut self,
         name: &[u8],
         routine: bool,
         parent: Option<ObjRef>,
+        program: bool,
     ) -> Result<ObjRef, Failure> {
         // **Read through the interpreter's own directory, recorded under the
         // name as given.** `Invocation::with_directory` is what a caller
@@ -1940,7 +1942,7 @@ impl Interp {
                 .map(|program| self.package_object(Package::Program(program)))
                 .transpose()?,
         };
-        self.install_executable(parsed, name, routine, parent, |interp, id| {
+        self.install_executable(parsed, name, routine, parent, program, |interp, id| {
             interp.required_paths.insert(id, name.into());
         })
     }
@@ -1950,12 +1952,16 @@ impl Interp {
     /// becomes the executable, its directives install into a package of its
     /// own whose parent is `parent`, and `record` names that package. A
     /// routine restored from an image keeps the name the image gives it.
+    /// `program` says the source is a program `CallProgram` runs
+    /// (`LanguageParser::createProgram`), which installs where it runs and calls no stub
+    /// routine to install here.
     pub(crate) fn install_executable(
         &mut self,
         parsed: Program,
         name: &[u8],
         routine: bool,
         parent: Option<ObjRef>,
+        program_run: bool,
         record: impl FnOnce(&mut Self, ProgramId),
     ) -> Result<ObjRef, Failure> {
         let Program {
@@ -2026,12 +2032,14 @@ impl Interp {
         // requires by calling an empty routine of the package, which traces
         // its `>I>` and `<I<` under the package's `::OPTIONS TRACE`. The main
         // body built here is that empty routine.
-        if program.directives.iter().any(|directive| {
-            matches!(
-                directive.kind,
-                DirectiveKind::Class(_) | DirectiveKind::Requires(_)
-            )
-        }) {
+        if !program_run
+            && program.directives.iter().any(|directive| {
+                matches!(
+                    directive.kind,
+                    DirectiveKind::Class(_) | DirectiveKind::Requires(_)
+                )
+            })
+        {
             self.run_install_stub(Rc::clone(&program), id, running)?;
         }
         let class = if routine {
@@ -2338,6 +2346,16 @@ impl Interp {
     /// Moves [`Interp::routine_generation`], for a write to a routine table.
     pub(crate) fn routines_changed(&mut self) {
         self.routine_generation = self.routine_generation.wrapping_add(1);
+    }
+
+    /// [`Interp::routines_changed`] where the C API changed the macrospace or a registration
+    /// since this interpreter last looked: an extension's native call may have.
+    pub(crate) fn sync_api_changes(&mut self) {
+        let now = crate::capi::changes();
+        if now != self.api_changes_seen {
+            self.api_changes_seen = now;
+            self.routines_changed();
+        }
     }
 
     /// [`Interp::resolve_library`] for a caller whose failure is a condition:

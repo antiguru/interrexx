@@ -547,6 +547,7 @@ fn emit_uncaptured(text: &str) {
 /// The runner itself. See the module doc for REPORT vs STRICT and how the
 /// oracle and the memory limit are handled.
 const SUBSET_FILES: &[&str] = &[
+    "phase-10.txt",
     "phase-4a.txt",
     "phase-4b.txt",
     "phase-4c.txt",

@@ -50,12 +50,16 @@ use queue::Queue;
 // The process's connection to the API service.
 mod rxapi_client;
 pub use rxapi_client::use_api_service;
+pub mod capi;
+mod classic;
+pub mod embedding;
+mod exits;
 
 // What a command line supplies to a top-level program: the one argument string
 // it can carry, how a list of words becomes that string, and where `.input`
 // reads from.
 mod invocation;
-pub use invocation::{Invocation, ProgramInput, Sinks, SwitchMode, join_command_line};
+pub use invocation::{Invocation, ProgramInput, Sinks, StartType, SwitchMode, join_command_line};
 pub use rexx_core::FrameBlock;
 pub use sim::{
     ClockOrigin, Decision, Knobs, Order, Policy, Replay, SIM_CHILD_ENV, SimConfig, SimReport,
@@ -362,6 +366,11 @@ const EXIT_VALUE_ROOT: &str = "the program's exit value";
 #[derive(Debug)]
 pub struct Outcome {
     pub exit_code: i32,
+    /// The string the program returned or exited with, `None` for none.
+    pub result: Option<Vec<u8>>,
+    /// The error number of the condition the program ended on untrapped, or
+    /// `None` where it ended otherwise.
+    pub error: Option<i32>,
     pub stdout: Vec<u8>,
     pub stderr: Vec<u8>,
     /// What the run cost in stack. Task 11 reads this to set the
@@ -870,6 +879,16 @@ impl Loud {
     fn missing_body() -> Loud {
         Loud {
             message: "an activation's body selector names no routine body".to_string(),
+        }
+    }
+
+    /// A class the `REXX` package defines that it does not hold: an internal
+    /// inconsistency, never a program error.
+    #[cold]
+    #[inline(never)]
+    fn missing_rexx_class(name: &str) -> Loud {
+        Loud {
+            message: format!("the REXX package holds no class {name}"),
         }
     }
 
@@ -1635,6 +1654,37 @@ struct Interp {
     /// name (`InterpreterInstance::commandHandlers`). Emptied at the first
     /// library close, since nothing ties a handler's code to its library.
     command_handlers: FxHashMap<Box<[u8]>, Rc<rexx_api::load::CommandHandler>>,
+    /// The environments `.CommandHandler` has stacked handlers on, the
+    /// objects of the native handlers, and the commands handlers written in
+    /// Rexx are running.
+    environments: command::Environments,
+    /// Whether the next native call leaves its driver whatever else runs:
+    /// an embedding instance's root call, which waits for the thread that
+    /// created the instance while the driver serves that thread's callbacks.
+    pub(crate) leave_next_native: bool,
+    /// An embedding instance's `INITIAL_ADDRESS_ENVIRONMENT`, the `ADDRESS` a
+    /// program `CallProgram` runs starts with; `None` the platform default.
+    pub(crate) default_address: Option<Rc<[u8]>>,
+    /// An embedding instance's `REGISTERED_ENVIRONMENTS`: the classic
+    /// subcommand handler an upper-cased environment name is served by.
+    pub(crate) subcom_aliases: FxHashMap<Vec<u8>, Vec<u8>>,
+    /// The system exits an embedding installed (`RexxStart`'s exit list, or
+    /// `RexxCreateInterpreter`'s `REGISTERED_EXITS` and `DIRECT_EXITS`), `None` where it
+    /// installed none.
+    pub(crate) exits: Option<Box<crate::exits::Exits>>,
+    /// Whether the halt or the trace exit is installed and so runs at each clause boundary
+    /// (`Activity::queryTrcHlt`).
+    pub(crate) clause_exits: bool,
+    /// Whether another thread can switch the trace of this run at a clause boundary
+    /// (`RexxSetTrace`), so that no chunk may settle a clause's trace setting at compile time.
+    pub(crate) trace_switchable: bool,
+    /// A native call posted to this interpreter's own inbox, which the clause boundary that
+    /// ends the calling clause serves: the activation depth of that clause. It sets
+    /// `clause_exits` to be reached there.
+    pub(crate) boundary_posts: Option<usize>,
+    /// An embedding instance's `EXTERNAL_CALL_PATH` and
+    /// `EXTERNAL_CALL_EXTENSIONS`, which every external search uses.
+    pub(crate) call_search: require::Instance,
     /// How many times [`Interp::resolve_library`] has asked `load::open` for a
     /// name nothing held, whether or not a library loaded, which is what a
     /// test reads to see that a held one is not asked for again.
@@ -1705,6 +1755,16 @@ struct Interp {
     /// ([`Interp::merge_routines`]), and `~addRoutine`/`~addPublicRoutine`.
     /// See `Resolved::kept_until_routines_change`.
     pub(crate) routine_generation: u32,
+    /// [`capi::changes`] when this interpreter last moved
+    /// [`Interp::routine_generation`] for it: a macrospace or registration
+    /// change made through the C API, which an extension's native call makes.
+    pub(crate) api_changes_seen: u64,
+    /// The classic function handlers calls have resolved, by uppercased name, kept until
+    /// `RxFuncDrop` names them: a handler dropped by any other route stays callable here.
+    pub(crate) classic_functions: FxHashMap<Vec<u8>, rexx_api::load::ClassicEntry>,
+    /// The classic subcommand handlers commands have resolved, by uppercased environment, kept for
+    /// the interpreter's life.
+    pub(crate) classic_subcoms: FxHashMap<Vec<u8>, rexx_api::load::ClassicEntry>,
     /// The access scope and protection of every method that has one -- the
     /// oracle's `isSpecial()` set, which is what `RexxObject::messageSend`
     /// consults before it runs anything.
@@ -2409,8 +2469,20 @@ impl Interp {
             package_routines: FxHashMap::default(),
             package_routine_codes: Vec::new(),
             routine_generation: 0,
+            api_changes_seen: capi::changes(),
+            classic_functions: FxHashMap::default(),
+            classic_subcoms: FxHashMap::default(),
             global_references: rexx_api::handles::Table::new(),
             command_handlers: FxHashMap::default(),
+            environments: command::Environments::default(),
+            leave_next_native: false,
+            default_address: None,
+            subcom_aliases: FxHashMap::default(),
+            exits: None,
+            clause_exits: false,
+            trace_switchable: false,
+            boundary_posts: None,
+            call_search: require::Instance::default(),
             kept_strings: rustc_hash::FxHashMap::default(),
             kept_names: rustc_hash::FxHashMap::default(),
             kept_holders: rustc_hash::FxHashMap::default(),
@@ -2469,10 +2541,34 @@ impl Interp {
 
     /// Loads `program`, runs its main body in a fresh activation, and tears
     /// the activation down again.
+    #[cfg(test)]
     fn run(&mut self, program: Program) -> Result<Option<ObjRef>, Failure> {
+        self.run_as_started(program, StartType::Command, None)
+    }
+
+    /// [`Interp::run`] as an embedding starts it: called as `start` says,
+    /// with `address` the initial environment.
+    fn run_as_started(
+        &mut self,
+        program: Program,
+        start: StartType,
+        address: Option<Vec<u8>>,
+    ) -> Result<Option<ObjRef>, Failure> {
         let program = Rc::new(program);
         let program_id = self.load_program(Rc::clone(&program));
-        self.run_loaded(program, program_id, CallType::Command, None, None)
+        let call_type = match start {
+            StartType::Command => CallType::Command,
+            StartType::Subroutine => CallType::Subroutine,
+            StartType::Function => CallType::Function,
+        };
+        let address = address.map(|name| {
+            let name: Rc<[u8]> = Rc::from(name);
+            crate::activation::AddressState {
+                current: Some(Rc::clone(&name)),
+                alternate: Some(name),
+            }
+        });
+        self.run_loaded(program, program_id, call_type, address, None)
     }
 
     /// Loads `program` and translates its directives, running none of its
@@ -2999,16 +3095,41 @@ impl Interp {
         // `exit 5`, and a bare `return` there exits 0. `Ended` keeps the two
         // apart because a *callee* has to tell them apart, not because the
         // program's own exit value ever depends on which arrived.
-        let exit = if nested {
-            pinned!(
-                self,
-                crate::pinning::PinKind::Program,
-                self.run_activation()
-            )
+        // A program is a program-level call: the initialization exit before its first clause,
+        // and the termination exit once it has returned or exited, its variables still live
+        // (`RexxActivation::run`, `exitFrom`, `implicitExit`). An embedding instance's own root
+        // program runs neither.
+        let program_exits = if nested {
+            self.calls_program_exits()
         } else {
-            self.run_activity_root()
-        }
-        .map(Ended::value);
+            self.main_calls_program_exits()
+        };
+        let initialized = if program_exits {
+            self.initialization_exit()
+        } else {
+            Ok(())
+        };
+        let exit = match initialized {
+            Err(failure) => Err(failure),
+            Ok(()) => if nested {
+                pinned!(
+                    self,
+                    crate::pinning::PinKind::Program,
+                    self.run_activation()
+                )
+            } else {
+                self.run_activity_root()
+            }
+            .map(Ended::value),
+        };
+        let exit = if program_exits && matches!(exit, Ok(_) | Err(Failure::Exited(_))) {
+            match self.termination_exit() {
+                Ok(()) => exit,
+                Err(failure) => Err(failure),
+            }
+        } else {
+            exit
+        };
         if own_level && let Err(failure) = &exit {
             self.capture_activation_frame(failure);
         }
@@ -3438,9 +3559,23 @@ impl Interp {
             package_routines: _,
             package_routine_codes: _,
             routine_generation: _,
+            api_changes_seen: _,
+            // Entry points, not objects.
+            classic_functions: _,
+            classic_subcoms: _,
             global_references,
             // Entry points, not objects.
             command_handlers: _,
+            environments,
+            leave_next_native: _,
+            default_address: _,
+            subcom_aliases: _,
+            // Entry points, not objects.
+            exits: _,
+            clause_exits: _,
+            trace_switchable: _,
+            boundary_posts: _,
+            call_search: _,
             // Copies keyed by object, dropped with it rather than keeping it.
             kept_strings: _,
             kept_names: _,
@@ -3508,6 +3643,7 @@ impl Interp {
         } = self;
         activity.object_roots(out);
         activities.object_roots(out);
+        environments.object_roots(out);
         out.extend(stem_exposers.values().flatten().copied());
         out.extend(traced_variable.as_ref().and_then(|traced| traced.value));
         out.extend(global_references.roots());
@@ -3852,10 +3988,10 @@ pub fn run_program(path: &str, text: Vec<u8>, invocation: Invocation) -> Outcome
 pub fn run_program_named(path: &[u8], text: Vec<u8>, invocation: Invocation) -> Outcome {
     let path = path.to_vec();
     on_interpreter_thread(move || {
-        execute_on(
+        execute_kept(
             &path,
             text,
-            false,
+            Entry::Run,
             invocation,
             Some(INTERPRETER_STACK_BYTES),
         )
@@ -3868,7 +4004,7 @@ pub fn run_program_named(path: &[u8], text: Vec<u8>, invocation: Invocation) -> 
 pub fn translate_program(path: &[u8], text: Vec<u8>) -> Outcome {
     let path = path.to_vec();
     on_interpreter_thread(move || {
-        execute_as(
+        execute_kept(
             &path,
             text,
             Entry::Translate,
@@ -3888,7 +4024,7 @@ pub(crate) fn run_program_on_stack(
 ) -> Outcome {
     let path = path.as_bytes().to_vec();
     on_thread_of(stack, move || {
-        execute_on(&path, text, false, invocation, Some(stack))
+        execute_kept(&path, text, Entry::Run, invocation, Some(stack))
     })
 }
 
@@ -3905,7 +4041,13 @@ pub fn run_program_collect_every_alloc(
 ) -> Outcome {
     let path = path.as_bytes().to_vec();
     on_interpreter_thread(move || {
-        execute_on(&path, text, true, invocation, Some(INTERPRETER_STACK_BYTES))
+        execute_kept(
+            &path,
+            text,
+            Entry::CollectEveryAlloc,
+            invocation,
+            Some(INTERPRETER_STACK_BYTES),
+        )
     })
 }
 
@@ -3947,11 +4089,11 @@ pub struct NativeEntryPoint {
     /// C++ translation unit defines it.
     pub family: &'static str,
     /// The label of the owner that owes this entry point a body, as its
-    /// refusal prints it, or `None` for one this crate runs.
+    /// refusal prints it, or `None` for one this crate runs, which every
+    /// entry point of the registry is.
     pub owner: Option<&'static str>,
-    /// Whether this phase runs the entry point rather than refusing a send to
-    /// it. A bind succeeds either way -- what it decides is whether the
-    /// declaring *file* installs.
+    /// Whether this crate runs the entry point rather than refusing a send to
+    /// it, which it does for every entry point of the registry.
     pub implemented: bool,
 }
 
@@ -4040,23 +4182,39 @@ fn report_late_failures(
 }
 
 /// Runs `body` on a thread with `INTERPRETER_STACK_BYTES` of stack.
-fn on_interpreter_thread(body: impl FnOnce() -> Outcome + Send + 'static) -> Outcome {
+fn on_interpreter_thread(
+    body: impl FnOnce() -> (Outcome, Option<Interp>) + Send + 'static,
+) -> Outcome {
     on_thread_of(INTERPRETER_STACK_BYTES, body)
 }
 
-/// Runs `body` on a thread with `stack` bytes of stack.
-fn on_thread_of(stack: usize, body: impl FnOnce() -> Outcome + Send + 'static) -> Outcome {
+/// Runs `body` on a thread with `stack` bytes of stack and answers its
+/// outcome as soon as it has one. An interpreter `body` hands back still has
+/// calls in flight: it stays on that thread, serving them, and is dropped
+/// once they have ended ([`Interp::wind_down`]), while the caller goes on.
+fn on_thread_of(
+    stack: usize,
+    body: impl FnOnce() -> (Outcome, Option<Interp>) + Send + 'static,
+) -> Outcome {
+    let (deliver, delivered) = std::sync::mpsc::channel();
     let interpreter = std::thread::Builder::new()
         .name("rexx-interp".to_string())
         .stack_size(stack)
-        .spawn(|| {
+        .spawn(move || {
             signal::receive();
-            body()
+            let (outcome, kept) = body();
+            let _ = deliver.send(outcome);
+            if let Some(interp) = kept {
+                interp.wind_down();
+            }
         })
         .expect("spawning the interpreter thread");
-    match interpreter.join() {
+    match delivered.recv() {
         Ok(outcome) => outcome,
-        Err(panic) => std::panic::resume_unwind(panic),
+        Err(_) => match interpreter.join() {
+            Err(panic) => std::panic::resume_unwind(panic),
+            Ok(()) => unreachable!("the interpreter thread ended without an outcome"),
+        },
     }
 }
 
@@ -4083,6 +4241,8 @@ fn parse_failure_outcome(path: &[u8], rejected: &rexx_parse::Rejected) -> Outcom
     }];
     Outcome {
         exit_code: raised.exit_code(),
+        result: None,
+        error: Some(i32::from(raised.number)),
         stdout: Vec::new(),
         stderr: raised.report(&ClauseSite {
             path,
@@ -4106,9 +4266,12 @@ fn parse_failure_outcome(path: &[u8], rejected: &rexx_parse::Rejected) -> Outcom
 #[cold]
 #[inline(never)]
 fn unrestorable_outcome(raised: Raised) -> Outcome {
+    let number = i32::from(raised.number);
     let (stderr, exit_code) = launcher::positionless(raised);
     Outcome {
         exit_code,
+        result: None,
+        error: Some(number),
         stdout: Vec::new(),
         stderr,
         stack: StackSpan::default(),
@@ -4137,6 +4300,7 @@ enum Entry {
 
 /// Everything that happens on the interpreter thread: parse, run, report.
 /// `stack` is the thread's stack size, where known.
+#[cfg(test)]
 fn execute_on(
     path: &[u8],
     text: Vec<u8>,
@@ -4152,7 +4316,9 @@ fn execute_on(
     execute_as(path, text, entry, invocation, stack)
 }
 
-/// [`execute_on`] for any [`Entry`].
+/// [`execute_on`] for any [`Entry`]; an interpreter left with calls in
+/// flight serves them on this thread before this returns.
+#[cfg(test)]
 fn execute_as(
     path: &[u8],
     text: Vec<u8>,
@@ -4160,6 +4326,24 @@ fn execute_as(
     invocation: Invocation,
     stack: Option<usize>,
 ) -> Outcome {
+    let (outcome, kept) = execute_kept(path, text, entry, invocation, stack);
+    if let Some(interp) = kept {
+        interp.wind_down();
+    }
+    outcome
+}
+
+/// [`execute_as`], answering the interpreter with the outcome where a call is
+/// still in flight: a pool thread still running a call ends it under the
+/// baton, through this interpreter's state, which therefore outlives the
+/// run until [`Interp::wind_down`] has served that end.
+fn execute_kept(
+    path: &[u8],
+    text: Vec<u8>,
+    entry: Entry,
+    invocation: Invocation,
+    stack: Option<usize>,
+) -> (Outcome, Option<Interp>) {
     let probe = 0u8;
     let base = &raw const probe as usize;
     // `rexxc` translates its input as source, an image included: measured,
@@ -4169,7 +4353,7 @@ fn execute_as(
     } else {
         match compiled::program_source(text, path) {
             Ok(source) => source,
-            Err(raised) => return unrestorable_outcome(raised),
+            Err(raised) => return (unrestorable_outcome(raised), None),
         }
     };
     // A rejected source that passed an `EXTERNAL`'s resolution point needs an
@@ -4177,7 +4361,7 @@ fn execute_as(
     let program = match rexx_parse::program_from(source) {
         Ok(program) => Ok(program),
         Err(rejected) if rejected.binds.is_empty() => {
-            return parse_failure_outcome(path, &rejected);
+            return (parse_failure_outcome(path, &rejected), None);
         }
         Err(rejected) => Err(rejected),
     };
@@ -4201,6 +4385,13 @@ fn execute_as(
         .activity_mut()
         .set_frame_block(parts.frame_block);
     let (argument, deadline, switch_mode) = (parts.argument, parts.deadline, parts.switch_mode);
+    let (arguments, start, address) = (parts.arguments, parts.start, parts.address);
+    let exits = parts.exits;
+    // Reachable by `RexxSetHalt` and `RexxSetTrace` through either thread while it runs.
+    interp.trace_switchable = parts.classic_thread.is_some();
+    let _classic = parts.classic_thread.map(|caller| {
+        embedding::ClassicRun::register([caller, signal::current_thread()], interp.timer.inbox())
+    });
     interp.input = Input::new(parts.input);
     interp.standard_transient = parts.standard_transient;
     if let Some(sinks) = &parts.sinks {
@@ -4238,7 +4429,18 @@ fn execute_as(
     // demand -- and running it first leaves nothing of this program's to keep
     // reachable across the allocation it does.
     let result = interp.bootstrap_library().and_then(|()| {
-        if let Some(argument) = argument {
+        if let Some(arguments) = &arguments {
+            let mut values = Vec::with_capacity(arguments.len());
+            for argument in arguments {
+                values.push(argument.as_deref().map(|bytes| {
+                    let value = interp.text(bytes);
+                    // Rooted as the one argument below is.
+                    interp.roots.activity_mut().push_temp(value);
+                    value
+                }));
+            }
+            interp.activity.call_context.arguments = Rc::from(values);
+        } else if let Some(argument) = argument {
             let value = interp.text(&argument);
             // Rooted with a `push_temp` taken before `run`, which is what makes it
             // outlive every clause: `Op::Clause`'s region truncates the
@@ -4255,6 +4457,9 @@ fn execute_as(
         if let Some((directive, count)) = default_options {
             interp.send_default_options(&directive, count)?;
         }
+        if !exits.is_empty() {
+            interp.install_exits(&exits, &[], false);
+        }
         // After the bootstrap, so `SwitchMode::AtClause` counts this program's
         // clauses alone.
         if let Some(mode) = switch_mode {
@@ -4263,7 +4468,9 @@ fn execute_as(
         match (entry, program) {
             (_, Err(rejected)) => Err(interp.raise_parse_failure(&rejected, None)),
             (Entry::Translate, Ok(program)) => interp.translate(program),
-            (Entry::Run | Entry::CollectEveryAlloc, Ok(program)) => interp.run(program),
+            (Entry::Run | Entry::CollectEveryAlloc, Ok(program)) => {
+                interp.run_as_started(program, start, address)
+            }
         }
     });
     // The whole echo stack, innermost first: the levels `seal_site_level`
@@ -4278,6 +4485,16 @@ fn execute_as(
     // as a whole value, and every other call above this one only reads or
     // takes a single field, never the whole struct.
     let refused_main = matches!(result, Err(Failure::Loud(_) | Failure::Slice));
+    let error = match &result {
+        Err(Failure::Raised(raised)) => Some(i32::from(raised.number)),
+        _ => None,
+    };
+    let returned = match &result {
+        Ok(Some(value)) | Err(Failure::Exited(Some(value))) => {
+            interp.string_value_text(*value).ok()
+        }
+        _ => None,
+    };
     let mut exit_code = match result {
         // `Failure::Exited` is not a failure -- it is `EXIT` (or falling off
         // the routine's own end) reached through `ExprKind::Call`'s
@@ -4384,6 +4601,8 @@ fn execute_as(
 
     let outcome = Outcome {
         exit_code,
+        result: returned,
+        error,
         stdout: std::mem::take(&mut interp.out),
         stderr: std::mem::take(&mut interp.trace),
         stack,
@@ -4400,12 +4619,130 @@ fn execute_as(
             SharingReport { bootstrap, program }
         },
     };
-    // A pool thread still running a call ends it under the baton, through
-    // this interpreter's state, which therefore outlives the run.
-    if interp.activities.in_flight() {
-        std::mem::forget(interp);
+    let kept = interp.activities.in_flight().then_some(interp);
+    (outcome, kept)
+}
+
+/// The program an embedding instance's root activity runs: the native call
+/// it waits in, which the thread that created the instance acts as until
+/// `Terminate`. A halt that finds it running is taken quietly.
+const INSTANCE_ROOT: &[u8] = b"signal on halt name done\n\
+call WAIT\n\
+done:\n\
+exit\n\
+::routine WAIT external 'LIBRARY REXXEMBEDDING WAIT'\n";
+
+/// The name the root program's library is registered under.
+const INSTANCE_LIBRARY: &[u8] = b"REXXEMBEDDING";
+
+/// Everything an embedding instance's interpreter thread does: the
+/// interpreter is built and bootstrapped, `options` applied, `started` told
+/// the root thread context and the inbox, and the root activity waits in a
+/// native call that leaves the driver free to serve the attached threads'
+/// callbacks; once it returns, the run ends as a program's does.
+pub(crate) fn run_instance(
+    options: embedding::InstanceOptions,
+    started: Box<dyn FnOnce(usize, crate::sync::Arc<timer::Inbox<timer::Posted>>) + Send>,
+) -> (Outcome, Option<Interp>) {
+    use rexx_api::callbacks::Surface as _;
+    let probe = 0u8;
+    let base = &raw const probe as usize;
+    let program = rexx_parse::program_from(rexx_parse::ProgramSource::new(
+        INSTANCE_ROOT.to_vec(),
+        rexx_parse::SourceKind::Program,
+    ))
+    .unwrap_or_else(|_| panic!("the instance's root program parses"));
+    let mut interp = Interp::new();
+    interp.measure_stack(base, INTERPRETER_STACK_BYTES);
+    interp.program_path = b"RexxCreateInterpreter".to_vec();
+    interp.activity.call_context.name = Rc::from(&b"RexxCreateInterpreter"[..]);
+    interp.input = Input::new(ProgramInput::Stdin);
+    let stdout_terminal = std::io::IsTerminal::is_terminal(&std::io::stdout());
+    interp.out_lines = stdout_terminal;
+    interp.out_bound = OUTPUT_BOUND;
+    interp.say_bound = if stdout_terminal { 0 } else { OUTPUT_BOUND };
+    // After what the embedding C program wrote through stdio, as the oracle orders them.
+    interp.sinks = Some(Sinks {
+        stdout: Box::new(|bytes| {
+            use std::io::Write;
+            signal::flush_c_streams();
+            let mut stdout = std::io::stdout();
+            stdout.write_all(bytes).and_then(|()| stdout.flush())
+        }),
+        stderr: Box::new(|bytes| {
+            use std::io::Write;
+            signal::flush_c_streams();
+            std::io::stderr().write_all(bytes)
+        }),
+        stdout_terminal,
+        own_descriptors: true,
+    });
+    let result = interp.bootstrap_library().and_then(|()| {
+        interp.default_address = options.initial_address.as_deref().map(Rc::from);
+        interp.call_search = require::Instance {
+            path: options.external_call_path,
+            extensions: options.external_call_extensions,
+        };
+        for (name, handler) in options.command_handlers {
+            interp.add_command_handler(&name, handler.into_inner());
+        }
+        for (name, registered) in options.registered_environments {
+            interp
+                .subcom_aliases
+                .insert(name.to_ascii_uppercase(), registered);
+        }
+        for (name, package) in options.registered_libraries {
+            let library = package.into_library(&String::from_utf8_lossy(&name));
+            interp.register_library(&name, library);
+        }
+        for library in &options.load_libraries {
+            interp.load_library(library);
+        }
+        interp.install_exits(&options.registered_exits, &options.context_exits, true);
+        let library = rexx_api::load::embedding_library(embedding::wait_in_root);
+        interp.register_library(INSTANCE_LIBRARY, Ok(Some(library)));
+        let thread = interp.thread_context();
+        thread.keep();
+        thread.set_application_data(options.application_data);
+        started(thread.address(), interp.timer.inbox());
+        interp.leave_next_native = true;
+        let program = Rc::new(program);
+        let program_id = interp.load_program(Rc::clone(&program));
+        interp.set_instance_root(program_id);
+        interp.run_loaded(program, program_id, CallType::Command, None, None)
+    });
+    let mut stderr = Vec::new();
+    if let Err(Failure::Loud(loud)) = &result {
+        stderr.extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
     }
-    outcome
+    let mut refused = interp.run_ready_uninits();
+    let late = interp.run_started_to_end();
+    report_late_failures(&mut interp, late, b"RexxCreateInterpreter", &mut 0);
+    refused.extend(interp.terminate());
+    for loud in refused {
+        stderr.extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+    }
+    let mut trace = std::mem::take(&mut interp.trace);
+    trace.extend(stderr);
+    let outcome = Outcome {
+        exit_code: 0,
+        result: None,
+        error: None,
+        stdout: std::mem::take(&mut interp.out),
+        stderr: trace,
+        stack: interp.stack_span(),
+        collections: 0,
+        #[cfg(test)]
+        peak_body_bytes: 0,
+        chunks_refused: 0,
+        sim: None,
+        #[cfg(feature = "pinning")]
+        pinning: PinReport::default(),
+        #[cfg(feature = "sharing")]
+        sharing: SharingReport::default(),
+    };
+    let kept = interp.activities.in_flight().then_some(interp);
+    (outcome, kept)
 }
 
 #[cfg(test)]

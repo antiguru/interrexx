@@ -86,6 +86,8 @@ pub fn run_bounded_with(
 pub fn abandoned(path: &str, after: Duration) -> Outcome {
     Outcome {
         exit_code: DEADLINE_EXIT,
+        result: None,
+        error: None,
         stdout: Vec::new(),
         stderr: format!("rexx-watchdog: {path} was abandoned after {after:?}\n").into_bytes(),
         stack: StackSpan::default(),

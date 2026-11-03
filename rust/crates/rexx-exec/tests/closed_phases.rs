@@ -273,19 +273,33 @@ fn the_row_check_reads_only_a_resolution_that_opens_a_clause() {
 
 /// The negative control for the scan: a phase that is still open is found by
 /// the same walk, so an empty result above means the sites are gone and not
-/// that the scan is looking in the wrong place.
+/// that the scan is looking in the wrong place. No source of this crate names
+/// an open phase any more (Phase 10's owners are `Owner::Phase10` values), so
+/// the witness is a fixture walked as a crate's `src/`
+/// (`tests/closed_phases/src/`), beside a check that the walk of this crate
+/// reaches its sources and reads their literals.
 #[test]
 fn the_scan_finds_an_open_phase_it_is_not_asked_about() {
-    let open = source_files("rexx-exec")
+    let open = source_files("rexx-exec/tests/closed_phases")
         .iter()
         .flat_map(|path| literals(&fs::read_to_string(path).expect("a source")))
         .filter(|(_, literal)| names(literal, "Phase 10"))
         .count();
     assert!(
         open >= 2,
-        "the scan found {open} refusals naming a phase that is still open, so it \
-         is not reading the sources the other test clears"
+        "the scan found {open} refusals naming a phase that is still open in the \
+         fixture, so it does not read what the other test clears"
     );
+    let sources = source_files("rexx-exec");
+    assert!(
+        sources.iter().any(|path| shown(path) == "src/lib.rs"),
+        "the walk of rexx-exec did not reach src/lib.rs"
+    );
+    let read = sources
+        .iter()
+        .flat_map(|path| literals(&fs::read_to_string(path).expect("a source")))
+        .count();
+    assert!(read > 0, "the walk of rexx-exec read no literal");
 }
 
 /// The literal scan reads a phase inside a longer refusal text, across a
@@ -319,11 +333,11 @@ let r = r#"raw "q" Phase 8"#; let u = "Phase 80";
         .iter()
         .filter(|path| shown(path) == "src/ffi.rs")
         .flat_map(|path| literals(&fs::read_to_string(path).expect("a source")))
-        .filter(|(_, literal)| literal.starts_with("RexxInstanceInterface.AttachThread"))
+        .filter(|(_, literal)| literal.starts_with("RexxThreadInterface."))
         .count();
     assert!(
         read >= 1,
-        "the scan read no literal naming the member ffi.rs refuses, so it is not \
-         reading the file it clears"
+        "the scan read no literal naming a thread-table member, which ffi.rs \
+         holds, so it is not reading the file it clears"
     );
 }

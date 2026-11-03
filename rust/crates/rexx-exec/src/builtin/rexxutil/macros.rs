@@ -17,7 +17,7 @@ pub(crate) const BEFORE: u64 = 1;
 /// `RXMACRO_SEARCH_AFTER`.
 pub(crate) const AFTER: u64 = 2;
 /// `RXMACRO_SOURCE_NOT_FOUND`.
-const SOURCE_NOT_FOUND: u64 = 7;
+pub(crate) const SOURCE_NOT_FOUND: u64 = 7;
 
 fn status_of(reply: Result<Reply, u64>) -> u64 {
     match reply {
@@ -55,7 +55,7 @@ fn order(routine: &str, option: &[u8]) -> Result<u64, Failure> {
 
 /// The image of the program in `path`, or `None` where it cannot be read or does not translate.
 /// A compiled program is its own image.
-fn translate(path: &[u8], name: &[u8]) -> Option<Vec<u8>> {
+pub(crate) fn translate(path: &[u8], name: &[u8]) -> Option<Vec<u8>> {
     let text = std::fs::read(crate::paths::os_path(path)).ok()?;
     if text.is_empty() {
         return None;
@@ -201,7 +201,7 @@ pub(crate) fn save(
 }
 
 /// Writes `bytes` to `file`, removing a partial file on failure.
-fn write_file(file: &[u8], bytes: &[u8]) -> u64 {
+pub(crate) fn write_file(file: &[u8], bytes: &[u8]) -> u64 {
     let path = crate::paths::os_path(file);
     match std::fs::write(path, bytes) {
         Ok(()) => OK,

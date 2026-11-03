@@ -20,7 +20,7 @@ mod counters;
 pub(crate) mod drive;
 pub(crate) mod trace_flow;
 mod valid;
-pub(crate) use compile::compile;
+pub(crate) use compile::{compile, compile_unsettled};
 pub(crate) use drive::{DriveStart, Driven, Level};
 pub(crate) use golden::render_annotated;
 

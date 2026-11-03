@@ -79,6 +79,28 @@ pub struct Invocation {
     /// The register frame arena's block size.
     frame_block: FrameBlock,
     switch_mode: Option<SwitchMode>,
+    /// What an embedding's `RexxStart` passes in place of the command line's
+    /// one string: each argument, `None` an omitted one.
+    arguments: Option<Vec<Option<Vec<u8>>>>,
+    /// How the program is called, `PARSE SOURCE`'s second word.
+    start: StartType,
+    /// The initial `ADDRESS` environment, or `None` for the platform's.
+    address: Option<Vec<u8>>,
+    /// The system exits an embedding's `RexxStart` names: each a function code and the name
+    /// of a registered exit handler.
+    exits: Vec<(std::ffi::c_int, Vec<u8>)>,
+    /// The thread an embedding's `RexxStart` was called on, which `RexxSetHalt` and
+    /// `RexxSetTrace` name to reach this run.
+    classic_thread: Option<usize>,
+}
+
+/// How an embedding calls a program (`RXCOMMAND`, `RXSUBROUTINE`,
+/// `RXFUNCTION`, `api/rexx.h`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StartType {
+    Command,
+    Subroutine,
+    Function,
 }
 
 /// Where a test sets `SLICE` itself in place of the timer (spec 2026-09-29
@@ -154,6 +176,47 @@ impl Invocation {
             default_options: None,
             frame_block: FrameBlock::DEFAULT,
             switch_mode: None,
+            arguments: None,
+            start: StartType::Command,
+            address: None,
+            exits: Vec::new(),
+            classic_thread: None,
+        }
+    }
+
+    /// The same invocation, passing `arguments` (`None` an omitted one), as
+    /// `RexxStart` does, in place of one argument string.
+    pub fn with_arguments(self, arguments: Vec<Option<Vec<u8>>>) -> Invocation {
+        Invocation {
+            arguments: Some(arguments),
+            ..self
+        }
+    }
+
+    /// The same invocation, calling the program as `start` says.
+    pub fn with_start(self, start: StartType) -> Invocation {
+        Invocation { start, ..self }
+    }
+
+    /// The same invocation, with `address` the initial `ADDRESS` environment.
+    pub fn with_address(self, address: Vec<u8>) -> Invocation {
+        Invocation {
+            address: Some(address),
+            ..self
+        }
+    }
+
+    /// The same invocation, with the system exits `exits` names, each a function code and the
+    /// name of a registered exit handler.
+    pub fn with_exits(self, exits: Vec<(std::ffi::c_int, Vec<u8>)>) -> Invocation {
+        Invocation { exits, ..self }
+    }
+
+    /// The same invocation, run for a `RexxStart` called on the thread `thread`.
+    pub fn with_classic_thread(self, thread: usize) -> Invocation {
+        Invocation {
+            classic_thread: Some(thread),
+            ..self
         }
     }
 
@@ -278,6 +341,11 @@ impl Invocation {
             default_options: self.default_options,
             frame_block: self.frame_block,
             switch_mode: self.switch_mode,
+            arguments: self.arguments,
+            start: self.start,
+            address: self.address,
+            exits: self.exits,
+            classic_thread: self.classic_thread,
         }
     }
 }
@@ -295,6 +363,11 @@ pub(crate) struct InvocationParts {
     pub(crate) words: Vec<Vec<u8>>,
     pub(crate) words_base: Option<usize>,
     pub(crate) default_options: Option<(Vec<u8>, i64)>,
+    pub(crate) arguments: Option<Vec<Option<Vec<u8>>>>,
+    pub(crate) start: StartType,
+    pub(crate) address: Option<Vec<u8>>,
+    pub(crate) exits: Vec<(std::ffi::c_int, Vec<u8>)>,
+    pub(crate) classic_thread: Option<usize>,
     pub(crate) frame_block: FrameBlock,
     pub(crate) switch_mode: Option<SwitchMode>,
 }

@@ -10,16 +10,13 @@ pub enum Deferral {
     Extension,
     /// It belongs to a row 10 native-API group.
     Row10NativeApi,
-    /// It is the embedding API (ruling R4).
-    Embedding,
 }
 
 impl Deferral {
-    pub const ALL: [Deferral; 4] = [
+    pub const ALL: [Deferral; 3] = [
         Deferral::Rxapi,
         Deferral::Extension,
         Deferral::Row10NativeApi,
-        Deferral::Embedding,
     ];
 
     /// The variant's name, as a refusal and the row files spell it.
@@ -29,7 +26,6 @@ impl Deferral {
             Deferral::Rxapi => "Rxapi",
             Deferral::Extension => "Extension",
             Deferral::Row10NativeApi => "Row10NativeApi",
-            Deferral::Embedding => "Embedding",
         }
     }
 
@@ -55,7 +51,6 @@ impl Owner {
             Owner::Phase10(Deferral::Rxapi) => "Phase 10 Rxapi",
             Owner::Phase10(Deferral::Extension) => "Phase 10 Extension",
             Owner::Phase10(Deferral::Row10NativeApi) => "Phase 10 Row10NativeApi",
-            Owner::Phase10(Deferral::Embedding) => "Phase 10 Embedding",
         }
     }
 

@@ -6,6 +6,12 @@ use std::process::ExitCode;
 
 use rexx_exec::launcher::{self, Command, Program};
 
+#[path = "../../../librexx/src/rexxapi_exports.rs"]
+mod rexxapi_exports;
+
+#[path = "../../../librexx/src/exports.rs"]
+mod rexx_exports;
+
 fn main() -> ExitCode {
     rexx_exec::install_signal_handlers();
     let args: Vec<Vec<u8>> = std::env::args_os()

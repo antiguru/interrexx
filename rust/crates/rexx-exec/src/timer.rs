@@ -29,6 +29,10 @@ pub(crate) const SIM: u32 = 8;
 /// A callback from another thread was refused under `SIM`.
 pub(crate) const FOREIGN: u32 = 16;
 
+/// `RexxSetHalt` or `RexxSetTrace` posted to the inbox, beside `INBOX`: a native call that
+/// finds it pending when it returns has the calling clause's boundary serve the post.
+pub(crate) const BOUNDARY: u32 = 32;
+
 /// `ActivityManager::timeSliceLength` (`concurrency/ActivityManager.hpp:359`).
 const SLICE_LENGTH: Duration = Duration::from_millis(24);
 

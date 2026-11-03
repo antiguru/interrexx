@@ -145,6 +145,41 @@ fn a_program_without_commands_starts_no_daemon() {
     assert!(!service.api().exists(), "nothing connected to a service");
 }
 
+/// A daemon the program's first command starts is no child of the program: `SysWait` finds no
+/// child to wait for, rather than waiting on the daemon, and the daemon's parent is not `rexx`.
+#[test]
+fn a_started_daemon_is_no_child_of_the_program() {
+    let service = Service::new();
+    let output = service.run(
+        "'true'\n\
+         say SysWait()\n\
+         'read -r _ _ _ parent _ < /proc/$(cat \"$REXX_API_DIR\"/rxapi.*.lock)/stat;' -\n\
+         'test \"$parent\" != \"'SysQueryProcess('PID')'\"'\n\
+         say rc\n",
+    );
+    assert_eq!(stdout(&output), "-1\n0\n", "{}", stderr(&output));
+    assert_eq!(output.status.code(), Some(0));
+}
+
+/// `rxapi --stop` stops the service before it returns, also with `REXX_API_DETACH` in the
+/// environment, which only a client's start of the service sets: the stop is not handed to a
+/// detached process that reports success at once.
+#[test]
+fn a_stop_with_the_detach_variable_set_stops_before_it_returns() {
+    let service = Service::new();
+    let first = service.run("say rxfuncadd('NOFN', 'nosuchlib')\n");
+    assert_eq!(stdout(&first), "1\n", "{}", stderr(&first));
+    assert!(service.has_socket());
+    let stopped = Command::new(bin_dir().join("rxapi"))
+        .arg("--stop")
+        .env("REXX_API_DIR", service.api())
+        .env("REXX_API_DETACH", "1")
+        .output()
+        .expect("rxapi runs");
+    assert!(stopped.status.success(), "{stopped:?}");
+    assert!(!service.has_socket(), "the service still listens");
+}
+
 /// Review Focus 5: a daemon killed under a running program gives a clean error, not a hang or
 /// a panic.
 #[test]

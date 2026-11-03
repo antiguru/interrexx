@@ -160,17 +160,30 @@ fn no_production_literal_names_phase_10() {
 /// The negative control: the same walk over every file, test modules
 /// included, finds the vocabularies the claim leaves out, so an empty result
 /// above is not a scan of nothing.
+///
+/// No literal of this crate names Phase 10 any more, test modules included, so
+/// the vocabularies are a fixture walked as a crate's `src/`
+/// (`tests/phase_ten_reasons/src/`): Phase 10 named in an inline test module
+/// and in a `#[cfg(test)] mod tests;` file, found by the walk of every file and
+/// left out by the production walk.
 #[test]
 fn the_scan_reads_the_test_modules_it_leaves_out() {
-    let everywhere = source_files("rexx-exec")
+    const FIXTURE: &str = "rexx-exec/tests/phase_ten_reasons";
+    let everywhere = source_files(FIXTURE)
         .iter()
         .flat_map(|path| literals(&fs::read_to_string(path).expect("a source")))
         .filter(|(_, literal)| names(literal, "Phase 10"))
         .count();
-    assert!(
-        everywhere >= 1,
-        "no literal in rexx-exec names Phase 10 at all, so the scan reads nothing"
+    assert_eq!(
+        everywhere, 2,
+        "the walk of every file did not find the fixture's two test-module literals"
     );
+    assert_eq!(phase_ten_literals(FIXTURE), Vec::<String>::new());
+    let fixture_kept: Vec<String> = production_sources(FIXTURE)
+        .iter()
+        .map(|(path, _)| shown(path))
+        .collect();
+    assert_eq!(fixture_kept.len(), 1, "{fixture_kept:?}");
     let kept: BTreeSet<String> = production_sources("rexx-exec")
         .iter()
         .map(|(path, _)| shown(path))

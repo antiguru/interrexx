@@ -2128,5 +2128,20 @@
   "source": "Phase 10 PR 2 implementer; reproduced 2026-11-02 at r13346",
   "status": "open",
   "crate": "Raises HALT once, then queued() is 1 and linein answers 'after' (rexx-exec tests/rxapi.rs a_halt_ends_a_queue_wait_and_leaves_the_queue_usable)."
+ },
+ {
+  "id": "native-command-handler-hand-made-context-segv",
+  "added": "2026-11-02",
+  "title": "COMMAND to a .NativeCommandHandler with a CommandContext made by ~new segfaults",
+  "category": "crash",
+  "area": "command handlers",
+  "severity": "crash",
+  "repro": "h = .CommandHandler~handler(\"sh\"); say h~kind; ctx = .CommandContext~new(.object~new, \"x\"); say h~command(\"echo hi\", ctx) -- run with a private XDG_RUNTIME_DIR, under timeout",
+  "oracle": "Prints REDIRECTING, then dies of SIGSEGV (exit 139), 3 runs in 3 plus a controller rerun.",
+  "expected": "A condition naming the unusable context; the process survives.",
+  "cause": "",
+  "source": "Phase 10 PR 3 implementer; reproduced 2026-11-02 at r13346",
+  "status": "open",
+  "crate": "Raises Error 98.900 'this CommandContext belongs to a command that has ended.' (interrexx-clean phase-10/pr3-work, rexx-exec tests/command_handler.rs)."
  }
 ]

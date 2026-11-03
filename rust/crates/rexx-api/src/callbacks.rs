@@ -262,6 +262,80 @@ pub trait Surface {
     /// to the environment `name`, upper-cased, replacing the handler that
     /// name had.
     fn add_command_handler(&mut self, name: &[u8], handler: crate::load::CommandHandler);
+
+    /// One `RexxVariablePool` request against the calling activation's
+    /// variables (rexxpg, "Variable Pool Interface").
+    fn variable_pool(&mut self, request: PoolRequest<'_>) -> PoolAnswer;
+
+    /// Every variable of the calling activation as `RXSHV_NEXTV` answers it,
+    /// name and string value: a stem's own value under its name where it has
+    /// one, then each tail as a compound name.
+    fn pool_variables(&mut self) -> Vec<(Vec<u8>, Vec<u8>)>;
+
+    /// `RexxCallBack`: the calling activation's label `label` run as an
+    /// internal function over `arguments` (`None` an omitted one).
+    fn call_back(&mut self, label: &[u8], arguments: &[Option<Vec<u8>>]) -> CallBack;
+
+    /// Moves the session queue to the API service where the interpreter still holds it in
+    /// process, as it does before a command, so that a C API operation on it and the program
+    /// see one queue.
+    fn share_session_queue(&mut self);
+
+    /// `HaltThread` and, `all`, `Halt`: the running activity, or every
+    /// activity, asked to halt at its next clause.
+    fn halt(&mut self, all: bool);
+
+    /// `SetThreadTrace` and, `all`, `SetTrace`: external tracing of the
+    /// running activity, or of every activity, turned on or off.
+    fn set_trace(&mut self, all: bool, on: bool);
+
+    /// `RaiseConditionObject`: the condition `condition` describes held for
+    /// the call to raise once it returns; `false` where it is no directory.
+    fn raise_condition_object(&mut self, condition: ObjRef) -> bool;
+
+    /// `InterpreterInstance::stackCommandHandler`: `handler` answers commands
+    /// to `name`, covering the handler in use under it.
+    fn stack_command_handler(&mut self, name: &[u8], handler: crate::load::CommandHandler);
+}
+
+/// One `SHVBLOCK` request (`api/rexx.h`), its name as the block holds it.
+#[derive(Clone, Copy, Debug)]
+pub enum PoolRequest<'r> {
+    /// `RXSHV_SET` or, `symbolic`, `RXSHV_SYSET`.
+    Set {
+        name: &'r [u8],
+        symbolic: bool,
+        value: &'r [u8],
+    },
+    /// `RXSHV_FETCH` or `RXSHV_SYFET`.
+    Fetch { name: &'r [u8], symbolic: bool },
+    /// `RXSHV_DROPV` or `RXSHV_SYDRO`.
+    Drop { name: &'r [u8], symbolic: bool },
+    /// `RXSHV_PRIV`.
+    Private { name: &'r [u8] },
+}
+
+/// What one [`PoolRequest`] answered.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PoolAnswer {
+    /// Served: `new` where the variable had no value (`RXSHV_NEWV`), and the
+    /// value a fetch answers.
+    Served { new: bool, value: Option<Vec<u8>> },
+    /// `RXSHV_BADN`.
+    BadName,
+}
+
+/// What a [`Surface::call_back`] ended with.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum CallBack {
+    /// The label returned, with its result where it gave one.
+    Returned(Option<Vec<u8>>),
+    /// No such label (`RX_CB_BADN`).
+    NoLabel,
+    /// The call raised a condition or exited, which the host keeps for the
+    /// external function's caller: the external function does not get
+    /// control back.
+    Ended,
 }
 
 /// `Error_Incorrect_method_positive` (`api/oorexxerrors.h`), which `ArrayAt`
@@ -1356,6 +1430,55 @@ impl Activation<'_> {
         })
     }
 
+    /// One `RexxVariablePool` request against the calling activation.
+    pub fn pool_request(&self, request: PoolRequest<'_>) -> PoolAnswer {
+        self.with_surface(
+            "RexxVariablePool",
+            PoolAnswer::Served {
+                new: true,
+                value: None,
+            },
+            |cx| {
+                cx.host
+                    .surface()
+                    .expect("checked by with_surface")
+                    .variable_pool(request)
+            },
+        )
+    }
+
+    /// The next variable of an `RXSHV_NEXTV` sequence, `None` at its end.
+    pub fn pool_next(&self) -> Option<(Vec<u8>, Vec<u8>)> {
+        self.next_pool_variable(|| {
+            self.with_surface("RexxVariablePool", Vec::new(), |cx| {
+                cx.host
+                    .surface()
+                    .expect("checked by with_surface")
+                    .pool_variables()
+            })
+        })
+    }
+
+    /// [`Surface::share_session_queue`].
+    pub fn share_session_queue(&self) {
+        self.with_surface("RexxAddQueue", (), |cx| {
+            cx.host
+                .surface()
+                .expect("checked by with_surface")
+                .share_session_queue();
+        });
+    }
+
+    /// `RexxCallBack`.
+    pub fn call_back(&self, label: &[u8], arguments: &[Option<Vec<u8>>]) -> CallBack {
+        self.with_surface("RexxCallBack", CallBack::NoLabel, |cx| {
+            cx.host
+                .surface()
+                .expect("checked by with_surface")
+                .call_back(label, arguments)
+        })
+    }
+
     /// `GetObjectVariable`.
     pub fn object_variable(&self, name: &[u8]) -> RexxObjectPtr {
         self.surface_handle("MethodContextInterface.GetObjectVariable", |surface| {
@@ -1885,6 +2008,54 @@ impl Activation<'_> {
                 .expect("checked by with_surface")
                 .add_command_handler(name, handler);
         });
+    }
+
+    /// `StackCommandEnvironment`.
+    pub fn stack_command_environment(&self, name: &[u8], handler: crate::load::CommandHandler) {
+        self.with_surface("RexxInstanceInterface.StackCommandEnvironment", (), |cx| {
+            cx.host
+                .surface()
+                .expect("checked by with_surface")
+                .stack_command_handler(name, handler);
+        });
+    }
+
+    /// `HaltThread` and, `all`, `Halt`.
+    pub fn halt(&self, all: bool) {
+        self.with_surface("RexxThreadInterface.HaltThread", (), |cx| {
+            cx.host
+                .surface()
+                .expect("checked by with_surface")
+                .halt(all);
+        });
+    }
+
+    /// `SetThreadTrace` and, `all`, `SetTrace`.
+    pub fn set_trace(&self, all: bool, on: bool) {
+        self.with_surface("RexxThreadInterface.SetThreadTrace", (), |cx| {
+            cx.host
+                .surface()
+                .expect("checked by with_surface")
+                .set_trace(all, on);
+        });
+    }
+
+    /// `RaiseConditionObject`: a null or unknown handle is 93.911, one naming
+    /// no directory 93.948, as the oracle's stub reports them.
+    pub fn raise_condition_object(&self, handle: RexxObjectPtr) {
+        let Some(condition) = self.resolve(handle) else {
+            self.raise_syntax(93_911);
+            return;
+        };
+        let raised = self.with_surface("RexxThreadInterface.RaiseConditionObject", true, |cx| {
+            cx.host
+                .surface()
+                .expect("checked by with_surface")
+                .raise_condition_object(condition)
+        });
+        if !raised {
+            self.raise_syntax(93_948);
+        }
     }
 
     /// `ObjectToValue`: `handle` converted as `declared` asks, or `None`

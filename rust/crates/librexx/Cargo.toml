@@ -1,0 +1,22 @@
+[package]
+name = "librexx"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "rexx"
+# `rlib` beside the `cdylib` so `cargo test` builds the shared object its tests read.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# The interpreter the exports drive.
+rexx-exec = { path = "../rexx-exec" }
+# The `#[repr(C)]` structs of `api/rexx.h` and `api/oorexxapi.h`.
+rexx-api = { path = "../rexx-api" }
+# `malloc` and `free`, which `librexxapi`'s exports, owned here, use.
+libc = "0.2.186"
+
+[lints]
+workspace = true

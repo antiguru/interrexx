@@ -132,23 +132,45 @@ fn find_daemon() -> Result<PathBuf, TransportError> {
         .ok_or_else(|| TransportError::Unavailable("no rxapi executable found".to_owned()))
 }
 
+/// Set in the environment of an `rxapi` a client starts: that process starts the daemon as a
+/// child of its own and exits at once, so the daemon is no child of the client, whose program
+/// may wait for any child of its process (`SysWait`).
+pub const DETACH_VARIABLE: &str = "REXX_API_DETACH";
+
 fn start_daemon(daemon: &Path, dir: &Path) -> Result<(), TransportError> {
-    let child = Command::new(daemon)
+    let status = Command::new(daemon)
         .env("REXX_API_DIR", dir)
+        .env(DETACH_VARIABLE, "1")
         .current_dir("/")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
-        .spawn()
+        .status()
         .map_err(|error| unavailable(&error))?;
-    // Reaps a starter that lost the race, and otherwise waits out the daemon.
-    let _ = std::thread::Builder::new()
-        .name("rexx-api-start".to_owned())
-        .spawn(move || {
-            let mut child = child;
-            let _ = child.wait();
-        });
-    Ok(())
+    if status.success() {
+        Ok(())
+    } else {
+        Err(TransportError::Unavailable(format!(
+            "rxapi could not start the service: {status}"
+        )))
+    }
+}
+
+/// In an `rxapi` a client started, starts the daemon from this executable with the arguments
+/// given and without [`DETACH_VARIABLE`], answering whether it did; the caller exits at once.
+pub fn detach() -> Option<io::Result<()>> {
+    std::env::var_os(DETACH_VARIABLE)?;
+    let spawned = std::env::current_exe().and_then(|exe| {
+        Command::new(exe)
+            .args(std::env::args_os().skip(1))
+            .env_remove(DETACH_VARIABLE)
+            .current_dir("/")
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+    });
+    Some(spawned.map(drop))
 }
 
 fn unavailable(error: &io::Error) -> TransportError {
@@ -266,6 +288,9 @@ impl Unix {
     fn start_and_connect(dir: &Path, daemon: &Path, uid: u32) -> Result<Unix, TransportError> {
         let deadline = now() + START_TIMEOUT;
         let mut next_start = now();
+        // A start that fails is retried until the deadline, as one whose service never answers
+        // is (Resolution 9); the error then names the failed start where there was one.
+        let mut failed_start = None;
         loop {
             let error = match Unix::attempt(dir, PROTOCOL_VERSION, uid) {
                 Ok(connected) => return Ok(connected),
@@ -274,10 +299,10 @@ impl Unix {
             };
             let time = now();
             if time >= deadline {
-                return Err(unavailable(&error));
+                return Err(failed_start.unwrap_or_else(|| unavailable(&error)));
             }
             if time >= next_start {
-                start_daemon(daemon, dir)?;
+                failed_start = start_daemon(daemon, dir).err();
                 next_start = time + RESPAWN_INTERVAL;
             }
             pause();

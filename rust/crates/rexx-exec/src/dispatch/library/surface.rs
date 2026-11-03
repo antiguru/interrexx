@@ -426,6 +426,30 @@ impl Surface for Interp {
         }
     }
 
+    fn variable_pool(
+        &mut self,
+        request: rexx_api::callbacks::PoolRequest<'_>,
+    ) -> rexx_api::callbacks::PoolAnswer {
+        self.pool_request(request)
+    }
+
+    fn pool_variables(&mut self) -> Vec<(Vec<u8>, Vec<u8>)> {
+        Interp::pool_variables(self)
+    }
+
+    fn call_back(
+        &mut self,
+        label: &[u8],
+        arguments: &[Option<Vec<u8>>],
+    ) -> rexx_api::callbacks::CallBack {
+        Interp::call_back(self, label, arguments)
+    }
+
+    fn share_session_queue(&mut self) {
+        let shared = Interp::share_session_queue(self);
+        self.held(shared);
+    }
+
     fn in_caller(&mut self, frame: u64, serve: &mut dyn FnMut(&mut dyn Surface)) {
         match self.suspended_caller(frame) {
             Some(index) => serve(&mut *CallerSwap::new(self, index)),
@@ -638,7 +662,7 @@ impl Surface for Interp {
             self.hold_native_condition(raised.into());
             return None;
         };
-        let routine = self.new_file_executable(&path, true, None);
+        let routine = self.new_file_executable(&path, true, None, true);
         let routine = self.held(routine)?;
         self.roots.activity_mut().push_temp(routine);
         let (program, directive) = self.executable_sources.get(&routine)?.routine?;
@@ -721,11 +745,77 @@ impl Surface for Interp {
         }
     }
 
+    /// `InterpreterInstance::addCommandHandler` (`runtime/InterpreterInstance.cpp:913`):
+    /// the handler replaces whatever the name had, stacked handlers included.
     fn add_command_handler(&mut self, name: &[u8], handler: rexx_api::load::CommandHandler) {
-        self.command_handlers.insert(
-            name.to_ascii_uppercase().into_boxed_slice(),
-            std::rc::Rc::new(handler),
-        );
+        let upper = name.to_ascii_uppercase();
+        self.environments.replace(&upper);
+        self.command_handlers
+            .insert(upper.into_boxed_slice(), std::rc::Rc::new(handler));
+    }
+
+    /// Covers the handler in use under `name`, as `.CommandHandler~register`
+    /// covers it: what uncovers it again is `.CommandHandler~deregister`'s.
+    fn stack_command_handler(&mut self, name: &[u8], handler: rexx_api::load::CommandHandler) {
+        self.stack_native_environment(name, handler);
+    }
+
+    fn halt(&mut self, all: bool) {
+        if all {
+            self.halt_all();
+        } else {
+            self.halt_running();
+        }
+    }
+
+    /// `Activity::setTrace` (`concurrency/Activity.cpp`): the running Rexx
+    /// frame's external trace, `TRACE ?R` on and `TRACE O` off. An idle
+    /// activity's frame is not reached.
+    fn set_trace(&mut self, _all: bool, on: bool) {
+        self.set_external_trace(on);
+    }
+
+    /// `Activity::raiseConditionObject`: the condition `condition` names,
+    /// with its description, additional and result, and `condition` itself
+    /// as the object `CONDITION('O')` answers; a `SYNTAX` one by its `CODE`.
+    fn raise_condition_object(&mut self, condition: ObjRef) -> bool {
+        if !Surface::is_of_class(self, condition, "Directory") {
+            return false;
+        }
+        let text = |interp: &mut Interp, name: &[u8]| {
+            Surface::directory_entry(interp, condition, name)
+                .map(|value| interp.unsent_string_value_text(value))
+        };
+        let name = text(self, b"CONDITION")
+            .unwrap_or_default()
+            .to_ascii_uppercase();
+        let description = text(self, b"DESCRIPTION");
+        let raised = if name == b"SYNTAX" {
+            let code = text(self, b"CODE").unwrap_or_default();
+            let code = String::from_utf8_lossy(&code).into_owned();
+            let (major, minor) = code.split_once('.').unwrap_or((code.as_str(), "0"));
+            Raised {
+                description,
+                ..Raised::syntax(
+                    major.trim().parse().unwrap_or(0),
+                    minor.trim().parse().unwrap_or(0),
+                    Vec::new(),
+                )
+            }
+        } else {
+            Raised {
+                description,
+                ..Raised::condition(Cow::Owned(String::from_utf8_lossy(&name).into_owned()))
+            }
+        };
+        let additional = Surface::directory_entry(self, condition, b"ADDITIONAL");
+        let result = Surface::directory_entry(self, condition, b"RESULT");
+        let frame = self.native_frame_mut();
+        frame.raised = Some(raised.into());
+        frame.additional = additional;
+        frame.result = result;
+        frame.condition = Some(condition);
+        true
     }
 }
 
@@ -831,7 +921,7 @@ impl Interp {
 
     /// The value `result` carries, or `None` with its condition held on the
     /// running native call.
-    fn held<T>(&mut self, result: Result<T, Failure>) -> Option<T> {
+    pub(super) fn held<T>(&mut self, result: Result<T, Failure>) -> Option<T> {
         match result {
             Ok(value) => Some(value),
             Err(failure) => {
@@ -858,7 +948,7 @@ impl Interp {
     /// A compound name's stem, with its period, and its tail resolved as
     /// `VALUE` resolves one: each piece that is a symbol replaced by the
     /// variable's value.
-    fn compound_parts(&mut self, upper: &[u8]) -> (Vec<u8>, Vec<u8>) {
+    pub(super) fn compound_parts(&mut self, upper: &[u8]) -> (Vec<u8>, Vec<u8>) {
         let dot = upper
             .iter()
             .position(|&byte| byte == b'.')
@@ -881,6 +971,27 @@ impl Interp {
         };
         self.roots.activity_mut().push_temp(object);
         Some(object)
+    }
+
+    /// `serve` with the activation `id` of this activity swapped in as the
+    /// running one, as a native callback reaches its caller's variables
+    /// (`Activity::setCallbackParent`), or `None` where this activity holds no
+    /// such activation.
+    pub(crate) fn in_activation<R>(
+        &mut self,
+        id: crate::activation::ActivationId,
+        serve: impl FnOnce(&mut Interp) -> R,
+    ) -> Option<R> {
+        if self.activity.running.as_ref()?.id == id {
+            return Some(serve(self));
+        }
+        let index = self
+            .activity
+            .suspended
+            .iter()
+            .position(|held| held.id == id)?;
+        let mut swapped = CallerSwap::new(self, index);
+        Some(serve(&mut swapped))
     }
 
     /// The index in [`Activity::suspended`] of the activation that made the

@@ -9,15 +9,13 @@ use std::marker::PhantomData;
 use std::ptr::NonNull;
 use std::rc::Rc;
 
-use rexx_core::{Deferral, Owner};
-
 use crate::layout::{
     CSTRING, CallContextInterface, ExitContextInterface, IORedirectorInterface,
     MethodContextInterface, Owned, POINTER, REXXPFN, RexxArrayObject, RexxBufferObject,
     RexxBufferStringObject, RexxCallContext_, RexxCondition, RexxDirectoryObject, RexxExitContext_,
     RexxIORedirectorContext_, RexxInstance_, RexxInstanceInterface, RexxMethodContext_,
     RexxMutableBufferObject, RexxObjectPtr, RexxPackageEntry, RexxPointerObject, RexxStringObject,
-    RexxThreadContext_, RexxThreadInterface, ValueDescriptor, logical_t, refusal, stringsize_t,
+    RexxThreadContext_, RexxThreadInterface, ValueDescriptor, logical_t, stringsize_t,
     wholenumber_t,
 };
 use crate::redirect::Redirector;
@@ -339,6 +337,10 @@ pub static INSTANCE: RexxInstanceInterface = {
     table.LanguageLevel = language_level;
     table.AttachThread = attach_thread;
     table.AddCommandEnvironment = add_command_environment;
+    table.StackCommandEnvironment = stack_command_environment;
+    table.Terminate = terminate;
+    table.Halt = halt;
+    table.SetTrace = set_trace;
     table
 };
 
@@ -488,6 +490,9 @@ pub const THREAD: RexxThreadInterface = {
     table.RegisterLibrary = register_library;
     table.GetInterpreterInstance = get_interpreter_instance;
     table.DetachThread = detach_thread;
+    table.HaltThread = halt_thread;
+    table.SetThreadTrace = set_thread_trace;
+    table.RaiseConditionObject = raise_condition_object;
     table
 };
 
@@ -588,7 +593,9 @@ impl<'a> RedirectorContext<'a> {
 /// Its callbacks reach the innermost native call in flight, which is what
 /// `contextToActivation` does for a thread context
 /// (`interpreter/concurrency/Activity.hpp:458`). A clone addresses the same
-/// context; the allocation lives until the last clone is dropped.
+/// context; the allocation lives until the last clone is dropped, unless it
+/// is kept ([`ThreadContext::keep`], `AttachThread`), when it lives for the
+/// rest of the process.
 #[derive(Clone)]
 pub struct ThreadContext {
     home: Rc<Home>,
@@ -664,10 +671,16 @@ struct Home(NonNull<Thread>);
 
 impl Drop for Home {
     fn drop(&mut self) {
+        let raw = self.0.as_ptr();
+        // SAFETY: the allocation is live until this drop frees it; the flag
+        // is read through its own field.
+        if unsafe { (*raw).kept.load(std::sync::atomic::Ordering::Acquire) } {
+            return;
+        }
         // SAFETY: the pointer came from `Box::into_raw` in
         // `ThreadContext::new`, and only this `Home`, which is not `Clone`,
         // frees it.
-        drop(unsafe { Box::from_raw(self.0.as_ptr()) });
+        drop(unsafe { Box::from_raw(raw) });
     }
 }
 
@@ -678,6 +691,12 @@ struct Thread {
     instance: Owned<RexxInstance_, Innermost>,
     table: ThreadTable,
     innermost: Innermost,
+    /// The allocation, and the table it links, are never freed: a thread
+    /// other than the interpreter's holds the context or its instance and
+    /// may call through them after the interpreter has ended
+    /// (`DetachThread` after `Terminate`). Set by [`ThreadContext::keep`]
+    /// and by `AttachThread`.
+    kept: std::sync::atomic::AtomicBool,
 }
 
 /// The innermost native call in flight on this context, null where none is,
@@ -694,6 +713,107 @@ thread_local! {
     /// thread, as `layout.rs`'s `REFUSED` is, since a thread's calls nest on
     /// its own stack (spec 2026-09-29 2.4, 2.5).
     static CALLING: Cell<*const Entered<'static>> = const { Cell::new(std::ptr::null()) };
+
+    /// The thread contexts this OS thread is attached to by `AttachThread`,
+    /// or by `RexxCreateInterpreter` on the thread that created the instance,
+    /// each with its count of attaches not yet detached: a callback through
+    /// one from this thread, which runs no native call of its activity,
+    /// reaches that activity's innermost call as its own.
+    static ATTACHED: std::cell::RefCell<Vec<(usize, usize)>> =
+        const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Whether this thread is attached to the thread context at `context`.
+fn attached_here(context: usize) -> bool {
+    ATTACHED.with_borrow(|attached| attached.iter().any(|(at, _)| *at == context))
+}
+
+/// Attaches this thread to the thread context at `context` once more.
+fn attach_here(context: usize) {
+    ATTACHED.with_borrow_mut(
+        |attached| match attached.iter_mut().find(|(at, _)| *at == context) {
+            Some((_, count)) => *count += 1,
+            None => attached.push((context, 1)),
+        },
+    );
+}
+
+/// Ends one attach of this thread to `context`, answering whether it was
+/// attached.
+fn detach_here(context: usize) -> bool {
+    ATTACHED.with_borrow_mut(|attached| {
+        let Some(at) = attached.iter().position(|(at, _)| *at == context) else {
+            return false;
+        };
+        attached[at].1 -= 1;
+        if attached[at].1 == 0 {
+            attached.remove(at);
+        }
+        true
+    })
+}
+
+/// The stack of this thread, its highest address and its size, where the
+/// thread is attached to some thread context; `None` otherwise or where the
+/// platform does not say.
+#[must_use]
+pub fn attached_stack() -> Option<(usize, usize)> {
+    if ATTACHED.with_borrow(Vec::is_empty) {
+        return None;
+    }
+    // SAFETY: `pthread_getattr_np` fills the zeroed attribute object for the
+    // calling thread, which `pthread_attr_getstack` reads and
+    // `pthread_attr_destroy` releases; every pointer is to a live local.
+    unsafe {
+        let mut attributes: libc::pthread_attr_t = std::mem::zeroed();
+        if libc::pthread_getattr_np(libc::pthread_self(), &raw mut attributes) != 0 {
+            return None;
+        }
+        let mut low: *mut std::ffi::c_void = std::ptr::null_mut();
+        let mut size: libc::size_t = 0;
+        let read = libc::pthread_attr_getstack(&raw const attributes, &raw mut low, &raw mut size);
+        libc::pthread_attr_destroy(&raw mut attributes);
+        (read == 0).then(|| (low as usize + size, size))
+    }
+}
+
+/// Attaches this thread to the thread context at `context`, as
+/// `RexxCreateInterpreter` attaches the thread that created the instance.
+pub fn attach_current_thread(context: usize) {
+    attach_here(context);
+}
+
+/// Detaches this thread from `context` entirely, as a terminated instance's
+/// creating thread is.
+pub fn forget_attached(context: usize) {
+    ATTACHED.with_borrow_mut(|attached| attached.retain(|(at, _)| *at != context));
+}
+
+/// What an embedding serves for the instance members that act on a whole
+/// instance rather than on a native call: its interpreter is reached by the
+/// address of its root thread context, from any thread.
+pub trait Embedder: Send + Sync {
+    /// `Terminate`: ends the instance whose root context is at `context`,
+    /// answering once it has ended; `false` where `context` is no instance's
+    /// or the instance cannot end now.
+    fn terminate(&self, context: usize) -> bool;
+    /// `Halt`: asks every activity of the instance to halt; `false` where
+    /// `context` is no instance's.
+    fn halt(&self, context: usize) -> bool;
+    /// `SetTrace`: turns external tracing of every activity on or off;
+    /// `false` where `context` is no instance's.
+    fn set_trace(&self, context: usize, on: bool) -> bool;
+}
+
+static EMBEDDER: std::sync::OnceLock<&'static dyn Embedder> = std::sync::OnceLock::new();
+
+/// Installs the process's [`Embedder`], once.
+pub fn set_embedder(embedder: &'static dyn Embedder) {
+    let _ = EMBEDDER.set(embedder);
+}
+
+fn embedder() -> Option<&'static dyn Embedder> {
+    EMBEDDER.get().copied()
 }
 
 /// The calls entered on this OS thread and not yet returned, innermost
@@ -738,6 +858,7 @@ impl ThreadContext {
             },
             table: table.clone(),
             innermost: Innermost(Cell::new(std::ptr::null()), table.requester.clone()),
+            kept: std::sync::atomic::AtomicBool::new(false),
         }));
         // SAFETY: `raw` is the allocation just made and nothing else addresses
         // it yet. Every link is taken from `raw` itself, so its provenance is
@@ -758,6 +879,20 @@ impl ThreadContext {
         }
     }
 
+    /// Keeps this context's allocation, the instance it links and the
+    /// table it links for the rest of the process, as an embedding's root
+    /// context is kept: the thread that created the instance, and any thread
+    /// still attached when it terminates, call through them afterwards.
+    pub fn keep(&self) {
+        let raw = self.home.0.as_ptr();
+        // SAFETY: the allocation is live while `self` is; the flag is atomic.
+        unsafe {
+            (*raw)
+                .kept
+                .store(true, std::sync::atomic::Ordering::Release)
+        };
+    }
+
     /// The address an extension is handed, as a number.
     #[must_use]
     pub fn address(&self) -> usize {
@@ -770,6 +905,28 @@ impl ThreadContext {
         // SAFETY: the allocation is live while `self` is, and naming a
         // field's address reads and writes nothing.
         unsafe { (&raw mut (*raw).thread).cast() }
+    }
+
+    /// The address of the instance this context links, as an embedding
+    /// hands it out.
+    #[must_use]
+    pub fn instance_address(&self) -> usize {
+        let raw = self.home.0.as_ptr();
+        // SAFETY: the allocation is live while `self` is, and naming a
+        // field's address reads and writes nothing.
+        unsafe { (&raw mut (*raw).instance) as usize }
+    }
+
+    /// Sets the `applicationData` the instance this context links carries
+    /// (`APPLICATION_DATA`), before any extension is handed it.
+    pub fn set_application_data(&self, data: usize) {
+        let raw = self.home.0.as_ptr();
+        // SAFETY: the allocation is live while `self` is; the field is plain
+        // data, written before the instance is handed out, so nothing reads
+        // it meanwhile.
+        unsafe {
+            (*raw).instance.context.applicationData = data as *mut std::ffi::c_void;
+        }
     }
 
     /// `InterpreterVersion`, called through the instance this context links,
@@ -1223,7 +1380,7 @@ unsafe fn innermost_activation<'a>(
 fn raise_invalid_thread(running: &Reached<'_>) {
     if running.abandoned || running.is_busy() {
         if running.pending().is_none() {
-            running.raise(INVALID_THREAD);
+            running.stick(INVALID_THREAD);
         }
         return;
     }
@@ -1292,6 +1449,11 @@ unsafe fn reached<'a>(context: *mut RexxThreadContext_, slot: &str) -> Addressed
     // `ThreadContext`, whose wrapper's `owner` is its `Innermost`, a field of
     // the same allocation.
     let cell = unsafe { &*owner_of::<RexxThreadContext_, Innermost>(context) };
+    if attached_here(context as usize)
+        && !calls_here().any(|entry| std::ptr::eq(entry.innermost, cell))
+    {
+        return attached_call(context, cell, slot);
+    }
     // SAFETY: a call in flight on this thread outlives the callback it makes.
     let calling = unsafe { CALLING.get().cast::<Entered<'a>>().as_ref() };
     let held = match calling {
@@ -1342,6 +1504,34 @@ unsafe fn reached<'a>(context: *mut RexxThreadContext_, slot: &str) -> Addressed
     } else {
         Addressed::Elsewhere(running_reached, None)
     }
+}
+
+/// The innermost call of `cell`'s activity, reached from a thread attached to
+/// its context that runs none of its calls: the attached thread acts as that
+/// call, as the oracle's attached thread is its activity, under the baton the
+/// context's requester takes.
+///
+/// # Panics
+/// Where no native call of the activity is in flight, as [`reached`].
+fn attached_call<'a>(
+    context: *mut RexxThreadContext_,
+    cell: &'a Innermost,
+    slot: &str,
+) -> Addressed<'a> {
+    let held = match &cell.1 {
+        Some(requester) => crate::values::BatonHold::take_for(&**requester, context as usize),
+        None => crate::values::BatonHold::none(),
+    };
+    let innermost = cell.0.get();
+    assert!(
+        !innermost.is_null(),
+        "RexxThreadInterface.{slot} was called with no native call in flight"
+    );
+    // SAFETY: a non-null pointer is a call `ThreadContext::enter` is running,
+    // whose activation is borrowed for as long as the pointer is there, and
+    // the baton is held, so nothing else reaches it meanwhile.
+    let innermost = unsafe { &*(*innermost).activation.cast::<Activation<'a>>() };
+    Addressed::Here(Reached::checked(innermost, held), None)
 }
 
 ///
@@ -4151,13 +4341,38 @@ unsafe fn runs_here(thread: *const Thread) -> bool {
     calls_here().any(|entry| std::ptr::eq(entry.innermost, cell))
 }
 
-/// `AttachThread` from a thread running a native call of the instance's
-/// activity: that thread is attached already, so the context it answers is
-/// the one the running call has.
+/// The [`Thread`] whose `instance` field `instance` is.
 ///
-/// # Panics
-/// Called from a thread running no native call of the instance's activity,
-/// which is embedding.
+/// # Safety
+/// `instance` is an instance a live [`ThreadContext`] links.
+unsafe fn thread_of_instance(instance: *mut RexxInstance_) -> *mut Thread {
+    // SAFETY: the caller guarantees `instance` is the `instance` field of a
+    // live `Thread`, and it was taken from that whole allocation, so stepping
+    // back to the allocation's start stays inside its provenance.
+    unsafe {
+        instance
+            .cast::<u8>()
+            .sub(std::mem::offset_of!(Thread, instance))
+            .cast::<Thread>()
+    }
+}
+
+/// The thread context of the [`Thread`] `thread`.
+///
+/// # Safety
+/// `thread` is a live `Thread`.
+unsafe fn context_of_thread(thread: *mut Thread) -> *mut RexxThreadContext_ {
+    // SAFETY: the caller guarantees `thread`; naming a field reads nothing.
+    unsafe { (&raw mut (*thread).thread).cast() }
+}
+
+/// `AttachThread` (`interpreter/api/InterpreterInstanceStubs.cpp:61`): the
+/// instance's context, which a thread running a native call of its activity
+/// already has. Any other thread is attached to it, so its callbacks reach
+/// that activity's innermost call, until it detaches: every attached thread
+/// shares the one activity, its calls serialized by the baton. The context is
+/// kept, so a `DetachThread` after the interpreter has ended reads live
+/// memory and finds the thread attached.
 ///
 /// # Safety
 /// `instance` is an instance a live [`ThreadContext`] links, and a non-null
@@ -4166,29 +4381,24 @@ unsafe extern "C" fn attach_thread(
     instance: *mut RexxInstance_,
     attached: *mut *mut RexxThreadContext_,
 ) -> logical_t {
-    // SAFETY: the caller guarantees `instance` is the `instance` field of a
-    // live `Thread`, and it was taken from that whole allocation, so stepping
-    // back to the allocation's start stays inside its provenance.
-    let thread = unsafe {
-        instance
-            .cast::<u8>()
-            .sub(std::mem::offset_of!(Thread, instance))
-            .cast::<Thread>()
-    };
+    // SAFETY: the caller guarantees `instance`.
+    let thread = unsafe { thread_of_instance(instance) };
     // SAFETY: as above.
-    let home = unsafe { runs_here(thread) };
-    assert!(
-        home,
-        "{}",
-        refusal(
-            "RexxInstanceInterface.AttachThread",
-            Owner::Phase10(Deferral::Embedding)
-        )
-    );
+    let context = unsafe { context_of_thread(thread) };
+    // SAFETY: as above.
+    if !unsafe { runs_here(thread) } {
+        // SAFETY: as above; the flag is atomic, and set before this thread
+        // is handed the context it keeps past the interpreter's end.
+        unsafe {
+            (*thread)
+                .kept
+                .store(true, std::sync::atomic::Ordering::Release)
+        };
+        attach_here(context as usize);
+    }
     if !attached.is_null() {
-        // SAFETY: the caller guarantees the write; the context is the
-        // allocation's own `thread` field.
-        unsafe { attached.write((&raw mut (*thread).thread).cast()) };
+        // SAFETY: the caller guarantees the write.
+        unsafe { attached.write(context) };
     }
     1
 }
@@ -4199,8 +4409,8 @@ unsafe extern "C" fn attach_thread(
 /// a null name or a null handler registers nothing.
 ///
 /// # Panics
-/// Called from a thread running no native call of the instance's activity,
-/// which is embedding.
+/// Called from a thread running no native call of the instance's activity
+/// and attached to none, where no call of that activity is in flight.
 ///
 /// # Safety
 /// `instance` is an instance a live [`ThreadContext`] links, a non-null
@@ -4212,37 +4422,138 @@ unsafe extern "C" fn add_command_environment(
     handler: REXXPFN,
     kind: std::ffi::c_int,
 ) {
-    // SAFETY: as in `attach_thread`.
-    let thread = unsafe {
-        instance
-            .cast::<u8>()
-            .sub(std::mem::offset_of!(Thread, instance))
-            .cast::<Thread>()
-    };
-    // SAFETY: as in `attach_thread`.
-    let home = unsafe { runs_here(thread) };
-    assert!(
-        home,
-        "{}",
-        refusal(
-            "RexxInstanceInterface.AddCommandEnvironment from another thread",
-            Owner::Phase10(Deferral::Embedding)
-        )
-    );
-    // SAFETY: as in `attach_thread`; the context is the allocation's own
-    // `thread` field.
-    let activation = unsafe {
-        innermost_activation((&raw mut (*thread).thread).cast(), "AddCommandEnvironment")
-    };
-    let activation = or_nothing!(activation);
-    // SAFETY: the caller guarantees the terminator.
-    let (Some(name), Some(handler)) = (
-        unsafe { name_of(name) },
-        crate::load::CommandHandler::new(handler, kind),
-    ) else {
+    // SAFETY: the caller's guarantees, which are `command_environment`'s.
+    unsafe { command_environment(instance, name, handler, kind, false) };
+}
+
+/// `StackCommandEnvironment`: as `AddCommandEnvironment`, the handler
+/// covering the one in use under `name`; true where it was added.
+///
+/// # Panics
+/// As [`add_command_environment`].
+///
+/// # Safety
+/// As [`add_command_environment`].
+unsafe extern "C" fn stack_command_environment(
+    instance: *mut RexxInstance_,
+    name: CSTRING,
+    handler: REXXPFN,
+    kind: std::ffi::c_int,
+) -> logical_t {
+    // SAFETY: the caller's guarantees, which are `command_environment`'s.
+    logical_t::from(unsafe { command_environment(instance, name, handler, kind, true) })
+}
+
+/// The two command-environment members: from a thread running no call of
+/// the instance's activity, attached for the length of the call, as the
+/// oracle attaches it. Answers whether a handler was added.
+///
+/// # Safety
+/// As [`add_command_environment`].
+unsafe fn command_environment(
+    instance: *mut RexxInstance_,
+    name: CSTRING,
+    handler: REXXPFN,
+    kind: std::ffi::c_int,
+    stack: bool,
+) -> bool {
+    // SAFETY: the caller guarantees `instance`.
+    let thread = unsafe { thread_of_instance(instance) };
+    // SAFETY: as above.
+    let context = unsafe { context_of_thread(thread) };
+    // SAFETY: as above.
+    let visiting = !unsafe { runs_here(thread) } && !attached_here(context as usize);
+    if visiting {
+        attach_here(context as usize);
+    }
+    let added = (|| {
+        // SAFETY: the caller guarantees the terminator.
+        let (Some(name), Some(handler)) = (
+            unsafe { name_of(name) },
+            crate::load::CommandHandler::new(handler, kind),
+        ) else {
+            return false;
+        };
+        // SAFETY: `context` is the live allocation's own `thread` field.
+        let activation = unsafe { innermost_activation(context, "AddCommandEnvironment") };
+        let Some(activation) = activation else {
+            return false;
+        };
+        if stack {
+            activation.stack_command_environment(name, handler);
+        } else {
+            activation.add_command_environment(name, handler);
+        }
+        true
+    })();
+    if visiting {
+        detach_here(context as usize);
+    }
+    added
+}
+
+/// `Terminate` (`interpreter/api/InterpreterInstanceStubs.cpp:52`): ends the
+/// instance and returns once it has ended. A thread still attached is not
+/// waited for unless it is inside a callback (measured on the oracle: a
+/// thread attached and idle detaches after `Terminate` has returned). From a thread running a call of its activity, and for an
+/// interpreter no embedding created, it does nothing, as the oracle's
+/// `terminate` refuses while the root activity is active.
+///
+/// # Safety
+/// `instance` is an instance a live [`ThreadContext`] links.
+unsafe extern "C" fn terminate(instance: *mut RexxInstance_) {
+    // SAFETY: the caller guarantees `instance`.
+    let thread = unsafe { thread_of_instance(instance) };
+    // SAFETY: as above.
+    if unsafe { runs_here(thread) } {
         return;
-    };
-    activation.add_command_environment(name, handler);
+    }
+    // SAFETY: as above.
+    let context = unsafe { context_of_thread(thread) } as usize;
+    if embedder().is_some_and(|embedder| embedder.terminate(context)) {
+        forget_attached(context);
+    }
+}
+
+/// `Halt` (`interpreter/api/InterpreterInstanceStubs.cpp:67`): every activity
+/// of the instance is asked to halt, from any thread.
+///
+/// # Safety
+/// `instance` is an instance a live [`ThreadContext`] links.
+unsafe extern "C" fn halt(instance: *mut RexxInstance_) {
+    // SAFETY: the caller guarantees `instance`.
+    let thread = unsafe { thread_of_instance(instance) };
+    // SAFETY: as above.
+    let context = unsafe { context_of_thread(thread) };
+    if embedder().is_some_and(|embedder| embedder.halt(context as usize)) {
+        return;
+    }
+    // SAFETY: as above; only a thread that reaches a call of the activity.
+    if unsafe { runs_here(thread) } || attached_here(context as usize) {
+        // SAFETY: as above.
+        or_nothing!(unsafe { innermost_activation(context, "Halt") }).halt(true);
+    }
+}
+
+/// `SetTrace` (`interpreter/api/InterpreterInstanceStubs.cpp:73`): external
+/// tracing of every activity of the instance on or off.
+///
+/// # Safety
+/// As [`halt`].
+unsafe extern "C" fn set_trace(instance: *mut RexxInstance_, setting: logical_t) {
+    // SAFETY: the caller guarantees `instance`.
+    let thread = unsafe { thread_of_instance(instance) };
+    // SAFETY: as above.
+    let context = unsafe { context_of_thread(thread) };
+    if embedder().is_some_and(|embedder| embedder.set_trace(context as usize, setting != 0)) {
+        return;
+    }
+    // SAFETY: as in `halt`.
+    if unsafe { runs_here(thread) } || attached_here(context as usize) {
+        // SAFETY: as above.
+        or_nothing!(unsafe { innermost_activation(context, "SetTrace") })
+            .set_trace(true, setting != 0);
+    }
 }
 
 /// The members a redirecting command handler reads and writes its streams
@@ -4431,15 +4742,55 @@ mod redirector {
     }
 }
 
-/// `DetachThread` of the context [`attach_thread`] answered, which the
-/// running call still holds, so nothing is released.
+/// `DetachThread`: ends one attach of this thread to the context
+/// [`attach_thread`] answered. A thread that runs a call of the context's
+/// activity holds it still, so nothing is released.
 ///
 /// # Safety
 /// As [`whole_number_to_object`].
 unsafe extern "C" fn detach_thread(context: *mut RexxThreadContext_) {
+    if detach_here(context as usize) {
+        return;
+    }
     // SAFETY: as `whole_number_to_object`; the call aborts where no native
     // call is in flight.
     or_nothing!(unsafe { innermost_activation(context, "DetachThread") });
+}
+
+/// `HaltThread` (`interpreter/api/ThreadContextStubs.cpp:91`): the context's
+/// activity is asked to halt.
+///
+/// # Safety
+/// As [`whole_number_to_object`].
+unsafe extern "C" fn halt_thread(context: *mut RexxThreadContext_) {
+    // SAFETY: as `whole_number_to_object`.
+    or_nothing!(unsafe { innermost_activation(context, "HaltThread") }).halt(false);
+}
+
+/// `SetThreadTrace` (`interpreter/api/ThreadContextStubs.cpp:104`): external
+/// tracing of the context's activity on or off.
+///
+/// # Safety
+/// As [`whole_number_to_object`].
+unsafe extern "C" fn set_thread_trace(context: *mut RexxThreadContext_, setting: logical_t) {
+    // SAFETY: as `whole_number_to_object`.
+    or_nothing!(unsafe { innermost_activation(context, "SetThreadTrace") })
+        .set_trace(false, setting != 0);
+}
+
+/// `RaiseConditionObject` (`interpreter/api/ThreadContextStubs.cpp:1934`):
+/// the condition a condition object describes is raised once the call
+/// returns.
+///
+/// # Safety
+/// As [`whole_number_to_object`].
+unsafe extern "C" fn raise_condition_object(
+    context: *mut RexxThreadContext_,
+    condition: RexxDirectoryObject,
+) {
+    // SAFETY: as `whole_number_to_object`.
+    or_nothing!(unsafe { innermost_activation(context, "RaiseConditionObject") })
+        .raise_condition_object(condition.cast());
 }
 
 /// # Safety
@@ -4477,6 +4828,384 @@ unsafe extern "C" fn reallocate_object_memory(
         return std::ptr::null_mut();
     };
     activation.reallocate_object_memory(pointer, size)
+}
+
+/// The classic API's calls into the running program from a handler it
+/// called: `RexxVariablePool` and `RexxCallBack` (`api/rexx.h`).
+pub mod classic {
+    use super::{Activation, CALLING, Entered, Reached, unwind};
+    use crate::callbacks::{CallBack, PoolAnswer, PoolRequest};
+    use crate::layout::{CONSTRXSTRING, RXSTRING, RexxReturnCode, SHVBLOCK};
+    use std::ffi::c_char;
+
+    /// `RXSHV_NEWV`.
+    const NEW_VARIABLE: u8 = 0x01;
+    /// `RXSHV_LVAR`.
+    const LAST_VARIABLE: u8 = 0x02;
+    /// `RXSHV_TRUNC`.
+    const TRUNCATED: u8 = 0x04;
+    /// `RXSHV_BADN`.
+    const BAD_NAME: u8 = 0x08;
+    /// `RXSHV_MEMFL`.
+    const MEMORY_FAILURE: u8 = 0x10;
+    /// `RXSHV_BADF`.
+    const BAD_FUNCTION: u8 = 0x80;
+    /// `RXSHV_NOAVL`.
+    pub const POOL_UNAVAILABLE: RexxReturnCode = 144;
+    /// `RX_CB_BADP`.
+    const CALL_BACK_BAD_PARAMETERS: RexxReturnCode = 1;
+    /// `RX_CB_NOTSTARTED`.
+    pub const CALL_BACK_NOT_STARTED: RexxReturnCode = 2;
+    /// `RX_CB_BADN`.
+    const CALL_BACK_NO_LABEL: RexxReturnCode = 8;
+
+    /// The native call this thread runs innermost, under the baton, where
+    /// it opened the variable pool and still runs as its activity's.
+    fn calling<'a>() -> Option<Reached<'a>> {
+        // SAFETY: a call in flight on this thread outlives the callback it
+        // makes, as in `super::reached`.
+        let calling = unsafe { CALLING.get().cast::<Entered<'a>>().as_ref() }?;
+        // SAFETY: the activation is borrowed for as long as its call is in
+        // flight; the reference is shared, as in `super::addressed`.
+        let activation = unsafe { &*calling.activation.cast::<Activation<'a>>() };
+        let held = activation.hold_baton();
+        let reached = Reached::checked(activation, held);
+        (!reached.abandoned && reached.variable_pool_open()).then_some(reached)
+    }
+
+    /// Where this thread runs a native call, has its interpreter move a session queue it still
+    /// holds in process to the service ([`crate::callbacks::Surface::share_session_queue`]):
+    /// what a C API operation on the session queue does first, so that it and the program
+    /// see one queue.
+    pub fn share_session_queue() {
+        // SAFETY: as in `calling`.
+        let Some(calling) = (unsafe { CALLING.get().cast::<Entered<'_>>().as_ref() }) else {
+            return;
+        };
+        // SAFETY: as in `calling`.
+        let activation = unsafe { &*calling.activation.cast::<Activation<'_>>() };
+        let held = activation.hold_baton();
+        let reached = Reached::checked(activation, held);
+        if !reached.abandoned {
+            reached.share_session_queue();
+        }
+    }
+
+    /// The bytes `string` addresses, empty for a null pointer.
+    ///
+    /// # Safety
+    /// A non-null `strptr` addresses `strlength` readable bytes.
+    unsafe fn bytes<'b>(strptr: *const c_char, strlength: usize) -> &'b [u8] {
+        if strptr.is_null() {
+            return &[];
+        }
+        // SAFETY: the caller's guarantee.
+        unsafe { std::slice::from_raw_parts(strptr.cast(), strlength) }
+    }
+
+    /// Hands `value` back through `strptr`/`strlength`: into the caller's
+    /// buffer of `capacity` bytes, truncated to it (`RXSHV_TRUNC`), or into a
+    /// block `RexxFreeMemory` releases where the caller gave none, its length
+    /// then the new capacity.
+    ///
+    /// # Safety
+    /// A non-null `*strptr` addresses `*capacity` writable bytes.
+    unsafe fn give(
+        strptr: &mut *mut c_char,
+        strlength: &mut usize,
+        capacity: &mut usize,
+        value: &[u8],
+    ) -> u8 {
+        if strptr.is_null() {
+            // SAFETY: `malloc` of a non-zero size; `RexxFreeMemory` is `free`.
+            let block = unsafe { libc::malloc(value.len() + 1) }.cast::<u8>();
+            if block.is_null() {
+                return MEMORY_FAILURE;
+            }
+            // SAFETY: the block holds `value.len() + 1` bytes.
+            unsafe {
+                std::ptr::copy_nonoverlapping(value.as_ptr(), block, value.len());
+                block.add(value.len()).write(0);
+            }
+            *strptr = block.cast();
+            *strlength = value.len();
+            *capacity = value.len();
+            return 0;
+        }
+        let kept = value.len().min(*capacity);
+        // SAFETY: the caller's buffer holds `capacity` bytes.
+        unsafe { std::ptr::copy_nonoverlapping(value.as_ptr(), strptr.cast::<u8>(), kept) };
+        *strlength = kept;
+        if kept < value.len() { TRUNCATED } else { 0 }
+    }
+
+    /// Hands a variable pool answer back as the oracle's `copyValue` does: into the caller's
+    /// buffer of `*strlength` bytes -- `length` is not its size -- with a NUL after the value
+    /// where the buffer has room for one, truncated to it (`RXSHV_TRUNC`, `*strlength` left at
+    /// the buffer's size), or into a fresh block where the caller gave none. `*length` is the
+    /// value's whole length in every case.
+    ///
+    /// # Safety
+    /// A non-null `*strptr` addresses `*strlength` writable bytes.
+    unsafe fn give_pool(
+        strptr: &mut *mut c_char,
+        strlength: &mut usize,
+        length: &mut usize,
+        value: &[u8],
+    ) -> u8 {
+        *length = value.len();
+        if strptr.is_null() {
+            // SAFETY: as `give`'s own allocation.
+            return unsafe { give(strptr, strlength, &mut value.len(), value) };
+        }
+        let capacity = *strlength;
+        let kept = value.len().min(capacity);
+        // SAFETY: the caller's buffer holds `capacity` bytes.
+        unsafe { std::ptr::copy_nonoverlapping(value.as_ptr(), strptr.cast::<u8>(), kept) };
+        if kept < value.len() {
+            return TRUNCATED;
+        }
+        if capacity > kept {
+            // SAFETY: `kept < capacity`, inside the caller's buffer.
+            unsafe { strptr.add(kept).write(0) };
+        }
+        *strlength = kept;
+        0
+    }
+
+    /// One block's request, answering its `shvret`.
+    ///
+    /// # Safety
+    /// The block's strings are as `api/rexx.h` asks: `shvname` readable for
+    /// its length, and a non-null fetch buffer writable for its `strlength`.
+    unsafe fn serve(activation: &Activation<'_>, block: &mut SHVBLOCK) -> u8 {
+        // The name is read only for the codes that take one, and the value only for a set: for
+        // `RXSHV_NEXTV` and a fetch they are the caller's output buffers, which may hold no
+        // initialised bytes.
+        let request = match block.shvcode {
+            code @ (0..=5 | 7) => {
+                // SAFETY: the caller's guarantee.
+                let name = unsafe { bytes(block.shvname.strptr, block.shvname.strlength) };
+                match code {
+                    0 | 3 => PoolRequest::Set {
+                        name,
+                        symbolic: code == 3,
+                        // SAFETY: as above, for a set's value.
+                        value: unsafe { bytes(block.shvvalue.strptr, block.shvvalue.strlength) },
+                    },
+                    1 | 4 => PoolRequest::Fetch {
+                        name,
+                        symbolic: code == 4,
+                    },
+                    2 | 5 => PoolRequest::Drop {
+                        name,
+                        symbolic: code == 5,
+                    },
+                    _ => PoolRequest::Private { name },
+                }
+            }
+            6 => {
+                let Some((name, value)) = activation.pool_next() else {
+                    return LAST_VARIABLE;
+                };
+                let mut strptr = block.shvname.strptr.cast_mut();
+                // SAFETY: a non-null name buffer is the caller's, of
+                // `shvname.strlength` bytes.
+                let mut ret = unsafe {
+                    give_pool(
+                        &mut strptr,
+                        &mut block.shvname.strlength,
+                        &mut block.shvnamelen,
+                        &name,
+                    )
+                };
+                block.shvname.strptr = strptr;
+                // SAFETY: as above, for the value buffer.
+                ret |= unsafe {
+                    give_pool(
+                        &mut block.shvvalue.strptr,
+                        &mut block.shvvalue.strlength,
+                        &mut block.shvvaluelen,
+                        &value,
+                    )
+                };
+                return ret;
+            }
+            _ => return BAD_FUNCTION,
+        };
+        let fetching = matches!(
+            request,
+            PoolRequest::Fetch { .. } | PoolRequest::Private { .. }
+        );
+        match activation.pool_request(request) {
+            PoolAnswer::BadName => BAD_NAME,
+            PoolAnswer::Served { new, value } => {
+                let mut ret = if new { NEW_VARIABLE } else { 0 };
+                if fetching && let Some(value) = value {
+                    // SAFETY: the caller's guarantee for a fetch buffer.
+                    ret |= unsafe {
+                        give_pool(
+                            &mut block.shvvalue.strptr,
+                            &mut block.shvvalue.strlength,
+                            &mut block.shvvaluelen,
+                            &value,
+                        )
+                    };
+                }
+                ret
+            }
+        }
+    }
+
+    /// `RexxVariablePool`: each block of the chain `blocks` served in turn
+    /// against the activation that called the running routine, classic
+    /// function or exit, answering their return codes OR'ed; `RXSHV_NOAVL`
+    /// where this thread runs none.
+    ///
+    /// # Safety
+    /// `blocks` is null or the head of a chain of `SHVBLOCK`s as `api/rexx.h`
+    /// describes, each live and unaliased for the call.
+    pub unsafe fn variable_pool(blocks: *mut SHVBLOCK) -> RexxReturnCode {
+        let Some(activation) = calling() else {
+            return POOL_UNAVAILABLE;
+        };
+        let mut answered: RexxReturnCode = 0;
+        let mut at = blocks;
+        // SAFETY: the caller guarantees each link of the chain.
+        while let Some(block) = unsafe { at.as_mut() } {
+            // SAFETY: the caller's guarantee for the block's strings.
+            let ret = unsafe { serve(&activation, block) };
+            block.shvret = ret;
+            answered |= RexxReturnCode::from(ret);
+            at = block.shvnext;
+        }
+        answered
+    }
+
+    /// C's `atoi` of `text`, as a `short`.
+    fn short_value(text: &[u8]) -> i16 {
+        let mut rest = text
+            .iter()
+            .skip_while(|byte| byte.is_ascii_whitespace())
+            .peekable();
+        let negative = match rest.peek() {
+            Some(b'-') => {
+                rest.next();
+                true
+            }
+            Some(b'+') => {
+                rest.next();
+                false
+            }
+            _ => false,
+        };
+        let mut value: i64 = 0;
+        for &byte in rest.take_while(|byte| byte.is_ascii_digit()) {
+            value = (value * 10 + i64::from(byte - b'0')) % (1 << 32);
+        }
+        if negative {
+            value = -value;
+        }
+        // The `int` atoi answers, cast to `short` as C casts it.
+        value as i32 as i16
+    }
+
+    /// `RexxCallBack`: the label `label` of the activation that called the
+    /// running external function, run as an internal function over the
+    /// `argc` strings at `argv` (a null `strptr` an omitted one). The result
+    /// goes into `result`'s buffer where it fits, else into a block
+    /// `RexxFreeMemory` releases, and its `atoi` into `rc`. A condition the
+    /// call raises, or an `EXIT`, ends the external function here: it
+    /// unwinds to the boundary that called it, which re-raises it.
+    ///
+    /// # Safety
+    /// A non-null `label` is NUL-terminated, `argv` holds `argc` strings each
+    /// readable for its length, and a non-null `rc` and `result` are
+    /// writable, `result`'s non-null buffer for its `strlength`.
+    pub unsafe fn call_back(
+        label: *const c_char,
+        argc: usize,
+        argv: *const CONSTRXSTRING,
+        rc: *mut i16,
+        result: *mut RXSTRING,
+    ) -> RexxReturnCode {
+        let Some(activation) = calling() else {
+            return CALL_BACK_NOT_STARTED;
+        };
+        // SAFETY: the caller's guarantee for the label.
+        let Some(label) = (unsafe { super::name_of(label) }) else {
+            return CALL_BACK_BAD_PARAMETERS;
+        };
+        if argc > 0 && argv.is_null() {
+            return CALL_BACK_BAD_PARAMETERS;
+        }
+        let arguments: Vec<Option<Vec<u8>>> = (0..argc)
+            .map(|index| {
+                // SAFETY: `argv` holds `argc` strings.
+                let argument = unsafe { *argv.add(index) };
+                (!argument.strptr.is_null())
+                    // SAFETY: the string is readable for its length.
+                    .then(|| unsafe { bytes(argument.strptr, argument.strlength) }.to_vec())
+            })
+            .collect();
+        let answered = activation.call_back(label, &arguments);
+        let value = match answered {
+            CallBack::Returned(value) => value,
+            CallBack::NoLabel => {
+                if !rc.is_null() {
+                    // SAFETY: the caller's guarantee.
+                    unsafe { rc.write(0) };
+                }
+                return CALL_BACK_NO_LABEL;
+            }
+            CallBack::Ended => {
+                drop(activation);
+                unwind()
+            }
+        };
+        if !rc.is_null() {
+            let short = value.as_deref().map_or(0, short_value);
+            // SAFETY: the caller's guarantee.
+            unsafe { rc.write(short) };
+        }
+        // SAFETY: the caller's guarantee.
+        if let Some(result) = unsafe { result.as_mut() } {
+            match value {
+                None => {
+                    result.strptr = std::ptr::null_mut();
+                    result.strlength = 0;
+                }
+                Some(value) => {
+                    let mut capacity = result.strlength;
+                    if value.len() > capacity {
+                        result.strptr = std::ptr::null_mut();
+                    }
+                    // SAFETY: a buffer left in place holds `capacity` bytes.
+                    unsafe {
+                        give(
+                            &mut result.strptr,
+                            &mut result.strlength,
+                            &mut capacity,
+                            &value,
+                        )
+                    };
+                }
+            }
+        }
+        0
+    }
+
+    #[cfg(test)]
+    mod tests {
+        #[test]
+        fn short_value_is_atoi_cast_to_short() {
+            assert_eq!(super::short_value(b"42"), 42);
+            assert_eq!(super::short_value(b"  -7x"), -7);
+            assert_eq!(super::short_value(b"3 a 0 c"), 3);
+            assert_eq!(super::short_value(b"abc"), 0);
+            assert_eq!(super::short_value(b"65537"), 1);
+        }
+    }
 }
 
 /// What a stub read through the context, which is the channel

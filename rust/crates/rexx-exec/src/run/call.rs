@@ -337,6 +337,9 @@ impl Interp {
             // decided here; the path is searched for again where the
             // file is entered, because a `Resolved` is `Copy` and this
             // resolver is `&self`.
+            // **A registered classic function**, which `SystemInterpreter::invokeExternalFunction`
+            // tries after the macros searched first and before the external file search.
+            None if self.classic_function(name).is_some() => Resolved::Registered,
             None if self.external_program(name).is_some() => Resolved::External,
             None if crate::builtin::rexxutil::macros::macro_position(name)
                 == Some(crate::builtin::rexxutil::macros::AFTER) =>
@@ -1002,13 +1005,25 @@ impl Interp {
         installed: InstalledRoutine,
         arguments: Vec<Option<ObjRef>>,
     ) -> Result<Option<ObjRef>, Failure> {
-        match self.invoke_call_over(
+        let mut arguments = arguments;
+        let begun = self.begin_call(
             Resolved::Routine(installed),
             b"CALL",
-            arguments,
+            &mut arguments,
+            0,
             CallType::Command,
             CallEntry::Written,
-        )? {
+        )?;
+        // An embedding instance's initial environment, which its programs
+        // start with as a top-level program starts with the platform's.
+        if matches!(begun, Begun::Entered)
+            && let Some(name) = self.default_address.clone()
+        {
+            let address = &mut self.activation_mut().address;
+            address.current = Some(Rc::clone(&name));
+            address.alternate = Some(name);
+        }
+        match self.complete_call(begun)? {
             Ended::Exited(value) | Ended::Returned(value) => Ok(value),
         }
     }
@@ -1071,12 +1086,29 @@ impl Interp {
         // the manager first**, an unresolvable name included.
         if matches!(
             resolved,
-            Resolved::Library(_) | Resolved::External | Resolved::Macro | Resolved::Unresolved
-        ) && let Some(handled) = self.call_checkpoint(name, &arguments[from..])?
-        {
-            return Ok(Begun::Done(Ended::Returned(handled)));
+            Resolved::Library(_)
+                | Resolved::External
+                | Resolved::Macro
+                | Resolved::Registered
+                | Resolved::Unresolved
+        ) {
+            if let Some(handled) = self.call_checkpoint(name, &arguments[from..])? {
+                return Ok(Begun::Done(Ended::Returned(handled)));
+            }
+            // The function exits next (`RexxActivation::externalCall` steps 2a and 2b).
+            if self.exits.is_some()
+                && let Some(handled) = self.function_exits(name, call_type, &arguments[from..])?
+            {
+                return Ok(Begun::Done(Ended::Returned(handled)));
+            }
         }
         if let Resolved::Unresolved = resolved {
+            // The scripting exit, after every search (step 4).
+            if self.exits.is_some()
+                && let Some(handled) = self.scripting_exit(name, call_type, &arguments[from..])?
+            {
+                return Ok(Begun::Done(Ended::Returned(handled)));
+            }
             return Err(Raised::routine_not_found(name).into());
         }
         if let Resolved::Library(program) = resolved {
@@ -1095,6 +1127,11 @@ impl Interp {
         if let Resolved::Macro = resolved {
             return self
                 .enter_macro(name, arguments[from..].to_vec(), call_type)
+                .map(|value| Begun::Done(Ended::Returned(value)));
+        }
+        if let Resolved::Registered = resolved {
+            return self
+                .call_classic_function(name, &arguments[from..])
                 .map(|value| Begun::Done(Ended::Returned(value)));
         }
 
@@ -1144,6 +1181,7 @@ impl Interp {
             Resolved::Library(_) => unreachable!("the library path returns just above"),
             Resolved::External => unreachable!("the external path returns just above"),
             Resolved::Macro => unreachable!("the macro path returns just above"),
+            Resolved::Registered => unreachable!("the registered path returns just above"),
             Resolved::Unresolved => unreachable!("an unresolved name raises just above"),
         };
 
@@ -1368,6 +1406,20 @@ impl Interp {
             saved_context,
             stack: LentStack::Kept,
         });
+        // A routine is a program-level call, which runs the initialization exit before its
+        // first clause (`RexxActivation::run`); its failure ends the call there.
+        if matches!(entered, Entered::Routine(_))
+            && self.calls_program_exits()
+            && let Err(failure) = self.initialization_exit()
+        {
+            return match self.finish_call(Err(failure)) {
+                Err(failure) => Err(failure),
+                Ok(_) => Err(Loud::scheduler_inconsistency(
+                    "a failed initialization exit ended its call normally",
+                )
+                .into()),
+            };
+        }
         Ok(Begun::Entered)
     }
 
@@ -1386,6 +1438,19 @@ impl Interp {
         }) = self.activity.call_tails.pop()
         else {
             return Err(Loud::op_not_driven("a call with no saved level state").into());
+        };
+        // A routine that returned or exited runs the termination exit while its variables are
+        // live (`RexxActivation::exitFrom`, `implicitExit`); its failure is the call's.
+        let ended = if kind == TailKind::Routine
+            && self.calls_program_exits()
+            && matches!(ended, Ok(_) | Err(Failure::Exited(_)))
+        {
+            match self.termination_exit() {
+                Ok(()) => ended,
+                Err(failure) => Err(failure),
+            }
+        } else {
+            ended
         };
         if let Err(failure) = &ended {
             self.capture_activation_frame(failure);

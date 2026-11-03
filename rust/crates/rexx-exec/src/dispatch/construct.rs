@@ -255,7 +255,7 @@ pub(super) fn native_new_file(
         None => None,
     };
     let name = interp.to_text(name).to_vec();
-    let object = interp.new_file_executable(&name, routine, parent)?;
+    let object = interp.new_file_executable(&name, routine, parent, false)?;
     if class != base {
         native_as_instance(interp, object, class, base)?;
     }

@@ -2,7 +2,7 @@
 /* TEST_A leaves a flag beside the copy and refuses; a run that finds the
    flag refuses in its prolog, before any test starts. */
   if .stream~new('../refuse-at-load')~query('exists') \== '' then do
-    r = .CommandHandler~environments
+    r = .local~send('ZZZ=')
   end
   parse source . . s
   group = .TestGroup~new(s)
@@ -17,7 +17,7 @@ return testResult
 
 ::method test_a
   .stream~new('../refuse-at-load')~~lineout('x')~~close
-  r = .CommandHandler~environments
+  r = .local~send('ZZZ=')
 
 ::method test_b
   self~assertSame(1, 1)

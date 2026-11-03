@@ -562,6 +562,16 @@ impl Interp {
     /// answers** -- measured, a program with one line pushed reads it and the
     /// destination sees a single `LINEIN`, for the second read.
     pub(crate) fn pull_line(&mut self) -> Result<Vec<u8>, Failure> {
+        // The queue exit's first pass (`Activity::pullInput`): a handler that returned no
+        // line answers `.nil`, read as its string.
+        if self.exits.is_some()
+            && let Some(line) = self.pull_exit()?
+        {
+            return Ok(match line {
+                Some(line) => line,
+                None => self.unsent_string_value_text(ObjRef::NIL),
+            });
+        }
         let Some(queue) = self.local_route(b"STDQUE")? else {
             return match self.queue.pop() {
                 Some(line) => Ok(line),
@@ -594,6 +604,12 @@ impl Interp {
     /// crate's licensed answer where the oracle dies
     /// (`corpus/oracle-crashes.txt` entry 11b).
     pub(crate) fn linein_line(&mut self) -> Result<Vec<u8>, Failure> {
+        // The I/O exit's first pass (`Activity::lineIn`).
+        if self.exits.is_some()
+            && let Some(line) = self.terminal_read_exit()?
+        {
+            return Ok(line);
+        }
         let route = self.local_route(b"INPUT")?;
         let Some(route) = route.filter(|route| *route != ObjRef::NIL) else {
             return Ok(self.input_line()?.unwrap_or_default());

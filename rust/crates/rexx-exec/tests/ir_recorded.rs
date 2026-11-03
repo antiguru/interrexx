@@ -804,6 +804,7 @@ const CORPUS_POPULATION: &str = "corpus";
 
 /// The subset files the corpus population reads, in union order.
 const SUBSET_FILES: &[&str] = &[
+    "phase-10.txt",
     "phase-4a.txt",
     "phase-4b.txt",
     "phase-4c.txt",

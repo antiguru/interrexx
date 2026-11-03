@@ -514,6 +514,8 @@ mod tests {
     fn outcome(stderr: &[u8]) -> Outcome {
         Outcome {
             exit_code: 0,
+            result: None,
+            error: None,
             stdout: Vec::new(),
             stderr: stderr.to_vec(),
             stack: StackSpan::default(),
@@ -569,6 +571,8 @@ mod tests {
     fn stdout_outcome(stdout: &[u8]) -> Outcome {
         Outcome {
             exit_code: 0,
+            result: None,
+            error: None,
             stdout: stdout.to_vec(),
             stderr: Vec::new(),
             stack: StackSpan::default(),

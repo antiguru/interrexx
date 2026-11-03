@@ -483,6 +483,7 @@ fn corpus_dir() -> PathBuf {
 
 /// The subset files the union-coverage run reads, in union order.
 const SUBSET_FILES: &[&str] = &[
+    "phase-10.txt",
     "phase-4a.txt",
     "phase-4b.txt",
     "phase-4c.txt",

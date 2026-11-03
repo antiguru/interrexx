@@ -193,6 +193,10 @@ pub(super) struct Ran {
     pub(super) thread: ThreadId,
     pub(super) takes: u64,
     pub(super) abandoned: usize,
+    /// Whether the run's interpreter was dropped once it had served its calls: its pool,
+    /// which the interpreter and each pool thread hold, was released within ten seconds of the
+    /// run's end. `None` where the run made no pool.
+    pub(super) pool_released: Option<bool>,
 }
 
 impl Ran {
@@ -271,10 +275,26 @@ pub(super) fn run_shaped(source: &str, shape: Shape) -> std::thread::Result<Ran>
                 thread: std::thread::current().id(),
                 takes: crate::dispatch::library::callback_takes(),
                 abandoned: crate::scheduler::abandoned_held(),
+                pool_released: pool_released(),
             }
         })
         .expect("the interpreter thread")
         .join()
+}
+
+/// Whether the last pool this thread made is released within ten seconds: its threads end on
+/// their own once the interpreter has dropped it.
+#[expect(clippy::disallowed_methods, reason = "this waits on real pool threads")]
+fn pool_released() -> Option<bool> {
+    let end = Instant::now() + Duration::from_secs(10);
+    loop {
+        match crate::scheduler::last_pool_held() {
+            Some(true) if Instant::now() < end => {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            held => return held.map(|held| !held),
+        }
+    }
 }
 
 const MEETING: &str = "m = .t~new~start('other')\ncall MEET\nsay 'main'\nsay m~result\n\
@@ -694,4 +714,23 @@ fn threads_beyond_the_bound_end_after_their_jobs() {
         std::thread::sleep(Duration::from_millis(10));
     }
     assert_eq!(pool.threads(), 1);
+}
+
+/// Queue item 3: a run that ends, here at its deadline, while main's native call runs on a pool
+/// thread keeps its interpreter until that call has ended -- the pool thread's recall to end it
+/// is served -- and then drops it, where it used to leak it with the pool thread left waiting.
+#[test]
+fn a_run_ending_with_a_call_in_flight_serves_the_call_then_drops_the_interpreter() {
+    let ran = run_shaped(
+        "t = .t~new~start('spin')\ncall NAP\nsay 'after'\n\
+         ::requires 'pooltest' LIBRARY\n::class t\n::method spin\n  do forever; end\n",
+        Shape {
+            deadline: Duration::from_millis(50),
+            ..SHAPE
+        },
+    )
+    .expect("the run did not panic");
+    assert_eq!(ran.exits, 1, "{}", ran.stderr());
+    assert_eq!(ran.stdout(), "");
+    assert_eq!(ran.pool_released, Some(true), "{}", ran.stderr());
 }

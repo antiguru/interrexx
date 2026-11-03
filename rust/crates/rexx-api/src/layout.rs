@@ -10,7 +10,7 @@
 use std::cell::Cell;
 use std::ffi::{c_char, c_int, c_void};
 
-use rexx_core::{Deferral, Owner};
+use rexx_core::Owner;
 
 /// `wholenumber_t` (`api/rexx.h:237`).
 pub type wholenumber_t = isize;
@@ -165,6 +165,167 @@ pub const CALL_INTERFACE_VERSION: wholenumber_t = 101;
 pub const EXIT_INTERFACE_VERSION: wholenumber_t = 101;
 /// `REDIRECT_INTERFACE_VERSION` (`api/oorexxapi.h:768`).
 pub const REDIRECT_INTERFACE_VERSION: wholenumber_t = 100;
+
+/// `RXSTRING` (`api/rexx.h:164-167`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXSTRING {
+    pub strlength: usize,
+    pub strptr: *mut c_char,
+}
+
+/// `CONSTRXSTRING` (`api/rexx.h:169-172`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct CONSTRXSTRING {
+    pub strlength: usize,
+    pub strptr: *const c_char,
+}
+
+/// `RXSYSEXIT` (`api/rexx.h:198-201`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXSYSEXIT {
+    pub sysexit_name: *const c_char,
+    pub sysexit_code: c_int,
+}
+
+/// `RexxContextExit` (`api/oorexxapi.h:183-187`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RexxContextExit {
+    pub handler: *mut c_void,
+    pub sysexit_code: c_int,
+}
+
+/// The flag word that begins an exit's parameter block: the C bit fields
+/// (`RXFNC_FLAGS` and its siblings, `api/rexx.h:489-641`), the first field
+/// in bit 0.
+pub type ExitFlags = u32;
+
+/// `RXFNCCAL_PARM` (`api/rexx.h:495-504`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXFNCCAL_PARM {
+    pub rxfnc_flags: ExitFlags,
+    pub rxfnc_name: *const c_char,
+    pub rxfnc_namel: u16,
+    pub rxfnc_que: *const c_char,
+    pub rxfnc_quel: u16,
+    pub rxfnc_argc: u16,
+    pub rxfnc_argv: *const CONSTRXSTRING,
+    pub rxfnc_retc: RXSTRING,
+}
+
+/// `RXOFNCCAL_PARM` and `RXEXFCAL_PARM` (`api/rexx.h:515-539`), which share
+/// one shape.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXOFNCCAL_PARM {
+    pub rxfnc_flags: ExitFlags,
+    pub rxfnc_name: CONSTRXSTRING,
+    pub rxfnc_argc: usize,
+    pub rxfnc_argv: *mut RexxObjectPtr,
+    pub rxfnc_retc: RexxObjectPtr,
+}
+
+/// `RXCMDHST_PARM` (`api/rexx.h:548-556`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXCMDHST_PARM {
+    pub rxcmd_flags: ExitFlags,
+    pub rxcmd_address: *const c_char,
+    pub rxcmd_addressl: u16,
+    pub rxcmd_dll: *const c_char,
+    pub rxcmd_dll_len: u16,
+    pub rxcmd_command: CONSTRXSTRING,
+    pub rxcmd_retc: RXSTRING,
+}
+
+/// `RXMSQPSH_PARM` (`api/rexx.h:573-576`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXMSQPSH_PARM {
+    pub rxmsq_flags: ExitFlags,
+    pub rxmsq_value: CONSTRXSTRING,
+}
+
+/// `RXSIOSAY_PARM` and `RXSIOTRC_PARM` (`api/rexx.h:596-606`). The blocks
+/// of one `RXSTRING` (`RXMSQPLL_PARM`, `RXMSQNAM_PARM`, `RXSIOTRD_PARM`,
+/// `RXSIODTR_PARM`), of one `size_t` (`RXMSQSIZ_PARM`) and of one flag word
+/// (`RXHLTTST_PARM`, `RXTRCTST_PARM`) are that member alone.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXSIOSAY_PARM {
+    pub rxsio_string: CONSTRXSTRING,
+}
+
+/// `RXVALCALL_PARM` (`api/rexx.h:650-654`); `RXVARNOVALUE_PARM` is its last
+/// two members.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXVALCALL_PARM {
+    pub selector: RexxStringObject,
+    pub variable_name: RexxStringObject,
+    pub value: RexxObjectPtr,
+}
+
+/// `RXVARNOVALUE_PARM` (`api/rexx.h:644-647`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct RXVARNOVALUE_PARM {
+    pub variable_name: RexxStringObject,
+    pub value: RexxObjectPtr,
+}
+
+/// `SHVBLOCK` (`api/rexx.h:212-220`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct SHVBLOCK {
+    pub shvnext: *mut SHVBLOCK,
+    pub shvname: CONSTRXSTRING,
+    pub shvvalue: RXSTRING,
+    pub shvnamelen: usize,
+    pub shvvaluelen: usize,
+    pub shvcode: u8,
+    pub shvret: u8,
+}
+
+/// `RexxQueueTime` (`api/rexx.h:245-256`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct RexxQueueTime {
+    pub hours: u16,
+    pub minutes: u16,
+    pub seconds: u16,
+    pub hundredths: u16,
+    pub day: u16,
+    pub month: u16,
+    pub year: u16,
+    pub weekday: u16,
+    pub microseconds: u32,
+    pub yearday: u32,
+}
+
+/// `REXXDATETIME` (`api/platform/unix/rexxplatformapis.h:42-54`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct REXXDATETIME {
+    pub hours: u16,
+    pub minutes: u16,
+    pub seconds: u16,
+    pub hundredths: u16,
+    pub day: u16,
+    pub month: u16,
+    pub year: u16,
+    pub weekday: u16,
+    pub microseconds: usize,
+    pub yearday: usize,
+    pub valid: u16,
+}
+
+/// `RexxReturnCode` (`api/rexx.h:73`).
+pub type RexxReturnCode = c_int;
 
 /// `RexxCondition` (`api/oorexxapi.h:462-473`).
 #[repr(C)]
@@ -366,36 +527,7 @@ pub struct Owned<C, T> {
 
 /// Each member a populated table still refuses, as `Table.Member`, with the
 /// owner and reason its refusal names.
-pub const REFUSING_MEMBERS: &[(&str, Owner)] = &[
-    (
-        "RexxInstanceInterface.Terminate",
-        Owner::Phase10(Deferral::Embedding),
-    ),
-    (
-        "RexxInstanceInterface.Halt",
-        Owner::Phase10(Deferral::Embedding),
-    ),
-    (
-        "RexxInstanceInterface.SetTrace",
-        Owner::Phase10(Deferral::Embedding),
-    ),
-    (
-        "RexxInstanceInterface.StackCommandEnvironment",
-        Owner::Phase10(Deferral::Embedding),
-    ),
-    (
-        "RexxThreadInterface.RaiseConditionObject",
-        Owner::Phase10(Deferral::Embedding),
-    ),
-    (
-        "RexxThreadInterface.HaltThread",
-        Owner::Phase10(Deferral::Embedding),
-    ),
-    (
-        "RexxThreadInterface.SetThreadTrace",
-        Owner::Phase10(Deferral::Embedding),
-    ),
-];
+pub const REFUSING_MEMBERS: &[(&str, Owner)] = &[];
 
 /// The owner a refusal of `entry` names: its [`REFUSING_MEMBERS`] row, and
 /// none for a member no row names, which every populated table fills.

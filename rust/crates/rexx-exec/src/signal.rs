@@ -30,6 +30,23 @@ static WAKE: AtomicI32 = AtomicI32::new(-1);
 
 static INSTALL: Once = Once::new();
 
+/// The calling thread's `pthread_t`, the `thread_id_t` the classic API names threads by.
+pub(crate) fn current_thread() -> usize {
+    // SAFETY: `pthread_self` has no preconditions.
+    let thread = unsafe { libc::pthread_self() };
+    thread as usize
+}
+
+/// Flushes the C library's output streams, so that what a C program embedding the interpreter
+/// wrote through stdio before a program's output lands before it, as on the oracle, also where
+/// standard output is a file and stdio holds it back.
+pub(crate) fn flush_c_streams() {
+    // SAFETY: `fflush(NULL)` flushes every open output stream, each under its own lock.
+    unsafe {
+        libc::fflush(std::ptr::null_mut());
+    }
+}
+
 /// Installs the handlers, once per process, with `wake` as the socket they
 /// write to.
 pub(crate) fn install(wake: RawFd) {
@@ -153,10 +170,21 @@ pub(crate) fn receive() {
 /// handlers are installed, and the thread's mask restored after: a signal
 /// then interrupts the wait, and its handler has run before the wait
 /// returns.
+///
+/// The kernel hands a signal sent to the process to one thread that takes
+/// it, which may be another interpreter's: a terminal's Ctrl-C can end the
+/// wait's child before that thread has run the handler, and this
+/// interpreter would then find no signal arrived and run on past the
+/// clause. Blocking and unblocking once more before the restore has the
+/// kernel deliver a signal still pending for the process here, so its
+/// handler has run before the wait returns.
 pub(crate) fn unblocked<R>(wait: impl FnOnce() -> R) -> R {
     struct Restore(libc::sigset_t);
     impl Drop for Restore {
         fn drop(&mut self) {
+            let halting = halting();
+            mask(libc::SIG_BLOCK, &halting);
+            mask(libc::SIG_UNBLOCK, &halting);
             mask(libc::SIG_SETMASK, &self.0);
         }
     }

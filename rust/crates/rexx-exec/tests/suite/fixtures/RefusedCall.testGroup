@@ -15,7 +15,7 @@ return testResult
   self~assertSame(1, 1)
 
 ::method test_b
-  r = .CommandHandler~environments
+  r = .local~send('ZZZ=')
   self~assertSame(1, 1)
 
 ::method test_c

@@ -1,0 +1,32 @@
+/* The REXX package's command classes, CommandContext and NativeCommandHandler, are found
+   after a program removes their .environment entries and removes them from the directory
+   the REXX package's publicClasses answers (a copy): they are the REXX package's own
+   classes, which no program can remove. Each site that builds one is then reached: a
+   native handler's object (.CommandHandler~handler), a Rexx handler's CommandContext
+   (ADDRESS to a registered CommandHandler subclass), and a native handler's command
+   forwarded from that context, once succeeding and once failing (its pending FAILURE is
+   raised at the ADDRESS clause). */
+pkg = .CommandContext~package
+say 'package' pkg~name (pkg == .object~package)
+do name over 'COMMANDCONTEXT', 'NATIVECOMMANDHANDLER'
+  say 'environment remove' name (.environment~remove(name) \= .nil)
+  say 'local remove' name (.local~remove(name) \= .nil)
+end
+classes = pkg~publicClasses
+say 'copy remove' (classes~remove('COMMANDCONTEXT') \= .nil) (classes~remove('NATIVECOMMANDHANDLER') \= .nil)
+say 'resolves' .CommandContext~id .NativeCommandHandler~id
+say 'native handler kind' .CommandHandler~handler('sh')~kind
+say 'register' .CommandHandler~register('MINE', .mine~new)
+address mine 'hello'
+say 'rc' rc
+say 'done'
+
+::class mine subclass CommandHandler
+::method command
+  use arg command, caller
+  say 'caller is a' caller~class~id
+  r = .CommandHandler~handler('sh')~command('exit 3', caller)
+  say 'forwarded' r
+  f = .CommandHandler~handler('sh')~command('no_such_command_mrc 2>/dev/null', caller)
+  say 'failed forward' (f \= 0)
+  return r

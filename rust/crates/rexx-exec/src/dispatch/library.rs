@@ -319,6 +319,7 @@ impl Interp {
         };
         let held = HeldCall::Routine(entry.held());
         let exits = self.leaves_driver();
+        self.leave_next_native = false;
         self.push_native_frame(ObjRef::NIL, ObjRef::NIL, None, name, args, Some(code));
         self.native_frame_mut().executable = executable;
         pin_enter!(self, crate::pinning::PinKind::NativeApiCallback);
@@ -392,6 +393,9 @@ impl Interp {
             });
             activation.set_frame(frame);
             activation.set_between_halves(stress);
+            if matches!(held, HeldCall::Routine(_)) {
+                activation.open_variable_pool();
+            }
             let answered = thread.enter(&activation, |contexts| match &held {
                 HeldCall::Method(held, _) => {
                     invoke::held_method(held, &contexts.method(), &activation, args)
@@ -454,7 +458,10 @@ impl Interp {
     pub(crate) fn leaves_driver(&self) -> bool {
         self.activity.pin_depth == 0
             && !self.activity.resuming
-            && (self.switch.is_some() || self.stress_collect || self.others_live())
+            && (self.switch.is_some()
+                || self.stress_collect
+                || self.leave_next_native
+                || self.others_live())
     }
 
     /// The running activity's native call, its completion drained: its
@@ -654,6 +661,7 @@ impl Interp {
                     // nothing ties the two together.
                     if library.close() {
                         self.command_handlers.clear();
+                        self.environments.close_registered();
                     }
                 }
                 Err(Failure::Loud(loud)) => return Some(*loud),
@@ -851,6 +859,14 @@ impl Interp {
         let (answer, mut frame) = self.take_native_frame();
         self.end_native_frame(&mut frame);
         self.activity.native_spares.push(frame);
+        // A request the call made of this interpreter -- `RexxSetHalt` naming the thread it
+        // runs on -- is served at the end of the clause that made the call, where the oracle's
+        // clause boundary takes it, rather than when the countdown next runs out.
+        if self.timer.requests().pending(crate::timer::BOUNDARY) {
+            self.timer.requests().clear(crate::timer::BOUNDARY);
+            self.boundary_posts = Some(self.activation_depth());
+            self.clause_exits = true;
+        }
         answer
     }
 
@@ -865,6 +881,7 @@ impl Interp {
     /// Pops the innermost native frame and takes its held condition out of
     /// it, leaving the rest held.
     fn take_native_frame(&mut self) -> (Popped, Box<crate::NativeFrame>) {
+        self.sync_api_changes();
         let mut frame = self
             .activity
             .native_handles
@@ -1228,6 +1245,9 @@ impl OffBaton {
         if let Some(number) = pending {
             activation.raise(number);
         }
+        if matches!(held, HeldCall::Routine(_)) {
+            activation.open_variable_pool();
+        }
         thread.enter(&activation, |contexts| post(held.call(native, contexts)));
         activation.pending()
     }
@@ -1310,6 +1330,9 @@ impl PooledCall {
             if let Some(number) = self.pending {
                 activation.raise(number);
             }
+            if matches!(held, HeldCall::Routine(_)) {
+                activation.open_variable_pool();
+            }
             let (completion, ended) = thread.enter(&activation, |contexts| {
                 drop(entered);
                 let completion = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
@@ -1371,6 +1394,7 @@ impl<'p> Recalling<'p> {
             },
             thread: std::thread::current().id(),
             base: Some(self.base),
+            room: None,
         }));
         Lent::wait(self.baton)
     }
@@ -1404,10 +1428,14 @@ impl rexx_api::values::Baton for Requester {
         }
         #[cfg(test)]
         self.baton.count_take();
+        // A thread attached to an embedding instance runs Rexx code on its
+        // own stack, as far as the part of it below a quarter's reserve.
+        let stack = rexx_api::ffi::attached_stack();
         self.inbox.post(Posted::Recall(Recall {
             by: Recaller::Context(context),
             thread: std::thread::current().id(),
-            base: None,
+            base: stack.map(|(top, _)| top),
+            room: stack.map(|(_, size)| size - size / 4),
         }));
         std::mem::forget(Lent::wait(&self.baton));
         true
@@ -2146,6 +2174,7 @@ fn percent_g(value: f64, significant: usize) -> String {
     format!("{sign}0.{zeros}{}", digits.trim_end_matches('0'))
 }
 
+mod pool;
 mod surface;
 #[cfg(test)]
 mod tests;

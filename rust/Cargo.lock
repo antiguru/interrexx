@@ -370,6 +370,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "librexx"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "rexx-api",
+ "rexx-exec",
+]
+
+[[package]]
+name = "librexxapi"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "rexx-api",
+]
+
+[[package]]
 name = "linux-raw-sys"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -563,6 +580,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 name = "rexx-api"
 version = "0.1.0"
 dependencies = [
+ "libc",
  "libloading",
  "rexx-core",
  "rustc-hash",
@@ -599,6 +617,8 @@ dependencies = [
  "chrono",
  "datadriven",
  "libc",
+ "librexx",
+ "librexxapi",
  "loom",
  "rayon",
  "rexx-api",
@@ -657,6 +677,7 @@ name = "rexx-rxapi"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "rexx-api",
  "rustix",
 ]
 

@@ -1886,7 +1886,10 @@ macro_rules! clause_region {
                     // would stop running down after the first clause.
                     // Measured: `trace -2` then suppressed every later clause
                     // instead of two.
-                    if $self.activity.pending_traps.is_empty() && !$debugging {
+                    if $self.activity.pending_traps.is_empty()
+                        && !$debugging
+                        && !$self.clause_exits
+                    {
                         $self.finish_plain_clause($entry);
                         $pc = next;
                         continue $ops_label;

@@ -47,6 +47,13 @@ pub(crate) fn rxqueue(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Resul
             (queue_class(interp), b"CREATE".as_slice(), argument)
         }
         Some(b'S') => {
+            // The queue exit's pass at the new name, before it is checked (`BUILTIN(RXQUEUE)`).
+            let queue_name = match queue_name {
+                Some(given) if interp.exits.is_some() => {
+                    Some(interp.queue_name_exit(&given)?.unwrap_or(given))
+                }
+                other => other,
+            };
             let argument = required(queue_name)?;
             (stdque(interp)?, b"SET".as_slice(), Some(argument))
         }

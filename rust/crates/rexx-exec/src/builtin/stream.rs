@@ -82,6 +82,15 @@ pub(crate) fn linein(
 ) -> Result<ObjRef, Failure> {
     whole_positions(interp, name, args, &[2, 3])?;
     if names_queue(interp, args) {
+        // The queue exit's first pass (`BUILTIN(LINEIN)`).
+        if interp.exits.is_some()
+            && let Some(line) = interp.pull_exit()?
+        {
+            return Ok(match line {
+                Some(line) => interp.text(&line),
+                None => ObjRef::NIL,
+            });
+        }
         return send_to_queue(interp, b"LINEIN", None);
     }
     send_to_stream(interp, args, b"LINEIN", true, true)
@@ -161,7 +170,16 @@ pub(crate) fn lineout(
     whole_positions(interp, name, args, &[3])?;
     if names_queue(interp, args) {
         return match arg(args, 2) {
-            Some(line) => send_to_queue(interp, b"QUEUE", Some(line)),
+            Some(line) => {
+                // The queue exit's first pass (`BUILTIN(LINEOUT)`).
+                if interp.exits.is_some() {
+                    let text = interp.to_text(line).into_owned();
+                    if interp.push_exit(&text, false)? {
+                        return Ok(interp.counted(0));
+                    }
+                }
+                send_to_queue(interp, b"QUEUE", Some(line))
+            }
             None => Ok(interp.counted(0)),
         };
     }

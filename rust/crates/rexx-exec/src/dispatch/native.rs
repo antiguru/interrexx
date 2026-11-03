@@ -16,12 +16,10 @@ use rexx_parse::{
 };
 
 use super::{Arity, NativeMethod, ScopedBegin, native_file_path_separator, native_file_separator};
+use crate::accessor_setter_name;
 use crate::internal_routines::Package;
-use crate::{Loud, accessor_setter_name};
-use rexx_core::{Deferral, Owner};
 
-/// Which part of the interpreter an entry point belongs to, and through that
-/// which phase owes it a body.
+/// Which part of the interpreter an entry point belongs to.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub(crate) enum Family {
     /// `platform/unix/TimeSupport.cpp`: the timers `.Alarm` and `.Ticker`
@@ -73,9 +71,6 @@ pub(in crate::dispatch) enum ExternalBody {
     /// A body that runs in the method's scope, with the parameter count the
     /// C++ entry declares.
     Scoped { arity: Arity, begin: ScopedBegin },
-    /// A body some later phase owes, named here. The bind still succeeds;
-    /// the send is loud.
-    Deferred { owner: Owner },
 }
 
 const fn implemented(
@@ -101,16 +96,6 @@ const fn scoped(
         name,
         family,
         body: ExternalBody::Scoped { arity, begin },
-    }
-}
-
-/// A deferred entry, which names the phase that owes it a body, per row
-/// rather than per family.
-const fn deferred(name: &'static str, family: Family, owner: Owner) -> NativeExternal {
-    NativeExternal {
-        name,
-        family,
-        body: ExternalBody::Deferred { owner },
     }
 }
 
@@ -506,90 +491,107 @@ static LIBRARY_REXX_METHODS: &[NativeExternal] = &[
         Arity::Fixed(2),
         super::files::search_path_impl,
     ),
-    deferred(
+    implemented(
         "cmdhandler_environments",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(0),
+        super::command_handler::environments,
     ),
-    deferred(
+    implemented(
         "cmdhandler_handler",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(1),
+        super::command_handler::handler,
     ),
-    deferred(
+    implemented(
         "cmdhandler_handlers",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(1),
+        super::command_handler::handlers,
     ),
-    deferred(
+    implemented(
         "cmdhandler_register",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(2),
+        super::command_handler::register,
     ),
-    deferred(
+    implemented(
         "cmdhandler_deregister",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(1),
+        super::command_handler::deregister,
     ),
-    deferred(
+    implemented(
         "cmdcontext_isRedirected",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(1),
+        super::command_handler::is_redirected,
     ),
-    deferred(
+    implemented(
         "cmdcontext_isValid",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(0),
+        super::command_handler::is_valid,
     ),
-    deferred(
+    implemented(
         "cmdcontext_check",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(0),
+        super::command_handler::check,
     ),
-    deferred(
+    implemented(
         "cmdcontext_getVar",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(1),
+        super::command_handler::get_var,
     ),
-    deferred(
+    implemented(
         "cmdcontext_hasVar",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(1),
+        super::command_handler::has_var,
     ),
-    deferred(
+    implemented(
         "cmdcontext_setVar",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(2),
+        super::command_handler::set_var,
     ),
-    deferred(
+    implemented(
         "cmdcontext_dropVar",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(1),
+        super::command_handler::drop_var,
     ),
-    deferred(
+    implemented(
         "cmdcontext_variables",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(0),
+        super::command_handler::variables,
     ),
-    deferred(
+    implemented(
         "cmdcontext_forward",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(2),
+        super::command_handler::forward,
     ),
-    deferred(
+    implemented(
         "cmdcontext_lineIn",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(0),
+        super::command_handler::line_in,
     ),
-    deferred(
+    implemented(
         "cmdcontext_write",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(2),
+        super::command_handler::write,
     ),
-    deferred(
+    implemented(
         "cmdnative_kind",
         Family::Command,
-        Owner::Phase10(Deferral::Embedding),
+        Arity::Fixed(0),
+        super::command_handler::kind,
     ),
 ];
 
@@ -602,11 +604,9 @@ pub(crate) fn entry_points() -> impl Iterator<Item = crate::NativeEntryPoint> {
         .map(|entry| crate::NativeEntryPoint {
             entry: entry.name,
             family: entry.family.label(),
-            owner: match entry.body {
-                ExternalBody::Deferred { owner } => Some(owner.label()),
-                ExternalBody::Implemented { .. } | ExternalBody::Scoped { .. } => None,
-            },
-            implemented: !matches!(entry.body, ExternalBody::Deferred { .. }),
+            // Every row has a body this crate runs.
+            owner: None,
+            implemented: true,
         })
 }
 
@@ -879,16 +879,6 @@ pub(crate) fn unresolved_entry(external: Option<&MethodExternal>) -> Option<&[u8
             .iter()
             .find_map(|bind| bind.entry.as_ref().err().map(Vec::as_slice)),
         MethodExternal::OtherLibrary { .. } => None,
-    }
-}
-
-/// The refusal a send to an entry point this phase does not implement gets.
-pub(crate) fn deferred_send(entry: &NativeExternal, owner: Owner) -> Loud {
-    Loud {
-        message: crate::owned_message(
-            &format!("the LIBRARY REXX entry point \"{}\"", entry.name),
-            Some(owner),
-        ),
     }
 }
 
