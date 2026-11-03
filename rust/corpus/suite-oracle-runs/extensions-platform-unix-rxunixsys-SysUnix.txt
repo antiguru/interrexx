@@ -1,0 +1,51 @@
+# The oracle on ootest group extensions/platform/unix/rxunixsys/SysUnix, ootest revision 13347,
+# two runs. TEST_SYSCRYPT fails on both: the call raises 43.1, "Could not find routine
+# "SYSCRYPT"". Every other test passes, the six TEST_SYSSTAT_* tests included: they stat the
+# oracle's rxapi socket XDG_RUNTIME_DIR/.ooRexx-5.3.0-64-USER.service, which run 1's directory
+# held after the run. (A try with a runtime directory under a longer path got no socket there,
+# and those six failed on the oracle too; it is not a run of the harness's setup.)
+
+## Run 1: alone, 2026-11-04, a private XDG_RUNTIME_DIR under rust/target/tmp
+command: cd <copy> && ulimit -v 1048576 && LD_LIBRARY_PATH=<oracle>/lib PATH=<oracle>/bin:$PATH XDG_RUNTIME_DIR=<runtime> TMPDIR=<tmp> timeout -k 10 300 <oracle>/bin/rexx testOORexx.rex -f <copy>/ooRexx/extensions/platform/unix/rxunixsys/SysUnix.testGroup -U -V 2 < /dev/null
+rc 2, 0.07 s
+### stdout
+Searching for test containers
+Executing automated test suite
+
+ooTest Framework - Automated Test of the ooRexx Interpreter
+
+Interpreter:        REXX-ooRexx_5.3.0(MT)_64-bit 6.06 30 Jul 2026
+OS Name:            LINUX
+SysVersion:         Linux 7.2.11+deb14-amd64
+
+Tests ran:          30
+Assertions:         176
+Failures:           0
+Errors:             1
+
+[error] 20261104 00:50:22.070732
+  Test:   TEST_SYSCRYPT
+  Class:  SysUnix.testgroup
+  File:   .../ooRexx/extensions/platform/unix/rxunixsys/SysUnix.testGroup
+  Event:  SYNTAX 43.1 raised unexpectedly.
+    Could not find routine "SYSCRYPT".
+    Line:    360
+   360 *-*   r = SysCrypt(pw, key)
+       *-* Compiled method "SEND" with scope "Message".
+  1585 *-*     .message~new(self, methodName)~send
+  1548 *-* self~doTheTest(fName, aTestResult)  -- carry out the testmethod
+   548 *-*   test~execute(testResult, verbose)
+   548 *-*   test~execute(testResult, verbose)
+   110 *-* suite~execute(testResult)
+    79 *-* retCode = 'worker.rex'(arguments)
+
+File search:        00:00:00.001526
+Suite construction: 00:00:00.000402
+Test execution:     00:00:00.003336
+Total time:         00:00:00.005936
+
+### stderr
+(empty)
+
+## Run 2: tests/suite.rs l3_core_suite at 9876f4fe1, 2026-11-04, REXX_SUITE_GROUPS=extensions/platform/unix/rxunixsys/SysUnix
+verdicts from its per-test record: TEST_SYSCRYPT failed on the oracle and on the crate; every other test passed on the oracle

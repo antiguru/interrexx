@@ -766,12 +766,12 @@ fn every_ownerless_refusal_has_a_disposition() {
 /// a measurement and not a scan of nothing.
 #[test]
 fn the_scanner_reads_each_owner_form() {
-    // The `Owner::Phase10(Deferral::Extension)` form, read from a fixture.
+    // The `Owner::Phase10(Deferral::Row10NativeApi)` form, read from a fixture.
     let fixture = "\
 impl Loud {
     fn extension() -> Loud {
         Loud {
-            message: owned_message(\"y\", Some(Owner::Phase10(Deferral::Extension))),
+            message: owned_message(\"y\", Some(Owner::Phase10(Deferral::Row10NativeApi))),
         }
     }
 }
@@ -782,7 +782,7 @@ impl Loud {
     )]));
     assert_eq!(
         fixture_owners.get("extension").map(|(owner, _)| owner),
-        Some(&Owner::Phase("Phase 10 Extension".to_string()))
+        Some(&Owner::Phase("Phase 10 Row10NativeApi".to_string()))
     );
     // A constructor outside lib.rs taking an `Owner` parameter, from a fixture: no source
     // outside lib.rs has one since `deferred_send` went.
@@ -862,7 +862,7 @@ impl Loud {
     }
     fn extension() -> Loud {
         Loud {
-            message: owned_message(\"y\", Some(Owner::Phase10(Deferral::Extension))),
+            message: owned_message(\"y\", Some(Owner::Phase10(Deferral::Row10NativeApi))),
         }
     }
     fn given(owner: Owner) -> Loud {
@@ -883,7 +883,7 @@ impl Loud {
     fn mixed(what: &str, early: bool) -> Loud {
         if early {
             return Loud {
-                message: owned_message(what, Some(Owner::Phase10(Deferral::Extension))),
+                message: owned_message(what, Some(Owner::Phase10(Deferral::Row10NativeApi))),
             };
         }
         Loud {
@@ -908,7 +908,7 @@ fn adjacent(r: u8) -> Failure {
 }
 fn hostemu() -> Loud {
     Loud {
-        message: owned_message(\"s\", Some(Owner::Phase10(Deferral::Extension))),
+        message: owned_message(\"s\", Some(Owner::Phase10(Deferral::Row10NativeApi))),
     }
 }
 fn native_api() -> Loud {
@@ -931,7 +931,7 @@ fn unknown() -> Loud {
     assert_eq!(owners["given"].0, Owner::Given);
     assert_eq!(
         owners["hostemu"].0,
-        Owner::Phase("Phase 10 Extension".to_string())
+        Owner::Phase("Phase 10 Row10NativeApi".to_string())
     );
     assert_eq!(
         owners["native_api"].0,

@@ -1,4 +1,4 @@
-//! The three files of tests the suite gate does not require to pass (spec
+//! The two files of tests the suite gate does not require to pass (spec
 //! 2026-10-10 section 2), and each owner's check. A row is
 //! `dir/group<TAB>TEST<TAB>owner<TAB>reason`; `#` starts a comment line, and
 //! each file holds one `# ootest revision N` line naming the revision its rows
@@ -16,13 +16,11 @@ use crate::group_runner::{
     read_lossy, source_classes, source_test_names_in, test_classes, worktree,
 };
 
-/// The Phase 10 rows, relative to the worktree; Phase 10 deletes the file.
-pub const EXCLUSIONS: &str = "docs/superpowers/plans/phase-9-exclusions.txt";
 /// The Deviation, Environment and Flaky rows.
 pub const LICENCES: &str = "rust/corpus/suite-licences.txt";
 /// The tests the framework does not run on this host.
 pub const NOT_RUN: &str = "rust/corpus/suite-not-run.txt";
-pub const FILES: [&str; 3] = [EXCLUSIONS, LICENCES, NOT_RUN];
+pub const FILES: [&str; 2] = [LICENCES, NOT_RUN];
 
 /// The ootest revision the files must name, relative to the worktree.
 pub const REVISION: &str = "rust/corpus/suite-revision.txt";
@@ -78,14 +76,9 @@ pub fn table_path() -> PathBuf {
     )
 }
 
-/// Why a test is Phase 10's: spec D3's closed set, the one the refusals
-/// print.
-pub use rexx_core::Deferral;
-
 /// A row's owner.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Owner {
-    Phase10(Deferral),
     Deviation(u32),
     Environment,
     Flaky,
@@ -94,9 +87,6 @@ pub enum Owner {
 
 impl Owner {
     pub fn parse(text: &str) -> Option<Owner> {
-        if let Some(reason) = text.strip_prefix("Phase 10 ") {
-            return Deferral::named(reason).map(Owner::Phase10);
-        }
         if let Some(number) = text.strip_prefix("Deviation ") {
             return number
                 .parse()
@@ -115,7 +105,6 @@ impl Owner {
     /// The file a row of this owner belongs in.
     pub fn file(self) -> &'static str {
         match self {
-            Owner::Phase10(_) => EXCLUSIONS,
             Owner::Deviation(_) | Owner::Environment | Owner::Flaky => LICENCES,
             Owner::NotRun => NOT_RUN,
         }
@@ -140,11 +129,6 @@ impl Row {
     /// Where the row is, for a message.
     pub fn at(&self) -> String {
         format!("{}:{}", self.file, self.line)
-    }
-
-    /// The refusal a `refusal: TEXT` reason records.
-    pub fn refusal(&self) -> Option<&str> {
-        self.reason.strip_prefix("refusal: ")
     }
 
     /// Whether the harness renames this row's test out on both sides: an
@@ -210,7 +194,7 @@ pub fn parse_rows(file: &str, text: &str) -> (Option<String>, Vec<Row>, Vec<Stri
     (revision, rows, problems)
 }
 
-/// Every row of the three files below `worktree`, and what is malformed,
+/// Every row of the two files below `worktree`, and what is malformed,
 /// including a file whose revision is not [`REVISION`]'s.
 pub fn read_rows_in(worktree: &Path) -> (Vec<Row>, Vec<String>) {
     let recorded = fs::read_to_string(worktree.join(REVISION)).expect("the recorded revision");
@@ -247,27 +231,6 @@ pub fn by_test(rows: &[Row]) -> BTreeMap<(String, String), &Row> {
         .collect()
 }
 
-/// The groups of the native-API partition's row 10, as `dir/group`.
-pub const ROW_10_GROUPS: &[&str] = &[
-    "API/classic/CLASSIC",
-    "API/classic/RexxCallBack",
-    "API/oo/INVOCATION",
-    "API/oo/ProcessInvocation",
-    "API/oo/ProcessRexxStart",
-    "API/oo/RexxStart",
-];
-
-/// The [`ROW_10_GROUPS`] Phase 10 has delivered: they pass, so the roadmap no longer owes them
-/// and they hold no `group` row.
-pub const ROW_10_DELIVERED: &[&str] = &[
-    "API/classic/CLASSIC",
-    "API/classic/RexxCallBack",
-    "API/oo/INVOCATION",
-    "API/oo/ProcessInvocation",
-    "API/oo/ProcessRexxStart",
-    "API/oo/RexxStart",
-];
-
 /// The `extensions/` directories of pure-Rexx packages, which Moritz ruled
 /// Phase 9's (2026-10-17).
 pub const PHASE_9_EXTENSION_DIRS: &[&str] = &[
@@ -276,62 +239,10 @@ pub const PHASE_9_EXTENSION_DIRS: &[&str] = &[
     "extensions/yaml/",
 ];
 
-/// The `extensions/` directories Phase 10 has delivered (PR 4): their groups
-/// pass, so the roadmap no longer owes them and they hold no `group` row.
-/// The tests [`HELD_EXTENSION_TESTS`] names keep a row of their own.
-pub const EXTENSION_DELIVERED_DIRS: &[&str] = &[
-    "extensions/hostemu/",
-    "extensions/logicalwrapper/",
-    "extensions/platform/unix/ncurses/",
-    "extensions/platform/unix/rxunixsys/",
-    "extensions/rxmath/",
-    "extensions/rxregexp/",
-    "extensions/rxsock/",
-];
-
-/// The tests of a delivered extension group that fail on this crate as
-/// delivered, each with why, which a `held: WHY` row of
-/// `Phase 10 Extension` records.
-pub const HELD_EXTENSION_TESTS: &[(&str, &str, &str)] = &[
-    (SYSUNIX, "TEST_SYSCRYPT", HELD_SYSCRYPT),
-    (SYSUNIX, "TEST_SYSSTAT_DEVICE", HELD_SYSSTAT),
-    (SYSUNIX, "TEST_SYSSTAT_IDS", HELD_SYSSTAT),
-    (SYSUNIX, "TEST_SYSSTAT_INODE", HELD_SYSSTAT),
-    (SYSUNIX, "TEST_SYSSTAT_NUMBERLINKS", HELD_SYSSTAT),
-    (SYSUNIX, "TEST_SYSSTAT_PERMISSIONS", HELD_SYSSTAT),
-    (SYSUNIX, "TEST_SYSSTAT_SIZE", HELD_SYSSTAT),
-    (SYSUNIX, "TEST_WORDEXP", HELD_WORDEXP),
-];
-
-const SYSUNIX: &str = "extensions/platform/unix/rxunixsys/SysUnix";
-const HELD_SYSCRYPT: &str = "neither engine provides SysCrypt; it fails on the oracle too";
-const HELD_SYSSTAT: &str = "the group's socket constant is the oracle's rxapi socket under \
-     XDG_RUNTIME_DIR, which this crate's service, under REXX_API_DIR, does not create";
-const HELD_WORDEXP: &str = "SysWordexp is refused, every call raising 40.1 (Deviation 90)";
-
-/// The reason a group the roadmap makes Phase 10's is, or `None`.
-pub fn phase_10_group(group: &str) -> Option<Deferral> {
-    if group.starts_with("extensions/")
-        && !PHASE_9_EXTENSION_DIRS
-            .iter()
-            .chain(EXTENSION_DELIVERED_DIRS)
-            .any(|dir| group.starts_with(dir))
-    {
-        Some(Deferral::Extension)
-    } else if ROW_10_GROUPS.contains(&group) && !ROW_10_DELIVERED.contains(&group) {
-        Some(Deferral::Row10NativeApi)
-    } else {
-        None
-    }
-}
-
-/// Whether a captured refusal `text` carries a row owned by Phase 10 for
-/// `reason`: it names Phase 10 with that reason in parentheses, as
-/// `rexx_core::Owner::label` prints it. The one place the check of a refusal
-/// row's reason is decided.
-pub fn refusal_carries(text: &str, reason: Deferral) -> bool {
-    text.contains(&format!("({})", rexx_core::Owner::Phase10(reason).label()))
-}
+/// The directory of the groups that need a Windows API this host lacks, each
+/// test of which a `platform windows` NotRun row records (Moritz,
+/// 2026-11-03).
+pub const WINDOWS_DIR: &str = "extensions/platform/windows/";
 
 /// What the owner checks need besides the rows.
 pub struct Context {
@@ -483,29 +394,20 @@ use checks::check_not_run;
 pub use checks::check_row;
 
 /// The rows the group files alone determine, one line each as the files hold
-/// them: every test [`HELD_EXTENSION_TESTS`] names; every other test of a group the roadmap
-/// makes Phase 10's; every other test of a group whose
-/// `restrictOS` leaves this host out; and every other test of a test class
-/// whose type the framework skips by default.
+/// them: every test of a group below [`WINDOWS_DIR`]; every test of another
+/// group whose `restrictOS` leaves this host out; and every other test of a
+/// test class whose type the framework skips by default.
 pub fn derived_rows(context: &Context) -> Vec<String> {
     let mut lines = Vec::new();
     for group in &context.groups {
         let (dir, name) = group.rsplit_once('/').unwrap_or(("", group));
         let text = read_lossy(&context.group_file(group));
-        let mut tests: BTreeSet<String> = source_test_names_in(&context.root, dir, name)
+        let tests: BTreeSet<String> = source_test_names_in(&context.root, dir, name)
             .into_iter()
             .collect();
-        for (held_group, test, why) in HELD_EXTENSION_TESTS {
-            if held_group == group && tests.remove(*test) {
-                lines.push(format!("{group}\t{test}\tPhase 10 Extension\theld: {why}"));
-            }
-        }
-        if let Some(reason) = phase_10_group(group) {
+        if group.starts_with(WINDOWS_DIR) {
             for test in &tests {
-                lines.push(format!(
-                    "{group}\t{test}\tPhase 10 {}\tgroup",
-                    reason.name()
-                ));
+                lines.push(format!("{group}\t{test}\tNotRun\tplatform windows"));
             }
             continue;
         }

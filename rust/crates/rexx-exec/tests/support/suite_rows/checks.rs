@@ -12,7 +12,6 @@ pub fn check_row(row: &Row, context: &Context) -> Result<(), String> {
         return Err("the group file defines no such method".to_string());
     }
     match row.owner {
-        Owner::Phase10(reason) => check_phase_10(row, reason),
         Owner::Deviation(number) => {
             if context.deviations.contains(&number) {
                 Ok(())
@@ -39,33 +38,6 @@ pub fn check_row(row: &Row, context: &Context) -> Result<(), String> {
             }
         }
         Owner::NotRun => check_not_run(row, &text, context),
-    }
-}
-
-fn check_phase_10(row: &Row, reason: Deferral) -> Result<(), String> {
-    if row.reason == "group" {
-        return match phase_10_group(&row.group) {
-            Some(found) if found == reason => Ok(()),
-            Some(found) => Err(format!("the group is Phase 10's for {}", found.name())),
-            None => Err("the roadmap does not make the group Phase 10's".to_string()),
-        };
-    }
-    if let Some(why) = row.reason.strip_prefix("held: ") {
-        return if reason == Deferral::Extension
-            && HELD_EXTENSION_TESTS.contains(&(row.group.as_str(), row.test.as_str(), why))
-        {
-            Ok(())
-        } else {
-            Err("HELD_EXTENSION_TESTS holds no such Phase 10 Extension test".to_string())
-        };
-    }
-    match row.refusal() {
-        Some(text) if refusal_carries(text, reason) => Ok(()),
-        Some(text) => Err(format!(
-            "the refusal does not carry Phase 10 {}: {text}",
-            reason.name()
-        )),
-        None => Err("the reason is not group, `held: WHY` or `refusal: TEXT`".to_string()),
     }
 }
 
@@ -109,6 +81,13 @@ fn check_environment(row: &Row, context: &Context) -> Result<(), String> {
 }
 
 pub(super) fn check_not_run(row: &Row, text: &str, context: &Context) -> Result<(), String> {
+    if row.reason == "platform windows" {
+        return if row.group.starts_with(WINDOWS_DIR) {
+            Ok(())
+        } else {
+            Err(format!("the group is not below {WINDOWS_DIR}"))
+        };
+    }
     if let Some(line) = row.reason.strip_prefix("restrictOS line ") {
         let number: usize = line.parse().map_err(|_| "not a line number")?;
         let source = text
@@ -153,5 +132,5 @@ pub(super) fn check_not_run(row: &Row, text: &str, context: &Context) -> Result<
             Err(format!("no test class defining it sets its type to {name}"))
         };
     }
-    Err("the reason is not `restrictOS line N` or `test type NAME`".to_string())
+    Err("the reason is not `platform windows`, `restrictOS line N` or `test type NAME`".to_string())
 }

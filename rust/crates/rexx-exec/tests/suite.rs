@@ -799,16 +799,6 @@ pub fn judge(oracle: &GroupRun, ours: &GroupRun, rows: &[&Row]) -> Vec<String> {
         ));
     }
     for row in rows {
-        if let Some(recorded) = row.refusal() {
-            match ours.blocked.get(&row.test) {
-                Some(captured) if captured == recorded => {}
-                Some(captured) => problems.push(format!(
-                    "{}'s refusal is not the one captured: {captured}",
-                    row.at()
-                )),
-                None => problems.push(format!("{}'s refusal not captured", row.at())),
-            }
-        }
         if row.owner == Owner::NotRun && oracle.started.contains(&row.test) {
             problems.push(format!("{}'s test started on the oracle", row.at()));
         }
@@ -985,7 +975,6 @@ fn the_row_files_hold_only_checked_rows() {
         .iter()
         .map(|row| {
             let owner = match row.owner {
-                Owner::Phase10(reason) => format!("Phase 10 {}", reason.name()),
                 Owner::Deviation(number) => format!("Deviation {number}"),
                 other => format!("{other:?}"),
             };
@@ -1009,8 +998,7 @@ mod gate_groups_9b {
     use std::fs;
     use std::path::Path;
 
-    use super::suite_rows::{Owner, Row};
-    use super::{expected_set_in, group_path, groups_root, read_rows, worktree};
+    use super::{group_path, groups_root, worktree};
 
     /// The file, relative to the worktree.
     const FILE: &str = "rust/corpus/suite-9b-groups.txt";
@@ -1111,24 +1099,9 @@ mod gate_groups_9b {
         hits
     }
 
-    /// Whether every test of the group has a Phase 10 row.
-    fn phase_10_group(root: &Path, dir: &str, group: &str, rows: &[Row]) -> bool {
-        let path = group_path(dir, group);
-        let tests = expected_set_in(root, dir, group);
-        let owned: BTreeSet<&str> = rows
-            .iter()
-            .filter(|row| row.group == path && matches!(row.owner, Owner::Phase10(_)))
-            .map(|row| row.test.as_str())
-            .collect();
-        !tests.is_empty() && tests.iter().all(|test| owned.contains(test.as_str()))
-    }
-
     /// The groups the derivation gives, as `dir/group` in path order.
-    fn derived(root: &Path, rows: &[Row]) -> Vec<String> {
-        let mut groups: Vec<(String, String)> = grep_hits(root)
-            .into_iter()
-            .filter(|(dir, group)| !phase_10_group(root, dir, group, rows))
-            .collect();
+    fn derived(root: &Path) -> Vec<String> {
+        let mut groups: Vec<(String, String)> = grep_hits(root).into_iter().collect();
         groups.sort_by_key(|(dir, group)| format!("{}.testGroup", group_path(dir, group)));
         groups
             .iter()
@@ -1151,11 +1124,9 @@ mod gate_groups_9b {
     fn the_9b_group_file_is_what_its_derivation_gives() {
         let text = fs::read_to_string(worktree().join(FILE))
             .unwrap_or_else(|e| panic!("cannot read {FILE}: {e}"));
-        let (rows, problems) = read_rows();
-        assert!(problems.is_empty(), "{}", problems.join("\n"));
         let (listed, recorded) = parse(&text);
         assert!(recorded, "{FILE}'s header does not record `{}`", command());
-        assert_eq!(listed, derived(&groups_root(), &rows));
+        assert_eq!(listed, derived(&groups_root()));
     }
 
     #[test]
@@ -1233,29 +1204,8 @@ mod judging {
     }
 
     #[test]
-    fn a_row_whose_refusal_or_claim_the_run_contradicts_reddens_its_group() {
-        let refused = row(
-            "TEST_R",
-            Owner::Phase10(super::suite_rows::Deferral::Extension),
-            "refusal: rexx-exec: x (Phase 10 Extension)",
-        );
+    fn a_not_run_row_whose_test_started_on_the_oracle_reddens_its_group() {
         let oracle = run(&["TEST_A"], &["TEST_A"], &["TEST_A"]);
-        let mut ours = run(&["TEST_A"], &["TEST_A", "TEST_R"], &["TEST_A"]);
-        ours.blocked.insert(
-            "TEST_R".to_string(),
-            "rexx-exec: x (Phase 10 Extension)".to_string(),
-        );
-        assert_eq!(judge(&oracle, &ours, &[&refused]), Vec::<String>::new());
-        ours.blocked
-            .insert("TEST_R".to_string(), "rexx-exec: y (Phase 9)".to_string());
-        assert_eq!(judge(&oracle, &ours, &[&refused]).len(), 1);
-        let failed = run(&["TEST_A"], &["TEST_A", "TEST_R"], &["TEST_A"]);
-        assert_eq!(
-            judge(&oracle, &failed, &[&refused]).len(),
-            1,
-            "a refusal row whose test ran without refusing"
-        );
-
         let not_run = row("TEST_N", Owner::NotRun, "restrictOS line 1");
         let ours = run(&["TEST_A"], &["TEST_A"], &["TEST_A"]);
         assert_eq!(judge(&oracle, &ours, &[&not_run]), Vec::<String>::new());
@@ -1370,12 +1320,8 @@ fn the_expected_set_is_the_classes_the_group_adds() {
 
 /// Each owner's check, on rows each of which passes or fails it.
 mod row_checks {
-    use std::collections::BTreeSet;
-
-    use super::group_runner::{groups_root, worktree};
-    use super::suite_rows::{
-        Context, EXCLUSIONS, LICENCES, NOT_RUN, ROW_10_GROUPS, check_row, check_rows, parse_rows,
-    };
+    use super::group_runner::groups_root;
+    use super::suite_rows::{Context, LICENCES, NOT_RUN, check_row, check_rows, parse_rows};
 
     fn context(groups: &[&str]) -> Context {
         let groups: Vec<(String, String)> = groups
@@ -1419,16 +1365,8 @@ mod row_checks {
 
     const PASSING: &[(&str, &str)] = &[
         (
-            EXCLUSIONS,
-            "extensions/platform/windows/rxwinsys/Clipboard\tTEST_01CREATE\tPhase 10 Extension\tgroup",
-        ),
-        (
-            EXCLUSIONS,
-            "extensions/platform/unix/rxunixsys/SysUnix\tTEST_SYSCRYPT\tPhase 10 Extension\theld: neither engine provides SysCrypt; it fails on the oracle too",
-        ),
-        (
-            EXCLUSIONS,
-            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Extension\trefusal: rexx-exec: a queue is not implemented (Phase 10 Extension)",
+            NOT_RUN,
+            "extensions/platform/windows/rxwinsys/Clipboard\tTEST_01CREATE\tNotRun\tplatform windows",
         ),
         (
             LICENCES,
@@ -1454,84 +1392,24 @@ mod row_checks {
 
     const FAILING: &[(&str, &str)] = &[
         (
-            EXCLUSIONS,
-            "extensions/json/json\tTEST_INVALID_EMPTY\tPhase 10 Extension\tgroup",
+            NOT_RUN,
+            "extensions/platform/unix/rxunixsys/SysUnix\tTEST_SYSCRYPT\tNotRun\tplatform windows",
         ),
         (
-            EXCLUSIONS,
-            "extensions/rxmath/RxMath\tTEST_NAN\tPhase 10 Extension\tgroup",
+            NOT_RUN,
+            "extensions/platform/windows/rxwinsys/Clipboard\tTEST_NO_SUCH_TEST\tNotRun\tplatform windows",
         ),
         (
-            EXCLUSIONS,
-            "extensions/platform/unix/rxunixsys/SysUnix\tTEST_SYSCRYPT\tPhase 10 Extension\theld: it is hard",
+            NOT_RUN,
+            "extensions/platform/windows/rxwinsys/NO_SUCH_GROUP\tTEST_A\tNotRun\tplatform windows",
         ),
         (
-            EXCLUSIONS,
-            "extensions/platform/unix/rxunixsys/SysUnix\tTEST_SYSCRYPT\tPhase 10 Row10NativeApi\theld: neither engine provides SysCrypt; it fails on the oracle too",
-        ),
-        (
-            EXCLUSIONS,
-            "extensions/platform/unix/rxunixsys/SysUnix\tTEST_SYSSTAT_SIZE\tPhase 10 Extension\theld: neither engine provides SysCrypt; it fails on the oracle too",
-        ),
-        (
-            EXCLUSIONS,
-            "base/bif/RXQUEUE\tTEST_RXQUEUE_NOARG\tPhase 10 Extension",
-        ),
-        (
-            EXCLUSIONS,
-            "base/bif/RXQUEUE\tTEST_RXQUEUE_NOARG\tPhase 10 Queue\treaching_rxapi",
-        ),
-        (
-            EXCLUSIONS,
-            "base/bif/RXQUEUE\tTEST_RXQUEUE_NOARG\tPhase 10 Rxapi\tgroup",
-        ),
-        (
-            LICENCES,
+            NOT_RUN,
             "extensions/platform/windows/rxwinsys/Clipboard\tTEST_01CREATE\tPhase 10 Extension\tgroup",
         ),
         (
-            EXCLUSIONS,
-            "base/bif/RXQUEUE\tTEST_RXQUEUE_NOARG\tPhase 10 Extension\treaching_rxapi",
-        ),
-        (
-            EXCLUSIONS,
-            "base/bif/CHAROUT\tTEST_NO_SUCH_TEST\tPhase 10 Extension\trefusal: rexx-exec: x (Phase 10 Extension)",
-        ),
-        (
-            EXCLUSIONS,
-            "base/bif/NO_SUCH_GROUP\tTEST_A\tPhase 10 Extension\trefusal: rexx-exec: x (Phase 10 Extension)",
-        ),
-        (
-            EXCLUSIONS,
-            "base/bif/CHAROUT\tTEST_STDOUT_START\tPhase 10 Extension\tgroup",
-        ),
-        (
-            EXCLUSIONS,
-            "API/oo/RexxStart\tTEST_A\tPhase 10 Extension\tgroup",
-        ),
-        (
-            EXCLUSIONS,
-            "utilities/rxapi\tTEST_A\tPhase 10 Extension\tgroup",
-        ),
-        (
-            EXCLUSIONS,
-            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Extension\trefusal: rexx-exec: Object~copy is not implemented (Phase 9)",
-        ),
-        (
-            EXCLUSIONS,
-            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Extension\trefusal: rexx-exec: a queue is not implemented (Phase 10)",
-        ),
-        (
-            EXCLUSIONS,
-            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Extension\trefusal: rexx-exec: a queue is not implemented (Phase 10 Row10NativeApi)",
-        ),
-        (
-            EXCLUSIONS,
-            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Extension\trefusal: rexx-exec: a queue is not implemented (Phase 10 Extension2)",
-        ),
-        (
-            EXCLUSIONS,
-            "base/class/RexxQueue\tTEST_CREATE\tPhase 10 Extension\tit needs the library",
+            LICENCES,
+            "extensions/platform/windows/rxwinsys/Clipboard\tTEST_01CREATE\tNotRun\tplatform windows",
         ),
         (
             LICENCES,
@@ -1628,10 +1506,10 @@ mod row_checks {
     #[test]
     fn a_test_with_two_rows_is_a_problem() {
         let context = context(&["extensions/platform/windows/rxwinsys/Clipboard"]);
-        let line = "extensions/platform/windows/rxwinsys/Clipboard\tTEST_01CREATE\tPhase 10 Extension\tgroup";
+        let line = "extensions/platform/windows/rxwinsys/Clipboard\tTEST_01CREATE\tNotRun\tplatform windows";
         let file = |lines: &[&str]| {
             let (_, rows, malformed) = parse_rows(
-                EXCLUSIONS,
+                NOT_RUN,
                 &format!("# ootest revision 13178\n{}\n", lines.join("\n")),
             );
             assert_eq!(malformed, Vec::<String>::new());
@@ -1644,28 +1522,10 @@ mod row_checks {
     #[test]
     fn a_file_without_its_revision_is_malformed() {
         let (_, _, problems) = parse_rows(
-            EXCLUSIONS,
-            "base/bif/RXQUEUE\tTEST_RXQUEUE_NOARG\tPhase 10 Extension\tgroup\n",
+            NOT_RUN,
+            "regressions/bug2061_newline_misalignment\tTEST_STDOUT_NEWLINE\tNotRun\trestrictOS line 41\n",
         );
         assert_eq!(problems.len(), 1, "{problems:?}");
-    }
-
-    #[test]
-    fn the_row_10_groups_are_the_native_api_partitions() {
-        let source = std::fs::read_to_string(
-            worktree().join("rust/crates/rexx-exec/tests/api_group_partition.rs"),
-        )
-        .expect("api_group_partition.rs");
-        let stems: BTreeSet<&str> = source
-            .lines()
-            .filter_map(|line| line.trim().strip_prefix("(\""))
-            .filter_map(|rest| rest.strip_suffix("\", 10),"))
-            .collect();
-        let ours: BTreeSet<&str> = ROW_10_GROUPS
-            .iter()
-            .map(|group| group.rsplit('/').next().expect("a stem"))
-            .collect();
-        assert_eq!(stems, ours);
     }
 }
 
