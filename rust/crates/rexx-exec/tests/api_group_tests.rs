@@ -117,6 +117,31 @@ fn the_detector_tells_a_queue_use_from_a_name_that_only_looks_like_one() {
     );
 }
 
+/// hostemu's EXECIO tests reach the session queue through a `::CONSTANT`
+/// (`session (.RexxQueue~new)`) and through hostemu's `RexxAddQueue`, which
+/// needs the service: the constant's expression counts as a body.
+#[test]
+fn a_constant_holding_a_queue_reaches_rxapi_from_the_tests_naming_it() {
+    let bodies = directive_bodies(
+        "::constant session (.RexxQueue~new)\n::method test_q\n  self~session~empty\n\
+         ::method test_r\n  say 1\n",
+    );
+    assert_eq!(
+        bodies,
+        [
+            ("session".to_string(), "(.rexxqueue~new)\n".to_string()),
+            ("test_q".to_string(), "  self~session~empty\n".to_string()),
+            ("test_r".to_string(), "  say 1\n".to_string()),
+        ]
+    );
+    let reaching = group_runner::reaching_rxapi("extensions/hostemu", &["hostemu"]);
+    assert!(
+        reaching.contains("hostemu.TEST_EXECIO_DISKR_DEFAULT"),
+        "{reaching:?}"
+    );
+    assert!(!reaching.contains("hostemu.TEST_HI"), "{reaching:?}");
+}
+
 #[test]
 fn the_tests_reaching_rxapi_run_on_neither_side() {
     assert_rxapi_tests_are_not_run();

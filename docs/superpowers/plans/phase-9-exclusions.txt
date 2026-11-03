@@ -276,6 +276,16 @@ base/rexxutil/Macrospace	TEST_SAVE_TWO_ARGS_TOO_MANY	Phase 10 Rxapi	reaching_rxa
 base/rexxutil/platform/unix/SysGetMessage	TEST_CATALOG_INVALID	Phase 10 Rxapi	reaching_rxapi
 base/rexxutil/platform/unix/SysGetMessage	TEST_GENCAT	Phase 10 Rxapi	reaching_rxapi
 base/runtime.objects/environmentEntries	TEST_LOCAL_STREAMS_QUEUE_ARRAY	Phase 10 Rxapi	reaching_rxapi
+extensions/hostemu/hostemu	TEST_EXECIO_DISKR_DEFAULT	Phase 10 Rxapi	reaching_rxapi
+extensions/hostemu/hostemu	TEST_EXECIO_DISKR_FIFO	Phase 10 Rxapi	reaching_rxapi
+extensions/hostemu/hostemu	TEST_EXECIO_DISKR_LIFO	Phase 10 Rxapi	reaching_rxapi
+extensions/hostemu/hostemu	TEST_EXECIO_DISKR_SKIP_THEN_STEM	Phase 10 Rxapi	reaching_rxapi
+extensions/hostemu/hostemu	TEST_EXECIO_DISKR_START_AT_THREE_READ_FOUR_FIFO	Phase 10 Rxapi	reaching_rxapi
+extensions/hostemu/hostemu	TEST_EXECIO_DISKR_START_AT_TWO_FIFO	Phase 10 Rxapi	reaching_rxapi
+extensions/hostemu/hostemu	TEST_EXECIO_DISKR_TWO_LINES_FIFO	Phase 10 Rxapi	reaching_rxapi
+extensions/hostemu/hostemu	TEST_EXECIO_DISKW_DEFAULT	Phase 10 Rxapi	reaching_rxapi
+extensions/hostemu/hostemu	TEST_EXECIO_DISKW_STEM	Phase 10 Rxapi	reaching_rxapi
+extensions/hostemu/hostemu	TEST_TE	Phase 10 Rxapi	reaching_rxapi
 extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSCRYPT	Phase 10 Extension	held: neither engine provides SysCrypt; it fails on the oracle too
 extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_DEVICE	Phase 10 Extension	held: the group's socket constant is the oracle's rxapi socket under XDG_RUNTIME_DIR, which this crate's service, under REXX_API_DIR, does not create
 extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_IDS	Phase 10 Extension	held: the group's socket constant is the oracle's rxapi socket under XDG_RUNTIME_DIR, which this crate's service, under REXX_API_DIR, does not create
