@@ -332,8 +332,7 @@ fn classic_inbox(thread: usize) -> Option<ClassicInbox> {
 /// names its own thread reaches it (hostemu's `HI`).
 pub fn classic_halt(thread: usize) -> bool {
     let Some(inbox) = classic_inbox(thread) else {
-        return thread == crate::signal::current_thread()
-            && rexx_api::ffi::classic::halt_calling();
+        return thread == crate::signal::current_thread() && rexx_api::ffi::classic::halt_calling();
     };
     inbox.post(crate::timer::Posted::Halt);
     inbox

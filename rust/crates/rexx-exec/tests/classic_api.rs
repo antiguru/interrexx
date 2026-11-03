@@ -1339,7 +1339,11 @@ fn the_extension_check_refuses_the_oracles_librexx() {
             .output()
             .expect("the build script runs")
     };
-    let passing = script(&["--check-only".as_ref(), "--out".as_ref(), extensions().as_os_str()]);
+    let passing = script(&[
+        "--check-only".as_ref(),
+        "--out".as_ref(),
+        extensions().as_os_str(),
+    ]);
     assert!(passing.status.success(), "{passing:?}");
     let deps = std::env::current_exe()
         .expect("the test's path")
