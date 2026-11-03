@@ -868,6 +868,24 @@ fn c_stdio_and_rexx_output_keep_their_order_in_files() {
     );
 }
 
+/// `RexxStart`'s result into a caller's buffer: one exactly the result's length gets a new block
+/// and is left untouched, one a byte longer takes the result and its NUL and nothing past them,
+/// a shorter one gets a new block. The bytes after each buffer are checked. Measured on the
+/// oracle with the same driver.
+#[test]
+fn rexx_start_writes_a_result_buffer_only_where_it_has_room_for_the_nul() {
+    let output = run_driver("resultbuf", &[], &[]);
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "size 3: new block length 3 value abc block XXXXXXXX\n\
+         size 4: in buffer length 3 value abc block abc0XXXX\n\
+         size 2: new block length 3 value abc block XXXXXXXX\n",
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
 /// Review Focus 4: a thread the instance never saw attaches, calls a program through the
 /// context it is given, and detaches; `Terminate`, called while that thread is attached but
 /// idle, returns without waiting for it, and its later `DetachThread` is harmless. The order
