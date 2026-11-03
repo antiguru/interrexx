@@ -784,6 +784,29 @@ impl Loud {
         fixture_owners.get("extension").map(|(owner, _)| owner),
         Some(&Owner::Phase("Phase 10 Extension".to_string()))
     );
+    // A constructor outside lib.rs taking an `Owner` parameter, from a fixture: no source
+    // outside lib.rs has one since `deferred_send` went.
+    let elsewhere = "\
+impl Loud {
+    fn deferred_send(name: &[u8], owner: Owner) -> Loud {
+        let shown = String::from_utf8_lossy(name).into_owned();
+        Loud {
+            message: owned_message(&format!(\"send {shown}\"), Some(owner)),
+        }
+    }
+}
+";
+    let elsewhere_owners = owners(&constructors(&[(
+        "src/dispatch/send.rs".to_string(),
+        code_lines(elsewhere),
+    )]));
+    assert_eq!(
+        elsewhere_owners
+            .get("deferred_send")
+            .map(|(owner, _)| owner),
+        Some(&Owner::Given),
+        "a constructor outside lib.rs is found"
+    );
     let constructors = constructors(&sources());
     let owners = owners(&constructors);
     assert_eq!(
@@ -800,11 +823,6 @@ impl Loud {
         owners.get("internal_routine").map(|(owner, _)| owner),
         Some(&Owner::Given),
         "an `Owner` parameter"
-    );
-    assert_eq!(
-        owners.get("deferred_send").map(|(owner, _)| owner),
-        Some(&Owner::Given),
-        "a constructor outside lib.rs is found"
     );
     assert_eq!(
         owners.get("unresolved_call").map(|(owner, _)| owner),
