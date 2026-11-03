@@ -4224,8 +4224,8 @@ struct NativeLevel<'a> {
 struct NativeActivationLevel {
     /// What `NativeActivationFrame::getPackage` answers.
     package: Option<Package>,
-    /// Whether the condition leaves it re-raised: a SYNTAX condition the
-    /// boundary did not raise for itself.
+    /// Whether the condition leaves it re-raised: a SYNTAX condition
+    /// ([`Failure::reraised_by_native_call`]).
     reraised: bool,
 }
 

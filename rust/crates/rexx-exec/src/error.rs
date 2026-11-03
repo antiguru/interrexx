@@ -2042,12 +2042,14 @@ impl From<Raised> for Failure {
 }
 
 impl Failure {
-    /// Whether a native call this left re-raises it in its caller: a SYNTAX
-    /// condition other than one its boundary raised for itself
-    /// ([`Delivery::lineless`]).
+    /// Whether a native call this left re-raises it in its caller: any SYNTAX
+    /// condition, one its boundary raised for itself
+    /// ([`Delivery::lineless`]) too. Bug #2116 (r13324) moved
+    /// `processArguments` inside the `try` of `NativeActivation::run` and
+    /// `callNativeRoutine`, so an argument refusal is trapped by the
+    /// activation and re-raised by `checkConditions` like any other error.
     pub(crate) fn reraised_by_native_call(&self) -> bool {
-        matches!(self, Failure::Raised(raised)
-            if raised.condition == "SYNTAX" && !raised.delivery.lineless)
+        matches!(self, Failure::Raised(raised) if raised.condition == "SYNTAX")
     }
 }
 
