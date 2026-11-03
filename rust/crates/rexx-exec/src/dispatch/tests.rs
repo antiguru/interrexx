@@ -1701,37 +1701,38 @@ fn array_of_on_a_subclass_answers_an_instance_of_it() {
     );
 }
 
-/// A lone array argument is spread into the subscript list by item count
-/// with slot array, so an array whose leading slot is empty and whose item
-/// count is one is 98.975, as on the oracle.
+/// A lone array argument is the subscript list, every slot of it, so a hole
+/// anywhere is 98.975 naming the first one (bug #2085, r13264). Measured on
+/// the oracle, rc 158 for each hole and rc 163 for the empty list.
 #[test]
-fn an_expanded_index_of_one_empty_slot_is_98_975() {
-    for source in [
-        "a = (1,2)\nsay a~at((,2))\n",
-        "a = (1,2)\nsay a~at((,,3))\n",
-        "a = (1,2)\nsay a[(,2)]\n",
+fn an_index_list_with_a_hole_is_98_975_naming_it() {
+    for (source, hole) in [
+        ("a = (1,2)\nsay a~at((,2))\n", 1),
+        ("a = (1,2)\nsay a~at((,,3))\n", 1),
+        ("a = (1,2)\nsay a[(,2)]\n", 1),
+        ("a = (1,2)\nsay a~at((1,))\n", 2),
+        ("a = (1,2)\nsay a~at((1,,3))\n", 2),
+        ("a = (1,2)\nsay a~at((,))\n", 1),
     ] {
         let (code, stdout, stderr) = run_source(source);
         assert_eq!((code, stdout.as_str()), (158, ""), "{source:?}");
         assert!(
-            stderr.ends_with("Error 98.975:  Missing array element at position 1.\n"),
+            stderr.ends_with(&format!(
+                "Error 98.975:  Missing array element at position {hole}.\n"
+            )),
             "{source:?}: {stderr}"
         );
     }
-    // The neighbouring successes: one item spread from a two-slot array,
-    // two items spread from a three-slot one, and an empty spread.
+    // The neighbouring successes: a full one-slot list is the subscript.
     assert_eq!(
         run_source(
             "a = (1,2)\n\
-             say a~at((1,))\n\
-             say a[(2,)]\n"
+             say a~at(.array~of(1))\n\
+             say a[.array~of(2)]\n"
         ),
         (0, "1\n2\n".to_string(), String::new())
     );
-    let (code, stdout, stderr) = run_source("a = (1,2)\nsay a~at((1,,3))\n");
-    assert_eq!((code, stdout.as_str()), (163, ""));
-    assert!(stderr.contains("Error 93.926:"), "{stderr:?}");
-    let (code, stdout, stderr) = run_source("a = (1,2)\nsay a~at((,))\n");
+    let (code, stdout, stderr) = run_source("a = (1,2)\nsay a~at(.array~new)\n");
     assert_eq!((code, stdout.as_str()), (163, ""));
     assert!(stderr.contains("Error 93.901:"), "{stderr:?}");
 }
