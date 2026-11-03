@@ -125,3 +125,7 @@ lang/xrange_class_then_range.rex
 # stem and expressions are read through the fragment they came from (bug
 # #2131, r13342).
 lang/address_with_interpreted.rex
+# PR 6: an untrapped HALT or NOMETHOD an extension raised is reported by its
+# native level once the call has returned: a routine's frame, and the
+# package with no line (NativeActivation::checkConditions).
+lang/library_condition_reported_on_return.rex

@@ -104,7 +104,7 @@ Raised	class_not_found	body	crates/rexx-exec/src/error.rs:366	off-send-surface	-
 Loud	classic_style_routine	send	crates/rexx-exec/src/lib.rs:836	agrees	no	no route: no routine table this crate loads on Linux has a ROUTINE_CLASSIC_STYLE row; git grep --no-index over ootest, testbinaries, extensions and samples finds one only in the Windows rxwinsys	say RxCalcSqrt(4) over ::requires 'rxmath' library, a typed row: 2, rc 0 on both
 Raised	compare_result_not_whole	send	crates/rexx-exec/src/error.rs:1144	agrees	yes	26.903	.Array~of('b','a')~sortWith(c) over a Comparator whose compare returns 'abc' -- a comparator answering '1.0' also sorts, so the refusal needs a result that is not a number at all
 Raised	compare_to_result_not_whole	send	crates/rexx-exec/src/error.rs:1150	agrees	yes	26.902	.Array~of(.K~new,.K~new)~sort over ::method compareTo returning 'zzz' -- sortWith on the same objects reaches 26.903 instead, so the default order is the only route
-Raised	condition	body+send	crates/rexx-exec/src/error.rs:139	agrees	yes	from_utf8_lossy(name)	t~rc('USER BAZ', , .array~of('a'), 'r3') under signal on user baz, over ::method rc external "LIBRARY orxmethod TestRaiseCondition" -- the name is the one the extension passed RaiseCondition
+Raised	condition	body+send	crates/rexx-exec/src/error.rs:139	agrees	yes	from_utf8_lossy(&name)	t~rc('USER BAZ', , .array~of('a'), 'r3') under signal on user baz, over ::method rc external "LIBRARY orxmethod TestRaiseCondition" -- the name is the one the extension passed RaiseCondition; RaiseCondition upper-cases the name first
 Raised	constant_not_initialized	send	crates/rexx-exec/src/error.rs:1631	agrees	yes	97.4	a class-side INIT reading ::constant c (2+3)
 Loud	constant_out_of_range	ir	crates/rexx-exec/src/lib.rs:978	off-send-surface	-	-	-
 Raised	context_not_active	send	crates/rexx-exec/src/error.rs:476	agrees	yes	98.981	a `.context` returned out of a ::routine and read after the return
@@ -120,7 +120,7 @@ Loud	environment_entry	body+send	crates/rexx-exec/src/lib.rs:666	diverges	yes	di
 Raised	environment_name_too_long	body	crates/rexx-exec/src/error.rs:1905	off-send-surface	-	-	-
 Loud	environment_symbol	body+send	crates/rexx-exec/src/lib.rs:655	agrees	no	no route: the send sites ask for .MESSAGENOTIFICATION and .FILE, REXX package classes the library bootstrap installs before any program runs	m~notify(.w~new) over ::class w inherit MessageNotification, after .environment~remove('MESSAGENOTIFICATION') and .local~remove('MESSAGENOTIFICATION') (Phase 9a Task 5 probe nt1), and .rexxinfo~executable (probe info): rc 0 on both
 Raised	error_syntax	body	crates/rexx-exec/src/error.rs:1672	off-send-surface	-	-	-
-Raised	escalated	body	crates/rexx-exec/src/command.rs:468	off-send-surface	-	-	-
+Raised	escalated	body+send	crates/rexx-exec/src/command.rs:468	agrees	yes	98.970	tester~TestRaiseConditionObject(c) in a routine under ::options error syntax, c an ERROR condition object (raise error 127 description 'a command') over METHODPackage.cls: Error 98.970, rc 158 (classic_api/raise_condition.rex opt1 holds the trapped form)
 Raised	executable_file_unreadable	body	crates/rexx-exec/src/error.rs:506	off-send-surface	-	-	-
 Raised	execution_user_defined	body+send	crates/rexx-exec/src/error.rs:1071	agrees	yes	this CommandContext belongs to a command that has ended	.CommandContext~new(.object~new, 'z')~getVar('a') -- a context its own CSELF names no running command of
 Raised	exit_after_reply	body	crates/rexx-exec/src/error.rs:1888	off-send-surface	-	-	-
@@ -137,7 +137,7 @@ Raised	forward_outside_method	body	crates/rexx-exec/src/error.rs:1861	off-send-s
 Loud	frame_without_executable	send	crates/rexx-exec/src/lib.rs:706	agrees	no	no route: every frame is built with its executable but a package hook's and one from a failure site that names none, and the Phase 9d Task 3 probes reached neither	corpus/lang/stackframe_library_routine_executable.rex and stackframe_merged_library_executable.rex: each library routine frame answers its Routine object, identical on both
 Raised	from	body	crates/rexx-exec/src/error.rs:1953	off-send-surface	-	-	-
 Raised	guard_outside_method	body	crates/rexx-exec/src/error.rs:1851	off-send-surface	-	-	-
-Raised	halt	body	crates/rexx-exec/src/error.rs:159	off-send-surface	-	-	-
+Raised	halt	body+send	crates/rexx-exec/src/error.rs:159	agrees	yes	4.1	t~rc('HALT', 'stop') untrapped, over ::method rc external "LIBRARY orxmethod TestRaiseCondition": rc 252, the native level a routine's and the major line naming the package with no line (corpus/lang/library_condition_reported_on_return.rex)
 Loud	handle_descriptor	send	crates/rexx-exec/src/lib.rs:844	recorded	yes	a HANDLE: stream on descriptor	.Stream~new('HANDLE:7'), recorded as Deviation 35: the oracle makes an inert stream (stream_handle.rs pins this side; HANDLE:2 beside it is made on both)
 Loud	hash_collection_without_store	send	crates/rexx-exec/src/lib.rs:690	not-run	no	oracle-crashes.txt entry 50: never run	-
 Loud	immovable_reply	body	crates/rexx-exec/src/lib.rs:1014	off-send-surface	-	-	-

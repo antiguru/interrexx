@@ -175,7 +175,7 @@ impl Interp {
     /// interpreter's own library programs are the `REXX` package. Measured,
     /// a trapped 88.902 from `.Validate~number` names `REXX` as its `PACKAGE`
     /// and `PROGRAM`.
-    fn reported_package(&self, package: Package) -> Package {
+    pub(crate) fn reported_package(&self, package: Package) -> Package {
         match package {
             Package::Program(id) if self.library_programs.contains(&id) => Package::Rexx,
             package => package,

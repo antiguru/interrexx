@@ -218,6 +218,14 @@ pub(crate) struct Activity {
     /// `NativeActivation::checkConditions` re-raises in the caller, rather
     /// than one its arguments' conversion raised on the way in.
     pub(crate) native_reraise: bool,
+    /// Whether the failure an extension's method or routine call is answering
+    /// is the error `NativeActivation::checkConditions` reports for an
+    /// untrapped `HALT` or `NOMETHOD` the call raised. It is reported from the
+    /// native level, which has a package and no line, so the report names
+    /// that package with no line; and `NativeActivation::run` has given up a
+    /// method's receiver by then (`execution/NativeActivation.cpp:1347`), so a
+    /// method's level reports itself as a routine's.
+    pub(crate) native_reported_on_return: bool,
     /// The activation a redirection's input reader is sending `LINEIN` from,
     /// for as long as that send runs: the `RedirectionDispatcher` a condition
     /// raised straight into it meets, which takes it and ends the input.
@@ -522,6 +530,7 @@ impl Activity {
             failure_propagated: false,
             failure_reraised: false,
             native_reraise: false,
+            native_reported_on_return: false,
             input_dispatch: None,
             api_bases: Vec::new(),
             input_dispatch_trapped: false,
@@ -687,6 +696,7 @@ impl Activity {
             failure_reraised: _,
             // Flags and an activation identity.
             native_reraise: _,
+            native_reported_on_return: _,
             input_dispatch: _,
             // Activation identities and native rows.
             api_bases: _,

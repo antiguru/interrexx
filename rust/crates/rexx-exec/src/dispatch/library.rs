@@ -701,6 +701,7 @@ impl Interp {
         let settled = self.settle_native_call(ran.map(|()| None), popped, true, None);
         // A hook is no level of the failure's, so nothing re-raises it.
         self.activity.native_reraise = false;
+        self.activity.native_reported_on_return = false;
         settled.map(|_| ())
     }
 
@@ -898,7 +899,10 @@ impl Interp {
                 self.activity.pending_result = result;
                 Err(raised)
             }
-            None if condition == "HALT" => Err(Raised::halt().into()),
+            None if condition == "HALT" => {
+                self.activity.native_reported_on_return = true;
+                Err(Raised::halt().into())
+            }
             None if condition == "NOMETHOD" => {
                 let raised = match (additional, held.description.as_deref()) {
                     (Some(receiver), Some(description)) => {
@@ -917,6 +921,7 @@ impl Interp {
                     }
                     _ => Raised::syntax(97, 5, Vec::new()),
                 };
+                self.activity.native_reported_on_return = true;
                 Err(raised.into())
             }
             None => Ok(answer),

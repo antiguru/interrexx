@@ -2211,7 +2211,7 @@ impl Interp {
         };
         // With no level that has a line, the report names no program or line
         // (`Activity::display` with no `POSITION`).
-        let report = if sites.iter().any(|site| site.line().is_some()) {
+        let report = if sites.iter().any(crate::error::FailureSite::positions) {
             raised.report_lines(&site)
         } else {
             let mut positionless = raised.clone();
