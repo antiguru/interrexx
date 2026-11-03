@@ -3192,17 +3192,43 @@ DEVIATIONS -- permanent, chosen
      condition raised inside one of them names this crate's line numbers;
      messages, codes and results match the oracle.
 
- 90. SYSWORDEXP RUNS NO COMMANDS (Phase 10). OWNER: none.
+ 90. SYSWORDEXP IS REFUSED (Phase 10). OWNER: none.
 
-     Ruled by Moritz 2026-11-03: "Can we refuse subshell? Just keep the
-     safe expansion part?"
+     Ruled by Moritz 2026-11-03: "Can we refuse the function for the
+     moment? It seems like a function we need to be careful with".
      The oracle's SysWordexp calls wordexp with no flags, so command
-     substitution ($(...) and backquotes) runs a shell. This crate expands
-     words itself (field splitting, quote removal, tilde, parameter and
-     arithmetic expansion, pathname globbing) and never starts a shell; text
-     containing command substitution raises 40.1 for the routine. Found by
-     the PR 4 review: handing the text to /bin/sh after a pre-check ran
-     commands the oracle's wordexp read as plain text.
+     substitution ($(...) and backquotes) runs a shell. This crate keeps
+     SysWordexp registered (RxFuncQuery answers 0 after RxFuncAdd, as on the
+     oracle), but every call raises 40.1 for the routine, description
+     "SysWordexp is refused (Deviation 90)"; it expands nothing and starts
+     no process. ooTest's SysUnix TEST_WORDEXP is held under this Deviation.
+     Found by the PR 4 review: handing the text to /bin/sh after a pre-check
+     ran commands the oracle's wordexp read as plain text. Moritz's earlier
+     direction ("Can we refuse subshell? Just keep the safe expansion
+     part?") is the queued item .superpowers/sdd/queued/
+     2026-11-03-syswordexp-without-commands.md.
+
+ 91. A COMMAND WHOSE CHILD WAS REAPED BEFORE THE WAIT ANSWERS -10 (Phase 10).
+     OWNER: none.
+
+     Ruled by Moritz 2026-11-03: "-10, new Deviation".
+     After SysSignal(17, 'I') the kernel reaps every child, so the wait for
+     a command's process answers ECHILD. The oracle then answers a negative
+     return code with no FAILURE trace whose value is unset stack (measured
+     -35, -64, -100, -112). This crate answers -10 (-ECHILD), an ERROR as
+     for a child a signal ended. Found by the PR 4 review (M2).
+
+ 92. THE INTERPRETER'S OWN DESCRIPTORS ARE OUT OF A PROGRAM'S REACH
+     (Phase 10). OWNER: none.
+
+     Ruled by Moritz 2026-11-03: "New Deviation".
+     The timer's wake pair and deadline timerfd, the rxapi connection and a
+     running command's pidfd are moved at creation to the lowest free number
+     at or above 1000 (24 below the RLIMIT_NOFILE soft limit where that is
+     lower). SockClose, SysClose and every other rxsock call answer EBADF
+     for one of these numbers. On the oracle a program can close the
+     interpreter's own descriptors; here that closed the timer's wake socket
+     and left a halt undelivered. Found by the PR 4 review (I3).
 
 EXPRKIND OWNERSHIP -- the expression forms 4a/4b do not evaluate
 ---------------------------------------------------------------------

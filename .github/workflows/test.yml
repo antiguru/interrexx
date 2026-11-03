@@ -19,8 +19,8 @@ jobs:
         with:
           submodules: true
       - uses: actions-rust-lang/setup-rust-toolchain@v2
-      - name: Install oracle build and test dependencies
-        run: sudo apt-get update && sudo apt-get install -y cmake subversion libxml2-dev libncurses-dev strace
+      - name: Install oracle build dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake subversion libxml2-dev libncurses-dev
       - name: Build third-party trees
         run: ../scripts/setup-third-party.sh
       - name: Provide memcap
