@@ -132,3 +132,6 @@ lang/library_condition_reported_on_return.rex
 # PR 6: a finished clause's registers and an UNTIL's evaluation root nothing
 # (Moritz's ruling 2026-11-03, ooTest METHOD TEST_BUG_2108).
 lang/registers_cleared_at_clause_end.rex
+# PR 6: a library routine's frame and its executable (gate:phase-9a-gate.md:476),
+# probed against the oracle with rxmath.
+lang/library_routine_frame_executable.rex

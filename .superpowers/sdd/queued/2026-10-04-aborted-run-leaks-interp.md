@@ -1,3 +1,5 @@
+**CLOSED 2026-11-03 by Phase 10 PR 3 (08695d1e2, #12).** PR 3 plan item 3: a run ending with a native call or command in flight no longer leaks its `Interp`.
+
 **DEFERRED to Phase 10, ruled by Moritz 2026-10-18.** embedding API (ruling P53); no probe.
 
 # An aborted run leaks its Interp

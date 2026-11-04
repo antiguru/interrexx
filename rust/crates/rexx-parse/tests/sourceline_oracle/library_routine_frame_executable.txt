@@ -1,0 +1,26 @@
+count 25
+/* A library routine's stack frame (gate:phase-9a-gate.md:476): a frame a
+   native routine from a LIBRARY package left on a condition is a ROUTINE
+   frame named for the routine, and its executable is a Routine object, the
+   same one on every call and distinct per routine, with no source and no
+   package. */
+signal on syntax name a1
+call RxCalcSqrt 'x'
+a1: f1 = condition('O')['STACKFRAMES']~firstItem
+e = f1~executable
+signal on syntax name a2
+call RxCalcSqrt 'y'
+a2: f = condition('O')['STACKFRAMES']~firstItem~executable
+signal on syntax name a3
+x = RxCalcPower('z', 2)
+a3: g = condition('O')['STACKFRAMES']~firstItem~executable
+say 'frame' f1~name f1~type
+say 'exec' e~class~id (e == f) (e == g)
+signal on syntax name s1
+say 'source' e~source~items
+s1: signal on syntax name s2
+p = e~package
+say 'package' (p == .nil) p~class~id
+say 'pkgname' p~name
+s2: say 'done' condition('o')~code
+::requires 'rxmath' LIBRARY
