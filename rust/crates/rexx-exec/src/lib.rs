@@ -1501,6 +1501,10 @@ struct Interp {
     /// a library whose version check refused is, because that check raises
     /// between the `put` and the `remove`.
     libraries: Libraries,
+    /// The thread context [`Interp::terminate`] ran on, which an extension
+    /// may have kept. Declared after `libraries`, so a library's destructor
+    /// run when they drop still finds it allocated.
+    termination_thread: Option<rexx_api::ffi::ThreadContext>,
     /// The command handlers extensions registered, by upper-cased environment
     /// name (`InterpreterInstance::commandHandlers`). Emptied at the first
     /// library close, since nothing ties a handler's code to its library.
@@ -2323,6 +2327,7 @@ impl Interp {
             native_externals: FxHashMap::default(),
             guarded_externals: rustc_hash::FxHashSet::default(),
             libraries: Libraries::new(),
+            termination_thread: None,
             #[cfg(test)]
             library_open_attempts: 0,
             #[cfg(test)]
@@ -3412,6 +3417,7 @@ impl Interp {
             guarded_externals: _,
             // Library handles and procedure names, no `ObjRef` in either.
             libraries: _,
+            termination_thread: _,
             #[cfg(test)]
                 library_open_attempts: _,
             #[cfg(test)]
