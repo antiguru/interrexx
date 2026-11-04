@@ -23,7 +23,9 @@ mod source_literals;
 use source_literals::{literals, names, shown, source_files};
 
 /// The phases whose work is finished and which this assertion covers.
-const CLOSED: &[&str] = &["Phase 5", "Phase 6", "Phase 7", "Phase 8", "Phase 9"];
+const CLOSED: &[&str] = &[
+    "Phase 5", "Phase 6", "Phase 7", "Phase 8", "Phase 9", "Phase 10",
+];
 
 /// This crate's test files holding owner tables: the instruction and
 /// expression tags, the assertion harnesses' exempt rows and the phase
@@ -282,7 +284,7 @@ fn the_scan_finds_an_open_phase_it_is_not_asked_about() {
     let open = source_files("rexx-exec/tests/closed_phases")
         .iter()
         .flat_map(|path| literals(&fs::read_to_string(path).expect("a source")))
-        .filter(|(_, literal)| names(literal, "Phase 10"))
+        .filter(|(_, literal)| names(literal, "Phase 11"))
         .count();
     assert!(
         open >= 2,
