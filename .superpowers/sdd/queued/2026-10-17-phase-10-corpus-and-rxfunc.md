@@ -1,3 +1,5 @@
+**CLOSED 2026-11-03.** `RxFuncAdd`, `RxFuncQuery` and `RxFuncDrop` answer from the service's registry since Phase 10 PR 2 (f093eae5a, #11); the corpus (PPWizard, the Rexx Parser) runs at parity since PR 5 (a42a017e3, #14), record `docs/superpowers/records/2026-11-03-phase-10/pr5/`.
+
 **DEFERRED to Phase 10, ruled by Moritz 2026-10-18.** ruled by Moritz 2026-10-17 (9d plan ruling 3).
 
 # Phase 10: a real-program corpus, and RxFuncAdd with the daemon

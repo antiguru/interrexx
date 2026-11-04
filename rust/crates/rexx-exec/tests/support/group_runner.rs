@@ -722,7 +722,7 @@ pub fn interpreter_bin(run: &Path) -> PathBuf {
 }
 
 /// Makes `at` a hard link to `ours`, or a copy where one cannot be made.
-fn place(at: &Path, ours: &str) {
+pub fn place(at: &Path, ours: &str) {
     let current = || {
         fs::metadata(at)
             .ok()
@@ -908,28 +908,91 @@ pub fn test_names(
 }
 
 /// The group's tests, sorted, distinct and upper case: the instance methods
-/// named `test...` of its test classes ([`test_classes`]), which the
-/// framework's `getTestMethods` runs (`framework/OOREXXUNIT.CLS:1761`): for a
-/// group whose whole-group listing run outlasts the oracle's deadline. A
-/// `::CLASS` directive split across lines is not followed.
+/// named `test...` of the classes the file adds to its group and of their
+/// ancestors in the file, which the framework's `getTestMethods` runs
+/// (`framework/OOREXXUNIT.CLS:1761`): for a group whose whole-group listing
+/// run outlasts the oracle's deadline. A `::CLASS` directive split across
+/// lines is not followed.
 pub fn source_test_names(dir: &str, group: &str) -> Vec<String> {
     source_test_names_in(&groups_root(), dir, group)
 }
 
 /// [`source_test_names`] over the groups below `root`.
 pub fn source_test_names_in(root: &Path, dir: &str, group: &str) -> Vec<String> {
-    let classes = source_classes(&read_lossy(
-        &root.join(dir).join(format!("{group}.testGroup")),
-    ));
-    let tests = test_classes(&classes);
+    let text = read_lossy(&root.join(dir).join(format!("{group}.testGroup")));
+    let classes = source_classes(&text);
+    // The framework runs what the file adds to its `TestGroup` and nothing
+    // else (`TestGroup::suite`, `ooTest.frm`): a test class whose `add` is
+    // commented out is not run. A file that adds nothing this reading
+    // recognises keeps every test class.
+    let added = added_classes(&text);
+    let run: BTreeSet<String> = if added.is_empty() {
+        test_classes(&classes)
+    } else {
+        ancestry(&classes, added)
+    };
     let names: BTreeSet<String> = classes
         .iter()
-        .filter(|class| tests.contains(&class.name))
+        .filter(|class| run.contains(&class.name))
         .flat_map(|class| class.methods.iter())
         .filter(|name| name.starts_with("TEST"))
         .cloned()
         .collect();
     names.into_iter().collect()
+}
+
+/// The classes `text` adds to its group, lower case: the first argument of
+/// each `~add`, `~addWithSuite` and `~addWithCollection` outside a comment
+/// (`TestGroup::add` and its two siblings, `ooTest.frm`), named as an
+/// environment symbol, in the prologue ahead of the first directive, where a
+/// group file builds its group. A method's own `~add` is no group's.
+fn added_classes(text: &str) -> BTreeSet<String> {
+    const ADDS: &[&str] = &["~add(", "~addwithsuite(", "~addwithcollection("];
+    let mut added = BTreeSet::new();
+    let mut depth = 0;
+    for raw in text.lines() {
+        let lower = without_comments(raw, &mut depth).to_ascii_lowercase();
+        if lower.trim_start().starts_with("::") {
+            break;
+        }
+        for add in ADDS {
+            let mut at = 0;
+            while let Some(hit) = lower[at..].find(add) {
+                at += hit + add.len();
+                let Some(name) = lower[at..].trim_start().strip_prefix('.') else {
+                    continue;
+                };
+                let name: String = name
+                    .chars()
+                    .take_while(|c| !c.is_whitespace() && !matches!(c, ',' | ')'))
+                    .collect();
+                if !name.is_empty() {
+                    added.insert(name);
+                }
+            }
+        }
+    }
+    added
+}
+
+/// `names` and every class of `classes` they descend from, through
+/// `SUBCLASS`, `MIXINCLASS` and `INHERIT`: the class hierarchy
+/// `getTestMethods` reads a test class's methods from.
+fn ancestry(classes: &[SourceClass], names: BTreeSet<String>) -> BTreeSet<String> {
+    let mut found = names;
+    loop {
+        let more: Vec<String> = classes
+            .iter()
+            .filter(|class| found.contains(&class.name))
+            .flat_map(|class| class.parents.iter())
+            .filter(|parent| !found.contains(*parent))
+            .cloned()
+            .collect();
+        if more.is_empty() {
+            return found;
+        }
+        found.extend(more);
+    }
 }
 
 /// One `::CLASS` of a group file.

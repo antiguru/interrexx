@@ -18,8 +18,8 @@ fn prepare_temporary_directory(run: &Path, group: &str) -> Option<PathBuf> {
     Some(directory)
 }
 
-/// `group` of `dir` on the oracle, once, with the tests reaching rxapi and
-/// `renamed_out` (`GROUP.TEST` names) renamed out.
+/// `group` of `dir` on the oracle, once, with `renamed_out` (`GROUP.TEST`
+/// names) renamed out, on an API service of the run's own.
 pub fn run_group_on_oracle(dir: &str, group: &str, renamed_out: &BTreeSet<String>) -> GroupRun {
     run_group_on_oracle_from(&groups_root(), dir, group, renamed_out)
 }
@@ -35,14 +35,10 @@ pub fn run_group_on_oracle_from(
     assert!(binary.is_file(), "no oracle at {}", binary.display());
     let work = work_dir(&group_path(dir, group), "oracle");
     let run = work.join("run");
-    let group_file = prepare(
-        root,
-        &run,
-        dir,
-        group,
-        &left_out(root, dir, group, renamed_out),
-    );
+    let group_file = prepare(root, &run, dir, group, &left_out(group, renamed_out));
     let temporary = prepare_temporary_directory(&run, &group_path(dir, group));
+    let service = PrivateService::new(Side::Oracle);
+    let (variable, service_dir) = service.variable();
     let path = std::env::join_paths(
         std::iter::once(oracle_root().join("bin")).chain(
             std::env::var_os("PATH")
@@ -61,12 +57,14 @@ pub fn run_group_on_oracle_from(
         .args(driver_args(&run, &group_file))
         .current_dir(&run)
         .env("LD_LIBRARY_PATH", oracle_root().join("lib"))
-        .env("XDG_RUNTIME_DIR", crate::support::oracle_runtime::dir())
+        .env(variable, service_dir)
+        .env_remove("REXX_API_DIR")
         .env("PATH", path);
     if let Some(temporary) = temporary {
         command.env("TMPDIR", temporary);
     }
     let process = run_process(command, None, ORACLE_DEADLINE);
+    drop(service);
     let mut result = GroupRun::new(group_path(dir, group), CapKind::OracleUlimit);
     record(
         &mut result,
@@ -92,7 +90,7 @@ pub fn crate_deadline(settings: &CrateSettings, oracle: &GroupRun) -> Duration {
 }
 
 /// `group` of `dir` (below `settings.root`) on this crate, each run under
-/// `deadline`, the tests reaching rxapi and `renamed_out` renamed out. A run
+/// `deadline` on an API service of its own, `renamed_out` renamed out. A run
 /// that ends early has its last started test renamed out and runs again, up
 /// to `settings.max_runs` runs; one that ends before any test starts, or in a
 /// test the group file does not define, is the last.
@@ -110,7 +108,7 @@ pub fn run_group_on_crate_within(
         CapKind::UlimitFallback
     };
     let source = read_bytes(&settings.root.join(dir).join(format!("{group}.testGroup")));
-    let mut left_out = left_out(&settings.root, dir, group, renamed_out);
+    let mut left_out = left_out(group, renamed_out);
     let mut result = GroupRun::new(group_path(dir, group), cap);
     let work = work_dir(&result.group, "crate");
     let run = work.join("run");
@@ -163,8 +161,7 @@ pub fn crate_run_once(
     let group_file = prepare(root, run, dir, group, left_out);
     let temporary = prepare_temporary_directory(run, &group_path(dir, group));
     let environment = crate_side_environment(run);
-    let bin = interpreter_bin(run);
-    lay_class_files(&bin);
+    let bin = crate_bin(run);
     let path = environment
         .iter()
         .find(|(name, _)| name == b"PATH")
@@ -204,7 +201,13 @@ pub fn crate_run_once(
     if let Some(temporary) = temporary {
         command.env("TMPDIR", temporary);
     }
+    let service = PrivateService::new(Side::Crate);
+    let (variable, service_dir) = service.variable();
+    command
+        .env(variable, service_dir)
+        .env("XDG_RUNTIME_DIR", service_dir);
     let process = run_process(command, None, deadline + Duration::from_secs(30));
+    drop(service);
     let tests = started_in_file(&marker(run));
     (process, tests)
 }

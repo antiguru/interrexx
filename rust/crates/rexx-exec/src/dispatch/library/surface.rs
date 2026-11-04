@@ -25,6 +25,8 @@ impl Surface for Interp {
         frame.additional = None;
         frame.result = None;
         frame.condition = None;
+        frame.callee = false;
+        frame.levels = None;
     }
 
     fn new_array(&mut self, items: &[Option<ObjRef>]) -> ObjRef {
@@ -63,6 +65,8 @@ impl Surface for Interp {
         frame.additional = additional;
         frame.result = None;
         frame.condition = None;
+        frame.callee = false;
+        frame.levels = None;
     }
 
     fn raise_condition(
@@ -72,16 +76,24 @@ impl Surface for Interp {
         additional: Option<ObjRef>,
         result: Option<ObjRef>,
     ) {
+        let name = name.to_ascii_uppercase();
+        // `RaiseCondition` has no error number to give a `SYNTAX` condition.
+        if name == b"SYNTAX" {
+            self.hold_api_misuse(
+                b"RaiseCondition cannot raise a SYNTAX condition; use RaiseException or RaiseConditionObject",
+            );
+            return;
+        }
         let description = description.map(|text| self.unsent_string_value_text(text));
+        if let Some(escalated) = self.options_escalation(&name, description.as_deref(), result) {
+            self.hold_raised(escalated, None, None, None);
+            return;
+        }
         let raised = Raised {
             description,
-            ..Raised::condition(Cow::Owned(String::from_utf8_lossy(name).into_owned()))
+            ..Raised::condition(Cow::Owned(String::from_utf8_lossy(&name).into_owned()))
         };
-        let frame = self.native_frame_mut();
-        frame.raised = Some(raised.into());
-        frame.additional = additional;
-        frame.result = result;
-        frame.condition = None;
+        self.hold_raised(raised, additional, result, None);
     }
 
     fn has_condition(&mut self) -> bool {
@@ -97,9 +109,12 @@ impl Surface for Interp {
             return None;
         };
         let (raised, additional, result) = (raised.clone(), frame.additional, frame.result);
+        let levels = frame.levels.clone();
         self.activity.pending_additional = additional;
         self.activity.pending_result = result;
-        let object = self.build_native_condition_object(&raised).ok()?;
+        let object = self
+            .build_native_condition_object(&raised, levels.as_ref())
+            .ok()?;
         self.native_frame_mut().condition = Some(object);
         Some(object)
     }
@@ -263,13 +278,9 @@ impl Surface for Interp {
 
     fn set_mutable_buffer_capacity(&mut self, buffer: ObjRef, capacity: usize) -> Option<POINTER> {
         let state = self.lent_buffer(buffer)?;
-        // `MutableBuffer::setCapacity` (`:292`), which asks `ensureCapacity`
-        // for the difference over the capacity and not over the length.
-        let mut grown = 0;
-        if capacity > state.capacity {
-            let added = capacity - state.capacity;
-            grown = state.ensure_capacity(added).unwrap_or(0);
-        }
+        // `MutableBuffer::setCapacity` (`:292`), which since bug #2092
+        // (r13247) asks `ensureCapacity` for the difference over the length.
+        let grown = state.set_capacity(capacity).unwrap_or(0);
         let reserved = state.capacity;
         let address = state.writable().0.cast();
         let shrunk = reserved - state.capacity;
@@ -360,6 +371,9 @@ impl Surface for Interp {
     }
 
     fn context_variable(&mut self, name: &[u8]) -> Option<ObjRef> {
+        if self.native_callerless() {
+            return None;
+        }
         let upper = name.to_ascii_uppercase();
         match classify(&upper) {
             SymbolKind::Bad => None,
@@ -383,6 +397,9 @@ impl Surface for Interp {
     }
 
     fn set_context_variable(&mut self, name: &[u8], value: ObjRef) {
+        if self.native_callerless() {
+            return;
+        }
         let upper = name.to_ascii_uppercase();
         match classify(&upper) {
             SymbolKind::Name => {
@@ -400,6 +417,9 @@ impl Surface for Interp {
     }
 
     fn drop_context_variable(&mut self, name: &[u8]) {
+        if self.native_callerless() {
+            return;
+        }
         let upper = name.to_ascii_uppercase();
         match classify(&upper) {
             SymbolKind::Name => {
@@ -417,7 +437,11 @@ impl Surface for Interp {
     }
 
     fn context_variables(&mut self) -> Option<ObjRef> {
-        match crate::dispatch::context::local_variables(self, 0) {
+        let listed = match self.native_callerless() {
+            true => crate::dispatch::hash::new_directory(self, 0),
+            false => crate::dispatch::context::local_variables(self, 0),
+        };
+        match listed {
             Ok(directory) => Some(directory),
             Err(failure) => {
                 self.hold_native_condition(failure);
@@ -505,6 +529,9 @@ impl Surface for Interp {
     fn variable_reference(&mut self, name: &[u8], object: bool) -> Option<ObjRef> {
         let upper = name.to_ascii_uppercase();
         if !matches!(classify(&upper), SymbolKind::Name | SymbolKind::Stem) {
+            return None;
+        }
+        if !object && self.native_callerless() {
             return None;
         }
         let home = if object {
@@ -609,7 +636,7 @@ impl Surface for Interp {
     }
 
     fn load_package_source(&mut self, name: &[u8], lines: &[Vec<u8>]) -> Option<ObjRef> {
-        let loaded = self.package_from_source(name, lines, None);
+        let loaded = self.package_from_source(name, lines, None, true);
         let program = self.held(loaded)?;
         let package = self.package_object(Package::Program(program));
         self.held(package)
@@ -630,6 +657,12 @@ impl Surface for Interp {
                 Ok(rexx_parse::ProgramSource::from_lines(&borrowed))
             }
             BufferKind::Routine => crate::compiled::program_source(data.to_vec(), name),
+            // A package this instance already loaded under the name, from
+            // data or a file, is answered as it is.
+            BufferKind::Package if let Some(&program) = self.required_packages.get(name) => {
+                let package = self.package_object(Package::Program(program));
+                return Some(self.held(package));
+            }
             BufferKind::Package => match crate::compiled::restore(data) {
                 crate::compiled::Restore::Source => return None,
                 _ => crate::compiled::program_source(data.to_vec(), name),
@@ -667,12 +700,15 @@ impl Surface for Interp {
         self.roots.activity_mut().push_temp(routine);
         let (program, directive) = self.executable_sources.get(&routine)?.routine?;
         let installed = crate::InstalledRoutine { program, directive };
-        let answered = self.run_routine_as_program(installed, arguments.to_vec());
+        let answered =
+            self.on_api_base(|interp| interp.run_routine_as_program(installed, arguments.to_vec()));
         self.held(answered).flatten()
     }
 
     fn call_routine(&mut self, routine: ObjRef, arguments: Option<ObjRef>) -> Option<ObjRef> {
-        let answered = crate::dispatch::executable::call_routine_directly(self, routine, arguments);
+        let answered = self.on_api_base(|interp| {
+            crate::dispatch::executable::call_routine_directly(interp, routine, arguments)
+        });
         let answer = self.held(answered).flatten();
         if let Some(answer) = answer {
             self.roots.activity_mut().push_temp(answer);
@@ -775,51 +811,163 @@ impl Surface for Interp {
         self.set_external_trace(on);
     }
 
-    /// `Activity::raiseConditionObject`: the condition `condition` names,
-    /// with its description, additional and result, and `condition` itself
-    /// as the object `CONDITION('O')` answers; a `SYNTAX` one by its `CODE`.
+    /// `Activity::raiseConditionObject` (`concurrency/Activity.cpp:776`): the
+    /// condition a copy of `condition` describes, with its description,
+    /// additional information, result and `RC`; a `SYNTAX` one by its `CODE`,
+    /// with the `RC`, `ERRORTEXT` and `MESSAGE` that follow from it. An
+    /// object that describes no condition is 93.900.
     fn raise_condition_object(&mut self, condition: ObjRef) -> bool {
         if !Surface::is_of_class(self, condition, "Directory") {
             return false;
         }
-        let text = |interp: &mut Interp, name: &[u8]| {
-            Surface::directory_entry(interp, condition, name)
-                .map(|value| interp.unsent_string_value_text(value))
+        let entry =
+            |interp: &mut Interp, name: &[u8]| Surface::directory_entry(interp, condition, name);
+        let Some(name) = entry(self, b"CONDITION").filter(|&name| self.is_string(name)) else {
+            self.hold_api_misuse(b"the condition object has no CONDITION name");
+            return true;
         };
-        let name = text(self, b"CONDITION")
-            .unwrap_or_default()
-            .to_ascii_uppercase();
-        let description = text(self, b"DESCRIPTION");
+        let name = self.unsent_string_value_text(name).to_ascii_uppercase();
+        let description =
+            entry(self, b"DESCRIPTION").map(|text| self.unsent_string_value_text(text));
+        let additional = entry(self, b"ADDITIONAL");
+        let result = entry(self, b"RESULT");
         let raised = if name == b"SYNTAX" {
-            let code = text(self, b"CODE").unwrap_or_default();
-            let code = String::from_utf8_lossy(&code).into_owned();
-            let (major, minor) = code.split_once('.').unwrap_or((code.as_str(), "0"));
+            let code = entry(self, b"CODE")
+                .filter(|&code| self.is_string(code))
+                .map(|code| self.unsent_string_value_text(code))
+                .and_then(|code| valid_error_code(&code));
+            let Some((major, minor)) = code else {
+                self.hold_api_misuse(
+                    b"the CODE of a SYNTAX condition object must be a valid error number",
+                );
+                return true;
+            };
+            let substitutions = match additional {
+                None => Vec::new(),
+                Some(array) => match self.array_slots_of(array) {
+                    Some(items) if Surface::is_of_class(self, array, "Array") => items
+                        .into_iter()
+                        .map(|item| {
+                            item.map(|object| self.native_found(object))
+                                .unwrap_or_default()
+                        })
+                        .collect(),
+                    _ => {
+                        self.hold_api_misuse(
+                            b"the ADDITIONAL of a SYNTAX condition object must be an array",
+                        );
+                        return true;
+                    }
+                },
+            };
+            if rexx_inventory::errors::lookup(major, 0).is_none() {
+                let code = format!("{major}.{minor}").into_bytes();
+                self.hold_raised(Raised::syntax(98, 941, vec![code]), None, None, None);
+                return true;
+            }
             Raised {
                 description,
-                ..Raised::syntax(
-                    major.trim().parse().unwrap_or(0),
-                    minor.trim().parse().unwrap_or(0),
-                    Vec::new(),
-                )
+                ..Raised::syntax(major, minor, substitutions)
             }
         } else {
+            if let Some(escalated) = self.options_escalation(&name, description.as_deref(), result)
+            {
+                self.hold_raised(escalated, None, None, None);
+                return true;
+            }
+            let rc = entry(self, b"RC").map(|rc| self.unsent_string_value_text(rc));
             Raised {
                 description,
+                rc,
                 ..Raised::condition(Cow::Owned(String::from_utf8_lossy(&name).into_owned()))
             }
         };
-        let additional = Surface::directory_entry(self, condition, b"ADDITIONAL");
-        let result = Surface::directory_entry(self, condition, b"RESULT");
-        let frame = self.native_frame_mut();
-        frame.raised = Some(raised.into());
-        frame.additional = additional;
-        frame.result = result;
-        frame.condition = Some(condition);
+        self.hold_raised(raised, additional, result, None);
         true
     }
 }
 
+/// `validErrorCode` (`concurrency/Activity.cpp:740`): `code` as an error
+/// number, a major part from 1 to 99 and a minor part from 0 to 999.
+fn valid_error_code(code: &[u8]) -> Option<(u16, u16)> {
+    let whole =
+        |part: &[u8]| rexx_num::Number::parse_bytes(part).and_then(|number| number.int64_value(9));
+    let (major, minor) = match code.iter().position(|&byte| byte == b'.') {
+        Some(point) => (&code[..point], Some(&code[point + 1..])),
+        None => (code, None),
+    };
+    let major = u16::try_from(whole(major)?)
+        .ok()
+        .filter(|major| (1..100).contains(major))?;
+    let minor = match minor {
+        Some(minor) => u16::try_from(whole(minor)?)
+            .ok()
+            .filter(|&minor| minor < 1000)?,
+        None => 0,
+    };
+    Some((major, minor))
+}
+
 impl Interp {
+    /// Holds `raised` on the running native frame, with the objects its
+    /// condition object names, for the call to raise once it returns.
+    fn hold_raised(
+        &mut self,
+        raised: Raised,
+        additional: Option<ObjRef>,
+        result: Option<ObjRef>,
+        condition: Option<ObjRef>,
+    ) {
+        let frame = self.native_frame_mut();
+        frame.raised = Some(raised.into());
+        frame.additional = additional;
+        frame.result = result;
+        frame.condition = condition;
+        frame.callee = false;
+        frame.levels = None;
+    }
+
+    /// `Error_Incorrect_method_user_defined` (93.900) with `message`, which
+    /// the condition APIs raise for a request they cannot serve.
+    fn hold_api_misuse(&mut self, message: &[u8]) {
+        self.hold_raised(
+            Raised::syntax(93, 900, vec![message.to_vec()]),
+            None,
+            None,
+            None,
+        );
+    }
+
+    /// `Activity::checkConditionSyntaxOptions` (`concurrency/Activity.cpp:595`):
+    /// the `SYNTAX` error the calling activation's `::OPTIONS` make of the
+    /// condition `name` a native call raises, with its description and, for
+    /// `ERROR` and `FAILURE`, its result as the return code.
+    fn options_escalation(
+        &mut self,
+        name: &[u8],
+        description: Option<&[u8]>,
+        result: Option<ObjRef>,
+    ) -> Option<Raised> {
+        let options = matches!(
+            name,
+            b"ERROR" | b"FAILURE" | b"LOSTDIGITS" | b"NOSTRING" | b"NOTREADY"
+        );
+        if !options || self.native_callerless() || !self.condition_raises_syntax(name) {
+            return None;
+        }
+        let rc = match result {
+            Some(result) if matches!(name, b"ERROR" | b"FAILURE") => {
+                self.unsent_string_value_text(result)
+            }
+            _ => Vec::new(),
+        };
+        Some(crate::command::escalated(
+            name,
+            description.unwrap_or_default(),
+            &rc,
+        ))
+    }
+
     /// `buffer`'s state, lent to the innermost native call: its storage is
     /// not reallocated in place until that call ends.
     fn lent_buffer(&mut self, buffer: ObjRef) -> Option<&mut BufferState> {
@@ -913,7 +1061,7 @@ impl Interp {
                 super::super::class_protocol::routine_in_package(self, name, parsed, None)
             }
             BufferKind::Package => self
-                .package_from_program(name, std::rc::Rc::new(parsed), None)
+                .package_from_program(name, std::rc::Rc::new(parsed), None, true)
                 .and_then(|program| self.package_object(Package::Program(program))),
         });
         self.held(built)
@@ -933,6 +1081,19 @@ impl Interp {
 }
 
 impl Interp {
+    /// Runs `run`, the code a `CallRoutine` or `CallProgram` call runs, on a
+    /// fresh activation stack ([`crate::activity::ApiBase`]).
+    fn on_api_base<T>(&mut self, run: impl FnOnce(&mut Interp) -> T) -> T {
+        let below = self.running_activation().map(|activation| activation.id);
+        let native = self.activity.native_handles.len() - 1;
+        self.activity
+            .api_bases
+            .push(crate::activity::ApiBase { below, native });
+        let ran = run(self);
+        self.activity.api_bases.pop();
+        ran
+    }
+
     /// The class `.name` resolves to from the calling activation, or `None`
     /// where it resolves to something that is not a class or the lookup
     /// raised, whose condition is then held for the native call.

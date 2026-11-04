@@ -12,11 +12,26 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use rexx_core::{Body, Decoded, ObjRef};
-use rexx_parse::{AddressIo, Expr, OutputOption, Redirection, SymbolId};
+use rexx_parse::{AddressIo, Expr, Fragment, OutputOption, Redirection, SymbolId};
 
 use crate::activation::{ActivationId, IoConfigs};
 use crate::error::{Failure, Raised};
 use crate::{Code, Interp, Loud};
+
+/// One stored `ADDRESS ... WITH` configuration and the code its names were
+/// parsed in. Its stems and expressions name symbols of that code's own
+/// table, so a configuration an `INTERPRET` stored is evaluated through the
+/// fragment it came from, against whatever frame issues the command -- as
+/// the oracle's configuration holds its own retrievers. Without the origin
+/// the fragment's ids were read in the program's table, which named another
+/// variable entirely.
+pub(crate) struct StoredIo {
+    pub(crate) io: AddressIo,
+    /// `None` for the program this activation runs, which every activation
+    /// sharing the table runs too: an internal call inherits it, and an
+    /// `INTERPRET` runs in the same activation.
+    pub(crate) fragment: Option<Rc<Fragment>>,
+}
 
 /// Which of a command's three streams a redirection names -- the word its
 /// `>K>` line carries and the one its errors are worded for.
@@ -432,17 +447,19 @@ pub(crate) fn split_lines(bytes: &[u8]) -> Vec<Vec<u8>> {
 /// the permanent target -- measured, a permanent `with output stem o.` and a
 /// one-off `with error stem e.` fill both. The option travels with whichever
 /// configuration supplied the target, as it does in `createOutputTarget`.
+/// The answer's `bool` is whether the local configuration supplied it, which
+/// decides the code its names are read in.
 fn merge<'a>(
     local: Option<(&'a Redirection, OutputOption)>,
     global: Option<(&'a Redirection, OutputOption)>,
-) -> Option<(&'a Redirection, OutputOption)> {
+) -> Option<(&'a Redirection, OutputOption, bool)> {
     match local {
         Some((Redirection::Normal, _)) => None,
         Some((Redirection::Default, _)) | None => match global {
             Some((Redirection::Default | Redirection::Normal, _)) | None => None,
-            Some(found) => Some(found),
+            Some((found, option)) => Some((found, option, false)),
         },
-        Some(found) => Some(found),
+        Some((found, option)) => Some((found, option, true)),
     }
 }
 
@@ -450,7 +467,7 @@ impl Interp {
     /// The permanent configuration stored for `environment`, looked up by the
     /// **upcased** name -- measured, `address sh with output stem o.` still
     /// redirects after a later `address SH`.
-    fn io_config(&self, environment: &[u8]) -> Option<Rc<AddressIo>> {
+    fn io_config(&self, environment: &[u8]) -> Option<Rc<StoredIo>> {
         let upper = environment.to_ascii_uppercase();
         self.activation()
             .io_configs
@@ -464,7 +481,7 @@ impl Interp {
     /// The table is cloned first when this activation inherited one, which is
     /// `checkIOConfigTable`'s lazy copy and what keeps a callee's write off
     /// its caller.
-    pub(crate) fn add_io_config(&mut self, environment: &[u8], io: Rc<AddressIo>) {
+    pub(crate) fn add_io_config(&mut self, environment: &[u8], io: Rc<StoredIo>) {
         let upper = environment.to_ascii_uppercase().into_boxed_slice();
         let table = self
             .activation_mut()
@@ -478,9 +495,28 @@ impl Interp {
     ///
     /// An instruction with no `WITH` stores nothing and leaves whatever that
     /// name already holds in place.
-    pub(crate) fn store_io_config(&mut self, environment: &[u8], address: &rexx_parse::Address) {
+    /// `code` is the code the instruction sits in: the configuration keeps
+    /// the fragment it came from, where it came from one.
+    pub(crate) fn store_io_config(
+        &mut self,
+        code: &Code<'_>,
+        environment: &[u8],
+        address: &rexx_parse::Address,
+    ) {
         if let Some(io) = &address.io {
-            self.add_io_config(environment, Rc::new(io.as_ref().clone()));
+            let fragment = self
+                .activity
+                .fragments
+                .iter()
+                .rev()
+                .filter_map(|level| level.fragment.as_ref())
+                .find(|fragment| std::ptr::eq(&fragment.symbols, code.symbols))
+                .cloned();
+            let stored = StoredIo {
+                io: io.as_ref().clone(),
+                fragment,
+            };
+            self.add_io_config(environment, Rc::new(stored));
         }
     }
 
@@ -498,11 +534,41 @@ impl Interp {
         environment: &[u8],
         local: Option<&AddressIo>,
     ) -> Result<Option<IoContext>, Failure> {
-        let global = self.io_config(environment);
-        let global = global.as_deref();
-        if global.is_none() && local.is_none() {
+        let stored = self.io_config(environment);
+        if stored.is_none() && local.is_none() {
             return Ok(None);
         }
+        // The stored configuration's own code, where it is not `code`: the
+        // fragment it came from, planned against this frame as an
+        // `INTERPRET` plans one, or the program when `code` is a fragment.
+        let program = Rc::clone(&self.activation().program);
+        let program_plan = Rc::clone(&self.activation().plan);
+        let program_body = crate::activation::body_of(&program, self.activation().body);
+        let fragment = stored.as_ref().and_then(|stored| stored.fragment.clone());
+        let fragment_planned = match &fragment {
+            Some(fragment) if !std::ptr::eq(&fragment.symbols, code.symbols) => {
+                Some(self.fragment_plan(fragment))
+            }
+            _ => None,
+        };
+        let stored_code = match (&fragment, &fragment_planned, program_body) {
+            (Some(fragment), Some((slots, plan)), _) => Some(Code {
+                body: &fragment.body,
+                symbols: &fragment.symbols,
+                slots,
+                plan: Some(plan),
+            }),
+            (None, _, Some(body)) if !std::ptr::eq(&program.symbols, code.symbols) => Some(Code {
+                body,
+                symbols: &program.symbols,
+                slots: &program_plan.by_symbol,
+                plan: Some(&program_plan),
+            }),
+            _ => None,
+        };
+        let stored_code = stored_code.as_ref().unwrap_or(code);
+        let code_for = |local: bool| if local { code } else { stored_code };
+        let global = stored.as_deref().map(|stored| &stored.io);
         let input = merge(
             local.map(|io| (&io.input, OutputOption::Default)),
             global.map(|io| (&io.input, OutputOption::Default)),
@@ -516,21 +582,21 @@ impl Interp {
             global.map(|io| (&io.error, io.error_option)),
         );
         let (input, origin) = match input {
-            Some((source, _)) => {
-                let (lines, origin) = self.input_lines(code, source)?;
+            Some((source, _, local)) => {
+                let (lines, origin) = self.input_lines(code_for(local), source)?;
                 (Some(lines), origin)
             }
             None => (None, Origin::Other),
         };
         let output = match output {
-            Some((target, option)) => {
-                Some(self.output_target(code, target, option, Stream::Output)?)
+            Some((target, option, local)) => {
+                Some(self.output_target(code_for(local), target, option, Stream::Output)?)
             }
             None => None,
         };
         let error = match error {
-            Some((target, option)) => {
-                Some(self.output_target(code, target, option, Stream::Error)?)
+            Some((target, option, local)) => {
+                Some(self.output_target(code_for(local), target, option, Stream::Error)?)
             }
             None => None,
         };

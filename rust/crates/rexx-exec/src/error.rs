@@ -1115,9 +1115,17 @@ impl Raised {
         Raised::syntax(93, 918, vec![index.to_vec()])
     }
 
-    /// 98.975: a sort or a spread subscript met an array with a hole in it.
+    /// 98.975: a sort or an index list met an array with a hole in it.
     pub(crate) fn missing_array_element(position: usize) -> Raised {
         Raised::syntax(98, 975, vec![position.to_string().into_bytes()])
+    }
+
+    /// 93.939: an `Array` given as an index list has more than one
+    /// dimension. Measured, oracle rc 0 under a trap, through
+    /// `(1,2)~at(.array~new(2,2))`: `Method argument 1 must have a
+    /// single-dimensional array value.`
+    pub(crate) fn index_list_not_single_dimensional(position: usize) -> Raised {
+        Raised::syntax(93, 939, vec![position.to_string().into_bytes()])
     }
 
     /// 93.954: a method that only works on a single-dimensional array was
@@ -2034,12 +2042,14 @@ impl From<Raised> for Failure {
 }
 
 impl Failure {
-    /// Whether a native call this left re-raises it in its caller: a SYNTAX
-    /// condition other than one its boundary raised for itself
-    /// ([`Delivery::lineless`]).
+    /// Whether a native call this left re-raises it in its caller: any SYNTAX
+    /// condition, one its boundary raised for itself
+    /// ([`Delivery::lineless`]) too. Bug #2116 (r13324) moved
+    /// `processArguments` inside the `try` of `NativeActivation::run` and
+    /// `callNativeRoutine`, so an argument refusal is trapped by the
+    /// activation and re-raised by `checkConditions` like any other error.
     pub(crate) fn reraised_by_native_call(&self) -> bool {
-        matches!(self, Failure::Raised(raised)
-            if raised.condition == "SYNTAX" && !raised.delivery.lineless)
+        matches!(self, Failure::Raised(raised) if raised.condition == "SYNTAX")
     }
 }
 
@@ -2084,6 +2094,12 @@ pub(crate) enum FailureSite {
     /// ([`Raised::compiled_method_line`]) carrying its own blank
     /// line-number field, `*-*` marker and text.
     Rendered { text: Vec<u8> },
+    /// A native level that reported the condition itself, rendered as
+    /// [`FailureSite::Rendered`] is, and the topmost level with a package:
+    /// the major line names `name`, that package, with no line, because
+    /// `Activity::generateProgramInformation` takes the `POSITION` from that
+    /// frame and a native frame has none (`concurrency/Activity.cpp:1241-1263`).
+    Packaged { text: Vec<u8>, name: Vec<u8> },
     /// The level a kept condition object was raised again in, which echoes
     /// nothing and whose line and `name` the report names
     /// (`Activity::reraiseException`); no level it leaves records a site.
@@ -2098,8 +2114,14 @@ impl FailureSite {
             FailureSite::Clause { line, .. }
             | FailureSite::Named { line, .. }
             | FailureSite::Reraised { line, .. } => Some(*line),
-            FailureSite::Rendered { .. } => None,
+            FailureSite::Rendered { .. } | FailureSite::Packaged { .. } => None,
         }
+    }
+
+    /// Whether this site decides the major line's `running <name> line <n>`
+    /// span: it has a line, or it is a [`FailureSite::Packaged`] level.
+    pub(crate) fn positions(&self) -> bool {
+        self.line().is_some() || matches!(self, FailureSite::Packaged { .. })
     }
 
     /// What a [`FailureSite::Named`] reports in place of the program's path,
@@ -2108,6 +2130,7 @@ impl FailureSite {
         match self {
             FailureSite::Named { name, .. } => Some(name),
             FailureSite::Reraised { name, .. } => name.as_deref(),
+            FailureSite::Packaged { name, .. } => Some(name),
             FailureSite::Clause { .. } | FailureSite::Rendered { .. } => None,
         }
     }
@@ -2125,7 +2148,7 @@ impl FailureSite {
                 crate::trace::push_clause(out, *line, *indent, text);
                 out.pop();
             }
-            FailureSite::Rendered { text, .. } => {
+            FailureSite::Rendered { text } | FailureSite::Packaged { text, .. } => {
                 out.extend_from_slice(text);
                 while out.last() == Some(&b'\n') {
                     out.pop();
@@ -2141,7 +2164,7 @@ impl FailureSite {
     pub(crate) fn text(&self) -> &[u8] {
         match self {
             FailureSite::Clause { text, .. } | FailureSite::Named { text, .. } => text,
-            FailureSite::Rendered { text, .. } => text,
+            FailureSite::Rendered { text } | FailureSite::Packaged { text, .. } => text,
             FailureSite::Reraised { .. } => &[],
         }
     }
@@ -2152,7 +2175,9 @@ impl FailureSite {
     pub(crate) fn indent(&self) -> Option<usize> {
         match self {
             FailureSite::Clause { indent, .. } | FailureSite::Named { indent, .. } => Some(*indent),
-            FailureSite::Rendered { .. } | FailureSite::Reraised { .. } => None,
+            FailureSite::Rendered { .. }
+            | FailureSite::Packaged { .. }
+            | FailureSite::Reraised { .. } => None,
         }
     }
 }
@@ -2243,7 +2268,9 @@ impl Raised {
                 }
                 // Already a whole line, `*-*` marker and blank line-number
                 // field included, straight from the catalogue.
-                FailureSite::Rendered { text, .. } => lines.push(text.clone()),
+                FailureSite::Rendered { text } | FailureSite::Packaged { text, .. } => {
+                    lines.push(text.clone());
+                }
                 FailureSite::Reraised { .. } => {}
             }
         }
@@ -2261,8 +2288,9 @@ impl Raised {
         // 3700` on the oracle where the same failure in a program's own
         // clause names the program's file. A `Rendered` entry decides
         // neither, for the reason its own doc gives.
-        let innermost = site.sites.iter().find(|entry| entry.line().is_some());
-        let line = innermost.and_then(FailureSite::line).unwrap_or(0);
+        // A `Packaged` level decides both too, and names no line.
+        let innermost = site.sites.iter().find(|entry| entry.positions());
+        let line = innermost.and_then(FailureSite::line);
         let named: &[u8] = if self.delivery.internal_package && !self.delivery.lineless {
             b"REXX"
         } else {
@@ -2279,7 +2307,12 @@ impl Raised {
         if !self.delivery.positionless {
             position.extend_from_slice(b" running ");
             position.extend_from_slice(named);
-            position.extend_from_slice(format!(" line {line}").as_bytes());
+            match (innermost, line) {
+                (Some(FailureSite::Packaged { .. }), _) => {}
+                (_, line) => {
+                    position.extend_from_slice(format!(" line {}", line.unwrap_or(0)).as_bytes());
+                }
+            }
         }
         let mut out = format!("Error {}", self.number).into_bytes();
         out.extend_from_slice(&position);

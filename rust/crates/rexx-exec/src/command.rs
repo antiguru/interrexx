@@ -465,7 +465,7 @@ fn exit_code(status: std::process::ExitStatus) -> i32 {
 /// for `FAILURE`, the `LOSTDIGITS`, `NOSTRING` and `NOTREADY` ones for a
 /// handler's condition of that name (`Activity::raiseCondition`,
 /// `concurrency/Activity.cpp:596-620`), and 98.970 for any other.
-fn escalated(condition: &[u8], description: &[u8], rc: &[u8]) -> Raised {
+pub(crate) fn escalated(condition: &[u8], description: &[u8], rc: &[u8]) -> Raised {
     match condition {
         b"FAILURE" => Raised::failure_syntax(description, rc),
         b"LOSTDIGITS" => Raised::lostdigits(description),
@@ -1494,18 +1494,15 @@ impl Interp {
         held: &HandlerCondition,
         name: &[u8],
     ) -> Result<(), Failure> {
-        // **Any condition but `FAILURE` meets `ERROR SYNTAX` ahead of the
-        // traps** (`RexxActivation::command`'s `!failureCondition` test):
-        // measured, a handler's `USER` under `::OPTIONS ERROR SYNTAX` is
-        // 98.970 with a `CALL ON USER` armed.
+        // **Only `ERROR` and `FAILURE` meet their `::OPTIONS ... SYNTAX` ahead
+        // of the traps** (`RexxActivation::command`'s `errorCondition` and
+        // `failureCondition` tests): measured, a handler's `USER` under
+        // `::OPTIONS ERROR SYNTAX` reaches a `SIGNAL ON USER` handler, and
+        // untrapped it is ignored. The re-raise of an untrapped `FAILURE`
+        // re-enters here as `ERROR`, the C++'s second `ERROR SYNTAX` test.
         let command_status = matches!(name, b"ERROR" | b"FAILURE");
-        let syntax: &[u8] = if name == b"FAILURE" {
-            b"FAILURE"
-        } else {
-            b"ERROR"
-        };
-        if self.condition_raises_syntax(syntax) {
-            return Err(self.handler_escalation(held, syntax));
+        if command_status && self.condition_raises_syntax(name) {
+            return Err(self.handler_escalation(held, name));
         }
         let raised = Raised {
             description: held.description.clone(),

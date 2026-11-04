@@ -1,3 +1,5 @@
+**CLOSED 2026-11-03 by Phase 10 PR 3 (08695d1e2, #12).** PR 3 plan item 4: a blocking wait re-blocks the halting signals, so a group Ctrl-C halts each interpreter.
+
 **DEFERRED to Phase 10, ruled by Moritz 2026-10-18.** the second interpreter instance is row 10's; no probe.
 
 # Two interpreters in one process reopen the Ctrl-C command race

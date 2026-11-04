@@ -3823,6 +3823,7 @@ impl Interp {
                                 GRANTING, TOP, clause_pc, index, region_end, clause, stale,
                                 debugging, entry, from
                             );
+                            registers.clear_from(chunk.register_top_at(index));
                             let end = region_end;
                             break 'step clause_region!(
                                 self, code, chunk, registers, source, pc, clause_pc, index, clause,
@@ -3838,6 +3839,7 @@ impl Interp {
                                 GRANTING, TOP, clause_pc, index, region_end, clause, stale,
                                 debugging, entry, from
                             );
+                            registers.clear_from(chunk.register_top_at(index));
                             header = None;
                         }
                         // **A jump past this range's end is loud rather than a

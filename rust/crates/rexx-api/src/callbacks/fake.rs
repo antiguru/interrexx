@@ -382,9 +382,7 @@ impl Surface for FakeHost {
 
     fn set_mutable_buffer_capacity(&mut self, buffer: ObjRef, capacity: usize) -> Option<POINTER> {
         let state = self.state(buffer)?.buffer_mut()?;
-        if capacity > state.capacity {
-            state.ensure_capacity(capacity - state.capacity).ok()?;
-        }
+        state.set_capacity(capacity).ok()?;
         Some(state.writable().0.cast())
     }
 

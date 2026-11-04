@@ -1,8 +1,11 @@
 # The tests the framework does not run on this host (spec 2026-10-10 section 2).
-# One row per test: dir/group, TEST, NotRun, reason. `restrictOS line N` and
-# `test type NAME` rows are the ones `suite_rows::derived_rows` derives from
-# the group files, and `the_row_files_hold_only_checked_rows`
-# (`tests/suite.rs`) asserts each is present.
+# One row per test: dir/group, TEST, NotRun, reason. `platform windows`,
+# `restrictOS line N` and `test type NAME` rows are the ones
+# `suite_rows::derived_rows` derives from the group files, and
+# `the_row_files_hold_only_checked_rows` (`tests/suite.rs`) asserts each is
+# present. A `platform windows` row is a test of a group below
+# `extensions/platform/windows/`, which needs a Windows API this host lacks
+# (Moritz, 2026-11-03).
 # ootest revision 13347
 base/rexxutil/platform/windows/SysBootDrive	TESTBOOTDRIVE	NotRun	restrictOS line 43
 base/rexxutil/platform/windows/SysBootDrive	TESTBOOTDRIVE2	NotRun	restrictOS line 43
@@ -170,6 +173,132 @@ base/rexxutil/platform/windows/SysWin_xxx_Printer	TEST_SETDEFAULTPRINTER_SYNTAX2
 base/rexxutil/platform/windows/SysWin_xxx_Printer	TEST_SETDEFAULTPRINTER_SYNTAX3	NotRun	restrictOS line 42
 base/rexxutil/platform/windows/SysWin_xxx_Printer	TEST_SETDEFAULTPRINTER_SYNTAX4	NotRun	restrictOS line 42
 doc/rexxref/chapter7/Section4	TEST_BEEP_EXAMPLE_7_4_6	NotRun	test type DOC_EXAMPLE_NOISE_TEST
+extensions/platform/windows/ole/ExcelQuickTest	TEST_GOODCREATION	NotRun	platform windows
+extensions/platform/windows/ole/ExcelQuickTest	TEST_GOODOS	NotRun	platform windows
+extensions/platform/windows/ole/OLEObject	TEST_CLSID_PROGID	NotRun	platform windows
+extensions/platform/windows/ole/OLEObject	TEST_HASOLEMETHOD	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_CLEARVARIANTEQUALS01	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_CLEARVARIANTEQUALS02	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_CLEARVARIANTEQUALS03	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_CLEARVARIANTEQUALS04	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR01	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR02	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR03	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR04	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR05	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR06	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR07	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR08	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR09	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR10	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR11	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR12	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR13	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR14	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR15	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR16	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR17	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR18	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR19	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR20	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR21	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR22	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR23	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR24	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR25	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_ERROR26	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_INSTANTIATE_PROPER	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_PARAMFLAGSEQUALS_ERROR01	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_PARAMFLAGSEQUALS_ERROR02	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_PARAMFLAGSEQUALS_ERROR03	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_PARAMFLAGSEQUALS_ERROR04	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_PARAMFLAGSEQUALS_ERROR05	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_PARAMFLAGSEQUALS_ERROR06	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_PARAMFLAGSEQUALS_ERROR07	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR01	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR02	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR03	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR04	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR05	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR06	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR07	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR08	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR09	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR10	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR11	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR12	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR13	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR14	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR15	NotRun	platform windows
+extensions/platform/windows/ole/OLEVariant	TEST_VARTYPEEQUALS_ERROR16	NotRun	platform windows
+extensions/platform/windows/ole/Printers	TESTDEFAULTPRINTER	NotRun	platform windows
+extensions/platform/windows/ole/Printers	TESTPRINTERNAMES	NotRun	platform windows
+extensions/platform/windows/ole/RexxProcess	TESTPROCESS	NotRun	platform windows
+extensions/platform/windows/ole/SpecialFolders	TEST_SHELL_NAMESPACE	NotRun	platform windows
+extensions/platform/windows/oodialog/Basic	TEST_0MSSLEEP_WORKS	NotRun	platform windows
+extensions/platform/windows/oodialog/Basic	TEST_1MSSLEEP_GOOD_VALUE	NotRun	platform windows
+extensions/platform/windows/oodialog/Basic	TEST_PACKAGELOAD	NotRun	platform windows
+extensions/platform/windows/oodialog/Basic	TEST_SLEEPMS_GOOD_VALUE	NotRun	platform windows
+extensions/platform/windows/oodialog/Basic	TEST_SLEEPMS_WORKS	NotRun	platform windows
+extensions/platform/windows/rxwinsys/Clipboard	TEST_01CREATE	NotRun	platform windows
+extensions/platform/windows/rxwinsys/Clipboard	TEST_02EMPTY	NotRun	platform windows
+extensions/platform/windows/rxwinsys/Clipboard	TEST_03ISDATAAVAILABLE	NotRun	platform windows
+extensions/platform/windows/rxwinsys/Clipboard	TEST_04COPY	NotRun	platform windows
+extensions/platform/windows/rxwinsys/Clipboard	TEST_05MAKEARRAY	NotRun	platform windows
+extensions/platform/windows/rxwinsys/Clipboard	TEST_06PASTE	NotRun	platform windows
+extensions/platform/windows/rxwinsys/Clipboard	TEST_07COPYPASTE	NotRun	platform windows
+extensions/platform/windows/rxwinsys/Clipboard	TEST_08COPY_UTF8	NotRun	platform windows
+extensions/platform/windows/rxwinsys/Clipboard	TEST_09PASTE_UTF8	NotRun	platform windows
+extensions/platform/windows/rxwinsys/Clipboard	TEST_10COPY_UNICODE	NotRun	platform windows
+extensions/platform/windows/rxwinsys/Clipboard	TEST_11PASTE_UNICODE	NotRun	platform windows
+extensions/platform/windows/rxwinsys/Clipboard	TEST_12LOCALE	NotRun	platform windows
+extensions/platform/windows/rxwinsys/Clipboard	TEST_13CLEANUP	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_CLOSE01	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_CLOSE02	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_CURRENTHANDLE_ATTRIBUTE	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_DEINSTALL	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_EVENTS_ATTRIBUTE	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_EVENTS_ATTRIBUTE_SET	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETFIRST01	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETFIRST02	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETFIRST03	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETLAST01	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETLAST02	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETLAST03	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETLOGNAMES01	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETLOGNAMES02	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETLOGNAMES03	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETLOGNAMES04	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETLOGNAMES05	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETLOGNAMES06	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETNUMBER01	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETNUMBER02	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_GETNUMBER03	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_INITCODE_ATTRIBUTE	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_ISFULL01	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_ISFULL02	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_ISFULL03	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_MINIMUMREAD	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_MINIMUMREADBUFFER_ATTRIBUTE	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_MINIMUMREADBUFFER_ATTRIBUTE_SET	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_MINIMUMREADEQUALS01	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_MINIMUMREADEQUALS02	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_MINIMUMREADEQUALS03	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_MINIMUMREADEQUALS04	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_MINIMUMREADEQUALS05	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_MINIMUMREADMAX_ATTRIBUTE	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_MINIMUMREADMAX_ATTRIBUTE_SET	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_MINIMUMREADMIN_ATTRIBUTE	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_MINIMUMREADMIN_ATTRIBUTE_SET	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_NEW	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_NEW_ARGS	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_OPEN01	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_OPEN02	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_OPEN03	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_OPEN04	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_OPEN_CLOSE	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_READRECORDS03	NotRun	platform windows
+extensions/platform/windows/rxwinsys/WindowsEventLog	TEST_READRECORDS05	NotRun	platform windows
 regressions/bug2061_newline_misalignment	TEST_STDERR_NEWLINE	NotRun	restrictOS line 41
 regressions/bug2061_newline_misalignment	TEST_STDOUT_NEWLINE	NotRun	restrictOS line 41
 samples/windows/adsi	TEST_ADSI1	NotRun	restrictOS line 42

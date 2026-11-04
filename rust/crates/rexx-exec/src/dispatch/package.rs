@@ -1018,7 +1018,7 @@ fn load_package(
         Some(source) => {
             let lines =
                 super::method_source_lines(interp, source, "source", super::SourceTaker::Package)?;
-            interp.package_from_source(&name, &lines, None)?
+            interp.package_from_source(&name, &lines, None, false)?
         }
         None => interp.load_package(program, &name)?,
     };
@@ -1074,7 +1074,7 @@ fn package_new(
                 "source",
                 super::SourceTaker::Executable,
             )?;
-            interp.package_from_source(&name, &lines, context)
+            interp.package_from_source(&name, &lines, context, false)
         }
     })?;
     let object = interp.package_object(Package::Program(program))?;

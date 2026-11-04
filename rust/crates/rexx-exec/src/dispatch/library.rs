@@ -511,13 +511,14 @@ impl Interp {
         let frame = self.native_token();
         if !exits {
             let stress = self.stress_collect;
+            let pool = self.opens_variable_pool(&held);
             let activation = Activation::new(Conversion {
                 host: self.into(),
                 strings: &mut strings,
             });
             activation.set_frame(frame);
             activation.set_between_halves(stress);
-            if matches!(held, HeldCall::Routine(_)) {
+            if pool {
                 activation.open_variable_pool();
             }
             let _reachable = crate::embedding::OtherRun::enter(inbox);
@@ -557,6 +558,7 @@ impl Interp {
         pin_leave!(self);
         self.activity.native_call = Some(Box::new(NativeInFlight {
             call: Some(Box::new(OffBaton {
+                pool: self.opens_variable_pool(&held),
                 held,
                 native,
                 strings,
@@ -699,6 +701,7 @@ impl Interp {
         let settled = self.settle_native_call(ran.map(|()| None), popped, true, None);
         // A hook is no level of the failure's, so nothing re-raises it.
         self.activity.native_reraise = false;
+        self.activity.native_reported_on_return = false;
         settled.map(|_| ())
     }
 
@@ -827,7 +830,8 @@ impl Interp {
             Ok(value) => match popped.raised {
                 None => Ok(value),
                 Some(raised) => {
-                    self.raise_held_condition(raised, popped.additional, popped.result, trapped)
+                    let held = (raised, popped.additional, popped.result);
+                    self.raise_held_condition(held, value, trapped)
                 }
             },
             Err(refused) => {
@@ -841,15 +845,19 @@ impl Interp {
     /// A condition a callback raised and the extension did not clear, raised
     /// once the call has returned (`NativeActivation::checkConditions`,
     /// `:1787`): a `SYNTAX` condition as the call's failure; any other is
-    /// offered to the caller's trap, and the call answers its `RESULT` where
-    /// no `SIGNAL ON` takes it.
+    /// offered to the caller's trap, and the call answers the condition's
+    /// `RESULT` where no `SIGNAL ON` takes it, or else `returned`, what the
+    /// call itself returned. As with `RAISE`, an untrapped `HALT` or
+    /// `NOMETHOD` is an error. `held` is the condition with its
+    /// `ADDITIONAL` and `RESULT` objects.
     fn raise_held_condition(
         &mut self,
-        raised: Failure,
-        additional: Option<ObjRef>,
-        result: Option<ObjRef>,
+        held: (Failure, Option<ObjRef>, Option<ObjRef>),
+        returned: Option<ObjRef>,
         trapped: Option<ObjRef>,
     ) -> Result<Option<ObjRef>, Failure> {
+        let (raised, additional, result) = held;
+        let answer = result.or(returned);
         let condition = match &raised {
             Failure::Raised(held) if held.condition != "SYNTAX" => held.condition.to_string(),
             _ => {
@@ -884,14 +892,39 @@ impl Interp {
                     fragment_depth: self.activity.fragment_depth,
                     trace_failure: None,
                 });
-                Ok(result)
+                Ok(answer)
             }
             Some(_) => {
                 self.activity.pending_additional = additional;
                 self.activity.pending_result = result;
                 Err(raised)
             }
-            None => Ok(result),
+            None if condition == "HALT" => {
+                self.activity.native_reported_on_return = true;
+                Err(Raised::halt().into())
+            }
+            None if condition == "NOMETHOD" => {
+                let raised = match (additional, held.description.as_deref()) {
+                    (Some(receiver), Some(description)) => {
+                        // `Error_No_method_name`'s substitutions are the
+                        // receiver object itself and the message name.
+                        let name = self.text(description);
+                        self.roots.activity_mut().push_temp(name);
+                        let array = rexx_api::callbacks::Surface::new_array(
+                            self,
+                            &[Some(receiver), Some(name)],
+                        );
+                        self.roots.activity_mut().push_temp(array);
+                        let receiver = self.string_value_text(receiver)?;
+                        self.activity.pending_additional = Some(array);
+                        Raised::no_method(&receiver, description)
+                    }
+                    _ => Raised::syntax(97, 5, Vec::new()),
+                };
+                self.activity.native_reported_on_return = true;
+                Err(raised.into())
+            }
+            None => Ok(answer),
         }
     }
 
@@ -946,6 +979,9 @@ impl Interp {
                 additional: None,
                 result: None,
                 condition: None,
+                callee: false,
+                levels: None,
+                callerless: false,
                 code: None,
                 executable: crate::RoutineObject::OfCode,
                 kept: rustc_hash::FxHashSet::default(),
@@ -964,6 +1000,9 @@ impl Interp {
         frame.code = code;
         frame.executable = crate::RoutineObject::OfCode;
         frame.caller = self.running_activation().map(|activation| activation.id);
+        // A native routine a `CallRoutine` call runs has no calling
+        // activation, though it runs above the one the call was made from.
+        frame.callerless = frame.caller.is_none_or(|id| self.below_api_base(id));
         frame.id = self.next_native_id();
         frame.packaged = false;
         frame.reserved = false;
@@ -1024,6 +1063,12 @@ impl Interp {
             .native_handles
             .pop()
             .expect("the frame pushed for this call is still the innermost");
+        // A condition `RAISE`d with no Rexx caller stops here.
+        if std::mem::take(&mut frame.callee) {
+            frame.raised = None;
+            frame.additional = None;
+            frame.result = None;
+        }
         let answer = Popped {
             raised: frame.raised.take(),
             method: frame.method,
@@ -1032,6 +1077,13 @@ impl Interp {
             result: frame.result.take(),
         };
         frame.condition = None;
+        // The levels of a condition the call raises again go back on the
+        // activity for its report; a cleared one's are forgotten.
+        if let Some(levels) = frame.levels.take()
+            && answer.raised.is_some()
+        {
+            self.restore_failure_levels(levels);
+        }
         for object in [answer.additional, answer.result].into_iter().flatten() {
             self.roots.activity_mut().push_temp(object);
         }
@@ -1213,6 +1265,8 @@ pub(crate) struct OffBaton {
     native: NativeCall,
     /// The call's C strings, which its descriptors point into.
     strings: CStringPool,
+    /// Whether `RexxVariablePool` reaches the call's caller's variables.
+    pool: bool,
 }
 
 /// The row a [`NativeInFlight`] calls.
@@ -1374,6 +1428,7 @@ impl OffBaton {
             held,
             native,
             strings,
+            pool,
         } = self;
         let activation = Activation::new(Conversion {
             host: HostRef::guarded(host, baton),
@@ -1383,7 +1438,7 @@ impl OffBaton {
         if let Some(number) = pending {
             activation.raise(number);
         }
-        if matches!(held, HeldCall::Routine(_)) {
+        if *pool {
             activation.open_variable_pool();
         }
         let _reachable = crate::embedding::OtherRun::enter(inbox);
@@ -1460,6 +1515,7 @@ impl PooledCall {
                 held,
                 native,
                 strings,
+                pool,
             } = &mut *call;
             let activation = Activation::new(Conversion {
                 host: HostRef::through(&recalling),
@@ -1469,7 +1525,7 @@ impl PooledCall {
             if let Some(number) = self.pending {
                 activation.raise(number);
             }
-            if matches!(held, HeldCall::Routine(_)) {
+            if *pool {
                 activation.open_variable_pool();
             }
             let _reachable = crate::embedding::OtherRun::enter(Arc::clone(&self.inbox));
@@ -1895,6 +1951,9 @@ impl Host for Interp {
     }
 
     fn context_stem(&mut self, object: ObjRef) -> Result<Option<ObjRef>, Condition> {
+        if self.native_callerless() {
+            return Ok(None);
+        }
         let text = self.native_string_conversion(object)?;
         let name = self.to_text(text).into_owned();
         Ok(self.context_stem_named(&name))
@@ -2131,12 +2190,59 @@ impl Interp {
             _ => None,
         };
         let failure = refused.unwrap_or(failure);
-        self.activity
+        let levels = self.take_failure_levels();
+        let frame = self
+            .activity
             .native_handles
             .last_mut()
-            .expect("a native activation is running")
-            .raised = Some(failure);
+            .expect("a native activation is running");
+        frame.raised = Some(failure);
+        frame.additional = None;
+        frame.result = None;
+        frame.condition = None;
+        frame.callee = false;
+        frame.levels = Some(levels);
         Condition
+    }
+
+    /// Holds `raised`, whose condition object is `object`, for the native
+    /// call that made the `CallRoutine` or `CallProgram` call in progress:
+    /// Rexx code that call ran `RAISE`d it with no Rexx caller to offer it
+    /// to. The call's `CheckCondition` and `GetConditionInfo` see it, and it
+    /// is not raised again when the call returns.
+    pub(crate) fn hold_callee_condition(&mut self, raised: Raised, object: ObjRef) {
+        let row = self
+            .activity
+            .api_bases
+            .last()
+            .expect("a CallRoutine call is in progress")
+            .native;
+        let frame = &mut self.activity.native_handles[row];
+        frame.raised = Some(raised.into());
+        frame.additional = None;
+        frame.result = None;
+        frame.condition = Some(object);
+        frame.callee = true;
+        frame.levels = None;
+    }
+
+    /// Whether the running native call has no calling activation, as a
+    /// native routine a `CallRoutine` call runs has none: its caller's
+    /// variables do not exist (`NativeActivation::getContextVariable` and its
+    /// kin answer nothing where `activation` is null). A Rust library, which
+    /// reaches the surface with no native frame, has the running activation
+    /// for its caller.
+    pub(crate) fn native_callerless(&self) -> bool {
+        self.activity
+            .native_handles
+            .last()
+            .is_some_and(|frame| frame.callerless)
+    }
+
+    /// Whether `held`'s call reaches its caller's variables through
+    /// `RexxVariablePool`: a routine's that has a calling activation.
+    fn opens_variable_pool(&self, held: &HeldCall) -> bool {
+        matches!(held, HeldCall::Routine(_)) && !self.native_callerless()
     }
 
     /// [`Interp::native_frame`], mutably.

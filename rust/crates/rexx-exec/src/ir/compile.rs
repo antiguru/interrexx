@@ -280,11 +280,16 @@ fn compile_settled(
     // own doc comment has why the ops that do are emitted here.
     let mut first_op_of = Vec::with_capacity(len);
 
+    // Indexed by instruction: the register top as its clause opens
+    // ([`Chunk::register_tops`]).
+    let mut register_tops: Vec<u16> = Vec::with_capacity(len);
+
     for (index, instruction) in body.instructions.iter().enumerate() {
         op_of.push(op_index(&ops)?);
         if let Some(mark) = release_at[index] {
             registers.release(mark);
         }
+        register_tops.push(registers.mark().0);
         emit_before(&mut ops, &mut patches, &mut landing, &mut before[index])?;
         first_op_of.push(op_index(&ops)?);
         // This clause's own answers, which is where a per-body `bool` used to
@@ -1279,6 +1284,7 @@ fn compile_settled(
         ops: super::valid::ValidOps::new(ops, registers)?,
         op_of,
         registers,
+        register_tops: register_tops.into_boxed_slice(),
         positions: clause_positions(body, plan),
         interned: vec![std::cell::Cell::new(rexx_core::ObjRef::NIL); consts.len()],
         interned_symbols: vec![

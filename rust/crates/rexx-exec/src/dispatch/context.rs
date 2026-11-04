@@ -982,9 +982,15 @@ pub(crate) fn build_native_level_frame(
     trace_text: &[u8],
     executable: Option<ObjRef>,
 ) -> ObjRef {
+    // A routine a `CallRoutine` call runs has no caller, and no context.
+    let hidden = |depth| {
+        interp
+            .frame_at(depth)
+            .is_some_and(|activation| interp.below_api_base(activation.id))
+    };
     let context = match caller {
-        Some(depth) => interp.context_object_at(depth).unwrap_or(ObjRef::NIL),
-        None => ObjRef::NIL,
+        Some(depth) if !hidden(depth) => interp.context_object_at(depth).unwrap_or(ObjRef::NIL),
+        _ => ObjRef::NIL,
     };
     let frame = interp.roots.activity_mut().push_frame();
     let kind = interp.text(if caller.is_none() {
@@ -1036,7 +1042,7 @@ pub(crate) fn native_method_executable(
 /// If no native call is in that row.
 pub(crate) fn build_native_frame_at(interp: &mut Interp, row: usize) -> Result<ObjRef, Failure> {
     let native = &interp.activity.native_handles[row];
-    let caller = native.caller;
+    let (caller, callerless) = (native.caller, native.callerless);
     let (method, name, receiver, scope, arguments, code, ran) = (
         native.method,
         native.name.clone(),
@@ -1060,8 +1066,15 @@ pub(crate) fn build_native_frame_at(interp: &mut Interp, row: usize) -> Result<O
             Raised::compiled_routine_line(&name),
         )
     };
-    let depth = caller_depth(interp, caller)?;
-    let context = interp.context_object_at(depth);
+    // Only a routine with a calling activation has a context
+    // (`NativeActivation::accessCallerContext` runs for a routine alone).
+    let context = match method || callerless {
+        true => None,
+        false => {
+            let depth = caller_depth(interp, caller)?;
+            interp.context_object_at(depth)
+        }
+    };
     let frame = interp.roots.activity_mut().push_frame();
     let kind = interp.text(kind);
     interp.roots.activity_mut().push_temp(kind);

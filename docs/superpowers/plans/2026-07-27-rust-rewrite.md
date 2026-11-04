@@ -667,6 +667,8 @@ Gates are hard. A phase does not close until every exit criterion is demonstrate
 
 Phases 6, 7, and 8 are independent of each other and may run in parallel once Phase 5 closes.
 
+Row 10 closed on 2026-11-04 at L3-full. Its gate record is `phase-10-gate.md`.
+
 **D-L2, 2026-09-14: L2's blocker is a closed phase's leftovers, and no open phase owns them.**
 *(As recorded when opened; the ruling at its end gives the blocker to Phase 8.)*
 Measured at Phase 8's L2 slice close and recorded in `docs/superpowers/plans/phase-8-l2.md`. The

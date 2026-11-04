@@ -1563,12 +1563,15 @@ impl Interp {
                 // clause_then_to_the_end_clause` and `a_loop_retest_after_
                 // an_iterate_belongs_to_the_iterate_clause` fail on.
                 let tested = self.in_clause(until_line, |it| {
+                    // The pass's own temps frame, as the flat path's.
+                    let pass = it.roots.activity_mut().push_frame();
                     let held = it.eval_condition(
                         code,
                         &cond.condition,
                         ConditionTrace::Keyword(loop_indent, "UNTIL"),
                         raised_until_not_logical,
                     )?;
+                    it.roots.activity_mut().pop_frame(pass);
                     // An `UNTIL` that held ends the loop, so this clause's
                     // own boundary sits outside the block -- the mirror of
                     // the top-of-loop test's, and the same call.
@@ -2021,6 +2024,11 @@ impl Interp {
         // `UNTIL`'s intermediates would read the `DO`'s own indent.
         self.activity.clause_state.current_value_indent = loop_indent;
         let tested = self.in_counted_clause(until_line, counted, |it| {
+            // The pass's own temps frame, as the header's: the enclosing
+            // region is the whole `DO` instruction's, so without it what the
+            // condition's evaluation roots stays rooted until the loop ends.
+            // The `?` path leaves the pop to the outer truncation.
+            let pass = it.roots.activity_mut().push_frame();
             let held = pinned!(
                 it,
                 crate::pinning::PinKind::LoopHeader,
@@ -2031,6 +2039,7 @@ impl Interp {
                     raised_until_not_logical,
                 )
             )?;
+            it.roots.activity_mut().pop_frame(pass);
             // An `UNTIL` that held ends the loop, so this clause's own
             // boundary sits outside the block.
             it.settle_block_indent(!held, do_indent);

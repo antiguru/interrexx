@@ -4082,20 +4082,39 @@ impl Interp {
         arguments: &[Option<ObjRef>],
         reraised: bool,
     ) {
+        let reported_on_return = std::mem::take(&mut self.activity.native_reported_on_return);
+        let activation = Some(NativeActivationLevel {
+            // A `LIBRARY REXX` entry's package is `REXX`.
+            package: Some(
+                self.external_package_program(method)
+                    .map_or(Package::Rexx, Package::Program),
+            ),
+            reraised,
+            reported_on_return,
+        });
+        // `NativeActivation::run` has given up the receiver before it reports
+        // that error, so the level is a routine's: no target, and the
+        // `Compiled routine` line.
+        if reported_on_return {
+            let executable = context::native_method_executable(self, target, name);
+            let level = NativeLevel {
+                method: false,
+                name,
+                target: ObjRef::NIL,
+                arguments,
+                executable,
+                activation,
+            };
+            self.blame_native_level(Raised::compiled_routine_line(name), level);
+            return;
+        }
         let level = NativeLevel {
             method: true,
             name,
             target,
             arguments,
             executable: None,
-            // A `LIBRARY REXX` entry's package is `REXX`.
-            activation: Some(NativeActivationLevel {
-                package: Some(
-                    self.external_package_program(method)
-                        .map_or(Package::Rexx, Package::Program),
-                ),
-                reraised,
-            }),
+            activation,
         };
         self.blame_native_level(Raised::compiled_method_line(name, scope), level);
     }
@@ -4128,6 +4147,7 @@ impl Interp {
             activation: Some(NativeActivationLevel {
                 package: Some(Package::Rexx),
                 reraised: failure.reraised_by_native_call(),
+                reported_on_return: false,
             }),
         };
         self.blame_native_level(Raised::compiled_routine_line(name), level);
@@ -4145,6 +4165,7 @@ impl Interp {
         code: Option<usize>,
     ) {
         let reraised = std::mem::take(&mut self.activity.native_reraise);
+        let reported_on_return = std::mem::take(&mut self.activity.native_reported_on_return);
         if self.activity.failure_site.is_some() {
             return;
         }
@@ -4158,6 +4179,7 @@ impl Interp {
             activation: Some(NativeActivationLevel {
                 package: program.map(Package::Program),
                 reraised,
+                reported_on_return,
             }),
         };
         self.blame_native_level(Raised::compiled_routine_line(name), level);
@@ -4196,8 +4218,18 @@ impl Interp {
             Some(NativeActivationLevel {
                 package: Some(package),
                 reraised: false,
+                reported_on_return,
             }) => {
                 self.activity.failure_origin.get_or_insert((package, None));
+                if reported_on_return {
+                    let name = match self.reported_package(package) {
+                        Package::Program(id) => self.program_display_name(id).to_vec(),
+                        Package::Rexx => crate::LIBRARY_PACKAGE_NAME.to_vec(),
+                    };
+                    self.activity.failure_site = Some(FailureSite::Packaged { text, name });
+                    self.seal_site_level();
+                    return;
+                }
             }
             Some(_) | None => {}
         }
@@ -4224,9 +4256,13 @@ struct NativeLevel<'a> {
 struct NativeActivationLevel {
     /// What `NativeActivationFrame::getPackage` answers.
     package: Option<Package>,
-    /// Whether the condition leaves it re-raised: a SYNTAX condition the
-    /// boundary did not raise for itself.
+    /// Whether the condition leaves it re-raised: a SYNTAX condition
+    /// ([`Failure::reraised_by_native_call`]).
     reraised: bool,
+    /// Whether the level reported the error itself once its call had
+    /// returned ([`Activity::native_reported_on_return`]), so that its package,
+    /// not a caller's line, is what the report's major line names.
+    reported_on_return: bool,
 }
 
 /// `VariableReference~name`: the referenced variable's own spelling --

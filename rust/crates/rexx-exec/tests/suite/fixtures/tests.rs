@@ -5,9 +5,10 @@ use std::time::Duration;
 
 use super::group_runner::{interpreter_bin, started_in_file};
 use super::{
-    CapKind, CrateSettings, GroupRun, check_path, crate_run_once, crate_side_environment,
-    discover_groups, end_reason, expected_set_in, floor_from, marker, path_of, resolve,
-    run_group_on_crate_within, run_group_on_oracle_from,
+    CapKind, CrateSettings, GroupRun, check_path, crate_bin, crate_run_once,
+    crate_side_environment, discover_groups, end_reason, expected_set_in, floor_from, marker,
+    path_of, resolve, run_group_on_crate_within, run_group_on_oracle_from, service_binaries,
+    testbinaries,
 };
 
 fn root() -> PathBuf {
@@ -165,7 +166,7 @@ fn the_crate_side_finds_its_own_rexx_and_rexxc() {
         .join(format!("suite-path-{}", std::process::id()))
         .join("run");
     fs::create_dir_all(&run).expect("the run directory");
-    let bin = interpreter_bin(&run);
+    let bin = crate_bin(&run);
     let path = crate_side_environment(&run)
         .into_iter()
         .find(|(name, _)| name == b"PATH")
@@ -173,9 +174,22 @@ fn the_crate_side_finds_its_own_rexx_and_rexxc() {
         .expect("a PATH");
     assert_eq!(
         path,
-        format!("{}:/usr/local/bin:/usr/bin:/bin", bin.display())
+        format!(
+            "{}:{}:/usr/local/bin:/usr/bin:/bin",
+            bin.display(),
+            testbinaries().display()
+        )
     );
     assert_eq!(check_path(&path, &bin), Ok(()));
+    for binary in service_binaries() {
+        let name = binary.file_name().expect("a file name");
+        assert_eq!(
+            fs::read(bin.join(name)).expect("the crate's service binary"),
+            fs::read(&binary).expect("the service binary"),
+            "{} beside rexx",
+            name.to_string_lossy()
+        );
+    }
     assert_eq!(resolve("rexx", &path), Some(bin.join("rexx")));
     assert_eq!(
         fs::read(bin.join("rexx")).expect("the crate's rexx"),
@@ -468,7 +482,9 @@ fn the_crate_side_bin_holds_the_oracle_bins_class_files_and_no_other_binary() {
     assert_eq!(class_files(&bin), class_files(&oracle_bin));
     let path = format!("{}:/usr/bin:/bin", bin.display());
     assert_eq!(check_path(&path, &bin), Ok(()));
-    fs::copy(oracle_bin.join("rxqueue"), bin.join("rxqueue")).expect("an oracle binary");
+    // A name the harness lays no binary under: `fs::copy` onto one of its hard links would
+    // write through to cargo's binary.
+    fs::copy(oracle_bin.join("rexximage"), bin.join("rexximage")).expect("an oracle binary");
     assert!(check_path(&path, &bin).is_err(), "an oracle ELF in the bin");
     fs::remove_dir_all(run.parent().expect("a parent")).expect("cannot remove the run");
 }

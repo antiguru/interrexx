@@ -127,7 +127,8 @@ impl Interp {
             self.roots.activity_mut().push_temp(object);
         }
         if let Some(raised) = popped.raised {
-            self.raise_held_condition(raised, popped.additional, popped.result, None)?;
+            let held = (raised, popped.additional, popped.result);
+            self.raise_held_condition(held, None, None)?;
         }
         Ok(outcome)
     }

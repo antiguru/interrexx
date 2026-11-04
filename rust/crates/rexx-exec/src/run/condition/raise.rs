@@ -63,8 +63,10 @@ impl Interp {
         // trapped gives `zd` where the same raise without the clause gives
         // the null string.
         let mut description: Option<Vec<u8>> = None;
+        let mut description_object = None;
         if let Some(expr) = &raise.description {
             let value = self.eval(code, expr)?;
+            description_object = Some(value);
             self.roots.activity_mut().push_temp(value);
             // The object on the line and its string value in the condition,
             // the same split the `rc` keyword above takes. Measured,
@@ -317,6 +319,7 @@ impl Interp {
                 // value, which the oracle drops (`RexxActivation::raise` passes
                 // its `result` member, `RexxActivation.cpp:1827`).
                 self.activity.pending_result = result;
+                self.activity.pending_description = description_object;
                 let object = self.build_condition_object(&queued, Some(true))?;
                 self.activity.pending_traps.push_back(PendingTrap {
                     condition: name,
@@ -366,6 +369,7 @@ impl Interp {
                 raised.additional = additional;
                 raised.delivery.search = sender.search();
                 self.activity.pending_result = result;
+                self.activity.pending_description = description_object;
                 Err(raised.into())
             }
             // Nothing traps it. `HALT` and `NOMETHOD` report; everything else
@@ -393,6 +397,22 @@ impl Interp {
             // `returnFrom`'s check (`RexxActivation::raise`).
             None if sender.reply_issued && result.is_some() => {
                 Err(Raised::return_after_reply().into())
+            }
+            None if sender.api => {
+                let held = Raised {
+                    rc,
+                    description,
+                    additional,
+                    position: u32::try_from(self.activity.clause_state.line()).unwrap_or(0),
+                    ..Raised::condition(condition_name(&name))
+                };
+                // Built at the raise, as for a `CALL ON` trap: what the
+                // native caller's `GetConditionInfo` answers.
+                self.activity.pending_result = result;
+                self.activity.pending_description = description_object;
+                let object = self.build_condition_object(&held, None)?;
+                self.hold_callee_condition(held, object);
+                Ok(finish(result))
             }
             None => Ok(finish(result)),
         }
@@ -605,6 +625,12 @@ impl Interp {
             None if sender.reply_issued && result.is_some() => {
                 Err(Raised::return_after_reply().into())
             }
+            None if sender.api => {
+                if let Some(object) = object {
+                    self.hold_callee_condition(raised.clone(), object);
+                }
+                Ok(finish(result))
+            }
             None => Ok(finish(result)),
         }
     }
@@ -630,10 +656,14 @@ impl Interp {
             .frame_at(top)
             .is_some_and(|activation| activation.reply != ReplyState::None);
         let replied = !in_fragment && reply_issued;
+        let api = !in_fragment
+            && self
+                .frame_at(depth)
+                .is_some_and(|activation| self.below_api_base(activation.id));
         let activation = self
             .frame_at(depth)
             .map(|activation| activation.id)
-            .filter(|_| !replied);
+            .filter(|_| !replied && !api);
         Sender {
             top,
             depth,
@@ -641,6 +671,7 @@ impl Interp {
             returns,
             reply_issued,
             activation,
+            api,
         }
     }
 

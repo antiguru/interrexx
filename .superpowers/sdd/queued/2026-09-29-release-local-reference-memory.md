@@ -1,3 +1,5 @@
+**CLOSED 2026-11-03 by Phase 10 PR 3 (08695d1e2, #12).** PR 3 plan item 1: `ReleaseLocalReference` releases the reference when called.
+
 **DEFERRED to Phase 10, ruled by Moritz 2026-10-18.** not probed, it needs the forged native library; native-API memory, ruled "do not fix, queue" at the Phase 8 close.
 
 # Queued: `ReleaseLocalReference` frees nothing until the call ends

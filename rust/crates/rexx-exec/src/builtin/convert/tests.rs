@@ -720,16 +720,21 @@ fn xrange_concatenates_ranges_and_wraps_at_the_top() {
     );
 }
 
-/// A class name and a start/end pair mix, and the oracle's own early
-/// return discards a class when the whole call is two arguments.
+/// A class name and a start/end pair mix, and since bug #2088 (r13248) a
+/// two-argument call ending in a range keeps the class before it: measured,
+/// `xrange('digit','z')` is 144 bytes, the digits first.
 #[test]
-fn a_two_argument_call_ending_in_a_range_drops_a_preceding_class() {
+fn a_two_argument_call_ending_in_a_range_keeps_a_preceding_class() {
     let from_z: Vec<u8> = (b'z'..=0xff).collect();
-    assert_eq!(answer(b"XRANGE", &[b"digit", b"z"]), from_z);
-    assert_eq!(answer(b"XRANGE", &[b"cntrl", b"z"]), from_z);
-    assert_eq!(from_z.len(), 134);
+    let mut digits = b"0123456789".to_vec();
+    digits.extend_from_slice(&from_z);
+    assert_eq!(answer(b"XRANGE", &[b"digit", b"z"]), digits);
+    assert_eq!(digits.len(), 144);
+    let mut blank = b"\t ".to_vec();
+    blank.extend_from_slice(&[0xfe, 0xff]);
+    assert_eq!(answer(b"XRANGE", &[b"blank", &[0xfe]]), blank);
 
-    // Add a third argument and the class comes back.
+    // A third argument adds a range after it.
     let mut expected = b"0123456789".to_vec();
     expected.extend((b'z'..=0xff).chain(0x00..=b'q'));
     assert_eq!(answer(b"XRANGE", &[b"digit", b"z", b"q"]), expected);
@@ -758,8 +763,8 @@ fn a_two_argument_call_ending_in_a_range_drops_a_preceding_class() {
         call(b"XRANGE", &[Some(b"digit"), None])
             .expect("a second position that is present but omitted is legal")
             .len(),
-        256,
-        "an omitted second argument is a start/end pair, not a missing one"
+        266,
+        "an omitted second argument is a start/end pair after the class, not a missing one"
     );
 }
 

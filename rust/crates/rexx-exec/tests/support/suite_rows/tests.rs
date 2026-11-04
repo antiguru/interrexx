@@ -1,15 +1,21 @@
 use super::*;
 
+const WINDOWS_GROUP: &str = "extensions/platform/windows/fixture/rows";
+const OTHER_GROUP: &str = "extensions/fixture/rows";
+
 fn fixture() -> (PathBuf, Context) {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let id = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let root = std::env::temp_dir().join(format!("suite-row-classes-{}-{id}", std::process::id()));
-    std::fs::create_dir_all(root.join("utilities")).unwrap();
-    std::fs::write(root.join("utilities/rxapi.testGroup"), "::class helper\n::method TEST_HELPER\n::class actual subclass ooTestCase\n::method TEST_REAL\n::method ordinary\n::class inherited subclass actual\n::method TEST_INHERITED\n").unwrap();
+    let text = "::class helper\n::method TEST_HELPER\n::class actual subclass ooTestCase\n::method TEST_REAL\n::method ordinary\n::class inherited subclass actual\n::method TEST_INHERITED\n";
+    for group in [WINDOWS_GROUP, OTHER_GROUP] {
+        let file = root.join(format!("{group}.testGroup"));
+        std::fs::create_dir_all(file.parent().unwrap()).unwrap();
+        std::fs::write(file, text).unwrap();
+    }
     let context = Context {
         root: root.clone(),
-        groups: BTreeSet::from(["utilities/rxapi".to_string()]),
-        rxapi: BTreeSet::from([("utilities/rxapi".to_string(), "TEST_REAL".to_string())]),
+        groups: BTreeSet::from([WINDOWS_GROUP.to_string(), OTHER_GROUP.to_string()]),
         deviations: BTreeSet::new(),
         flaky: BTreeSet::new(),
         skipped_types: BTreeSet::new(),
@@ -18,49 +24,46 @@ fn fixture() -> (PathBuf, Context) {
     (root, context)
 }
 
+fn windows_row(group: &str, test: &str) -> Row {
+    Row {
+        file: NOT_RUN.to_string(),
+        line: 1,
+        group: group.to_string(),
+        test: test.to_string(),
+        owner: Owner::NotRun,
+        reason: "platform windows".to_string(),
+    }
+}
+
 #[test]
 fn only_tests_of_test_classes_can_own_suite_rows() {
     let (root, context) = fixture();
-    let mut row = Row {
-        file: EXCLUSIONS.to_string(),
-        line: 1,
-        group: "utilities/rxapi".to_string(),
-        test: "TEST_REAL".to_string(),
-        owner: Owner::Phase10(Deferral::Rxapi),
-        reason: "group".to_string(),
-    };
     for name in ["TEST_REAL", "TEST_INHERITED"] {
-        row.test = name.to_string();
-        assert!(check_row(&row, &context).is_ok(), "{name}");
+        assert!(
+            check_row(&windows_row(WINDOWS_GROUP, name), &context).is_ok(),
+            "{name}"
+        );
     }
     for name in ["TEST_HELPER", "ORDINARY", "TEST_MISSING"] {
-        row.test = name.to_string();
-        assert!(check_row(&row, &context).is_err(), "{name}");
+        assert!(
+            check_row(&windows_row(WINDOWS_GROUP, name), &context).is_err(),
+            "{name}"
+        );
     }
     std::fs::remove_dir_all(root).unwrap();
 }
 
 #[test]
-fn owner_equality_covers_reaching_group_and_captured_refusal() {
+fn a_platform_windows_row_is_derived_and_checked_only_below_the_windows_directory() {
     let (root, context) = fixture();
-    let mut row = Row {
-        file: EXCLUSIONS.to_string(),
-        line: 1,
-        group: "utilities/rxapi".to_string(),
-        test: "TEST_REAL".to_string(),
-        owner: Owner::Phase10(Deferral::Rxapi),
-        reason: String::new(),
-    };
-    for reason in [
-        "reaching_rxapi",
-        "group",
-        "refusal: rexx-exec: queue unavailable (Phase 10 Rxapi)",
-    ] {
-        row.reason = reason.to_string();
-        row.owner = Owner::Phase10(Deferral::Rxapi);
-        assert!(check_row(&row, &context).is_ok(), "{reason}");
-        row.owner = Owner::Phase10(Deferral::Extension);
-        assert!(check_row(&row, &context).is_err(), "{reason}");
-    }
+    assert!(check_row(&windows_row(WINDOWS_GROUP, "TEST_REAL"), &context).is_ok());
+    assert!(check_row(&windows_row(OTHER_GROUP, "TEST_REAL"), &context).is_err());
+    assert_eq!(
+        derived_rows(&context),
+        [
+            format!("{WINDOWS_GROUP}\tTEST_INHERITED\tNotRun\tplatform windows"),
+            format!("{WINDOWS_GROUP}\tTEST_REAL\tNotRun\tplatform windows"),
+        ]
+    );
     std::fs::remove_dir_all(root).unwrap();
 }

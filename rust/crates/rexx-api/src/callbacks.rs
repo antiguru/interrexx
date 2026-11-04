@@ -624,39 +624,67 @@ impl Activation<'_> {
     pub fn decode_condition(&self, handle: RexxObjectPtr) -> Option<DecodedCondition> {
         let directory = self.resolve(handle)?;
         self.with_surface("RexxThreadInterface.DecodeConditionInfo", None, |cx| {
-            let mut entry = |name: &[u8]| {
-                let object = cx
-                    .host
-                    .surface()
-                    .expect("checked by with_surface")
-                    .directory_entry(directory, name)?;
-                Some((object, cx.host.register_local(object)))
-            };
+            let surface = cx.host.surface().expect("checked by with_surface");
+            let mut entry = |name: &[u8]| surface.directory_entry(directory, name);
+            let name = entry(b"CONDITION");
             let code = entry(b"CODE");
             let rc = entry(b"RC");
             let position = entry(b"POSITION");
-            let handle = |found: Option<(ObjRef, RexxObjectPtr)>| {
-                found.map_or(std::ptr::null_mut(), |(_, handle)| handle)
+            let (message, errortext, program) =
+                (entry(b"MESSAGE"), entry(b"ERRORTEXT"), entry(b"PROGRAM"));
+            let (description, additional) = (entry(b"DESCRIPTION"), entry(b"ADDITIONAL"));
+            // `RAISE` allows any object as the description and, but for
+            // `SYNTAX`, as the additional information: each is given only
+            // where it is of the type the structure declares.
+            let description = description.filter(|&object| surface.is_string(object));
+            let additional = additional.filter(|&object| surface.is_of_class(object, "Array"));
+            let mut handle = |found: Option<ObjRef>| {
+                found.map_or(std::ptr::null_mut(), |object| {
+                    cx.host.register_local(object)
+                })
             };
             let decoded = DecodedCondition {
                 code: 0,
                 rc: 0,
                 position: 0,
-                name: handle(entry(b"CONDITION")),
-                message: handle(entry(b"MESSAGE")),
-                errortext: handle(entry(b"ERRORTEXT")),
-                program: handle(entry(b"PROGRAM")),
-                description: handle(entry(b"DESCRIPTION")),
-                additional: handle(entry(b"ADDITIONAL")),
+                name: handle(name),
+                message: handle(message),
+                errortext: handle(errortext),
+                program: handle(program),
+                description: handle(description),
+                additional: handle(additional),
             };
-            let text = |found: Option<(ObjRef, RexxObjectPtr)>, cx: &mut Conversion<'_>| {
-                let (object, _) = found?;
-                let text = cx.host.string_value_text(object);
-                Some(text)
+            let text = |found: Option<ObjRef>, cx: &mut Conversion<'_>| {
+                Some(cx.host.string_value_text(found?))
+            };
+            let syntax = text(name, cx).is_some_and(|name| name == b"SYNTAX");
+            // Only a `SYNTAX` condition has an error code, and its `RC` is the
+            // error number; `ERROR` and `FAILURE` have a command's return
+            // code, any value, given where it is a whole number.
+            let (code, rc) = match syntax {
+                true => (
+                    text(code, cx).map_or(0, |code| message_number(&code)),
+                    text(rc, cx).map_or(0, |rc| message_number(&rc) / 1000),
+                ),
+                false => {
+                    let rc = rc
+                        .and_then(|rc| {
+                            cx.host
+                                .signed_integer(
+                                    rc,
+                                    -crate::values::MAX_WHOLENUMBER,
+                                    crate::values::MAX_WHOLENUMBER,
+                                )
+                                .ok()
+                                .flatten()
+                        })
+                        .map_or(0, |rc| rc as isize);
+                    (0, rc)
+                }
             };
             Some(DecodedCondition {
-                code: text(code, cx).map_or(0, |code| message_number(&code)),
-                rc: text(rc, cx).map_or(0, |rc| message_number(&rc) / 1000),
+                code,
+                rc,
                 position: text(position, cx)
                     .and_then(|position| std::str::from_utf8(&position).ok()?.parse().ok())
                     .unwrap_or(0),
@@ -1176,9 +1204,25 @@ impl Activation<'_> {
             .map_or(0, |dimensions| dimensions.max(1))
     }
 
-    /// `NewArray`: an array of that size and no items.
+    /// `NewArray`: an array of that size and no items, or 93.959 for a size
+    /// above `ArrayClass::MaxFixedArraySize`, as `new_array` raises it
+    /// (`classes/ArrayClass.cpp:183`).
     pub fn new_array_sized(&self, size: usize) -> RexxObjectPtr {
         const SLOT: &str = "RexxThreadInterface.NewArray";
+        /// `ArrayClass::MaxFixedArraySize` (`classes/ArrayClass.hpp:329`).
+        const MAX_FIXED_ARRAY_SIZE: usize = 100_000_000_000_000_000;
+        if size > MAX_FIXED_ARRAY_SIZE {
+            self.with_surface(SLOT, (), |cx| {
+                let limit = cx
+                    .host
+                    .new_string(MAX_FIXED_ARRAY_SIZE.to_string().as_bytes());
+                cx.host.register_local(limit);
+                let surface = cx.host.surface().expect("checked by with_surface");
+                let substitutions = surface.new_array(&[Some(limit)]);
+                surface.raise_exception(93_959, Some(substitutions));
+            });
+            return std::ptr::null_mut();
+        }
         let class = self.class(SLOT, "Array");
         self.send_for_handle(SLOT, class, b"NEW", &[Argument::Number(size)])
     }
@@ -2043,19 +2087,37 @@ impl Activation<'_> {
     /// `RaiseConditionObject`: a null or unknown handle is 93.911, one naming
     /// no directory 93.948, as the oracle's stub reports them.
     pub fn raise_condition_object(&self, handle: RexxObjectPtr) {
-        let Some(condition) = self.resolve(handle) else {
-            self.raise_syntax(93_911);
-            return;
-        };
-        let raised = self.with_surface("RexxThreadInterface.RaiseConditionObject", true, |cx| {
-            cx.host
-                .surface()
-                .expect("checked by with_surface")
-                .raise_condition_object(condition)
+        const SLOT: &str = "RexxThreadInterface.RaiseConditionObject";
+        let condition = self.resolve(handle);
+        self.with_surface(SLOT, (), |cx| {
+            // Each substitution held by this call while the array is made.
+            let argument = |cx: &mut Conversion<'_>, texts: &[&[u8]]| {
+                let items: Vec<Option<ObjRef>> = texts
+                    .iter()
+                    .map(|text| {
+                        let string = cx.host.new_string(text);
+                        cx.host.register_local(string);
+                        Some(string)
+                    })
+                    .collect();
+                let surface = cx.host.surface().expect("checked by with_surface");
+                surface.new_array(&items)
+            };
+            // `Error_Incorrect_method_null` and `Error_Incorrect_method_noclass`,
+            // naming argument 1 (and the Directory class).
+            let Some(condition) = condition else {
+                let substitutions = argument(cx, &[b"1"]);
+                let surface = cx.host.surface().expect("checked by with_surface");
+                surface.raise_exception(93_911, Some(substitutions));
+                return;
+            };
+            let surface = cx.host.surface().expect("checked by with_surface");
+            if !surface.raise_condition_object(condition) {
+                let substitutions = argument(cx, &[b"1", b"Directory"]);
+                let surface = cx.host.surface().expect("checked by with_surface");
+                surface.raise_exception(93_948, Some(substitutions));
+            }
         });
-        if !raised {
-            self.raise_syntax(93_948);
-        }
     }
 
     /// `ObjectToValue`: `handle` converted as `declared` asks, or `None`

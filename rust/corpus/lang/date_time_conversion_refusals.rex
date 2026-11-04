@@ -1,0 +1,44 @@
+/* DATE and TIME conversions as bug #2089 (r13250) left them, each row a
+ * fixed input so no row reads the clock:
+ *
+ * - a civil hour of 0 is no hour, am or pm, one digit or two (40.19);
+ * - a TIME('O') shift that leaves the calendar is refused (40.19) rather
+ *   than ignored;
+ * - ticks before 1970 round down, so a fractional second never rounds the
+ *   reading up past its own clock time;
+ * - '00'x is a valid separator, on output and on input, while a style
+ *   byte of '00'x is still taken as found by the strchr style checks
+ *   (40.904, 40.44), and a letter is still no separator (40.43).
+ */
+signal on syntax name trapped
+n = 0
+
+next:
+n = n + 1
+select
+  when n = 1 then say n time(, '00:00am', 'c')
+  when n = 2 then say n time(, '00:00pm', 'c')
+  when n = 3 then say n time(, '0:00pm', 'c')
+  when n = 4 then say n time(, '0:30am', 'c')
+  when n = 5 then say n time(, '12:00am', 'c') time(, '12:59pm', 'c') time(, '1:05pm', 'c')
+  when n = 6 then say n time(, '315537897599999999', 'o')
+  when n = 7 then say n time(, '-315537897599999999', 'o')
+  when n = 8 then say n time('t', '17:26:12.291000', 'l')
+  when n = 9 then say n time(, time('t', '17:26:12.291000', 'l'), 't')
+  when n = 10 then say n time('t', '00:00:00.5', 'l') time('t', '23:59:59.999999', 'l')
+  when n = 11 then say n date('T', '1 Jan 0001') date('T', '31 Dec 1969') date('T', '1 Jan 1970')
+  when n = 12 then say n c2x(date('S', '20070922', 'S', '00'x))
+  when n = 13 then say n c2x(date('E', '2007'||'00'x||'09'||'00'x||'22', 'S', '-', '00'x))
+  when n = 14 then say n date('00'x, , , '-')
+  when n = 15 then say n date(, '20070922', '00'x, , '-')
+  when n = 16 then say n date('S', '20070922', 'S', 'a')
+  otherwise signal done
+end
+signal next
+
+trapped:
+say n 'raised' rc'.'condition('E') condition('O')~message
+signal on syntax name trapped
+signal next
+
+done:
