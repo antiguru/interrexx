@@ -263,14 +263,11 @@ fn every_out_of_scope_variant_fails_loudly() {
             .unwrap();
             continue;
         }
-        // **This line is the equality between `src/lib.rs`'s
-        // `instruction_owner`/`expr_owner` and `owners.rs`'s tables.**
-        // `owner` came out of `owners.rs`; the suffix came out of the
-        // running executor, which built it from `lib.rs`'s own answer. The
-        // third copy of the ownership data is therefore checked against the
-        // first on every run, per row, with no hand-maintained table
-        // between them -- which is what makes `lib.rs`'s match a derived
-        // fact rather than one more place to remember to edit.
+        // **This line is the equality between the refusal the executor
+        // prints and `owners.rs`'s tables.** `owner` came out of
+        // `owners.rs`; the suffix came out of the running executor, whose
+        // refusals name no phase since Phase 10 closed, so a witness here
+        // fails rather than passing on an owner nothing prints.
         let stderr = String::from_utf8_lossy(&outcome.stderr);
         let want_suffix = format!(" is not implemented ({owner})");
         if !stderr.trim_end().ends_with(&want_suffix) {

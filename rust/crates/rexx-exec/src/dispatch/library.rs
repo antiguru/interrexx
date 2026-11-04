@@ -1201,15 +1201,7 @@ impl Interp {
                 Raised::incorrect_native_signature(number, refused == Refused::Signature)
             }
             Refused::ClassicStyle => return Loud::classic_style_routine().into(),
-            Refused::UnfilledSlot { entry } => {
-                return Loud {
-                    message: crate::owned_message(
-                        &format!("{refused}"),
-                        rexx_api::layout::refusal_owner(entry),
-                    ),
-                }
-                .into();
-            }
+            Refused::UnfilledSlot { entry } => return Loud::unfilled_slot(entry).into(),
             // No phase owes a stale handle: a local reference protects its
             // object only until the call that made it ends
             // (`NativeActivation::createLocalReference`,

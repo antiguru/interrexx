@@ -1,10 +1,9 @@
-# Why no phase owes each loud refusal that names none.
+# Why no phase owes each loud refusal.
 #
 # crates/rexx-exec/tests/refusal_dispositions.rs reads every `Loud` constructor in
-# crates/rexx-exec/src and requires a row here for each one that can build a message with
-# no owner; it fails on such a constructor with no row, on a row whose constructor is gone,
-# on a row for a constructor that names a phase (REHOME aside), and on a citation that does
-# not resolve.
+# crates/rexx-exec/src and requires a row here for each one; it fails on a constructor
+# with no row, on a row whose constructor is gone, on a row naming a phase, and on a
+# citation that does not resolve.
 #
 # Columns, tab-separated: constructor, kind, phase, record.
 #
@@ -15,9 +14,7 @@
 #              numbered Deviation in docs/superpowers/plans/phase-4-exclusions.txt, or quotes
 #              an exclusions row.
 #   LIMIT      a design limit; the record cites the Deviation or design document licensing it.
-#   REHOME     a remaining phase owes it; `phase` names it, the constructor carries it, and
-#              the record quotes the roadmap row text naming the work.
-# phase is `-` for every kind but REHOME.
+# phase is `-` for every row: no refusal names a phase since Phase 10 closed.
 #
 # Probe names: scout A's are in .superpowers/sdd/2026-10-07-phase-6-1/scout-a-report.md,
 # Appendix B; Task 4's in docs/superpowers/plans/phase-6-1-gate.md, "## Task 4"; Task 7's in
@@ -34,13 +31,14 @@ entry_method_without_a_value	DEVIATION	-	Deviation 29: the oracle stores its eva
 environment_entry	GUARD	-	scout A b18: envx_* (every .environment and .local index in its own program), env_new_activity, env_reply_activity: with no owner it is an entry the library bootstrap fills, and only STDQUE (Phase 10) refused
 environment_symbol	GUARD	-	scout A b16 and b18: c2_stream_first_clause, c2_address_with_stream_first (.STREAM before StreamClasses.orx), envx_*, env_new_activity, env_reply_activity; only STDQUE (Phase 10) refused. Phase 9a Task 5 probes nt1, nt2 (Message~notify after removing MESSAGENOTIFICATION from .environment and .local, and from a ::REQUIRES prolog) and info (.rexxinfo~executable and ~libraryPath, which build a .FILE) answer
 expose_receiver	GUARD	-	Task 4 report, "Kept with owner None": EXPOSE from methods of Directory, .local, .environment and a Directory subclass, a borrowed Object RUN row on an instance; all answer, oracle-identical
-expression	GUARD	-	every ExprKind evaluates (expr_owner answers None for each); each site is a match arm for a form its caller routes elsewhere (census d-guard)
+expression	GUARD	-	every ExprKind evaluates (tests/owners.rs: EXPR_TAGS are all in scope, EXPECTED_OUT_OF_SCOPE is empty); each site is a match arm for a form its caller routes elsewhere (census d-guard)
 fork_child	DEVIATION	-	Deviation 42: SysFork, whose forked child cannot continue without the timer thread and the joining main thread; not supported (Moritz 2026-10-17)
 frame_without_executable	GUARD	-	docs/superpowers/records/2026-10-18-phase-9d/refusals.tsv, the context.rs row: Task 3's probes reached this site only on a library routine's frame, which answers its Routine object (rust/corpus/lang/stackframe_library_routine_executable.rex, rust/corpus/lang/stackframe_merged_library_executable.rex) and refused on no other frame
 handle_descriptor	DEVIATION	-	Deviation 35: a HANDLE: stream on a descriptor other than 0, 1 or 2 needs unsafe to adopt; the oracle's HANDLE: stream never reaches its descriptor (crates/rexx-exec/tests/stream_handle.rs)
 hash_collection_without_store	DEVIATION	-	oracle-crashes.txt entry 50: the oracle dies on a hash class instance Class~new builds with .Class as the scope; the other hash.rs rows of docs/superpowers/records/2026-10-18-phase-9d/refusals.tsv (the condition object, a subclass whose INIT does not forward, the package tables) answer before this site
 immovable_reply	LIMIT	-	Deviation 15 (spec 2026-09-29 section 5)
-instruction	GUARD	-	every InstructionKind executes (instruction_owner answers None for each); each site is a match arm for a kind its caller routes elsewhere (census d-guard)
+instruction	GUARD	-	every InstructionKind executes (tests/owners.rs: INSTRUCTION_TAGS are all in scope, EXPECTED_OUT_OF_SCOPE is empty); each site is a match arm for a kind its caller routes elsewhere (census d-guard)
+internal_routine	GUARD	-	every row of the internal-package routine table has a body: rexx-exec tests/internal_routines.rs every_internal_routine_row_runs
 interpreter_table_copy	GUARD	-	docs/superpowers/records/2026-10-18-phase-9d/refusals.tsv, the object_protocol.rs Directory and StringTable row: sweep2.py found no such receiver, since every native_instance caller builds another class and .environment, .local, .methods and .routines are instance stores
 inverted_wait	LIMIT	-	Deviation 14 (spec 2026-09-29 section 2.6)
 jump_out_of_range	GUARD	-	compiler invariant: a jump stays inside its range (census d-guard)
@@ -73,7 +71,9 @@ stale_handle	DEVIATION	-	exclusions row "A LOCAL HANDLE KEPT FROM AN EARLIER CAL
 store_op_off_its_node	GUARD	-	compiler invariant: a Store op names its own assignment (census d-guard)
 string_answer_not_a_string	DEVIATION	-	Deviation 30: a user STRING method answering an object with no string value, which the oracle converts to .nil, read by a consumer of its bytes; Task 11a probes bytes_dir, bytes_nil, bytes_queue, bytes_obj
 unbound_method	GUARD	-	docs/superpowers/records/2026-10-18-phase-9d/refusals.tsv, the dispatch.rs row: sweep.py and sweep2.py sent every documented method with its required arguments and every scope override, and Interp::invocable found each resolved method in a table
+unfilled_slot	GUARD	-	no populated interface table keeps a refusing stub: rexx-api tests/layout.rs no_populated_table_member_refuses compares every member of every populated table with its stub
 unknown_receiver	GUARD	-	scout A b9 b11_ctx_exec_* and weak reference sends b_weakref_*, b2_run_hasmethod_on_weakref; Task 7 probe rc4 and Phase 9a Task 5 probe copy8 (a Method copy passed to define, setMethod and run answers); the rest are handles whose object is gone or kinds receiver_kind has no arm for
 unrecorded_executable	GUARD	-	invariant: every Method and Routine object is recorded where it is built and its record is dropped only with the object; Phase 9b1 Task 7 probes executable_a.rex and executable_b.rex (docs/superpowers/records/2026-10-14-phase-9b1/task-7/probes/: copies, Method and Routine subclass instances, setMethod, define and defineMethods with method objects) answer as the oracle does
 unreadable_collection	GUARD	-	scout A b18: env_supplier; with no owner it is a directory holding an entry the library bootstrap fills, and only STDQUE (Phase 10) refused
+unresolved_call	GUARD	-	built for an excluded builtin, and rexx-exec tests/coverage.rs the_builtin_exclusion_set_matches_the_committed_file holds the exclusions empty; and for BuiltinTarget::Gap, which src/builtin/tests.rs resolve_partitions_the_in_scope_set_into_rows_and_gaps asserts no name reaches
 unsatisfiable_wait	LIMIT	-	Deviation 20 (rulings P27, P65, P77)

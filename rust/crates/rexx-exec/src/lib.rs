@@ -5,7 +5,7 @@
 #![cfg(not(all(loom, test)))]
 
 use rexx_classes::MethodId;
-use rexx_core::{Heap, NameMap, ObjRef, Owner, RootSet, SlotRef};
+use rexx_core::{Heap, NameMap, ObjRef, RootSet, SlotRef};
 use rexx_num::Settings;
 use rexx_parse::{
     CodeBody, ExprKind, InstructionKind, Operator, Program, SymbolId, SymbolTable, compound_parts,
@@ -439,8 +439,8 @@ struct Loud {
 
 impl Loud {
     /// An instruction handed to a site its caller routes elsewhere -- an
-    /// internal inconsistency, never a program error: every variant executes,
-    /// and [`instruction_owner`] answers `None` for each. `keyword()` is `None`
+    /// internal inconsistency, never a program error: every variant executes.
+    /// `keyword()` is `None`
     /// for the clause shapes no keyword introduces, and their names come from
     /// the shape rather than from a keyword table.
     fn instruction(kind: &InstructionKind) -> Loud {
@@ -489,16 +489,15 @@ impl Loud {
             | InstructionKind::WhenCase { .. } => kind.keyword().unwrap_or("an instruction"),
         };
         Loud {
-            message: owned_message(name, instruction_owner(kind)),
+            message: owned_message(name),
         }
     }
 
     /// An expression form handed to a site its caller routes elsewhere -- an
-    /// internal inconsistency, never a program error: every form evaluates, and
-    /// [`expr_owner`] answers `None` for each.
+    /// internal inconsistency, never a program error: every form evaluates.
     fn expression(kind: &ExprKind) -> Loud {
         Loud {
-            message: owned_message(&form_name(kind), expr_owner(kind)),
+            message: owned_message(&form_name(kind)),
         }
     }
 
@@ -510,9 +509,7 @@ impl Loud {
         }
     }
 
-    /// A call that resolved to a **builtin this crate runs nothing for**. The
-    /// owner comes from the same table the exclusion itself does, so a
-    /// delivered exclusion takes its blame with it.
+    /// A call that resolved to a **builtin this crate runs nothing for**.
     fn unresolved_call(name: &[u8]) -> Loud {
         const LIMIT: usize = 128;
         let shown = if name.len() > LIMIT {
@@ -520,20 +517,19 @@ impl Loud {
         } else {
             String::from_utf8_lossy(name).into_owned()
         };
-        let owner = excluded_owner(&shown);
         Loud {
-            message: owned_message(&format!("routine \"{shown}\""), owner),
+            message: owned_message(&format!("routine \"{shown}\"")),
         }
     }
 
     /// A call that resolved to a routine one of the oracle's internal packages
     /// exports and this crate has no body for. Distinct from
-    /// [`Loud::unresolved_call`] only in where the name and the owner come
-    /// from; the message a program sees is the same shape.
-    fn internal_routine(name: &[u8], owner: Owner) -> Loud {
+    /// [`Loud::unresolved_call`] only in where the name comes from; the
+    /// message a program sees is the same shape.
+    fn internal_routine(name: &[u8]) -> Loud {
         let shown = String::from_utf8_lossy(name).into_owned();
         Loud {
-            message: owned_message(&format!("routine \"{shown}\""), Some(owner)),
+            message: owned_message(&format!("routine \"{shown}\"")),
         }
     }
 
@@ -576,7 +572,7 @@ impl Loud {
     #[cold]
     fn receiver_class(kind: &str) -> Loud {
         Loud {
-            message: owned_message(&format!("a message send to {kind}"), None),
+            message: owned_message(&format!("a message send to {kind}")),
         }
     }
 
@@ -588,7 +584,6 @@ impl Loud {
         Loud {
             message: owned_message(
                 "a metaclass NEW answering a class Class~new did not build or a subclass already took",
-                None,
             ),
         }
     }
@@ -611,10 +606,7 @@ impl Loud {
     #[cold]
     fn string_answer_not_a_string() -> Loud {
         Loud {
-            message: owned_message(
-                "a STRING method answering an object with no string value",
-                None,
-            ),
+            message: owned_message("a STRING method answering an object with no string value"),
         }
     }
 
@@ -628,7 +620,7 @@ impl Loud {
     #[cold]
     fn unknown_receiver(kind: &str) -> Loud {
         Loud {
-            message: owned_message(&format!("a message send to {kind}"), None),
+            message: owned_message(&format!("a message send to {kind}")),
         }
     }
 
@@ -639,34 +631,34 @@ impl Loud {
     /// stem holding an array and `.stdout`, refused none.
     fn operator_operand(op: &str, kind: &str) -> Loud {
         Loud {
-            message: owned_message(&format!("the operator `{op}` applied to {kind}"), None),
+            message: owned_message(&format!("the operator `{op}` applied to {kind}")),
         }
     }
 
     /// A `.NAME` the oracle's `.environment` or `.local` answers and this
-    /// crate builds nothing for. With no owner it is an entry the library
-    /// bootstrap fills, or `.STREAM` before `StreamClasses.orx` installs, and
-    /// no program reaches it: each `.environment` and `.local` index read in
+    /// crate builds nothing for: an entry the library bootstrap fills, or
+    /// `.STREAM` before `StreamClasses.orx` installs, and no program reaches
+    /// it: each `.environment` and `.local` index read in
     /// its own program (scout A's `envx_*`), from a started activity and a
     /// REPLY continuation (`env_new_activity`, `env_reply_activity`), and a
     /// stream as the first clause (`c2_stream_first_clause`,
     /// `c2_address_with_stream_first`) refused only `STDQUE`, which is Phase
     /// 10's.
-    fn environment_symbol(name: &[u8], owner: Option<Owner>) -> Loud {
+    fn environment_symbol(name: &[u8]) -> Loud {
         let shown = String::from_utf8_lossy(name);
         Loud {
-            message: owned_message(&format!("environment symbol \"{shown}\""), owner),
+            message: owned_message(&format!("environment symbol \"{shown}\"")),
         }
     }
 
     /// A directory index the oracle's own `.environment` or `.local` has an
-    /// entry for and this crate builds nothing for. With no owner it is an
-    /// entry the library bootstrap fills, which no program reaches, by the
+    /// entry for and this crate builds nothing for: an entry the library
+    /// bootstrap fills, which no program reaches, by the
     /// probes [`Loud::environment_symbol`] names.
-    fn environment_entry(index: &[u8], owner: Option<Owner>) -> Loud {
+    fn environment_entry(index: &[u8]) -> Loud {
         let shown = String::from_utf8_lossy(index);
         Loud {
-            message: owned_message(&format!("directory entry \"{shown}\""), owner),
+            message: owned_message(&format!("directory entry \"{shown}\"")),
         }
     }
 
@@ -678,7 +670,7 @@ impl Loud {
     fn unbound_method(name: &[u8], scope: &str) -> Loud {
         let shown = String::from_utf8_lossy(name);
         Loud {
-            message: owned_message(&format!("method \"{shown}\" of class \"{scope}\""), None),
+            message: owned_message(&format!("method \"{shown}\" of class \"{scope}\"")),
         }
     }
 
@@ -690,10 +682,9 @@ impl Loud {
     fn hash_collection_without_store(method: &[u8], class: &str) -> Loud {
         let shown = String::from_utf8_lossy(method);
         Loud {
-            message: owned_message(
-                &format!("method \"{shown}\" of a \"{class}\" built without its store"),
-                None,
-            ),
+            message: owned_message(&format!(
+                "method \"{shown}\" of a \"{class}\" built without its store"
+            )),
         }
     }
 
@@ -705,7 +696,7 @@ impl Loud {
     #[cold]
     fn frame_without_executable() -> Loud {
         Loud {
-            message: owned_message("the executable of a stack frame built without one", None),
+            message: owned_message("the executable of a stack frame built without one"),
         }
     }
 
@@ -717,10 +708,7 @@ impl Loud {
     #[cold]
     fn interpreter_table_copy(class: &str) -> Loud {
         Loud {
-            message: owned_message(
-                &format!("Object~copy of the interpreter's own {class}"),
-                None,
-            ),
+            message: owned_message(&format!("Object~copy of the interpreter's own {class}")),
         }
     }
 
@@ -730,21 +718,19 @@ impl Loud {
     fn entry_method_without_a_value(index: &[u8]) -> Loud {
         let shown = String::from_utf8_lossy(index);
         Loud {
-            message: owned_message(
-                &format!("an entry-method assignment to \"{shown}\" with no value"),
-                None,
-            ),
+            message: owned_message(&format!(
+                "an entry-method assignment to \"{shown}\" with no value"
+            )),
         }
     }
 
     /// A collection this crate can name but cannot read: one whose entries
     /// the oracle has and this crate answers per name through
-    /// [`Loud::environment_entry`] instead of building. With no owner it is
-    /// one holding an entry the library bootstrap fills, which no program
-    /// reaches (`env_supplier` refused only `STDQUE`, Phase 10's).
-    fn unreadable_collection(owner: Option<Owner>) -> Loud {
+    /// [`Loud::environment_entry`] instead of building: one holding an entry
+    /// the library bootstrap fills, which no program reaches (`env_supplier` refused only `STDQUE`, Phase 10's).
+    fn unreadable_collection() -> Loud {
         Loud {
-            message: owned_message("a directory whose entries this crate does not fill", owner),
+            message: owned_message("a directory whose entries this crate does not fill"),
         }
     }
 
@@ -767,7 +753,7 @@ impl Loud {
     /// that `Directory` (88.901, the entry method arrives with no arguments).
     fn object_method(what: &str) -> Loud {
         Loud {
-            message: owned_message(what, None),
+            message: owned_message(what),
         }
     }
 
@@ -776,7 +762,7 @@ impl Loud {
     /// probe runs past the library bootstrap.
     fn library_source(name: &str, error: &str) -> Loud {
         Loud {
-            message: owned_message(&format!("{name} does not parse here: {error}"), None),
+            message: owned_message(&format!("{name} does not parse here: {error}")),
         }
     }
 
@@ -786,7 +772,7 @@ impl Loud {
     /// `b_inherit_instance_methods` are 97.1 on both engines.
     fn setup_method(what: &str) -> Loud {
         Loud {
-            message: owned_message(what, None),
+            message: owned_message(what),
         }
     }
 
@@ -797,7 +783,7 @@ impl Loud {
     /// only through a dictionary no program can add to.
     fn expose_receiver() -> Loud {
         Loud {
-            message: owned_message("EXPOSE on an object with no variable pool", None),
+            message: owned_message("EXPOSE on an object with no variable pool"),
         }
     }
 
@@ -815,7 +801,7 @@ impl Loud {
     /// `RxCalcSqrt`) raises the callee's condition on both engines.
     fn conversion_raised() -> Loud {
         Loud {
-            message: owned_message("the interpreter raised a condition while converting", None),
+            message: owned_message("the interpreter raised a condition while converting"),
         }
     }
 
@@ -824,7 +810,7 @@ impl Loud {
     /// FROM AN EARLIER CALL IS STILL REFUSED").
     fn stale_handle() -> Loud {
         Loud {
-            message: owned_message("the handle is no longer held by this activation", None),
+            message: owned_message("the handle is no longer held by this activation"),
         }
     }
 
@@ -835,7 +821,17 @@ impl Loud {
     /// `extensions/platform/windows/rxwinsys/rxwinsys.cpp`.
     fn classic_style_routine() -> Loud {
         Loud {
-            message: owned_message("a call to a ROUTINE_CLASSIC_STYLE routine", None),
+            message: owned_message("a call to a ROUTINE_CLASSIC_STYLE routine"),
+        }
+    }
+
+    /// An interface member `entry` an extension reached that its table still
+    /// holds a refusing stub for. No populated table holds one: rexx-api's
+    /// `no_populated_table_member_refuses` compares every member of every
+    /// populated table with its stub.
+    fn unfilled_slot(entry: &str) -> Loud {
+        Loud {
+            message: owned_message(entry),
         }
     }
 
@@ -843,10 +839,7 @@ impl Loud {
     /// which only `unsafe` could adopt (Deviation 35).
     fn handle_descriptor(descriptor: i64) -> Loud {
         Loud {
-            message: owned_message(
-                &format!("a HANDLE: stream on descriptor {descriptor}"),
-                None,
-            ),
+            message: owned_message(&format!("a HANDLE: stream on descriptor {descriptor}")),
         }
     }
 
@@ -985,7 +978,7 @@ impl Loud {
     /// (`corpus/oracle-crashes.txt`, the unsent-message block; Deviation 20).
     fn unsatisfiable_wait() -> Loud {
         Loud {
-            message: owned_message("a wait that nothing left to run can end", None),
+            message: owned_message("a wait that nothing left to run can end"),
         }
     }
 
@@ -1001,10 +994,9 @@ impl Loud {
     /// (spec 2026-09-29 section 2.6, an inverted wait; Deviation 14).
     fn inverted_wait(what: &str) -> Loud {
         Loud {
-            message: owned_message(
-                &format!("a pinned wait for {what} that only an activity pinned below it can end"),
-                None,
-            ),
+            message: owned_message(&format!(
+                "a pinned wait for {what} that only an activity pinned below it can end"
+            )),
         }
     }
 
@@ -1013,7 +1005,7 @@ impl Loud {
     /// 5; Deviation 15).
     fn immovable_reply() -> Loud {
         Loud {
-            message: owned_message("a REPLY its method body runs on a nested Rust frame", None),
+            message: owned_message("a REPLY its method body runs on a nested Rust frame"),
         }
     }
 }
@@ -1077,156 +1069,19 @@ pub fn internal_routine_names() -> Vec<&'static str> {
         .collect()
 }
 
-/// Every internal-package routine as `(name, package, owner)`, for the test
-/// that re-derives the two packages from the C++ tree separately. The owner
-/// is `None` for a row this crate runs.
-pub fn internal_routine_rows() -> Vec<(&'static str, &'static str, Option<Owner>)> {
+/// Every internal-package routine as `(name, package, runs)`, for the test
+/// that re-derives the two packages from the C++ tree separately. `runs` is
+/// whether this crate has a body for the row.
+pub fn internal_routine_rows() -> Vec<(&'static str, &'static str, bool)> {
     internal_routines::INTERNAL_ROUTINES
         .iter()
-        .map(|row| (row.name, row.package.label(), row.owner))
+        .map(|row| (row.name, row.package.label(), row.body.is_some()))
         .collect()
 }
 
-/// The owner [`rexx_inventory::builtins::EXCLUDED`] gives the builtin
-/// `name`, or `None` for a name it does not list.
-fn excluded_owner(name: &str) -> Option<Owner> {
-    let (phase, reason) = rexx_inventory::builtins::owner_of(name)?;
-    Owner::named(phase, Some(reason))
-}
-
-/// Appends the owner's label to a loud message, `"{name} is not implemented
-/// ({label})"`, or leaves it unsuffixed (`"{name} is not implemented"`) when
-/// [`instruction_owner`]/[`expr_owner`] answer `None` -- meaning "this crate
-/// implements that variant", not "the owner is some particular phase".
-fn owned_message(name: &str, owner: Option<Owner>) -> String {
-    match owner {
-        None => format!("{name} is not implemented"),
-        Some(owner) => format!("{name} is not implemented ({})", owner.label()),
-    }
-}
-
-/// Who is responsible for an `InstructionKind` this crate does not implement,
-/// spelled exactly as the split table spells it
-/// (`docs/superpowers/specs/2026-07-30-phase-4a-executor-design.md`, "The
-/// split") -- `None` for a variant this crate implements (see
-/// [`owned_message`]'s doc for why that is `None` and not a `"4a"` string).
-fn instruction_owner(kind: &InstructionKind) -> Option<Owner> {
-    match kind {
-        InstructionKind::Assignment { .. }
-        | InstructionKind::Label { .. }
-        | InstructionKind::Do(_)
-        | InstructionKind::Loop(_)
-        | InstructionKind::If { .. }
-        | InstructionKind::Then
-        | InstructionKind::Else { .. }
-        | InstructionKind::Select { .. }
-        | InstructionKind::When { .. }
-        | InstructionKind::WhenCase { .. }
-        | InstructionKind::Otherwise
-        | InstructionKind::Leave { .. }
-        | InstructionKind::Iterate { .. }
-        | InstructionKind::End { .. }
-        | InstructionKind::Drop { .. }
-        | InstructionKind::Say { .. }
-        | InstructionKind::Exit { .. }
-        | InstructionKind::Numeric { .. }
-        | InstructionKind::Trace(_)
-        | InstructionKind::Interpret { .. }
-        // A `RETURN` in the main body is not a gap either: measured, it ends
-        // the program with its value exactly as `EXIT` does.
-        | InstructionKind::Return { .. }
-        | InstructionKind::Nop => None,
-        // Every arm is implemented, so any owner string here would be a false
-        // statement in a table whose only job is to be true --
-        // `Loud::instruction` is not reached for any of them, and an owner
-        // string nothing reads is exactly how the third copy of this data
-        // drifts. A named call that resolves to no internal label, no builtin
-        // and no `::ROUTINE` raises the oracle's own 43.1 rather than failing
-        // loudly, and the external file search behind those three runs. So
-        // there is no residual claim on the `CALL` keyword here at all.
-        InstructionKind::Call(_) => None,
-        // `Use` is `None`: every form runs, and `USE LOCAL` anywhere but a
-        // method's first instruction answers the oracle's own 98.993/99.910.
-        InstructionKind::Procedure { .. } | InstructionKind::Use(_) => None,
-        // All three `Signal` arms are implemented, so unlike
-        // `Call` above this one needs no arm-grained match. `RAISE` needs none
-        // either, and the shape that would have forced one is
-        // `ADDITIONAL <array>`: measured on both engines, three descriptors,
-        // `raise syntax 40.4 additional (1,,3)` and `... array (1,,3)` are
-        // byte-identical to each other and to the oracle, because
-        // `requestArray` answers an array unchanged and both spellings
-        // therefore build the same substitution list.
-        InstructionKind::Signal(_) | InstructionKind::Raise(_) => None,
-        // Both keywords are whole: `queue.rs`
-        // stores every line either writes, and neither has a shape this
-        // crate cannot express the way `Procedure`'s `expose a.1` does.
-        InstructionKind::Push { .. } | InstructionKind::Queue { .. } => None,
-        // All three spellings of the one instruction: `PARSE`, and the `ARG`
-        // and `PULL` short forms, which `rexx-parse` gives variants of their
-        // own but which share `exec_parse`. Every source is implemented,
-        // including the two that read a line (`PARSE PULL`, `PARSE LINEIN`).
-        InstructionKind::Parse(_) | InstructionKind::Arg(_) | InstructionKind::Pull(_) => None,
-        // Every form is implemented, the `WITH` redirection included: the
-        // one shape with no code here is a `RexxQueue` target, which fails
-        // loudly through `Loud::redirection` rather than through this table.
-        InstructionKind::Address(_) => None,
-        // A message send as a whole clause: `exec_message` (`run.rs`)
-        // evaluates it and settles `RESULT`. `None` in the same sense
-        // `DotVariable` is `None` below -- the variant is implemented, and
-        // the sub-cases with no code here fail loudly through `Loud::
-        // receiver_class`/`Loud::unbound_method` rather than answering.
-        InstructionKind::Message { .. } => None,
-        // `EXPOSE` binds its names to the receiving object's scope pool.
-        // `None` in the same sense `Message` above is: the variant executes,
-        // and the sub-case with no code here, a receiver that is neither an
-        // instance nor a class object, fails loudly through
-        // `Loud::expose_receiver` rather than answering.
-        InstructionKind::Expose { .. } => None,
-        // `GUARD` reserves and releases the receiver's scope and waits for
-        // its `WHEN`, and `REPLY` hands its value to the sender and moves the
-        // rest of the body to a new activity. `None` in the same sense
-        // `Expose` above is: both variants execute, and the sub-case with no
-        // code here -- a `REPLY` with Rust frames inside its method body --
-        // fails loudly through `Loud::immovable_reply` rather than answering.
-        InstructionKind::Guard(_) | InstructionKind::Reply { .. } => None,
-        InstructionKind::Forward(_)
-        | InstructionKind::Options { .. }
-        | InstructionKind::Command { .. } => None,
-    }
-}
-
-/// [`instruction_owner`]'s counterpart for `ExprKind`. See that function's
-/// own doc for why this is a third copy of `owners.rs`'s `EXPR_TAGS` (there,
-/// `EXPR_TAGS`), and for the completeness guarantee the exhaustive match
-/// below carries.
-fn expr_owner(kind: &ExprKind) -> Option<Owner> {
-    match kind {
-        ExprKind::Literal(_)
-        | ExprKind::Constant(_)
-        | ExprKind::Variable(_)
-        | ExprKind::Stem(_)
-        | ExprKind::Compound(_)
-        | ExprKind::DotVariable(_)
-        | ExprKind::Prefix { .. }
-        | ExprKind::Binary { .. }
-        | ExprKind::Logical(_) => None,
-        // **`ExprKind::Call` is `None`, not an owner string.** It has
-        // exactly two `CallTarget` forms and this crate evaluates both, so it
-        // closes outright. A
-        // name that resolves to no internal label (or a `CallTarget::
-        // Literal`, which never searches labels at all), no builtin and no
-        // `::ROUTINE` raises the oracle's own 43.1 -- exactly the same shape
-        // `InstructionKind::Call`'s own comment above describes for `CALL`.
-        // `>name`/`<name` answers a `VariableReference`, which `eval.rs`'s
-        // own arm builds and `run/call.rs`'s `Interp::variable_reference` binds to
-        // the variable.
-        ExprKind::Call { .. }
-        | ExprKind::VariableReference(_)
-        | ExprKind::Message { .. }
-        | ExprKind::List(_)
-        | ExprKind::QualifiedCall { .. }
-        | ExprKind::ClassResolver { .. } => None,
-    }
+/// A loud message for `name`: `"{name} is not implemented"`.
+fn owned_message(name: &str) -> String {
+    format!("{name} is not implemented")
 }
 
 /// The code a step is executing, all of it borrowed from the caller's local

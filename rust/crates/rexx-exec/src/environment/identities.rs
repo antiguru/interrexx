@@ -1037,8 +1037,8 @@ impl Interp {
         if let Some(local) = self.package_data(package).and_then(|data| data.local) {
             match self.package_local_entry(local, upper)? {
                 hash::DirectoryEntry::Found(found) => return Ok(found),
-                hash::DirectoryEntry::Owed(owner) => {
-                    return Err(Loud::environment_entry(upper, owner).into());
+                hash::DirectoryEntry::Owed => {
+                    return Err(Loud::environment_entry(upper).into());
                 }
                 hash::DirectoryEntry::Absent => {}
             }
@@ -1049,7 +1049,7 @@ impl Interp {
             &env_seam::Access::Resolve,
         )? {
             hash::DirectoryEntry::Found(found) => Ok(found),
-            hash::DirectoryEntry::Owed(owner) => Err(Loud::environment_entry(upper, owner).into()),
+            hash::DirectoryEntry::Owed => Err(Loud::environment_entry(upper).into()),
             hash::DirectoryEntry::Absent => Ok(ObjRef::NIL),
         }
     }

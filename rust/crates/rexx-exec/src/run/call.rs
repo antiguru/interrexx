@@ -319,12 +319,7 @@ impl Interp {
             // have, which a program cannot tell from its own typo.
             None if let Some(row) = crate::internal_routines::lookup(name) => match row.body {
                 Some(_) => Resolved::Internal(row),
-                None => {
-                    let owner = row
-                        .owner
-                        .expect("a row with no body names the phase that owes it");
-                    return Err(Loud::internal_routine(name, owner).into());
-                }
+                None => return Err(Loud::internal_routine(name).into()),
             },
             // **A routine a loaded library exports**, whichever load
             // registered it. The oracle keeps these in the table the
@@ -820,10 +815,7 @@ impl Interp {
         executable: ObjRef,
     ) -> Result<Started<ObjRef>, Failure> {
         let Some(body) = row.body else {
-            let owner = row
-                .owner
-                .expect("a row with no body names the phase that owes it");
-            return Err(Loud::internal_routine(row.name.as_bytes(), owner).into());
+            return Err(Loud::internal_routine(row.name.as_bytes()).into());
         };
         let caller = self.running_activation().map(|activation| activation.id);
         let depth = self.activity.internal_depth;

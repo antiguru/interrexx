@@ -327,7 +327,7 @@ impl Interp {
         count: i64,
     ) -> Result<(), Failure> {
         let Some(package) = self.system_symbol(b"PACKAGE") else {
-            return Err(crate::Loud::environment_symbol(b".PACKAGE", None).into());
+            return Err(crate::Loud::environment_symbol(b".PACKAGE").into());
         };
         let define = self.text(b"D");
         self.roots.activity_mut().push_temp(define);

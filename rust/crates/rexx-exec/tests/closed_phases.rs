@@ -274,8 +274,7 @@ fn the_row_check_reads_only_a_resolution_that_opens_a_clause() {
 /// The negative control for the scan: a phase that is still open is found by
 /// the same walk, so an empty result above means the sites are gone and not
 /// that the scan is looking in the wrong place. No source of this crate names
-/// an open phase any more (Phase 10's owners are `Owner::Phase10` values), so
-/// the witness is a fixture walked as a crate's `src/`
+/// an open phase, so the witness is a fixture walked as a crate's `src/`
 /// (`tests/closed_phases/src/`), beside a check that the walk of this crate
 /// reaches its sources and reads their literals.
 #[test]

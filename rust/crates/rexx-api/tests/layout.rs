@@ -733,34 +733,12 @@ fn refusing_members() -> BTreeSet<String> {
 }
 
 /// **No stub remains that a populated table should have replaced**: the
-/// members still refusing are exactly the ones `REFUSING_MEMBERS` names with
-/// their owner, derived from the header's members rather than from a list.
-#[test]
-fn a_populated_table_refuses_exactly_the_members_it_names() {
-    let listed: BTreeSet<String> = rexx_api::layout::REFUSING_MEMBERS
-        .iter()
-        .map(|(member, _)| (*member).to_string())
-        .collect();
-    assert_eq!(
-        listed.len(),
-        rexx_api::layout::REFUSING_MEMBERS.len(),
-        "a member is listed twice"
-    );
-    assert_eq!(refusing_members(), listed);
-}
-
-/// Every member of every populated table is filled: the embedding API's members, the last to
-/// refuse (ruling R4), are written, so none refuses and none names an owner.
+/// embedding API's members, the last to refuse (ruling R4), are written, so
+/// no member of a populated table refuses, derived from the header's members
+/// rather than from a list.
 #[test]
 fn no_populated_table_member_refuses() {
-    assert!(rexx_api::layout::REFUSING_MEMBERS.is_empty());
-    for member in [
-        "RexxInstanceInterface.Halt",
-        "RexxInstanceInterface.Terminate",
-        "RexxThreadInterface.HaltThread",
-    ] {
-        assert_eq!(rexx_api::layout::refusal_owner(member), None, "{member}");
-    }
+    assert_eq!(refusing_members(), BTreeSet::new());
 }
 
 /// The negative control for the comparison above: a refusing table compared

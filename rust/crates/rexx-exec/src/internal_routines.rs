@@ -8,8 +8,6 @@
 //! `tests/internal_routines.rs` re-derives this table from those three C++
 //! files.
 
-use rexx_core::Owner;
-
 /// Which internal package exports the routine.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(crate) enum Package {
@@ -57,12 +55,7 @@ pub(crate) struct InternalRoutine {
     /// spelling is for a reader.
     pub(crate) name: &'static str,
     pub(crate) package: Package,
-    /// The phase owing a body, or `None` for a row this crate runs. **Not a
-    /// field beside `body`**: a row has one or the other, and an owner on a
-    /// row that runs is a phase name nothing can print.
-    pub(crate) owner: Option<Owner>,
-    /// The code, once some phase has written it. A row with `None` refuses,
-    /// naming [`InternalRoutine::owner`].
+    /// The code, once some phase has written it. A row with `None` refuses.
     pub(crate) body: Option<InternalBody>,
 }
 
@@ -71,7 +64,6 @@ const fn rexx_run(name: &'static str, body: InternalBody) -> InternalRoutine {
     InternalRoutine {
         name,
         package: Package::Rexx,
-        owner: None,
         body: Some(body),
     }
 }
@@ -81,7 +73,6 @@ const fn util_run(name: &'static str, body: InternalBody) -> InternalRoutine {
     InternalRoutine {
         name,
         package: Package::RexxUtil,
-        owner: None,
         body: Some(body),
     }
 }

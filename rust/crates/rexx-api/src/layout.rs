@@ -10,8 +10,6 @@
 use std::cell::Cell;
 use std::ffi::{c_char, c_int, c_void};
 
-use rexx_core::Owner;
-
 /// `wholenumber_t` (`api/rexx.h:237`).
 pub type wholenumber_t = isize;
 /// `stringsize_t` (`api/rexx.h:236`).
@@ -525,31 +523,9 @@ pub struct Owned<C, T> {
     pub owner: *mut T,
 }
 
-/// Each member a populated table still refuses, as `Table.Member`, with the
-/// owner and reason its refusal names.
-pub const REFUSING_MEMBERS: &[(&str, Owner)] = &[];
-
-/// The owner a refusal of `entry` names: its [`REFUSING_MEMBERS`] row, and
-/// none for a member no row names, which every populated table fills.
-#[must_use]
-pub fn refusal_owner(entry: &str) -> Option<Owner> {
-    REFUSING_MEMBERS
-        .iter()
-        .find(|(member, _)| *member == entry)
-        .map(|(_, owner)| *owner)
-}
-
-/// The refusal text for `what`, naming `owner`.
-pub(crate) fn refusal(what: &str, owner: Owner) -> String {
-    format!("{what} is not implemented ({})", owner.label())
-}
-
-/// The refusal text for `entry`, with its owner when it has one.
+/// The refusal text for `entry`, a stub member no populated table leaves.
 fn refusal_text(entry: &str) -> String {
-    match refusal_owner(entry) {
-        Some(owner) => refusal(entry, owner),
-        None => format!("{entry} is not implemented"),
-    }
+    format!("{entry} is not implemented")
 }
 
 /// Abandon the process, naming the entry the caller reached.

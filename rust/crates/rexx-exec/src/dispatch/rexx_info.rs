@@ -156,7 +156,7 @@ fn file_object(interp: &mut Interp, path: Option<Vec<u8>>) -> Result<Option<ObjR
         return Ok(Some(ObjRef::NIL));
     };
     let Some(class) = interp.rexx_package_class(b"FILE") else {
-        return Err(Loud::environment_symbol(b".FILE", None).into());
+        return Err(Loud::environment_symbol(b".FILE").into());
     };
     let argument = interp.text_built(path);
     interp.roots.activity_mut().push_temp(argument);

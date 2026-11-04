@@ -4,7 +4,7 @@
 
 use rustc_hash::FxHashMap;
 
-use rexx_core::{BehaviourId, Body, NativeObject, ObjRef, Owner};
+use rexx_core::{BehaviourId, Body, NativeObject, ObjRef};
 
 use crate::dispatch::hash;
 use crate::plan::{ClassPackage, Package, ProgramId};
@@ -232,10 +232,10 @@ static ORACLE_LOCAL: &[&str] = &[
 pub(crate) struct EnvironmentModel {
     directories: env_seam::Directories,
     /// The item standing in for an entry the oracle's directory holds and this
-    /// crate does not build, one per owner. A write replaces one in place,
-    /// which keeps the oracle's order. The owner is `None` for the entries the
-    /// library bootstrap fills, which no program reads unfilled.
-    owed: [(ObjRef, Option<Owner>); 1],
+    /// crate does not build: one the library bootstrap fills, which no program
+    /// reads unfilled. A write replaces one in place, which keeps the oracle's
+    /// order.
+    owed: [ObjRef; 1],
     /// A reading of `.local`'s pool and of `.environment`'s, in that order,
     /// from an earlier lookup; one that is not current is read again.
     views: [Option<hash::StoreView>; 2],
@@ -356,17 +356,13 @@ impl Interp {
         // Every object below is rooted the instant it exists and before the
         // next allocation, which can collect.
         let frame = self.roots.activity_mut().push_frame();
-        let mut owed: [(ObjRef, Option<Owner>); 1] = [(ObjRef::NIL, None)];
-        for (at, (held, owner)) in owed.iter_mut().enumerate() {
-            let rendered = match owner {
-                Some(owner) => format!("an entry owed by {}", owner.label()),
-                None => "an entry the library bootstrap fills".to_string(),
-            };
+        let mut owed: [ObjRef; 1] = [ObjRef::NIL];
+        for (at, held) in owed.iter_mut().enumerate() {
             *held = self.alloc_with(
                 BehaviourId::OBJECT,
                 Body::Native(Box::new(NativeObject::new(
                     object_class,
-                    rendered.as_bytes(),
+                    b"an entry the library bootstrap fills",
                 ))),
             );
             self.roots.add_global(&format!(".owed{at}"), *held);
@@ -430,7 +426,7 @@ impl Interp {
             if *name == "LOCAL" {
                 continue;
             }
-            let value = known.remove(name.as_bytes()).unwrap_or(owed[0].0);
+            let value = known.remove(name.as_bytes()).unwrap_or(owed[0]);
             self.put_interpreter_entry(environment, name.as_bytes(), value);
         }
         let mut rest: Vec<(Box<[u8]>, ObjRef)> = known.into_iter().collect();
@@ -446,7 +442,7 @@ impl Interp {
         // before any program runs; `Interp::mint_local_directory` does the
         // same once the classes it needs exist.
         for name in ORACLE_LOCAL {
-            self.put_interpreter_entry(local, name.as_bytes(), owed[0].0);
+            self.put_interpreter_entry(local, name.as_bytes(), owed[0]);
         }
         self.roots.activity_mut().pop_frame(frame);
 
@@ -478,15 +474,12 @@ impl Interp {
             .expect("a string-keyed store accepts a string index");
     }
 
-    /// The owner of `item`, when it stands in for an entry the oracle's
-    /// directory holds and this crate does not build.
-    pub(crate) fn owed_entry_owner(&self, item: ObjRef) -> Option<Option<Owner>> {
-        let model = self.environment.as_ref()?;
-        model
-            .owed
-            .iter()
-            .find(|(held, _)| *held == item)
-            .map(|(_, owner)| *owner)
+    /// Whether `item` stands in for an entry the oracle's directory holds
+    /// and this crate does not build.
+    pub(crate) fn is_owed_entry(&self, item: ObjRef) -> bool {
+        self.environment
+            .as_ref()
+            .is_some_and(|model| model.owed.contains(&item))
     }
 
     /// `.NAME`'s value: `PackageClass::findClass`'s order, then
@@ -508,8 +501,8 @@ impl Interp {
         {
             match self.package_local_symbol(program, bare)? {
                 hash::DirectoryEntry::Found(found) => return Ok(found),
-                hash::DirectoryEntry::Owed(owner) => {
-                    return Err(Loud::environment_symbol(dotted, owner).into());
+                hash::DirectoryEntry::Owed => {
+                    return Err(Loud::environment_symbol(dotted).into());
                 }
                 hash::DirectoryEntry::Absent => {}
             }
@@ -521,8 +514,8 @@ impl Interp {
             &env_seam::Access::Resolve,
         )? {
             hash::DirectoryEntry::Found(found) => return Ok(found),
-            hash::DirectoryEntry::Owed(owner) => {
-                return Err(Loud::environment_symbol(dotted, owner).into());
+            hash::DirectoryEntry::Owed => {
+                return Err(Loud::environment_symbol(dotted).into());
             }
             hash::DirectoryEntry::Absent => {}
         }
@@ -565,8 +558,8 @@ impl Interp {
         if let Some(local) = local {
             match self.package_local_entry(local, bare)? {
                 hash::DirectoryEntry::Found(found) => return Ok(Some(found)),
-                hash::DirectoryEntry::Owed(owner) => {
-                    return Err(Loud::environment_entry(bare, owner).into());
+                hash::DirectoryEntry::Owed => {
+                    return Err(Loud::environment_entry(bare).into());
                 }
                 hash::DirectoryEntry::Absent => {}
             }
@@ -578,7 +571,7 @@ impl Interp {
         )? {
             hash::DirectoryEntry::Found(found) => Ok(Some(found)),
             hash::DirectoryEntry::Absent => Ok(None),
-            hash::DirectoryEntry::Owed(owner) => Err(Loud::environment_entry(bare, owner).into()),
+            hash::DirectoryEntry::Owed => Err(Loud::environment_entry(bare).into()),
         }
     }
 
@@ -1470,12 +1463,10 @@ impl Interp {
         env_seam::which(&model.directories, directory)
     }
 
-    /// The owner of an entry `object` holds and this crate does not build, or
-    /// `None` for a collection whose entries it fills. Only `.environment` and
-    /// `.local` hold such entries.
-    pub(crate) fn unbuilt_collection_owner(&mut self, object: ObjRef) -> Option<Option<Owner>> {
-        self.directory_scope(object)?;
-        hash::owed_table_owner(self, object)
+    /// Whether `object` holds an entry this crate does not build. Only
+    /// `.environment` and `.local` hold such entries.
+    pub(crate) fn holds_unbuilt_entry(&mut self, object: ObjRef) -> bool {
+        self.directory_scope(object).is_some() && hash::holds_owed_entry(self, object)
     }
 
     /// The program whose directives and installed classes a `.NAME` resolves

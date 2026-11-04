@@ -9,8 +9,8 @@
 #
 # The `unblocked_by` column is NOT hand-written FOR A BODY THAT FAILS LOUDLY:
 # there it is the owning phase `rexx-exec`'s own message names, re-derived on
-# every run, so this file cannot drift from `instruction_owner`/`expr_owner`
-# and a blocker moving between phases goes red here.
+# every run, so this file cannot drift from `rexx-exec`'s refusals and a
+# blocker moving between phases goes red here.
 #
 # Two limits on that, both real:
 #

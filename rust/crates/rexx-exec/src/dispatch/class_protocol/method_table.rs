@@ -65,8 +65,8 @@ pub(super) fn method_table_pairs(
         // difference: a collection whose entries this crate answers per name
         // rather than storing looks empty to `native_keys`, and a mutation
         // over an empty walk is a mutation that silently does nothing.
-        if let Some(owner) = interp.unbuilt_collection_owner(table) {
-            return Err(Loud::unreadable_collection(owner).into());
+        if interp.holds_unbuilt_entry(table) {
+            return Err(Loud::unreadable_collection().into());
         }
     }
     // A user SUPPLIER can send protected methods or install methods

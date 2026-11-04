@@ -94,53 +94,53 @@ Raised	array_too_big	send	crates/rexx-exec/src/error.rs:1172	agrees	yes	93.959	.
 Raised	authorization_not_logical	body	crates/rexx-exec/src/error.rs:203	off-send-surface	-	-	-
 Raised	bad_external_specification	send	crates/rexx-exec/src/error.rs:513	agrees	yes	99.917	say .Method~loadExternalMethod('M9', 'garbage') -- and the same for a one-word descriptor and for the empty string; oracle rc 157
 Raised	bad_metaclass	body+send	crates/rexx-exec/src/error.rs:386	agrees	yes	99.927	.Object~subclass('K', 5)
-Loud	binary_operator	body	crates/rexx-exec/src/lib.rs:507	off-send-surface	-	-	-
+Loud	binary_operator	body	crates/rexx-exec/src/lib.rs:506	off-send-surface	-	-	-
 Raised	c2d_result_too_large	body	crates/rexx-exec/src/error.rs:929	off-send-surface	-	-	-
-Loud	call_op_off_its_node	ir	crates/rexx-exec/src/lib.rs:970	off-send-surface	-	-	-
-Loud	chunk_map_too_short	ir	crates/rexx-exec/src/lib.rs:894	off-send-surface	-	-	-
-Loud	chunk_refused	body	crates/rexx-exec/src/lib.rs:903	off-send-surface	-	-	-
+Loud	call_op_off_its_node	ir	crates/rexx-exec/src/lib.rs:963	off-send-surface	-	-	-
+Loud	chunk_map_too_short	ir	crates/rexx-exec/src/lib.rs:887	off-send-surface	-	-	-
+Loud	chunk_refused	body	crates/rexx-exec/src/lib.rs:896	off-send-surface	-	-	-
 Raised	circular_requires	body	crates/rexx-exec/src/error.rs:519	off-send-surface	-	-	-
 Raised	class_not_found	body	crates/rexx-exec/src/error.rs:366	off-send-surface	-	-	-
-Loud	classic_style_routine	send	crates/rexx-exec/src/lib.rs:836	agrees	no	no route: no routine table this crate loads on Linux has a ROUTINE_CLASSIC_STYLE row; git grep --no-index over ootest, testbinaries, extensions and samples finds one only in the Windows rxwinsys	say RxCalcSqrt(4) over ::requires 'rxmath' library, a typed row: 2, rc 0 on both
+Loud	classic_style_routine	send	crates/rexx-exec/src/lib.rs:822	agrees	no	no route: no routine table this crate loads on Linux has a ROUTINE_CLASSIC_STYLE row; git grep --no-index over ootest, testbinaries, extensions and samples finds one only in the Windows rxwinsys	say RxCalcSqrt(4) over ::requires 'rxmath' library, a typed row: 2, rc 0 on both
 Raised	compare_result_not_whole	send	crates/rexx-exec/src/error.rs:1144	agrees	yes	26.903	.Array~of('b','a')~sortWith(c) over a Comparator whose compare returns 'abc' -- a comparator answering '1.0' also sorts, so the refusal needs a result that is not a number at all
 Raised	compare_to_result_not_whole	send	crates/rexx-exec/src/error.rs:1150	agrees	yes	26.902	.Array~of(.K~new,.K~new)~sort over ::method compareTo returning 'zzz' -- sortWith on the same objects reaches 26.903 instead, so the default order is the only route
 Raised	condition	body+send	crates/rexx-exec/src/error.rs:139	agrees	yes	from_utf8_lossy(&name)	t~rc('USER BAZ', , .array~of('a'), 'r3') under signal on user baz, over ::method rc external "LIBRARY orxmethod TestRaiseCondition" -- the name is the one the extension passed RaiseCondition; RaiseCondition upper-cases the name first
 Raised	constant_not_initialized	send	crates/rexx-exec/src/error.rs:1631	agrees	yes	97.4	a class-side INIT reading ::constant c (2+3)
-Loud	constant_out_of_range	ir	crates/rexx-exec/src/lib.rs:978	off-send-surface	-	-	-
+Loud	constant_out_of_range	ir	crates/rexx-exec/src/lib.rs:971	off-send-surface	-	-	-
 Raised	context_not_active	send	crates/rexx-exec/src/error.rs:476	agrees	yes	98.981	a `.context` returned out of a ::routine and read after the return
-Loud	conversion_raised	send	crates/rexx-exec/src/lib.rs:816	agrees	no	no route: both callers of Interp::refusal answer a conversion that raised before reaching it, so the callee's condition is what a program sees	RxCalcSqrt(o) with o an object whose STRING raises 93.900 (scout A c_native_raised): rc 163 on both engines
+Loud	conversion_raised	send	crates/rexx-exec/src/lib.rs:802	agrees	no	no route: both callers of Interp::refusal answer a conversion that raised before reaching it, so the callee's condition is what a program sees	RxCalcSqrt(o) with o an object whose STRING raises 93.900 (scout A c_native_raised): rc 163 on both engines
 Raised	copy_not_supported	send	crates/rexx-exec/src/error.rs:1592	agrees	yes	93.970	.K~copy
 Raised	cyclic_inheritance	body	crates/rexx-exec/src/error.rs:488	off-send-surface	-	-	-
 Raised	d2c_value_not_whole	body	crates/rexx-exec/src/error.rs:918	off-send-surface	-	-	-
 Raised	d2x_value_not_whole	body	crates/rexx-exec/src/error.rs:911	off-send-surface	-	-	-
 Raised	date_format_invalid	body	crates/rexx-exec/src/error.rs:769	off-send-surface	-	-	-
 Raised	deadlock	body+send	crates/rexx-exec/src/error.rs:270	agrees	yes	98.905	m~wait inside a guarded method whose started send m waits for that method's lock (message_wait_deadlock.rex); two activities each holding a lock and sending to the other's (guard_deadlock_two_activities.rex)
-Loud	entry_method_without_a_value	send	crates/rexx-exec/src/lib.rs:730	recorded	yes	an entry-method assignment to	.local~sendWith('ZZZ=', .array~new(1))
-Loud	environment_entry	body+send	crates/rexx-exec/src/lib.rs:666	diverges	yes	directory entry	.local['STDQUE'] or .context~package~findClass('STDQUE'), before STDQUE is replaced
+Loud	entry_method_without_a_value	send	crates/rexx-exec/src/lib.rs:718	recorded	yes	an entry-method assignment to	.local~sendWith('ZZZ=', .array~new(1))
+Loud	environment_entry	body+send	crates/rexx-exec/src/lib.rs:658	diverges	yes	directory entry	.local['STDQUE'] or .context~package~findClass('STDQUE'), before STDQUE is replaced
 Raised	environment_name_too_long	body	crates/rexx-exec/src/error.rs:1905	off-send-surface	-	-	-
-Loud	environment_symbol	body+send	crates/rexx-exec/src/lib.rs:655	agrees	no	no route: the send sites ask for .MESSAGENOTIFICATION and .FILE, REXX package classes the library bootstrap installs before any program runs	m~notify(.w~new) over ::class w inherit MessageNotification, after .environment~remove('MESSAGENOTIFICATION') and .local~remove('MESSAGENOTIFICATION') (Phase 9a Task 5 probe nt1), and .rexxinfo~executable (probe info): rc 0 on both
+Loud	environment_symbol	body+send	crates/rexx-exec/src/lib.rs:647	agrees	no	no route: the send sites ask for .MESSAGENOTIFICATION and .FILE, REXX package classes the library bootstrap installs before any program runs	m~notify(.w~new) over ::class w inherit MessageNotification, after .environment~remove('MESSAGENOTIFICATION') and .local~remove('MESSAGENOTIFICATION') (Phase 9a Task 5 probe nt1), and .rexxinfo~executable (probe info): rc 0 on both
 Raised	error_syntax	body	crates/rexx-exec/src/error.rs:1672	off-send-surface	-	-	-
 Raised	escalated	body+send	crates/rexx-exec/src/command.rs:468	agrees	yes	98.970	tester~TestRaiseConditionObject(c) in a routine under ::options error syntax, c an ERROR condition object (raise error 127 description 'a command') over METHODPackage.cls: Error 98.970, rc 158 (classic_api/raise_condition.rex opt1 holds the trapped form)
 Raised	executable_file_unreadable	body	crates/rexx-exec/src/error.rs:506	off-send-surface	-	-	-
 Raised	execution_user_defined	body+send	crates/rexx-exec/src/error.rs:1071	agrees	yes	this CommandContext belongs to a command that has ended	.CommandContext~new(.object~new, 'z')~getVar('a') -- a context its own CSELF names no running command of
 Raised	exit_after_reply	body	crates/rexx-exec/src/error.rs:1888	off-send-surface	-	-	-
 Raised	expose_outside_method	body	crates/rexx-exec/src/error.rs:1846	off-send-surface	-	-	-
-Loud	expose_receiver	body	crates/rexx-exec/src/lib.rs:798	off-send-surface	-	-	-
-Loud	expression	body	crates/rexx-exec/src/lib.rs:499	off-send-surface	-	-	-
+Loud	expose_receiver	body	crates/rexx-exec/src/lib.rs:784	off-send-surface	-	-	-
+Loud	expression	body	crates/rexx-exec/src/lib.rs:498	off-send-surface	-	-	-
 Raised	external_method_not_found	body	crates/rexx-exec/src/error.rs:284	off-send-surface	-	-	-
 Raised	external_routine_not_found	body	crates/rexx-exec/src/error.rs:290	off-send-surface	-	-	-
 Raised	failure_syntax	body	crates/rexx-exec/src/error.rs:1678	off-send-surface	-	-	-
-Loud	fork_child	body	crates/rexx-exec/src/lib.rs:561	off-send-surface	-	-	-
+Loud	fork_child	body	crates/rexx-exec/src/lib.rs:557	off-send-surface	-	-	-
 Raised	format_incompatible_separator	body	crates/rexx-exec/src/error.rs:805	off-send-surface	-	-	-
 Raised	forward_arguments	body	crates/rexx-exec/src/error.rs:1867	off-send-surface	-	-	-
 Raised	forward_outside_method	body	crates/rexx-exec/src/error.rs:1861	off-send-surface	-	-	-
-Loud	frame_without_executable	send	crates/rexx-exec/src/lib.rs:706	agrees	no	no route: every frame is built with its executable but a package hook's and one from a failure site that names none, and the Phase 9d Task 3 probes reached neither	corpus/lang/stackframe_library_routine_executable.rex and stackframe_merged_library_executable.rex: each library routine frame answers its Routine object, identical on both
+Loud	frame_without_executable	send	crates/rexx-exec/src/lib.rs:697	agrees	no	no route: every frame is built with its executable but a package hook's and one from a failure site that names none, and the Phase 9d Task 3 probes reached neither	corpus/lang/stackframe_library_routine_executable.rex and stackframe_merged_library_executable.rex: each library routine frame answers its Routine object, identical on both
 Raised	from	body	crates/rexx-exec/src/error.rs:1953	off-send-surface	-	-	-
 Raised	guard_outside_method	body	crates/rexx-exec/src/error.rs:1851	off-send-surface	-	-	-
 Raised	halt	body+send	crates/rexx-exec/src/error.rs:159	agrees	yes	4.1	t~rc('HALT', 'stop') untrapped, over ::method rc external "LIBRARY orxmethod TestRaiseCondition": rc 252, the native level a routine's and the major line naming the package with no line (corpus/lang/library_condition_reported_on_return.rex)
-Loud	handle_descriptor	send	crates/rexx-exec/src/lib.rs:844	recorded	yes	a HANDLE: stream on descriptor	.Stream~new('HANDLE:7'), recorded as Deviation 35: the oracle makes an inert stream (stream_handle.rs pins this side; HANDLE:2 beside it is made on both)
-Loud	hash_collection_without_store	send	crates/rexx-exec/src/lib.rs:690	not-run	no	oracle-crashes.txt entry 50: never run	-
-Loud	immovable_reply	body	crates/rexx-exec/src/lib.rs:1014	off-send-surface	-	-	-
+Loud	handle_descriptor	send	crates/rexx-exec/src/lib.rs:840	recorded	yes	a HANDLE: stream on descriptor	.Stream~new('HANDLE:7'), recorded as Deviation 35: the oracle makes an inert stream (stream_handle.rs pins this side; HANDLE:2 beside it is made on both)
+Loud	hash_collection_without_store	send	crates/rexx-exec/src/lib.rs:682	not-run	no	oracle-crashes.txt entry 50: never run	-
+Loud	immovable_reply	body	crates/rexx-exec/src/lib.rs:1006	off-send-surface	-	-	-
 Raised	incorrect_list_index	send	crates/rexx-exec/src/error.rs:1114	agrees	yes	93.918	q=.Queue~new;q~queue('a');q~put('Y',99)
 Raised	incorrect_native_signature	send	crates/rexx-exec/src/error.rs:327	agrees	yes	40.918	ForgeSelf() over ::requires 'forgesig' LIBRARY in a required package, a forged routine library declaring CSELF; a method over a forged procedure declaring parameter code 9 is 93.968 -- no oracle-built extension declares either, so neither program can be a corpus witness
 Raised	incorrect_pad	send	crates/rexx-exec/src/error.rs:844	agrees	yes	93.922	.MutableBuffer~new('abcabc')~substr(1, 2, 'xx')
@@ -151,8 +151,8 @@ Raised	inherit_base_class	body+send	crates/rexx-exec/src/error.rs:444	agrees	yes
 Raised	inherit_needs_a_mixinclass	body+send	crates/rexx-exec/src/error.rs:437	agrees	yes	98.942	.K~inherit(.Array)
 Loud	instruction	body+ir	crates/rexx-exec/src/lib.rs:446	off-send-surface	-	-	-
 Raised	insufficient_stack	body+send	crates/rexx-exec/src/error.rs:212	recorded	no	the self-forward family is in oracle-crashes.txt: never run	-
-Loud	internal_routine	body	crates/rexx-exec/src/lib.rs:533	off-send-surface	-	-	-
-Loud	interpreter_table_copy	send	crates/rexx-exec/src/lib.rs:718	agrees	no	no route: every native_instance caller builds another class, and .environment, .local and a package's .methods and .routines are instance stores	.Message~new(o, .array~of('COPY', .Object))~send over .environment, .local, .context~package~routines and .methods answers a Directory or StringTable that is not o, identical on both
+Loud	internal_routine	body	crates/rexx-exec/src/lib.rs:529	off-send-surface	-	-	-
+Loud	interpreter_table_copy	send	crates/rexx-exec/src/lib.rs:709	agrees	no	no route: every native_instance caller builds another class, and .environment, .local and a package's .methods and .routines are instance stores	.Message~new(o, .array~of('COPY', .Object))~send over .environment, .local, .context~package~routines and .methods answers a Directory or StringTable that is not o, identical on both
 Raised	invalid_base64	send	crates/rexx-exec/src/error.rs:1798	agrees	yes	93.962	'YW==YWJj'~decodeBase64
 Raised	invalid_conversion	body	crates/rexx-exec/src/error.rs:775	off-send-surface	-	-	-
 Raised	invalid_digit	body	crates/rexx-exec/src/error.rs:947	off-send-surface	-	-	-
@@ -162,21 +162,21 @@ Raised	invalid_option	body	crates/rexx-exec/src/error.rs:867	off-send-surface	-	
 Raised	invalid_position	body+send	crates/rexx-exec/src/error.rs:834	agrees	yes	93.924	m = .array~new(2,3) then m[1.5,1]
 Raised	invalid_routine_option	body	crates/rexx-exec/src/error.rs:1460	off-send-surface	-	-	-
 Raised	invalid_stream_name	body	crates/rexx-exec/src/error.rs:756	off-send-surface	-	-	-
-Loud	inverted_wait	body	crates/rexx-exec/src/lib.rs:1002	off-send-surface	-	-	-
-Loud	jump_out_of_range	ir	crates/rexx-exec/src/lib.rs:920	off-send-surface	-	-	-
+Loud	inverted_wait	body	crates/rexx-exec/src/lib.rs:995	off-send-surface	-	-	-
+Loud	jump_out_of_range	ir	crates/rexx-exec/src/lib.rs:913	off-send-surface	-	-	-
 Raised	label_not_found	body	crates/rexx-exec/src/error.rs:540	off-send-surface	-	-	-
 Raised	length_required_for_negative	body	crates/rexx-exec/src/error.rs:902	off-send-surface	-	-	-
 Raised	library_not_loaded	body	crates/rexx-exec/src/error.rs:298	off-send-surface	-	-	-
-Loud	library_procedure_gone	send	crates/rexx-exec/src/lib.rs:754	agrees	no	no route: Libraries holds every library that loaded until the interpreter ends, so a row found at binding is found at every call	r~doparse() over a ::method doparse external in re.cls (library_method_package_blame.rex), and RxCalcSqrt(1, 2, 3) over a required package's ::routine sq external (library_routine_package_blame.rex)
-Loud	library_source	body	crates/rexx-exec/src/lib.rs:777	off-send-surface	-	-	-
+Loud	library_procedure_gone	send	crates/rexx-exec/src/lib.rs:740	agrees	no	no route: Libraries holds every library that loaded until the interpreter ends, so a row found at binding is found at every call	r~doparse() over a ::method doparse external in re.cls (library_method_package_blame.rex), and RxCalcSqrt(1, 2, 3) over a required package's ::routine sq external (library_routine_package_blame.rex)
+Loud	library_source	body	crates/rexx-exec/src/lib.rs:763	off-send-surface	-	-	-
 Raised	library_version	body+send	crates/rexx-exec/src/error.rs:304	agrees	yes	98.982	.context~package~loadLibrary('forgever') over a forged extension whose package entry asks for 6.0.0 -- no oracle-built extension asks for a newer interpreter, so the program cannot be a corpus witness
 Raised	logical_list_element	body	crates/rexx-exec/src/error.rs:229	off-send-surface	-	-	-
-Loud	loop_op_off_its_node	body+ir	crates/rexx-exec/src/lib.rs:944	off-send-surface	-	-	-
+Loud	loop_op_off_its_node	body+ir	crates/rexx-exec/src/lib.rs:937	off-send-surface	-	-	-
 Raised	lostdigits	body	crates/rexx-exec/src/error.rs:431	off-send-surface	-	-	-
 Raised	message_array_shape	send	crates/rexx-exec/src/error.rs:1605	agrees	yes	93.946	say o~sendWith(.array~new(2,2)) -- the message-NAME array; the argument array's own multidimensional case is a separate silent divergence
 Raised	message_name_shape	send	crates/rexx-exec/src/error.rs:1598	agrees	yes	93.972	o~sendWith(o, (1))
 Raised	message_reuse	send	crates/rexx-exec/src/error.rs:471	agrees	yes	98.915	m~send over m = .message~new(o, 'N'); m~start -- corpus/lang/message_reuse.rex, which also sends ~start and ~sendWith to started messages
-Loud	metaclass_new_reused_class	send	crates/rexx-exec/src/lib.rs:587	recorded	yes	a metaclass NEW answering a class	say 'id' .object~subclass("k", .MyMeta)~id over ::CLASS MyMeta SUBCLASS Class / ::METHOD new CLASS / return .array (Phase 9a Task 8b review probe metaarr): the oracle id Array, recorded as Deviation 32
+Loud	metaclass_new_reused_class	send	crates/rexx-exec/src/lib.rs:583	recorded	yes	a metaclass NEW answering a class	say 'id' .object~subclass("k", .MyMeta)~id over ::CLASS MyMeta SUBCLASS Class / ::METHOD new CLASS / return .array (Phase 9a Task 8b review probe metaarr): the oracle id Array, recorded as Deviation 32
 Raised	metaclass_not_found	body	crates/rexx-exec/src/error.rs:380	off-send-surface	-	-	-
 Raised	method_argument_not_a_number	body	crates/rexx-exec/src/error.rs:1776	off-send-surface	-	-	-
 Raised	method_argument_not_in_list	send	crates/rexx-exec/src/error.rs:1223	agrees	yes	93.914	.Package~defaultOptions('FORM')
@@ -192,17 +192,17 @@ Raised	missing_annotation_target	body	crates/rexx-exec/src/error.rs:532	off-send
 Raised	missing_argument	body	crates/rexx-exec/src/error.rs:574	off-send-surface	-	-	-
 Raised	missing_argument_named	send	crates/rexx-exec/src/error.rs:1014	agrees	yes	93.903	s~seek('write') over a stream opened read
 Raised	missing_array_element	send	crates/rexx-exec/src/error.rs:1119	agrees	yes	98.975	a=.Array~new;a[1]='c';a[3]='a';a~sort
-Loud	missing_body	body+ir+send	crates/rexx-exec/src/lib.rs:865	agrees	no	no route: every arm guards a directive index the parser fills	an instance reading a generated accessor
+Loud	missing_body	body+ir+send	crates/rexx-exec/src/lib.rs:858	agrees	no	no route: every arm guards a directive index the parser fills	an instance reading a generated accessor
 Raised	missing_internal_argument	body+send	crates/rexx-exec/src/error.rs:356	agrees	yes	88.901	say .Stream~new('/dev/null')~position
 Raised	missing_method_argument	body+send	crates/rexx-exec/src/error.rs:1004	agrees	yes	93.903	o~hasMethod
 Raised	missing_named_argument	body+send	crates/rexx-exec/src/error.rs:1237	agrees	yes	88.901	self~setMethod with no arguments
 Raised	missing_native_argument	body+send	crates/rexx-exec/src/error.rs:311	agrees	yes	88.901	r~parse() over ::requires rxregexp.cls
-Loud	missing_rexx_class	body+send	crates/rexx-exec/src/lib.rs:875	agrees	no	no route: CommandClasses.orx installs CommandContext and NativeCommandHandler with the REXX package	.CommandHandler~handler('sh')~kind
+Loud	missing_rexx_class	body+send	crates/rexx-exec/src/lib.rs:868	agrees	no	no route: CommandClasses.orx installs CommandContext and NativeCommandHandler with the REXX package	.CommandHandler~handler('sh')~kind
 Raised	named_argument_invalid_length	send	crates/rexx-exec/src/error.rs:1572	agrees	yes	88.911	.MutableBuffer~new('abcdef')~replaceAt('a', 1, -1) -- ~'[]='('a', 1, -1) is the same message
 Raised	named_argument_invalid_pad	send	crates/rexx-exec/src/error.rs:1565	agrees	yes	88.910	.MutableBuffer~new('abcdef')~replaceAt('a', 1, 3, 'xx') -- []= passes no pad and cannot reach it
 Raised	named_argument_invalid_position	send	crates/rexx-exec/src/error.rs:1579	agrees	yes	88.912	.MutableBuffer~new('abcdef')~replaceAt('a', 0) -- buf['x'] = 'a' is the same message
 Raised	named_argument_needs_a_string_value	send	crates/rexx-exec/src/error.rs:1558	agrees	yes	88.909	self~setMethod('Z', "return 1", self)
-Loud	named_semaphore	body	crates/rexx-exec/src/lib.rs:545	off-send-surface	-	-	-
+Loud	named_semaphore	body	crates/rexx-exec/src/lib.rs:541	off-send-surface	-	-	-
 Raised	namespace_class_not_found	body	crates/rexx-exec/src/error.rs:276	off-send-surface	-	-	-
 Raised	namespace_not_found	body	crates/rexx-exec/src/error.rs:264	off-send-surface	-	-	-
 Raised	namespace_routine_not_found	body	crates/rexx-exec/src/error.rs:257	off-send-surface	-	-	-
@@ -240,14 +240,14 @@ Raised	not_inherited	body+send	crates/rexx-exec/src/error.rs:458	agrees	yes	98.9
 Raised	not_logical	body+send	crates/rexx-exec/src/error.rs:196	agrees	yes	34.901	.String~new("abc")~"?"("y", "n") -- it has to be the ? method: say \'abc' is the identical 34.901 from the body site in eval.rs and reaches nothing here
 Raised	not_one_of	body+send	crates/rexx-exec/src/error.rs:401	agrees	yes	88.916	self~setMethod('Z', "return 1", 'BOGUS')
 Raised	notready_syntax	body	crates/rexx-exec/src/error.rs:1695	off-send-surface	-	-	-
-Loud	numeric_form_without_expression	body	crates/rexx-exec/src/lib.rs:806	off-send-surface	-	-	-
-Loud	object_method	send	crates/rexx-exec/src/lib.rs:768	agrees	no	no route: SETMETHOD and UNSETMETHOD are private, so a receiver sends them to itself from one of its own methods, and every receiver a program's method runs on is an instance or a class object, which hold methods of their own	'abc'~setMethod('m', 'return 1') is 97.2 on both engines; a class method's self~setMethod('m2', 'return 42') answers 42 (corpus/lang/class_setmethod.rex)
-Loud	object_name_of_a_value	send	crates/rexx-exec/src/lib.rs:599	recorded	yes	OBJECTNAME= on a String	longs = 'a longer string than seven' / longs~objectName = 'long' (Phase 9a Task 8b probe objname4), recorded as Deviation 36
+Loud	numeric_form_without_expression	body	crates/rexx-exec/src/lib.rs:792	off-send-surface	-	-	-
+Loud	object_method	send	crates/rexx-exec/src/lib.rs:754	agrees	no	no route: SETMETHOD and UNSETMETHOD are private, so a receiver sends them to itself from one of its own methods, and every receiver a program's method runs on is an instance or a class object, which hold methods of their own	'abc'~setMethod('m', 'return 1') is 97.2 on both engines; a class method's self~setMethod('m2', 'return 42') answers 42 (corpus/lang/class_setmethod.rex)
+Loud	object_name_of_a_value	send	crates/rexx-exec/src/lib.rs:594	recorded	yes	OBJECTNAME= on a String	longs = 'a longer string than seven' / longs~objectName = 'long' (Phase 9a Task 8b probe objname4), recorded as Deviation 36
 Raised	object_not_single_dimensional	body+send	crates/rexx-exec/src/error.rs:1918	agrees	yes	98.913	o~startWith('M', .array~new(2,2)) -- the same call shape ~sendWith reports 88.913 for
-Loud	op_not_driven	body+ir	crates/rexx-exec/src/lib.rs:912	off-send-surface	-	-	-
-Loud	operator_operand	body	crates/rexx-exec/src/lib.rs:640	off-send-surface	-	-	-
+Loud	op_not_driven	body+ir	crates/rexx-exec/src/lib.rs:905	off-send-surface	-	-	-
+Loud	operator_operand	body	crates/rexx-exec/src/lib.rs:632	off-send-surface	-	-	-
 Raised	package_scope_method	send	crates/rexx-exec/src/error.rs:1624	agrees	yes	97.3	o~m over a ::method m package in a required file, whose ::REQUIRES this phase built
-Loud	parse_trigger_operand	body	crates/rexx-exec/src/lib.rs:855	off-send-surface	-	-	-
+Loud	parse_trigger_operand	body	crates/rexx-exec/src/lib.rs:848	off-send-surface	-	-	-
 Raised	power_exponent_not_whole	body	crates/rexx-exec/src/error.rs:186	off-send-surface	-	-	-
 Raised	private_method	send	crates/rexx-exec/src/error.rs:1618	agrees	yes	97.2	.K~new~p over ::method p private
 Raised	procedure_out_of_place	body	crates/rexx-exec/src/error.rs:546	off-send-surface	-	-	-
@@ -279,11 +279,11 @@ Raised	raised_when_not_logical	body+ir	crates/rexx-exec/src/run/raised.rs:47	off
 Raised	raised_while_not_logical	body	crates/rexx-exec/src/run/raised.rs:163	off-send-surface	-	-	-
 Raised	random_bounds_reversed	body	crates/rexx-exec/src/error.rs:995	off-send-surface	-	-	-
 Raised	random_range_too_wide	body	crates/rexx-exec/src/error.rs:987	off-send-surface	-	-	-
-Loud	receiver_class	body+send	crates/rexx-exec/src/lib.rs:577	diverges	yes	a message send to	say .t~new~go(.array~method('ITEMS')) over ::class t / ::method go / use arg m / return self~run(m): ours rc 120, the oracle a different number each run (Deviation 28)
+Loud	receiver_class	body+send	crates/rexx-exec/src/lib.rs:573	diverges	yes	a message send to	say .t~new~go(.array~method('ITEMS')) over ::class t / ::method go / use arg m / return self~run(m): ours rc 120, the oracle a different number each run (Deviation 28)
 Raised	recursive_inherit	body+send	crates/rexx-exec/src/error.rs:451	agrees	yes	98.944	.M~inherit(.M) with M a mixinclass
 Raised	redirection_failed	body	crates/rexx-exec/src/error.rs:729	off-send-surface	-	-	-
 Raised	redirection_not_supported	body	crates/rexx-exec/src/error.rs:1685	off-send-surface	-	-	-
-Loud	register_not_logical	ir	crates/rexx-exec/src/lib.rs:928	off-send-surface	-	-	-
+Loud	register_not_logical	ir	crates/rexx-exec/src/lib.rs:921	off-send-surface	-	-	-
 Raised	reply_outside_method	body	crates/rexx-exec/src/error.rs:1856	off-send-surface	-	-	-
 Raised	reply_twice	body	crates/rexx-exec/src/error.rs:1878	off-send-surface	-	-	-
 Raised	requires_file_not_found	body	crates/rexx-exec/src/error.rs:495	off-send-surface	-	-	-
@@ -296,34 +296,34 @@ Raised	routine_failed	body	crates/rexx-exec/src/error.rs:1445	off-send-surface	-
 Raised	routine_not_found	body	crates/rexx-exec/src/error.rs:250	off-send-surface	-	-	-
 Raised	routine_null_argument	body	crates/rexx-exec/src/error.rs:1499	off-send-surface	-	-	-
 Raised	routine_user_defined	body	crates/rexx-exec/src/error.rs:1512	off-send-surface	-	-	-
-Loud	scheduler_inconsistency	body+ir+send	crates/rexx-exec/src/lib.rs:994	agrees	no	no route: a guard wait's send is kept until its resume takes it, and a guarded method whose body parks is unguarded in the library	t~v over ::attribute v while a REPLY continuation holds the lock (guarded_getter_waits_for_reply.rex)
+Loud	scheduler_inconsistency	body+ir+send	crates/rexx-exec/src/lib.rs:987	agrees	no	no route: a guard wait's send is kept until its resume takes it, and a guarded method whose body parks is unguarded in the library	t~v over ::attribute v while a REPLY continuation holds the lock (guarded_getter_waits_for_reply.rex)
 Raised	scope_override_not_a_class	body+send	crates/rexx-exec/src/error.rs:1188	agrees	yes	88.914	o~m:v with v holding 5
 Raised	scope_override_not_a_scope	send	crates/rexx-exec/src/error.rs:1194	agrees	yes	93.957	o~m:.Array
-Loud	select_op_off_its_node	ir	crates/rexx-exec/src/lib.rs:936	off-send-surface	-	-	-
+Loud	select_op_off_its_node	ir	crates/rexx-exec/src/lib.rs:929	off-send-surface	-	-	-
 Raised	separator_not_a_char	body	crates/rexx-exec/src/error.rs:781	off-send-surface	-	-	-
-Loud	setup_method	send	crates/rexx-exec/src/lib.rs:787	agrees	no	no route: Setup.cpp removes both before an image ships	.Class~defineClassMethod('Z', .nil)
-Loud	signal_op_off_its_node	ir	crates/rexx-exec/src/lib.rs:953	off-send-surface	-	-	-
-Loud	sim_blocked_command	body	crates/rexx-exec/src/sim.rs:1337	off-send-surface	-	-	-
-Loud	sim_blocked_native	body	crates/rexx-exec/src/sim.rs:1348	off-send-surface	-	-	-
-Loud	sim_endless_wait	body	crates/rexx-exec/src/sim.rs:1374	off-send-surface	-	-	-
+Loud	setup_method	send	crates/rexx-exec/src/lib.rs:773	agrees	no	no route: Setup.cpp removes both before an image ships	.Class~defineClassMethod('Z', .nil)
+Loud	signal_op_off_its_node	ir	crates/rexx-exec/src/lib.rs:946	off-send-surface	-	-	-
+Loud	sim_blocked_command	body	crates/rexx-exec/src/sim.rs:1336	off-send-surface	-	-	-
+Loud	sim_blocked_native	body	crates/rexx-exec/src/sim.rs:1346	off-send-surface	-	-	-
+Loud	sim_endless_wait	body	crates/rexx-exec/src/sim.rs:1371	off-send-surface	-	-	-
 Loud	sim_foreign_post	body	crates/rexx-exec/src/sim.rs:1326	off-send-surface	-	-	-
-Loud	sim_replay_diverged	body	crates/rexx-exec/src/sim.rs:1359	off-send-surface	-	-	-
-Loud	sim_trace_unwritten	body	crates/rexx-exec/src/sim.rs:1364	off-send-surface	-	-	-
+Loud	sim_replay_diverged	body	crates/rexx-exec/src/sim.rs:1356	off-send-surface	-	-	-
+Loud	sim_trace_unwritten	body	crates/rexx-exec/src/sim.rs:1361	off-send-surface	-	-	-
 Raised	single_dimension_only	send	crates/rexx-exec/src/error.rs:1133	agrees	yes	93.954	.Array~new(2,3)~delete(1)
 Raised	source_not_string_or_array	send	crates/rexx-exec/src/error.rs:1032	agrees	yes	93.961	.method~new('m', .object~new) (corpus/lang/method_new_object_source.rex); Routine~new the same
 Raised	sourceline_out_of_range	body	crates/rexx-exec/src/error.rs:656	off-send-surface	-	-	-
-Loud	stale_handle	send	crates/rexx-exec/src/lib.rs:825	recorded	yes	the handle is no longer held by this activation	the forge's StashLocal then UseStashed (stash.rex), recorded as the exclusions row A LOCAL HANDLE KEPT FROM AN EARLIER CALL IS STILL REFUSED
+Loud	stale_handle	send	crates/rexx-exec/src/lib.rs:811	recorded	yes	the handle is no longer held by this activation	the forge's StashLocal then UseStashed (stash.rex), recorded as the exclusions row A LOCAL HANDLE KEPT FROM AN EARLIER CALL IS STILL REFUSED
 Raised	stem_argument_unresolved	body	crates/rexx-exec/src/error.rs:1451	off-send-surface	-	-	-
 Raised	stem_count_invalid	body	crates/rexx-exec/src/error.rs:1543	off-send-surface	-	-	-
 Raised	stem_element_unset	body	crates/rexx-exec/src/error.rs:1553	off-send-surface	-	-	-
 Raised	stem_range	body	crates/rexx-exec/src/error.rs:1548	off-send-surface	-	-	-
 Raised	stem_size_not_whole	body	crates/rexx-exec/src/error.rs:740	off-send-surface	-	-	-
 Raised	stem_without_a_size	body	crates/rexx-exec/src/error.rs:735	off-send-surface	-	-	-
-Loud	store_op_off_its_node	ir	crates/rexx-exec/src/lib.rs:962	off-send-surface	-	-	-
+Loud	store_op_off_its_node	ir	crates/rexx-exec/src/lib.rs:955	off-send-surface	-	-	-
 Raised	stream_not_readable	body	crates/rexx-exec/src/error.rs:707	off-send-surface	-	-	-
 Raised	stream_not_writeable	body	crates/rexx-exec/src/error.rs:712	off-send-surface	-	-	-
 Raised	stream_target_option	body	crates/rexx-exec/src/error.rs:718	off-send-surface	-	-	-
-Loud	string_answer_not_a_string	send	crates/rexx-exec/src/lib.rs:612	recorded	yes	a STRING method answering	o = .k~new / say length(o) over ::class k / ::method string / return .directory~new: ours rc 120, the oracle a pointer-sized number (Deviation 30); an Array answer joins and agrees
+Loud	string_answer_not_a_string	send	crates/rexx-exec/src/lib.rs:607	recorded	yes	a STRING method answering	o = .k~new / say length(o) over ::class k / ::method string / return .directory~new: ours rc 120, the oracle a pointer-sized number (Deviation 30); an Array answer joins and agrees
 Raised	syntax	body+send	crates/rexx-exec/src/error.rs:124	agrees	yes	Stream not initialized	s = .Stream~new('t.txt'); s~uninit; s~flush -- flush is the guarded half of oracle-crashes.txt entry 12b, so both sides raise 48.1 at rc 208 rather than the segfault the unguarded half gives
 Raised	syntax_additional	body	crates/rexx-exec/src/error.rs:1873	off-send-surface	-	-	-
 Raised	system_resources	body+send	crates/rexx-exec/src/error.rs:878	agrees	yes	5.0	.array~new(999999999999999)
@@ -334,12 +334,13 @@ Raised	too_many_method_arguments	body+send	crates/rexx-exec/src/error.rs:1046	ag
 Raised	too_many_subscripts	send	crates/rexx-exec/src/error.rs:1160	agrees	yes	93.926	.array~new(2,2)~at(1,2,3)
 Raised	transient_positioning	send	crates/rexx-exec/src/error.rs:1021	agrees	yes	93.958	.Stream~new('/dev/null')~open('write') then ~seek('=1')
 Raised	unassigned_variable	body	crates/rexx-exec/src/error.rs:1702	off-send-surface	-	-	-
-Loud	unbound_method	send	crates/rexx-exec/src/lib.rs:678	agrees	no	no route: Interp::invocable finds every resolved MethodId in natives, method_bodies, generated_methods, native_externals or library_externals	every documented send with its required arguments and every scope-override send (Phase 9d Task 3, refusals-probes sweep.py and sweep2.py)
-Loud	unknown_receiver	body+send	crates/rexx-exec/src/lib.rs:629	agrees	no	no route: every receiver a send reaches is live and of a kind receiver_kind answers	w = .WeakReference~new(.object~new) then w~hasMethod('VALUE'), w~isA(.WeakReference), w~defaultName, w~objectName and w~instanceMethods (scout A b2_run_hasmethod_on_weakref), identical on both engines
-Loud	unreadable_collection	send	crates/rexx-exec/src/lib.rs:745	diverges	yes	a directory whose entries this crate does not fill	.K~defineMethods(.local) from a method body
-Loud	unrecorded_executable	send	crates/rexx-exec/src/lib.rs:886	agrees	no	no route: every Method and Routine object is recorded where it is built, and its record is dropped only with the object	m~copy~isGuarded, a Method subclass instance's isPrivate and copy, a Routine subclass instance's call and copy~call, setMethod and define with a method object, define and defineMethods with .object~method(...) (Phase 9b1 Task 7 probes executable_a.rex, executable_b.rex): identical on both, the subclass instances refused with 93.974 by both
-Loud	unresolved_call	body	crates/rexx-exec/src/lib.rs:516	off-send-surface	-	-	-
-Loud	unsatisfiable_wait	body+send	crates/rexx-exec/src/lib.rs:986	recorded	yes	a wait that nothing left to run can end	say .RexxQueue~new~lineIn with no other activity: the oracle blocks for ever, recorded as Deviation 20 (dispatch/tests.rs a_line_in_nothing_can_satisfy_is_an_unsatisfiable_wait)
+Loud	unbound_method	send	crates/rexx-exec/src/lib.rs:670	agrees	no	no route: Interp::invocable finds every resolved MethodId in natives, method_bodies, generated_methods, native_externals or library_externals	every documented send with its required arguments and every scope-override send (Phase 9d Task 3, refusals-probes sweep.py and sweep2.py)
+Loud	unfilled_slot	send	crates/rexx-exec/src/lib.rs:832	agrees	no	no route: rexx-api's no_populated_table_member_refuses compares every member of every populated interface table with its stub and finds none still refusing	say RxCalcSqrt(4) over ::requires 'rxmath' library, which calls GetContextDigits and DoubleToObjectWithPrecision through the populated call-context and thread tables (rxmath.cpp:122, :139): 2, rc 0 on both (the classic_style_routine row's probe)
+Loud	unknown_receiver	body+send	crates/rexx-exec/src/lib.rs:621	agrees	no	no route: every receiver a send reaches is live and of a kind receiver_kind answers	w = .WeakReference~new(.object~new) then w~hasMethod('VALUE'), w~isA(.WeakReference), w~defaultName, w~objectName and w~instanceMethods (scout A b2_run_hasmethod_on_weakref), identical on both engines
+Loud	unreadable_collection	send	crates/rexx-exec/src/lib.rs:731	diverges	yes	a directory whose entries this crate does not fill	.K~defineMethods(.local) from a method body
+Loud	unrecorded_executable	send	crates/rexx-exec/src/lib.rs:879	agrees	no	no route: every Method and Routine object is recorded where it is built, and its record is dropped only with the object	m~copy~isGuarded, a Method subclass instance's isPrivate and copy, a Routine subclass instance's call and copy~call, setMethod and define with a method object, define and defineMethods with .object~method(...) (Phase 9b1 Task 7 probes executable_a.rex, executable_b.rex): identical on both, the subclass instances refused with 93.974 by both
+Loud	unresolved_call	body	crates/rexx-exec/src/lib.rs:513	off-send-surface	-	-	-
+Loud	unsatisfiable_wait	body+send	crates/rexx-exec/src/lib.rs:979	recorded	yes	a wait that nothing left to run can end	say .RexxQueue~new~lineIn with no other activity: the oracle blocks for ever, recorded as Deviation 20 (dispatch/tests.rs a_line_in_nothing_can_satisfy_is_an_unsatisfiable_wait)
 Raised	unsupported_new_method	send	crates/rexx-exec/src/error.rs:1109	agrees	yes	93.967	.Pointer~new
 Raised	use_local_not_first	body	crates/rexx-exec/src/error.rs:1900	off-send-surface	-	-	-
 Raised	use_local_outside_method	body	crates/rexx-exec/src/error.rs:1894	off-send-surface	-	-	-

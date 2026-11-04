@@ -1119,9 +1119,7 @@ impl Interp {
             }
 
             // `CALL name`, `CALL "name"`, `CALL (expr)` and `CALL ON`/`CALL
-            // OFF`. The one arm of `rexx_parse::Call` that stays loud keeps
-            // its own owner (`instruction_owner`, `lib.rs`): `Qualified`
-            // (`CALL ns:name`) is Phase 5's.
+            // OFF`.
             InstructionKind::Call(call) => match &**call {
                 // `name` arrives already upcased for the symbol form and
                 // verbatim for the quoted one (`rexx-parse`'s own `Call`
@@ -1198,9 +1196,7 @@ impl Interp {
                 self.returned_value(value, ReturnKeyword::Return)
             }
 
-            // `SIGNAL label` and `SIGNAL VALUE`. `Signal::Trap` (`SIGNAL
-            // ON`/`SIGNAL OFF`) stays loud, Task 7's own owner
-            // (`instruction_owner`, `lib.rs`).
+            // `SIGNAL label` and `SIGNAL VALUE`.
             InstructionKind::Signal(signal) => match &**signal {
                 // `name` is already upcased for a bare symbol and verbatim
                 // for a quoted one (`rexx-parse`'s own `Signal` doc), and
@@ -3906,7 +3902,7 @@ impl Interp {
         let Some(class) = self.rexx_package_class(b"STREAM") else {
             // Only before `StreamClasses.orx` has installed, which is the
             // library bootstrap's own step.
-            return Err(Loud::environment_symbol(b".STREAM", None).into());
+            return Err(Loud::environment_symbol(b".STREAM").into());
         };
         let argument = self.text(name);
         self.roots.activity_mut().push_temp(argument);
