@@ -10,9 +10,8 @@ pub mod builtins {
 
     /// The builtins `docs/superpowers/plans/phase-4-exclusions.txt` excludes
     /// from Phase 4, whole or in part, each with the phase that file gives it
-    /// and the name of the `rexx_core::Deferral` that makes it Phase 10's:
-    /// its whole exclusions followed by its partial rows. The owner rides here
-    /// rather than in the refusal, so a name and the phase blamed for it
+    /// and the reason it gives: its whole exclusions followed by its partial
+    /// rows. The owner rides here, so a name and the phase blamed for it
     /// cannot drift apart.
     pub const EXCLUDED: &[(&str, &str, &str)] = &[];
 

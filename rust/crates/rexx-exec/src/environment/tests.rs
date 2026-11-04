@@ -101,7 +101,7 @@ fn the_environment_holds_the_native_classes_and_the_hand_registered_entries() {
     assert_ne!(environment, local);
 }
 /// The names and order the bootstrap leaves in both directories are the
-/// oracle's, and the only entry still owed is `.local`'s `STDQUE`.
+/// oracle's, and no entry is still owed.
 #[test]
 fn the_bootstrap_leaves_the_oracles_names_in_the_oracles_order() {
     let mut interp = Interp::new();
@@ -137,7 +137,7 @@ fn the_bootstrap_leaves_the_oracles_names_in_the_oracles_order() {
                         hash::Key::new(name.as_bytes()),
                         None
                     ),
-                    Ok((hash::DirectoryEntry::Owed(_), _))
+                    Ok((hash::DirectoryEntry::Owed, _))
                 )
             })
             .collect();
@@ -290,7 +290,7 @@ fn a_class_search_from_a_program_refuses_an_owed_entry() {
         .package_object(Package::Program(program))
         .expect("a fresh program's package");
     let local = interp.package_local(package);
-    let owed = interp.environment_model().owed[0].0;
+    let owed = interp.environment_model().owed[0];
     let array = interp.classes().lookup("Array").expect("Array is native");
     hash::directory_put(&mut interp, local, b"OWEDCLASS", owed).expect("puts");
     hash::directory_put(&mut interp, local, b"FOUNDCLASS", array).expect("puts");

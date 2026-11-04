@@ -700,12 +700,13 @@ struct Thread {
 }
 
 /// The innermost native call in flight on this context, null where none is,
-/// and the table's requester.
+/// the table's requester, and whether [`ThreadContext::retire`] retired the
+/// context.
 ///
 /// The lifetime is erased: the pointer is written only by
 /// [`ThreadContext::enter`] and [`Entered`]'s drop, on the baton, for the
 /// length of a borrow of the activation.
-struct Innermost(Cell<*const Entered<'static>>, Option<Requester>);
+struct Innermost(Cell<*const Entered<'static>>, Option<Requester>, Cell<bool>);
 
 thread_local! {
     /// The native call entered last on this OS thread and not yet returned,
@@ -857,7 +858,11 @@ impl ThreadContext {
                 owner: std::ptr::null_mut(),
             },
             table: table.clone(),
-            innermost: Innermost(Cell::new(std::ptr::null()), table.requester.clone()),
+            innermost: Innermost(
+                Cell::new(std::ptr::null()),
+                table.requester.clone(),
+                Cell::new(false),
+            ),
             kept: std::sync::atomic::AtomicBool::new(false),
         }));
         // SAFETY: `raw` is the allocation just made and nothing else addresses
@@ -891,6 +896,21 @@ impl ThreadContext {
                 .kept
                 .store(true, std::sync::atomic::Ordering::Release)
         };
+    }
+
+    /// Retires this context when termination takes its thread, as the
+    /// oracle's termination runs on an instance created for it
+    /// (`runtime/Interpreter.cpp:277-281`): a member called through it from
+    /// a native call of another context on this thread, with none of its own
+    /// in flight, then does nothing and answers its failure value, as the
+    /// oracle's stub catches the failure it meets (measured: a routine
+    /// answering through it in a termination `UNINIT` returns no object).
+    pub fn retire(&self) {
+        let raw = self.home.0.as_ptr();
+        // SAFETY: the allocation is live while `self` is; the reference
+        // covers only the cell, which is written on the baton, as the
+        // innermost pointer beside it is.
+        unsafe { (*raw).innermost.2.set(true) };
     }
 
     /// The address an extension is handed, as a number.
@@ -1264,8 +1284,9 @@ enum Addressed<'a> {
     /// call to be given 98.983, and the host frame of the context's call.
     Elsewhere(Reached<'a>, Option<u64>),
     /// A context reached from a thread running no native call, whose callback
-    /// the host refuses ([`crate::values::Baton::refuses_foreign`]): the
-    /// member does nothing.
+    /// the host refuses ([`crate::values::Baton::refuses_foreign`]), or a
+    /// retired context with no call in flight reached from another context's
+    /// call ([`ThreadContext::retire`]): the member does nothing.
     Refused,
 }
 
@@ -1470,6 +1491,9 @@ unsafe fn reached<'a>(context: *mut RexxThreadContext_, slot: &str) -> Addressed
     };
     // Read with the baton held: a thread writes the cell only on the baton.
     let innermost = cell.0.get();
+    if innermost.is_null() && calling.is_some() && cell.2.get() {
+        return Addressed::Refused;
+    }
     assert!(
         !innermost.is_null(),
         "RexxThreadInterface.{slot} was called with no native call in flight"

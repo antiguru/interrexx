@@ -6451,6 +6451,12 @@ the loadable ones that declare a loader, rxsock and rxunixsys, print nothing.
   "same 1" and "use 42", rc 0. The task's re-review measured the oracle at
   rc 139 on its own variant of the probe. OWNER: Phase 10 Embedding, whose instance API
   is where a second instance would come from (core-conformance spec R4, 2026-10-10).
+  RESOLVED by commit 29ed335c1, 2026-11-04: termination runs on a thread context of
+  its own, and a call through a context kept from before it, made from a native call
+  of termination's, answers its failure value and raises nothing. Re-measured on the
+  oracle, three runs each: uninit4 and uninit5 print "uninit local same 0", no use
+  line and "unloader ... same=0", rc 0; a variant trapping SYNTAX sees 44.1 from
+  UseStash. Ours now matches, rust/crates/rexx-exec/tests/termination_context.rs.
   SAY OUTPUT AND AN EXTENSION'S OWN printf INTERLEAVE DIFFERENTLY. SAY is
   buffered in the interpreter and written at exit (Phase 7 spec A1,
   docs/superpowers/specs/2026-09-11-phase-7-streams-platform.md:12), while a

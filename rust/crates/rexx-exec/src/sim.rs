@@ -1325,10 +1325,9 @@ impl Loud {
     /// this one, other than a signal's halt, whose timing is real.
     pub(crate) fn sim_foreign_post(what: &str) -> Loud {
         Loud {
-            message: crate::owned_message(
-                &format!("{what} from another thread in the simulation mode"),
-                None,
-            ),
+            message: crate::owned_message(&format!(
+                "{what} from another thread in the simulation mode"
+            )),
         }
     }
 
@@ -1338,7 +1337,6 @@ impl Loud {
         Loud {
             message: crate::owned_message(
                 "a command in the simulation mode that waits longer than its bound",
-                None,
             ),
         }
     }
@@ -1349,7 +1347,6 @@ impl Loud {
         Loud {
             message: crate::owned_message(
                 "a native call in the simulation mode that runs longer than its bound",
-                None,
             ),
         }
     }
@@ -1375,7 +1372,6 @@ impl Loud {
         Loud {
             message: crate::owned_message(
                 "a wait in the simulation mode that only a signal can end",
-                None,
             ),
         }
     }

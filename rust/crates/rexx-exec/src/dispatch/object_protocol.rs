@@ -1460,7 +1460,7 @@ pub(super) fn native_message_notify(
         return Err(Raised::missing_named_argument(ARGUMENT).into());
     };
     let Some(notification) = interp.rexx_package_class(b"MESSAGENOTIFICATION") else {
-        return Err(Loud::environment_symbol(b".MESSAGENOTIFICATION", None).into());
+        return Err(Loud::environment_symbol(b".MESSAGENOTIFICATION").into());
     };
     let notifiable = interp
         .class_of_value(target)

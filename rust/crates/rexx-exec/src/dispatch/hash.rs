@@ -9,8 +9,6 @@ use removal::{
     Removal, native_hash_empty, native_hash_remove_item, take, take_at, take_in, take_merged,
 };
 
-use rexx_core::Owner;
-
 use super::collection;
 use super::required_string_named_argument;
 use super::{
@@ -474,13 +472,13 @@ fn slot_at(interp: &Interp, array: ObjRef, slot: usize) -> Result<Option<ObjRef>
 fn item_at(interp: &mut Interp, store: &Store, slot: usize) -> Result<Option<ObjRef>, Failure> {
     let item = slot_at(interp, store.items, slot)?;
     if let Some(held) = item
-        && let Some(owner) = interp.owed_entry_owner(held)
+        && interp.is_owed_entry(held)
     {
         let index = slot_at(interp, store.indexes, slot)?;
         let name = index
             .map(|index| interp.to_text(index).into_owned())
             .unwrap_or_default();
-        return Err(Loud::environment_entry(&name, owner).into());
+        return Err(Loud::environment_entry(&name).into());
     }
     Ok(item)
 }
@@ -1482,9 +1480,8 @@ pub(crate) fn directory_put_method_value(
 /// What `DirectoryClass::get` finds for a name.
 pub(crate) enum DirectoryEntry {
     Found(ObjRef),
-    /// An entry the oracle holds and this crate does not build, with its
-    /// owner.
-    Owed(Option<Owner>),
+    /// An entry the oracle holds and this crate does not build.
+    Owed,
     Absent,
 }
 
@@ -1589,9 +1586,10 @@ fn view_get(
     let store = view.contents;
     if let Some(slot) = text_slot(interp, &store, key)? {
         let item = slot_at(interp, store.items, slot)?.unwrap_or(ObjRef::NIL);
-        return Ok(match interp.owed_entry_owner(item) {
-            Some(owner) => DirectoryEntry::Owed(owner),
-            None => DirectoryEntry::Found(item),
+        return Ok(if interp.is_owed_entry(item) {
+            DirectoryEntry::Owed
+        } else {
+            DirectoryEntry::Found(item)
         });
     }
     if let Some(methods) = view.methods
@@ -1625,14 +1623,16 @@ fn text_slot(interp: &mut Interp, store: &Store, key: Key<'_>) -> Result<Option<
     Ok(None)
 }
 
-/// The owner of an entry `table` still holds and this crate does not build,
-/// or `None` when it holds none.
-pub(crate) fn owed_table_owner(interp: &mut Interp, table: ObjRef) -> Option<Option<Owner>> {
-    let store = read_store(interp, table, CONTENTS).ok()??;
-    let order = walk_in(interp, &store).ok()?;
-    order.into_iter().find_map(|slot| {
-        let item = slot_at(interp, store.items, slot).ok()??;
-        interp.owed_entry_owner(item)
+/// Whether `table` still holds an entry this crate does not build.
+pub(crate) fn holds_owed_entry(interp: &mut Interp, table: ObjRef) -> bool {
+    let Ok(Some(store)) = read_store(interp, table, CONTENTS) else {
+        return false;
+    };
+    let Ok(order) = walk_in(interp, &store) else {
+        return false;
+    };
+    order.into_iter().any(|slot| {
+        matches!(slot_at(interp, store.items, slot), Ok(Some(item)) if interp.is_owed_entry(item))
     })
 }
 

@@ -32,7 +32,7 @@ impl Interp {
     pub(crate) fn local_route(&mut self, name: &[u8]) -> Result<Option<ObjRef>, Failure> {
         match self.directory_lookup(&[EnvScope::Local], name, &env_seam::Access::Direct)? {
             hash::DirectoryEntry::Found(found) => Ok(Some(found)),
-            hash::DirectoryEntry::Owed(_) | hash::DirectoryEntry::Absent => Ok(None),
+            hash::DirectoryEntry::Owed | hash::DirectoryEntry::Absent => Ok(None),
         }
     }
 

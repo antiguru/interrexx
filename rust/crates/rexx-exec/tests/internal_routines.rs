@@ -89,12 +89,13 @@ fn the_table_names_exactly_what_the_two_internal_packages_register() {
     }
 }
 
-/// Every row runs: none names a phase that owes it.
+/// Every row runs: none is without a body.
 #[test]
 fn every_internal_routine_row_runs() {
-    let owed: Vec<_> = rexx_exec::internal_routine_rows()
+    let unrun: Vec<_> = rexx_exec::internal_routine_rows()
         .into_iter()
-        .filter_map(|(name, _package, owner)| owner.map(|owner| (name, owner)))
+        .filter(|(_, _, runs)| !runs)
+        .map(|(name, _, _)| name)
         .collect();
-    assert!(owed.is_empty(), "rows owed by a phase: {owed:?}");
+    assert!(unrun.is_empty(), "rows without a body: {unrun:?}");
 }

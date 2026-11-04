@@ -770,9 +770,24 @@ impl Interp {
     /// `Interpreter::terminateInterpreter`'s two steps that run extension or
     /// Rexx code (`runtime/Interpreter.cpp:279-281`): the last-chance
     /// `UNINIT`s, then the package unloaders. Answers the refusals they met.
+    ///
+    /// Both run on a thread context of their own, as the oracle's run on the
+    /// instance it creates to terminate on (`InstanceBlock instance;`,
+    /// `:277`): the running activity's context is retired
+    /// ([`rexx_api::ffi::ThreadContext::retire`]) and set aside for the
+    /// length of the two steps, so the first native call or hook among them
+    /// makes a new one.
     pub(crate) fn terminate(&mut self) -> Vec<Loud> {
+        let running = self.activity.thread.take();
+        if let Some(running) = &running {
+            running.retire();
+        }
         let mut refused = self.run_termination_uninits();
         refused.extend(self.run_package_unloaders());
+        let terminated = std::mem::replace(&mut self.activity.thread, running);
+        if terminated.is_some() {
+            self.termination_thread = terminated;
+        }
         refused
     }
 
@@ -1201,15 +1216,7 @@ impl Interp {
                 Raised::incorrect_native_signature(number, refused == Refused::Signature)
             }
             Refused::ClassicStyle => return Loud::classic_style_routine().into(),
-            Refused::UnfilledSlot { entry } => {
-                return Loud {
-                    message: crate::owned_message(
-                        &format!("{refused}"),
-                        rexx_api::layout::refusal_owner(entry),
-                    ),
-                }
-                .into();
-            }
+            Refused::UnfilledSlot { entry } => return Loud::unfilled_slot(entry).into(),
             // No phase owes a stale handle: a local reference protects its
             // object only until the call that made it ends
             // (`NativeActivation::createLocalReference`,
