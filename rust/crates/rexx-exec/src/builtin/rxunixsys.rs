@@ -1,5 +1,5 @@
 //! The `rxunixsys` extension library, run in Rust: the Unix system routines
-//! `docs/superpowers/specs/extensions-behaviour.md` ("rxunixsys") describes.
+//! `docs/design/extensions.md` describes.
 //!
 //! Each routine makes the OS call its name says through `rustix`, or through
 //! `nix` where `rustix` has no safe process-wide form, and answers the call's

@@ -781,7 +781,7 @@ mod tests {
         assert_eq!(code, 216, "{stderr}");
         assert!(stderr.contains("40.914"), "{stderr}");
         // The adjacent success: an *omitted* third argument -- even with an
-        // interior omission at the second position -- stays on 4c's own
+        // interior omission at the second position -- stays on the
         // local-pool path and never reaches the loud one.
         assert_eq!(
             output(b"myvar = 'ORIGINAL'\nsay value('myvar',)\n"),

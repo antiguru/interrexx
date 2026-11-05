@@ -1,4 +1,4 @@
-//! The scheduler seam (spec 2026-09-29 section 2.1) and the activity table:
+//! The scheduler seam and the activity table:
 //! the running activity sits inline on `Interp`, every other one boxed here,
 //! and a switch swaps the two where a driver has exited or, for a pinned
 //! wait, inside the Rust frames that pin the outgoing activity. A pinned
@@ -541,12 +541,11 @@ pub(crate) trait Scheduler {
     /// Puts the running activity, whose slice is over, at the back of the
     /// ready queue.
     fn yield_at_slice(&mut self);
-    /// Stops every activity's driver for a collection (spec 2026-09-29
-    /// section 5): with the one thread holding the baton running a driver,
-    /// that is holding the baton.
+    /// Stops every activity's driver for a collection: with the one thread
+    /// holding the baton running a driver, that is holding the baton.
     fn stop_the_world(&self);
     /// Runs the native call the running activity, parked for it, prepared,
-    /// off the baton (spec 2026-09-29 P6-3): on a pool thread, which this
+    /// off the baton: on a pool thread, which this
     /// thread lends the baton to while it enters the call, or, where the pool
     /// is configured inline, here on the baton. Its completion is posted.
     /// A spawn failure wakes the original continuation without starting it.
@@ -1109,7 +1108,7 @@ impl Interp {
         }
     }
 
-    /// The scheduler's invariants (spec 2026-10-07 section 4), which the
+    /// The scheduler's invariants, which the
     /// simulation mode checks at every switch: this thread holds the baton;
     /// each activity is running, ready, parked or finished, and one only; a
     /// ready activity holds no park reason and a parked one has a wake
@@ -1234,7 +1233,7 @@ impl Interp {
     }
 
     /// A wait for `reason` with Rust frames between the scheduler and the
-    /// running driver (spec 2026-09-29 section 2.6): the other activities run
+    /// running driver: the other activities run
     /// on this stack until the running one is woken. Where nothing can run,
     /// the refusal is an inverted wait if an activity is ready whose frames
     /// lie below a loop on the stack, and a wait nothing can end where no
@@ -2317,8 +2316,8 @@ impl Interp {
     /// begins: the sleepers now due, the switch mode's count, the timer's
     /// arming, and `SLICE`. A slice ends where the clause `yields` and
     /// nothing pins the activity; anywhere else it is deferred to the next
-    /// clause that does (spec 2026-09-29 P6-4), and a second slice that finds
-    /// the activity still pinned takes a pinned yield (ruling P29).
+    /// clause that does, and a second slice that finds
+    /// the activity still pinned takes a pinned yield.
     pub(crate) fn serve_requests(&mut self, yields: bool) -> Result<(), Failure> {
         if !self.activity.guard_waits.is_empty() {
             self.serve_guard_wait(yields)?;

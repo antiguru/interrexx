@@ -577,8 +577,7 @@ impl Interp {
         None
     }
 
-    /// Whether a native call made now leaves its driver (spec 2026-09-29
-    /// P6-3): from a resumable entry nothing pins, and where another activity
+    /// Whether a native call made now leaves its driver: from a resumable entry nothing pins, and where another activity
     /// is alive or a test mode asks for every exit. A lone activity's call
     /// runs on the baton, which costs a single-activity program nothing
     /// (ruling P43).
@@ -1468,7 +1467,7 @@ impl HeldCall {
     }
 }
 
-/// A native call a pool thread runs (spec 2026-09-29 2.2): the baton's holder
+/// A native call a pool thread runs: the baton's holder
 /// lends it the baton to enter the call, and it recalls the baton for each
 /// callback and for the call's end, so that each runs as the call's activity.
 pub(crate) struct PooledCall {
@@ -1604,7 +1603,7 @@ impl<'p> Recalling<'p> {
 }
 
 /// The baton as a thread running no native call of the interpreter's
-/// reaches it (spec 2026-09-29 2.4): it recalls the baton as a pool thread
+/// reaches it: it recalls the baton as a pool thread
 /// does, and the holder serves it at its next drain.
 pub(crate) struct Requester {
     baton: Arc<InterpBaton>,

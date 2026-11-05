@@ -1,5 +1,5 @@
 //! The extension libraries this crate runs in Rust: `rxmath`, `rxregexp`,
-//! `rxsock` and `rxunixsys` (`docs/superpowers/specs/extensions-behaviour.md`).
+//! `rxsock` and `rxunixsys` (`docs/design/extensions.md`).
 //!
 //! A program sees each as the oracle's shared library: [`Interp::resolve_library`]
 //! answers a library whose tables name the routines and methods with no

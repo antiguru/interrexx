@@ -48,9 +48,8 @@ fn resolve_partitions_the_in_scope_set_into_rows_and_gaps() {
     );
 
     // **`BuiltinTarget::Gap` is unreachable today, and this is where that
-    // is written down.** Phase 4's in-scope set and this crate's table are
-    // currently the same 66 names, so no call can produce it -- found by
-    // this test failing an earlier assertion that demanded a gap exist.
+    // is written down.** The in-scope set and this crate's table are the
+    // same names, so no call can produce it.
     assert_eq!(
         gaps_seen,
         0,

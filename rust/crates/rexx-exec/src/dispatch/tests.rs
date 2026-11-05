@@ -204,7 +204,7 @@ fn pointer(interp: &mut Interp, address: usize) -> ObjRef {
 }
 
 /// A `.Pointer` answers its address, its class and its own name, all
-/// measured 2026-09-14 against the oracle through a `CSELF` an
+/// measured against the oracle through a `CSELF` an
 /// `expose`-ing method handed back.
 #[test]
 fn a_pointer_renders_as_its_address_and_names_its_class() {
@@ -1337,7 +1337,7 @@ fn identity_hash_answers_a_number_that_follows_the_handle() {
 }
 
 /// Every receiver kind answers `~identityHash`, and each line is the
-/// oracle's own answer, measured 2026-09-03 on three descriptors.
+/// oracle's own answer, measured on three descriptors.
 #[test]
 fn identity_hash_answers_every_receiver_kind_as_the_oracle_does() {
     assert_eq!(
@@ -1486,10 +1486,7 @@ fn a_constructor_taking_arguments_answers_an_instance_and_refuses_its_state() {
         ),
         (0, "WeakReference 1 Object\n".to_string(), String::new())
     );
-    // `Supplier` joined the readback group in Phase 5g Task 1. Its `init`
-    // used to validate both arrays and drop them, which is the shell this
-    // test's refusal rows exist to catch; it now keeps them in the
-    // receiver's own pool and walks them.
+    // `Supplier` keeps both arrays in the receiver's own pool and walks them.
     assert_eq!(
         run_source(
             "o = .Supplier~new(.Array~of('i'), .Array~of('x'))\n\
@@ -1611,9 +1608,7 @@ fn a_stem_receiver_answers_stem_and_renders_its_own_value() {
         ),
         (0, "[] [FOO.]\nStem FOO.\n".to_string(), String::new())
     );
-    // **These three used to be the refusals this test pinned**, and
-    // Phase 5h Task 5 gave `Stem` its collection surface. Each value is
-    // the oracle's: a tail never assigned answers the stem's default,
+    // Each value is the oracle's: a tail never assigned answers the stem's default,
     // and `items` counts only the tails that hold something.
     for (send, answer) in [("o~at(1)", "dflt"), ("o[1]", "dflt"), ("o~items", "0")] {
         assert_eq!(
@@ -1691,8 +1686,7 @@ fn array_of_fills_its_slots_from_its_arguments() {
 }
 
 /// `~of` sent to a subclass of `Array` answers an instance of that
-/// subclass -- Phase 5g Task 6, where this test used to assert the
-/// refusal.
+/// subclass.
 #[test]
 fn array_of_on_a_subclass_answers_an_instance_of_it() {
     assert_eq!(
@@ -1777,7 +1771,7 @@ fn a_subscript_refusal_names_the_position_its_own_method_counts_from() {
     }
 }
 /// A subclass of `Array` constructs, keeps its class, and carries both a
-/// store and an object variable pool -- Phase 5g Task 6.
+/// store and an object variable pool.
 #[test]
 fn new_on_a_subclass_of_array_answers_an_instance_of_it() {
     assert_eq!(
@@ -2256,8 +2250,7 @@ fn a_native_tails_objects_are_rooted_only_while_it_is_parked() {
 /// `RexxContext` and `.RexxInfo` raises 93.970, as the plain `~copy` does on
 /// both sides: rexxref forbids copying each (`fundclasses.xml:63-65`,
 /// `utilityclasses.xml:7934-7942`, `:7549`). Measured, the oracle copies
-/// each through the override
-/// (`docs/superpowers/records/2026-10-18-phase-9d/t7.1/r1/probes/copyrules.rex`).
+/// each through the override.
 #[test]
 fn a_scope_override_copy_of_an_uncopyable_object_raises() {
     let source = "do o over .array~of(.Array, .zz, .context, .RexxInfo)\n\

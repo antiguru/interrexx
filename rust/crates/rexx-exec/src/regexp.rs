@@ -1,5 +1,5 @@
 //! The `rxregexp` pattern language and its matcher, as
-//! `docs/superpowers/specs/extensions-behaviour.md` ("rxregexp") describes
+//! `docs/design/extensions.md` describes
 //! them: a pattern compiles to a Thompson automaton, and every question the
 //! `RegularExpression` methods ask is one pass of it over the subject, which
 //! keeps each answer linear in the subject and the automaton (Deviation 87:

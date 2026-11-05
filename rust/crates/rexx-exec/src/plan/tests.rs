@@ -228,20 +228,12 @@ fn activate(interp: &mut Interp, program: Program) -> Rc<Program> {
     program
 }
 
-/// The measured bug this fix closes (Task 6 fix dispatch): before it,
-/// every one of the first four bodies below built an *empty* plan --
-/// `Plan::note`'s `_ => {}` dropped `Stem`/`Compound` outright, and
-/// `Plan::build`'s own `_ => {}` meant an instruction it did not
-/// explicitly list (a `DROP`, a controlled `DO`) never even reached
-/// `note` at all. This asserts the plan's actual *contents* -- which
+/// A plan lists the names a body uses, `Stem`/`Compound` and the
+/// instructions `Plan::build` has to reach (a `DROP`, a controlled `DO`)
+/// included. This asserts the plan's actual *contents* -- which
 /// names ended up in `plan.names` -- not merely that resolution still
-/// works afterwards through the `extra`/`grow_slots_of` fallback, which is
-/// the exact bar the dispatch set: neutering `Plan::build` to return an
-/// empty plan unconditionally must fail this test. It does not fail the
-/// pre-existing tests below, whose own assertions run through
-/// `slot_of`, which still gives the right *answer* via that fallback
-/// even when the plan is empty -- only the plan's own contents catch
-/// the regression.
+/// works through the `extra`/`grow_slots_of` fallback, which gives the
+/// right *answer* even when the plan is empty.
 #[test]
 fn build_registers_every_name_a_stem_or_compound_touches() {
     let cases: &[(&[u8], &[&str])] = &[

@@ -1,6 +1,6 @@
 use super::*;
 
-// ---- Task 11's own indentation quantity ----
+// ---- the indentation quantity ----
 
 #[test]
 fn one_two_and_three_enclosing_dos_indent_by_two_four_and_six() {
@@ -188,15 +188,10 @@ fn an_ifs_matched_then_or_else_branch_indents_four_and_an_else_if_chain_indents_
     );
 }
 
-/// Task 13's own four `static_indent` fixes, found while building
-/// `TRACE`'s clause echo -- **not a second computation of the
-/// indentation quantity**, a bug in the existing one, for a case
-/// Task 10/11 structurally could not exercise: none of `THEN`/`ELSE`/
-/// `OTHERWISE`/a `WHEN`'s own `THEN` carries an expression, so none of
-/// them can ever raise a condition and become a `FailureSite` -- the
-/// only way anything before this task ever asked `static_indent` a
-/// question. `TRACE` echoes every stepped instruction, markers
-/// included, which is what finally asks.
+/// `static_indent` answers for every instruction, markers included:
+/// none of `THEN`/`ELSE`/`OTHERWISE`/a `WHEN`'s own `THEN` carries an
+/// expression, so none of them can raise a condition and become a
+/// `FailureSite`, but `TRACE` echoes every stepped instruction.
 #[test]
 fn all_indents_fills_what_static_indent_computes_for_every_corpus_program() {
     let corpus = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");

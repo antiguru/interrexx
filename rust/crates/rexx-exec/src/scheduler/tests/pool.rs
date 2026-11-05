@@ -1,5 +1,5 @@
-//! Native calls and commands on the interpreter's pool threads (spec
-//! 2026-09-29 2.2, 2.6, 2.7), over routines this test defines.
+//! Native calls and commands on the interpreter's pool threads, over
+//! routines this test defines.
 
 use std::sync::{Condvar, Mutex};
 use std::thread::ThreadId;

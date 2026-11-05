@@ -64,8 +64,8 @@ pub(crate) struct Raised {
     /// The condition name a trapped Rexx program would see from
     /// `condition('c')`, and the exact bytes an activation's trap table is
     /// keyed by (`Activation::traps`). It is carried as a field rather than
-    /// hardcoded at each call site because the spec's own shape includes it
-    /// and 4b's `NOVALUE` and `RAISE` do set it to something else.
+    /// hardcoded at each call site because `NOVALUE` and `RAISE` set it to
+    /// something else.
     pub(crate) condition: Cow<'static, str>,
     pub(crate) number: u16,
     pub(crate) sub: u16,
@@ -207,7 +207,7 @@ impl Raised {
     /// 11.1: "Insufficient control stack space" -- D19's evaluation-depth
     /// limit (`eval.rs`'s own `MAX_EVAL_DEPTH`). No substitution: measured
     /// against the oracle's own parse-side 11.1 (nested parens/calls,
-    /// `phase-4-exclusions.txt`'s Deviation 2), the catalogue's `(11, 1)`
+    /// Deviation 2), the catalogue's `(11, 1)`
     /// entry carries none either.
     pub(crate) fn insufficient_stack() -> Raised {
         Raised::syntax(11, 1, Vec::new())
@@ -231,7 +231,7 @@ impl Raised {
     }
 
     /// 44.1: an internal routine reached through `ExprKind::Call`'s
-    /// expression form (`f(...)`, Task 4, `eval.rs`'s `eval_call`) ran to
+    /// expression form (`f(...)`, `eval.rs`'s `eval_call`) ran to
     /// completion without a value to hand back -- a bare `RETURN`, measured
     /// against the oracle in a clean directory: `say f(1)` into `f: return`
     /// gives rc 212 and
@@ -1980,9 +1980,7 @@ impl Raised {
 /// travelling through an expression (`Exited`), or a harness bound the run
 /// outlived (`Deadline`). `step` and everything above it propagate this
 /// rather than any one alone, since a clause containing an expression can
-/// fail more than one way -- `eval`'s own `ExprKind::Message` arm is `Loud`
-/// (not implemented, Phase 5's), its `1 / 0` arm is `Raised` (implemented,
-/// and this is what it does).
+/// fail more than one way.
 #[derive(Debug)]
 pub(crate) enum Failure {
     /// **Boxed, and that is a measurement rather than a habit.** This variant
@@ -1997,7 +1995,7 @@ pub(crate) enum Failure {
     Loud(Box<Loud>),
     Raised(Box<Raised>),
     /// **Not a failure at all** -- `EXIT` inside a routine reached through
-    /// `ExprKind::Call`'s expression form (Task 4), or that routine falling
+    /// `ExprKind::Call`'s expression form, or that routine falling
     /// off its own end, either of which ends the whole program exactly as
     /// the same event does when reached through `CALL` (`resolve_and_run_
     /// call`'s own doc, `run/call.rs`). `CALL`'s own instruction form carries
@@ -2044,9 +2042,7 @@ impl From<Raised> for Failure {
 impl Failure {
     /// Whether a native call this left re-raises it in its caller: any SYNTAX
     /// condition, one its boundary raised for itself
-    /// ([`Delivery::lineless`]) too. Bug #2116 (r13324) moved
-    /// `processArguments` inside the `try` of `NativeActivation::run` and
-    /// `callNativeRoutine`, so an argument refusal is trapped by the
+    /// ([`Delivery::lineless`]) too: an argument refusal is trapped by the
     /// activation and re-raised by `checkConditions` like any other error.
     pub(crate) fn reraised_by_native_call(&self) -> bool {
         matches!(self, Failure::Raised(raised) if raised.condition == "SYNTAX")
@@ -2062,23 +2058,9 @@ pub(crate) enum FailureSite {
     Clause {
         line: usize,
         text: Vec<u8>,
-        /// Spaces to prefix `text` with on the echo line, Task 11's own
-        /// nesting-depth quantity. **Computed statically from the AST**
-        /// (`run/indent.rs`'s `static_indent`), never carried on a running counter:
-        /// Task 10's own report concluded the depth is derivable from the
-        /// instruction list alone with no runtime block stack, and this
-        /// task's own oracle measurements confirm it for the ordinary case
-        /// and for one LEAVE/ITERATE error family (28.5) besides -- see
-        /// `static_indent`'s own doc comment and the report for the
-        /// transcripts. A mutable per-`Interp` counter was the first design
-        /// tried here and was abandoned once it became clear it would need
-        /// perfect symmetric bookkeeping on every exit path out of every
-        /// construct, including the error paths and the `run_bounded`
-        /// `Goto`-absorption case `Flow`'s own doc comment warns about --
-        /// exactly the class of defect this crate's skipped-`pop_frame`
-        /// discussion elsewhere already flags. A pure function of
-        /// `(instructions, index)` cannot desync, because there is nothing
-        /// stateful to desync.
+        /// Spaces to prefix `text` with on the echo line: the clause's nesting
+        /// depth, computed statically from the AST (`run/indent.rs`'s
+        /// `static_indent`), never carried on a running counter.
         indent: usize,
     },
     /// A level whose `running <name> line <n>` span names something other
@@ -2190,8 +2172,7 @@ pub(crate) struct ClauseSite<'a> {
     /// masks the cwd, so an absolute path is comparable across machines.
     pub(crate) path: &'a [u8],
     /// One entry per activation-like level the condition escaped through,
-    /// **innermost first** -- 4b's Task 2, and the whole reason this is a
-    /// slice rather than the single site 4a carried.
+    /// **innermost first**.
     /// ```text
     ///      2 *-* say 2 & 1
     ///      2 *-* interpret "say 2 & 1"
@@ -2248,13 +2229,8 @@ impl Raised {
     /// substitution holds.
     pub(crate) fn report_lines(&self, site: &ClauseSite<'_>) -> Vec<Vec<u8>> {
         let mut lines = Vec::new();
-        // `trace::push_clause` rather than a second copy of the same four
-        // lines: the two used to be written out separately and documented as
-        // byte-identical, and 4b's Task 2 needed the 40-column clamp on both.
-        // Calling the one formatter is what makes "one quantity" true in the
-        // code rather than only in a comment -- `push_clause` owns the
-        // clamp, the six-wide line field and the indent, and this loop owns
-        // only the order.
+        // `push_clause` owns the 40-column clamp, the six-wide line field and
+        // the indent; this loop owns only the order.
         for entry in site.sites {
             match entry {
                 FailureSite::Clause { line, text, indent }
@@ -2321,8 +2297,7 @@ impl Raised {
         lines.push(out);
         // **Sub `0` prints no second line at all**, measured: `raise syntax
         // 40` gives the major line and stops, where `raise syntax 40.4`
-        // gives both. Reachable only through `RAISE` -- every raiser in the
-        // crate names a real sub -- which is why 4a never had to know.
+        // gives both. Reachable only through `RAISE`.
         if self.sub != 0 {
             let mut out = format!("Error {}.{}:  ", self.number, self.sub).into_bytes();
             out.extend_from_slice(&self.message(self.number, self.sub));
@@ -2476,7 +2451,7 @@ mod tests {
         }
     }
 
-    /// `256 - major`, over every major 4a is measured to raise.
+    /// `256 - major`, over every major the interpreter raises.
     #[test]
     fn the_exit_code_is_256_minus_the_major() {
         for (major, sub, rc) in [
@@ -2500,8 +2475,7 @@ mod tests {
         }
     }
 
-    /// Every raiser family 4a is measured to produce has catalogue text for
-    /// both its lines.
+    /// Every raiser family has catalogue text for both its lines.
     #[test]
     fn every_measured_family_has_catalogue_text() {
         for (major, sub) in [
@@ -2571,8 +2545,8 @@ mod tests {
         );
     }
 
-    /// Task 11's own addition: `site.indent` prefixes the clause echo with
-    /// that many spaces, and nothing else on the report moves.
+    /// `site.indent` prefixes the clause echo with that many spaces, and
+    /// nothing else on the report moves.
     #[test]
     fn the_indent_field_prefixes_the_clause_echo_with_that_many_spaces() {
         let raised = Raised::syntax(42, 3, vec![]);
@@ -2589,7 +2563,7 @@ mod tests {
         );
     }
 
-    /// 4b Task 2: one echo line per entry, innermost first, each carrying its
+    /// One echo line per entry, innermost first, each carrying its
     /// own line and its own absolute indent -- and the major line naming the
     /// **innermost** entry's line, not the outermost.
     #[test]
@@ -2671,16 +2645,6 @@ mod tests {
         }
     }
 
-    // The new Task 11 raisers themselves -- 26.2/26.3/28.1-28.5/34.3/34.4 --
-    // live in `run/raised.rs` as local `fn raised_*` free functions, matching that
-    // file's own established convention for every other instruction-
-    // specific raiser (`raised_if_not_logical`, `raised_select_no_when`,
-    // `raised_symbol_expected`, ...), not as `Raised::` methods here: this
-    // module holds only the raisers `eval.rs` also needs (cross-module), and
-    // `insufficient_stack` is the one member of this task's own set that
-    // qualifies. Their wording is exercised end to end by `run.rs`'s own
-    // tests (`run_source` against a real program, checking `raised.number`/
-    // `.sub`/`.additional`), not spot-checked again here -- `Raised::message`
-    // is private to this module and `every_measured_family_has_catalogue_text`
-    // above already proves every one of their catalogue entries exists.
+    // Instruction-specific raisers live in `run/raised.rs`; this module holds
+    // only the ones `eval.rs` also needs.
 }

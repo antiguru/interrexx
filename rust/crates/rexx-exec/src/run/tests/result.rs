@@ -86,7 +86,7 @@ fn exit_code_for_converts_the_result_the_way_the_oracle_does() {
     );
 }
 
-// ---- CALL and RETURN (Task 3) ----
+// ---- CALL and RETURN ----
 
 /// D9r's default, and the one property a witness without variables in it
 /// cannot check: a callee with no `PROCEDURE` reads the caller's
@@ -272,18 +272,16 @@ fn a_callees_trace_setting_does_not_survive_its_return() {
     );
 }
 
-/// **The two trace-line indents Task 9 added, pinned here because
-/// nothing else in the tree can pin them** (review round 1, F1).
+/// **The two trace-line indents of a `Controlled` loop's re-test and `>F>`,
+/// pinned here because nothing else in the tree can pin them.**
 /// `tests/trace_oracle.rs`'s witnesses and `tests/corpus.rs` both
-/// compare through DEVIATION 0's `normalize_stderr`, which collapses
+/// compare through Deviation 0's `normalize_stderr`, which collapses
 /// exactly the space run these lines differ in -- measured, replacing
 /// the `do_indent`/`loop_indent` split in `loop_advance` with
 /// `loop_indent` alone, or emitting `>F>` two columns in, leaves both
 /// harnesses green while diverging from the oracle byte for byte. A
 /// unit test's own `assert_eq!` is outside either comparison function,
-/// which is what makes this the instrument for the job -- the same
-/// argument `phase-4-exclusions.txt`'s DEVIATION 0 already makes for
-/// the pinned shallow-depth indent witnesses.
+/// which is what makes this the instrument for the job.
 #[test]
 fn task_9s_two_new_indents_are_the_oracles_own_and_normalisation_cannot_see_them() {
     // A `Controlled` loop: the setup assignment prints at the `DO`
@@ -404,16 +402,13 @@ fn a_callees_clauses_echo_at_the_calling_clauses_indent_plus_two() {
     );
 }
 
-/// **Review finding C1, Task 4 fix round 1.** `current_value_indent` is
+/// `current_value_indent` is
 /// a fourth piece of level state `Interp::invoke_call` must restore on
 /// the way out, alongside `activation_indent`/`indent_offset`/
 /// `clause_line_override` (that function's own doc comment) -- and this
 /// is the shape that tells a version missing the restore apart from a
 /// correct one: **two** internal-function calls inside *one* clause
-/// (`ExprKind::Call`, Task 4). Before Task 4 at most one activation
-/// could be entered per clause, and the *next* clause's own
-/// `Op::Clause`'s region re-set the field before anything read it, so
-/// the gap was unobservable through `CALL` alone. Without the restore,
+/// (`ExprKind::Call`). Without the restore,
 /// `g`'s own base indent -- and everything computed from it: its
 /// clauses, its `RETURN`'s own value trace, and the enclosing `say`
 /// clause's own final `>>>` -- is derived from `f`'s last clause instead
@@ -441,14 +436,9 @@ fn current_value_indent_is_restored_after_a_nested_expression_call() {
     );
 }
 
-/// `current_value_indent`'s own sibling field, found the identical way
-/// (Task 6 fix round 2): `current_clause_line` (bundled with it into
-/// `ClauseState`, whose own doc comment states the property that puts
-/// both fields in one save/restore rather than two) is a piece of level
-/// state `Interp::invoke_call` must restore on the way out, and shipped
-/// once already without that restore -- the second field of this exact
-/// shape to do so, after `current_value_indent` itself went unrestored
-/// until the test just above this one caught it at Task 4.
+/// `current_value_indent`'s sibling field: `current_clause_line` (bundled
+/// with it into `ClauseState`) is a piece of level
+/// state `Interp::invoke_call` must restore on the way out.
 #[test]
 fn current_clause_line_is_restored_after_a_nested_expression_call() {
     let mut interp = Interp::new();
@@ -604,7 +594,7 @@ fn a_calls_arguments_are_evaluated_in_the_caller() {
 
 /// The quoted form bypasses the label search entirely, so `call "SUB"`
 /// with `sub:` present is *not* a call. This crate's answer is the loud
-/// builtin/external fallback naming `4c`; the oracle's own is Error 43.1,
+/// builtin/external fallback; the oracle's own is Error 43.1,
 /// which is a claim about what is *not* a builtin either and so not
 /// this crate's to make.
 #[test]

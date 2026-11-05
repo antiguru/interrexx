@@ -1,5 +1,5 @@
-//! The signal handlers (D-U3; spec 2026-09-29 section 4). A process entry
-//! point that starts Rexx for a user installs them once (ruling P62): SIGINT
+//! The signal handlers. A process entry
+//! point that starts Rexx for a user installs them once: SIGINT
 //! and SIGTERM where the action is the default or ignored, SIGHUP only where
 //! it is the default, never over a handler, without `SA_RESTART`
 //! (`platform/unix/SystemInterpreter.cpp:117-145`, ruling P61); SIGPIPE is

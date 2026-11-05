@@ -1,5 +1,5 @@
 //! API callbacks from native calls on the interpreter's pool threads and
-//! from threads running none (spec 2026-09-29 2.4, section 4), over routines
+//! from threads running none, over routines
 //! this test and `rexx_api::load` define.
 
 use std::sync::Mutex;

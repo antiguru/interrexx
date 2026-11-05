@@ -432,7 +432,7 @@ fn source(
 
 /// The physical lines a `::CONSTANT` expression's method answers as its
 /// source: its own directive clause's, where the oracle answers the last
-/// `::CONSTANT` clause for each (ruled, Moritz 2026-10-26).
+/// `::CONSTANT` clause for each.
 fn directive_clause_lines(interp: &Interp, program: ProgramId, directive: usize) -> Vec<Vec<u8>> {
     let Some(source) = interp.programs.get(program) else {
         return Vec::new();

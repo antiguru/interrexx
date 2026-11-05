@@ -414,16 +414,8 @@ mod tests {
         );
     }
 
-    /// The adjacent success `PUSH`/`QUEUE` sharing a codepath needs
-    /// (CLAUDE.md's "pair a refusal with its adjacent success"): a queue
-    /// touched only by `QUEUE`, never `PUSH`, is a plain FIFO with no head
-    /// insertion to get right, and this is what would stay green if
-    /// `push`'s own `push_front` quietly became a second `push_back` --
-    /// the interleaved test above would still fail that mutation (order
-    /// would come out `a`, `b`, `c` rather than `c`, `a`, `b`), but pinning
-    /// pure FIFO order separately is what shows *this* half of the type is
-    /// right for the ordinary reason and not by an accident of the other
-    /// half's mistake cancelling out.
+    /// A queue touched only by `QUEUE`, never `PUSH`, is a plain FIFO with no
+    /// head insertion to get right.
     #[test]
     fn queue_alone_is_plain_fifo() {
         let mut queue = Queue::new(false);
@@ -483,23 +475,10 @@ mod tests {
         program
     }
 
-    /// **I3 (review round 1): the reader `Queue`'s own tests above cannot
-    /// be.** Both tests above construct a `Queue` and call its methods
-    /// directly, so neither can see whether the running interpreter ever
-    /// calls `Queue::push`/`Queue::queue` at all. Those calls are
-    /// `Interp::queue_evaluated`'s (`run.rs`), which `step`'s own
-    /// `Push`/`Queue` arm and `crate::ir::Op::Queue` both enter, so a
-    /// deletion of them -- keeping the expression's evaluation and its trace,
-    /// discarding only the rendered line -- takes the write away from both
-    /// engines at once. Measured at review round 1, when the write sat in
-    /// `step`'s arm alone: that deletion left `cargo test --workspace` at 978
-    /// passed / 0 failed and the STRICT corpus at 39 of 39, because nothing
-    /// ran a program through the interpreter and then read `Interp::queue`
-    /// back afterward. This test is that reader: it runs the module doc's own
-    /// probe -- the three `PUSH`/`QUEUE` clauses, without the `PULL`s --
-    /// through `Interp::run_activation`, the same entry point `Interp::run`
-    /// uses in production, and inspects the queue afterward through the same
-    /// private field the type-level tests above use.
+    /// The running interpreter writes into its queue: runs the three
+    /// `PUSH`/`QUEUE` clauses through `Interp::run_activation` and inspects
+    /// the queue afterward, since the type-level tests above cannot see
+    /// whether `Interp::queue_evaluated` ever calls `Queue::push`/`Queue::queue`.
     #[test]
     fn push_and_queue_actually_write_into_the_running_interpreters_queue() {
         let mut interp = Interp::new();

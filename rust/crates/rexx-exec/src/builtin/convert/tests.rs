@@ -720,7 +720,7 @@ fn xrange_concatenates_ranges_and_wraps_at_the_top() {
     );
 }
 
-/// A class name and a start/end pair mix, and since bug #2088 (r13248) a
+/// A class name and a start/end pair mix, and a
 /// two-argument call ending in a range keeps the class before it: measured,
 /// `xrange('digit','z')` is 144 bytes, the digits first.
 #[test]

@@ -10,7 +10,7 @@ use crate::{Failure, Interp, LibraryLoad};
 
 /// This worktree's own `build/lib`, not the oracle checkout's: a second
 /// build of the extensions from the same sources, which the oracle never
-/// runs (D5's amendment, `docs/superpowers/specs/2026-09-14-phase-8-native-api.md`).
+/// runs.
 /// Its libraries are loaded, never rebuilt.
 fn worktree_library_directory() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))

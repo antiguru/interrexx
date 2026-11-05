@@ -1,6 +1,5 @@
 //! An interpreter's pool of threads, which run native calls and blocking
-//! operations while the baton's holder runs other activities (spec
-//! 2026-09-29 2.7).
+//! operations while the baton's holder runs other activities.
 
 use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::thread::{JoinHandle, ThreadId};

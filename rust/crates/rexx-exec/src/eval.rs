@@ -71,7 +71,7 @@ impl Interp {
         // `> MAX_EVAL_DEPTH`, not `>=`: a 100,000-term left-deep expression
         // reaches depth exactly 100,000 and the oracle is measured to
         // survive and print an answer at that depth
-        // (`phase-4-exclusions.txt`'s Deviation 2), so the check must fire
+        // (Deviation 2), so the check must fire
         // one level *above* the one the oracle is known to handle, or the
         // one depth we are supposed to match becomes the first one we
         // refuse.
@@ -196,10 +196,7 @@ impl Interp {
             ExprKind::Variable(id) | ExprKind::Stem(id) | ExprKind::Compound(id) => {
                 self.echo_symbol_read(code, *id, value)?;
             }
-            // `.NIL`/`.TRUE`/`.FALSE` -- `>E>`, measured (this task's
-            // report): **not** in the design spec's own "measured reachable
-            // from pure-4a code" list, a correction this task found rather
-            // than assumed. The other `DotVariable` names all fail loudly
+            // `.NIL`/`.TRUE`/`.FALSE` -- `>E>`. The other `DotVariable` names all fail loudly
             // before reaching here (`eval_node`'s own arm), so this is
             // exhaustive over what can arrive.
             ExprKind::DotVariable(id) => self.echo_environment_symbol(code, *id, value)?,
@@ -502,11 +499,11 @@ impl Interp {
             // `o~value = 7` writes `vr`.
             ExprKind::VariableReference(inner) => self.variable_reference(code, inner),
 
-            // `f(...)`/`"f"(...)` (Task 4, 4b) -- see `eval_call`'s own doc.
+            // `f(...)`/`"f"(...)` -- see `eval_call`'s own doc.
             ExprKind::Call { target, args } => self.eval_call(code, target, args),
 
             // `target~name(...)`, `target~~name(...)` and `target[...]`
-            // (Phase 5a) -- see `Interp::message_term` (`dispatch.rs`) for
+            // -- see `Interp::message_term` (`dispatch.rs`) for
             // the evaluation order and `Interp::resolve_in`/`Interp::invoke`
             // for the send itself. The **expression** form only: the
             // message-assignment form is an instruction and never an

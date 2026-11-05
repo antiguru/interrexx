@@ -295,7 +295,7 @@ pub(crate) struct Activity {
     /// -- `Activity`'s own `requiresTable` (`concurrency/Activity.hpp:308`).
     pub(crate) requires_installing: Vec<Box<[u8]>>,
     /// How many Rust frames pin this activity between the scheduler and its
-    /// running driver (spec 2026-09-29 section 2.6).
+    /// running driver.
     pub(crate) pin_depth: u32,
     /// The pin depth where the innermost running driver was entered.
     pub(crate) driver_pins: u32,

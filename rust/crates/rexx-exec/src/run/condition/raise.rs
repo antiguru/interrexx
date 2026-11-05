@@ -149,12 +149,7 @@ impl Interp {
             }
         }
         if let Some(items) = &raise.array {
-            // **The elements first, then the `>K>` line** -- corrected at
-            // Task 9, which owns `>A>` and measured the ordering while
-            // adding it. An earlier version of this arm traced the `>K>`
-            // first and said so in a comment that claimed "the elements
-            // produce no lines of their own"; both halves are false.
-            // Measured, `trace i` / `raise syntax 40.4 array('R',,'X')`:
+            // **The elements first, then the `>K>` line.** Measured, `trace i` / `raise syntax 40.4 array('R',,'X')`:
             // ```text
             //   >L>   "R"
             //   >A>   "R"

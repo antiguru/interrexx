@@ -1,5 +1,5 @@
 //! The pin depth, and the pinned-park counter: at each would-be park point,
-//! the pinned re-entry frames (spec 2026-09-29 section 2.1) between the driver
+//! the pinned re-entry frames between the driver
 //! and that point. Every build counts the depth on the running activity; the
 //! `pinning` feature adds the kind of each frame.
 

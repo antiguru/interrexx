@@ -1,5 +1,5 @@
 //! Island memory lent to native calls on pool threads while the holder runs
-//! other activities (spec 2026-09-29 2.5), over routines this test and
+//! other activities, over routines this test and
 //! `rexx_api::load` define.
 
 use rexx_api::layout::{RexxCallContext_, ValueDescriptor};

@@ -212,7 +212,7 @@ impl Interp {
     /// Raises `NOTREADY` for the stream named `name` -- the name **as the
     /// program wrote it**, which is what `CONDITION('D')` answers.
     ///
-    /// Three outcomes, all measured 2026-09-12. A `SIGNAL ON` trap takes it
+    /// Three outcomes, all measured. A `SIGNAL ON` trap takes it
     /// as a failure, so the raising clause is abandoned. A `CALL ON` trap
     /// queues it against the running activation, and `leave_clause` runs the
     /// handler once the clause finishes -- measured, the clause prints its
@@ -757,7 +757,7 @@ impl Interp {
             replied,
         }));
         // **The failed clause's own boundary, and the one place it can
-        // happen** (fix round 3). `Op::Clause`'s region ends a *completing*
+        // happen**. `Op::Clause`'s region ends a *completing*
         // clause; a clause that raised has not completed, and at that moment
         // nothing yet knows whether it will be trapped here or unwind the
         // activation. This is the point where that is decided in favour of
@@ -911,8 +911,7 @@ impl Interp {
         // cleared.
         let mut raised = Raised::condition(condition_name(&pending.condition));
         raised.rc = pending.rc.clone();
-        // **Saved and restored, not cleared** (fix round 2's NEW 1). Round 1
-        // set this back to `None` when the handler returned, which is right
+        // **Saved and restored, not cleared**: clearing is right
         // only when nothing was active before -- and one clause can queue a
         // `CALL ON` condition *and* raise a `SIGNAL ON`-trapped one, so a
         // `SIGNAL` handler can be running when a `CALL` handler is delivered

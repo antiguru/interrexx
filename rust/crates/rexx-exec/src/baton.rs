@@ -1,5 +1,5 @@
 //! The baton: the right to touch an interpreter's state, held by one thread
-//! at a time (spec 2026-09-29 P6-3, 2.3). The thread that creates an
+//! at a time. The thread that creates an
 //! interpreter holds it. A holder may lend it, with a value `L`, to a named
 //! thread and waits, touching nothing, until that thread gives it back; lends
 //! nest, so the holders form a stack whose top alone runs.
@@ -95,7 +95,7 @@ impl<L: Copy> Baton<L> {
     }
 
     /// Takes the baton unless this thread holds it, as a callback into the
-    /// interpreter does (spec 2026-09-29 2.4), answering whether it took it.
+    /// interpreter does, answering whether it took it.
     pub(crate) fn take_unless_held(&self) -> bool {
         let me = thread::current().id();
         let mut state = lock(&self.state);

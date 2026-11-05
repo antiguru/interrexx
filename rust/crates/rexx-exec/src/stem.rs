@@ -276,8 +276,8 @@ impl Interp {
     /// g.1='x'; h.=g.; k.=h.;      say k.9  ->  G.9   (two hops, still G)
     /// m.1='x'; n.2='y'; m.=n.;    say m.1  ->  N.1   (m.'s own object discarded)
     /// ```
-    /// **Returns the `Novalue` flag alongside the value since 4b's Task 7**,
-    /// the same pair `Interp::read` has always returned and for the same
+    /// **Returns the `Novalue` flag alongside the value**,
+    /// the same pair `Interp::read` returns and for the same
     /// reader: `SIGNAL ON NOVALUE`. `Novalue::Unset` is precisely the two
     /// derived-name exits below -- no object at all, or an object with
     /// nothing at this key -- and measured against the oracle both count,

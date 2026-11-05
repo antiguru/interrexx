@@ -351,7 +351,7 @@ fn a_compound_control_variables_tail_re_resolves_every_pass() {
 }
 
 /// **Crosses TO-bound-only termination with a pre-existing stem default
-/// that masks a missing write** (review round 1, I3) -- the shape
+/// that masks a missing write** -- the shape
 /// `a_compound_control_variables_tail_re_resolves_every_pass` above does
 /// not reach, because that test's own termination is an independent
 /// `LEAVE` on `i`, not the loop's own `TO` bound. Here nothing but `TO 7`
@@ -510,8 +510,7 @@ fn do_over_for_0_skips_the_single_non_stem_iteration() {
 }
 
 /// **The oracle's own bytes for `DO OVER ... FOR`'s count**, captured
-/// 2026-08-14 under both `TRACE I` and `TRACE R`, from a fresh oracle run
-/// wrapped exactly as `rust/CLAUDE.md` specifies. The oracle prints
+/// under both `TRACE I` and `TRACE R`. The oracle prints
 /// `>K>   "FOR" => "1"` for the count, and
 /// `HeaderRole::OverFor::keyword()` is what decides whether this crate
 /// emits it.
@@ -826,8 +825,7 @@ fn iterate_reaches_untils_own_bottom_of_iteration_test_rather_than_skipping_it()
 fn a_do_loops_own_end_is_a_pure_marker_never_independently_dispatched() {
     // Reached at all only if something jumped straight onto it, which
     // nothing in this crate does -- covered indirectly by every DO/LOOP
-    // test above completing without the loud failure this arm used to
-    // give before Task 11. Direct coverage: a labelled LOOP closes
+    // test above completing. Direct coverage: a labelled LOOP closes
     // cleanly (EndStyle::LabeledDo is exercised on the same code path
     // EndStyle::Do/Loop are).
     let mut interp = Interp::new();

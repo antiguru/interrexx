@@ -669,7 +669,7 @@ fn separator_errors_are_40_43_and_40_44() {
 
 /// A `0x00` byte, crossed against the separator check and the two
 /// `strchr` style checks in this builtin, each measured directly against
-/// the oracle. Since bug #2089 (r13250) the separator check is `memchr`
+/// the oracle. The separator check is `memchr`
 /// over `ALPHANUM`'s own length, so a NUL osep is a separator; a NUL
 /// *style* is still "found" in `EINOSU`, so it is treated as
 /// osep-compatible and falls through to be rejected by the final style
@@ -750,9 +750,7 @@ fn a_parse_failure_with_an_input_separator_is_40_44_not_40_19() {
 // ---- Rexx strings are byte strings ----
 
 /// A high byte in an option argument round-trips into the error's
-/// `found` field raw -- never through a lossy UTF-8 conversion (the
-/// shared brief's own Task 3 defect, checked directly here rather than
-/// trusted). A control byte does **not** round-trip the same way: the
+/// `found` field raw -- never through a lossy UTF-8 conversion. A control byte does **not** round-trip the same way: the
 /// whole report line, this substitution included, passes through
 /// `error.rs`'s own `displayable` before it is written, which turns
 /// every byte below `0x20` (other than tab/newline/CR) into `?` --

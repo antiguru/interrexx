@@ -239,7 +239,7 @@ impl Interp {
     /// The half of a call's resolution the oracle decides before its
     /// arguments run: a label (`RexxExpressionFunction::resolve`,
     /// `expression/ExpressionFunction.cpp:154`) or a builtin (the parser's
-    /// `builtinIndex`), or the refusal of a builtin Phase 4 excludes. `None`
+    /// `builtinIndex`), or the refusal of a builtin this crate excludes. `None`
     /// for a name that is none of those.
     pub(crate) fn resolve_fixed_call(
         &self,
@@ -274,7 +274,7 @@ impl Interp {
             // and `is_builtin(name)` agree on every name. It costs the same
             // one lookup and keeps which builtin it found.
             None if let Some(target) = builtin::resolve(name) => Resolved::Builtin(target),
-            // A builtin Phase 4 excludes outright is still a builtin, so it
+            // A builtin excluded outright is still a builtin, so it
             // sits here rather than behind the routine lookup -- see
             // `builtin::is_excluded_builtin`'s own doc for why neither the
             // routine step nor 43.1 is an acceptable answer for one.

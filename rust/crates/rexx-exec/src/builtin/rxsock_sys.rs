@@ -1,4 +1,4 @@
-//! The `unsafe` the Rust `rxsock` needs, granted by Moritz (2026-11-03) and
+//! The `unsafe` the Rust `rxsock` needs and
 //! nothing else: borrowing a socket's descriptor number for one call
 //! ([`with_socket`], [`with_sockets`]) and reading or setting a socket option
 //! by its raw level and number ([`get_int_option`], [`set_int_option`]), for

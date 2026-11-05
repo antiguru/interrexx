@@ -1,4 +1,4 @@
-//! Native calls that leave their driver (spec 2026-09-29 P6-3, 2.6), over
+//! Native calls that leave their driver, over
 //! the test libraries in the worktree's `build/lib`.
 
 use crate::{Interp, Invocation, Outcome, SwitchMode};
@@ -262,7 +262,7 @@ fn a_function_whose_call_left_its_driver_and_answered_nothing_is_44_1() {
 }
 
 /// The timer is armed while a native call is in flight, with no other
-/// activity ready (spec 2026-09-29 section 4).
+/// activity ready.
 #[test]
 fn the_timer_is_armed_for_a_call_in_flight() {
     let mut interp = Interp::new();

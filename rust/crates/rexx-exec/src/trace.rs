@@ -1,7 +1,6 @@
-//! `TRACE` (D17): the mode, the byte-level formatting of each prefix
-//! reachable from the code this crate runs -- 4a's own ten (`*-*`, `>>>`,
-//! `>=>`, `>L>`, `>V>`, `>O>`, `>K>`, `>C>`, `>P>`, `>E>`) plus the three
-//! 4b's calls add (`>A>`, `>F>`, `>R>`, Task 9) -- and the classification a
+//! `TRACE`: the mode, the byte-level formatting of each prefix (`*-*`, `>>>`,
+//! `>=>`, `>L>`, `>V>`, `>O>`, `>K>`, `>C>`, `>P>`, `>E>`, `>A>`, `>F>`,
+//! `>R>`), and the classification a
 //! `TRACE`/`TRACE VALUE` setting goes through to become one.
 
 use crate::error::Raised;
@@ -387,12 +386,8 @@ impl Interp {
     }
 
     /// `>E>` (`TRACE_PREFIX_DOTVARIABLE`): `.NIL`/`.TRUE`/`.FALSE`, tagged
-    /// with the environment symbol's own spelling, unquoted. **Not named in
-    /// the design spec's own "measured reachable from pure-4a code" list --
-    /// a correction this task found and reports**: measured, `trace i` /
-    /// `say .nil` shows `>E>   .NIL => "The NIL object"` *and* `>>>`, both
-    /// on pure 4a code (`ExprKind::DotVariable`'s three admissible names are
-    /// 4a's own, D15).
+    /// with the environment symbol's own spelling, unquoted. Measured, `trace i` /
+    /// `say .nil` shows `>E>   .NIL => "The NIL object"` *and* `>>>`.
     pub(crate) fn trace_dotvar(&mut self, indent: usize, tag: &[u8], value: &[u8]) {
         if !self.traced_mode().intermediates {
             return;
@@ -744,9 +739,8 @@ mod tests {
         );
         assert_eq!(mode_from_setting(b"i"), Ok(TraceMode::INTERMEDIATES));
         assert_eq!(mode_from_setting(b"results"), Ok(TraceMode::RESULTS));
-        // `L` left this group at review round 1 (F8): it is the one letter
-        // here that has something to show, and this assertion is what went
-        // red when it moved. Both spellings, since `TRACE VALUE 'l'` reaches
+        // `L` is the one letter here that has something to show. Both
+        // spellings, since `TRACE VALUE 'l'` reaches
         // the same classifier as `TRACE ?L` does.
         assert_eq!(mode_from_setting(b"L"), Ok(TraceMode::LABELS));
         assert_eq!(
@@ -853,7 +847,7 @@ mod tests {
         push_value(&mut out, ">L>", 4, b"big");
         assert_eq!(out, b"       >L>       \"big\"\n");
 
-        // 4b's three, each from this task's own oracle transcript.
+        // `>A>`, `>F>` and `>R>`.
         // `>A>`, indent 0: `call sub 1,,3` under `trace i`.
         let mut out = Vec::new();
         push_value(&mut out, ">A>", 0, b"1");
@@ -877,7 +871,7 @@ mod tests {
         assert_eq!(out, b"       >R>     \"ORIG\" => \"Q\"\n");
     }
 
-    /// The 4b prefixes' own gates, which are **not** all the same one:
+    /// The `>A>`, `>F>` and `>R>` gates, which are **not** all the same one:
     /// `>A>`/`>F>` are `intermediates` and `>R>` is `results`
     /// (`traceArgument`/`traceFunction` against `traceVariableAlias`,
     /// `RexxActivation.hpp:340`/`:347`/`:370`, and measured -- `trace r` on

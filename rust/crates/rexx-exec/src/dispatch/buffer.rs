@@ -1445,8 +1445,7 @@ fn grow_buffer(
 /// The receiver's state with room for `length` bytes in all
 /// ([`BufferState::set_capacity`], `MutableBuffer::setCapacity`), the growth
 /// charged as [`grow_buffer`] charges it. `overlay`, `replaceAt`, `[]=` and
-/// the two `changeStr`s size by this since bug #2092 (r13247): before it they
-/// asked `ensureCapacity` for the whole result on top of the contents.
+/// the two `changeStr`s size by this.
 fn grow_buffer_to(
     interp: &mut Interp,
     receiver: ObjRef,

@@ -18,10 +18,9 @@ impl Interp {
     }
 }
 
-/// How many spaces of nesting depth `target`'s own clause sits at --
-/// Task 11's whole indentation feature, and the design decision at its
-/// centre: **computed fresh from the flat instruction list every time,
-/// never carried on a running `Interp` counter.**
+/// How many spaces of nesting depth each clause sits at: **computed fresh
+/// from the flat instruction list every time, never carried on a running
+/// `Interp` counter.**
 fn fill_indents(
     instructions: &[Instruction],
     start: usize,

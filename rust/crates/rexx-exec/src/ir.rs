@@ -1,5 +1,5 @@
-//! The register-based instruction stream (Phase 4e): `Op`, `Chunk`, and the
-//! shapes later tasks extend rather than reshape.
+//! The register-based instruction stream: `Op`, `Chunk`, and the
+//! shapes they compile from.
 
 use std::cell::Cell;
 
@@ -643,8 +643,7 @@ pub(crate) struct Chunk {
     /// stack and what an enclosing construct keeps live across its clauses
     /// (a loop header's values, a `SELECT CASE` value) sits below it. The
     /// driver clears them as the clause opens, so that no value a finished
-    /// clause computed stays rooted by its register (ruling 2026-11-03,
-    /// bug #2108's ooTest).
+    /// clause computed stays rooted by its register.
     register_tops: Box<[u16]>,
     /// One entry per instruction, in instruction order, or **empty when this
     /// body's plan cannot supply every entry** -- a body planned without

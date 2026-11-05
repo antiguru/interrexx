@@ -1,5 +1,5 @@
 //! The `rxsock` extension library, run in Rust: the IPv4 socket routines
-//! `docs/superpowers/specs/extensions-behaviour.md` ("rxsock") describes.
+//! `docs/design/extensions.md` describes.
 //!
 //! A socket is its descriptor number, as on the oracle. Each call borrows the
 //! number for the call ([`rxsock_sys::with_socket`]) and makes its OS calls

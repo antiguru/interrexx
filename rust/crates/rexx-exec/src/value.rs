@@ -727,8 +727,7 @@ impl Interp {
                 return Cow::Borrowed(self.not_in_arena(value));
             };
             // A class renders its own name rather than anything the value
-            // model holds. Since Phase 5j a class resolves like any other
-            // object, so this is an arm and no longer rides the `None`.
+            // model holds.
             if matches!(object.body, Body::Class { .. }) {
                 return Cow::Borrowed(self.not_in_arena(value));
             }

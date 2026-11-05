@@ -1,7 +1,6 @@
 //! The Rexx packages shipped inside this crate, which a `::REQUIRES` finds
-//! after every search route has missed (Phase 10 PR 4 plan, "Packages on
-//! disk"): the rewritten packages of the extension libraries this crate runs
-//! in Rust.
+//! after every search route has missed: the rewritten packages of the
+//! extension libraries this crate runs in Rust.
 
 /// One shipped package.
 pub(crate) struct Shipped {

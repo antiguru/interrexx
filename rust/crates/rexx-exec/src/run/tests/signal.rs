@@ -18,14 +18,11 @@ fn signal_out_of_a_fragment_does_not_collide_with_the_fragments_own_index_space(
     );
 }
 
-/// I3 (Task 6 fix round 1): `SIGNAL` out of a `SELECT`, the one Step 1
-/// shape the original landing measured for `DO` and `INTERPRET` but
-/// never for `SELECT` -- `leave_select` (`run/select.rs`) is one of the
-/// forwarding sites `Flow::Signal`'s own design argument depends on, and
-/// it was the only one with no witness. Measured (source with a leading
+/// `SIGNAL` out of a `SELECT`: `leave_select` (`run/select.rs`) is one of the
+/// forwarding sites `Flow::Signal` depends on. Measured (source with a leading
 /// `trace r` clause, lines decremented by one as every other traced test
 /// in this file already does): `SELECT` is abandoned exactly like `DO`
-/// is, unconditionally, and `SIGL` (C1, this same fix round) reads back
+/// is, unconditionally, and `SIGL` reads back
 /// the `WHEN`'s own line, all three sub-clauses (`WHEN`, `THEN`,
 /// `SIGNAL`) sharing that one source line.
 #[test]
@@ -62,7 +59,7 @@ fn signal_out_of_a_select_unwinds_it_and_lands_on_its_label() {
     assert_eq!(interp.out, b"before\nreached there sigl: 3\n".to_vec());
 }
 
-/// C1 (Task 6 fix round 1): `SIGL`. The oracle's own `RexxActivation::
+/// `SIGL`. The oracle's own `RexxActivation::
 /// signalTo`/`internalCall` (`execution/RexxActivation.cpp`, read
 /// directly) both call `new_integer(lineNum)` at the point of transfer
 /// -- an integer object, which is why `set_sigl` uses `self.text`
@@ -122,7 +119,7 @@ fn sigl_is_set_at_every_control_transfer() {
         b"before: SIGL\nsigl after signal-in-fragment: 2\n".to_vec()
     );
 
-    // The expression-call form (`f(1)`, Task 4) sets it exactly like
+    // The expression-call form (`f(1)`) sets it exactly like
     // `CALL` does.
     let mut interp = Interp::new();
     assert_eq!(

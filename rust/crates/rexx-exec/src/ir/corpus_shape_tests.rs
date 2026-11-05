@@ -515,7 +515,7 @@ fn every_corpus_body_compiles_the_minimum_promotion_set_to_its_own_ops() {
     // overflowed and why it is this sweep that asks for a stack rather than
     // the callers around it. `INTERPRETER_STACK_BYTES` is the size because
     // that is what `on_interpreter_thread` gives the same walk in production.
-    // Measured 2026-08-12 with the sweep called inline instead: it aborts the
+    // Measured with the sweep called inline instead: it aborts the
     // whole test binary at `RUST_MIN_STACK=2621440` and passes at `2883584`,
     // against a libtest thread's own 2 MiB.
     let sweep = std::thread::Builder::new()
