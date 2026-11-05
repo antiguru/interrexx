@@ -144,11 +144,17 @@ fn main() -> ExitCode {
     let name = name
         .or_else(|| std::env::var_os("RXQUEUE").map(|value| value.as_bytes().to_vec()))
         .unwrap_or_else(|| b"SESSION".to_vec());
+    let session = Session::of_process();
+    // Deviation 93: with no session handed down, the session queue would be this process's own,
+    // gone when it disconnects, so its lines would reach nobody.
+    if name.eq_ignore_ascii_case(b"SESSION") && !session.inherited() {
+        say("There is no session queue: name a queue, or run rxqueue from a Rexx program.");
+        return ExitCode::from(QUEUE_NOT_REGISTERED as u8);
+    }
     let client: Unix = match connect() {
         Ok(client) => client,
         Err(status) => return fail(status, &name),
     };
-    let session = Session::of_process();
     let _ = client.call(Request::CreateSessionQueue {
         session: session.handle(),
     });

@@ -1,4 +1,4 @@
-**CLOSED 2026-11-03 by Phase 10 PR 6 Task 1 (d04cbdaac).** Each suite run has a private service per side; the rows, `R1_GROUPS` and `Deferral::Rxapi` are gone and the two licence rows are in `rust/corpus/suite-licences.txt`. `rexx-bench`'s shared oracle runtime is not changed.
+**CLOSED 2026-11-03 by Phase 10 PR 6 Task 1 (d04cbdaac).** Each suite run has a private service per side; the rows, `R1_GROUPS` and `Deferral::Rxapi` are gone and the two licence rows are in `rust/corpus/suite-licences.txt`. `rexx-bench`'s shared oracle runtime is not changed; it is queued as `2026-11-05-rexx-bench-isolated-api-daemons.md`.
 
 **OPEN, queued 2026-11-02 by Phase 10 PR 2. Owner: Phase 10 PR 6 (suite gate).**
 

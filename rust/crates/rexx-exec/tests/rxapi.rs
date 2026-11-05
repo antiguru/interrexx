@@ -335,22 +335,45 @@ fn a_killed_programs_session_queue_goes() {
     );
 }
 
-/// `rxqueue` run with no program behind it uses a queue only its own connection held, so its
-/// lines go when it disconnects and leave no daemon.
+/// Deviation 93: `rxqueue` with no program behind it and the session queue as its target refuses,
+/// exit 9, whether the session queue is the default, named, or named by `RXQUEUE`, and with
+/// `/CLEAR` too. It starts no daemon.
 #[test]
-fn an_orphan_rxqueue_leaves_no_daemon() {
+fn an_orphan_rxqueue_refuses_the_session_queue() {
     let service = Service::new();
-    let mut rxqueue = Command::new(bin_dir().join("rxqueue"));
-    rxqueue
-        .env("REXX_API_DIR", service.api())
-        .env_remove("RXQUEUESESSION")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null());
-    let mut child = rxqueue.spawn().expect("rxqueue runs");
-    std::io::Write::write_all(child.stdin.as_mut().expect("a pipe"), b"orphan\n").expect("written");
-    drop(child.stdin.take());
-    assert!(child.wait().expect("rxqueue ends").success());
-    assert!(daemon_exits(&service), "the orphan line kept the daemon up");
+    let cases: &[(&[&str], Option<&str>)] = &[
+        (&[], None),
+        (&["session"], None),
+        (&["/lifo"], None),
+        (&["/clear"], None),
+        (&[], Some("Session")),
+    ];
+    for (arguments, variable) in cases {
+        let mut rxqueue = Command::new(bin_dir().join("rxqueue"));
+        rxqueue
+            .args(*arguments)
+            .env("REXX_API_DIR", service.api())
+            .env_remove("RXQUEUESESSION")
+            .env_remove("RXQUEUE")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped());
+        if let Some(variable) = variable {
+            rxqueue.env("RXQUEUE", variable);
+        }
+        let mut child = rxqueue.spawn().expect("rxqueue runs");
+        // The refusal may come before the input is read, so a failed write is no error.
+        let _ = std::io::Write::write_all(child.stdin.as_mut().expect("a pipe"), b"orphan\n");
+        drop(child.stdin.take());
+        let output = child.wait_with_output().expect("rxqueue ends");
+        let case = format!("{arguments:?} RXQUEUE={variable:?}");
+        assert_eq!(output.status.code(), Some(9), "{case}");
+        assert_eq!(
+            stdout(&output),
+            "There is no session queue: name a queue, or run rxqueue from a Rexx program.\n",
+            "{case}"
+        );
+        assert!(!service.has_socket(), "{case} started a daemon");
+    }
 }
 
 /// Without a service, a command still runs when the session queue is empty, and its child gets

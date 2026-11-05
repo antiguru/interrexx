@@ -821,8 +821,12 @@ These settle where interrexx departs from, or chooses among, the behaviour above
    it holds none, and keeps that connection for its life. So `cmd | rxqueue` delivers to a running
    program after `rxqueue` exits. There is no shutdown message: the connection closing, on a clean
    exit or when the kernel closes a crashed process's socket, is the only signal, and the queue
-   goes with it. `echo x | rxqueue` from a plain shell loses its lines when `rxqueue` disconnects.
-   Session queues do not count for the daemon's exit rule.
+   goes with it. Session queues do not count for the daemon's exit rule.
+   So `rxqueue` with no `RXQUEUESESSION` refuses the session queue (Deviation 93, ruled by Moritz
+   2026-11-05): when its queue is `SESSION` (the default, the name argument or `RXQUEUE`, in any
+   case), it prints `There is no session queue: name a queue, or run rxqueue from a Rexx program.`
+   and exits 9 before reading input or reaching the service. This holds with `/CLEAR` too. The
+   oracle accepts the lines into a queue nothing can reach.
 5. **Registrations stay owner-only,** as observed. A daemon holding them stays up.
 6. **Timestamps** keep the observed zero-based `month` and years-since-1900 `year`.
 7. **A blocked pull ends when its connection closes,** and the queue stays usable. The observed
