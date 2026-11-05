@@ -245,7 +245,7 @@ Loud	object_name_of_a_value	send	crates/rexx-exec/src/lib.rs:588	recorded	yes	OB
 Raised	object_not_single_dimensional	body+send	crates/rexx-exec/src/error.rs:1918	agrees	yes	98.913	o~startWith('M', .array~new(2,2)) -- the same call shape ~sendWith reports 88.913 for
 Loud	op_not_driven	body+ir	crates/rexx-exec/src/lib.rs:886	off-send-surface	-	-	-
 Loud	operator_operand	body	crates/rexx-exec/src/lib.rs:619	off-send-surface	-	-	-
-Raised	package_scope_method	send	crates/rexx-exec/src/error.rs:1624	agrees	yes	97.3	o~m over a ::method m package in a required file, whose ::REQUIRES this phase built
+Raised	package_scope_method	send	crates/rexx-exec/src/error.rs:1624	agrees	yes	97.3	o~m over a ::method m package in a required file, whose ::REQUIRES the program names
 Loud	parse_trigger_operand	body	crates/rexx-exec/src/lib.rs:829	off-send-surface	-	-	-
 Raised	power_exponent_not_whole	body	crates/rexx-exec/src/error.rs:186	off-send-surface	-	-	-
 Raised	private_method	send	crates/rexx-exec/src/error.rs:1618	agrees	yes	97.2	.K~new~p over ::method p private

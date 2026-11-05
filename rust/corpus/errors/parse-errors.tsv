@@ -59,7 +59,6 @@
 # latter as the `if <condition>` programs). Each row is what build/bin/rexxc
 # answered for that program.
 #
-
 # Nothing here is our parser's own answer. A row records only what the oracle
 # said, so a divergence shows up as a test failure rather than as an expected
 # value.
