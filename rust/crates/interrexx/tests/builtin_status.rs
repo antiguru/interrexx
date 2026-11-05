@@ -600,19 +600,19 @@ fn every_divergent_row_has_a_known_gap() {
 #[test]
 fn a_name_is_only_mentioned_when_it_stands_alone() {
     assert!(mentions_as_word(
-        br#"rexx-exec: routine "WORD" is not implemented"#,
+        br#"interrexx: routine "WORD" is not implemented"#,
         "WORD"
     ));
     assert!(mentions_as_word(
-        b"rexx-exec: ADDRESS is not implemented",
+        b"interrexx: ADDRESS is not implemented",
         "ADDRESS"
     ));
     assert!(!mentions_as_word(
-        br#"rexx-exec: routine "WORDS" is not implemented"#,
+        br#"interrexx: routine "WORDS" is not implemented"#,
         "WORD"
     ));
     assert!(!mentions_as_word(
-        br#"rexx-exec: routine "C2X" is not implemented"#,
+        br#"interrexx: routine "C2X" is not implemented"#,
         "BITAND"
     ));
     assert!(!mentions_as_word(b"", "LENGTH"));

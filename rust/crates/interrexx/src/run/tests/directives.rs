@@ -328,7 +328,7 @@ fn an_internal_routine_refuses_loudly_where_an_unknown_name_still_raises() {
         assert_eq!(outcome.stdout, b"", "{message}: stdout");
         assert_eq!(
             outcome.stderr,
-            format!("rexx-exec: {message}\n").into_bytes(),
+            format!("interrexx: {message}\n").into_bytes(),
             "{message}: stderr"
         );
     }

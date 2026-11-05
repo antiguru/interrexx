@@ -1277,14 +1277,7 @@ fn only_the_interpreter_and_its_waits_take_the_halting_signals() {
     let mut seen = Vec::new();
     for _ in 0..3 {
         std::thread::sleep(Duration::from_secs(1));
-        let mut threads = halting_blocked(child.id());
-        // The thread reaping a daemon the command started, there only when
-        // no daemon was running already.
-        let starter = ("rexx-api-start".to_string(), true);
-        threads.retain(|thread| {
-            assert!(thread.0 != starter.0 || *thread == starter, "{thread:?}");
-            thread.0 != starter.0
-        });
+        let threads = halting_blocked(child.id());
         seen.push(threads);
         std::thread::sleep(Duration::from_secs(1));
     }

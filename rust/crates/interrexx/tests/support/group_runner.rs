@@ -857,11 +857,11 @@ pub fn failing(run: &Run) -> Vec<String> {
     names
 }
 
-/// The first `rexx-exec: ` line of a run's stderr: this crate's refusal.
+/// The first `interrexx: ` line of a run's stderr: this crate's refusal.
 pub fn refusal(run: &Run) -> Option<String> {
     String::from_utf8_lossy(&run.stderr)
         .lines()
-        .find(|line| line.starts_with("rexx-exec: "))
+        .find(|line| line.starts_with("interrexx: "))
         .map(str::to_string)
 }
 
@@ -1432,9 +1432,9 @@ pub fn rows_in_parallel<R: Sync, T: Send>(
 
 fn compare(theirs: Run, ours: Run) -> Outcome {
     let stderr = String::from_utf8_lossy(&ours.stderr).into_owned();
-    if let Some(line) = stderr.lines().find(|line| line.starts_with("rexx-exec: ")) {
+    if let Some(line) = stderr.lines().find(|line| line.starts_with("interrexx: ")) {
         return Outcome::Refused {
-            message: line["rexx-exec: ".len()..].to_string(),
+            message: line["interrexx: ".len()..].to_string(),
             oracle: theirs,
         };
     }

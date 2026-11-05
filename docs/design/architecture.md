@@ -19,8 +19,8 @@ All under `rust/crates/`.
 | `interrexx` | the interpreter: IR compiler and driver, dispatch, builtins, streams, commands, scheduler; the `rexx`, `rexxc` and `rexx-ir` binaries |
 | `interrexx-api` | the C ABI boundary: context interface tables, value conversion, library loading |
 | `interrexx-rxapi` | the API service: queues, registries, macrospace; the `rxapi`, `rxqueue` and `rxsubcom` binaries |
-| `librexx` | `librexx.so.4`: the C entry points, and owner of the API's client state |
-| `librexxapi` | `librexxapi.so.4`: the classic API names, forwarding to `librexx.so.4` |
+| `interrexx-capi` | `librexx.so.4`: the C entry points, and owner of the API's client state |
+| `interrexx-capi-rxapi` | `librexxapi.so.4`: the classic API names, forwarding to `librexx.so.4` |
 | `interrexx-oracle` | runs a program under an interpreter and captures stdout, stderr and exit status separately |
 | `interrexx-extract` | lifts ooTest test methods into standalone programs |
 | `interrexx-bench` | the benchmark harness and suite tools |

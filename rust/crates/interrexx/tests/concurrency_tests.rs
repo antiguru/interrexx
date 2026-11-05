@@ -681,8 +681,8 @@ mod derived_runs {
     /// The run's outcome: the refusal, a deadline, or the summary's class.
     pub(super) fn outcome_of(outcome: &Outcome) -> String {
         let stderr = String::from_utf8_lossy(&outcome.stderr);
-        if let Some(line) = stderr.lines().find(|line| line.starts_with("rexx-exec: ")) {
-            return format!("refused at {}", &line["rexx-exec: ".len()..]);
+        if let Some(line) = stderr.lines().find(|line| line.starts_with("interrexx: ")) {
+            return format!("refused at {}", &line["interrexx: ".len()..]);
         }
         if super::watchdog::did_not_finish(outcome) {
             return "did not finish".to_string();

@@ -129,14 +129,14 @@ const DIFFERING: &[(&str, &str, &str, &str, &str)] = &[
         "base/class/MutexSemaphore.testGroup",
         "whole",
         "every",
-        "rexx-exec: the run exceeded its deadline, rc none, last started TEST_RELEASE_ONE_ARG, failing []",
+        "interrexx: the run exceeded its deadline, rc none, last started TEST_RELEASE_ONE_ARG, failing []",
         "TEST_EXCLUSION's own race: the oracle hangs in it when that schedule is forced (SysSleep 0.01 after step = 6)",
     ),
     (
         "base/class/MutexSemaphore.testGroup",
         "derived",
         "every",
-        "rexx-exec: the run exceeded its deadline, rc none, last started TEST_RELEASE_ONE_ARG, failing []",
+        "interrexx: the run exceeded its deadline, rc none, last started TEST_RELEASE_ONE_ARG, failing []",
         "TEST_EXCLUSION's own race: the oracle hangs in it when that schedule is forced (SysSleep 0.01 after step = 6)",
     ),
     (
@@ -966,13 +966,13 @@ mod sim_gate {
     const PROGRAMS: &str = "crates/interrexx/tests/sim_gate/";
 
     /// The refusals naming a broken invariant of the scheduler.
-    const INVARIANT: &str = "rexx-exec: the scheduler found ";
+    const INVARIANT: &str = "interrexx: the scheduler found ";
 
     /// The refusals of a determinism breach: a post from another
     /// thread, and a replay taking a decision its trace does not hold.
     const DETERMINISM: &[&str] = &[
         "from another thread in the simulation mode is not implemented",
-        "rexx-exec: the replay of ",
+        "interrexx: the replay of ",
     ];
 
     /// The design-limit refusals, red unless the part's oracle set
@@ -2203,7 +2203,7 @@ mod sim_gate {
         let line = sim_line(stderr).expect("the run's own line");
         assert_eq!(sim_field(&line, "contended"), Some("2"));
         assert_eq!(sim_field(&line, "trace"), Some("00000000000000ff"));
-        assert_eq!(sim_line(b"rexx-sim: x\nrexx-exec: y\n"), None);
+        assert_eq!(sim_line(b"rexx-sim: x\ninterrexx: y\n"), None);
     }
 
     /// A finished run of a group part: `stdout`, the started test `T`
@@ -2278,9 +2278,9 @@ mod sim_gate {
             kinds(&finished("", None, 0), &row, "pre:1,k=1"),
             [(Kind::Abort, "no ooTest summary".to_string())]
         );
-        let listed = "rexx-exec: method \"OBJECTNAME=\" of class \"Object\" is not \
+        let listed = "interrexx: method \"OBJECTNAME=\" of class \"Object\" is not \
                               implemented (owner)";
-        let other = "rexx-exec: method \"COPY\" of class \"Object\" is not implemented \
+        let other = "interrexx: method \"COPY\" of class \"Object\" is not implemented \
                              (owner)";
         let key = format!("{listed}, rc 120, last started T, failing []");
         let differing = [key.as_str()];

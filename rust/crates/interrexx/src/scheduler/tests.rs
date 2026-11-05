@@ -186,7 +186,7 @@ fn a_wait_main_can_end_from_its_root_is_satisfied() {
     );
 }
 
-const INVERTED: &str = "rexx-exec: a pinned wait for a message's completion that only an \
+const INVERTED: &str = "interrexx: a pinned wait for a message's completion that only an \
                         activity pinned below it can end is not implemented\n";
 
 /// The inversion where the refusing loop itself set the ready activity
@@ -243,7 +243,7 @@ fn a_pinned_wait_nothing_can_end_is_refused() {
     assert_eq!(outcome.exit_code, 120);
     assert_eq!(
         stderr(&outcome),
-        "rexx-exec: a wait that nothing left to run can end is not implemented\n"
+        "interrexx: a wait that nothing left to run can end is not implemented\n"
     );
 }
 
@@ -261,7 +261,7 @@ say 'not reached'
     assert_eq!(stdout(&outcome), "0 0 abc LENGTH\n");
     assert_eq!(
         stderr(&outcome),
-        "rexx-exec: a wait that nothing left to run can end is not implemented\n"
+        "interrexx: a wait that nothing left to run can end is not implemented\n"
     );
 }
 
@@ -723,7 +723,7 @@ fn a_refusal_after_main_ended_in_a_nested_round_is_reported() {
             assert_eq!(outcome.exit_code, 120, "{end}: {}", stderr(&outcome));
             assert_eq!(
                 stderr(&outcome),
-                "rexx-exec: a STRING method answering an object with no string value is not \
+                "interrexx: a STRING method answering an object with no string value is not \
                  implemented\n"
             );
             let printed = stdout(&outcome);
@@ -1407,7 +1407,7 @@ fn every_refusal_of_the_uninits_at_an_activitys_end_is_reported() {
         Invocation::none().with_deadline(RUN_DEADLINE),
     );
     let refusal =
-        "rexx-exec: a REPLY its method body runs on a nested Rust frame is not implemented\n";
+        "interrexx: a REPLY its method body runs on a nested Rust frame is not implemented\n";
     assert_eq!(
         stderr(&outcome).matches(refusal).count(),
         2,
@@ -1430,7 +1430,7 @@ fn a_refusal_in_main_does_not_wait_for_the_other_activities() {
     assert_eq!(stdout(&outcome), "main\n");
     assert_eq!(
         stderr(&outcome),
-        "rexx-exec: a REPLY its method body runs on a nested Rust frame is not implemented\n"
+        "interrexx: a REPLY its method body runs on a nested Rust frame is not implemented\n"
     );
 }
 
@@ -1453,7 +1453,7 @@ fn a_blocked_guard_when_keeps_the_programs_end_waiting() {
         run("say .k~new~m\n::class k\n::method m\n  expose v\n  v = 0\n  guard on when v = 1\n");
     assert_eq!(
         stderr(&outcome),
-        "rexx-exec: a wait that nothing left to run can end is not implemented\n"
+        "interrexx: a wait that nothing left to run can end is not implemented\n"
     );
 }
 

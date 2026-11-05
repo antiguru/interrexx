@@ -156,7 +156,7 @@ enum RowOutcome {
     Anomaly { detail: String },
 }
 
-/// Pulls `X` out of a `rexx-exec: X is not implemented` line. Identical in
+/// Pulls `X` out of a `interrexx: X is not implemented` line. Identical in
 /// shape to `corpus.rs`'s `owner_from_stderr`; both harnesses classify the
 /// same loud-failure marker, so the pattern is duplicated deliberately
 /// rather than pulled into a shared helper neither crate is a natural home
@@ -164,7 +164,7 @@ enum RowOutcome {
 /// has never run a program).
 fn construct_from_stderr(stderr: &[u8]) -> Option<String> {
     let text = String::from_utf8_lossy(stderr);
-    const MARKER: &str = "rexx-exec: ";
+    const MARKER: &str = "interrexx: ";
     const SUFFIX: &str = " is not implemented";
     let after_marker = &text[text.find(MARKER)? + MARKER.len()..];
     let end = after_marker.find(SUFFIX)?;

@@ -214,7 +214,7 @@ fn under_a_collection_at_every_allocation_only_the_released_string_goes() {
         ),
         (
             "kept\nstale released\nheld among many\n18\n".to_owned(),
-            "rexx-exec: the handle is no longer held by this activation is not implemented\n"
+            "interrexx: the handle is no longer held by this activation is not implemented\n"
                 .to_owned(),
             120
         )

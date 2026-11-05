@@ -1767,5 +1767,5 @@ all-notified after them (`classes/MessageClass.cpp:666-685`), and `~notify`
 sends at once only where all-notified is set (`:217-229`), so `w` is never sent
 `messageComplete` and `w~wait` never ends. Here `slow`'s `messageComplete`
 sleeps 1 s, and main's `~notify` lands 0.3 s in. This crate prints `notified 1`
-and refuses with `rexx-exec: a wait that nothing left to run can end is not
+and refuses with `interrexx: a wait that nothing left to run can end is not
 implemented`, rc 120. No upstream ticket.

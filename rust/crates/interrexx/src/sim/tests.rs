@@ -190,7 +190,7 @@ fn a_wait_only_a_signal_can_end_is_refused() {
     assert_eq!(stdout(&outcome), "main done\nwaits\n");
     assert_eq!(
         stderr(&outcome),
-        "rexx-exec: a wait in the simulation mode that only a signal can end is not implemented\n"
+        "interrexx: a wait in the simulation mode that only a signal can end is not implemented\n"
     );
     let real = run_program(
         "/tmp/sim.rex",
@@ -366,7 +366,7 @@ fn a_command_only_another_activity_can_end_is_refused_after_its_bound() {
     assert_eq!(stdout(&simulated), "");
     assert_eq!(
         stderr(&simulated),
-        "rexx-exec: a command in the simulation mode that waits longer than its bound is not \
+        "interrexx: a command in the simulation mode that waits longer than its bound is not \
          implemented\n"
     );
     assert!(
@@ -531,7 +531,7 @@ fn a_replay_that_diverges_is_refused() {
     assert_eq!(same.exit_code, 0, "{}", stderr(&same));
     let refusal = |at: usize, held: &str, did: &str| {
         format!(
-            "rexx-exec: the replay of `{path}` diverged at decision {at}: the file holds {held}, \
+            "interrexx: the replay of `{path}` diverged at decision {at}: the file holds {held}, \
              the run {did}\n"
         )
     };
@@ -658,7 +658,7 @@ fn a_trace_that_cannot_be_written_is_refused() {
         (
             120,
             "ran\n".into(),
-            "rexx-exec: the trace `/nonexistent/dir/t.txt` could not be written: No such file or \
+            "interrexx: the trace `/nonexistent/dir/t.txt` could not be written: No such file or \
              directory (os error 2)\n"
                 .into()
         )
@@ -806,7 +806,7 @@ fn each_invariant_is_refused_where_a_switch_finds_it_broken() {
         let broken = corrupted(source, "sim:1", Some(corruption));
         assert_eq!(
             (broken.exit_code, stderr(&broken)),
-            (120, format!("rexx-exec: the scheduler found {expected}\n")),
+            (120, format!("interrexx: the scheduler found {expected}\n")),
             "{corruption:?}"
         );
     }

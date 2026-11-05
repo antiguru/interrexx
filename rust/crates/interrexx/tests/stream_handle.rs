@@ -135,7 +135,7 @@ fn another_descriptor_is_refused_loudly() {
     assert_eq!(stdout(&refused), "");
     assert_eq!(
         String::from_utf8_lossy(&refused.stderr),
-        "rexx-exec: a HANDLE: stream on descriptor 7 is not implemented\n"
+        "interrexx: a HANDLE: stream on descriptor 7 is not implemented\n"
     );
 }
 

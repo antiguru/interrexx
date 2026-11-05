@@ -542,7 +542,7 @@ fn a_native_row_on_a_receiver_of_another_class_refuses_its_type() {
                 120,
                 String::new(),
                 format!(
-                    "rexx-exec: a message send to a value that is not {kind} is not implemented\n"
+                    "interrexx: a message send to a value that is not {kind} is not implemented\n"
                 )
             ),
             "{class}~{method}"
@@ -627,7 +627,7 @@ fn a_string_answer_reads_as_primitive_make_string_reads_it() {
             "{answer}"
         );
     }
-    let refusal = "rexx-exec: a STRING method answering an object with no string value \
+    let refusal = "interrexx: a STRING method answering an object with no string value \
                    is not implemented\n";
     for answer in [".directory~new", ".queue~of('a')", ".nil", ".object~new"] {
         assert_eq!(
@@ -1516,7 +1516,7 @@ fn a_constructor_taking_arguments_answers_an_instance_and_refuses_its_state() {
     assert_eq!((code, stdout.as_str()), (120, ""));
     assert_eq!(
         stderr,
-        "rexx-exec: a wait that nothing left to run can end is not implemented\n"
+        "interrexx: a wait that nothing left to run can end is not implemented\n"
     );
     assert_eq!(
         run_source(
@@ -1817,7 +1817,7 @@ fn an_entry_method_send_with_no_value_is_loud() {
         let (code, stdout, stderr) = run_source(source);
         assert_eq!((code, stdout.as_str()), (120, ""), "{source:?}");
         assert!(
-            stderr.starts_with("rexx-exec: an entry-method assignment to ")
+            stderr.starts_with("interrexx: an entry-method assignment to ")
                 && stderr.ends_with("with no value is not implemented\n"),
             "{source:?} refused with {stderr:?}"
         );
@@ -1868,7 +1868,7 @@ fn a_metaclass_new_answering_no_new_class_is_loud() {
             (
                 120,
                 String::new(),
-                format!("rexx-exec: {refusal} is not implemented\n")
+                format!("interrexx: {refusal} is not implemented\n")
             ),
             "{answer}"
         );
@@ -1892,7 +1892,7 @@ fn a_metaclass_new_answering_no_new_class_is_loud() {
         (
             120,
             "XX\n".to_string(),
-            "rexx-exec: a metaclass NEW answering a class Class~new did not build or a subclass \
+            "interrexx: a metaclass NEW answering a class Class~new did not build or a subclass \
              already took is not implemented\n"
                 .to_string()
         )
@@ -2069,7 +2069,7 @@ fn a_conversion_this_phase_does_not_model_is_loud_where_the_ones_it_models_answe
             (
                 120,
                 String::new(),
-                "rexx-exec: OBJECTNAME= on a String is refused because a String is \
+                "interrexx: OBJECTNAME= on a String is refused because a String is \
                  value-based (Deviation 36)\n"
                     .to_string()
             ),
@@ -2125,7 +2125,7 @@ fn a_line_in_nothing_can_satisfy_is_an_unsatisfiable_wait() {
     assert_eq!(outcome.stdout, b"before\n");
     assert_eq!(
         String::from_utf8_lossy(&outcome.stderr),
-        "rexx-exec: a wait that nothing left to run can end is not implemented\n"
+        "interrexx: a wait that nothing left to run can end is not implemented\n"
     );
     assert_eq!(
         run_source(

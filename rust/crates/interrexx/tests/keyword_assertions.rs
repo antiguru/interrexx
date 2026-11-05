@@ -131,11 +131,11 @@ impl RunOutcome {
     }
 }
 
-/// Splits a `rexx-exec: X is not implemented (OWNER)` line into `X` and
+/// Splits a `interrexx: X is not implemented (OWNER)` line into `X` and
 /// `OWNER`. The owner is optional.
 fn parse_loud(stderr: &[u8]) -> (String, Option<String>) {
     let text = String::from_utf8_lossy(stderr);
-    const MARKER: &str = "rexx-exec: ";
+    const MARKER: &str = "interrexx: ";
     const SUFFIX: &str = " is not implemented";
     let Some(after) = text.find(MARKER).map(|at| &text[at + MARKER.len()..]) else {
         return ("<unnamed>".to_string(), None);

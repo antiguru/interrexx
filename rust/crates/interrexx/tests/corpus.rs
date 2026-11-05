@@ -107,7 +107,7 @@ fn run_rust(
 /// side's run did not finish.
 struct Mismatch {
     rel_path: String,
-    /// The construct named in `rexx-exec: X is not implemented`, when the
+    /// The construct named in `interrexx: X is not implemented`, when the
     /// stderr has that shape. `None` for a genuine divergence and for a
     /// structural failure alike.
     owner: Option<String>,
@@ -122,11 +122,11 @@ struct Mismatch {
     structural: bool,
 }
 
-/// Pulls `X` out of a `rexx-exec: X is not implemented` line, the same
+/// Pulls `X` out of a `interrexx: X is not implemented` line, the same
 /// pattern the hand-run shell loop grepped for to partition failures by task.
 fn owner_from_stderr(stderr: &[u8]) -> Option<String> {
     let text = String::from_utf8_lossy(stderr);
-    const MARKER: &str = "rexx-exec: ";
+    const MARKER: &str = "interrexx: ";
     const SUFFIX: &str = " is not implemented";
     let after_marker = &text[text.find(MARKER)? + MARKER.len()..];
     let end = after_marker.find(SUFFIX)?;

@@ -226,7 +226,7 @@ pub const NOT_IMPLEMENTED_EXIT: i32 = 120;
 pub const DEADLINE_EXIT: i32 = 121;
 
 /// The stderr line a run abandoned at its deadline leaves behind.
-pub const DEADLINE_REPORT: &[u8] = b"rexx-exec: the run exceeded its deadline\n";
+pub const DEADLINE_REPORT: &[u8] = b"interrexx: the run exceeded its deadline\n";
 
 /// The name the interpreter's own package answers to -- `PackageClass::
 /// getProgramName`'s answer for internal code (`classes/PackageClass.hpp:147`).
@@ -4010,14 +4010,14 @@ fn report_late_failures(
             Failure::Loud(loud) => {
                 interp
                     .trace
-                    .extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+                    .extend_from_slice(format!("interrexx: {}\n", loud.message).as_bytes());
                 *exit_code = NOT_IMPLEMENTED_EXIT;
             }
             Failure::Slice => {
                 let loud = Loud::scheduler_inconsistency("a slice outside a root driver");
                 interp
                     .trace
-                    .extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+                    .extend_from_slice(format!("interrexx: {}\n", loud.message).as_bytes());
                 *exit_code = NOT_IMPLEMENTED_EXIT;
             }
             Failure::Raised(raised) => {
@@ -4364,14 +4364,14 @@ fn execute_kept(
         Err(Failure::Loud(loud)) => {
             interp
                 .trace
-                .extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+                .extend_from_slice(format!("interrexx: {}\n", loud.message).as_bytes());
             NOT_IMPLEMENTED_EXIT
         }
         Err(Failure::Slice) => {
             let loud = Loud::scheduler_inconsistency("a slice outside a root driver");
             interp
                 .trace
-                .extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+                .extend_from_slice(format!("interrexx: {}\n", loud.message).as_bytes());
             NOT_IMPLEMENTED_EXIT
         }
         Err(Failure::Raised(raised)) => {
@@ -4427,7 +4427,7 @@ fn execute_kept(
     for loud in refused {
         interp
             .trace
-            .extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+            .extend_from_slice(format!("interrexx: {}\n", loud.message).as_bytes());
         exit_code = NOT_IMPLEMENTED_EXIT;
     }
 
@@ -4570,14 +4570,14 @@ pub(crate) fn run_instance(
     });
     let mut stderr = Vec::new();
     if let Err(Failure::Loud(loud)) = &result {
-        stderr.extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+        stderr.extend_from_slice(format!("interrexx: {}\n", loud.message).as_bytes());
     }
     let mut refused = interp.run_ready_uninits();
     let late = interp.run_started_to_end();
     report_late_failures(&mut interp, late, b"RexxCreateInterpreter", &mut 0);
     refused.extend(interp.terminate());
     for loud in refused {
-        stderr.extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+        stderr.extend_from_slice(format!("interrexx: {}\n", loud.message).as_bytes());
     }
     let mut trace = std::mem::take(&mut interp.trace);
     trace.extend(stderr);

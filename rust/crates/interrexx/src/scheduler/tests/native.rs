@@ -233,7 +233,7 @@ fn a_callbacks_wait_on_a_call_below_it_is_refused() {
         assert_eq!(run.stdout(), "");
         assert_eq!(
             run.stderr(),
-            "rexx-exec: a wait that nothing left to run can end is not implemented\n"
+            "interrexx: a wait that nothing left to run can end is not implemented\n"
         );
     }
 }
@@ -359,7 +359,7 @@ fn a_native_call_only_another_activity_can_end_is_refused_after_its_bound() {
     assert_eq!(run.stdout(), "bind 0 listen 0\n");
     assert_eq!(
         run.stderr(),
-        "rexx-exec: a native call in the simulation mode that runs longer than its bound is \
+        "interrexx: a native call in the simulation mode that runs longer than its bound is \
          not implemented\n"
     );
     assert!(
@@ -479,7 +479,7 @@ fn a_failure_ending_a_native_park_abandons_the_call() {
     assert_eq!(run.stdout(), "");
     assert_eq!(
         run.stderr(),
-        "rexx-exec: a STRING method answering an object with no string value is not \
+        "interrexx: a STRING method answering an object with no string value is not \
          implemented\n"
     );
     assert_eq!(run.exits, 1);

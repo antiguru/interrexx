@@ -440,8 +440,8 @@ fn read_subset(list_paths: &[&Path]) -> Vec<String> {
 #[test]
 fn read_subset_unions_two_files_first_seen_order_deduplicated() {
     let dir = std::env::temp_dir();
-    let a = dir.join("rexx-exec-read-subset-test-a.txt");
-    let b = dir.join("rexx-exec-read-subset-test-b.txt");
+    let a = dir.join("interrexx-read-subset-test-a.txt");
+    let b = dir.join("interrexx-read-subset-test-b.txt");
     fs::write(&a, "# a comment\none.rex\ntwo.rex\n").expect("writing the first list file");
     fs::write(&b, "two.rex\nthree.rex\n").expect("writing the second list file");
 

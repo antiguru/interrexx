@@ -33,7 +33,7 @@ fn names(names: &[&str]) -> BTreeSet<String> {
 }
 
 const REFUSAL: &str =
-    "rexx-exec: an entry-method assignment to \"ZZZ\" with no value is not implemented";
+    "interrexx: an entry-method assignment to \"ZZZ\" with no value is not implemented";
 
 #[test]
 fn a_refusal_ends_the_run_and_the_next_run_goes_past_it() {

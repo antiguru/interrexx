@@ -1,5 +1,5 @@
 //! The C entry points each library exports, and the ELF readings the export tests compare them
-//! against. Shared through `#[path]` by `librexxapi`'s, `librexx`'s and `interrexx`'s tests.
+//! against. Shared through `#[path]` by `interrexx-capi-rxapi`'s, `interrexx-capi`'s and `interrexx`'s tests.
 
 #![allow(dead_code)]
 

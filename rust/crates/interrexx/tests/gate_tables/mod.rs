@@ -131,15 +131,15 @@ pub fn is_loud(outcome: &Outcome) -> bool {
     wrapped_exit_code(outcome.exit_code) == interrexx::NOT_IMPLEMENTED_EXIT
         && String::from_utf8_lossy(&outcome.stderr)
             .lines()
-            .any(|line| line.starts_with("rexx-exec: "))
+            .any(|line| line.starts_with("interrexx: "))
 }
 
-/// The construct named in a `rexx-exec: X is not implemented` line, for
+/// The construct named in a `interrexx: X is not implemented` line, for
 /// grouping a report by which gap a row is waiting on. `None` when the crate
 /// answered, and for a refusal whose message does not have that shape.
 pub fn refused_construct(stderr: &[u8]) -> Option<String> {
     let text = String::from_utf8_lossy(stderr);
-    const MARKER: &str = "rexx-exec: ";
+    const MARKER: &str = "interrexx: ";
     const SUFFIX: &str = " is not implemented";
     let after_marker = &text[text.find(MARKER)? + MARKER.len()..];
     let end = after_marker.find(SUFFIX)?;

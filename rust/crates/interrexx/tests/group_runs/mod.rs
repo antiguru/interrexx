@@ -425,7 +425,7 @@ const PRINTS_ELAPSED: &[&str] = &[
 
 /// The rows whose trace output, on stderr, comes from a `REPLY`
 /// continuation and its sender, so the lines interleave differently by
-/// mode. Allowed while both runs end in the same `rexx-exec: ` refusal, or
+/// mode. Allowed while both runs end in the same `interrexx: ` refusal, or
 /// end alike with the same stderr lines in another order.
 const TRACE_INTERLEAVES: &[&str] =
     &["base/keyword/TRACE_TraceObject.testGroup TEST_TRACEOBJECT_COLLECTOR"];
@@ -537,7 +537,7 @@ fn compare_modes(row: &str, normal: &Run, every: &Run) -> (String, bool) {
     let refusal = |run: &Run| {
         String::from_utf8_lossy(&run.stderr)
             .lines()
-            .find(|line| line.starts_with("rexx-exec: "))
+            .find(|line| line.starts_with("interrexx: "))
             .map(str::to_string)
     };
     let sorted_lines = |run: &Run| {

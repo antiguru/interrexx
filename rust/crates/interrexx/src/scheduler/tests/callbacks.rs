@@ -166,7 +166,7 @@ fn a_callback_from_another_thread_is_refused_in_the_simulation_mode() {
     assert_eq!(ran.stdout(), "1\n");
     assert_eq!(
         ran.stderr(),
-        "rexx-exec: a callback from another thread in the simulation mode is not implemented\n"
+        "interrexx: a callback from another thread in the simulation mode is not implemented\n"
     );
 }
 
