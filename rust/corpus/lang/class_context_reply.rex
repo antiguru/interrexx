@@ -1,4 +1,4 @@
-/* Task 21, fix round 3: the rest of a method a REPLY moved to another
+/* The rest of a method a REPLY moved to another
    activity reads the context object its first half set.
 
    The moved body prints nothing when it is right, and that is deliberate.

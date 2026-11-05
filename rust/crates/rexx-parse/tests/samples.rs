@@ -1,4 +1,4 @@
-//! Phase 3 gate: every `.rex` file under `samples/` parses to an AST.
+//! Every `.rex` file under `samples/` parses to an AST.
 
 use std::path::{Path, PathBuf};
 

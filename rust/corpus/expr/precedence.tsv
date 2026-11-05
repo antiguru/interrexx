@@ -1,4 +1,4 @@
-# Generated expression corpus for the Task 3.5 differential test.
+# Generated expression corpus for the differential test.
 #
 # One record per line, tab separated: the expression source, then OK or ERR,
 # then either the value the interpreter printed or, for ERR, the error number

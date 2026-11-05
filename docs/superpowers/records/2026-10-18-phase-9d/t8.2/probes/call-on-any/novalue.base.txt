@@ -1,5 +1,0 @@
---- crate rc=0
-[stdout]
-D=[] NOVALUE
-back
-[stderr]

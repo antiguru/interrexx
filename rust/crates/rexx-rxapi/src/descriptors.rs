@@ -1,5 +1,5 @@
-//! Closing the descriptors a started daemon inherited from its starter (ruled 2026-11-02).
-// The Phase 10 grant: one function, at daemon start-up.
+//! Closing the descriptors a started daemon inherited from its starter.
+// The one `unsafe` function, at daemon start-up.
 #![allow(unsafe_code)]
 
 use std::os::fd::{AsRawFd, BorrowedFd, RawFd};

@@ -70,7 +70,7 @@ say "after directive"
 }
 
 /// A directive body gets this grammar's full clause-level validation even
-/// though Task 3.7c, not this task, assembles its chain. Measured against
+/// though another pass assembles its chain. Measured against
 /// `build/bin/rexxc`:
 /// ```text
 /// say "main"
@@ -239,7 +239,7 @@ fn a_duplicate_label_keeps_the_first_occurrence_not_the_last() {
 /// A label inside a directive's body is not in `Program::main.labels` at all:
 /// that map is built from the main body's instructions only, because a label
 /// is local to the code body that declares it (the same reason each directive
-/// body will get its own table once Task 3.7c parses one).
+/// body gets its own table).
 #[test]
 fn a_label_inside_a_directive_body_is_not_in_the_programs_own_label_map() {
     let p = parse_program(b"::routine r\na: nop\n".to_vec()).unwrap();
@@ -298,7 +298,7 @@ fn assigned_symbol(instruction: &rexx_parse::Instruction) -> rexx_parse::SymbolI
 
 /// `parse_interpret` builds a fresh `SymbolTable` every call rather than
 /// sharing one across calls -- which a shared table could not do without
-/// `&mut` at the point Phase 4 calls this at run time. This is not observable
+/// `&mut` at the point the executor calls this at run time. This is not observable
 /// through the id VALUE, since both calls resolve `A` the same way; what is
 /// observable is that each fragment's own table resolves its own id back to
 /// the right text independently of the other fragment's table existing at

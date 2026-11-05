@@ -1,6 +1,6 @@
 count 33
 /* .LOCAL, .ENVIRONMENT and .CONTEXT as objects, a class name out of the
- * environment, and the reflection names beside them. Phase 5a Task 6.
+ * environment, and the reflection names beside them.
  *
  * .LOCAL and .ENVIRONMENT render as the names CoreClasses.orx:990 and :55
  * assign with ~objectName=, .ARRAY as RexxClass::defaultName's "The <id>

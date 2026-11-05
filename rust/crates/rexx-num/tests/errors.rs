@@ -266,12 +266,11 @@ fn sub_codes_major_half_agrees_with_code_on_every_variant() {
 }
 
 /// `sub_code()` pinned directly against the oracle for the two variants
-/// `rexx-exec`'s `From<ArithError> for Raised` (Task 7) needs first --
-/// `DivideByZero` and `PowerExponentNotWhole` are the two that stopgap
-/// hand-copied before this accessor existed, independently verified there
-/// against `1/0`/`1//0` and `2**2.5`. Repinned here, through the real
+/// `rexx-exec`'s `From<ArithError> for Raised` needs first --
+/// `DivideByZero` and `PowerExponentNotWhole`, verified
+/// against `1/0`/`1//0` and `2**2.5`. Pinned here, through the real
 /// accessor, so a regression shows up in `rexx-num` itself rather than
-/// only in whichever crate copied the numbers.
+/// only in whichever crate copies the numbers.
 #[test]
 fn sub_code_is_42_3_for_divide_by_zero_and_26_8_for_power_exponent_not_whole() {
     assert_eq!(

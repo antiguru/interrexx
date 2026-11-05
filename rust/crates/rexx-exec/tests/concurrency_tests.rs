@@ -1,7 +1,8 @@
-//! Phase 6 exit criterion 1's test list, derived per test method from the
+//! The concurrency test list, derived per test method from the
 //! ooTest sources and held equal to the one in
-//! `docs/superpowers/plans/phase-6-pinning.md`; with the `pinning` feature, the
-//! would-be park points each of those tests reaches.
+//! `concurrency_tests/derived-list.txt` and `concurrency_tests/exclusions.txt`;
+//! with the `pinning` feature, the would-be park points each of those tests
+//! reaches.
 
 #![expect(
     clippy::disallowed_methods,
@@ -24,18 +25,17 @@ fn ootest_root() -> PathBuf {
     env::var_os(ROOT_ENV).map_or_else(|| worktree().join("ootest/ooRexx"), PathBuf::from)
 }
 
-fn pinning_doc() -> PathBuf {
-    worktree().join("docs/superpowers/plans/phase-6-pinning.md")
+fn fixture(name: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/concurrency_tests")
+        .join(name)
 }
 
 /// Directories whose groups are excluded whole, with the reason.
 const EXCLUDED_DIRS: &[(&str, &str)] = &[
-    ("extensions/", "extension Phase 10 recompiles"),
-    ("samples/", "sample Phase 10 recompiles"),
-    (
-        "base/class/CommandHandler.testGroup",
-        "CommandHandler, Phase 10",
-    ),
+    ("extensions/", "native extension"),
+    ("samples/", "native sample"),
+    ("base/class/CommandHandler.testGroup", "CommandHandler"),
 ];
 
 /// A `::METHOD`, `::ROUTINE` or `::RESOURCE` of a group file.
@@ -238,7 +238,7 @@ fn sends(code: &str, name: &str) -> bool {
     })
 }
 
-/// The criterion's features `unit` uses itself.
+/// The concurrency features `unit` uses itself.
 fn features(unit: &Unit) -> BTreeSet<&'static str> {
     let code = unit.code.as_str();
     let mut found = BTreeSet::new();
@@ -293,7 +293,7 @@ fn rxapi(unit: &Unit) -> Option<&'static str> {
     const CALLS: &[&str] = &["rxqueue", "rxfuncadd", "rxfuncdrop", "rxfuncquery"];
     let code = unit.code.as_str();
     if code.contains(".rexxqueue") {
-        return Some("RexxQueue, Phase 10");
+        return Some("RexxQueue");
     }
     let word_set: BTreeSet<&str> = words(code).collect();
     if word_set.iter().any(|word| word.contains("rexxmacro"))
@@ -383,7 +383,7 @@ fn derive(root: &Path) -> (Vec<Derived>, Vec<(Derived, &'static str)>) {
             .iter()
             .find(|(prefix, _)| {
                 group.starts_with(prefix)
-                    && !suite_rows::PHASE_9_EXTENSION_DIRS
+                    && !suite_rows::REXX_EXTENSION_DIRS
                         .iter()
                         .any(|dir| group.starts_with(dir))
             })
@@ -422,17 +422,8 @@ fn render_excluded(excluded: &[(Derived, &str)]) -> String {
         .collect()
 }
 
-/// The fenced block following `heading` in the pinning document.
-fn committed_block(heading: &str) -> String {
-    let text = fs::read_to_string(pinning_doc()).expect("the pinning document");
-    let after = text
-        .split_once(&format!("\n{heading}\n"))
-        .unwrap_or_else(|| panic!("no {heading:?} in the pinning document"))
-        .1;
-    let open = after.find("```").expect("a fenced block after the heading");
-    let body = &after[open..];
-    let body = &body[body.find('\n').expect("an opening fence line") + 1..];
-    body[..body.find("```").expect("a closing fence")].to_string()
+fn committed(name: &str) -> String {
+    fs::read_to_string(fixture(name)).unwrap_or_else(|error| panic!("fixture {name}: {error}"))
 }
 
 #[test]
@@ -445,19 +436,19 @@ fn the_derived_list_is_the_committed_one() {
         return;
     }
     assert_eq!(
-        committed_block("## Derived list"),
+        committed("derived-list.txt"),
         fresh,
         "the derived list; the fresh one is printed above"
     );
     assert_eq!(
-        committed_block("## Exclusions"),
+        committed("exclusions.txt"),
         fresh_excluded,
         "the exclusions"
     );
 }
 
 #[test]
-fn the_derived_list_holds_the_groups_the_spec_names() {
+fn the_derived_list_holds_the_core_concurrency_groups() {
     const NAMED: &[&str] = &[
         "base/keyword/GUARD.testGroup",
         "base/keyword/REPLY.testGroup",
@@ -640,7 +631,7 @@ mod byte_exact_copies {
     }
 }
 
-/// One test of criterion 1's derived list, run in process, for the
+/// One test of the derived list, run in process, for the
 /// instruments that read an `Outcome` field a feature adds.
 #[cfg(any(feature = "pinning", feature = "sharing"))]
 mod derived_runs {
@@ -714,7 +705,7 @@ mod derived_runs {
     }
 }
 
-/// Criterion 6's sharing fraction (spec 2026-09-29 section 9).
+/// The sharing fraction.
 #[cfg(feature = "sharing")]
 mod sharing {
     use std::fs;
@@ -1138,8 +1129,8 @@ mod measured {
     /// Two pinned busy-waiters that need each other: `a` spins until `b`
     /// sets `x`, then sets `y`; `b`, run inside `a`'s pinned yields, sets `x`
     /// and spins until `y`. `b`'s yields can never run `a`, buried below, so
-    /// each round of them is an inverted yield; the oracle completes (ruling
-    /// P31). Bounded by a deadline, so the count is asserted, not the end.
+    /// each round of them is an inverted yield, where the oracle completes.
+    /// Bounded by a deadline, so the count is asserted, not the end.
     #[test]
     fn pinned_busy_waiters_that_need_each_other_count_inverted_yields() {
         let source = "g = .gate~new\na = .t~new~start('a', g)\nb = .t~new~start('b', g)\n\

@@ -1,4 +1,4 @@
-/* Task 21: a second removed name, for the reason the first has its own file.
+/* A second removed name, for the reason the first has its own file.
    `MAKESTRING` is removed from `.Queue` by a different `RemoveMethod` line
    than `SORT` is, so a replay that stopped early is what two rows catch. */
 say .Array~method("MAKESTRING")

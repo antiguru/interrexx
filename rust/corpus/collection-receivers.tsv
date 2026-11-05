@@ -1,5 +1,5 @@
 # The receiver each class's rows are sent to in corpus/collection-arity.tsv's
-# probe, and the second collection its set operations take (Phase 5g Task 0b).
+# probe, and the second collection its set operations take.
 #
 # class<TAB>setup, statements separated by ` | `, which must leave `r` holding
 # the receiver, `other` a second collection of the same class, and `ka`/`va`
@@ -12,7 +12,7 @@
 # THE SETUP IS THE RICHEST RECEIVER THE ORACLE CAN BUILD, not the richest both
 # sides can. A class whose store this crate does not have fails here rather
 # than at the send, and the probe reports that as `setup-differs` -- which is
-# the phase's headline measurement and not a harness fault.
+# a measurement and not a harness fault.
 Array	ka = 1 | va = 'z' | r = .Array~of('a','b','c') | r[1] = va | other = .Array~of('c','d')
 Bag	ka = 'k1' | va = ka | r = .Bag~new | r~put(ka) | r~put('k2') | other = .Bag~new | other~put('k2')
 CircularQueue	ka = 1 | va = 'z' | r = .CircularQueue~new(5) | r~queue(va) | r~queue('b') | other = .CircularQueue~new(5) | other~queue('b')

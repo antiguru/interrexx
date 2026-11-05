@@ -1,5 +1,5 @@
 /* .METHODS holds the methods a floating directive declares, reachable both by
- * index and as a message. Phase 5a Task 17.
+ * index and as a message.
  *
  * A StringTable answers an entry name sent as a message exactly as a Directory
  * does, out of the same donated UNKNOWN. What CoreClasses.orx needs is the

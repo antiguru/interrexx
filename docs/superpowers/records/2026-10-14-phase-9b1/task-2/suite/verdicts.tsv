@@ -1,4 +1,0 @@
-# ootest revision 13178
-group	verdict	crate	oracle denominator
-base/class/String/arithmetic	green		equal
-base/class/WeakReference	green		equal

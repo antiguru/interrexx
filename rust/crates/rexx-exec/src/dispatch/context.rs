@@ -1163,8 +1163,6 @@ fn read_snapshot(interp: &Interp, depth: usize) -> Result<Snapshot, Failure> {
     // fragment's, which `run_fragment` pushes no activation for and
     // `live_levels` lists beside them, and `FRAME_COMPILE` belongs to the parser
     // (`LanguageParser::createStackFrame`, `parser/LanguageParser.cpp:866`).
-    // The phase's `found-not-fixed-register.md` is where which kinds this
-    // crate reaches is recorded, because that is a boundary that moves.
     let (kind, target) = match activation.entry {
         Entry::TopLevel
             if matches!(

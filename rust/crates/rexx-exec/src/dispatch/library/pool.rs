@@ -82,7 +82,7 @@ impl Interp {
     ///
     /// # Errors
     /// The condition the handler raised, and [`Loud`] for an interface member it reached that
-    /// this phase has not written.
+    /// this crate has not written.
     pub(crate) fn run_exit(
         &mut self,
         handler: rexx_api::load::ExitHandler,

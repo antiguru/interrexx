@@ -478,7 +478,7 @@ sel 1 0 1 1
 [stderr]
 
 # SockSelect with an entry that is not a number: the oracle ends with
-# SIGSEGV (D7); this crate raises 40.1 (Deviation 88).
+# SIGSEGV; this crate raises 40.1 (Deviation 88).
 ruled
 w.0 = 2; w.1 = 1; w.2 = 'z'
 signal on syntax

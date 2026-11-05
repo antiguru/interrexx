@@ -1,4 +1,4 @@
-# One differential probe per in-scope builtin function. Read by
+# One differential probe per builtin function. Read by
 # `crates/rexx-exec/tests/builtin_status.rs`, which runs each program through
 # both interpreters and writes the result into `builtin-status.txt`.
 #
@@ -8,63 +8,42 @@
 # needed). Lines starting with # are comments; blank lines are ignored. A tab
 # is the separator, so no program may contain one.
 #
-# WHICH NAMES GET A ROW. Every name that is not one of the whole exclusions in
-# `docs/superpowers/plans/phase-4-exclusions.txt` -- including the three names
-# that file excludes only partially (VALUE, ADDRESS, QUEUED), each probed in
-# the form that is in scope. The harness derives that set and asserts this
-# file matches it in both directions, so a missing row and a spurious one are
-# both red; do not maintain the membership by hand from this comment.
+# WHICH NAMES GET A ROW. Every name `rexx_inventory::builtins::in_scope()`
+# yields. The harness asserts this file matches it in both directions, so a
+# missing row and a spurious one are both red.
 #
-# THE THREE PARTIAL ROWS ARE PROBED ON THEIR IN-SCOPE HALF. For ADDRESS the
-# in-scope half is now both: a first draft probed it as `say address()`, the
-# platform-supplied default, which the exclusions file assigned to Phase 7 at
-# the time and reassigned to 4c at Task 10. The row below still sets the
-# environment with an ADDRESS instruction first, because a probe that reads
-# only the default would say nothing about the half this crate tracks.
-# `corpus/lang/address_env.rex` is where the default itself is witnessed.
-# VALUE is probed on the variable-access form, not the
-# external-selector form. QUEUED is probed within a single program, which is
-# what its own row permits -- the oracle's queue is rxapi-backed and shared
-# across processes, so nothing that spans two programs could ever match.
+# ADDRESS sets the environment with an ADDRESS instruction first, because a
+# probe that reads only the platform default would say nothing about the half
+# this crate tracks. `corpus/lang/address_env.rex` witnesses the default itself.
+# VALUE is probed on the variable-access form, not the external-selector form.
+# QUEUED is probed within a single program: the oracle's queue is rxapi-backed
+# and shared across processes, so nothing that spans two programs could ever
+# match.
 #
-# WHY EACH PROGRAM COMPUTES SOMETHING. A zero-argument probe such as
-# `say substr()` compares two error messages. That is a real comparison, but
-# it tests the 40.x incorrect-call family rather than the builtin, and it is
-# satisfied by an implementation that exists and computes nothing. Each row
-# below therefore elicits a *value*: it prints a non-empty result the builtin
-# had to compute, and the harness compares that result against the oracle's
-# byte for byte.
+# EACH PROGRAM COMPUTES SOMETHING. A zero-argument probe such as `say substr()`
+# compares two error messages, which tests the 40.x incorrect-call family
+# rather than the builtin, and is satisfied by an implementation that computes
+# nothing. Each row therefore prints a non-empty result the builtin had to
+# compute, and the harness compares it against the oracle's byte for byte.
 #
-# NO PROBE NESTS ONE BUILTIN INSIDE ANOTHER. A first draft rendered the
-# bit-operation results with `c2x(...)`; measured, the executor then reported
-# `routine "C2X" is not implemented` for BITAND, BITOR, BITXOR, D2C and
-# XRANGE, so five rows would have been answering for a name other than their
-# own. The operands below were chosen so each result is printable ASCII on its
-# own -- `bitand('cat','DOG')` is `@AD`, `bitor` of the same pair is `gow`,
-# `bitxor('cat','   ')` is `CAT`, `d2c(16706)` is `AB`, `xrange('a','e')` is
-# `abcde`.
+# NO PROBE NESTS ONE BUILTIN INSIDE ANOTHER, or a row would answer for a name
+# other than its own. The operands are chosen so each result is printable ASCII
+# on its own: `bitand('cat','DOG')` is `@AD`, `bitor` of the same pair is
+# `gow`, `bitxor('cat','   ')` is `CAT`, `d2c(16706)` is `AB`,
+# `xrange('a','e')` is `abcde`.
 #
-# EVERY PROGRAM IS DETERMINISTIC. The status this file feeds only means
-# something if a matching run stays matching, so nothing here may read the
-# clock, the process's identity or an entropy source. The three builtins that
-# otherwise would -- DATE, TIME, RANDOM -- are probed through their
-# deterministic forms: DATE and TIME converting a *given* value between
-# formats rather than reporting now, and RANDOM over a one-element range.
+# EVERY PROGRAM IS DETERMINISTIC: nothing reads the clock, the process's
+# identity or an entropy source. DATE and TIME convert a *given* value between
+# formats rather than reporting now, and RANDOM runs over a one-element range.
 #
 # A ONE-ELEMENT RANGE IS NOT ENOUGH ON ITS OWN. RANDOM's row also sets a
 # precision the answer would not survive being re-rendered under. The oracle
 # returns a RexxInteger, whose spelling is fixed; a value carrying the
 # DIGITS/FORM pair instead renders `1.23E+4` at `DIGITS 3`. `random(5,5)`
-# cannot see that -- 5 is 5 at every setting -- and it was this row for one
-# task, during which the executor really did answer `1.23E+4` here.
-# Measured: all 66 programs below were run through the oracle twice, from two
-# freshly created empty directories, and stdout, stderr and exit status were
-# identical on both passes for every one.
+# cannot see that, because 5 is 5 at every setting.
 #
 # EVERY PROGRAM IS SELF-CONTAINED. None reads stdin, needs a terminal, or
-# writes a file: measured with stdin redirected from /dev/null, no probe left
-# anything in its own run directory beyond the program and the captured
-# descriptors. That is what lets the harness run them unattended.
+# writes a file, which is what lets the harness run them unattended.
 #
 # ORDER is `NAMES` order, which is `BuiltinFunctions.cpp`'s own table order.
 

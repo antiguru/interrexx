@@ -1,5 +1,5 @@
-//! The two files of tests the suite gate does not require to pass (spec
-//! 2026-10-10 section 2), and each owner's check. A row is
+//! The two files of tests the suite gate does not require to pass, and each
+//! owner's check. A row is
 //! `dir/group<TAB>TEST<TAB>owner<TAB>reason`; `#` starts a comment line, and
 //! each file holds one `# ootest revision N` line naming the revision its rows
 //! were derived at. Declared with `#[path]` beside `group_runner`.
@@ -32,9 +32,8 @@ pub const ORACLE_RUNS: &str = "rust/corpus/suite-oracle-runs/";
 /// The file of tests that fail on every CI platform, which a Flaky row cites.
 pub const COMMON_FAILURES: &str = ".github/known-test-failures/common.txt";
 
-/// The file whose `DEVIATIONS -- permanent, chosen` section a Deviation row
-/// cites.
-pub const DEVIATIONS: &str = "docs/superpowers/plans/phase-4-exclusions.txt";
+/// The Deviations table a Deviation row's number must be active in.
+pub const DEVIATIONS: &str = crate::support::deviations::TABLE;
 
 /// Where the suite gate writes its table; the oracle-difference report, the
 /// per-test record and the verdicts go beside it.
@@ -231,17 +230,15 @@ pub fn by_test(rows: &[Row]) -> BTreeMap<(String, String), &Row> {
         .collect()
 }
 
-/// The `extensions/` directories of pure-Rexx packages, which Moritz ruled
-/// Phase 9's (2026-10-17).
-pub const PHASE_9_EXTENSION_DIRS: &[&str] = &[
+/// The `extensions/` directories of pure-Rexx packages.
+pub const REXX_EXTENSION_DIRS: &[&str] = &[
     "extensions/dateparser/",
     "extensions/json/",
     "extensions/yaml/",
 ];
 
 /// The directory of the groups that need a Windows API this host lacks, each
-/// test of which a `platform windows` NotRun row records (Moritz,
-/// 2026-11-03).
+/// test of which a `platform windows` NotRun row records.
 pub const WINDOWS_DIR: &str = "extensions/platform/windows/";
 
 /// What the owner checks need besides the rows.
@@ -291,31 +288,15 @@ pub fn group_path(dir: &str, group: &str) -> String {
     }
 }
 
-/// The numbers under `text`'s `DEVIATIONS -- permanent, chosen` heading,
-/// up to the next heading at the margin, other than those `WITHDRAWN`.
+/// The active numbers of the Deviations table `text`; none when it does not
+/// parse, so every Deviation row then fails its check.
 pub fn deviations(text: &str) -> BTreeSet<u32> {
-    let mut lines = text
-        .lines()
-        .skip_while(|line| *line != "DEVIATIONS -- permanent, chosen")
-        .skip(2);
-    let mut numbers = BTreeSet::new();
-    for line in lines.by_ref() {
-        if !line.is_empty() && !line.starts_with(' ') {
-            break;
-        }
-        let trimmed = line.trim_start();
-        let Some((number, rest)) = trimmed.split_once(". ") else {
-            continue;
-        };
-        if line.len() - trimmed.len() <= 2
-            && !number.is_empty()
-            && number.bytes().all(|byte| byte.is_ascii_digit())
-            && !rest.starts_with("WITHDRAWN")
-        {
-            numbers.insert(number.parse().expect("a number"));
-        }
-    }
-    numbers
+    crate::support::deviations::parse(text)
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|(_, deviation)| deviation.active)
+        .map(|(number, _)| number)
+        .collect()
 }
 
 /// The `GROUP.testGroup/TEST` entries of a known-failures file, upper case.

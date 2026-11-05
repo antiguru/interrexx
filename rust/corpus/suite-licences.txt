@@ -1,14 +1,14 @@
-# The suite gate's permanent licences (spec 2026-10-10 section 2): Deviation,
-# Environment and Flaky rows. One row per test: dir/group, TEST, owner,
-# reason. A Deviation or Environment row is added only by Moritz's ruling.
+# The suite gate's permanent licences: Deviation, Environment and Flaky
+# rows. One row per test: dir/group, TEST, owner, reason. An Environment
+# row's reason ends `record: PATH`, the committed oracle run naming the test.
 # ootest revision 13347
 base/bif/CHAROUT	TEST_STDOUT_START	Flaky	common.txt: CHAROUT.testGroup/TEST_STDOUT_START
 base/bif/LINEOUT	TEST_BINARY	Deviation 46	the final assertFile expects the oracle's blank records 2 and 4 from a position-only and a closing LINEOUT
 base/bif/LINEOUT	TEST_LINE_TRANSIENT	Flaky	common.txt: LINEOUT.testGroup/TEST_LINE_TRANSIENT
 base/class/Bag	TEST_HASITEM_VALUE_NOTEQUAL_INDEX	Deviation 45	the test's one assertion expects the oracle's .nil from hasItem with an index unequal to the item
-base/class/IdentityTable	TEST_AT01	Deviation 4	line 78 asserts that coll~at("2"||"2") misses the index "2"||"2" built in init; the other assertions pass (t6.7/probes/identity/)
-base/class/IdentityTable	TEST_HASINDEX	Deviation 4	line 163 asserts that hasIndex("1223"~substr(2,2)) misses the indexes "22" and "2"||"2"; the other assertions pass (t6.7/probes/identity/)
-base/class/IdentityTable	TEST_[]	Deviation 4	line 89 asserts that coll["2"||"2"] misses the index "2"||"2" built in init; the other assertions pass (t6.7/probes/identity/)
+base/class/IdentityTable	TEST_AT01	Deviation 4	line 78 asserts that coll~at("2"||"2") misses the index "2"||"2" built in init; the other assertions pass
+base/class/IdentityTable	TEST_HASINDEX	Deviation 4	line 163 asserts that hasIndex("1223"~substr(2,2)) misses the indexes "22" and "2"||"2"; the other assertions pass
+base/class/IdentityTable	TEST_[]	Deviation 4	line 89 asserts that coll["2"||"2"] misses the index "2"||"2" built in init; the other assertions pass
 base/class/RexxInteger	TEST_INTEGER_ADDITION	Deviation 44	the group's isInteger reads the oracle's integer representation through n~min
 base/class/RexxInteger	TEST_INTEGER_CONSTANT	Deviation 44	the group's isInteger reads the oracle's integer representation through n~min
 base/class/RexxInteger	TEST_INTEGER_D2X	Deviation 44	the group's isInteger reads the oracle's integer representation through n~min
@@ -31,13 +31,13 @@ base/class/RexxInteger	TEST_STRING_C2D	Deviation 44	the group's isInteger reads 
 base/class/RexxInteger	TEST_STRING_X2D	Deviation 44	the group's isInteger reads the oracle's integer representation through n~min
 base/rexxutil/SysSleep	TEST_SLEEP_CONCURRENT	Flaky	common.txt: SYSSLEEP.testGroup/TEST_SLEEP_CONCURRENT
 base/rexxutil/SysSleep	TEST_SLEEP_DURATION	Flaky	common.txt: SYSSLEEP.testGroup/TEST_SLEEP_DURATION
-extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSCRYPT	Environment	SysCrypt raises 43.1 on both sides, no SysCrypt routine being found; record: rust/corpus/suite-oracle-runs/extensions-platform-unix-rxunixsys-SysUnix.txt; ruled: Moritz 2026-11-03
-extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_DEVICE	Environment	the test stats the C++ rxapi's socket file $XDG_RUNTIME_DIR/.ooRexx-VERSION-ARCH-USER.service, which this crate's service (own name and protocol, D7) does not create; record: rust/corpus/suite-oracle-runs/extensions-platform-unix-rxunixsys-SysUnix.txt; ruled: Moritz 2026-11-03
-extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_IDS	Environment	the test stats the C++ rxapi's socket file $XDG_RUNTIME_DIR/.ooRexx-VERSION-ARCH-USER.service, which this crate's service (own name and protocol, D7) does not create; record: rust/corpus/suite-oracle-runs/extensions-platform-unix-rxunixsys-SysUnix.txt; ruled: Moritz 2026-11-03
-extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_INODE	Environment	the test stats the C++ rxapi's socket file $XDG_RUNTIME_DIR/.ooRexx-VERSION-ARCH-USER.service, which this crate's service (own name and protocol, D7) does not create; record: rust/corpus/suite-oracle-runs/extensions-platform-unix-rxunixsys-SysUnix.txt; ruled: Moritz 2026-11-03
-extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_NUMBERLINKS	Environment	the test stats the C++ rxapi's socket file $XDG_RUNTIME_DIR/.ooRexx-VERSION-ARCH-USER.service, which this crate's service (own name and protocol, D7) does not create; record: rust/corpus/suite-oracle-runs/extensions-platform-unix-rxunixsys-SysUnix.txt; ruled: Moritz 2026-11-03
-extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_PERMISSIONS	Environment	the test stats the C++ rxapi's socket file $XDG_RUNTIME_DIR/.ooRexx-VERSION-ARCH-USER.service, which this crate's service (own name and protocol, D7) does not create; record: rust/corpus/suite-oracle-runs/extensions-platform-unix-rxunixsys-SysUnix.txt; ruled: Moritz 2026-11-03
-extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_SIZE	Environment	the test stats the C++ rxapi's socket file $XDG_RUNTIME_DIR/.ooRexx-VERSION-ARCH-USER.service, which this crate's service (own name and protocol, D7) does not create; record: rust/corpus/suite-oracle-runs/extensions-platform-unix-rxunixsys-SysUnix.txt; ruled: Moritz 2026-11-03
+extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSCRYPT	Environment	SysCrypt raises 43.1 on both sides, no SysCrypt routine being found; record: rust/corpus/suite-oracle-runs/extensions-platform-unix-rxunixsys-SysUnix.txt
+extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_DEVICE	Environment	the test stats the C++ rxapi's socket file $XDG_RUNTIME_DIR/.ooRexx-VERSION-ARCH-USER.service, which this crate's service (own name and protocol, D7) does not create; record: rust/corpus/suite-oracle-runs/extensions-platform-unix-rxunixsys-SysUnix.txt
+extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_IDS	Environment	the test stats the C++ rxapi's socket file $XDG_RUNTIME_DIR/.ooRexx-VERSION-ARCH-USER.service, which this crate's service (own name and protocol, D7) does not create; record: rust/corpus/suite-oracle-runs/extensions-platform-unix-rxunixsys-SysUnix.txt
+extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_INODE	Environment	the test stats the C++ rxapi's socket file $XDG_RUNTIME_DIR/.ooRexx-VERSION-ARCH-USER.service, which this crate's service (own name and protocol, D7) does not create; record: rust/corpus/suite-oracle-runs/extensions-platform-unix-rxunixsys-SysUnix.txt
+extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_NUMBERLINKS	Environment	the test stats the C++ rxapi's socket file $XDG_RUNTIME_DIR/.ooRexx-VERSION-ARCH-USER.service, which this crate's service (own name and protocol, D7) does not create; record: rust/corpus/suite-oracle-runs/extensions-platform-unix-rxunixsys-SysUnix.txt
+extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_PERMISSIONS	Environment	the test stats the C++ rxapi's socket file $XDG_RUNTIME_DIR/.ooRexx-VERSION-ARCH-USER.service, which this crate's service (own name and protocol, D7) does not create; record: rust/corpus/suite-oracle-runs/extensions-platform-unix-rxunixsys-SysUnix.txt
+extensions/platform/unix/rxunixsys/SysUnix	TEST_SYSSTAT_SIZE	Environment	the test stats the C++ rxapi's socket file $XDG_RUNTIME_DIR/.ooRexx-VERSION-ARCH-USER.service, which this crate's service (own name and protocol, D7) does not create; record: rust/corpus/suite-oracle-runs/extensions-platform-unix-rxunixsys-SysUnix.txt
 extensions/platform/unix/rxunixsys/SysUnix	TEST_WORDEXP	Deviation 90	SysWordexp is refused, every call raising 40.1
 utilities/rexx/rexx_command	TEST_PASSINGARGS7	Deviation 40	a child rexx's OUTPUT and ERROR merged into one array interleave by hand-over
 utilities/rxapi	TEST_RXAPI_LOCKED	Deviation 86	the test expects rxapi already running in every Rexx process and the oracle's two lock-file lines from a second rxapi

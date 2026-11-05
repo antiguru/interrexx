@@ -1,6 +1,7 @@
 # L0 differential corpus
 
-Each `.rex` file here is run under both interpreters by `rexx-diff`, and their
+Each `.rex` file under `lang/` and `num/` (and the few others `differential.txt`
+names) is run under both interpreters by the differential harnesses, and their
 normalised stdout, stderr, and exit code must match exactly.
 
 ## The one rule: determinism
@@ -9,20 +10,20 @@ A program here must produce byte-identical output on every run of the *same*
 interpreter. No `DATE()`, no `TIME()`, no process IDs, no file system state, no
 directory listings, no addresses, no iteration over an unordered collection.
 
-**Narrowed for the programs `phase-7.txt` lists, not dropped.** Each corpus
-program runs with its working directory set to one of its own, created empty
-before the oracle's run and emptied again before this crate's, so both sides
-see the same absolute path and the same state. A program there may create,
-read and delete files inside that directory. It still prints no timestamp, no
-size of a file it did not write, no directory listing it did not create, and
-no host variable's value.
+**Narrowed for a program's own files, not dropped.** Each corpus program runs
+with its working directory set to one of its own, created empty before the
+oracle's run and emptied again before this crate's, so both sides see the same
+absolute path and the same state. A program there may create, read and delete
+files inside that directory. It still prints no timestamp, no size of a file it
+did not write, no directory listing it did not create, and no host variable's
+value.
 
-**Narrowed again for the programs `phase-6.txt` and `phase-8.txt` list.** A program there may
-load one of the oracle's own compiled extensions, which is a file outside its
-run directory and outside this repository's own build. It is named through an
-`LD_LIBRARY_PATH={oraclelib}` sidecar rather than found on the ambient
-machine, it is loaded and never rebuilt, and it prints no address: a
-`.Pointer` renders differently on every run.
+**Narrowed again for compiled extensions.** A program may load one of the
+oracle's own compiled extensions, which is a file outside its run directory and
+outside this repository's own build. It is named through an
+`LD_LIBRARY_PATH={oraclelib}` sidecar rather than found on the ambient machine,
+it is loaded and never rebuilt, and it prints no address: a `.Pointer` renders
+differently on every run.
 
 **`rxmath`, `rxregexp`, `rxsock` and `rxunixsys` are this crate's own Rust
 libraries**, answered before any `dlopen`, so a program naming them tests those
@@ -31,87 +32,68 @@ shared-library path. A program that is about that path names `rxmathc`,
 `rxregexpc`, `rxsockc` or `rxunixsysc` instead and puts `{instruments}` on its
 `LD_LIBRARY_PATH` after `{oraclelib}`: the harness's directory of links to the
 oracle's `librxmath.so`, `librxregexp.so`, `librxsock.so` and
-`librxunixsys.so` under those names
-(`INSTRUMENTS` in `crates/rexx-exec/tests/support/sidecar.rs`), so both sides
-load the same C binary. Each such program has a `_rust` copy naming the Rust library
-(`phase-10.txt`).
+`librxunixsys.so` under those names (`INSTRUMENTS` in
+`crates/rexx-exec/tests/support/sidecar.rs`), so both sides load the same C
+binary. Each such program has a `_rust` copy naming the Rust library.
 
-**The case that joins those last two, because nothing about the program says
-so.** The order `DO OVER` yields a hash collection's indexes in is the order of
-the oracle's own hash table: bucket `key->getHashValue() % bucketSize`,
-iterated bucket-ascending. **Whether that reproduces from run to run depends on
-what the keys are, not on which collection class it is.** A string's
-`getHashValue` is `31*h + byte` over its own content
+**Hash iteration order.** The order `DO OVER` yields a hash collection's
+indexes in is the order of the oracle's own hash table: bucket
+`key->getHashValue() % bucketSize`, iterated bucket-ascending. Whether that
+reproduces from run to run depends on what the keys are, not on which collection
+class it is. A string's `getHashValue` is `31*h + byte` over its own content
 (`classes/StringClass.hpp:328`), and a number's delegates to its string value.
 Every other object's is `RexxObject::identityHash`, which is
 `((uintptr_t)this) ^ UINTPTR_MAX` (`classes/ObjectClass.hpp:340`) -- the
-address. ASLR moves every address, and therefore every bucket index, by the
-same delta on each run.
+address, which ASLR moves on every run.
 
 Measured, ten oracle runs each: a program filling an `IdentityTable` with eight
-fresh `.Object`s and printing their values in iteration order gives **five
-distinct outputs**, each a rotation of one cyclic sequence. The same program
-over a `StringTable` of eight string keys gives **one** output in ten.
+fresh `.Object`s and printing their values in iteration order gives five
+distinct outputs, each a rotation of one cyclic sequence. The same program over
+a `StringTable` of eight string keys gives one output in ten.
 
 So **no program here may print the iteration order of a collection whose keys
 are objects rather than strings or numbers**. That covers an `IdentityTable`
-outright and covers a `Table`, `Set`, `Bag` or `Relation` whenever what went
-into it was not a string. It is not a gap this project could close by working
-harder: the oracle does not agree with itself, so a differential has nothing to
-compare against and such a row would land as an intermittent red rather than as
-an honest gap. Iterating a **string**-keyed table and printing something
-order-independent -- a count, or a lookup of each index against the table --
-is fine, and is what `lang/do_over_string_table.rex` does.
+outright and a `Table`, `Set`, `Bag` or `Relation` whenever what went into it
+was not a string. The oracle does not agree with itself there, so a differential
+has nothing to compare against. Iterating a string-keyed table and printing
+something order-independent -- a count, or a lookup of each index against the
+table -- is fine, and is what `lang/do_over_string_table.rex` does.
 
-**A class object is an exception, and it is one because `RexxClass` overrides
-the hash rather than because a class is special.** `RexxClass::getHashValue`
-(`classes/ClassClass.cpp:209`) answers `id->getHashValue()` -- the hash of the
-class's id string -- so a class object's bucket is string-derived and does not
-move with ASLR. The other overrides are whatever
-
-```
-/bin/grep -rn "HashCode .*::getHashValue" ../../../ooRexx/interpreter/
-```
-
-names; `RexxNilObject`'s answers a stored constant, so `.nil` is a second
-object that is neither a string nor a number and still hashes reproducibly.
-The collection this reaches is the collector's own uninit table, whose
-iteration order is the order class `UNINIT`s run at termination.
-`lang/uninit_class_sweep_order.rex` prints that order and is allowed to; the
-sequences it and the oracle produce are asserted in
-`crates/rexx-classes/tests/uninit_sweep_order.rs`. **An instance in the same
-table is not**: its hash is the inherited `identityHash`, so a program whose
-termination sweep mixes an instance `UNINIT` with a class `UNINIT` is exactly
-the shape the rule above forbids -- measured, twenty runs of one class at
-bucket 16 beside one live instance gave the instance first nineteen times and
-the class first once.
+A class object is an exception, because `RexxClass::getHashValue`
+(`classes/ClassClass.cpp:209`) answers the hash of the class's id string, so a
+class object's bucket does not move with ASLR. `RexxNilObject`'s hash is a
+stored constant, so `.nil` is reproducible too. The collection this reaches is
+the collector's own uninit table, whose iteration order is the order class
+`UNINIT`s run at termination. `lang/uninit_class_sweep_order.rex` prints that
+order and is allowed to; the sequences it and the oracle produce are asserted in
+`crates/rexx-classes/tests/uninit_sweep_order.rs`. An instance in the same table
+is not reproducible (its hash is the inherited `identityHash`): a program whose
+termination sweep mixes an instance `UNINIT` with a class `UNINIT` is the shape
+the rule forbids -- measured, twenty runs of one class at bucket 16 beside one
+live instance gave the instance first nineteen times and the class first once.
 
 When the self-test (`--cpp X --rs X`, the same binary twice) reports a
-divergence, the corpus is at fault, not the differ. **Fix the program; never
-loosen `normalize` to make it pass** — everything normalisation strips is a
-class of divergence the project can no longer detect.
+divergence, the corpus is at fault, not the differ. Fix the program; never loosen
+`normalize` to make it pass, because everything normalisation strips is a class
+of divergence that can no longer be detected.
 
 ## A program that needs a second file beside it
 
-**Two shapes work, and both are honest.** What selects a program here is the
-extension, so a required file spelled `.cls` is outside every scan; and a
-required file spelled `.rex` is simply a corpus program of its own, filed like
-any other. A file opening with a directive has no main body and runs as a
-no-op, which is what makes the second shape available even for a pure library
--- measured against the oracle and both engines, rc 0 with both descriptors
-empty. (`lang/gate_variants.rex` also prints nothing, but by a different
-mechanism: it has a main body and guards every effect behind `if 0 then`.)
+Two shapes work. What selects a program here is the extension, so a required
+file spelled `.cls` is outside every scan; and a required file spelled `.rex` is
+simply a corpus program of its own, filed like any other. A file opening with a
+directive has no main body and runs as a no-op, which makes the second shape
+available even for a pure library.
 
-**What is not allowed is a `.rex` helper nobody files.** It would be counted as
-a program nothing runs, which is the gap
-`every_lang_program_is_run_or_named_unfiled` exists to close.
+What is not allowed is a `.rex` helper nobody files: it would be a program
+nothing runs, which `every_lang_program_is_run_or_named_unfiled` exists to
+catch.
 
-`lang/package_requires.rex` is the first program needing a second file, and it
-takes the `.cls` shape because its helpers are class libraries and `.cls` is
-what ooRexx calls one. Naming them without an extension in the directive means
-the search's own `.cls` step is what finds them. A `.cls` helper needs no
-`sourceline_oracle` expectation and appears in no subset file, because no
-scanner sees it. `lang/package_namespace.rex` follows the same convention.
+`lang/package_requires.rex` and `lang/package_namespace.rex` take the `.cls`
+shape, because their helpers are class libraries. Naming them without an
+extension in the directive means the search's own `.cls` step finds them. A
+`.cls` helper needs no `sourceline_oracle` expectation and appears in no corpus
+list, because no scanner sees it.
 
 ## Running it
 
@@ -122,349 +104,141 @@ cargo build --release
 ```
 
 Expect `N programs, 0 divergences` and exit 0, where `N` is whatever the tool
-itself counts (`find corpus -name '*.rex' | wc -l` agrees with it) -- do not
-hard-code a number here, since it goes stale every time a program is added or
-removed and nothing catches the drift. Substituting any other binary for
-`--rs` should report `N` divergences and exit 1; that negative control is what
-makes a zero meaningful.
+itself counts (`find corpus -name '*.rex' | wc -l` agrees with it). Substituting
+any other binary for `--rs` should report `N` divergences and exit 1; that
+negative control is what makes a zero meaningful.
 
-## Phase 4a subset
+## Corpus lists
 
-Phase 4a's executor implements a subset of the language -- no builtin
-functions, no `CALL`/`INTERPRET`/`PARSE`, no message sends, no `::`
-directives, no `DO WITH` or `DO OVER` on a stem. `phase-4a.txt` lists exactly
-the programs in this directory that stay inside that subset, so Task 14's
-harness has something narrower to run than "every `.rex` file here". It is a
-plain list, one path per line, relative to this directory; rebuild it by hand
-whenever a program's scope changes rather than trusting a stale copy.
+One path per line, relative to this directory; `#` starts a comment.
 
-## Phase 4b subset
+* `differential.txt` -- every program the differential harnesses run under both
+  interpreters (`crates/rexx-exec/tests/corpus.rs`, `coverage.rs`,
+  `collect_stress.rs`, `ir_recorded.rs`, `trace_oracle.rs`, and the IR shape
+  sweep). Every `lang/*.rex` is either listed here or named in `unfiled.txt`
+  with a reason; the entries outside `lang/` are pinned by `corpus.rs`'s
+  `NON_LANG_PROGRAMS`.
+* `concurrency.txt` -- the programs that start activities, which the
+  scheduler-simulation gate (`tests/group_runs/`) replays. Each is also in
+  `differential.txt`, and `corpus.rs` checks that.
+* `suite-rexxutil-groups.txt` -- the ooTest groups that name a RexxUtil routine,
+  for `REXX_SUITE_GROUPS`; `suite.rs` re-derives it from the command its header
+  records.
 
-`phase-4b.txt` is the same format and is **read alongside `phase-4a.txt`, not
-instead of it**: `read_subset` takes a list of files and unions them in
-first-seen order, so every 4a witness stays exercised as later phases add
-their own programs. A construct 4b implements cannot have its witness in
-`phase-4a.txt`, whose own header excludes those constructs by definition, so
-each phase gets a file rather than the one file growing. The file's own header
-says what that subset admits and what it still excludes, and moves one line at
-a time as 4b's tasks land.
+What a listed program may not print, beyond the determinism rule above:
 
-## Phase 4c subset
-
-`phase-4c.txt` is the same format again, and is read alongside both earlier
-files for the same reason: `phase-4b.txt`'s own header excludes `PARSE` by
-definition, so a witness for a construct 4c implements cannot go there without
-making that header false.
-The file's own header says what that subset admits and what it still excludes,
-and moves one line at a time as 4c's tasks land.
-
-What it admits that no earlier subset does comes with rules attached, and they
-are worth naming here rather than only in the file's own header.
-Builtin function calls are admissible only in the names
-`crates/rexx-exec/tests/builtin_status.rs` measures as implemented, and
-`builtin-status.txt` is that machine-derived table.
-`PARSE SOURCE` is admissible but its third word is not: that word is the
-program's own absolute path, so a program printing it would put the filesystem
-in its output and break the determinism rule above.
-`lang/parse_sources.rex` projects it away, and `lang/source_arg.rex` -- an
-earlier program that is *not* in this subset, because it calls builtins the
-status table does not yet call implemented -- already did the same.
-`PARSE VERSION` is implemented and no program here prints it either, for a
-related reason: all three of its fields are the interpreter's own build
-identity, the last a build date, so a committed differential over it would be a
-claim about which binary the oracle was built from.
-`crates/rexx-exec/tests/parse_version_oracle.rs` is where that string is
-checked instead.
-
-### What a `phase-4c.txt` program may not do
-
-Five rules, each of which would break the determinism rule above or would put
-a program's answer outside what any harness here can compare.
-
-* **No `RANDOM()`, no `DATE()`, no `TIME()`** (decision D11).
-  All three answer differently on two runs of the *same* interpreter, so a
-  differential over one compares two unrelated values and calls the difference
-  a divergence.
-  Their only gate is in-crate unit tests, in `crates/rexx-exec/src/builtin/`,
-  which pin the properties that do not move -- a rendering, an argument's
-  arity, that two `TIME('R')` reads in one clause answer identically.
-* **`QUEUED()` only over a queue the program filled itself.**
-  The data queue is not the program's own storage -- it is named by
-  `RXQUEUE`/`rxapi` and outlives the program -- so a count taken over lines
-  the program did not push is a statement about the session it ran in.
-* **No dependence on external routine resolution.**
-  The oracle searches the filesystem for a `.rex` file named for a call target
-  matching no label, no builtin and no `::ROUTINE`; this crate raises 43.1
-  instead, and that search is Phase 7's.
-  A program relying on it answers according to what happens to be sitting in
-  the directory the harness runs it from.
-* **No `DO OVER` on a stem** (decision D3), the same exclusion `phase-4a.txt`
-  and `phase-4b.txt` carry.
-  The traversal-order deviation it would expose is recorded in
-  `docs/superpowers/plans/phase-4-exclusions.txt` and is out of scope through
-  the end of Phase 4.
-* **No `::` directive but `::ROUTINE`.**
-  A `phase-4c.txt` program still admits none of the other eight, even though
-  `tests/coverage.rs`'s `assert_program_has_only_admitted_directives` (Phase
-  5a's widening) no longer panics on `::CLASS`/`::METHOD` -- this file's own
-  subset rule is narrower than what the walker merely tolerates.
-
-## Phase 5a subset
-
-`phase-5a.txt` is the same format again, read alongside the three earlier
-files. It is committed **empty** as of Task 1: Phase 5a's own scope --
-`::CLASS`/`::METHOD` installation, Rexx method-body invocation, `EXPOSE` and
-class-scope instance variables, up to `CoreClasses.orx`'s prologue completing
--- is not implemented by any task yet, so there is nothing a corpus program
-could run to agreement with the oracle. `tests/coverage.rs`'s directive
-walker admits `::CLASS` and `::METHOD` without panicking (Task 1), but does
-not descend into either body, so a construct used only inside one is not yet
-counted toward criterion 1's coverage. Each later 5a task appends its own
-witness to the file as its own construct starts agreeing with the oracle.
-
-## Current programs
-
-| File | Covers |
-|---|---|
-| `arith_digits.rex` | `NUMERIC DIGITS`/`FORM`, division, `**`, `//`, `%`, exponential formatting |
-| `parse_template.rex` | `PARSE` with string, literal, positional and `UPPER` templates |
-| `condition_syntax.rex` | `SIGNAL ON SYNTAX`, `RC`, `CONDITION()` |
-| `do_variants.rex` | `DO TO/BY/count/WHILE/UNTIL/OVER`, `ITERATE`, `LEAVE` |
-| `select_when.rex` | `SELECT`/`WHEN`/`OTHERWISE`, `SELECT CASE` |
-| `call_procedure.rex` | `CALL`, `PROCEDURE`, `EXPOSE`, `USE ARG`, `ARG()`, recursion |
-| `stem_compound.rex` | stem defaults, compound variables, tail substitution, `DROP` |
-| `interpret_dynamic.rex` | `INTERPRET` of statements and assignments |
-| `string_builtins.rex` | 20 string builtins including the `C2X`/`X2C`/`D2X`/`X2D` conversions |
-| `trace_output.rex` | `TRACE I` output formatting, which is observable |
-| `source_arg.rex` | `PARSE SOURCE`, `SOURCELINE()`, `ARG()` option forms |
-| `whitespace_significant.rex` | `f(x)` vs `f (x)`, abuttal forms, and the empty-binary-literal trap |
-
-### Phase 4a additions -- executor control flow
-
-Written for Task 14a because, of the programs above, none exercises `LEAVE`
-or `ITERATE` and most exercise the arithmetic core rather than the
-executor's control flow. Every file below stays inside what Phase 4a's
-executor implements (see `phase-4a.txt`): no builtin function calls, no
-`CALL`/`RETURN`/`PROCEDURE`/`USE`/`SIGNAL`/`RAISE`/`INTERPRET`, no
-`PARSE`/`ARG`/`PULL`/`PUSH`/`QUEUE`, no message sends, no `::` directives, no
-command clauses, no `DO WITH`, and no `DO OVER` on a stem.
-
-| File | Covers |
-|---|---|
-| `do_loop_forms.rex` | `do_variants.rex` minus its one `DO OVER` line -- `TO`/`BY`, a repetition count, `WHILE`, `UNTIL`, inline `ITERATE`/`LEAVE` |
-| `do_label.rex` | the explicit `DO LABEL name` form -- on a plain block and on a controlled loop, `LEAVE`/`ITERATE` by that label from a nested loop; the only program constructing `Loop::label` |
-| `leave_nested_outer.rex` | nested `DO` with `LEAVE` naming the outer loop's control variable |
-| `iterate_from_select.rex` | `ITERATE` from inside a `SELECT` nested in a loop |
-| `if_else_chain.rex` | an `IF`/`ELSE IF`/`ELSE` chain with different-length bodies, so a wrong then-exit or false-target is visible |
-| `select_when_bodies.rex` | `SELECT`/`WHEN` bodies several instructions long, so a wrong exit lands inside a neighbouring `WHEN` |
-| `select_when_absorption.rex` | a `WHEN` whose `THEN` instruction is itself a `WHEN` clause -- it is never collected into the `SELECT`'s list |
-| `leave_iterate_variants.rex` | bare and outer-naming `LEAVE`/`ITERATE`, matrixed so mis-wiring either one is visible |
-| `drop_stem_tail.rex` | single-tail vs whole-stem `DROP`, including the tombstone rendering of a dropped compound |
-| `stem_aliasing.rex` | `b. = a.` shares a.'s table; assigning a bare stem into a scalar copies its default; an unset stem renders its own name |
-| `exit_with_value.rex` | `EXIT` with an expression sets the process exit code |
-| `exit_no_value.rex` | bare `EXIT` exits 0 |
-| `number_identity.rex` | a number's `DIGITS`/`FORM` are fixed when it is created, not when it is displayed |
-| `comparison_families.rex` | the four comparison-operator families (simple, strict, simple ordering, strict ordering) and the cases that tell them apart |
-| `deep_nested_expr.rex` | a 3000-term expression, deep enough to matter and far below the oracle's ~150,000-term stack cliff |
-| `trace_results.rex` | `TRACE R` output on stderr, distinct from `SAY`'s stdout |
-
-### Phase 4a additions -- closing criterion 1's variant-coverage gap
-
-Written for Task 14b, closing criterion 1's coverage requirement (every
-`InstructionKind`/`ExprKind`/`LoopKind`/`PrefixOp`/`EndStyle`/`Trace`
-variant in scope, and every `Operator`, constructed by at least one program
-in the subset). A gap analysis found nineteen such variants unconstructed
-by any program above; these three close every one of them.
-
-| File | Covers |
-|---|---|
-| `prefix_dotvar_logical_over_label.rex` | `LOOP` as its own keyword, a bare label, `.nil`, a comma-list condition, `DO OVER` on a non-stem, an `OTHERWISE`-less `SELECT`, prefix `+` and `\`, bare `TRACE`, `TRACE VALUE` |
-| `comparison_operators_remaining.rex` | the ten `Operator` variants no other program constructs (`\>` `\<` `\>>` `\<<` `>>=` `<<=` `<>` `><` `\|` `&&`), and a labelled `SELECT` with an `OTHERWISE` |
-| `trace_numeric_request.rex` | `TRACE` with a bare number (`trace 5`) -- a raiser, Error 24.901, not a no-op, so it has to be this program's last statement |
-
-### Phase 4c additions -- the `PARSE` template engine and the input model
-
-Between them they cover all eight `TriggerKind` variants, the comma fence, the
-`.` placeholder and every `ParseSource` variant but `Version`, which is
-implemented and deliberately unprinted (see the subset section above) because
-every field it carries is the oracle's own build identity. Each file's own
-header states, per block, which wrong answer a defective engine prints.
-
-| File | Covers |
-|---|---|
-| `parse_triggers.rex` | the movement rules, on stdout alone: `-n` against `<n`, `>n`/`<n` as exact slices, the shared backward rule, patterns and the relative trigger that measures from a match's start, word carving, the comma fence, placeholders |
-| `parse_sources.rex` | `PARSE VAR` in all three name shapes, `PARSE ARG` with comma-fenced templates and an omitted argument, `PARSE SOURCE`'s first two words, `UPPER`/`LOWER`/`CASELESS`, and the same two templates under `TRACE R` and `TRACE I` -- the modes disagree about which prefix a target's own value line takes |
-| `pull_queue.rex` | `PULL`, `PARSE PULL`, `PARSE LINEIN` and the `ARG` instruction: the queue's interleaved storage order read back, an exhausted console answering the null string repeatedly, `PARSE LINEIN` declining to consult the queue, and the same five constructs under `TRACE R` and `TRACE I` -- a bare `PULL`'s `>K>` line carries the value before the upcase and the `>>>` after it the value after |
-| `address_env.rex` | `ADDRESS` naming an environment: the constant, the two computed forms and the bare toggle under `TRACE R` and `TRACE I`, the 250-byte name limit either side of the boundary, and -- read back through `ADDRESS()` -- the platform default, the swap four toggles deep, and inheritance into a callee in both halves of the pair |
-| `state_builtins.rex` | the builtins that read interpreter state other than `ADDRESS`: the `NUMERIC` trio across a call, `TRACE()`'s five settings that trace nothing and are still five distinct answers, `ARG` over a call with an interior omission, and `CONDITION` from inside both a `SIGNAL ON` and a `CALL ON` handler -- including the re-arm that separates the stored `I` from the live `S` |
-| `procedure_entry_rule.rex` | which entries admit a `PROCEDURE`: the two internal-call shapes that are legal, the two `::ROUTINE` shapes that raise 17.1, and -- once the refusal is trapped -- the caller's own next variable, which is where admitting it corrupts the frame stack |
-| `builtin_argument_range.rex` | one range message twice: a builtin's 40.9xx substitutes the integer its argument converted to, not the rendering D15 fixed at creation, and only an argument that is not an integer literal crossed with a `NUMERIC DIGITS` setting can tell the two apart. Fatal, so it is the last clause |
+* **`QUEUED()` only over a queue the program filled itself.** The data queue is
+  named by `RXQUEUE`/`rxapi` and outlives the program, so a count taken over
+  lines the program did not push is a statement about the session it ran in.
+* **Not `PARSE SOURCE`'s third word**, the program's own absolute path.
+  `lang/parse_sources.rex` and `lang/source_arg.rex` project it away.
+* **Not `PARSE VERSION`**: all three fields are the interpreter's own build
+  identity. `crates/rexx-exec/tests/parse_version_oracle.rs` checks it instead.
 
 The command line and a non-empty console are outside every corpus program's
-reach: the harness passes no arguments and an empty stdin, and a program whose
-output depended on the console could not be deterministic. Both are compared
-against the oracle in `crates/rexx-exec/tests/input_oracle.rs`, which drives
-the `rexx` binary with an `argv` and a fed stdin instead.
+reach: the harness passes no arguments and an empty stdin. Both are compared
+against the oracle in `crates/rexx-exec/tests/input_oracle.rs`, which drives the
+`rexx` binary with an `argv` and a fed stdin instead.
 
-### `num/` — Phase 2, the numeric core
+## Directories
 
-`digits_rounding.rex`, `exponential.rex` and `operators.rex` are listed here
-as corpus programs but are **not** in the Phase 4a subset (`phase-4a.txt`):
-all three build `ExprKind::List` from a comma in a `SAY`, which is out of
-4a's scope. They stay in this directory for Phase 5, once `List` exists --
-the general form builds an Array, which is Phase 5's object model, not a 4b
-or 4c one (`docs/superpowers/plans/phase-4-exclusions.txt`, "EXPRKIND
-OWNERSHIP").
-
-| File | Covers |
-|---|---|
-| `digits_rounding.rex` | `NUMERIC DIGITS` 1-12 and 40; round-half-up at the boundary |
-| `form_notation.rex` | `SCIENTIFIC` vs `ENGINEERING`; `FORM()` |
-| `operators.rex` | `+ - * / % // **` across sign combinations |
-| `comparison.rex` | numeric vs strict comparison, `<<` and `>>` |
-| `fuzz.rex` | `NUMERIC FUZZ` altering `=` but not `==` |
-| `format_trunc.rex` | `FORMAT()` in all argument forms, `TRUNC()` |
-| `datatype_num.rex` | `DATATYPE` `N`/`W`/default |
-| `exponential.rex` | E-notation thresholds, which are asymmetric |
-| `errors.rex` | error numbers 42, 41 and 26 |
-| `canonical_form.rex` | trailing-zero preservation; zero collapsing |
-| `notation_thresholds.rex` | the E-notation boundaries, which use *different* exponents per side |
-
-### `expr/` — Phase 3, the expression grammar
-
-Not a `rexx-diff` corpus. `precedence.tsv` is a table of generated expressions
-with the value or error number `build/bin/rexx` gave for each, read by
-`rexx-parse`'s differential test so that `cargo test` needs no built C++
-interpreter. Its own header records how it was generated and what the columns
-mean.
-
-### `gate-tables/` -- the Phase 5 gate tables' probe programs
-
-`.rex` files, and **not** a `rexx-diff` corpus in the sense the top of this
-file means. Each one is the probe for one row of a Phase 5 gate table, and
-most of them diverge from the oracle today, which is what their row records.
-`gate-tables/README.md` says which table reads which subdirectory and what a
-missing or unnamed probe does.
-
-The determinism rule above still binds them, because `rexx-diff`'s walk is
-recursive and its self-test (`--cpp X --rs X`) reads every `.rex` under
-`corpus/`: measured with the subtree in place, 440 programs, 0 divergences,
-exit 0. What does not bind them is agreement between the two interpreters --
-`rexx-diff --cpp <c++> --rs <rust>` reports their divergences, and each of
-those is a gate-table row rather than a corpus defect.
-
-### `errors/` — Phase 3, the parse-error gate
-
-Not a `rexx-diff` corpus either.
-`parse-errors.tsv` holds one row per program with the answer `build/bin/rexxc` gave for it: the major number, sub-number, reported line and secondary message when it refused, and `ok` when it translated.
-The `message` column is the oracle's secondary line after `Error N.M:  `, escaped as `program` is, and `-` where the oracle printed none.
-`rexx-parse`'s `tests/errors.rs` reads it and checks both directions, so a parser that rejected nothing and one that rejected everything both fail, and it checks each secondary message.
-`rexx-exec`'s `tests/rexxc.rs` reads it too and checks this crate's `rexxc` against each row.
-
-The `class` field is the one worth knowing about.
-It says whether the oracle refused to *translate* the program or rejected it later, while installing the package, and that is recorded per row rather than derived from the error number.
-The two install-time classes are `98.903` and `90.999`, so a rule keyed on a `98.9xx` prefix would have covered half of them and read as correct.
-
-Nothing in the file is our parser's own answer.
-That is the point: a row records only what the oracle said, so a divergence shows up as a test failure rather than as an expected value.
-The header records how the rows were collected, what each class means, and what the escaping covers.
+* `lang/` -- the language and class-library programs, one subject per file, named
+  for what they pin. Most say in their header which wrong answer a defective
+  engine would print.
+* `num/` -- the numeric core: `NUMERIC DIGITS`/`FORM`/`FUZZ`, rounding,
+  notation thresholds, comparison, operators, error numbers. All are in
+  `differential.txt`.
+* `expr/` -- not a `rexx-diff` corpus. `precedence.tsv` is a table of generated
+  expressions with the value or error number the oracle gave for each, read by
+  `rexx-parse`'s differential test so that `cargo test` needs no built C++
+  interpreter. Its own header records how it was generated and what the columns
+  mean.
+* `errors/` -- not a `rexx-diff` corpus either. `parse-errors.tsv` holds one row
+  per program with the answer `build/bin/rexxc` gave for it: the major number,
+  sub-number, reported line and secondary message when it refused, and `ok` when
+  it translated. `rexx-parse`'s `tests/errors.rs` reads it and checks both
+  directions, so a parser that rejected nothing and one that rejected everything
+  both fail; `rexx-exec`'s `tests/rexxc.rs` checks this crate's `rexxc` against
+  each row. The `class` field says whether the oracle refused to *translate* the
+  program or rejected it later, while installing the package, and is recorded per
+  row rather than derived from the error number: the two install-time classes
+  are `98.903` and `90.999`, so a rule keyed on a `98.9xx` prefix would cover
+  half of them. A row records only what the oracle said, so a divergence shows up
+  as a test failure rather than as an expected value.
+* `gate-tables/` -- `.rex` probes, one per row of a gate table, and **not** a
+  `rexx-diff` corpus in the sense the top of this file means. Most of them
+  diverge from the oracle, which is what their row records.
+  `gate-tables/README.md` says which table reads which subdirectory and what a
+  missing or unnamed probe does. The determinism rule still binds them, because
+  `rexx-diff`'s walk is recursive and its self-test reads every `.rex` under
+  `corpus/`; agreement between the two interpreters does not.
+* `model/` -- the executable numeric and stream models, checked against the
+  native implementations by `crates/rexx-exec/tests/numeric_model.rs` and
+  `stream_model.rs`.
+* `docs/` -- tables extracted from the reference documentation (class set,
+  class methods, directive options, hierarchy edges, `provide` sections).
+* `sim-oracle/` -- the committed oracle outcome sets of the scheduler-simulation
+  gate.
+* `suite-oracle-runs/` -- recorded oracle runs behind the suite's environment
+  licences.
+* The remaining `.tsv` and `.txt` files are tables read by one test each; each
+  names its reader and column meanings in its own header.
 
 ## Things this corpus learned the hard way
 
 `say a"|"b` does not concatenate three values. `"|"b` is read as a **binary
-string literal** — the `b` suffix binds to the preceding quote — and the
+string literal** -- the `b` suffix binds to the preceding quote -- and the
 program dies with error 15.4. `parse_template.rex` uses explicit `||` for
 exactly this reason.
 
-Worse, the same rule usually fails *silently*. `say a''b` looks like the
-classic idiom for blank-free concatenation but prints `x`, not `xy`: `''b` is
-an empty binary literal, so the line concatenates `a` with `""` and never
-reads `b`. This was written into `whitespace_significant.rex` as a comment
-asserting the wrong output, and only caught by running it.
+The same rule usually fails *silently*. `say a''b` looks like the classic idiom
+for blank-free concatenation but prints `x`, not `xy`: `''b` is an empty binary
+literal, so the line concatenates `a` with `""` and never reads `b`
+(`whitespace_significant.rex`).
 
 `.integer` is not an environment symbol; `Integer` is internal and unexposed.
-`.rexxinfo` is an *instance*, not a class, so it has no `~id`. Both were in
-the first draft of the program that is now
-`gate-tables/concepts/classmeth.rex` and both failed.
+`.rexxinfo` is an *instance*, not a class, so it has no `~id`.
 
-`LEAVE name`/`ITERATE name` accept two different kinds of name, and a
-*clause* label is neither of them. `outer: do i = 1 to 3` then `leave outer`
-fails, and it fails the **same way** regardless of where the clause label
-sits relative to the `DO` it was meant to name: `rexxc` accepts the program
-(it is not a translate-time error), and at run time `LEAVE`/`ITERATE` refuse
-the name with error 28.3 ("must either match the label of a current loop or
-block instruction") — a clause label is a `SIGNAL` target, not a loop name,
-and 28.3 does not distinguish "wrong kind of name" from "right kind, wrong
-loop". Error 47.2 ("Labels are not allowed within a DO/LOOP block") is
-unrelated: it is a translate-time rejection of a clause label written
-*inside* a loop's body, between `DO` and `END`, which has nothing to do with
-naming the loop at all. (An earlier revision of this entry conflated the
-two — measure the claim that only lands in documentation, not just the one
-that decides what a program contains.) What does work is either the loop's
-own **control variable** (`do outer = 1 to 3` / `leave outer`, used
-throughout `leave_nested_outer.rex` and `leave_iterate_variants.rex`) or the
-explicit **`DO LABEL name`** form (`do label outer i = 1 to 3` / `leave
-outer`, which also works on a plain non-repetitive block and is the only
-corpus program that constructs the parser's `Loop::label` field — see
-`do_label.rex`). First draft of `leave_nested_outer.rex` used a clause label
-and failed with 28.3 before this was measured.
+`LEAVE name`/`ITERATE name` accept two different kinds of name, and a *clause*
+label is neither of them. `outer: do i = 1 to 3` then `leave outer` fails the
+same way wherever the clause label sits relative to the `DO`: `rexxc` accepts
+the program, and at run time `LEAVE`/`ITERATE` refuse the name with error 28.3
+("must either match the label of a current loop or block instruction"). A
+clause label is a `SIGNAL` target, and 28.3 does not distinguish "wrong kind of
+name" from "right kind, wrong loop". Error 47.2 ("Labels are not allowed within
+a DO/LOOP block") is unrelated: a translate-time rejection of a clause label
+written *inside* a loop's body. What works is the loop's own **control
+variable** (`do outer = 1 to 3` / `leave outer`, used throughout
+`leave_nested_outer.rex` and `leave_iterate_variants.rex`) or the explicit **`DO
+LABEL name`** form (`do label outer i = 1 to 3` / `leave outer`, which also
+works on a plain non-repetitive block and is the only corpus program that
+constructs the parser's `Loop::label` field -- see `do_label.rex`).
 
 A `WHEN` whose `THEN` instruction is itself a `WHEN` clause
-(`select_when_absorption.rex`) parses and is accepted, and the second `WHEN`
-is never added to the enclosing `SELECT`'s clause list — it is silently
-swallowed as the first `WHEN`'s (empty) consequence. That is confirmed only
-for the case where the first `WHEN`'s condition is *true*, which is all the
-shipped program uses. The *false* variant is an orphaned-`WHEN` landmine, not
-a corpus program, and this is its full writeup:
-
-```rexx
-n = 0
-select
-  when 1 = 2 then
-    when 2 = 2 then n = 42
-  otherwise
-    n = 99
-end
-say n
-```
-
-`build/bin/rexxc` accepts this file and exits 0 — it is not a parse defect.
-Running it under `build/bin/rexx` segfaults deterministically: exit 139,
-3/3 runs (measured 2026-07-30). Changing only the first line's `2` to a `1`
-(so the first `WHEN`'s condition is true, control never reaches the orphaned
-second `WHEN`, and this is exactly `select_when_absorption.rex`) removes the
-crash entirely — output `0`, exit 0, also 3/3 stable. So the crash is
-specifically in the fallthrough path past an unmatched `WHEN` whose `THEN`
-was itself absorbed, not in parsing or in the SELECT construct generally.
-This is a real defect in the oracle itself. It is being surfaced upstream by
-the team lead's human partner with this repro; it is deliberately not built
-into a corpus program, because the corpus's one rule is byte-identical
-output between the two interpreters under test, and a memory-safe Rust
-reimplementation neither can nor should reproduce a C++ segfault.
+(`select_when_absorption.rex`) parses and is accepted, and the second `WHEN` is
+never added to the enclosing `SELECT`'s clause list: it is silently swallowed as
+the first `WHEN`'s (empty) consequence. That is confirmed only for the case
+where the first `WHEN`'s condition is *true*, which is all the shipped program
+uses. The *false* variant crashes the oracle and is entry 1 of
+`oracle-crashes.txt`; it is deliberately not a corpus program, because the
+corpus's one rule is byte-identical output between the two interpreters, and a
+memory-safe reimplementation neither can nor should reproduce a C++ segfault.
 
 **Editing a `corpus/lang/*.rex` file invalidates its `sourceline_oracle`
-expectation, even if you only touched a comment or a blank line.**
-`rust/crates/rexx-parse/tests/sourceline_oracle/<name>.txt` records the
-oracle's line count and every one of its lines by position, so any edit that
-changes the file's line count desyncs that index against the program —
-behaviour does not need to change for the expectation to go stale, only the
-line numbering does. This bit precisely because it looked safe: a fix to
-`leave_nested_outer.rex`'s header comment ran byte-identically, same stdout,
-same stderr, same exit code, across two runs, which is every check a careful
-edit would think to make, and the only thing that moved was the line count.
-The only tell is `cargo test -p rexx-parse` failing a `sourceline`-named
-test, or, cheaper, `wc -l` on the `.rex` file disagreeing with the `count`
-on the first line of its `.txt`.
-
-Regenerate with the driver named in `sourceline_oracle.rs`'s own module
-comment: save it to a scratch file as `srclines.rex`, then from the
-repository root,
+expectation, even if you only touched a comment.**
+`rust/crates/rexx-parse/tests/sourceline_oracle/<name>.txt` records the oracle's
+line count and every one of its lines by position, so any edit to the text or the
+line count desyncs it. The only tell is `cargo test -p rexx-parse` failing a
+`sourceline`-named test. To change a comment, keep the line count and every
+non-comment line, then regenerate with the driver named in
+`sourceline_oracle.rs`'s own module comment: save it to a scratch file as
+`srclines.rex`, then from the repository root,
 
 ```bash
 for f in rust/corpus/lang/*.rex; do
   name=$(basename "$f" .rex)
-  out=$( ( ulimit -v 1048576; build/bin/rexx SCRATCH/srclines.rex "$f" ) \
-          2>/dev/null | grep '^%SRCG%' )
+  out=$( ( ulimit -v 1048576; build/bin/rexx SCRATCH/srclines.rex "$f" \
+          2>/dev/null ) | grep '^%SRCG%' )
   count=$(printf '%s\n' "$out" | sed -n 's/^%SRCG%COUNT //p')
   { echo "count $count"; printf '%s\n' "$out" | sed -n 's/^%SRCG%L//p'; } \
     > rust/crates/rexx-parse/tests/sourceline_oracle/$name.txt
@@ -472,4 +246,4 @@ done
 ```
 
 Regenerating for every file in the loop is cheap and idempotent, so do that
-rather than hand-picking which files you think you changed.
+rather than hand-picking which files changed.

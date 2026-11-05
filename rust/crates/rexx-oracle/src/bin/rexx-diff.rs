@@ -56,7 +56,7 @@ fn main() -> ExitCode {
     let mut programs: Vec<PathBuf> = walk(&corpus);
     programs.sort();
     // A mistyped or empty corpus directory would otherwise report
-    // "0 programs, 0 divergences" and exit 0 -- the phase's central
+    // "0 programs, 0 divergences" and exit 0 -- the central
     // self-test passing by finding nothing.
     if programs.is_empty() {
         eprintln!("no .rex programs under {}", corpus.display());

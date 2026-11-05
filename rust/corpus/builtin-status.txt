@@ -17,11 +17,9 @@
 #
 # THE FOUR STATUSES.
 #
-#   excluded     Excluded outright from Phase 4 by
-#                docs/superpowers/plans/phase-4-exclusions.txt. No probe, and
-#                nothing is run. The three names that file excludes only
-#                partially are NOT here: they are in scope in their other
-#                form and are probed on it.
+#   excluded     Excluded outright by `rexx_inventory::builtins`. No probe,
+#                and nothing is run. A name excluded only partially is not
+#                here: it is in scope in its other form and is probed on it.
 #
 #   loud         The executor exited NOT_IMPLEMENTED_EXIT. The gap is
 #                declared, with a message naming the construct -- the
@@ -35,8 +33,9 @@
 #   divergent    Neither: the executor ran, returned, and disagreed. A wrong
 #                answer rather than a missing one, which is the failure this
 #                project is organised to prevent. Committing such a row needs
-#                a `KNOWN GAP: <NAME>` row in the exclusions file naming it;
-#                the harness refuses the row without one.
+#                a comment line `# KNOWN GAP: <NAME> #<N>` in this file, <N>
+#                being the GitHub issue that tracks the gap; the harness
+#                refuses the row without one.
 ABBREV	implemented
 ABS	implemented
 ADDRESS	implemented

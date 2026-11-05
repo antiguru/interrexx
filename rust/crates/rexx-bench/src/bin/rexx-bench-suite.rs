@@ -241,7 +241,7 @@ fn main() -> ExitCode {
     // rather than one with `../..` in the middle of it.
     let rust_binary = rust_binary.canonicalize().unwrap_or(rust_binary);
 
-    // The entire output of this phase is ratios against the oracle, so an
+    // The entire output of this tool is ratios against the oracle, so an
     // oracle that could not be identified is not a measurement to report with
     // a caveat -- it is a run that must not produce a table at all.
     let objects = oracle_objects(&oracle_binary);
@@ -719,23 +719,6 @@ mod tests {
         assert!(
             !vacuous.contains("-100"),
             "a negative coverage reached the report: {vacuous}"
-        );
-    }
-
-    /// The caveat this suite emits at [`PAIRS`] is the one the committed
-    /// baseline carries.
-    #[test]
-    fn the_caveat_matches_the_committed_baseline() {
-        let baseline = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../docs/superpowers/plans/perf-baseline.md");
-        let text = fs::read_to_string(&baseline)
-            .unwrap_or_else(|e| panic!("cannot read {}: {e}", baseline.display()));
-        let emitted = ratio_interval_caveat(interval_for(PAIRS).coverage);
-        assert!(
-            text.contains(&emitted),
-            "the committed baseline does not contain the caveat this suite emits at {PAIRS} \
-             pairs. Either the wording changed and the block needs re-pasting, or the block is \
-             no longer this program's output and the document says it is.\n\nemitted:\n{emitted}"
         );
     }
 

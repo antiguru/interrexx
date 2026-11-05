@@ -18,10 +18,9 @@ impl Interp {
     }
 }
 
-/// How many spaces of nesting depth `target`'s own clause sits at --
-/// Task 11's whole indentation feature, and the design decision at its
-/// centre: **computed fresh from the flat instruction list every time,
-/// never carried on a running `Interp` counter.**
+/// How many spaces of nesting depth each clause sits at: **computed fresh
+/// from the flat instruction list every time, never carried on a running
+/// `Interp` counter.**
 fn fill_indents(
     instructions: &[Instruction],
     start: usize,
@@ -245,7 +244,7 @@ fn indent_in_range(instructions: &[Instruction], start: usize, end: usize, targe
                             // the `OTHERWISE` one three lines of history
                             // below: "`whens` holds only `When`/`WhenCase`"
                             // is `rexx-parse`'s own invariant, not this
-                            // function's, and this phase's invariants have
+                            // function's, and such invariants have
                             // not all held -- the absorbed-`WHEN` case
                             // (`when_absorbing_a_when_parses_and_runs_at_
                             // rc_0`, `run`'s own test) is exactly a

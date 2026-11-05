@@ -1,4 +1,4 @@
-//! Phase 3 gate: every `Instruction` and `Expr` variant is constructed at
+//! Every `Instruction` and `Expr` variant is constructed at
 //! least once by parsing `rust/corpus/lang/` and `samples/` together, asserted
 //! by enumerating the variants rather than by inspection.
 

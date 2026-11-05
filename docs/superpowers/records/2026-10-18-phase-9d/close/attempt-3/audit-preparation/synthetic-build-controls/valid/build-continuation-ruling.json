@@ -1,1 +1,0 @@
-{"head": "1ef21db99b90d55f02e6d12d2e473cee56b6a747", "rust_tree": "fixture-rust-tree", "original_status": 124, "original_record_sha256": "16413751c9513f362f99ebbb6ef681a1510e8eb9e22924f7cc17677ba373ba48", "ruling": "Fixture-only explicit ruling", "reason": "Fixture timeout", "cost_if_wrong": "Fixture only"}

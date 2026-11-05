@@ -10,7 +10,7 @@ fn sourceline_returns_lines_without_terminators() {
     assert_eq!(src.line(2), Some(&b"say 2"[..]));
     // Out of range is an ERROR in the interpreter, not an empty answer:
     // sourceline(0) raises 40.14 and sourceline(99) raises 40.34. Verified.
-    // `line` returning None is how this crate reports that; Task 3.8 turns
+    // `line` returning None is how this crate reports that; the executor turns
     // it into the right error number. Do not let it render as "".
     assert_eq!(src.line(3), None);
     assert_eq!(src.line(0), None);
@@ -222,11 +222,10 @@ fn assert_traced(text: &[u8], traced: &[TracedLine]) {
 fn trace_output_rex_reconstructs_every_traced_line() {
     // Measured on the corpus file itself. It sets `trace i`, so the raw
     // capture also carries value-marker lines and the program's own output.
-    // Those need an executor and are Phase 4's, so only the six *-* lines
+    // Those need an executor, so only the six *-* lines
     // appear here. (The markers THIS file happens to emit are >L>, >V>,
     // >O>, >>> and >=>. That is not the set: the authority is "everything
-    // except *-*", eighteen prefixes, and enumerating them has gone wrong
-    // three times in this phase.) Source line 4 is three clauses: the
+    // except *-*", eighteen prefixes.) Source line 4 is three clauses: the
     // condition KEEPS its trailing blank and stops before `then`, `then` is
     // a clause of its own, and the THEN arm is the third.
     let text = include_bytes!("../../../corpus/lang/trace_output.rex");
@@ -284,7 +283,7 @@ fn probe_b_traces_a_label_with_its_colon() {
 
 #[test]
 fn probe_g_an_else_arm_continues_like_any_other_clause() {
-    // Scratch probe G, measured 2026-07-29: the untaken THEN branch is not
+    // Probe G, measured: the untaken THEN branch is not
     // traced, `else` carries no blank on either side, and the ELSE arm's
     // continuation keeps its four blanks like any other.
     let text = b"trace r\nif 1 = 2 then nop\nelse say 1,\n    2\ntrace off\n";
@@ -301,7 +300,7 @@ fn probe_g_an_else_arm_continues_like_any_other_clause() {
 
 #[test]
 fn probe_h_an_otherwise_arm_continues_like_any_other_clause() {
-    // Scratch probe H, measured 2026-07-29, the SELECT equivalent of probe
+    // Probe H, measured, the SELECT equivalent of probe
     // G. The WHEN condition keeps its trailing blank the way an IF's does,
     // `otherwise` carries no blank on either side, and the arm's
     // continuation joins with its four blanks kept.
@@ -322,7 +321,7 @@ fn probe_h_an_otherwise_arm_continues_like_any_other_clause() {
 
 #[test]
 fn probe_i_a_three_fragment_continuation_drops_every_terminator() {
-    // Scratch probe I, measured 2026-07-29: two continuations in one
+    // Probe I, measured: two continuations in one
     // clause, so the join drops two terminators and keeps both
     // continuation lines' leading blanks. Every other probe joins exactly
     // two fragments, and this is the one that makes the join loop more
@@ -333,7 +332,7 @@ fn probe_i_a_three_fragment_continuation_drops_every_terminator() {
 
 #[test]
 fn probe_j_a_multi_label_clause_is_one_clause_per_label() {
-    // Scratch probe J, measured 2026-07-29: `a: b: nop` traces as three
+    // Probe J, measured: `a: b: nop` traces as three
     // clauses on one source line, each label with its own colon.
     let text = b"trace r\na: b: nop\ntrace off\n";
     assert_traced(

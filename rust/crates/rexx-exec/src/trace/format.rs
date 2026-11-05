@@ -22,10 +22,7 @@ pub(crate) struct TraceMode {
     /// `tracingIntermediates`.
     pub(crate) intermediates: bool,
     /// `TraceSetting::tracingLabels`: a `LABEL` clause is echoed, with the
-    /// ordinary `*-*` prefix. **A fourth field, added at 4b Task 9's review
-    /// round 1 (F8) because 4b measured a fourth observable question this
-    /// struct's own "three for a program 4a can run" argument did not
-    /// cover.** `RexxInstructionLabel::execute` (`LabelInstruction.cpp`,
+    /// ordinary `*-*` prefix. `RexxInstructionLabel::execute` (`LabelInstruction.cpp`,
     /// read directly) traces through `traceLabel` and nothing else, and
     /// `traceLabel`'s gate is `tracingLabels()` -- which
     /// `TraceSetting.cpp:52`-`54` sets in `traceAllFlags`,
@@ -445,9 +442,7 @@ fn mode_of_letter(byte: u8) -> Result<TraceMode, u8> {
         b'A' => Ok(TraceMode::ALL),
         b'R' => Ok(TraceMode::RESULTS),
         b'I' => Ok(TraceMode::INTERMEDIATES),
-        // `L` was in the silent group below until 4b Task 9's review round 1
-        // measured what it actually does. It echoes every executed `LABEL`
-        // clause -- see `TraceMode::labels`.
+        // `L` echoes every executed `LABEL` clause -- see `TraceMode::labels`.
         b'L' => Ok(TraceMode::LABELS),
         // `C`/`E`/`F`/`N`/`O`: every letter `check_trace_setting` accepts is
         // recognised here. Each of the four besides `O` decides whether a
@@ -511,7 +506,7 @@ pub(crate) fn raised_invalid_trace_letter(found: u8) -> Raised {
 // ---- byte-level formatting ----
 
 /// Appends `indent` spaces to `out` -- the one place every formatter below
-/// applies Task 11's own quantity, so a caller never repeats
+/// applies the clause indent, so a caller never repeats
 /// `std::iter::repeat_n(b' ', indent)` at five call sites.
 fn push_indent(out: &mut Vec<u8>, indent: usize) {
     out.extend(std::iter::repeat_n(b' ', indent));
@@ -527,9 +522,7 @@ pub(super) fn make_displayable(out: &mut [u8], line_start: usize) {
 pub(crate) const MAX_CLAUSE_INDENT: usize = 40;
 
 /// `TRACE_PREFIX_CLAUSE` (`*-*`): `line`'s own clause, `text`, indented by
-/// `indent` spaces (Task 11's `static_indent`, unchanged and reused, per
-/// this module's own doc comment on why "when" is not this module's job),
-/// clamped at [`MAX_CLAUSE_INDENT`].
+/// `indent` spaces (`static_indent`), clamped at [`MAX_CLAUSE_INDENT`].
 pub(crate) fn push_clause(out: &mut Vec<u8>, line: usize, indent: usize, text: &[u8]) {
     let line_start = out.len();
     out.extend_from_slice(format!("{line:>6} *-* ").as_bytes());

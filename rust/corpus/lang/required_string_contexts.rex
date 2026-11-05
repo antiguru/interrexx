@@ -4,11 +4,11 @@
  * where its own line expects the conversion.
  *
  * The contexts the section lists and this program does not reach are the ones
- * whose instruction is refused in this phase: a command to an external
- * environment and a command on an ADDRESS instruction (Phase 7), and the
- * OPTIONS instruction (5c). The environment *name* on ADDRESS is here.
+ * whose instruction is not exercised: a command to an external
+ * environment and a command on an ADDRESS instruction, and the
+ * OPTIONS instruction. The environment *name* on ADDRESS is here.
  *
- * Phase 5a Task 14.
+ *
  */
 
 say .said

@@ -99,8 +99,7 @@ fn err(text: &str) -> (u16, u16) {
     }
 }
 
-/// The byte `text`'s error is reported against, which Task 3.8 turns into a
-/// line number.
+/// The byte `text`'s error is reported against, which becomes a line number.
 fn err_byte(text: &str) -> usize {
     parse(text).expect_err("an error was expected").byte
 }

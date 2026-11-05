@@ -1,7 +1,0 @@
-
-running 1 test
-test tests::resources::a_long_chain_of_stem_subclass_instances_is_walked_once has been running for over 60 seconds
-test tests::resources::a_long_chain_of_stem_subclass_instances_is_walked_once ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1240 filtered out; finished in 65.72s
-

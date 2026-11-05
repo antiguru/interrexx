@@ -1,7 +1,0 @@
-==3717540==WARNING: Program is run with limited virtual address space, which wouldn't work with ThreadSanitizer.
-==3717540==Re-execing with unlimited virtual address space.
-==3717540==ERROR: ThreadSanitizer setrlimit() failed 22
-
-thread 'input::tests::spawn_failure_preserves_partial_input_and_requeues_other_posts' (3717539) panicked at crates/rexx-exec/src/test_process.rs:50:5:
-isolated test failed: exit status: 66
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

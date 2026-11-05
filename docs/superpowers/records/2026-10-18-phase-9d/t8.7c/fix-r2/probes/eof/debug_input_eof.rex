@@ -1,8 +1,0 @@
-/* A debug pause at the end of standard input raises NOTREADY, which the
-   program traps. */
-signal on notready name nr
-trace ?a
-say 'a'
-say 'b'
-exit
-nr: trace off; say 'NOTREADY trapped' condition('D'); exit 3

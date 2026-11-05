@@ -2,7 +2,7 @@ count 52
 -- Message~halt reaching a started activity spinning in an empty-body loop
 -- ends the loop with 4.1, raised in the spinning method's own activation,
 -- for each kind of loop. Which clause the halt lands on is not printed: it
--- depends on where the request finds the loop (ruling P32).
+-- depends on where the request finds the loop.
 do kind over .array~of('forever', 'while', 'controlled', 'until')
   g = .gate~new
   m = .message~new(.t~new, kind, 'I', g)

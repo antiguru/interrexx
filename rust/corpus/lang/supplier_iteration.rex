@@ -1,4 +1,4 @@
-/* Supplier, which every `supplier` row in both collection phases lands on.
+/* Supplier, which every `supplier` row of the collection tables lands on.
    `.Supplier~new(items, indexes)` takes the ITEMS first: the pairs below are
    what settles that, and getting it backwards is invisible until something
    asks for both halves of one pair.  The last send is left to escape because

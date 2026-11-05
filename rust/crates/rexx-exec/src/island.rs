@@ -1,5 +1,4 @@
-//! The interpreter's state on another OS thread (decision D-U2, spec
-//! 2026-09-29 2.5): a pool thread reaches it only through what the baton's
+//! The interpreter's state on another OS thread: a pool thread reaches it only through what the baton's
 //! holder lends it, and only while it holds the baton.
 
 #![allow(unsafe_code)]

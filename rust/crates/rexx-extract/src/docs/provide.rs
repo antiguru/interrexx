@@ -76,7 +76,7 @@ pub fn rows(sections: &[ConceptSection]) -> Vec<String> {
         .collect()
 }
 
-/// The header the committed file carries, with its D56 stamp.
+/// The header the committed file carries, with its revision stamp.
 pub fn header(stamp: &str) -> Vec<String> {
     vec![
         "Table C's concept row set: every <section id> under provide.xml's".into(),

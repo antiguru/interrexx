@@ -127,7 +127,7 @@ impl Interp {
         }
         // `RexxActivation::setTrace` calls `traceEntry()` right after
         // installing the new flags (`RexxActivation.cpp:1024`), which is the
-        // route every 4c-reachable `>I>` takes. `Trace::Skip` never gets here
+        // route every `>I>` takes. `Trace::Skip` never gets here
         // -- it returned above -- and the C++ agrees: its own arm sets no
         // flags and calls nothing.
         self.allow_entry_after_exposes(code);

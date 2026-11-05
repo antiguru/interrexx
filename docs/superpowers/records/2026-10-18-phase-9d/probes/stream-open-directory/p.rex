@@ -1,6 +1,0 @@
-say stream('/', 'c', 'open read')
-say stream('/', 'c', 'open write')
-say stream('/nonexist/x', 'c', 'open read')
-say .stream~new('/')~command('open read')
-say stream('/', 'c', 'open read shared')
-say stream('.', 'c', 'open read shared')

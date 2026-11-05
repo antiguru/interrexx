@@ -22,6 +22,10 @@ pub mod setup_cpp;
 /// to invoke the oracle identically or their results are not comparable.
 pub mod oracle;
 
+/// The Deviations table, `rust/corpus/deviations.tsv`, and the chapter
+/// headings it is held equal to.
+pub mod deviations;
+
 /// The oracle's private `XDG_RUNTIME_DIR`, whose daemon is stopped when the process ends.
 pub mod oracle_runtime;
 
@@ -33,7 +37,7 @@ pub mod sidecar;
 /// not only the subset this crate has an emitter for. See the module doc
 /// for why the markers nothing here has ever produced are carried anyway:
 /// the alternative is a list that has to be remembered and extended each
-/// time a later phase adds an emitter, which is exactly the kind of
+/// time a change adds an emitter, which is exactly the kind of
 /// silent-drift risk this project keeps finding in its own harnesses.
 /// `tests/trace_oracle.rs`'s
 /// `every_trace_prefix_is_witnessed_or_carries_an_owner` asserts its own

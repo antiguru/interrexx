@@ -22,7 +22,7 @@ fn compile_for_test(source: &[u8]) -> Result<Chunk, ChunkTooLarge> {
 }
 
 /// [`compile_for_test`] under a named trace setting, which is an input to
-/// what `compile` emits (D23).
+/// what `compile` emits.
 fn compile_for_test_under(source: &[u8], trace: ChunkTrace) -> Result<Chunk, ChunkTooLarge> {
     let program = parse_program(source.to_vec()).expect("test program parses");
     let plan = Plan::build(
@@ -228,7 +228,7 @@ fn every_instruction_of_an_all_delegating_body_compiles_to_one_exec_op() {
     assert!(chunk.consts.is_empty());
 }
 
-/// **The phase's first native expression op.** An assignment whose value is a
+/// **A native expression op.** An assignment whose value is a
 /// literal compiles to a constant load, the literal's own value line, and the
 /// write -- with no `EvalExpr` in it at all, which is what makes it native.
 #[test]
@@ -1354,7 +1354,7 @@ fn chunk_for_compiles_a_body_once_across_repeated_lookups() {
 }
 
 /// **One body, two settings, two chunks.** The trace setting is an input to
-/// compilation (D23), so a cache keyed on `BodyKey` alone hands the body
+/// compilation, so a cache keyed on `BodyKey` alone hands the body
 /// entered under the second setting a stream compiled for the first one.
 #[test]
 fn one_body_under_two_trace_settings_is_two_cached_chunks() {

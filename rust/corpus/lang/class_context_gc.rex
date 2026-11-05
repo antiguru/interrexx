@@ -1,4 +1,4 @@
-/* Task 21, fix round 2: a forced collection does not take the running
+/* A forced collection does not take the running
    activation's context object with it.
 
    `GC('force')` reached `Heap::collect` directly, past the sweep that names

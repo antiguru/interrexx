@@ -1,4 +1,0 @@
-==1== Using Valgrind-3.27.1 and LibVEX
-==1== Command: /tmp/p9d-profile-verifier-controls-x9tj7462/pin /home/moritz/dev/repos/ooRexx-rust-rewrite/rust/bench-programs/nop.rex
-==1== Collected : 100
-==1== I refs: 100

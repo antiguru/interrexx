@@ -591,7 +591,7 @@ pub(super) fn native_unset_method(
 }
 
 /// `setMethod`'s third argument: which variable pool the new method's
-/// `EXPOSE` reaches (D67).
+/// `EXPOSE` reaches.
 fn set_method_scope(
     interp: &mut Interp,
     receiver: ObjRef,
@@ -614,7 +614,7 @@ fn set_method_scope(
 }
 
 /// `RexxObject::checkRestrictedMethod` (`classes/ObjectClass.cpp:697`), the
-/// fourth access check (D66): `run`, `setMethod` and `unsetMethod` may be
+/// fourth access check: `run`, `setMethod` and `unsetMethod` may be
 /// sent only from a method of the receiving object itself or from a class
 /// method of a class it is an instance of.
 fn check_restricted_method(

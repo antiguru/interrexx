@@ -1,6 +1,6 @@
 count 40
 /* `~start` and `~startWith` answer a Message object holding what the send
-   returned. What may be asserted about one is bounded by D68: `~start`'s
+   returned. What may be asserted about one is bounded by a fact about the oracle: `~start`'s
    interleaving with the program that started it is not reproducible on the
    oracle, and `~completed` sampled BEFORE `~result` is part of that
    interleaving. So every line below reads `~result` first and `~completed`

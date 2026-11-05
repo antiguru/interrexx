@@ -1,3 +1,0 @@
-struct ParseCtx
-struct TokenCursor
-BLOCK:impl TokenCursor

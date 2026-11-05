@@ -10,7 +10,7 @@
  * Compared raw (see corpus.rs's RAW_STDERR_COMPARISON), for that program's
  * reason.
  *
- * Phase 5a Task 14.
+ *.
  */
 
 say 'before'

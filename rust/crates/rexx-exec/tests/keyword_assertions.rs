@@ -1,4 +1,4 @@
-//! Phase 4b's L1 obligation: runs every method body `rexx-extract`'s
+//! Runs every method body `rexx-extract`'s
 //! `keyword` module lifts out of `ootest/ooRexx/base/keyword/` through
 //! `rexx_exec`'s public entry point, and checks each `self~assertSame` the
 //! way the ooTest framework's own `assertSame` does.
@@ -22,7 +22,7 @@ use std::process::{Command, Stdio};
 /// this is a label, in the same spirit as `assertions.rs`'s `ROW_PATH`.
 const BODY_PATH: &str = "/nonexistent/keyword-body.rex";
 
-/// Env var that flips this test from a progress report into the phase gate.
+/// Env var that flips this test from a progress report into the gate.
 /// Named separately from the other two gates because the three measure
 /// independent things and a caller should be able to run one without the
 /// others.
@@ -98,8 +98,7 @@ enum RunOutcome {
     /// suite asserts holds does not hold here.
     AssertionFailed { failed: usize, total: usize },
     /// Hit [`NOT_IMPLEMENTED_EXIT`]. `construct` is what the body ran into
-    /// first; `owner` is the phase `rexx-exec`'s own tables name for it,
-    /// which is the separate question of what would actually unblock it.
+    /// first; `owner` is the owner its refusal names, if any.
     Blocked {
         construct: String,
         owner: Option<String>,
@@ -113,8 +112,8 @@ enum RunOutcome {
 }
 
 impl RunOutcome {
-    /// The phase that would make this body pass, in the vocabulary the
-    /// committed exempt file uses. `None` for a passing body.
+    /// What this body is exempt under, in the vocabulary the committed exempt
+    /// file uses. `None` for a passing body.
     fn attribution(&self) -> Option<String> {
         match self {
             RunOutcome::Pass { .. } => None,
@@ -645,23 +644,19 @@ fn an_assertion_inside_a_loop_is_checked_on_every_pass() {
     );
 }
 
-/// The exempt file's `unblocked_by` column is in the vocabulary
-/// `phase-4-exclusions.txt` fixes for owner strings, is an explicit
-/// `defect:` tag, or is one of the two categories [`RunOutcome::attribution`]
-/// emits for a body that neither passes nor names a construct. Nothing else,
+/// The exempt file's `unblocked_by` column is an explicit `defect:` tag or one
+/// of the two categories [`RunOutcome::attribution`] emits for a body that
+/// neither passes nor names a construct. Nothing else,
 /// so a typo cannot quietly become a new category that the set-equality test
 /// then happily matches against itself.
 #[test]
-fn every_exempt_attribution_is_a_known_phase_or_a_declared_defect() {
-    const PHASES: &[&str] = &["4b", "4c"];
+fn every_exempt_attribution_is_a_declared_outcome_or_defect() {
     const DERIVED: &[&str] = &["RAISED", "NO-ASSERTION-EXECUTED"];
     for (key, attribution) in committed_exempt() {
         assert!(
-            PHASES.contains(&attribution.as_str())
-                || DERIVED.contains(&attribution.as_str())
-                || attribution.starts_with("defect:"),
-            "{key} is attributed to {attribution:?}, which is none of {PHASES:?}, {DERIVED:?} nor \
-             a `defect:` tag"
+            DERIVED.contains(&attribution.as_str()) || attribution.starts_with("defect:"),
+            "{key} is attributed to {attribution:?}, which is none of {DERIVED:?} nor a \
+             `defect:` tag"
         );
     }
 }

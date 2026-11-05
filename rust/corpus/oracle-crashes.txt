@@ -1,35 +1,27 @@
 # Programs known to crash or exhaust the C++ oracle interpreter
-# (third_party/oracle/bin/rexx, r13346), so nobody has to
-# rediscover them by running them. This file exists precisely so a sweep,
-# a probe, or a corpus generator can exclude these by reference rather
-# than by folklore passed between sessions -- do not run any of the
-# programs below to "confirm" the entry still holds; that is the failure
-# mode this file exists to end.
+# (third_party/oracle/bin/rexx, r13346), so nobody has to rediscover them by
+# running them. A sweep, a probe, or a corpus generator excludes these by
+# reference. Do not run any program below to "confirm" an entry.
 #
-# Every entry was measured under the standard oracle wrapper, and re-run once
-# at r13346 (docs/superpowers/records/2026-11-02-phase-10/pr0/). An entry that
-# no longer fails keeps its number and says so, for the citations to it:
+# Every entry was measured under the standard oracle wrapper at r13346. An
+# entry that no longer fails keeps its number and says so, for the citations
+# to it:
 #   ( ulimit -v 1048576; LD_LIBRARY_PATH=third_party/oracle/lib \
 #     third_party/oracle/bin/rexx /abs/path/FILE )
-# run from a fresh empty directory (the scratchpad root is on the oracle's
-# own external-routine search path and must never be the run directory).
+# run from a fresh empty directory (the oracle searches the run directory for
+# external routines).
 #
 # The failure modes are not folded into one label. An entry is a deterministic
 # memory-safety defect in the C++ (SIGSEGV, rc 139); or a resource-exhaustion
-# hazard (unbounded allocation, OOM-killed), which is not a crash in that
-# sense; or an INDEFINITE BLOCK -- the process alive and healthy, consuming no
-# CPU, parked on a wait that nothing in the program can ever satisfy. Each
-# entry below says which it is.
+# hazard (unbounded allocation, OOM-killed); or an INDEFINITE BLOCK -- the
+# process alive and healthy, consuming no CPU, parked on a wait that nothing in
+# the program can ever satisfy; or an UNDEFINED ANSWER -- a value the oracle
+# reads from memory it never set, different from run to run. Each entry says
+# which it is.
 #
-# The third mode was added on 2026-08-23 for entry 7 and needs the wrapper
-# above to grow a deadline: a block produces no bytes and no status of its
-# own, so it is the one mode whose entry can only be characterised by killing
-# it. Every such entry states the deadline it was killed at, and rc 137 there
-# is the kill and not the oracle's answer.
-#
-# A fourth mode, an UNDEFINED ANSWER, was added on 2026-10-13 for entry 39:
-# a value the oracle reads from memory it never set, different from run to
-# run.
+# A block produces no bytes and no status of its own, so its entry can only be
+# characterised by killing it. Every such entry states the deadline it was
+# killed at, and rc 137 there is the kill and not the oracle's answer.
 
 ## 1. `select; when 1 = 0 then; when 2 = 2 then nop; end`
 
@@ -40,13 +32,10 @@
 
 Effect: SIGSEGV, rc 139, deterministic.
 
-Cause: upstream SourceForge **SF #2018**, filed and commented with the
-crash site and a verified guard. An orphaned `WHEN` (a `WHEN` clause with
-no body, immediately followed by another `WHEN`) reaches a null-pointer
-dereference in the C++ parser/interpreter's `SELECT` handling. Not a
-oorexx-rust-rewrite bug and not something this crate needs to reproduce --
-`rust/CLAUDE.md` and every phase plan already carry "never run this" for
-the same reason this file now carries the account.
+Cause: upstream SourceForge **SF #2018**. An orphaned `WHEN` (a `WHEN` clause
+with no body, immediately followed by another `WHEN`) reaches a null-pointer
+dereference in the C++ parser/interpreter's `SELECT` handling. Not something
+this crate needs to reproduce.
 
 ## 2. `say date('M','0','D')`
 
@@ -67,13 +56,12 @@ turns an otherwise slower failure into an immediate one under the
 standard oracle invocation above). Recorded here as a hazard rather than
 a defect: raising `NUMERIC DIGITS` widens the precision every arithmetic
 operation carries, and at four figures and above the C++ allocates
-proportionally to that precision on a scale this project has not
-characterised further, so the safe rule is the blanket one already in
-`rust/CLAUDE.md` and every phase plan -- never set it above 1000 in a
-probe, full stop, rather than searching for the exact boundary.
+proportionally to that precision on a scale not characterised
+further, so the rule is: never set it above 1000 in a probe, rather than
+searching for the exact boundary.
 
-At r13346 this program answers `2` rc 0 under the standard wrapper, as the
-July build does, so the hazard is not this program; the rule stands.
+At r13346 this program answers `2` rc 0 under the standard wrapper, so the
+hazard is not this program; the rule stands.
 
 ## 5. One clause queuing the same `CALL ON` condition twice
 
@@ -92,10 +80,7 @@ prints `h1 2` on stdout and then dies, so what kills it is the boundary
 reaching the *second* copy of an already-delivered condition name, not
 the queuing of it.
 
-Found 2026-08-15 while measuring what a clause boundary does with more
-than one pending condition, and it bounds that measurement: the same
-clause with two *differently* named conditions answers cleanly and is
-how the rule was established -- `zr = ra() + rb()` gives `h1` then `h2`
+The same clause with two *differently* named conditions answers cleanly -- `zr = ra() + rb()` gives `h1` then `h2`
 then `after`, both handlers reporting the raising clause's own line, and
 a three-name version gives all three in the order they were queued. So
 the oracle drains a boundary in queue order, and this program is the one
@@ -104,7 +89,7 @@ shape in that family it cannot answer for.
 Consequence for this crate: a boundary that drains has to decide what to
 do with a repeated name, and there is **no oracle behaviour to match**.
 Whatever it does is unconstrained here, and must not be described as
-agreeing with the oracle. Filed upstream 2026-08-22 as **SF #2084**.
+agreeing with the oracle. Filed upstream as **SF #2084**.
 
 ## 6. An array with a leading empty slot as the sole subscript of `~at`
 
@@ -128,8 +113,7 @@ stdout, nothing on stderr. **That much is direct evidence and is what makes
 
 **The "parked rather than spinning" half is predicted, not measured.** It was
 argued here from a `/usr/bin/time -v` run reporting 0.00 s user and system
-over 5.00 s elapsed, and that instrument is now known to be blind to the
-distinction: measured 2026-09-03, `/usr/bin/time -v timeout ... <binary>` run
+over 5.00 s elapsed, and that instrument is blind to the distinction: `/usr/bin/time -v timeout ... <binary>` run
 against `do forever; nop; end` -- a program `/proc/<pid>/stat` shows in state
 `R` at 700 utime ticks over seven seconds -- also reports `User time 0.00`,
 `System time 0.00`, `Percent of CPU this job got: 0%`. GNU time's `wait4` sees
@@ -176,8 +160,7 @@ check instead of the block.
 
 Consequence for this crate: **there is no oracle behaviour to match**, so
 `rexx-exec` refuses the shape rather than hanging: main parks in the wait,
-nothing is left to run, and the run ends at `Loud::unsatisfiable_wait` (ruling
-P27); `run/tests/message.rs`'s
+nothing is left to run, and the run ends at `Loud::unsatisfiable_wait` ; `run/tests/message.rs`'s
 `the_guard_instructions_answers_and_their_refusals` is the instrument. A
 started activity blocked the same way keeps the program's end waiting, as the
 oracle's does (`scheduler/tests.rs`'s
@@ -187,11 +170,9 @@ against: the rc 137 above is the deadline killing the process, not an answer.
 Entry 4 shares that much -- its rc is the OOM kill -- and differs in having a
 cause that consumes something; this one consumes nothing at all.
 
-Found 2026-08-23 while building this crate's `GUARD`; the CPU-time reading is
-that task's review round. **No upstream ticket.** The block is what
-`GUARD ... WHEN` is specified to do, and whether an interpreter should detect
-that no other activity can ever satisfy a particular wait is a design question
-this project has not put to the maintainers.
+**No upstream ticket.** The block is what `GUARD ... WHEN` is specified to do;
+whether an interpreter should detect that no other activity can ever satisfy a
+particular wait is a design question not put to the maintainers.
 
 ## 8. A metaclass whose `NEW` answers something that is not a class
 
@@ -225,7 +206,7 @@ refuses an answer that is not a class, at rc 120 (`Loud::receiver_class`,
 this crate reports rather than reaches. A class answer is not this entry: the
 oracle answers rc 0 and rewires that class, Deviation 32.
 
-Found 2026-08-26 while building `Class~subclass`. **No upstream ticket.**
+**No upstream ticket.**
 
 --------------------------------------------------------------------------
 
@@ -272,9 +253,7 @@ sends with the forwarding activation still on the stack, so its own
 `MAX_ACTIVATION_DEPTH` guard counts the recursion: measured on the crate alone,
 both engines, the program above is **rc 245**, stdout empty, stderr ending
 `Error 11.1:  Insufficient control stack space; cannot continue execution.` --
-the clean answer the oracle itself gives `forward continue`. The divergence is
-recorded in the same terms Task 9's list uses for the oracle's `Error 5` stack
-overflows; matching an oracle crash is not a target.
+the clean answer the oracle itself gives `forward continue`. Matching an oracle crash is not a target.
 
 **With a `REPLY` before the FORWARD, this crate does not terminate**, and that
 is a second divergence rather than a narrowing of the first. Measured on the
@@ -283,14 +262,12 @@ then a FORWARD that resolves back to it is rc 137 at the timeout with both
 descriptors empty, where the same shapes without the `reply` are rc 245 in
 under 0.08 s. Each continuation runs on an activity of its own and ends once
 its FORWARD has spawned the next, so no activation depth grows and the guard
-above never fires. Measured again 2026-10-02 (Phase 6 S2 Task 6 fix round 1),
-release build, killed at 5 s: `VmRSS` 20 to 21 MB at each of 1 to 5 s, since
+above never fires. Measured with a release build, killed at 5 s: `VmRSS` 20 to 21 MB at each of 1 to 5 s, since
 an ended activity that made no native call keeps no thread context.
 The oracle's answer to this member cannot be measured, because it is this
-shape. No bound has been chosen; Task 9's list carries the reasoning.
+shape. No bound has been chosen.
 
-Found 2026-09-01 by the controller while measuring `keyForward`'s six options
-for Task 4's brief. **No upstream ticket.**
+**No upstream ticket.**
 
 --------------------------------------------------------------------------
 
@@ -338,11 +315,9 @@ Consequence for this crate: **there is no oracle behaviour to match**, so
 differential row can cover it, and the rc 137 above is the deadline killing
 the process rather than an answer.
 
-Found 2026-09-03 while building `Message~new` for Phase 5c Task 2. **No
-upstream ticket.** The wait is what `~result` is specified to do, and whether
+**No upstream ticket.** The wait is what `~result` is specified to do, and whether
 an interpreter should detect that no activity can ever satisfy a particular
-one is the design question entry 7 already puts and this project has not put
-to the maintainers.
+one is the design question entry 7 already puts.
 
 --------------------------------------------------------------------------
 
@@ -388,15 +363,11 @@ there, or route those six methods to the twin.
 
 Consequence for this crate: these six are among `String`'s documented instance
 rows, and `corpus/method-bodies.txt` classifies a row by sending its name with
-no arguments. Today they are `loud`, and that verdict is reached in the
-crate-only pass without running the oracle at all. **The first commit that
-implements any of them makes the refresh reach the oracle for that row**, where
-`method_bodies.rs` will record a `Structural` failure -- "the oracle did not
-finish" -- rather than a verdict. That is the instrument behaving correctly and
-it is still red, so whoever binds these six decides first how the table is to
-carry a row whose oracle answer cannot be obtained.
+no arguments, which the oracle cannot answer for them: a row the crate
+implements records a `Structural` failure ("the oracle did not finish")
+rather than a verdict.
 
-Found 2026-09-05 building the Phase 5f receiver sweep. **No upstream ticket.**
+**No upstream ticket.**
 
 --------------------------------------------------------------------------
 
@@ -429,16 +400,10 @@ rather than a new one.
 
 Consequence for this crate, and it is the same trap: `Stem~index` and
 `Stem~hasItem` are documented instance rows, and `corpus/method-bodies.txt`
-classifies a row by sending its name with NO ARGUMENTS. Both read `loud`
-today, a verdict reached in the crate-only pass without running the oracle.
-**The first commit that implements either makes the refresh reach the oracle
-for that row**, where `method_bodies.rs` records a `Structural` failure rather
-than a verdict. Whoever binds them decides first how the table carries a row
-whose oracle answer cannot be obtained.
+classifies a row by sending its name with no arguments, which the oracle
+cannot answer for them.
 
-Found 2026-09-06 by Phase 5g Task 0(b)'s argument instrument, which flagged it
-as an argument list the oracle refuses -- the rule that a list is only real if
-the oracle answers rc 0 to it. **No upstream ticket.**
+**No upstream ticket.**
 
 --------------------------------------------------------------------------
 
@@ -471,7 +436,7 @@ cannot be run at all**, not rows where the two sides agree. Nothing in
 `corpus/method-bodies.txt` reaches them, because the classification sends no
 arguments and an empty entry needs one send to create.
 
-Found 2026-09-07 by the Phase 5g review. **No upstream ticket.**
+**No upstream ticket.**
 
 ## 9. `::OPTIONS TRACE ?<letter>` -- a package trace setting with the `?` prefix
 
@@ -479,14 +444,10 @@ Found 2026-09-07 by the Phase 5g review. **No upstream ticket.**
     ::options trace ?r
 
 Effect: **neither a SIGSEGV nor an exhaustion -- an indefinite block**, the
-third mode this file's header names, and the reason this entry is here rather
-than left as a note: a block gives no signal at all, so it costs a session the
-way an OOM does and offers less to diagnose it with.
+third mode this file's header names.
 
-Measured 2026-09-08 under the standard wrapper with no deadline: the run
-produced nothing on stdout, nothing on stderr, and did not return; it had to
-be killed by name. No `timeout` figure is quoted because none was set on that
-run, and this file forbids running the program again to obtain one.
+Measured under the standard wrapper with no deadline: nothing on stdout,
+nothing on stderr, and it did not return; it had to be killed by name.
 
 **The "waiting for a line on the console" half is predicted, not measured.**
 `?` is `TraceSetting`'s debug prefix, and interactive debug pauses after a
@@ -505,11 +466,9 @@ rather than letting it take effect: `Package~trace` answers the one letter and
 `Package~options('TRACE')` answers the word, neither of which runs a traced
 clause. `corpus/lang/package_settings.rex` reads both. If the *debug* form
 itself has to be exercised, it needs a deadline on both sides and a decision
-about what a console-less interactive pause should even mean, which no phase
-has taken.
+about what a console-less interactive pause should even mean, which is undecided.
 
-Found 2026-09-08 by Phase 5i Tasks 7+8, while measuring what `Package~trace`
-answers for each `::OPTIONS TRACE` letter. **No upstream ticket** -- it is not
+**No upstream ticket** -- it is not
 established that this is a defect rather than interactive debug behaving as
 documented with no console attached.
 
@@ -591,8 +550,7 @@ consistent: `say endlocal(); say endlocal()` with no `SETLOCAL` anywhere answers
 `0` and `0` at rc 0 (measured, same wrapper). An absent list is safe; an emptied
 one is not.
 
-Found 2026-09-12 by the Phase 7 survey of `SETLOCAL`/`ENDLOCAL`. **No upstream
-ticket.** The consequence for this crate is a licensed divergence: an `ENDLOCAL`
+**No upstream ticket.** The consequence for this crate is a licensed divergence: an `ENDLOCAL`
 past the outstanding `SETLOCAL`s answers `0` here -- the answer the
 never-created path already gives -- and no differential case may put that
 program in front of the oracle.
@@ -631,8 +589,7 @@ Nothing on either descriptor.
 The trace lines and the program's own output all arrive **on stdout** --
 `     3 *-* zz = 1`, `       >>>   "1"`, `     4 *-* trace off`, `after` -- and
 the process dies afterwards with an empty stderr. The control is the same two
-first clauses with no traced clause after them: rc 0. The Phase 7 monitor survey
-also measured that restoring the destination before the end does not save it.
+first clauses with no traced clause after them: rc 0. Restoring the destination before the end does not save it.
 
 **11d, `.TRACEOUTPUT` answered by a `.local` method entry that exits:**
 
@@ -649,14 +606,13 @@ body `return 1 / 0` is not a crash but ends rc 207 with **both** stdout and stde
 `after`. It is 11c's shape reached through a method entry instead of `~destination(.nil)`: the
 trace route is looked up through `.local` for every traced line.
 
-Found 2026-09-15 by Phase 8 surface Task 1's second fix round
-(`docs/superpowers/records/2026-09-14-phase-8-surface/task-1-report.md`, "Fix round 2"). This crate
+This crate
 answers both at rc 0: the exiting entry with the oracle's stdout and an empty stderr, the raising one
 with the trace lines on stderr and `after` on stdout. The crash falls under the licence below;
 where this crate writes the raising variant's trace lines is its own answer, recorded here and not
 licensed further.
 
-Cause, for 11a and 11b, **Read** in the survey and not measured further:
+Cause, for 11a and 11b, read and not measured further:
 `RexxActivation::resolveStream` (`execution/RexxActivation.cpp:1938`-`:1977`)
 answers `.INPUT` or `.OUTPUT` for an omitted stream name by asking
 `getLocalEnvironment`, which answers null once the entry is gone, and the
@@ -667,9 +623,7 @@ back to writing the line itself. For 11c the fallback exists too --
 `lineOut`, which is why the lines land on stdout -- but what dies at exit was
 not established.
 
-Found 2026-09-12 by the Phase 7 survey of the monitors, and re-measured by the
-controller with the controls above (11a-11c; 11d is recorded separately above). **No upstream
-ticket.** For this crate all four are licensed divergences: nothing here may answer by crashing, so a
+**No upstream ticket.** For this crate all four are licensed divergences: nothing here may answer by crashing, so a
 missing entry answers 97.1 the way a `.nil` entry already does, and a trace
 destination that cannot take a `LINEOUT` leaves the line on stdout and lets the
 program exit normally.
@@ -682,7 +636,7 @@ program exit normally.
 
 SIGSEGV, rc 139, both descriptors empty. The control is the same stream read
 rather than written: `stream('HANDLE:1','C','query streamtype')` answers
-`UNKNOWN` at rc 0, and the survey measured four more reading shapes
+`UNKNOWN` at rc 0, and four more reading shapes
 (`stream('handle:1','S')`, `.Stream~new('HANDLE:1')~state`, `~string`,
 `~qualify`) answering as well. Only the write dies.
 
@@ -697,18 +651,17 @@ SIGSEGV, rc 139. The control is the same program without the last line: rc 0.
 `stream_uninit` destroys the `StreamInfo` and drops `CSELF`
 (`streamLibrary/StreamNative.cpp:2195`-`:2198`), and `stream_state` dereferences
 it without the `checkStreamInfo` guard its siblings use (`:3609`-`:3610`) --
-**Read**, from the Phase 7 stream survey. The guarded ones are safe and measured:
+Read, not measured. The guarded ones are safe and measured:
 `~lineout`, `~linein`, `~open` and `~chars` after `~uninit` raise 48.1
 `Stream not initialized`. `~description`, `~qualify` and the five `query_*`
 entries share `stream_state`'s shape and were not run.
 
-Found 2026-09-12 by the Phase 7 stream survey, re-measured by the controller with
-the controls above. **No upstream ticket.** This crate writes `HANDLE:1` and
+**No upstream ticket.** This crate writes `HANDLE:1` and
 `HANDLE:2` to standard output and standard error and refuses any other
 descriptor (Deviation 35), and answers 48.1 from every entry point after
 `uninit`, so both are licensed divergences.
 
-**Related, not a new entry**: the survey also reproduced entry 5's shape with a
+**Related, not a new entry**: entry 5's shape also reproduces with a
 different condition -- two NOTREADY-raising reads in one clause under
 `CALL ON NOTREADY`, which dies the same way after running the handler once. It is
 the same defect, so entry 5's rule ("never queue the same `CALL ON` condition
@@ -761,8 +714,7 @@ shows `>M>   "M" => "4"` and never the method's own `qq = 2 + 2`.
 Distinct from entry 11, which is a route that is missing or `.nil`. Here the route works:
 the same object takes 7 lines without complaint when the trace setting is a clause.
 
-Found 2026-09-12 by Task 11 of the Phase 7 plan, while establishing whether this crate
-needs to suppress tracing during delivery to the trace route. **No upstream ticket.** For
+**No upstream ticket.** For
 this crate it is a licensed divergence with one binding requirement: nothing here may
 answer by crashing *or by hanging*, so delivery to the trace route is guarded against
 re-entry and the run terminates.
@@ -773,7 +725,7 @@ re-entry and the run terminates.
     p = .Package~new('x', .array~of('say "prolog ran"', 'say .array', 'say .nosuchzz'), m)
     say 'answered' p~name
 
-SIGSEGV, rc 139, stdout `prolog ran`, stderr empty, measured 2026-09-14. `m` is a
+SIGSEGV, rc 139, stdout `prolog ran`, stderr empty. `m` is a
 `loadExternalMethod` answer no directive has bound, so `m~package` is `.nil`, and the crash is at
 the first name resolved through the new code's parent.
 
@@ -796,7 +748,7 @@ that misses locally calls a `PackageClass` member on `TheNilObject` (`findLocalR
 `:836-839`, `findInstalledClass` `:997-1000`), reading fields out of an object that is not a
 package. **Read**, not established under a debugger.
 
-Found 2026-09-14 by the Phase 8 residual fix round. **No upstream ticket.** This crate hands such a
+**No upstream ticket.** This crate hands such a
 context on as the `REXX` package, a parent its routine lookup does not search, so it answers every
 shape the oracle answers and answers the crashing ones as if the context held nothing.
 
@@ -817,14 +769,12 @@ shape the oracle answers and answers the crashing ones as if the context held no
       return
     ::requires 'reach' LIBRARY
 
-The routines are the Phase 8 surface forge's
-(`docs/superpowers/records/2026-09-14-phase-8-surface/task-5-forge/reach.cpp`, built by its
-`build.sh`, loaded with the output directory on `LD_LIBRARY_PATH`); the file is that directory's
-`probes/refs.rex`, which its `compare.sh` runs.
+The routines are from a purpose-built native test library named `reach` (global references,
+`RegisterLibrary`, a nested attach), loaded with its directory on `LD_LIBRARY_PATH`. Its source is
+`oracle-crashes/reach.cpp`: `g++ -shared -fPIC -I third_party/ooRexx/api -I third_party/ooRexx/api/platform/unix reach.cpp -o libreach.so`.
 
 SIGSEGV, rc 139, **at termination**: stdout is complete and byte-identical to this crate's, which
-ends at rc 0. Measured twice by the Phase 8 surface plan's Task 5, which found it, and by its
-behaviour review. Which call leaves the state the termination trips on **has not been isolated**,
+ends at rc 0. Measured twice. Which call leaves the state the termination trips on **has not been isolated**,
 so the program is the entry. **No upstream ticket.**
 
 ## 17. orxmethod's `TestRaiseCondition` with a description, read back by a `CALL ON` handler
@@ -846,8 +796,7 @@ Dropped at r13346: Error 93.900 rc 163: `RaiseCondition cannot raise a SYNTAX co
     ::class T
     ::method rc external "LIBRARY orxmethod TestRaiseCondition"
 
-SIGSEGV, rc 139, 3 runs of 3. Measured 2026-09-29 by the Phase 8 final re-review (probe
-`rc/tw2.rex` in its scratchpad). **Cause not established.** One such raise in a clause is
+SIGSEGV, rc 139, 3 runs of 3. **Cause not established.** One such raise in a clause is
 identical on both sides (`library_raise_condition_call_on.rex`); this crate runs the handler
 twice. No upstream ticket.
 
@@ -865,8 +814,7 @@ Dropped at r13346: prints `start`, `caught 11 SYNTAX` and an empty line, rc 0 (S
 
 SIGSEGV, rc 139, stdout and stderr empty; 3 runs of 3 for `Table`, 2 of 2 with `subclass directory`
 in its place. `say self~items` in place of the store crashes the same way, 3 runs of 3.
-Measured 2026-09-30 by Phase 6 Task 9 fix round 1 while writing
-`lang/new_init_subclasses.rex`. **Cause not established.** This crate prints `1`, rc 0. No upstream
+**Cause not established.** This crate prints `1`, rc 0. No upstream
 ticket.
 
 ## 22. `~result` re-raising a started message's condition whose TRACEBACK holds a non-string
@@ -884,8 +832,7 @@ ticket.
 
 SIGSEGV, rc 139, 3 runs of 3, stdout empty; stderr has the started activity's report, then the
 re-raise report's first two traceback lines (`    10 *-* return 1/0`, `extra line`) before the
-crash. Found by the Phase 6 S2-S5 Task 3 review (probe `tb2.rex`), reproduced 2026-10-01 by its fix
-round 1. Cause read, not run under a debugger: `Activity::display`
+crash. Cause read, not run under a debugger: `Activity::display`
 (`concurrency/Activity.cpp:1428`) casts each TRACEBACK item to `RexxString *` without a check, so
 the Array is written as a string. This crate prints `an Array` for that line and re-raises, rc 214.
 No upstream ticket.
@@ -922,8 +869,7 @@ No upstream ticket.
 SIGSEGV, rc 139, in 5 runs of 10, stdout complete (`1`, `1`, `1`); stderr then has a second HALT
 report naming `Method UNKNOWN with scope "Monitor"` (line 1457 of the `REXX` package) before the
 crash. The other runs exit 0 with the started activity's 4.1 report alone. Without the last
-`say m~halt` it is 30 runs of 30 rc 0 (`lang/message_halt_untrapped.rex`). Measured 2026-10-01 by
-Phase 6 S2-S5 Task 4. **Cause not established.** This crate answers `1` for the last halt (the
+`say m~halt` it is 30 runs of 30 rc 0 (`lang/message_halt_untrapped.rex`). **Cause not established.** This crate answers `1` for the last halt (the
 started activity has no Rexx frame) and exits 0. No upstream ticket.
 
 ## 24. `.traceOutput` redirected to a Rexx object's `lineout` under `trace r`
@@ -942,8 +888,7 @@ started activity has no Rexx frame) and exits 0. No upstream ticket.
 SIGSEGV, rc 139, 6 runs of 6, after the program's last line: stdout `     3 *-* x = 1`,
 `       >>>   "1"`, `     4 *-* trace o` and `trace lines The NIL object`, stderr empty. The trace
 lines go to stdout and the object's `lineout` is never run. This crate prints the same four lines
-and exits 0. First found with a started activity spinning alongside (the Phase 6 S2-S5 Task 6
-re-review 2, `rr-t6/p2/traceobj.rex`); the started activity is not needed. **Cause not
+and exits 0. A started activity spinning alongside is not needed. **Cause not
 established.** No upstream ticket.
 
 ## 25. `alarm_stopTimer` on the handle of an `alarm_startTimer` whose wait has ended
@@ -970,8 +915,7 @@ failed: e != ESRCH || !robust`. An earlier shape (the stop during a second objec
 10 of 10 at `pthread_mutex_lock.c:88` instead. Cause: `alarm_startTimer`'s semaphore is a local
 of the native (`platform/unix/TimeSupport.cpp:116`) and `EVENTSEMHANDLE` keeps a pointer to it,
 which `alarm_stopTimer` posts (`:165`-`:166`) after the frame is gone. `.Alarm~cancel` reaches it
-only in the window before `init` clears `eventSemHandle`. Measured 2026-10-02 by Phase 6 S2-S5
-Task 8. This crate's stop on an ended timer does nothing (ruling R-T8-2). No upstream ticket.
+only in the window before `init` clears `eventSemHandle`. This crate's stop on an ended timer does nothing. No upstream ticket.
 
 ## 26. Two waits on one ticker timer, both in their whole days, and one post
 
@@ -1005,7 +949,7 @@ Cause: `ticker_waitTimer`'s day loop (`platform/unix/TimeSupport.cpp:191`-`:212`
 semaphore when a wait ends early without `CANCELED`; the post wakes both waiters by broadcast
 (`common/platform/unix/SysSemaphore.cpp:231`-`:238`), and when the first resets before the
 second's `pthread_cond_timedwait` loop re-tests `postedCount` (`:291`-`:306`), the second goes
-back to waiting out its day. Measured 2026-10-02 by Phase 6 S2-S5 Task 8. This crate ends both
+back to waiting out its day. This crate ends both
 waits' current day (`a_post_wakes_every_waiter_of_a_timer`). No upstream ticket.
 
 ## 27. `SysCreateMutexSem()` with no argument
@@ -1016,8 +960,7 @@ waits' current day (`a_post_wakes_every_waiter_of_a_timer`). No upstream ticket.
 SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper: stdout `before`, nothing on stderr. Cause:
 `SysCreateMutexSem` tests its optional name with `strlen(name) == 0`
 (`platform/unix/SysRexxUtil.cpp:878`), and an omitted `OPTIONAL_CSTRING` is a null pointer. The
-oracle's unnamed form is `SysCreateMutexSem('')`. Measured 2026-10-03 by Phase 6 S2-S5 Task 13.
-This crate creates an unnamed semaphore for both. No upstream ticket.
+oracle's unnamed form is `SysCreateMutexSem('')`. This crate creates an unnamed semaphore for both. No upstream ticket.
 
 ## 28. FORWARD ARGUMENTS over an instance whose `MAKEARRAY` answers a List
 
@@ -1032,8 +975,7 @@ This crate creates an unnamed semaphore for both. No upstream ticket.
     return .list~of(1, 2)
 
 SIGSEGV, rc 139, 5 runs of 5 under the standard wrapper, nothing on stdout or stderr. The same
-program with a `MAKEARRAY` answering a string raises 98.946 on both sides. Measured 2026-10-08 by
-Phase 6.1 Task 3's fix round. This crate raises 98.946 (`requestArray` answered no array). No
+program with a `MAKEARRAY` answering a string raises 98.946 on both sides. This crate raises 98.946 (`requestArray` answered no array). No
 upstream ticket.
 
 ## 29. GUARD WHEN on a compound tail set by another method
@@ -1056,8 +998,7 @@ upstream ticket.
 
 An indefinite block: 5 runs of 5 under the standard wrapper are killed at the timeout (rc 137),
 nothing printed; the waiter is never woken by the tail's assignment. A simple exposed variable in
-the same shape wakes. Measured 2026-10-08 by Phase 6.1 Task 3's fix round; its review measured the
-same block, 5 runs of 5 each, with the tail set through a generated `::ATTRIBUTE "A.B"` and through
+the same shape wakes. The same block, 5 runs of 5 each, occurs with the tail set through a generated `::ATTRIBUTE "A.B"` and through
 a stem `[]=`. The shape of entry 7. This crate wakes the waiter and prints `woke 1`. No upstream
 ticket.
 
@@ -1069,8 +1010,7 @@ ticket.
     return 'return "not an array"'
 
 SIGSEGV, rc 139, 5 runs of 5 under the standard wrapper (`Method~new`'s `processExecutableSource`
-takes the answer of `requestArray` as an array). Measured 2026-10-08 by the review of Phase 6.1
-Task 4 (its probe `e7_5`, which wraps the same `Method~new` in a trapping procedure). This crate
+takes the answer of `requestArray` as an array). This crate
 raises 93.961 (`requestArray` answered no array, and the class defines no `MAKESTRING`).
 No upstream ticket.
 
@@ -1086,8 +1026,7 @@ No upstream ticket.
       return
 
 SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper (`Activity::traceInput` casts the answer
-of `LINEIN` to `RexxString *` unchecked, `Activity.cpp:3252`). Measured 2026-10-09 by the review of
-Phase 6.1 Task 6 (its probe `dj2`). This crate reads an absent answer as the null string. No
+of `LINEIN` to `RexxString *` unchecked, `Activity.cpp:3252`). This crate reads an absent answer as the null string. No
 upstream ticket.
 
 ## 32. A `.DebugInput` whose `LINEIN` itself runs under interactive debug
@@ -1104,8 +1043,7 @@ upstream ticket.
       return 'say "typed"'
 
 SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper: each pause in `LINEIN` reads the next
-line by calling `LINEIN` again, so the recursion has no bottom. Measured 2026-10-09 by the review
-of Phase 6.1 Task 6 (its probe `di6`) and again by its fix round 2. This crate recurses the same
+line by calling `LINEIN` again, so the recursion has no bottom. This crate recurses the same
 way and stops at Error 11.1 (control stack full), rc 245. No upstream ticket.
 
 ## 33. A primitive's native method run on an object of another class
@@ -1127,11 +1065,9 @@ The same in a subclass of `Supplier` whose `INIT` does not forward to its superc
     ::method init
 
 SIGSEGV, rc 139, 5 runs of 5. The native method reads its receiver through the layout of the class
-it was written for. Measured 2026-10-07 by Phase 6.1's scout A (probes `b2_run_*_on_inst`,
-`b4_subclass_supplier`) and again for `List~ITEMS` and `Routine~CALL` by its Task 4. This crate
+it was written for. This crate
 refuses each with `Loud::receiver_class` (`a message send to a value that is not a list is not
-implemented`, and the like); the shapes that answer garbage instead of crashing are Deviation 28
-in `docs/superpowers/plans/phase-4-exclusions.txt`. No upstream ticket.
+implemented`, and the like); the shapes that answer garbage instead of crashing are Deviation 28. No upstream ticket.
 
 A variable reference list, `(v)` in `DROP`, `EXPOSE` or `PROCEDURE EXPOSE`, whose variable holds an
 object with a `STRING` method that answers a non-string object:
@@ -1148,9 +1084,8 @@ object with a `STRING` method that answers a non-string object:
 
 SIGSEGV, rc 139. `expose v (v)` inside a method and `drop (v)` crash the same way. The oracle's
 `primitiveMakeString` turns the answer into `.nil`, and the list is then read through the string
-layout. This was measured 2026-10-10 by Phase 6.1's Task 11a review and fix round 1. The probes are
-`b08_drop`, `f1c/c11_expose` and `f1c/c05_procexpose`, and were run 2 times on the oracle. This crate
-refuses each with the R11 loud refusal (Deviation 30). No upstream ticket.
+layout. Run 2 times on the oracle. This crate
+refuses each loudly (Deviation 30). No upstream ticket.
 
 ## 34. An `arrayArgument` whose `MAKEARRAY` answers a List, or a string of some contents
 
@@ -1160,8 +1095,7 @@ refuses each with the R11 loud refusal (Deviation 30). No upstream ticket.
 
 SIGSEGV, rc 139, 5 runs of 5 under the standard wrapper, nothing on stdout or stderr.
 `arrayArgument` (`runtime/MethodArguments.hpp:675`) checks the `requestArray` answer only against
-`TheNilObject` and then reads it through the array layout. Measured 2026-10-12 by Phase 9a Task 5
-(probe `ua11`). A string answer is read the same way, and the outcome is fixed by the string's
+`TheNilObject` and then reads it through the array layout. A string answer is read the same way, and the outcome is fixed by the string's
 content: the table under entry 43 holds it, measured on this program and on that one. This crate
 raises 98.913 for any answer that is not a single-dimensional array. No upstream ticket.
 
@@ -1175,8 +1109,7 @@ raises 98.913 for any answer that is not a single-dimensional array. No upstream
 
 SIGSEGV, rc 139, 5 runs of 5 under the standard wrapper, nothing on stdout or stderr.
 `RexxClass::createMethodDictionary` (`classes/ClassClass.cpp:1250`-`:1251`) casts the `SUPPLIER`
-answer to `SupplierClass *` and calls its methods directly. Measured 2026-10-12 by Phase 9a Task 5
-(probe `dm7`). This crate refuses with `Loud::receiver_class` (`a message send to a value that is
+answer to `SupplierClass *` and calls its methods directly. This crate refuses with `Loud::receiver_class` (`a message send to a value that is
 not a supplier`). No upstream ticket.
 
 ## 36. A `TRACE` write to the REXX package's settings
@@ -1185,8 +1118,7 @@ not a supplier`). No upstream ticket.
 
 SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper, nothing on stdout or stderr. The read
 `.object~package~options('T')` answers `?n/a?` and a `DIGITS` write to the same package answers,
-so it is the trace write that crashes. Measured 2026-10-12 by Phase 9a Task 7 (probe `t7-crash`).
-This crate stores the setting and answers `?n/a?`. Cause not read. No upstream ticket.
+so it is the trace write that crashes. This crate stores the setting and answers `?n/a?`. Cause not read. No upstream ticket.
 
 ## 37. An untrapped error raised from inside `SysStemSort`'s sort
 
@@ -1208,9 +1140,8 @@ Dropped at r13346: its programs raise their error, rc 216 and 163 (SF #2068, r13
     ::method string
       raise syntax 93.900 array('boom')
 
-SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper and `memcap 4G`, measured 2026-10-13 by
-Phase 9b Task 3's fix round: stdout `Name=A, Value='first'`, nothing from the interpreter on
-stderr. The `SIGNAL ON SYNTAX` does not save it. Found by Task 3's review. Cause not read: the
+SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper and `memcap 4G`: stdout `Name=A, Value='first'`, nothing from the interpreter on
+stderr. The `SIGNAL ON SYNTAX` does not save it. Cause not read: the
 raise comes out of `ObjectToString` inside `writeVariable` (`runtime/RexxUtilCommon.cpp:1449`).
 This crate traps the 93.900 and prints `trapped 93.900`, pinned by
 `builtin::rexxutil::stems::tests::a_string_method_raising_inside_the_dump_is_trapped`. No
@@ -1227,16 +1158,15 @@ Dropped at r13346: answers `0 0 1` from a directory on another file system than 
     say f.0 f.1
     'rm dangling'
 
-Not a crash: an UNDEFINED ANSWER. 3 runs under the standard wrapper, measured 2026-10-13 by Phase
-9b Task 5: stdout `1  1/01/70   1:00a           0  ----------  <dir>/dangling` each time, rc 0.
+Not a crash: an UNDEFINED ANSWER. 3 runs under the standard wrapper: stdout `1  1/01/70   1:00a           0  ----------  <dir>/dangling` each time, rc 0.
 `SysFileIterator::findNextEntry` (`platform/unix/SysFileSystem.cpp`) ignores `stat64`'s failure,
 so the line carries whatever its `findFileData` held: a longer probe program printed
 `1/01/70   1:00a          23  l-----S--T` for the same call, and in a `*` listing whose previous
 entry was a directory the link carried that directory's date, size and mode and was counted under
 `D` and not `F`. Any `stat` failure does the same: a chain of links past the kernel's limit
-fails with `ELOOP`, and the Task 5 review's loop probe (`loop.d/s/up -> ..` searched with `S`)
+fails with `ELOOP`, and a loop (`loop.d/s/up -> ..` searched with `S`)
 printed the previous entry's `80  drwxrwxr-x` for the deepest `up`, where this crate prints the
-link's own `2  lrwxrwxrwx`; both stop there, count 123. This checkout's `interpreter/` is the same. This crate lists the link
+link's own `2  lrwxrwxrwx`; both stop there, count 123. This crate lists the link
 by `lstat`, a link with its own size that counts as a file, pinned by
 `builtin::rexxutil::tree::tests::a_dangling_link_is_listed_by_its_own_status`. The corpus
 witness `lang/rexxutil_file_tree.rex` makes no dangling link.
@@ -1247,8 +1177,8 @@ witness `lang/rexxutil_file_tree.rex` makes no dangling link.
     ::class raiser
     ::method string; raise syntax 93.900 array('raised')
 
-SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper and `memcap 4G`, nothing on stdout,
-measured 2026-10-13 by Phase 9b Task 6. `formatMessage` (`runtime/RexxUtilCommon.cpp`) takes
+SIGSEGV, rc 139, 3 runs of 3 under the standard wrapper and `memcap 4G`, nothing on stdout.
+`formatMessage` (`runtime/RexxUtilCommon.cpp`) takes
 each value through `ObjectToStringValue`, which catches the raise and answers `NULL`, and the
 message's `&1` then runs `strlen` on it. A raising value the message does not refer to is safe:
 the other values are still converted and the last raise is the routine's answer, which the corpus
@@ -1262,8 +1192,7 @@ upstream ticket.
     call stream 'zero.cat', 'c', 'close'
     say SysGetMessage(1, './zero.cat')
 
-SIGFPE, rc 136, 3 runs of 3 under the standard wrapper and `memcap 4G`, measured 2026-10-13 by
-Phase 9b Task 6: a catalog of no buckets passes glibc 2.43's `__open_catalog` checks and
+SIGFPE, rc 136, 3 runs of 3 under the standard wrapper and `memcap 4G`: a catalog of no buckets passes glibc 2.43's `__open_catalog` checks and
 `catgets` divides by the bucket count. A header claiming more table than the file holds
 (`'a0860100'x` buckets, one deep, 20 bytes after the header) dies of SIGBUS, rc 135, 3 runs of 3:
 `__open_catalog` scans the table for its largest offset before it tests the file's size. This
@@ -1277,10 +1206,10 @@ and `a_table_reaching_past_the_mapping_is_rejected`. No upstream ticket.
     ::class k
     ::method makearray; return 'not an array'
 
-SIGSEGV, rc 139, 5 runs of 5 under the standard wrapper and `memcap 4G`, nothing on stdout,
-measured 2026-10-13 by Phase 9b Task 6. `arrayArgument` (`runtime/MethodArguments.hpp:675`) reads
+SIGSEGV, rc 139, 5 runs of 5 under the standard wrapper and `memcap 4G`, nothing on stdout.
+`arrayArgument` (`runtime/MethodArguments.hpp:675`) reads
 the string through the array layout, as in entry 34, and what follows depends on the string's
-content and not on the run. The Phase 9b Task 6 review measured both programs, entry 34's
+content and not on the run. Measured on both programs, entry 34's
 (`.environment~unknown('ARRAY', .k~new)`) and this one, 3 runs each, with `MAKEARRAY` answering:
 
 | `MAKEARRAY` answers | entry 34's program | this program |
@@ -1300,7 +1229,7 @@ ticket.
     say rc
 
 Run with `HOME` removed from the environment (`env -u HOME`): SIGSEGV, rc 139, 3 runs of 3 under
-the standard wrapper and `memcap 4G`, nothing on stdout, measured 2026-10-13 by Phase 9b Task 6.
+the standard wrapper and `memcap 4G`, nothing on stdout.
 `sys_process_cd` (`platform/unix/SystemCommands.cpp:494`) hands a bare `cd` and `cd ~/x` to the
 shell where `getenv("HOME")` is null, but for `cd ~` and `cd ~ x` it runs `strlen` on it. This
 crate hands those to the shell too, and the shell's answer is the command's, the directory
@@ -1311,16 +1240,13 @@ ticket.
 
     say SysWait()
 
-Not a crash: an UNDEFINED ANSWER. 3 runs under the standard wrapper and `memcap 4G`, measured
-2026-10-13 by Phase 9b Task 7: stdout `32582`, `32589`, `32624`, rc 0, and a second call in the
+Not a crash: an UNDEFINED ANSWER. 3 runs under the standard wrapper and `memcap 4G`, : stdout `32582`, `32589`, `32624`, rc 0, and a second call in the
 same run answers the same value as the first. `SysWait` (`platform/unix/SysRexxUtil.cpp`) answers
-the status `wait` would have set, and `wait` fails with `ECHILD` and sets nothing. This checkout's
-`interpreter/` is the same. A command whose child a `SysWait` on another activity reaped is the
+the status `wait` would have set, and `wait` fails with `ECHILD` and sets nothing. A command whose child a `SysWait` on another activity reaped is the
 same defect one step on: `ioCommandHandler` (`platform/unix/SystemCommands.cpp`) reads the status
 of its own failed `waitpid`. With `'exit 3'` then `'sleep 0.6; exit 5'` run on a started activity
 and `SysWait` after `SysSleep 0.2` on the main one, 3 runs printed the wait's answer and the
-command's `rc` as `1280` and `3` twice, then `32631` and `5`
-(`docs/superpowers/records/2026-10-13-phase-9b/task-7/probe-runs.txt`). This crate answers `-1` for a wait that finds no
+command's `rc` as `1280` and `3` twice, then `32631` and `5`. This crate answers `-1` for a wait that finds no
 child or fails, pinned by `tests/rexxutil_process.rs`, and a command whose child was reaped elsewhere
 answers `127` with a `FAILURE`, pinned by that file's
 `a_command_whose_child_was_reaped_elsewhere_fails_with_127`. No upstream ticket.
@@ -1352,13 +1278,12 @@ answers `127` with a `FAILURE`, pinned by that file's
 
 An INDEFINITE BLOCK, and one that outlives its wrapper: the forked child holds no thread but the
 forking one and never ends, so the parent's `SysWait` waits for ever. 5 runs under the standard
-wrapper with `timeout -k 5 20` and `memcap 4G`, measured 2026-10-13 by Phase 9b Task 7: each
-killed at the deadline, rc 124; the child printed `child: alive` in 3 of the 5 and nothing in the
+wrapper with `timeout -k 5 20` and `memcap 4G`, : each killed at the deadline, rc 124; the child printed `child: alive` in 3 of the 5 and nothing in the
 other 2, and every child was still running after its parent was killed, to be killed by hand.
 `SysFork` with no other activity works: 3 runs of 3 printed the child's line and a wait status of
 `768` for its `exit 3`, rc 0. This crate refuses `SysFork`: every run has a timer thread and a
 joining main thread, which a forked child would not have
-(`.superpowers/sdd/queued/2026-10-13-sysfork-design.md`). No upstream ticket.
+(Deviation 42). No upstream ticket.
 
 ## 47. A stem passed by name whose variable a `STRING` method in the same call drops
 
@@ -1378,8 +1303,7 @@ joining main thread, which a forked child would not have
 
 Not one mode: what the oracle does depends on when it collects. `SysStemCopy`, `SysStemDelete`, `SysStemInsert`
 and `SysStemSort` resolve a stem named by a string and hold it only through the caller's variable,
-while later arguments and the sort's elements run `STRING` methods. Measured 2026-10-13 by the
-Phase 9b final fix, 3 runs of 3 each under the standard wrapper and `memcap 4G`, from a fresh
+while later arguments and the sort's elements run `STRING` methods. Measured 3 runs of 3 each under the standard wrapper and `memcap 4G`, from a fresh
 empty directory:
 
 | program | `STRING` allocates `copies('filler ', 50)` once | 200000 times | 200000 times, no `drop` |
@@ -1390,8 +1314,7 @@ empty directory:
 | `SysStemSort('s.')`, `s.2 = self` | rc 0: `0 S.0` | rc 0: `0 S.0` | rc 0: `0 3` |
 | `SysStemSort('s.x')`, `s.x.2 = self` | rc 0: `0 S.X.0` | rc 0: `0 S.X.0` | rc 0: `0 3` |
 
-The Phase 9b final review measured 40.922 for its own program of the same shape, 3 runs of 3,
-where this program crashes. This crate holds the stem it resolved for the whole call, and answers as
+A program of the same shape answered 40.922, 3 runs of 3, where this program crashes. This crate holds the stem it resolved for the whole call, and answers as
 the oracle does when it does not collect, collecting or not: pinned by
 `builtin::rexxutil::stems::tests::a_stem_named_by_its_variable_outlives_the_variable`, which reads
 `crates/rexx-exec/tests/stem_dropped_by_name_cases/crate` and runs each case normally and
@@ -1402,7 +1325,7 @@ collecting at every allocation. No corpus witness can run it. No upstream ticket
     say qualify('~')
 
 Measured at r13346 under `env -u HOME`: SIGSEGV, rc 139. `SysFileSystem::resolveTilde` (`platform/unix/SysFileSystem.cpp:569` at the
-oracle's `cb9563364`, `:486` in this checkout's `interpreter/`) assigns `getenv("HOME")` to a
+oracle's `cb9563364`) assigns `getenv("HOME")` to a
 `FileNameBuffer`, whose `operator=` (`memory/FileNameBuffer.hpp:122`) runs `strlen` on it:
 `strlen(NULL)` where `HOME` is unset, as in entry 44's `cd ~`, which was measured.
 `canonicalizeName` calls it for a name starting `~`, and `qualifyStreamName` calls
@@ -1422,9 +1345,8 @@ Dropped at r13346: both programs answer rc 0, 5 of 5, with the crate's output. N
     say s~items
 
 Effect: SIGSEGV, rc 139. On Stem it first prints `built Stem`, so the crash comes at the first
-method the object answers. The same shape on Set crashes before printing. Measured 2026-10-18 by
-the Phase 9d Task 3 review and again by the controller, 1 run each, under the standard wrapper
-from a fresh empty directory. The review found the same crash on Set, Bag, Table, Directory,
+method the object answers. The same shape on Set crashes before printing. Measured 1 run each, under the standard wrapper
+from a fresh empty directory. The same crash occurs on Set, Bag, Table, Directory,
 StringTable, Relation, IdentityTable and Properties. `Class~new` builds an object without the
 hash class's own allocation, and the class's native methods then read a layout it lacks. This
 crate refuses `ITEMS` on the Stem with `method "ITEMS" of a "Stem" built without its store is
@@ -1441,15 +1363,12 @@ not implemented` (rc 120), and answers on Set (`0`, rc 0). No upstream ticket.
     say 'routine end'
 
 Effect: SIGSEGV, rc 139, at exit. Before it, stdout holds every trace line from `6 *-* a = 1` on,
-then `routine end` and `not reached`; stderr is empty. Measured 2026-10-19 by Phase 9d Task 6.10,
-and again by its review. The failed `LINEOUT` raises 97.1 with no trap anywhere, so
+then `routine end` and `not reached`; stderr is empty. The failed `LINEOUT` raises 97.1 with no trap anywhere, so
 `Activity::raiseException` pops the traced activation and `raisePropagate` reaches the base frame,
 where `traceOutput`'s `catch (NativeActivation *)` writes the line with `lineOut` (stdout, as in
 entry 11c) and returns into the popped activation, which runs on. This crate reports the
 untrapped 97.1 at `a = 1`, rc 159, and writes the report's lines, which the destination cannot
-take either, on stdout under entry 11's licence
-(`docs/superpowers/records/2026-10-18-phase-9d/t6.10/probes/untrapped-trace-failure/`). No
-upstream ticket.
+take either, on stdout under entry 11's licence. No upstream ticket.
 
 ## 52. A `.TRACEOUTPUT` destination whose `LINEOUT` recurses without end
 
@@ -1466,11 +1385,8 @@ upstream ticket.
     spin: call spin
 
 Effect: SIGSEGV, rc 139. Before it, stdout holds `3 *-* x = 1` and its `>>>   "1"` line; stderr
-is empty. Measured 2026-10-19 by Phase 9d Task 6.10 fix round 3, 1 run, under the standard
-wrapper from a fresh empty directory, after its review measured the same crash. This crate is
-killed at a 2G memory cap after about 7 s (rc 137), where the task's parent printed `after`,
-rc 0: queued as
-`.superpowers/sdd/queued/2026-10-19-trace-destination-recursion-oom.md`. No upstream ticket.
+is empty. Measured 1 run, under the standard wrapper from a fresh empty directory. This crate is
+killed at a 2G memory cap after about 7 s (rc 137). No upstream ticket.
 
 ## 53. HALT sent to a started message whose activity is inside a trace delivery
 
@@ -1507,8 +1423,7 @@ rc 0: queued as
       return 0
 
 Effect: SIGSEGV, rc 139, on 8 of 8 runs. Before it, stdout holds `halt 1` and
-`    24 *-* a = 1`; stderr is empty. Measured 2026-10-19 by the Phase 9d Task 6.10 round-3
-re-review, under the standard wrapper from a fresh empty directory. This crate raises HALT in
+`    24 *-* a = 1`; stderr is empty. Measured under the standard wrapper from a fresh empty directory. This crate raises HALT in
 the halted activity, prints `result error 4.1` and `main lines 1`, rc 0. No upstream ticket.
 
 ## 54. A security manager's STREAM replacement that does not support the Stream methods
@@ -1525,8 +1440,7 @@ the halted activity, prints `result error 4.1` and `main lines 1`, rc 0. No upst
       return 1
 
 Effect: SIGSEGV, rc 139, at program exit, on 3 of 3 runs. Before it, stdout holds `97.1` and the
-file is never created. Measured 2026-10-19 by Phase 9d Task 6.12 round 1 (`t6.12/r1/probes/stream_replacement.rex`
-and its `.txt`), under the standard wrapper from a fresh empty directory. rexxref makes the entry
+file is never created. Measured under the standard wrapper from a fresh empty directory. rexxref makes the entry
 the stream target, so this crate answers the same 97.1, leaves the file alone and exits 0
 (`tests/security_replacements.rs`). No upstream ticket.
 
@@ -1543,14 +1457,12 @@ the stream target, so this crate answers the same 97.1, leaves the file alone an
       args[1]['NAME'] = .object~new
       return 1
 
-with `present.cls` an existing file beside the program. Effect: SIGSEGV, rc 139, on 3 of 3 runs of
-this program and 8 of 8 of `t6.12/r1/probes/requires_object_name.rex`, with nothing written. Cause: the unchecked `(RexxString *)` cast of the entry at
+with `present.cls` an existing file beside the program. Effect: SIGSEGV, rc 139, on 3 of 3 runs, with nothing written. Cause: the unchecked `(RexxString *)` cast of the entry at
 `SecurityManager.cpp:343`. A string or `.nil` replacement answers 3.1 naming its string value. A
 run that traps the load with `SIGNAL ON SYNTAX`, after a `.nil` replacement in the same loop, can
-answer 3.1 naming `an Object` instead (Task 6.12 re-review r1, 3 of 3). This
+answer 3.1 naming `an Object` instead (3 of 3). This
 crate reads the object's string value too, which is 3.1 naming `an Object`
-(`tests/security_replacements.rs`). Measured 2026-10-19 by Phase 9d Task 6.12 round 1
-(`t6.12/r1/probes/requires_object_name.rex`). No upstream ticket.
+(`tests/security_replacements.rs`). No upstream ticket.
 
 ## 56. A redirected command whose error stem is also its input stem, with no output target
 
@@ -1570,11 +1482,10 @@ Dropped at r13346: answers `error only 1 [in]` rc 0 (SF #2087, r13262).
       address system 'sleep 0.5; cat; echo err'k' >&2' with input stem i. output stem o. error stem e.
       return k rc o.0 o.1 o.2 o.3 e.0 e.1 .context~rs
 
-Effect: an INDEFINITE BLOCK in 2 or 3 of 6 runs (3 here, 2 in the Task 6.13 re-review r2), killed at the 20 s deadline (rc 124, the program
+Effect: an INDEFINITE BLOCK in 2 or 3 of 6 runs , killed at the 20 s deadline (rc 124, the program
 then reporting 4.1 at the command's line), having printed none or the first of the results;
-the other 3 runs print the four results and `parallel 1`. Measured 2026-10-20 by Phase 9d Task 6.13 fix round 2, under the standard wrapper
-with `timeout -k 5 20`, from a fresh empty directory (found by the Task 6.13 re-review, also 3 of
-6). This crate gives the four results and `parallel 1` in every run. No upstream ticket.
+the other 3 runs print the four results and `parallel 1`. Measured under the standard wrapper
+with `timeout -k 5 20`, from a fresh empty directory. This crate gives the four results and `parallel 1` in every run. No upstream ticket.
 
 ## 58. A redirect target's method raising ERROR under `CALL ON ERROR`, the command ending non-zero
 
@@ -1596,9 +1507,7 @@ with `timeout -k 5 20`, from a fresh empty directory (found by the Task 6.13 re-
 Effect: SIGSEGV, rc 139, on 3 of 3 runs, after `O:a`, `O:b` and one handler line, the command's
 (`handler ERROR echo a; ... exit 5 rc 5 rs 1 sigl 4`). The same shape with no redirection, a
 command whose expression's method does `raise error 3 return 'exit 5'`, dies the same way: it is
-entry 5's family, the same `CALL ON` condition queued twice in one clause. Measured 2026-10-20 by
-Phase 9d Task 6.13 fix round 3 under the standard wrapper from a fresh empty directory (found by
-the Task 6.13 re-review r2 as `rcun2`). rexxref (Condition traps, CALL ON) puts the trap in the
+entry 5's family, the same `CALL ON` condition queued twice in one clause. Measured under the standard wrapper from a fresh empty directory. rexxref (Condition traps, CALL ON) puts the trap in the
 delayed state from the first raise and ignores an ERROR raised again while it is delayed, so this
 crate runs the handler once, for the target's ERROR (`rc 9`), and ignores the command's
 (`src/scheduler/tests.rs`). No upstream ticket.
@@ -1611,8 +1520,8 @@ crate runs the handler once, for the target's ERROR (`rc 9`), and ignores the co
 
 Effect: a hang after `made`, and not an INDEFINITE BLOCK: the process spins on the CPU (6 s of CPU
 time in its first 6 s, `ps` state `R`), ignores SIGTERM, and is SIGKILLed at `timeout -k 5 20`'s
-25 s (rc 137, stderr empty). Measured 2026-10-27 by Phase 9d Task 8.5 fix round 3 under the
-standard wrapper from a fresh empty directory (found by the Task 8.5 re-review r2); the cause is not
+25 s (rc 137, stderr empty). Measured under the
+standard wrapper from a fresh empty directory; the cause is not
 traced in the C++. This crate answers 11.1 at the conversion (`src/tests.rs`,
 `a_cyclic_reference_is_insufficient_stack_in_every_conversion`). No upstream ticket.
 
@@ -1628,8 +1537,8 @@ traced in the C++. This crate answers 11.1 at the conversion (`src/tests.rs`,
     nostring: say 'NS' condition('D'); exit
 
 Effect: entry 59's hang through a two-variable cycle: `made`, then still running at SIGTERM and
-SIGKILLed at 25 s (rc 137, stderr empty). Measured 2026-10-27 by Phase 9d Task 8.5 fix round 3 under
-the standard wrapper from a fresh empty directory (the Task 8.5 re-review r2's `cycle.rex`). This
+SIGKILLed at 25 s (rc 137, stderr empty). Measured under
+the standard wrapper from a fresh empty directory. This
 crate answers 11.1 (`a_cyclic_reference_is_insufficient_stack_in_every_conversion`). No upstream
 ticket.
 
@@ -1642,9 +1551,8 @@ ticket.
 
 Effect: entry 59's hang through a stem's default: `made.txt` written, then still running at SIGTERM
 and SIGKILLed at 25 s (rc 137, stdout and stderr empty). `s. = >s.` alone, followed by `say
-s.~class~id`, prints `Stem` at rc 0, so the hang is in the conversion. Measured 2026-10-27 by the
-Phase 9d Task 8.5 re-review r3 under the standard wrapper from a fresh empty directory (its
-`sd1.rex`). This crate answers 11.1 (`a_cyclic_reference_is_insufficient_stack_in_every_conversion`,
+s.~class~id`, prints `Stem` at rc 0, so the hang is in the conversion. Measured under the
+standard wrapper from a fresh empty directory. This crate answers 11.1 (`a_cyclic_reference_is_insufficient_stack_in_every_conversion`,
 whose stem shapes it holds). No upstream ticket.
 
 ## 62. Array's native SORTWITH defined on a class that is not an Array, sent to an instance
@@ -1654,12 +1562,9 @@ whose stem shapes it holds). No upstream ticket.
     ::class k
     ::class ksub subclass k
 
-Effect: SIGSEGV, rc 139. Measured 2026-10-21 by the Phase 9d Task 8 triage under the standard
-wrapper from a fresh empty directory (`.superpowers/sdd/2026-10-18-phase-9d/t8-triage-2/q09/e.rex`);
-the Task 6.11 re-review had recorded `98.975 Missing array element at position 2.` for the same
-shape. `ArrayClass::stableSortWithRexx` runs with a receiver that is not an `ArrayClass`. This crate
-refuses loudly (`a message send to a value that is not an array is not implemented`, rc 120). Not
-re-run by Task 8.7a. No upstream ticket.
+Effect: SIGSEGV, rc 139. Measured under the standard
+wrapper from a fresh empty directory. `ArrayClass::stableSortWithRexx` runs with a receiver that is not an `ArrayClass`. This crate
+refuses loudly (`a message send to a value that is not an array is not implemented`, rc 120). No upstream ticket.
 
 ## 63. TRACE I over a `~value=` assignment to a variable reference
 
@@ -1697,10 +1602,8 @@ Dropped at r13346: prints `3` rc 0, 5 of 5, with the crate's stderr. No upstream
       say 'sg end'
       exit
 
-Effect: SIGSEGV, rc 139, stdout `h 1 first` and `after first, n = 1`, stderr empty. Measured 2026-10-28 by
-Phase 9d Task 8.7b fix round 1 under the standard wrapper from a fresh directory holding only that round's
-delayed-trap probes, once
-(`docs/superpowers/records/2026-10-18-phase-9d/t8.7b/fix-r1/delayed/w1.rex`); not narrowed to one half.
+Effect: SIGSEGV, rc 139, stdout `h 1 first` and `after first, n = 1`, stderr empty. Measured once under the standard
+wrapper from a fresh directory; not narrowed to one half.
 This crate holds the conditions (rexxref, `condtra.xml`, CALL ON):
 `crates/rexx-exec/tests/delayed_trap_cases/crate`. No upstream ticket.
 
@@ -1732,9 +1635,8 @@ This crate holds the conditions (rexxref, `condtra.xml`, CALL ON):
       return
 
 Effect: SIGSEGV, rc 139, after the whole of stdout (`hf FAILURE` to `after error, k = 1`) and the
-command trace lines on stderr. Measured 2026-10-28 by Phase 9d Task 8.7b fix round 1 under the standard
-wrapper from a fresh directory holding only that round's delayed-trap probes, once
-(`docs/superpowers/records/2026-10-18-phase-9d/t8.7b/fix-r1/delayed/w4.rex`). This crate prints the same
+command trace lines on stderr. Measured once under the standard
+wrapper from a fresh directory. This crate prints the same
 stdout and stderr at rc 0: `crates/rexx-exec/tests/delayed_trap_cases/crate`. No upstream ticket.
 
 ## 66. A NOTREADY under a delayed CALL ON ANY trap, then two NOTREADY conditions raised in one clause under CALL ON NOTREADY
@@ -1760,9 +1662,8 @@ stdout and stderr at rc 0: `crates/rexx-exec/tests/delayed_trap_cases/crate`. No
       return
 
 Effect: SIGSEGV, rc 139, stdout `ha 1 NOTREADY no_such_file_zz.txt` to `hn 1 NOTREADY
-no_such_file_zz4.txt`, stderr empty. Measured 2026-10-28 by Phase 9d Task 8.7b fix round 2 under the
-standard wrapper from a fresh directory, once
-(`docs/superpowers/records/2026-10-18-phase-9d/t8.7b/fix-r2/nr/nr.rex`); not narrowed to one half. The
+no_such_file_zz4.txt`, stderr empty. Measured once under the
+standard wrapper from a fresh directory; not narrowed to one half. The
 second half is the shape of the probes rule against queueing one `CALL ON` condition twice at one
 boundary. This crate ignores both NOTREADY conditions raised again while the trap is delayed (rexxref,
 `condtra.xml`, NOTREADY; `iostrms.xml`, the DELAY state): `crates/rexx-exec/tests/delayed_trap_cases/crate`.
@@ -1784,8 +1685,87 @@ No upstream ticket.
       return
 
 Effect: SIGSEGV, rc 139, stdout `ha 1 NOTREADY no_such_file_zz.txt` only, stderr empty. Measured
-2026-10-29 by the Phase 9d Task 8.7b fix round 2 re-review under the standard wrapper from a fresh
-directory, once (`docs/superpowers/records/2026-10-18-phase-9d/t8.7b/fix-r3/p4/p4.rex`); not narrowed.
+once under the standard wrapper from a fresh directory; not narrowed.
 The first clause raises USER (a `RAISE ... RETURN` in a function call) and NOTREADY. This crate runs
 the handler for the USER condition and ignores the NOTREADY raised while the `ANY` trap is delayed:
 `crates/rexx-exec/tests/delayed_trap_cases/crate`. No upstream ticket.
+
+## 68. A mutex semaphore main takes between the worker's last two steps
+
+    o = .t~new
+    o~test_exclusion
+    ::class t
+    ::method test_exclusion
+      expose step
+      sem = .MutexSemaphore~new
+      step = 1
+      self~run_test_exclusion(sem)
+      guard off when step == 2
+      say 'm1' sem~acquire(0)
+      say 'm2' sem~acquire(0.05)
+      step = 3
+      say 'm3' sem~acquire(1)
+      step = 4
+      guard off when step = 5
+      say 'm4' sem~release
+      guard off when step == 6
+      say 'm5' sem~acquire(1)
+    ::method run_test_exclusion unguarded
+      expose step
+      use strict arg sem
+      reply
+      say 'w1' sem~acquire
+      step = 2
+      guard off when step = 3
+      say 'w2' sem~release
+      say 'w3' sem~release
+      guard off when step = 4
+      say 'w4' sem~acquire(0)
+      say 'w5' sem~acquire(0.05)
+      step = 5
+      say 'w6' sem~acquire(-1)
+      say 'w7' sem~release
+      step = 6
+      call SysSleep 0.01
+      say 'w8' sem~acquire
+
+Effect: an INDEFINITE BLOCK. Measured 3 of 3 under the standard wrapper with
+`timeout -k 5 20`: rc 137 (the kill, not an answer). The program is ooTest's
+`MutexSemaphore` `TEST_EXCLUSION` run outside the framework, with the worker
+yielding (`SysSleep`) after `step = 6`.
+
+Cause: main takes the mutex between the worker's `step = 6` and its last
+`acquire` and never releases it, so the worker waits for ever and the program's
+end waits for it. The oracle reaches the same deadlock in that interleaving: it
+is the test's own race. No upstream ticket.
+
+## 69. A `~notify` sent while the notification loop is running
+
+    m = .message~new('abc', 'reverse')
+    m~notify(.slow~new)
+    m~start
+    call SysSleep 0.3
+    w = .message~new(.counter~new, 'bump')
+    m~notify(w)
+    say 'notified' m~completed
+    w~wait
+    say 'waited'
+    exit
+    ::class slow inherit MessageNotification
+    ::method messageComplete
+      call SysSleep 1
+    ::class counter
+    ::method bump
+      return 1
+
+Effect: an INDEFINITE BLOCK. Measured 5 of 5 under the standard wrapper with
+`timeout -k 5 8`: rc 137 (the kill), stdout `notified 1` and never `waited`,
+stderr empty.
+
+Cause: the notification loop fixes its count before the sends and sets
+all-notified after them (`classes/MessageClass.cpp:666-685`), and `~notify`
+sends at once only where all-notified is set (`:217-229`), so `w` is never sent
+`messageComplete` and `w~wait` never ends. Here `slow`'s `messageComplete`
+sleeps 1 s, and main's `~notify` lands 0.3 s in. This crate prints `notified 1`
+and refuses with `rexx-exec: a wait that nothing left to run can end is not
+implemented`, rc 120. No upstream ticket.

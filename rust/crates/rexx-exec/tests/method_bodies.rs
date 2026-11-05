@@ -1,4 +1,4 @@
-//! The method-body table (D76): whether each documented method **works**,
+//! The method-body table: whether each documented method **works**,
 //! where gate table C only asks whether `hasMethod` answers for it.
 
 #![expect(
@@ -138,10 +138,7 @@ fn regressed(was: Body, now: Body) -> bool {
         (Body::Unstable, Body::Unstable) => false,
         // **A row losing its evidence is a regression when it had some.**
         // `Answers` -> `Unanswered` is a class that used to construct and
-        // stopped, which is the case this arm exists to catch. The 2026-09-04
-        // landing that introduced the verdict moved 71 rows across it, and
-        // did so by writing the committed table in the same commit rather
-        // than by relaxing this -- a definitional change, not a regression.
+        // stopped, which is the case this arm exists to catch.
         (Body::Answers, Body::Unanswered) => true,
         (Body::Diverge, Body::Unanswered) => false,
         (Body::Loud, Body::Unanswered) => false,
@@ -336,20 +333,14 @@ const RECEIVER_OVERRIDES: &[(&str, &str)] = &[
         ".DateTime~fromIsoDate('2020-01-02T03:04:05.678901')",
     ),
     ("MutableBuffer", ".MutableBuffer~new('abc')"),
-    // **Phase 5g Task 7's sweep.** The 5c follow-up left 105 rows across
-    // thirteen classes whose zero-argument probe cannot discriminate because
-    // the documented receiver is empty, and Phase 5f's Task 0 measured that a
-    // populated one would sharpen `Queue`, `Array` and `List`. It is worth
-    // nothing until the collection can hold something and nearly free
-    // afterwards, which is why it is this phase's last step and not its
-    // first.
+    // Collections: a zero-argument probe on an empty documented receiver
+    // cannot discriminate, so each holds something.
     ("Array", ".Array~of('a','b','c')"),
     ("Queue", ".Queue~of('a','b','c')"),
     ("List", ".List~of('a','b','c')"),
     ("CircularQueue", ".CircularQueue~of('a','b','c')"),
-    // **Phase 5h Task 6's sweep**, the same step for the mapped classes: a
-    // zero-argument probe against an empty map cannot tell a body that works
-    // from one that refuses, and every class below can hold something now.
+    // The mapped classes: a zero-argument probe against an empty map cannot
+    // tell a body that works from one that refuses.
     ("Table", ".Table~new~~put('v1','k1')~~put('v2','k2')"),
     (
         "IdentityTable",
@@ -385,7 +376,7 @@ const RECEIVER_OVERRIDES: &[(&str, &str)] = &[
         ".Array~of(.Ticker~new(99999, .Message~new(.Object~new, 'STRING'))~~cancel, \
          SysSleep(0.2))[1]",
     ),
-    // **Phase 5i Task 6.** `StackFrame` has no construction expression in
+    // `StackFrame` has no construction expression in
     // `corpus/docs/class-set.txt` -- the reference says the user cannot make
     // one -- so the fallback receiver is a bare `~new`, which the oracle and
     // this crate both refuse at `93.967`. That leaves all ten instance rows
@@ -750,7 +741,7 @@ fn render(rows: &[MethodRow], measured: &BTreeMap<(String, String, String), Meas
 /// The committed table's header, which is where a reader of the data meets
 /// the four verdicts and the rule they are gated by.
 const TABLE_HEADER: &str = "\
-# The method-body table (D76): one row per (class, method, arm) of
+# The method-body table: one row per (class, method, arm) of
 # corpus/docs/class-methods.txt, classified by sending the documented name
 # with NO ARGUMENTS to a real receiver -- the class object for the class arm,
 # and class-set.txt's construction expression for the instance arm.
@@ -1049,7 +1040,7 @@ fn no_row_started_diverging_or_stopped_answering() {
     // ---------------------------------------------------------------- report
 
     let mut report = Report::new(
-        "rexx-exec method-body table (D76) -- whether each documented method works \
+        "rexx-exec method-body table -- whether each documented method works \
          (corpus/method-bodies.txt)",
     );
     report.line(&format!(
@@ -1123,7 +1114,7 @@ fn no_row_started_diverging_or_stopped_answering() {
         // **A row the oracle now crashes on is not a row that stopped.**
         // `ORACLE_CRASHING_SENDS` names a property of the oracle, and a
         // receiver override can move a pair onto that list without anything
-        // in this tree changing: Phase 5h Task 6's `Stem` receiver holds a
+        // in this tree changing: the `Stem` receiver holds a
         // tail, and `hasItem`/`index` with no argument segfault the oracle
         // only when one does, so both rows went `answers -> uncomparable`
         // with their bodies untouched. The pair has to be on the list for

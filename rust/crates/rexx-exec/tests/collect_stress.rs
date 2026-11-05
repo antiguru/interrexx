@@ -1,7 +1,6 @@
-//! The 4a exit gate's criterion 4: the named L0 subset -- the union of every
-//! `rust/corpus/phase-*.txt` file, which is what [`read_subset`]'s caller
-//! reads -- passes again under collect-on-every-allocation, and the mode is
-//! proved to do something before its pass is believed.
+//! The differential corpus list, `rust/corpus/differential.txt`, passes again
+//! under collect-on-every-allocation, and the mode is proved to do something
+//! before its pass is believed.
 
 mod support;
 
@@ -38,23 +37,8 @@ fn read_subset(list_paths: &[&Path]) -> Vec<String> {
     union
 }
 
-/// The subset files this harness reads, in union order.
-const SUBSET_FILES: &[&str] = &[
-    "phase-10.txt",
-    "phase-4a.txt",
-    "phase-4b.txt",
-    "phase-4c.txt",
-    "phase-5a.txt",
-    "phase-5b.txt",
-    "phase-5c.txt",
-    "phase-5d.txt",
-    "phase-5j.txt",
-    "phase-6-1.txt",
-    "phase-6.txt",
-    "phase-7.txt",
-    "phase-8.txt",
-    "phase-9.txt",
-];
+/// The corpus list this harness reads.
+const SUBSET_FILES: &[&str] = &["differential.txt"];
 
 /// The directory one corpus program runs in: its own, under the target
 /// directory, named by the program's corpus path with `/` spelled `__`. That
@@ -109,7 +93,7 @@ const NO_ALLOCATION_PROGRAMS: &[&str] = &[
 ];
 
 /// The programs whose stdout depends on when a collection happens, which is
-/// not an observable the oracle defines (ruled 2026-09-01): each loads a
+/// not an observable the oracle defines: each loads a
 /// package nothing holds, which the requires cache holds weakly, and loads it
 /// again. Measured on the oracle with a loop of `copies('y', 100000)` between
 /// the two loads: `library_package_retried.rex` prints `its class The K3
@@ -125,33 +109,6 @@ const COLLECTION_TIMED_PROGRAMS: &[&str] = &[
     "lang/uninit_drain_trace_line.rex",
 ];
 
-/// The phase subset files that exist in the corpus directory, sorted.
-fn phase_subset_files_on_disk() -> Vec<String> {
-    let dir = corpus_dir();
-    let entries =
-        fs::read_dir(&dir).unwrap_or_else(|e| panic!("cannot read {}: {e}", dir.display()));
-    let mut names: Vec<String> = entries
-        .flatten()
-        .filter_map(|entry| entry.file_name().into_string().ok())
-        .filter(|name| name.starts_with("phase-") && name.ends_with(".txt"))
-        .collect();
-    names.sort();
-    names
-}
-
-/// The stress run reads **every** phase subset file the corpus has.
-#[test]
-fn the_stress_subset_reads_every_phase_subset_file() {
-    assert_eq!(
-        SUBSET_FILES,
-        phase_subset_files_on_disk(),
-        "the collect-on-every-allocation run does not read every phase subset \
-         file in rust/corpus/. A file missing from SUBSET_FILES is a phase \
-         whose programs never reach this harness, and nothing else in the \
-         workspace can see that -- the run passes over whatever it was given"
-    );
-}
-
 #[test]
 fn the_l0_subset_passes_again_under_collect_on_every_allocation() {
     let corpus_dir = corpus_dir();
@@ -162,7 +119,7 @@ fn the_l0_subset_passes_again_under_collect_on_every_allocation() {
     let subset = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>());
     assert!(
         !subset.is_empty(),
-        "the phase subset files named no programs -- that is a corpus defect, \
+        "the corpus list named no programs -- that is a corpus defect, \
          not an empty pass"
     );
 

@@ -14,7 +14,7 @@ fn repository_root() -> PathBuf {
 }
 
 /// The checkout-local `rxregexp` extension, kept separate from the oracle
-/// build under D5's amendment: it is loaded, never rebuilt by this test.
+/// build: it is loaded, never rebuilt by this test.
 fn rxregexp() -> PathBuf {
     repository_root().join("build/lib/librxregexp.so")
 }

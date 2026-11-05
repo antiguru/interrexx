@@ -1,5 +1,4 @@
-//! `rexxc`, the command line `utilities/rexxc/platform/unix/RexxCompiler.cpp`
-//! reads.
+//! `rexxc`, the command-line compiler.
 
 use std::ffi::OsStr;
 use std::io::Write;

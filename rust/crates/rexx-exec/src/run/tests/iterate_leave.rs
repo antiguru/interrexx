@@ -152,10 +152,9 @@ fn leave_by_name_exits_a_select_only_when_it_was_given_that_label() {
 }
 
 /// A named `LEAVE` reaching a `SELECT LABEL` from inside its
-/// `OTHERWISE` branch -- the fix that routes `OTHERWISE`'s own body
-/// through `Select`'s own `run_bounded`/`leave_select`, not the plain
-/// `Goto` it used before Task 11 (`Select`'s own arm has the full
-/// argument). Kills a version that still lets `OTHERWISE` fall through
+/// `OTHERWISE` branch -- `OTHERWISE`'s own body runs
+/// through `Select`'s own `run_bounded`/`leave_select`, not a plain
+/// `Goto`. Kills a version that still lets `OTHERWISE` fall through
 /// to the outer loop directly: that version would propagate this
 /// `LEAVE` all the way to `run_activation`'s own top level and raise
 /// 28.3 instead of the clean exit this test asserts.

@@ -88,7 +88,7 @@ fn main() {
         // `say (((...('a')...)))` with `n` levels of nesting, to measure the
         // parenthesis-descent recursion in `subterm`/`full_subexpression`
         // rather than the flat-chain recursions above. `paren_sized` uses
-        // the 512 MiB stack D19 gives `rexx-exec`'s public entry point;
+        // the 512 MiB stack `rexx-exec`'s public entry point runs on;
         // `paren_default` uses no explicit `stack_size`, i.e. what a
         // `cargo test` thread gets, which is the number that decides
         // whether any of this crate's own tests are near the cliff.
@@ -114,10 +114,8 @@ fn main() {
                 .unwrap();
             handle.join().unwrap();
         }
-        // Task 3c Step 4 checks: other per-construct recursive descents,
-        // measured but not fixed by this task -- see this file's own doc
-        // comment and the task's report for the numbers and why they stay
-        // unfixed.
+        // Other per-construct recursive descents, measured but not fixed --
+        // see this file's own doc comment.
         "prefix_chain" => {
             let mut src = String::from("say ");
             src.push_str(&"- ".repeat(n));
@@ -134,10 +132,9 @@ fn main() {
                 .unwrap();
             handle.join().unwrap();
         }
-        // `nested_calls_sized` is the mode Task 3d needed and Task 3c did not
-        // have. Measuring nested calls only on a default thread made the gap
-        // look like a small-stack embedder's problem; on the 512 MiB thread
-        // D19 gives `rexx-exec`'s public entry point, the same construct
+        // `nested_calls_sized`: measuring nested calls only on a default
+        // thread makes the gap look like a small-stack embedder's problem; on
+        // the 512 MiB thread `rexx-exec`'s public entry point gives, the same construct
         // aborted above roughly 92,000, which is the sized path the executor
         // actually runs on.
         "nested_calls" | "nested_calls_sized" => {

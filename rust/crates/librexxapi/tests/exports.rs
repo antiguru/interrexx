@@ -14,7 +14,7 @@ fn the_library_names_itself_as_extensions_need_it() {
     assert_eq!(dynamic_entries(&library, "SONAME"), ["librexxapi.so.4"]);
 }
 
-/// Every export forwards to `librexx.so.4` (Moritz, 2026-11-03, option A), which the library
+/// Every export forwards to `librexx.so.4`, which the library
 /// needs and finds beside itself.
 #[test]
 fn the_library_needs_librexx_beside_it() {

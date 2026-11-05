@@ -1,4 +1,4 @@
-/* Phase 5b Task 1: the methods an instance answers that no gate-table row
+/* The methods an instance answers that no other program
    sends to one -- ~string, ~defaultName, ~objectName, ~objectName= , ~class
    and ~isA -- with Class~defaultName beside them, which nothing else reaches
    either. The renames are what separate the three names: ~objectName= moves

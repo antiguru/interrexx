@@ -1,9 +1,0 @@
-A.
-twiceStem answers ok
-a.1 set
-twiceStem answers ok
-c.1 set
-twiceStem answers ok
-twiceStem answers ok
-twiceStem 98.995 Unable to reference variable "ABC."; it must be an uninitialized local variable.
-twiceRenamed 98.995 Unable to reference variable "ABC."; it must be an uninitialized local variable.

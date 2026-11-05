@@ -1,5 +1,5 @@
 /* A Controlled loop re-READS its control variable on every re-tested pass
- * (4b Task 9, review round 1 F2). The body assigns 10, so the oracle reads
+ * The body assigns 10, so the oracle reads
  * 10 back, adds 1, and 11 > 3 ends the loop after ONE pass -- both the
  * trip count and the >V> line depend on the read.
  *

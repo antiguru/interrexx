@@ -3,7 +3,7 @@
 //! ```text
 //! rexx-arms --build base=/path/to/rexx --build head=target/release/rexx \
 //!           --axis varlookup --axis emptyloop --rounds 5 \
-//!           --task 7-M2 --commit ced6c209 --baseline bench-baselines/phase-4e-arms.tsv
+//!           --baseline BASELINE.tsv
 //! ```
 
 use std::io::Write;

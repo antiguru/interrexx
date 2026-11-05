@@ -183,8 +183,8 @@ pub(crate) fn parse_instruction(
         // A label clause is excluded, which is the one place this diverges
         // from the C++. There the label is still one clause with whatever
         // follows the colon, so a label spelled THEN becomes the THEN and the
-        // leftover `:` then fails with 35.1. Task 3.4 has already split the
-        // colon off here, leaving nothing that can fail, so the missing-THEN
+        // leftover `:` then fails with 35.1. The colon is already split
+        // off here, leaving nothing that can fail, so the missing-THEN
         // error fires instead. Both reject `if 1 = 1` followed by
         // `then: nop`, measured 35.1 for both the IF and the WHEN spelling,
         // and only the number differs.

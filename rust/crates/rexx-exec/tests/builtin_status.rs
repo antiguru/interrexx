@@ -61,11 +61,6 @@ fn status_path() -> PathBuf {
     corpus_dir().join("builtin-status.txt")
 }
 
-fn exclusions_path() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../docs/superpowers/plans/phase-4-exclusions.txt")
-}
-
 /// Splits a `NAME<TAB>rest` file into pairs, skipping `#` comments and blank
 /// lines. Both committed files this test reads have that shape, and reading
 /// them the same way is what keeps "a row exists" meaning the same thing in
@@ -418,9 +413,7 @@ fn the_status_file_matches_a_live_differential_run() {
         rexx_inventory::builtins::wholly_excluded().len(),
         "the excluded rows are exactly the names excluded outright"
     );
-    // Moved 4 -> 0 and 77 -> 81 when Phase 10 delivered the RXAPI builtins,
-    // the last whole exclusions.
-    assert_eq!(excluded, 0, "phase-4-exclusions.txt's whole exclusions");
+    assert_eq!(excluded, 0, "no builtin is wholly excluded");
     assert_eq!(
         run.derived.len() - excluded,
         81,
@@ -575,24 +568,28 @@ fn every_state_builtin_is_implemented() {
     );
 }
 
-/// Committing a `divergent` row requires a `KNOWN GAP: <NAME>` marker in the
-/// exclusions file. See the module doc: a divergence is a wrong answer, and
-/// absorbing one into the status file must cost more than a one-line edit.
+/// Committing a `divergent` row requires a `# KNOWN GAP: <NAME> #<N>` comment
+/// line in the status file, `<N>` being the GitHub issue that tracks it. A
+/// divergence is a wrong answer, and absorbing one into the status file must
+/// cost more than a one-line edit.
 #[test]
 fn every_divergent_row_has_a_known_gap() {
     let committed = read_tab_rows(&status_path());
-    let exclusions = fs::read_to_string(exclusions_path())
-        .unwrap_or_else(|e| panic!("cannot read {}: {e}", exclusions_path().display()));
+    let text = fs::read_to_string(status_path()).expect("the status file");
     for (name, token) in &committed {
         if Status::parse(token) != Some(Status::Divergent) {
             continue;
         }
+        let prefix = format!("# KNOWN GAP: {name} #");
         assert!(
-            exclusions.contains(&format!("KNOWN GAP: {name}")),
+            text.lines()
+                .any(|line| line.strip_prefix(&prefix).is_some_and(
+                    |issue| !issue.is_empty() && issue.chars().all(|c| c.is_ascii_digit())
+                )),
             "{name} is committed as divergent, which records a wrong answer \
-             rather than a missing one. That needs a row reading \
-             \"KNOWN GAP: {name}\" in {}, naming it and saying what is wrong.",
-            exclusions_path().display()
+             rather than a missing one. That needs a comment line reading \
+             \"{prefix}<N>\" in {}, <N> being the GitHub issue that tracks it.",
+            status_path().display()
         );
     }
 }
@@ -603,19 +600,19 @@ fn every_divergent_row_has_a_known_gap() {
 #[test]
 fn a_name_is_only_mentioned_when_it_stands_alone() {
     assert!(mentions_as_word(
-        br#"rexx-exec: routine "WORD" is not implemented (4c)"#,
+        br#"rexx-exec: routine "WORD" is not implemented"#,
         "WORD"
     ));
     assert!(mentions_as_word(
-        b"rexx-exec: ADDRESS is not implemented (4c)",
+        b"rexx-exec: ADDRESS is not implemented",
         "ADDRESS"
     ));
     assert!(!mentions_as_word(
-        br#"rexx-exec: routine "WORDS" is not implemented (4c)"#,
+        br#"rexx-exec: routine "WORDS" is not implemented"#,
         "WORD"
     ));
     assert!(!mentions_as_word(
-        br#"rexx-exec: routine "C2X" is not implemented (4c)"#,
+        br#"rexx-exec: routine "C2X" is not implemented"#,
         "BITAND"
     ));
     assert!(!mentions_as_word(b"", "LENGTH"));

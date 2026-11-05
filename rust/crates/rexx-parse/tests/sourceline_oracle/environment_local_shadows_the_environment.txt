@@ -1,6 +1,6 @@
 count 25
-/* The order a .NAME resolves in, at the two steps this phase can observe:
- * .LOCAL before .ENVIRONMENT. Phase 5a Task 17.
+/* The order a .NAME resolves in, at the two steps a program can observe:
+ * .LOCAL before .ENVIRONMENT.
  *
  * PackageClass::findClass asks the running package's own installed classes,
  * then .LOCAL, then .ENVIRONMENT, and only the last two are reachable from a

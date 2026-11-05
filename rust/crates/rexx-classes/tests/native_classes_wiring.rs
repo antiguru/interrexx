@@ -1,4 +1,4 @@
-//! Task 3's own probes: the metaclass graph (D44, R6) and the native class
+//! Probes of the metaclass graph and the native class
 //! set [`native_classes`] builds.
 
 use rexx_classes::{
@@ -42,7 +42,7 @@ fn set(names: &[&str]) -> BTreeSet<String> {
 }
 
 // ---------------------------------------------------------------------
-// D44 self-reference: `.class` is an instance of itself.
+// Self-reference: `.class` is an instance of itself.
 // ---------------------------------------------------------------------
 
 /// `.class~metaclass~id` recorded `"Class"` -- `.Class` names itself as its
@@ -127,8 +127,8 @@ fn an_ordinary_object_hierarchy_class_cannot_inherit_a_mixinclass_class_mixin() 
 /// `.MyMeta~inherit(.Mixin)`. Recorded: the `~inherit` call raises no
 /// error, `MyMeta~hasmethod('GREET')= 1`, `MyMeta~greet= "hi from mixin"`,
 /// and `MyMeta~superclasses` is `Class Mixin` (`.Class` first, from
-/// `subclass`, then `.Mixin` appended by `inherit`). This is the mechanism
-/// D44 and R6 both cite: `MyMeta subclass Class` gives `MyMeta`'s own
+/// `subclass`, then `.Mixin` appended by `inherit`). This is the mechanism:
+/// `MyMeta subclass Class` gives `MyMeta`'s own
 /// *instance*-behaviour `.Class` in scope through the ordinary ancestor
 /// cascade (not the metaclass merge, which is class-behaviour-only), which
 /// is the one way `inherit`'s instance-side base-class check can ever pass
@@ -346,7 +346,7 @@ fn every_class_untouched_by_the_prologue_matches_the_live_oracle_exactly() {
 /// `CoreClasses.orx` runs, not a claim about what the live, fully-booted
 /// oracle answers (measured different: e.g. `.Array~superClasses` there is
 /// `Object OrderedCollection`). Full post-prologue verification for these
-/// classes is Task 13's.
+/// classes is `rexx-exec`'s.
 #[test]
 fn every_prologue_mutated_class_has_the_pre_prologue_superclasses_setup_cpp_builds() {
     let r = native_classes(&mut mint);
@@ -365,7 +365,7 @@ fn every_prologue_mutated_class_has_the_pre_prologue_superclasses_setup_cpp_buil
 /// `exact_methods.rex` recorded `.class~instancemethods(.class)`'s full
 /// scope-exact set with neither `DEFINECLASSMETHOD` nor
 /// `INHERITINSTANCEMETHODS` present -- `removeSetupMethods()` deletes both
-/// before the image ships (D39). Building them and never removing them (the
+/// before the image ships. Building them and never removing them (the
 /// one path this crate's `MethodDict` supports) would be a corpus-visible
 /// divergence.
 #[test]
@@ -405,7 +405,6 @@ fn id_string_matches_the_recorded_id_for_a_representative_sample() {
 /// superclass -- the cascade's own bookkeeping (`ClassGraph::subclasses`,
 /// populated by `define_class`) must record that edge in both directions,
 /// not only the forward `superclass` one `superclasses()` already covers.
-/// Built since Task 3's first submission; this is its first assertion.
 #[test]
 fn objects_subclass_list_contains_every_other_native_class() {
     let r = native_classes(&mut mint);
@@ -1200,7 +1199,7 @@ fn object_and_string_answer_the_concatenation_operator_names() {
 /// `Class`'s and `Object`'s own instance method sets, exact -- asserted in
 /// their own case here rather than in the table above because their
 /// expected sets are long enough to want that, and because they are the
-/// classes D39/D44's bootstrap-only mechanisms touch directly.
+/// classes the bootstrap-only mechanisms touch directly.
 #[test]
 fn class_and_object_match_their_recorded_own_instance_method_sets() {
     let r = native_classes(&mut mint);
@@ -1244,7 +1243,7 @@ fn class_and_object_match_their_recorded_own_instance_method_sets() {
             "\\==",
         ]),
         "Class's own instance methods, task3_fixround1.rex Part A -- \
-         DefineClassMethod/InheritInstanceMethods absent, per D39"
+         DefineClassMethod/InheritInstanceMethods absent, removed at bootstrap"
     );
     assert_eq!(
         r.own_instance_method_names(object),

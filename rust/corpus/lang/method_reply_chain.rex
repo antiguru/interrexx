@@ -1,5 +1,5 @@
 /* The rest of a replied method sends a message whose method replies in its
-   turn: both remainders run and neither is lost. Phase 5a Task 16. */
+   turn: both remainders run and neither is lost. */
 
 say .K~outer
 

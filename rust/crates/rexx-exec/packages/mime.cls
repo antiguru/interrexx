@@ -1,8 +1,8 @@
 /*----------------------------------------------------------------------------*/
 /* mime.cls: MIME message parts.                                              */
 /*                                                                            */
-/* Written for this crate from docs/superpowers/specs/extensions-behaviour.md */
-/* ("mime.cls"); its line numbers are its own (Deviation 89).                 */
+/* Written for this crate from the extension's documented behaviour;          */
+/* its line numbers are its own (Deviation 89).                               */
 /*----------------------------------------------------------------------------*/
 
 /* The header lines both classes write after their Content-Type, each only    */

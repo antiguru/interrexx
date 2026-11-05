@@ -1,5 +1,5 @@
 //! [`BufferBytes`], a `MutableBuffer`'s bytes as native calls may hold their
-//! address (spec 2026-09-29 2.5).
+//! address.
 
 use rexx_core::{BufferBytes, BufferState};
 

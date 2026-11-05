@@ -65,8 +65,7 @@ pub enum DropReason {
     /// a number rather than left as a claim.
     OtherAssertion,
     /// The enclosing body sends a real message, which this module cannot run
-    /// and will not delete. Unblocking these needs message dispatch, which
-    /// is Phase 5's.
+    /// and will not delete. Unblocking these needs message dispatch.
     MessageSend,
     /// An argument list this scanner has not seen -- not two or three
     /// arguments, or not closed on its own line.

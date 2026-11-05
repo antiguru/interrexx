@@ -1,6 +1,0 @@
-rc=0
-[stdout]
-handler FAILURE 
-handler FAILURE 
-zr 2
-[stderr]

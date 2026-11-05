@@ -1,4 +1,4 @@
-//! `loom` models of the baton, the inbox and the timer (spec 2026-09-29 R4),
+//! `loom` models of the baton, the inbox and the timer,
 //! compiled from the interpreter's own sources against `loom`'s primitives;
 //! the timer's wake source is `sync.rs`'s model of the self-pipe.
 //! Empty unless built with `RUSTFLAGS="--cfg loom"`.
@@ -125,7 +125,7 @@ fn the_timer_sets_slice_while_the_holder_idles() {
 }
 
 /// A model with more than one registration, explored with at most five
-/// preemptions (ruling P58): unbounded, each also explores the timer thread
+/// preemptions: unbounded, each also explores the timer thread
 /// its first registration starts, and does not finish in a gate's time.
 fn registration_model(body: impl Fn() + Sync + Send + 'static) {
     let mut builder = loom::model::Builder::new();

@@ -1,5 +1,5 @@
 //! The live-interpreter registry and the timer thread, the process's only
-//! global state (spec 2026-09-29 section 4, R3), and each interpreter's
+//! global state, and each interpreter's
 //! inbox. Each interpreter registers its inbox; the timer sets `SLICE` in
 //! every armed one each slice, wakes an idle one through its inbox when the
 //! deadline it idles until is due, and posts a halt to every one when a
@@ -77,7 +77,7 @@ impl Requests {
     }
 }
 
-/// An interpreter's inbox (spec 2026-09-29 section 2.1): its request word,
+/// An interpreter's inbox: its request word,
 /// and a queue other threads post to and the baton holder takes from. The
 /// holder idles here, and a post or the timer wakes it.
 pub(crate) struct Inbox<T> {

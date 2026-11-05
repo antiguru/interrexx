@@ -1126,7 +1126,7 @@ impl Interp {
     /// variable's binding alone.
     ///
     /// Not `stem_drop`, which allocates a fresh object and rebinds the
-    /// variable for D15a's aliasing rule: here the object is the one the
+    /// variable for the stem aliasing rule: here the object is the one the
     /// redirection resolved to and the program's own name for it may not even
     /// be in scope.
     fn stem_object_clear(&mut self, object: ObjRef) {

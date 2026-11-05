@@ -1,8 +1,8 @@
 count 25
-/* Task 16's mutation-testing witness: a number's rendering is fixed by the
+/* A mutation-testing witness: a number's rendering is fixed by the
    NUMERIC FORM in force when it is CREATED, never by the FORM in force when
    it is first DISPLAYED. See mutation_digits_at_render.rex's own comment for
-   why the Controlled loop's control variable is the one construct in 4a
+   why the Controlled loop's control variable is the one construct
    where this window is observable at all: every other write site renders
    eagerly, before a later NUMERIC FORM instruction can run.
 

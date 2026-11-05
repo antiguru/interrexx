@@ -1,4 +1,4 @@
-/* Phase 5b Task 1: two method bodies assign over SELF and then allocate, once
+/* Two method bodies assign over SELF and then allocate, once
    inside INIT while ~new is still building the object and once in an ordinary
    send. An instance keeps its variable pools in its own body, so a collection
    reaches the exposed value only by tracing the instance, and SELF is an

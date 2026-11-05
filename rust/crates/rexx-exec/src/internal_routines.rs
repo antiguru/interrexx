@@ -55,7 +55,7 @@ pub(crate) struct InternalRoutine {
     /// spelling is for a reader.
     pub(crate) name: &'static str,
     pub(crate) package: Package,
-    /// The code, once some phase has written it. A row with `None` refuses.
+    /// The code. A row with `None` refuses.
     pub(crate) body: Option<InternalBody>,
 }
 

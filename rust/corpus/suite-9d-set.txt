@@ -1,9 +1,0 @@
-# Phase 9d's set (spec 2026-10-17 section 2.1, parent spec 2026-10-10 section 3):
-# the tests with no row that complete with a failure here and pass on the
-# oracle. Derived from the per-test record of the suite gate's run at
-# 25197002a (the 9c close),
-# docs/superpowers/records/2026-10-15-phase-9c/close/suite/tests.tsv, by:
-#
-#   awk -F'\t' '$3=="-" && $4=="passed" && $5=="failed" {print $1"\t"$2}' tests.tsv
-#
-# ootest revision 13347

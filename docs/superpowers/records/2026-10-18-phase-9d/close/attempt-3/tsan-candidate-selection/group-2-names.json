@@ -1,6 +1,0 @@
-[
-  "tests::a_cyclic_reference_is_insufficient_stack_in_every_conversion",
-  "tests::a_join_rendering_itself_through_defaultname_runs_out_of_stack",
-  "tests::a_long_chain_of_stem_subclass_instances_is_walked_once",
-  "tests::reshaped_arrays_are_collected_on_their_bytes"
-]

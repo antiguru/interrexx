@@ -1,5 +1,5 @@
 /* gate_variants.rex -- reaches the AST variants that no other corpus program
-   and no file under samples/ constructs, so the phase 3 gate's enumeration
+   and no file under samples/ constructs, so the enumeration
    test (rust/crates/rexx-parse/tests/variants.rs) can assert every variant is
    built at least once. Each block names the variants it exists for.
    Everything with a runtime effect is behind "if 0 then" or inside a routine

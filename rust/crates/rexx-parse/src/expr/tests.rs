@@ -844,7 +844,7 @@ fn program_selectors(text: &str) -> Vec<crate::Selector> {
         .collect()
 }
 
-/// **The interning constraint, at the point the parse decides it** (D24):
+/// **The interning constraint, at the point the parse decides it**:
 /// every site in one program that names a method holds the same selector,
 /// whichever spelling wrote it, and a different method is a different one.
 #[test]

@@ -981,7 +981,7 @@ rc 0
 9
 [stderr]
 
-# Deviation 88: an unknown group crashes the oracle (D6); this crate raises
+# Deviation 88: an unknown group crashes the oracle; this crate raises
 # the routine failure.
 ruled
 signal on syntax name a

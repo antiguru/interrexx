@@ -1,5 +1,5 @@
 # The argument list each documented introspection method is sent in
-# corpus/introspection-arity.tsv's probe (Phase 5i Task 0).
+# corpus/introspection-arity.tsv's probe.
 #
 # class<TAB>method<TAB>arm<TAB>arguments, where `--` is a send with none.
 #
@@ -8,11 +8,10 @@
 # introspection_arity.rs makes that a test failure. Without the rule the
 # instrument reads green having sent nothing that could work.
 #
-# THE CLASS ARM IS HERE and corpus/collection-arguments.tsv's is not. This
-# phase's own `loud` rows that live on it -- Method~loadExternalMethod,
-# Method~newFile, Routine~loadExternalRoutine and Routine~newFile -- are
-# named by the plan's Tasks 4 and 7; an instance-only
-# table would leave them unsized.
+# THE CLASS ARM IS HERE and corpus/collection-arguments.tsv's is not. The
+# `loud` rows that live on it -- Method~loadExternalMethod, Method~newFile,
+# Routine~loadExternalRoutine and Routine~newFile -- would stay unsized in an
+# instance-only table.
 #
 # `UNSTABLE:` marks an explicitly classified identity-derived value. The
 # probe compares setup, send completion and status across processes, then

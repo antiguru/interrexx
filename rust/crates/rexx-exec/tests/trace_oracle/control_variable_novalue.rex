@@ -1,6 +1,6 @@
 /* A Controlled loop's re-test is an EVALUATION of the control variable, so
- * it raises NOVALUE when the body has dropped it (4b Task 9, review round 1
- * re-review, NEW-1).
+ * it raises NOVALUE when the body has dropped it.
+ *
  *
  * The second loop drops JJ, so the next re-test raises NOVALUE, the trap
  * fires, and the program exits 0 through the handler. Reading the variable

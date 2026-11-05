@@ -1,4 +1,4 @@
-//! Phase 5j's witnesses for when a class dies and what runs when it does.
+//! Witnesses for when a class dies and what runs when it does.
 
 use std::path::PathBuf;
 

@@ -53,9 +53,8 @@ pub struct Heap {
     /// Every handle [`Heap::set_uninit`] has flagged and no collection has
     /// since found gone or cleared.
     uninit: Vec<ObjRef>,
-    /// How many times `collect` has run, ever. Exists for Task 16's
-    /// collect-on-every-allocation gate criterion (4a exit gate, criterion
-    /// 4): the mode has to *prove* it collected rather than merely claim to,
+    /// How many times `collect` has run, ever. Exists for the
+    /// collect-on-every-allocation mode: it has to *prove* it collected rather than merely claim to,
     /// and a caller that never sees this move above zero has not tested
     /// what it says it tested. Not reset by anything; a fresh count needs a
     /// fresh `Heap`.
@@ -79,7 +78,7 @@ pub struct Heap {
     sharing: Sharing,
 }
 
-/// The sharing-fraction instrument (spec 2026-09-29 section 5): each slot's
+/// The sharing-fraction instrument: each slot's
 /// object is tagged with the last activity that resolved it through
 /// [`Heap::get`], [`Heap::get_mut`] or [`Heap::body_text`], or else made it.
 #[cfg(feature = "sharing")]

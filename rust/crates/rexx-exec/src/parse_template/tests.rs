@@ -4,8 +4,7 @@ use crate::version::{
 };
 
 /// The measured oracle answers for one template, as `(template, pieces)`.
-/// Every row was taken from the oracle on 2026-08-05 (this task's report
-/// carries the transcripts); the driver below replays only the *movement*,
+/// Every row was taken from the oracle; the driver below replays only the *movement*,
 /// so a row here is a claim about [`Cursor`] alone.
 fn pieces(source: &str, template: &[Trigger]) -> Vec<String> {
     let string = source.as_bytes();

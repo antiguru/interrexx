@@ -1,6 +1,6 @@
 //! The `rxmath` extension library, run in Rust: `MathLoadFuncs`,
 //! `MathDropFuncs` and the sixteen `RxCalc` routines, as
-//! `docs/superpowers/specs/extensions-behaviour.md` ("rxmath") describes them.
+//! `docs/design/extensions.md` describes them.
 //!
 //! Every result is a double rendered by [`crate::dispatch::library::double_text`] at the
 //! routine's precision. The trigonometric routines reduce a degree or grade

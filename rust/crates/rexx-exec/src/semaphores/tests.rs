@@ -103,8 +103,7 @@ fn a_held_mutex_is_not_collected() {
 
 /// A release readies the waiter without giving it the lock, so the
 /// releaser's acquire in the same clause takes it again: the oracle's answer
-/// in 18 of 30 runs of this program and 28 of 30 of the two-clause form
-/// (ruling P47).
+/// in 18 of 30 runs of this program and 28 of 30 of the two-clause form.
 #[test]
 fn a_releaser_takes_the_mutex_again_before_its_waiter() {
     answers(
@@ -133,7 +132,7 @@ fn a_name_sem_open_rejects_creates_nothing() {
 /// in one clause it waits out its timeout, where the untimed waits answer 1.
 /// The oracle's timed waiter races the reset for the semaphore's mutex: this
 /// answer in 21 of 23 runs of this program, and in 6 of 10 with the post and
-/// reset as two clauses (ruling P47).
+/// reset as two clauses.
 #[test]
 fn a_timed_wait_tests_the_post_again_after_a_pulse() {
     answers(

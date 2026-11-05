@@ -1,3 +1,0 @@
-measured exit 0
-corpus exit 0
-corpus every exit 0

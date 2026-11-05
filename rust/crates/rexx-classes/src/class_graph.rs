@@ -42,7 +42,7 @@ pub enum InheritRefusal {
     NotInherited(ObjRef),
 }
 
-/// Which of a class's two behaviours (D44) an internal cascade operation
+/// Which of a class's two behaviours an internal cascade operation
 /// targets.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 enum Side {
@@ -50,11 +50,8 @@ enum Side {
     Class,
 }
 
-/// One flattened behaviour, plus the monotonic version D29 asks for: "one
-/// field, bumped by every cascade". Nothing in this crate reads it for any
-/// purpose beyond that assertion -- it exists so a future per-call-site
-/// cache (D28's revisit condition) has something cheap to check rather
-/// than needing to be invented later against every mutating site.
+/// One flattened behaviour, plus a monotonic version bumped by every
+/// cascade, which a per-call-site cache can check.
 struct Behaviour {
     dict: MethodDict,
     version: u64,
@@ -91,8 +88,8 @@ struct ClassDef {
     /// `baseClass` field.
     base_class: ObjRef,
     /// The class whose *instance* behaviour gets merged into this class's
-    /// own class-behaviour by [`ClassGraph::cascade_build`] (D44,
-    /// `RexxClass::createClassBehaviour`'s `metaClass->mergeInstanceBehaviour`
+    /// own class-behaviour by [`ClassGraph::cascade_build`]
+    /// (`RexxClass::createClassBehaviour`'s `metaClass->mergeInstanceBehaviour`
     /// branch, `ClassClass.cpp:1119-1127`) -- oracle's `metaClass` field.
     /// Every class built by `interpreter/memory/Setup.cpp` has `.Class` here,
     /// including `.Class` itself, self-referentially (measured:
@@ -693,7 +690,7 @@ impl ClassGraph {
     /// old method set: `class` is repointed at a brand-new
     /// [`BehaviourHandle`] and the old one is never written to again,
     /// while every subclass keeps its own existing handle and is rebuilt
-    /// in place (D43).
+    /// in place.
     pub fn define(&mut self, class: ObjRef, name: &str, method: MethodId) {
         let def = self.classes.get_mut(&class).expect("define: unknown class");
         def.own_instance_methods.replace_method(name, class, method);
@@ -779,7 +776,7 @@ impl ClassGraph {
     /// `setField(instanceBehaviour, instanceBehaviour->copy())` that
     /// `~define`, `~defineMethods` and `~delete` each take before they touch
     /// the dictionary, so that an object created before the call keeps
-    /// answering the old method set (D43).
+    /// answering the old method set.
     fn copy_instance_behaviour(&mut self, class: ObjRef) {
         let fresh = self.alloc_behaviour();
         let def = self
@@ -986,7 +983,7 @@ impl ClassGraph {
         &self.classes[&class].subclasses
     }
 
-    /// `class`'s metaclass (D44) -- oracle's `~metaClass`. `.Class`'s own
+    /// `class`'s metaclass -- oracle's `~metaClass`. `.Class`'s own
     /// entry answers itself.
     pub fn metaclass(&self, class: ObjRef) -> ObjRef {
         self.classes[&class].metaclass
@@ -1152,7 +1149,7 @@ impl ClassGraph {
     }
 
     /// `~hasMethod` against a specific, possibly stale, handle -- a
-    /// simulated already-created instance's own frozen reference (D43).
+    /// simulated already-created instance's own frozen reference.
     pub fn has_method_at(&self, handle: BehaviourHandle, name: &str) -> bool {
         self.behaviours[handle.index()].dict.has_method(name)
     }
@@ -1210,9 +1207,8 @@ impl ClassGraph {
             .resolve_super_scope(scope)
     }
 
-    /// The monotonic version D29 asks for -- bumped once per
-    /// `rebuild_behaviour` call against this
-    /// handle.
+    /// The monotonic version, bumped once per `rebuild_behaviour` call
+    /// against this handle.
     pub fn version_at(&self, handle: BehaviourHandle) -> u64 {
         self.behaviours[handle.index()].version
     }

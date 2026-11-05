@@ -50,7 +50,7 @@ pub const MAX_NATIVE_ARGUMENTS: usize = 16;
 /// a return code it does not know or does not convert back;
 /// [`Failure::TooManyArguments`] for arguments the signature does not consume,
 /// where no parameter takes the argument list; [`Failure::UnfilledSlot`] for the
-/// first interface member the extension reached that this phase has not
+/// first interface member the extension reached that this crate has not
 /// written, which also forgets any condition the extension raised.
 ///
 /// # Panics
@@ -148,7 +148,7 @@ pub fn held_routine(
 ///
 /// # Errors
 /// [`Failure::UnfilledSlot`] for the first interface member the hook reached
-/// that this phase has not written, which also forgets any condition it
+/// that this crate has not written, which also forgets any condition it
 /// raised.
 pub fn hook(
     library: &Library,
@@ -175,7 +175,7 @@ pub fn hook(
 ///
 /// # Errors
 /// [`Failure::UnfilledSlot`] for the first interface member the handler
-/// reached that this phase has not written, which also forgets any condition
+/// reached that this crate has not written, which also forgets any condition
 /// it raised.
 pub fn command(
     handler: &CommandHandler,
@@ -255,7 +255,7 @@ impl NativeCall {
 
 /// What a native call left behind for [`finish`]: the declared result type,
 /// what the stub wrote into element zero, and the first interface member it
-/// reached that this phase has not written.
+/// reached that this crate has not written.
 ///
 /// It holds raw words only, never an `ObjRef`, so that it is `Send`; the
 /// `const` block below asserts that for it and for [`NativeCall`]. A

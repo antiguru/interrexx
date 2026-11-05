@@ -6,7 +6,7 @@
 
    Do not "fix" this by making the first condition false to test the
    fallthrough: `when 1 = 2 then / when 2 = 2 then n = 42` segfaults the
-   oracle deterministically (measured 2026-07-30, build/bin/rexx, exit 139,
+   oracle deterministically (build/bin/rexx, measured, exit 139,
    3/3 runs). That is a real defect in the oracle itself, not something a
    memory-safe reimplementation could or should reproduce -- this program
    stays on the side of the trap that the oracle survives. */

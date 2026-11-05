@@ -190,8 +190,7 @@ fn releases_answer_as_the_oracles_do() {
 /// one held beside it stays.** The answers that read no released object
 /// after an allocation are the oracle's; `RelTwice`'s released string is
 /// collected before its answer is read and is refused loudly, a use after
-/// release being outside the API contract
-/// (`docs/superpowers/plans/phase-4-exclusions.txt`).
+/// release being outside the API contract.
 #[test]
 fn under_a_collection_at_every_allocation_only_the_released_string_goes() {
     let dir = fresh_dir("release-stress");

@@ -3,7 +3,7 @@
 Not benchmark axes.
 Each file here is a **control**: a program that differs from an axis in `../bench-programs/` by a known amount, run alongside that axis so a measurement can be shown to resolve a difference of that size.
 
-`phase-4d-gate.md`'s escalation rule is what needs them.
+The between-run band tool's escalation rule is what needs them.
 An axis whose ratio lands near 1.0 earns more runs until its interval separates from 1.0, and a tight interval on its own does not distinguish a sensitive instrument from a blind one.
 Running a pair that differs by a known small amount at the same time answers that: an instrument that cannot separate the control pair has not certified anything about the axis.
 

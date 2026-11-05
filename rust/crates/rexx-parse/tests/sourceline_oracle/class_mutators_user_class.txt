@@ -1,5 +1,5 @@
 count 39
-/* Task 21: the four mutators on a class this file declares, where they must
+/* The four mutators on a class this file declares, where they must
    succeed. The readback is `~method`, which reads the class's own instance
    dictionary: `~hasMethod` sent to a class object asks its class behaviour
    and answers 0 either way, measured, so it cannot witness an instance-side

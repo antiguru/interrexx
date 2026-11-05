@@ -439,7 +439,7 @@ pub fn rows(rows: &[OptionRow]) -> Vec<String> {
         .collect()
 }
 
-/// The header the committed file carries, with its D56 stamp.
+/// The header the committed file carries, with its revision stamp.
 pub fn header(stamp: &str) -> Vec<String> {
     vec![
         "Table D's row set: the directive and option surface, from dire.xml and".into(),

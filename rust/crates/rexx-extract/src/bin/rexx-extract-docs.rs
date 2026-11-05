@@ -1,4 +1,4 @@
-//! Derives the Phase 5 gate tables' row sets from `oodocs/` and from
+//! Derives the gate tables' row sets from `oodocs/` and from
 //! `interpreter/parser/DirectiveParser.cpp`, and writes them to
 //! `rust/corpus/docs/`.
 //! ```text

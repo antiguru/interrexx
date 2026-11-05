@@ -1,4 +1,0 @@
---- stdout
-HALT rc -4 stem S.0 S.1 line 4
---- stderr
---- rc 0

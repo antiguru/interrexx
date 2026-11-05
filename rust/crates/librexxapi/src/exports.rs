@@ -1,8 +1,8 @@
 //! `librexxapi.so.4`'s C entry points, each forwarding to the definition `librexx.so.4` exports
-//! (Moritz, 2026-11-03, option A). This library holds no API state: `librexx.so.4`, which it
+//! This library holds no API state: `librexx.so.4`, which it
 //! records as `NEEDED`, owns it, so a program linked against either library or both, in either
 //! order, registers and runs against one state.
-// D-U1 as extended 2026-11-02: the export modules of the C libraries.
+// The export modules of the C libraries.
 #![allow(unsafe_code)]
 #![allow(non_snake_case)]
 

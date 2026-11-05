@@ -1,4 +1,4 @@
-/* Task 21: `~inherit`'s optional second argument. The mixin takes the
+/* `~inherit`'s optional second argument. The mixin takes the
    position the named class held, pushing it and everything after it back --
    `insertAfter` is `insert` and `insert` opens the gap at the index. */
 .K~inherit(.M1)

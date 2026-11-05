@@ -1,4 +1,4 @@
-/* Fix round 2, finding 1: the same forwarded frame reached through prefix
+/* The same forwarded frame reached through prefix
  * `\`, whose own check is textual rather than numeric -- `s.`'s default
  * "abc" is not a logical value. Measured, rc 222, stderr opening
  * `       *-* Compiled method "\" with scope "String".`.

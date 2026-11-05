@@ -272,8 +272,8 @@ fn problem(path: &Path, line: usize, message: String) -> Problem {
 /// checks `rexx_spec::load` makes, then that every rule has an example or a
 /// cited test, that every citation names a rule, that every example's output
 /// and exit code are what its page says, that deviations agree with rules and
-/// the register, and that rule links resolve. Registers and citations are read
-/// from `repo`.
+/// the Deviations table, and that rule links resolve. The table and citations
+/// are read from `repo`.
 fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
     let (pages, mut problems) = rexx_spec::load(spec_root);
     let cited = citations(repo);
@@ -321,9 +321,9 @@ fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
     }
 
     // 6: deviations.
-    let register = fs::read_to_string(repo.join("docs/superpowers/plans/phase-4-exclusions.txt"))
-        .unwrap_or_default();
-    let registered = |n: u32| registered(&register, n);
+    let table = fs::read_to_string(repo.join(support::deviations::TABLE)).unwrap_or_default();
+    let table = support::deviations::parse(&table).unwrap_or_default();
+    let registered = |n: u32| table.get(&n).is_some_and(|d| d.active);
     for page in &pages {
         for n in &page.front.deviations {
             let id_suffix = format!(".deviation.{n}");
@@ -342,7 +342,7 @@ fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
                 problems.push(problem(
                     &page.path,
                     1,
-                    format!("deviation {n} has no entry in the deviation register"),
+                    format!("deviation {n} is not an active entry of the Deviations chapter"),
                 ));
             }
         }
@@ -376,14 +376,6 @@ fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
     }
 
     problems
-}
-
-/// Whether the deviation register `register` has an entry numbered `n`. An
-/// entry begins a line with its number right-aligned in three columns and a
-/// full stop and blank after it (`  4. `, ` 90. `).
-fn registered(register: &str, n: u32) -> bool {
-    let head = format!("{n:>3}. ");
-    register.lines().any(|l| l.starts_with(&head))
 }
 
 /// Runs one example in process with an empty standard input, bounded as the
@@ -511,7 +503,7 @@ fn page_with_example(rexx: &str, output: &str) -> String {
 }
 
 /// The problems for a tree holding the one example, checked against the real
-/// repository (whose citations and register it reads).
+/// repository (whose citations and Deviations table it reads).
 fn check_example(rexx: &str, output: &str) -> Vec<Problem> {
     let scratch = Scratch::new("example");
     let root = tree_with_page(&scratch, &page_with_example(rexx, output));
@@ -701,7 +693,7 @@ fn a_missing_final_newline_is_a_mismatch_shown_on_both_sides() {
 }
 
 #[test]
-fn deviations_match_rules_and_the_register() {
+fn deviations_match_rules_and_the_table() {
     let scratch = Scratch::new("deviations");
     let root = scratch.0.join("spec");
     write(&root.join("withdrawn.txt"), "");
@@ -709,17 +701,19 @@ fn deviations_match_rules_and_the_register() {
         &root.join("src/SUMMARY.md"),
         "# S\n\n- [T](builtins/t.md)\n",
     );
-    // Deviation 1 is registered and has its rule; 2 has a rule but is not
-    // listed; 999 is listed, unregistered, and has no rule.
+    // Deviation 1 is active and has its rule; 2 has a rule but is not
+    // listed; 5 is listed with its rule but withdrawn; 999 is listed, absent
+    // from the table, and has no rule.
     write(
         &root.join("src/builtins/t.md"),
-        "---\nelement: T\nkind: builtin\ndeviations: [1, 999]\n---\n\n\
+        "---\nelement: T\nkind: builtin\ndeviations: [1, 5, 999]\n---\n\n\
          r[bif.t.deviation.1]\nRule.\n\n```rexx\nnop\n```\n\n```output\n```\n\n\
-         r[bif.t.deviation.2]\nRule.\n\n```rexx\nnop\n```\n\n```output\n```\n",
+         r[bif.t.deviation.2]\nRule.\n\n```rexx\nnop\n```\n\n```output\n```\n\n\
+         r[bif.t.deviation.5]\nRule.\n\n```rexx\nnop\n```\n\n```output\n```\n",
     );
     let problems = check(&root, &repo_root());
     let text = render(&problems);
-    assert_eq!(problems.len(), 3, "{text}");
+    assert_eq!(problems.len(), 4, "{text}");
     assert!(
         problems.iter().any(|p| p.message.contains("deviation.999")),
         "{text}"
@@ -727,7 +721,13 @@ fn deviations_match_rules_and_the_register() {
     assert!(
         problems
             .iter()
-            .any(|p| p.message.contains("999") && p.message.contains("register")),
+            .any(|p| p.message.contains("999") && p.message.contains("active entry")),
+        "{text}"
+    );
+    assert!(
+        problems
+            .iter()
+            .any(|p| p.message.contains("deviation 5 ") && p.message.contains("active entry")),
         "{text}"
     );
     assert!(
@@ -912,12 +912,38 @@ fn only_a_listed_deviation_rule_is_exempt_from_the_oracle() {
 }
 
 #[test]
-fn a_register_entry_is_matched_in_its_own_format() {
-    let register =
-        "  4. AN ENTRY.\n 90. ANOTHER.\n     7750. A number in prose.\n12. Not an entry.\n";
-    assert!(registered(register, 4));
-    assert!(registered(register, 90));
-    assert!(!registered(register, 7750));
-    assert!(!registered(register, 12));
-    assert!(!registered(register, 5));
+fn the_deviations_chapter_and_table_agree() {
+    let repo = repo_root();
+    let chapter = fs::read_to_string(repo.join(support::deviations::CHAPTER))
+        .expect("reading the Deviations chapter");
+    let headings = support::deviations::chapter_headings(&chapter);
+    let in_chapter: BTreeMap<u32, bool> = headings.iter().copied().collect();
+    assert_eq!(
+        in_chapter.len(),
+        headings.len(),
+        "a Deviation number is a heading twice"
+    );
+    let in_table: BTreeMap<u32, bool> = support::deviations::load(&repo)
+        .into_iter()
+        .map(|(n, d)| (n, d.active))
+        .collect();
+    assert_eq!(
+        in_chapter, in_table,
+        "the chapter's `## N.` headings and the table's rows (number, active) differ"
+    );
+}
+
+#[test]
+fn a_chapter_heading_is_matched_in_its_own_format() {
+    let text = "## 4. An entry\n## 5. Withdrawn\n### 6. Deeper\n7. Prose\n## Intro\n";
+    assert_eq!(
+        support::deviations::chapter_headings(text),
+        [(4, true), (5, false)]
+    );
+    let table = "# comment\n4\tactive\t-\t-\n5\twithdrawn\tstream_model\ta,b\n";
+    let rows = support::deviations::parse(table).expect("a table");
+    assert!(rows[&4].active && !rows[&5].active);
+    assert_eq!(rows[&5].witnesses, ["a", "b"]);
+    assert!(support::deviations::parse("4\tactive\t-\t-\n4\tactive\t-\t-\n").is_err());
+    assert!(support::deviations::parse("4\tlive\t-\t-\n").is_err());
 }

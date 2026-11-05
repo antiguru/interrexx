@@ -20,7 +20,7 @@
  * first and quotes the conversion, so its own line reads the makeString
  * answer.
  *
- * Phase 5a Task 14.
+ *.
  */
 
 /* The counter is set before the trap is armed, for the reason

@@ -228,27 +228,19 @@ fn activate(interp: &mut Interp, program: Program) -> Rc<Program> {
     program
 }
 
-/// The measured bug this fix closes (Task 6 fix dispatch): before it,
-/// every one of the first four bodies below built an *empty* plan --
-/// `Plan::note`'s `_ => {}` dropped `Stem`/`Compound` outright, and
-/// `Plan::build`'s own `_ => {}` meant an instruction it did not
-/// explicitly list (a `DROP`, a controlled `DO`) never even reached
-/// `note` at all. This asserts the plan's actual *contents* -- which
+/// A plan lists the names a body uses, `Stem`/`Compound` and the
+/// instructions `Plan::build` has to reach (a `DROP`, a controlled `DO`)
+/// included. This asserts the plan's actual *contents* -- which
 /// names ended up in `plan.names` -- not merely that resolution still
-/// works afterwards through the `extra`/`grow_slots_of` fallback, which is
-/// the exact bar the dispatch set: neutering `Plan::build` to return an
-/// empty plan unconditionally must fail this test. It does not fail the
-/// pre-existing tests below, whose own assertions run through
-/// `slot_of`, which still gives the right *answer* via that fallback
-/// even when the plan is empty -- only the plan's own contents catch
-/// the regression.
+/// works through the `extra`/`grow_slots_of` fallback, which gives the
+/// right *answer* even when the plan is empty.
 #[test]
 fn build_registers_every_name_a_stem_or_compound_touches() {
     let cases: &[(&[u8], &[&str])] = &[
         // say a.b -- the stem "A." and the tail-piece variable "B",
         // neither of which `note`'s old match handled at all.
         (&b"say a.b"[..], &["A.", "B"][..]),
-        // a.1 = 'x' -- a bare digit tail is a constant (D15a), so only
+        // a.1 = 'x' -- a bare digit tail is a constant, so only
         // the stem itself needs a slot.
         (b"a.1 = 'x'", &["A."]),
         // q. = 1 -- a bare Stem assignment target, dropped by the same
@@ -871,8 +863,7 @@ fn a_runtime_name_grows_the_frame() {
 
 #[test]
 fn names_are_keyed_upcased_but_tail_values_are_not() {
-    // The two rules live in different decision blocks (D16 vs D15a) and
-    // are easy to swap. A NAME is upcased before a `SymbolId` even
+    // The two rules are easy to swap. A NAME is upcased before a `SymbolId` even
     // exists for it -- the *tokenizer* does that (`SymbolTable::intern`),
     // not `Plan` or `slot_of`, which never see a lowercase spelling to
     // begin with: `v.i`, however the source writes it, interns as
@@ -891,8 +882,8 @@ fn names_are_keyed_upcased_but_tail_values_are_not() {
         other => panic!("expected a SAY with an expression, got {other:?}"),
     };
     // The compound's own interned spelling is already upcased regardless
-    // of how the source wrote it -- the fact D16's "keyed by upcased
-    // name" rests on, checked here rather than assumed.
+    // of how the source wrote it -- the fact "keyed by upcased name" rests
+    // on, checked here rather than assumed.
     assert_eq!(program.symbols.name(id), "V.I");
 
     let program = activate(&mut interp, program);
@@ -912,7 +903,7 @@ fn names_are_keyed_upcased_but_tail_values_are_not() {
         .tail_key(&code, id)
         .expect("the tail pieces are strings");
     // The tail VALUE "abc" survives verbatim, lowercase and all -- not
-    // upcased to "ABC", which is the distinct rule D15a states.
+    // upcased to "ABC", which is the distinct rule for tails.
     assert_eq!(key, b"abc");
 }
 

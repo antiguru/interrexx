@@ -139,8 +139,8 @@ err>      5 *-* end
 # The one row that is a guard rather than a regression test. It has no
 # promoted clause at all: an assignment is Generic today, so both engines
 # route the whole clause through eval.rs and the >L> line comes out of
-# evaluating the literal. The spike promoted this assignment and dropped
-# that line, because a native constant op evaluates nothing. This row goes
+# evaluating the literal. A native constant op evaluates nothing and would
+# drop that line. This row goes
 # red when the first native expression op forgets to re-emit it.
 program
 trace i

@@ -1,5 +1,5 @@
 /* VALUE's one-argument form resolves a leading-dot name the same way the
- * expression form does. Phase 5a Task 6.
+ * expression form does.
  *
  * BUILTIN(VALUE) with no selector asks VariableDictionary::getVariableRetriever
  * for a retriever, and a leading-dot symbol gets an ordinary RexxDotVariable

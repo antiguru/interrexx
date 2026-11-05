@@ -3,7 +3,7 @@
    reply. The RETURN below it carries a value that now has nobody to go to,
    which is 98.936 -- and the whole program is EXIT STATUS 0 WITH A TRACEBACK,
    because by the time the raise happens the main program has finished and
-   there is nothing left to carry a status. Phase 5a Task 16. */
+   there is nothing left to carry a status. */
 
 say .K~m
 

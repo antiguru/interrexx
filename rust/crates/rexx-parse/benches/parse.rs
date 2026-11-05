@@ -1,5 +1,5 @@
-//! Task 3.10: parse throughput on the two `.orx` files the Rust build ships
-//! and parses at every interpreter start (D2).
+//! Parse throughput on the two `.orx` files the Rust build ships
+//! and parses at every interpreter start.
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use rexx_parse::{DirectiveKind, parse_program};
@@ -28,7 +28,7 @@ struct Case {
 const CASES: &[Case] = &[
     Case {
         name: "CoreClasses.orx",
-        // 4,193 lines (Task 3.10 brief).
+        // 4,193 lines.
         text: include_bytes!(
             "../../../../third_party/ooRexx/interpreter/RexxClasses/CoreClasses.orx"
         ),
@@ -38,7 +38,7 @@ const CASES: &[Case] = &[
     },
     Case {
         name: "StreamClasses.orx",
-        // 1,010 lines (Task 3.10 brief).
+        // 1,010 lines.
         text: include_bytes!(
             "../../../../third_party/ooRexx/interpreter/RexxClasses/StreamClasses.orx"
         ),

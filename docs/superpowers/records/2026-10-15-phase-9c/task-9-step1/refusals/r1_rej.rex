@@ -1,1 +1,0 @@
-call 'rej.rxo'

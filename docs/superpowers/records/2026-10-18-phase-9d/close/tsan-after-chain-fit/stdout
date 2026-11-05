@@ -1,5 +1,0 @@
-api exit 0
-lib exit 0
-int exit 0
-no tsan log
-memcap: left /sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/claude-jail-1613672/memcap-4904 behind, processes are still in it

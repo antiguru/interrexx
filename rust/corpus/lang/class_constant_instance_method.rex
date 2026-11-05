@@ -1,5 +1,5 @@
 /* A ::CONSTANT installs its getter on the instance side as well as the class
-   side, and ~method is the reader a phase without ~new has for the instance
+   side, and ~method is a reader for the instance
    side: it retrieves from the class's own instanceMethodDictionary
    (RexxClass::method, classes/ClassClass.cpp:984, the retrieval at :991).
 

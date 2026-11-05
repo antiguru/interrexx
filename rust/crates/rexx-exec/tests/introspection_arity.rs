@@ -1,4 +1,4 @@
-//! `corpus/introspection-arity.tsv` (Phase 5i Task 0): what each documented
+//! `corpus/introspection-arity.tsv`: what each documented
 //! introspection method does when it is sent an argument list it could
 //! accept.
 
@@ -8,15 +8,14 @@ use support::arity;
 
 const HEADER: &str = "\
 # What each documented introspection method does when sent an argument list it
-# could accept (Phase 5i Task 0). Derived by
+# could accept. Derived by
 # crates/rexx-exec/tests/introspection_arity.rs; edit that, never this.
 #
 # class<TAB>method<TAB>arm<TAB>verdict<TAB>evidence
 #
 # THIS TABLE REPLACES corpus/method-bodies.txt's verdict column for these
 # classes. That column sends no arguments, so for a method that needs them it
-# records agreement about an arity error. No task in Phase 5i may cite it as
-# a reason a row needs no work.
+# records agreement about an arity error.
 #
 #   agree          the oracle and the crate give identical descriptors,
 #                  the answered value among them
@@ -38,9 +37,8 @@ const HEADER: &str = "\
 # sides complete with different answers reads send-differs rather than agree.
 # `Class~enhanced` is the row it exists for: the oracle answers `enhanced K`
 # at rc 0, so a crate that completes the send and answers something else was
-# invisible to an instrument reading only the exit status and the streams. A
-# task closing a row still owes it a witness that reads the answer's own
-# contents, which `~string` does not.
+# invisible to an instrument reading only the exit status and the streams.
+# `~string` does not read the answer's own contents.
 #
 # The argument lists are corpus/introspection-arguments.tsv and the receivers
 # are corpus/introspection-receivers.tsv. A list is only real if the ORACLE

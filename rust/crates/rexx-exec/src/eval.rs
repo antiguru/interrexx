@@ -11,7 +11,7 @@ use rexx_core::{Body, Decoded, INLINE_BYTES, NotNumeric, ObjRef};
 use rexx_num::{CompareOp, DivOp, Number};
 use rexx_parse::{CallTarget, Expr, ExprKind, Operator, PrefixOp, SymbolId};
 
-/// D19's evaluation-depth limit: `eval`'s own recursion, one level per
+/// The evaluation-depth limit: `eval`'s own recursion, one level per
 /// left-deep term, refuses anything past this depth with 11.1 ("Insufficient
 /// control stack space") rather than letting the interpreter thread's guard
 /// page abort the process silently.
@@ -50,8 +50,8 @@ pub(crate) enum SymbolRead {
 }
 
 impl Interp {
-    /// Evaluates one expression node, and keeps the depth bookkeeping D19
-    /// needs.
+    /// Evaluates one expression node, and keeps the depth bookkeeping the
+    /// evaluation-depth limit needs.
     pub(crate) fn enter_eval_node<T>(&mut self, anchor: *const T) -> Result<(), Failure> {
         let here = anchor as usize;
 
@@ -65,13 +65,13 @@ impl Interp {
             self.activity.stack_deepest = here;
         }
 
-        // D19's evaluation-depth limit, checked **after** the bookkeeping
+        // The evaluation-depth limit, checked **after** the bookkeeping
         // above so a run that trips it still gets an accurate `StackSpan`
         // (the deepest level reached is this one, not the one before it).
         // `> MAX_EVAL_DEPTH`, not `>=`: a 100,000-term left-deep expression
         // reaches depth exactly 100,000 and the oracle is measured to
         // survive and print an answer at that depth
-        // (`phase-4-exclusions.txt`'s Deviation 2), so the check must fire
+        // (Deviation 2), so the check must fire
         // one level *above* the one the oracle is known to handle, or the
         // one depth we are supposed to match becomes the first one we
         // refuse.
@@ -87,7 +87,7 @@ impl Interp {
         self.enter_eval_node(&raw const probe)?;
         let value = self.eval_node(code, expr);
         self.activity.depth -= 1;
-        // `TRACE I`'s own value events (D17), inserted here and in
+        // `TRACE I`'s own value events, inserted here and in
         // [`Interp::eval_in_parse`], which repeats this depth bookkeeping, so
         // a post-order event with the value already in hand needs no
         // threading through `eval_node`'s own arms at all. Only `Ok` gets
@@ -196,10 +196,7 @@ impl Interp {
             ExprKind::Variable(id) | ExprKind::Stem(id) | ExprKind::Compound(id) => {
                 self.echo_symbol_read(code, *id, value)?;
             }
-            // `.NIL`/`.TRUE`/`.FALSE` -- `>E>`, measured (this task's
-            // report): **not** in the design spec's own "measured reachable
-            // from pure-4a code" list, a correction this task found rather
-            // than assumed. The other `DotVariable` names all fail loudly
+            // `.NIL`/`.TRUE`/`.FALSE` -- `>E>`. The other `DotVariable` names all fail loudly
             // before reaching here (`eval_node`'s own arm), so this is
             // exhaustive over what can arrive.
             ExprKind::DotVariable(id) => self.echo_environment_symbol(code, *id, value)?,
@@ -451,9 +448,9 @@ impl Interp {
 
             ExprKind::Prefix { op, operand } => self.eval_prefix(code, *op, operand),
 
-            // Arithmetic (D15's "Expression evaluation": `+ - * / % // **`,
-            // through `rexx-num` under the settings in force *now* -- the
-            // rendering of the result is fixed at creation, D15's own rule,
+            // Arithmetic (`+ - * / % // **`), through `rexx-num` under the
+            // settings in force *now* -- the rendering of the result is fixed
+            // at creation (D15),
             // but the DIGITS/FORM an operation computes *under* is always
             // the activation's current ones, read fresh on every call. Ahead
             // of the arm below, which is every *other* binary operator, so
@@ -464,8 +461,7 @@ impl Interp {
                 self.eval_arithmetic(code, *op, left, right)
             }
 
-            // Concatenation, comparison and `&`/`|`/`&&`
-            // (D15's "Expression evaluation"), which share this operand
+            // Concatenation, comparison and `&`/`|`/`&&`, which share this operand
             // prologue exactly: **both operands are always evaluated, left
             // then right, and never short-circuited** -- measured, `say (0 &
             // 'x')` raises 34.901 on `"x"` though the result is already
@@ -502,11 +498,11 @@ impl Interp {
             // `o~value = 7` writes `vr`.
             ExprKind::VariableReference(inner) => self.variable_reference(code, inner),
 
-            // `f(...)`/`"f"(...)` (Task 4, 4b) -- see `eval_call`'s own doc.
+            // `f(...)`/`"f"(...)` -- see `eval_call`'s own doc.
             ExprKind::Call { target, args } => self.eval_call(code, target, args),
 
             // `target~name(...)`, `target~~name(...)` and `target[...]`
-            // (Phase 5a) -- see `Interp::message_term` (`dispatch.rs`) for
+            // -- see `Interp::message_term` (`dispatch.rs`) for
             // the evaluation order and `Interp::resolve_in`/`Interp::invoke`
             // for the send itself. The **expression** form only: the
             // message-assignment form is an instruction and never an
@@ -672,7 +668,7 @@ impl Interp {
         function_started(begun, name)
     }
 
-    /// `+`/`-`/`\` (D15's "Expression evaluation"), over an operand this
+    /// `+`/`-`/`\`, over an operand this
     /// evaluates out of the tree.
     fn eval_prefix(
         &mut self,
@@ -1070,8 +1066,7 @@ impl Interp {
         Ok(joined)
     }
 
-    /// The comparison operators (D15's "Expression evaluation":
-    /// numeric-or-string `= \= <> >< > < >= <= \> \<`, and strict
+    /// The comparison operators (numeric-or-string `= \= <> >< > < >= <= \> \<`, and strict
     /// `== \== >> << >>= <<= \>> \<<`), all through `rexx-num`'s
     /// `compare_numbers` and `compare_strings` -- **no comparison rule is
     /// written here**, per the plan's own instruction and this crate's
@@ -1550,7 +1545,7 @@ pub(crate) fn saturate_digits(digits: u64) -> u32 {
 }
 
 /// A logical value is *exactly* the one-byte string `0` or `1` -- text, not
-/// numeric, no coercion (D15's "Expression evaluation"; measured, `' 1 '`,
+/// numeric, no coercion (measured, `' 1 '`,
 /// `'01'`, `'1.0'` and `''` are each not logical, error 34).
 fn logical_value(text: &[u8]) -> Option<bool> {
     match text {
@@ -1801,7 +1796,7 @@ fn is_strict_compare(op: Operator) -> bool {
 #[cfg(test)]
 mod tests;
 
-/// **R12: an operator whose left operand is an object this phase can build
+/// **An operator whose left operand is an object this crate can build
 /// and send no message to.**
 #[cfg(test)]
 mod object_operand_tests;

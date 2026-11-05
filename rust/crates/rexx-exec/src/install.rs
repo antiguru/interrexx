@@ -230,7 +230,7 @@ impl Interp {
                 _ => {}
             }
 
-            // **The eager bind** (D37), in this walk because the oracle does
+            // **The eager bind**, in this walk because the oracle does
             // it while the directive is being translated:
             // `createNativeMethod` raises from inside `methodDirective`
             // (`parser/DirectiveParser.cpp:1385`), so the file is refused
@@ -1565,7 +1565,7 @@ impl Interp {
     /// `::METHOD`'s own R9 install: the name lands in `class`'s instance
     /// dictionary, or its class dictionary for `::METHOD ... CLASS`, and
     /// [`Interp::record_method_body`] records which directive to read its
-    /// body from later (Task 7's, not entered here).
+    /// body from later.
     fn install_method(
         &mut self,
         program: ProgramId,

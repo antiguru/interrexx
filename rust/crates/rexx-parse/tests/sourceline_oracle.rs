@@ -1,4 +1,4 @@
-//! Phase 3 gate: `SOURCELINE(n)` matches the interpreter for every line of
+//! `SOURCELINE(n)` matches the interpreter for every line of
 //! every `rust/corpus/lang/` program, including the last line of a file
 //! without a trailing newline (`no_trailing_newline.rex`, which the oracle
 //! counts as a full line).

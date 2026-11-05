@@ -1,5 +1,5 @@
 # The argument list each documented collection method is sent in
-# corpus/collection-arity.tsv's probe (Phase 5g Task 0b).
+# corpus/collection-arity.tsv's probe.
 #
 # class<TAB>method<TAB>arguments, where `--` is a send with none.
 #

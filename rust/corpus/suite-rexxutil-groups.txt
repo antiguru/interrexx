@@ -1,0 +1,23 @@
+# The ooTest groups that name a RexxUtil routine, for REXX_SUITE_GROUPS (comma-joined):
+# each *.testGroup hit of this command, run from the worktree root, as dir/group in
+# byte order; suite.rs re-runs it and asserts the list below equals it.
+#   grep -rlawiE 'SysCls|SysCreatePipe|SysDropFuncs|SysDumpVariables|SysFileCopy|SysFileMove|SysFileSearch|SysFork|SysFormatMessage|SysGetErrorText|SysGetFileDateTime|SysGetKey|SysGetMessage|SysGetMessageX|SysIsFileDirectory|SysIsFileLink|SysLoadFuncs|SysOpenEventSem|SysOpenMutexSem|SysQueryProcess|SysSearchPath|SysSetFileDateTime|SysSetPriority|SysStemCopy|SysStemDelete|SysStemInsert|SysStemSort|SysTempFileName|SysUtilVersion|SysWait|SysFileTree|SysFileXXX' ootest/ooRexx
+base/class/File
+base/keyword/ADDRESS
+base/rexxutil/Macrospace
+base/rexxutil/SysDumpVariables
+base/rexxutil/SysFileDateTime
+base/rexxutil/SysFileSearch
+base/rexxutil/SysFileTree
+base/rexxutil/SysFileXXX
+base/rexxutil/SysFormatMessage
+base/rexxutil/SysSearchPath
+base/rexxutil/SysStemCopy
+base/rexxutil/SysStemDelete
+base/rexxutil/SysStemInsert
+base/rexxutil/SysStemSort
+base/rexxutil/platform/unix/SysGetMessage
+base/rexxutil/platform/unix/tilde
+base/rexxutil/platform/windows/SysFileTree
+base/rexxutil/platform/windows/SysIsFileDirectory
+base/security.manager/SecurityManager

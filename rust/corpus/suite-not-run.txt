@@ -1,11 +1,10 @@
-# The tests the framework does not run on this host (spec 2026-10-10 section 2).
+# The tests the framework does not run on this host.
 # One row per test: dir/group, TEST, NotRun, reason. `platform windows`,
 # `restrictOS line N` and `test type NAME` rows are the ones
 # `suite_rows::derived_rows` derives from the group files, and
 # `the_row_files_hold_only_checked_rows` (`tests/suite.rs`) asserts each is
 # present. A `platform windows` row is a test of a group below
-# `extensions/platform/windows/`, which needs a Windows API this host lacks
-# (Moritz, 2026-11-03).
+# `extensions/platform/windows/`, which needs a Windows API this host lacks.
 # ootest revision 13347
 base/rexxutil/platform/windows/SysBootDrive	TESTBOOTDRIVE	NotRun	restrictOS line 43
 base/rexxutil/platform/windows/SysBootDrive	TESTBOOTDRIVE2	NotRun	restrictOS line 43

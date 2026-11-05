@@ -1,4 +1,4 @@
-//! The deterministic simulation mode (spec 2026-10-07 section 4) and the
+//! The deterministic simulation mode and the
 //! clock seam every clock read goes through. Each decision kind draws from a
 //! stream of its own, so a knob turned on or off moves no other draw.
 //! ```text
@@ -30,7 +30,7 @@ use crate::{Interp, Loud};
 
 /// The per-clause quantum's range: half and twice the oracle's measured
 /// 58 ns per clause (`rexxcps`, median of five runs, 17,229,378 clauses per
-/// second; `docs/superpowers/plans/phase-6-1-gate.md`, `## Task 8`).
+/// second).
 const QUANTUM_NANOS: std::ops::RangeInclusive<u64> = 29..=116;
 
 /// The seeded origin's epoch, 2026-01-01T00:00:00Z, in seconds since the Unix

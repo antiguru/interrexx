@@ -1,4 +1,4 @@
-/* Task 21: `RexxContext~package`, the one route to the running program's own
+/* `RexxContext~package`, the one route to the running program's own
    package object.
 
    The identity rows are the point. A build that minted a fresh Package

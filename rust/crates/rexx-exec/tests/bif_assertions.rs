@@ -1,4 +1,4 @@
-//! Phase 4c's L1 obligation: runs every row `rexx-extract`'s `bif` module
+//! Runs every row `rexx-extract`'s `bif` module
 //! lifts out of `ootest/ooRexx/base/bif/` through `rexx_exec`'s public entry
 //! point, and checks each the way the ooTest framework's own `assertSame`
 //! does.
@@ -163,8 +163,7 @@ enum RowOutcome {
     /// `40.9`.
     RaiseMismatch,
     /// Hit [`NOT_IMPLEMENTED_EXIT`]. `construct` is what the program ran into
-    /// first; `owner` is the phase `rexx-exec`'s own tables name for it, which
-    /// is the separate question of what would actually unblock it.
+    /// first; `owner` is the owner its refusal names, if any.
     Blocked {
         construct: String,
         owner: Option<String>,
@@ -175,8 +174,8 @@ enum RowOutcome {
 }
 
 impl RowOutcome {
-    /// The phase that would make this row pass, in the vocabulary the
-    /// committed exempt file uses. `None` for a passing row.
+    /// What this row is exempt under, in the vocabulary the committed exempt
+    /// file uses. `None` for a passing row.
     fn attribution(&self) -> Option<String> {
         match self {
             RowOutcome::Pass => None,
@@ -625,7 +624,7 @@ fn build_report(
     writeln!(
         w,
         "THIS HEADLINE IS A MEASUREMENT, NOT A THRESHOLD -- base/bif covers the whole builtin \
-         surface, including the names D4 excludes and the builtins later phases own."
+         surface."
     )
     .unwrap();
     writeln!(
@@ -787,63 +786,29 @@ fn a_raise_row_needs_the_sub_number_too() {
     );
 }
 
-/// The exempt file's `unblocked_by` column is in the vocabulary
-/// `phase-4-exclusions.txt` fixes for owner strings, or is one of the four
+/// The exempt file's `unblocked_by` column is a refusal's construct or one of the
 /// categories [`RowOutcome::attribution`] emits for a row that neither passes
 /// nor names a construct. Nothing else, so a typo cannot quietly become a new
 /// category that the set-equality test then happily matches against itself.
 #[test]
-fn every_exempt_attribution_is_a_known_phase_or_a_declared_outcome() {
-    const PHASES: &[&str] = &["4b", "4c"];
-
+fn every_exempt_attribution_is_a_declared_outcome() {
     // The count is the whole point of this table, not decoration on it.
-    // `ANOMALY` moved 3 -> 0 on 2026-09-12: all three were `BEEP`, and Phase 7
-    // gave the `REXX` package's internal routines their bodies, so the rows
-    // pass and the category is empty rather than swept aside.
-    //
-    // `MISMATCH` moved 0 -> 2 on 2026-09-12, and neither remedy the panic
-    // below offers fits these two. They are `STREAM::test_relative_file_exists`
-    // and `...2`, which the stream builtins made reachable. Both assert
-    // against `.ooTest.dir`, and measured, that symbol does not resolve
-    // outside the ooTest framework -- both interpreters render it as the
-    // literal `.OOTEST.DIR`, so the expected value is a string no
-    // implementation can produce. The group's own `::method setup` supplies it
-    // along with the working directory, and this harness lifts one assertion
-    // out without it. A phase would assert that some later task makes them
-    // pass, which is false; a `KNOWN GAP` marker is read only by
-    // `builtin_status.rs`, and only for a builtin whose status row is
-    // `divergent`, which `STREAM`'s is not. So the number moves, with the
-    // reason, rather than the rows being attributed to a fiction.
-    //
-    // `MISMATCH` moved 0 -> 2 on 2026-09-12, and neither remedy the panic below
-    // offers fits these two. They are `STREAM::test_relative_file_exists` and
-    // `...2`, which the stream builtins made reachable. Both assert against
-    // `.ooTest.dir`, and measured, that symbol does not resolve outside the
+    // `MISMATCH`'s two rows are `STREAM::test_relative_file_exists` and `...2`.
+    // Both assert against `.ooTest.dir`, which does not resolve outside the
     // ooTest framework -- both interpreters render it as the literal
     // `.OOTEST.DIR`, so the expected value is a string no implementation can
-    // produce. The group's own `::method setup` supplies it along with the
-    // working directory, and this harness lifts one assertion out without it.
-    // A phase would assert that some later task makes them pass, which is
-    // false; a `KNOWN GAP` marker is read only by `builtin_status.rs`, and
-    // only for a builtin whose status row is `divergent`, which `STREAM`'s is
-    // not. So the number moves, with the reason, rather than the rows being
-    // attributed to a fiction.
+    // produce. The group's own `::method setup` supplies it, and this harness
+    // lifts one assertion out without it.
     //
-    // `RAISE-MISMATCH` and `ANOMALY` stay 0. `CHAROUT`'s two std-stream rows
-    // briefly derived as those while an omitted name was answered with 40.3
-    // and 40.5; once it resolved to `.STDOUT` they went back to a loud
-    // refusal, so the harness attributes them to `Phase 7` again -- the phase
-    // that owes them -- rather than recording a divergence no one holds.
+    // `RAISE-MISMATCH` and `ANOMALY` are 0.
     const DERIVED: &[(&str, usize)] = &[("MISMATCH", 2), ("RAISE-MISMATCH", 0), ("ANOMALY", 0)];
 
     let names: Vec<&str> = DERIVED.iter().map(|(name, _)| *name).collect();
     let mut counts = vec![0usize; DERIVED.len()];
     for (key, attribution) in committed_exempt() {
         assert!(
-            PHASES.contains(&attribution.as_str())
-                || names.contains(&attribution.as_str())
-                || attribution.starts_with("UNATTRIBUTED:"),
-            "{key} is attributed to {attribution:?}, which is none of {PHASES:?} nor {names:?}"
+            names.contains(&attribution.as_str()) || attribution.starts_with("UNATTRIBUTED:"),
+            "{key} is attributed to {attribution:?}, which is none of {names:?}"
         );
         if let Some(i) = names.iter().position(|name| *name == attribution) {
             counts[i] += 1;
@@ -855,9 +820,8 @@ fn every_exempt_attribution_is_a_known_phase_or_a_declared_outcome() {
             expected,
             "{count} rows of {} carry the derived attribution {name}, against the {expected} \
              pinned here. A row with this attribution names no owner and no construct, so it is \
-             a divergence no phase is holding: rule on it -- give it a phase, or record it as a \
-             KNOWN GAP in phase-4-exclusions.txt -- and move this number deliberately rather \
-             than letting the set-equality test absorb it",
+             a divergence nothing accounts for: record it as a Deviation, and move this number deliberately rather than letting the set-equality test \
+             absorb it",
             exempt_path().display()
         );
     }

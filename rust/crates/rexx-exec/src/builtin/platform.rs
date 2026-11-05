@@ -311,7 +311,7 @@ fn in_range(number: i64, argument: &str, minimum: i64, maximum: i64) -> Result<(
     .into())
 }
 
-/// `VALUE(name, [new], selector)`: the two external pools this phase answers.
+/// `VALUE(name, [new], selector)`: the two external pools this crate answers.
 /// The empty selector names `.environment` itself; `ENVIRONMENT`, caselessly,
 /// names the process environment this interpreter holds. Any other selector is
 /// 40.914, which is also what the oracle answers on unix for every selector its

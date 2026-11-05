@@ -14,8 +14,7 @@ fn id(n: u32) -> ObjRef {
     ObjRef::heap(n, 0)
 }
 
-// `define_class`'s fourth argument (D44's metaclass, added for the metaclass
-// graph) is `object` (or, in the one test with no `object` local, its own
+// `define_class`'s fourth argument (the metaclass) is `object` (or, in the one test with no `object` local, its own
 // root) in every call below: every graph here descends from its own root,
 // so the ordinary ancestor walk always folds that root's scope in before a
 // class's own metaclass-merge check runs, making the merge a guaranteed
@@ -291,8 +290,7 @@ fn inherit_on_a_superclass_reaches_an_existing_subclass_instance_too() {
 }
 
 // ---------------------------------------------------------------------
-// Probe: mixinclass_object_class_method.rex -- the class-behaviour side
-// (D44).
+// Probe: mixinclass_object_class_method.rex -- the class-behaviour side.
 // ---------------------------------------------------------------------
 
 /// `mixinclass_object_class_method.rex`: `GreeterMixin` (`mixinclass
@@ -300,8 +298,8 @@ fn inherit_on_a_superclass_reaches_an_existing_subclass_instance_too() {
 /// inherit GreeterMixin`. Recorded: `MyClass~hasmethod(GREET)= 1`,
 /// `MyClass~greet= CLASS-SIDE GREET`, `inst~hasmethod(GREET)= 0` -- a plain
 /// `INHERIT` cascades a mixin's own class-side methods into the
-/// *class object's own* behaviour (D44's "a class carries two
-/// behaviours"), not into its instances' behaviour.
+/// *class object's own* behaviour (a class carries two behaviours), not
+/// into its instances' behaviour.
 #[test]
 fn inherit_donates_a_mixins_class_side_methods_to_the_class_object_not_its_instances() {
     let object = id(1);
@@ -671,10 +669,10 @@ fn a_refused_inherit_propagates_no_uninit_flag() {
 }
 
 // ---------------------------------------------------------------------
-// Design-decision tests, not oracle probes: D29's scope-ordering data and
+// Design tests, not oracle probes: the scope-ordering data and the
 // monotonic version. These read `MethodDictionary::resolveSuperScope`
 // (`MethodDictionary.cpp:569`) and `findSuperMethod` (`:434`) directly --
-// Task 2 builds no dispatch, so there is no scope-override *send* to
+// This crate builds no dispatch, so there is no scope-override *send* to
 // probe against the oracle; only the data these functions would read.
 // ---------------------------------------------------------------------
 
@@ -749,9 +747,8 @@ fn a_scope_rooted_lookup_can_disagree_with_the_ordinary_lookup() {
     );
 }
 
-/// D29: "every behaviour carries a monotonic version, bumped by the
-/// cascade". Not an oracle fact (there is nothing in a running script
-/// that reads it) -- a design decision the spec records, checked here as
+/// Every behaviour carries a monotonic version, bumped by the cascade. Not
+/// an oracle fact (nothing in a running script reads it), checked here as
 /// a property of this crate's own bookkeeping: every cascade that touches
 /// a handle bumps its version by exactly one, and a handle `define`
 /// orphans stops advancing forever.

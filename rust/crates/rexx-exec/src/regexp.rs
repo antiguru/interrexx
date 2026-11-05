@@ -1,12 +1,13 @@
 //! The `rxregexp` pattern language and its matcher, as
-//! `docs/superpowers/specs/extensions-behaviour.md` ("rxregexp") describes
+//! `docs/design/extensions.md` describes
 //! them: a pattern compiles to a Thompson automaton, and every question the
 //! `RegularExpression` methods ask is one pass of it over the subject, which
 //! keeps each answer linear in the subject and the automaton (Deviation 87:
 //! `(a*)*` and a set range ending at `'7F'x` terminate).
 //!
 //! The language is the grammar's, with standard meanings for alternation and
-//! repetition; the oracle's two departures from it, D4 and D5, are not
+//! repetition; the oracle's departures from it (a starred factor at the
+//! start of an alternative, and `X+` followed by a starred factor) are not
 //! reproduced.
 
 /// One automaton state.

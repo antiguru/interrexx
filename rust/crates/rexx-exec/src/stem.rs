@@ -1,4 +1,4 @@
-//! Stems and compound variables (D15a): four measured behaviours an obvious
+//! Stems and compound variables: four measured behaviours an obvious
 //! model gets wrong.
 
 use crate::plan::{CompoundName, TailPiece};
@@ -37,7 +37,7 @@ pub(crate) fn exposed_home(
 
 impl Interp {
     /// Resolves a compound's tail pieces into the one key its tails map is
-    /// keyed by (D15a): each piece verbatim and case-sensitively, joined by
+    /// keyed by: each piece verbatim and case-sensitively, joined by
     /// `.`. `TailPiece::Constant` stands for itself; `TailPiece::Variable` is
     /// a plain variable name whose *current value* supplies the piece, read
     /// through the ordinary variable path (deriving its own name if unset,
@@ -166,8 +166,8 @@ impl Interp {
         }
     }
 
-    /// Reads a bare stem (`ExprKind::Stem`): D15a's own auto-vivification
-    /// rule (branch review F4), mirroring the oracle's `createStemVariable`,
+    /// Reads a bare stem (`ExprKind::Stem`): the auto-vivification rule,
+    /// mirroring the oracle's `createStemVariable`,
     /// which fires on any miss to the variable dictionary, reads included
     /// (`VariableDictionary::getStemVariable`, `VariableDictionary.hpp:
     /// 178-183`).
@@ -276,8 +276,8 @@ impl Interp {
     /// g.1='x'; h.=g.; k.=h.;      say k.9  ->  G.9   (two hops, still G)
     /// m.1='x'; n.2='y'; m.=n.;    say m.1  ->  N.1   (m.'s own object discarded)
     /// ```
-    /// **Returns the `Novalue` flag alongside the value since 4b's Task 7**,
-    /// the same pair `Interp::read` has always returned and for the same
+    /// **Returns the `Novalue` flag alongside the value**,
+    /// the same pair `Interp::read` returns and for the same
     /// reader: `SIGNAL ON NOVALUE`. `Novalue::Unset` is precisely the two
     /// derived-name exits below -- no object at all, or an object with
     /// nothing at this key -- and measured against the oracle both count,
@@ -399,7 +399,7 @@ impl Interp {
 
     /// Writes a tail: mutates the stem's existing object in place, or
     /// auto-vivifies one (`default: None`) if this is the first write the
-    /// stem has ever seen (D15a: "a tail assignment mutates", and measured,
+    /// stem has ever seen (a tail assignment mutates, and measured,
     /// `q.1='x'` with `q.` never itself assigned still leaves `q.2`
     /// deriving its own name rather than falling back to anything).
     pub(crate) fn stem_set(&mut self, stem_name: &[u8], key: &[u8], value: ObjRef) {
@@ -499,8 +499,7 @@ impl Interp {
         tails.insert(key.to_vec(), (ordinal, None));
     }
 
-    /// `stem. = expr`: replaces the whole object and rebinds the variable
-    /// (D15a).
+    /// `stem. = expr`: replaces the whole object and rebinds the variable.
     pub(crate) fn stem_assign(&mut self, stem_name: &[u8], value: ObjRef) {
         self.stem_assign_at(stem_name, None, value);
     }
@@ -533,8 +532,8 @@ impl Interp {
     /// The shared half of `stem_assign`'s "wrap" branch and `stem_drop`:
     /// build a fresh `Body::Stem` with the given default and rebind the
     /// variable to it, leaving any old object exactly where aliases into it
-    /// already point (D15a's `r.`/`u` and `s.`/`t` transcripts, which need
-    /// the *old* object left untouched rather than mutated).
+    /// already point (aliases such as `r.`/`u` need the *old* object left
+    /// untouched rather than mutated).
     fn replace_stem(&mut self, stem_name: &[u8], at: Option<usize>, default: Option<ObjRef>) {
         let slot = self.stem_slot(stem_name, at);
         let frame = self.activation().frame;

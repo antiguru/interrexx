@@ -1,6 +1,6 @@
 /* EXPOSE binds a name to the receiving object's variable pool, so a value
    written by one send is there for the next one. The receiver here is a class
-   object, which is the only kind of object a program reaches in this phase.
+   object, which a program can reach without ~new.
    Also: a name the pool has never held reads as its own derived name and is
    LIT to SYMBOL, DROP returns it to that state, VALUE reaches it by name, and
    a name listed twice binds once. */

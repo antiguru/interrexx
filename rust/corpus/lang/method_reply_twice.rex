@@ -3,7 +3,7 @@
    body, where nothing is left to carry a status, so this is rc 0 with a
    traceback and `tail` is never reached. The second reply's own expression is
    evaluated before the check, which is the order the C++ takes -- the raise is
-   in `RexxActivation::reply`, past `evaluateExpression`. Phase 5a Task 16. */
+   in `RexxActivation::reply`, past `evaluateExpression`. */
 
 say .K~m
 

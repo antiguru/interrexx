@@ -811,7 +811,7 @@ impl Interp {
     /// A child's wait leaves the baton, answering `Left`, outside a park's
     /// continuation (`NativeActivation::run`,
     /// `execution/NativeActivation.cpp:1691`, releases the kernel lock around
-    /// a command handler), where a halt can abandon it (ruling P60).
+    /// a command handler), where a halt can abandon it.
     ///
     /// A handler written in Rexx (`.CommandHandler~register`) is sent the
     /// command on this activity ([`Interp::run_rexx_command`]).

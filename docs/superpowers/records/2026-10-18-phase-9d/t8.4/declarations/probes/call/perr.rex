@@ -1,2 +1,0 @@
-say "prolog"
-say (

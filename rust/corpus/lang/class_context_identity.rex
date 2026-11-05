@@ -1,4 +1,4 @@
-/* Task 21, fix round 1: `.context` answers one object per activation, which
+/* `.context` answers one object per activation, which
    is what `~objectName=` and `~identityHash` read.
 
    The rename row is the one a fresh-object-per-evaluation build cannot pass

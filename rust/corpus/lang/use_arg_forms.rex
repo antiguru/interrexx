@@ -1,24 +1,24 @@
-/* USE ARG, USE STRICT ARG and the variable-reference argument (4b Task 5).   */
+/* USE ARG, USE STRICT ARG and the variable-reference argument.              */
 /*                                                                           */
-/* What each block would print if the implementation were wrong:              */
+/* What each block would print if the implementation were wrong:             */
 /*                                                                           */
-/*   extra     -- USE ARG takes as many arguments as it has targets and       */
-/*                ignores the rest; a version that raised on the surplus      */
+/*   extra     -- USE ARG takes as many arguments as it has targets and      */
+/*                ignores the rest; a version that raised on the surplus     */
 /*                would not reach the SAY at all.                            */
-/*   omitted   -- an omitted position holds its place. Closing the list up    */
-/*                would bind R to 3 and leave Q unset, printing "[1] [3]      */
+/*   omitted   -- an omitted position holds its place. Closing the list up   */
+/*                would bind R to 3 and leave Q unset, printing "[1] [3]     */
 /*                [R]" instead.                                              */
-/*   dropped   -- a target with no argument and no default is DROPPED, not    */
-/*                left alone. PRESET is set in the caller and the callee      */
-/*                shares its pool (no PROCEDURE), so an implementation that   */
-/*                merely skips an absent target prints "preset-value" where   */
-/*                the oracle prints the derived name. A target whose prior    */
-/*                value happened to equal its own name could not show this.   */
-/*   default   -- a default fills an absent position, and satisfies STRICT's  */
-/*                own minimum: the strict block below supplies one argument   */
+/*   dropped   -- a target with no argument and no default is DROPPED, not   */
+/*                left alone. PRESET is set in the caller and the callee     */
+/*                shares its pool (no PROCEDURE), so an implementation that  */
+/*                merely skips an absent target prints "preset-value" where  */
+/*                the oracle prints the derived name. A target whose prior   */
+/*                value happened to equal its own name could not show this.  */
+/*   default   -- a default fills an absent position, and satisfies STRICT's */
+/*                own minimum: the strict block below supplies one argument  */
 /*                for two targets and must not raise 40.3.                   */
-/*   alias     -- >PREF passes the caller's variable rather than its value,   */
-/*                so the callee's write is visible in the caller. Copying     */
+/*   alias     -- >PREF passes the caller's variable rather than its value,  */
+/*                so the callee's write is visible in the caller. Copying    */
 /*                the value instead prints "before-alias" afterwards.        */
 /*   decay     -- >PREF in an ordinary expression position is worth the      */
 /*                referenced variable's value, not a reference object.       */

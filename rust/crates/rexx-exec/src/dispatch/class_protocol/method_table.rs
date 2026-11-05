@@ -40,8 +40,8 @@ pub(in crate::dispatch) fn native_define_methods(
 
 /// Whether `value` is a table `~defineMethods`, `~enhanced` and `~setMethod`
 /// can walk: one of this crate's own `Body::Native` directories, or a
-/// `Directory` or `StringTable` a program made, which since Phase 5h Task 4
-/// is a collection with a hash store.
+/// `Directory` or `StringTable` a program made, a collection with a hash
+/// store.
 fn string_keyed_table(interp: &mut Interp, value: ObjRef) -> bool {
     if matches!(
         interp.receiver_kind(value),

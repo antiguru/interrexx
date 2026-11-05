@@ -39,9 +39,8 @@ fn fresh_run_dir() -> PathBuf {
 
 /// `do forever; end` reddens at [`ORACLE_DEADLINE`] instead of hanging the
 /// suite. The one program in this file, and the whole point of it: a
-/// controlled loop with no terminating condition, which is exactly the shape
-/// `rust/CLAUDE.md`'s probe rules warn a *rounded-away step* can produce by
-/// accident and this constructs on purpose.
+/// controlled loop with no terminating condition, which a *rounded-away step*
+/// can produce by accident and this constructs on purpose.
 #[test]
 fn a_program_that_never_finishes_reddens_at_the_deadline_instead_of_hanging() {
     if !gate_mode() {

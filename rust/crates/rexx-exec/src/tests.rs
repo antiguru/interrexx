@@ -89,7 +89,7 @@ fn the_ir_render_covers_every_body_and_only_the_ones_that_exist() {
 }
 
 /// **The `TRACE` setting is an input to compilation, not a display
-/// option** (D23), and the render shows the difference.
+/// option**, and the render shows the difference.
 #[test]
 fn the_ir_render_compiles_under_the_setting_it_is_given() {
     let untraced = super::render_ir(EVERY_BODY.to_vec(), b"n").expect("the program parses");
@@ -213,7 +213,7 @@ fn interpret_binds_a_name_the_enclosing_body_never_mentions() {
     assert_eq!(outcome.stdout, b"42\n");
 }
 
-/// Step 2, and the reason the spike exists in the shape it does.
+/// A nested `INTERPRET` sees the enclosing frame's variables.
 /// ```text
 /// zzz = 'from the enclosing frame'
 /// interpret "say zzz"
@@ -552,9 +552,8 @@ fn the_stack_span_does_not_depend_on_what_else_the_program_evaluated() {
 
 // ---- R9: ::CLASS/::METHOD/::ATTRIBUTE create and record in
 // `Interp::classes`. No corpus program can see this yet -- reading a
-// class object back needs a message send, and `ExprKind::Message` still
-// fails loudly (Task 5's), so this is witnessed here, against the
-// registry `install_directives` leaves behind, instead. ----
+// class object back needs a message send, so this is witnessed here,
+// against the registry `install_directives` leaves behind. ----
 
 /// Parses `text` and installs its directives against a fresh `Interp`,
 /// under `ProgramId::nth(0)`, handing both back so a test can read the

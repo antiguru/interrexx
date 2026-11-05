@@ -1,4 +1,4 @@
-//! [`ScopePools`], the storage `EXPOSE` binds a method's names to (D40).
+//! [`ScopePools`], the storage `EXPOSE` binds a method's names to.
 
 use rexx_core::{BehaviourHandle, Body, ObjRef, ScopePools};
 

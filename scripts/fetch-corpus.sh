@@ -1,5 +1,5 @@
 #!/bin/bash
-# Fetches the real-program corpus (Phase 10 design, "Corpus") into corpus/, checked against pinned
+# Fetches the real-program corpus into corpus/, checked against pinned
 # sha256 hashes. Nothing fetched is committed: PPWizard's licence allows distributing its archive
 # only in full, and CI does not run the corpus.
 set -eu
@@ -26,7 +26,7 @@ if [ ! -d corpus/ppwizard ]; then
     unzip -q corpus/downloads/ppwall.zip -d corpus/ppwizard.part
     echo "$PPWIZARD_REX_SHA256  corpus/ppwizard.part/ppwizard.rex" | sha256sum -c --quiet
     # The licence allows modifying the code. PPWizard's interpreter detection takes ooRexx for
-    # OS/2: these two one-word changes (docs/superpowers/plans/ppwizard-gate.md) make it treat
+    # OS/2: these two one-word changes make it treat
     # Linux as UNIX and read the environment through ooRexx's selector.
     LC_ALL=C sed \
         -e 's/^if RexSystemOpSys="BEOS" then/if RexSystemOpSys="BEOS" | RexSystemOpSys="LINUX" | RexSystemOpSys="AIX" | RexSystemOpSys="DARWIN" then/' \

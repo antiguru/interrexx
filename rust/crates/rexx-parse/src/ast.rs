@@ -425,7 +425,7 @@ pub struct CodeBody {
     /// any more than any other literal is -- measured, a label spelled with a
     /// raw non-UTF-8 byte is a legal `SIGNAL VALUE` target under
     /// `build/bin/rexx`. Interning the key would be wrong in both directions;
-    /// see Task 3.3's six measurements. The first occurrence of a duplicated
+    /// The first occurrence of a duplicated
     /// label wins -- measured, two labels spelled `a:` in one program is
     /// accepted and `signal a` reaches the first -- so this is built with
     /// "insert if absent", never an unconditional overwrite.
@@ -485,8 +485,7 @@ pub enum InstructionKind {
         target: Expr,
         value: Expr,
     },
-    /// `name:`, and also `"name":`. Task 3.4 already ended the clause at the
-    /// colon.
+    /// `name:`, and also `"name":`. The clause ends at the colon.
     Label {
         name: Box<[u8]>,
     },

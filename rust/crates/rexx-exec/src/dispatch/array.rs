@@ -169,8 +169,7 @@ pub(super) fn array_position(
 /// `None` for any other argument (`classes/ArrayClass.cpp:1226`-`:1239`). The
 /// list is every slot of a single-dimensional array, so a hole in it is
 /// 98.975 naming the hole, and an array of more dimensions is 93.939 naming
-/// `position`. Bug #2085 (r13264) made it so; before it the list was the
-/// array's first `items` slots, holes and all.
+/// `position`.
 pub(super) fn index_list(
     interp: &Interp,
     value: ObjRef,

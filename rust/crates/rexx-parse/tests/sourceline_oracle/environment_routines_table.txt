@@ -1,6 +1,6 @@
 count 22
 /* .ROUTINES is the package's own routine table, reachable both by index and
- * as a message. Phase 5a Task 17.
+ * as a message.
  *
  * It is package->routines, which is both access scopes and not the public
  * ones alone, and it is keyed by the upcased name even where the directive

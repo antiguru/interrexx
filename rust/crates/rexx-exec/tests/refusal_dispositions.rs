@@ -1,16 +1,18 @@
 //! **Every refusal has a committed disposition.**
 //!
-//! No refusal names a phase that owes its work: the last open phase that did,
-//! Phase 10, has closed. So this file reads every `Loud` constructor in `src/`
-//! and requires each one to have a row in `corpus/refusal-dispositions.tsv`,
-//! saying why no phase owes it: GUARD (no program reaches it; the record names
+//! This file reads every `Loud` constructor in `src/` and requires each one
+//! to have a row in `corpus/refusal-dispositions.tsv`, saying why it stays:
+//! GUARD (no program reaches it; the record names
 //! the probes that tried), DEVIATION (matching the oracle is wrong; the record
-//! cites an `oracle-crashes.txt` entry or an exclusions row), or LIMIT (a
+//! cites an `oracle-crashes.txt` entry or an active Deviation), or LIMIT (a
 //! design limit; the record cites the deviation or the design document that
 //! licenses it). A `Loud` struct literal outside a constructor has no name to
 //! key a row on, so it is refused.
 
-use std::collections::BTreeMap;
+#[path = "support/deviations.rs"]
+mod deviations;
+
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -22,7 +24,6 @@ const KINDS: &[&str] = &["GUARD", "DEVIATION", "LIMIT"];
 struct Row {
     constructor: String,
     kind: String,
-    phase: String,
     record: String,
 }
 
@@ -45,14 +46,13 @@ fn parse_table(text: &str) -> Vec<Row> {
             let fields: Vec<&str> = line.split('\t').collect();
             assert_eq!(
                 fields.len(),
-                4,
-                "four tab-separated fields (constructor, kind, phase, record) in {line:?}"
+                3,
+                "three tab-separated fields (constructor, kind, record) in {line:?}"
             );
             Row {
                 constructor: fields[0].to_string(),
                 kind: fields[1].to_string(),
-                phase: fields[2].to_string(),
-                record: fields[3].to_string(),
+                record: fields[2].to_string(),
             }
         })
         .collect()
@@ -266,15 +266,11 @@ fn crash_citations(record: &str, crashes: &str) -> (bool, Vec<String>) {
     })
 }
 
-/// Whether `record` cites a numbered deviation that exists in the
-/// exclusions file's DEVIATIONS list, and the citations that do not.
-fn deviation_citations(record: &str, exclusions: &str) -> (bool, Vec<String>) {
+/// Whether `record` cites a Deviation, and the citations that are not one
+/// of the `active` numbers.
+fn deviation_citations(record: &str, active: &BTreeSet<u32>) -> (bool, Vec<String>) {
     citations(record, "Deviation ", |number| {
-        exclusions.lines().any(|line| {
-            line.trim_start()
-                .strip_prefix(&format!("{number}. "))
-                .is_some_and(|rest| rest.starts_with(|c: char| c.is_ascii_uppercase() || c == '`'))
-        })
+        number.parse().is_ok_and(|n: u32| active.contains(&n))
     })
 }
 
@@ -354,14 +350,8 @@ fn problems(
         if row.record.trim().is_empty() || row.record == "-" {
             found.push(format!("{}: a row with no record", row.constructor));
         }
-        if row.phase != "-" {
-            found.push(format!(
-                "{}: phase {:?} on a {} row; no refusal names a phase",
-                row.constructor, row.phase, row.kind
-            ));
-        }
         let (crash, bad_crash) = crash_citations(&row.record, &documents.crashes);
-        let (deviation, bad_deviation) = deviation_citations(&row.record, &documents.exclusions);
+        let (deviation, bad_deviation) = deviation_citations(&row.record, &documents.deviations);
         let (path, bad_path) = missing_paths(&row.record, &documents.repository);
         for bad in bad_crash.iter().chain(&bad_deviation).chain(&bad_path) {
             found.push(format!(
@@ -369,16 +359,9 @@ fn problems(
                 row.constructor
             ));
         }
-        let quoted_row = row
-            .record
-            .split('"')
-            .skip(1)
-            .step_by(2)
-            .any(|q| q.len() >= 12 && documents.exclusions.contains(q));
         match row.kind.as_str() {
-            "DEVIATION" if !(crash || deviation || quoted_row) => found.push(format!(
-                "{}: a DEVIATION cites an oracle-crashes.txt entry, a Deviation, or quotes an \
-                 exclusions row",
+            "DEVIATION" if !(crash || deviation) => found.push(format!(
+                "{}: a DEVIATION cites an oracle-crashes.txt entry or a Deviation",
                 row.constructor
             )),
             "LIMIT" if !(deviation || path) => found.push(format!(
@@ -404,7 +387,8 @@ fn problems(
 /// The files a record's citations are checked against.
 struct Documents {
     crashes: String,
-    exclusions: String,
+    /// The active Deviations' numbers.
+    deviations: BTreeSet<u32>,
     repository: PathBuf,
 }
 
@@ -418,9 +402,19 @@ fn documents() -> Documents {
     };
     Documents {
         crashes: read("rust/corpus/oracle-crashes.txt"),
-        exclusions: read("docs/superpowers/plans/phase-4-exclusions.txt"),
+        deviations: active_deviations(&read(deviations::TABLE)),
         repository,
     }
+}
+
+/// The active numbers of a Deviations table's `text`.
+fn active_deviations(text: &str) -> BTreeSet<u32> {
+    deviations::parse(text)
+        .unwrap_or_else(|e| panic!("{}: {e}", deviations::TABLE))
+        .into_iter()
+        .filter(|(_, d)| d.active)
+        .map(|(n, _)| n)
+        .collect()
 }
 
 /// The whole claim.
@@ -491,7 +485,7 @@ impl Loud {
 }
 
 /// Each way a table can be wrong is found: a constructor with no row, a row
-/// with no constructor, a row naming a phase, a kind that is not a
+/// with no constructor, a kind that is not a
 /// disposition, a duplicate row, a struct literal outside a constructor, a
 /// citation that does not resolve, and a `-> Self` constructor.
 #[test]
@@ -555,15 +549,15 @@ fn hostemu() -> Loud {
     );
     let documents = Documents {
         crashes: "\n## 6. An array\n".to_string(),
-        exclusions: " 20. A WAIT NOTHING LEFT TO RUN CAN END IS REFUSED\n".to_string(),
+        deviations: active_deviations("20\tactive\t-\t-\n21\twithdrawn\t-\t-\n"),
         repository: rust_root().parent().expect("the repository").to_path_buf(),
     };
     let table = "\
-plain\tGUARD\t-\tprobe p1
-none\tDEVIATION\t-\toracle-crashes.txt entry 6
-mutant_self\tLIMIT\t-\tDeviation 20
-mixed\tGUARD\t-\tprobe p5
-hostemu\tGUARD\t-\tprobe p6
+plain\tGUARD\tprobe p1
+none\tDEVIATION\toracle-crashes.txt entry 6
+mutant_self\tLIMIT\tDeviation 20
+mixed\tGUARD\tprobe p5
+hostemu\tGUARD\tprobe p6
 ";
     assert!(
         problems(&sites, &[], &parse_table(table), &documents).is_empty(),
@@ -571,12 +565,13 @@ hostemu\tGUARD\t-\tprobe p6
         problems(&sites, &[], &parse_table(table), &documents)
     );
     let wrong = "\
-plain\tGUARD\t-\tprobe p1
-plain\tGUARD\t-\tprobe p1
-none\tDEVIATION\t-\toracle-crashes.txt entry 7
-gone\tGUARD\t-\tprobe p2
-hostemu\tREHOME\tPhase 11\t\"the row's text\"
-mixed\tGUARD\tPhase 11\tprobe p3
+plain\tGUARD\tprobe p1
+plain\tGUARD\tprobe p1
+none\tDEVIATION\toracle-crashes.txt entry 7
+gone\tGUARD\tprobe p2
+hostemu\tREHOME\t\"the row's text\"
+mixed\tGUARD\tprobe p3
+mutant_self\tLIMIT\tDeviation 21
 ";
     let found = problems(&sites, &literals, &parse_table(wrong), &documents);
     let expect = [
@@ -587,8 +582,7 @@ mixed\tGUARD\tPhase 11\tprobe p3
         "none: cites oracle-crashes.txt entry 7",
         "gone: a row with no constructor",
         "hostemu: kind \"REHOME\" is not one of",
-        "mixed: phase \"Phase 11\" on a GUARD row",
-        "mutant_self (src/lib.rs:12): no disposition row",
+        "mutant_self: cites Deviation 21, which does not exist",
     ];
     for needle in expect {
         assert!(

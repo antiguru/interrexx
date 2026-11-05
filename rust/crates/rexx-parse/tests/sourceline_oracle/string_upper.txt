@@ -1,7 +1,7 @@
 count 65
 /* `String~upper([n [, length]])` -- `RexxString::upperRexx`
  * (`classes/StringClass.cpp:1765`), bound at `memory/Setup.cpp:681` with a
- * declared count of 2. Phase 5a Task 23.
+ * declared count of 2.
  *
  * The rows that answer come first and the ladder of refusals follows, because
  * the no-op cases are what separate this from a range check that refuses: a

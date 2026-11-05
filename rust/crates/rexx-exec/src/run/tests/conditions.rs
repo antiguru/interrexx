@@ -520,9 +520,9 @@ fn a_call_on_any_handler_holds_its_any_trap() {
     );
 }
 
-// ---- fix round 1: the pending-trap delivery boundary, and its identity ----
+// ---- the pending-trap delivery boundary, and its identity ----
 
-/// **Fix round 1's Critical, half (a).** The clause that finishes may
+/// The clause that finishes may
 /// itself be the `RETURN`: `aa`'s whole body is `return bb()`, and `bb`
 /// raises a trapped `USER` condition. The oracle runs the handler at that
 /// clause's own boundary -- so `SIGL` is line 7, `aa`'s `return bb()` --
@@ -611,11 +611,9 @@ fn a_signal_handler_that_runs_on_can_still_propagate() {
     assert_eq!(interp.out, b"TH ran\nonward\n".to_vec());
 }
 
-/// **4b's fix round 1, finding 3(a).** A `CALL ON` trap is held for its
+/// A `CALL ON` trap is held for its
 /// handler's duration and released afterwards, unlike a `SIGNAL ON`
-/// trap, which is removed and stays removed. `deliver_pending_traps`
-/// documented this and nothing tested it: deleting the release left the
-/// whole suite and the corpus gate green.
+/// trap, which is removed and stays removed.
 #[test]
 fn a_call_trap_is_put_back_after_its_handler_returns() {
     let mut interp = Interp::new();
@@ -731,9 +729,9 @@ fn raise_syntax_validates_its_argument() {
     }
 }
 
-// ---- fix round 2: the clause boundary inside nested bodies ----
+// ---- the clause boundary inside nested bodies ----
 
-/// **Fix round 2's NEW 5.** A clause inside a `DO` body reaches its own
+/// A clause inside a `DO` body reaches its own
 /// boundary, not the `END`'s. Both iterations must see the handler's
 /// value, and `SIGL` must be the `call sub` clause's line (4), not the
 /// `say`'s.
@@ -798,9 +796,9 @@ fn a_call_handler_restores_the_condition_it_interrupted() {
     assert_eq!(interp.out, b"UH ran 3\nSH ran 3\n".to_vec());
 }
 
-// ---- fix round 3: a loop header is a clause too ----
+// ---- a loop header is a clause too ----
 
-/// **Fix round 3's NEW-A.** A `DO` header is a Rexx clause: its control
+/// A `DO` header is a Rexx clause: its control
 /// expressions run in it, and its boundary is its own, not the whole
 /// loop's. `do i = 1 to sub()` must report `SIGL` 3 -- the `DO` clause --
 /// and deliver the handler before the body's first pass.
@@ -847,14 +845,13 @@ fn a_while_retest_belongs_to_the_do_clause_then_to_the_end_clause() {
     );
 }
 
-// ---- fix round 4: NEW-1, the third member of the re-test family ----
+// ---- the re-test after an ITERATE ----
 
-/// **Fix round 4's NEW-1, a regression round 3 introduced.** When an
+/// When an
 /// `ITERATE` ends a pass, the re-test that follows belongs to the
 /// `ITERATE`'s own clause -- the oracle re-enters the loop from inside
 /// `RexxActivation::iterate`, so `END` is never reached and never owns
-/// anything. Round 3 attributed it to `END` and turned two
-/// byte-for-byte-matching programs into divergences.
+/// anything.
 #[test]
 fn a_loop_retest_after_an_iterate_belongs_to_the_iterate_clause() {
     let mut interp = Interp::new();
@@ -927,9 +924,9 @@ fn end_does_not_echo_for_a_pass_an_iterate_ended() {
     );
 }
 
-// ---- fix round 4: NEW-2, the header clause of a nesting construct ----
+// ---- the header clause of a nesting construct ----
 
-/// **Fix round 4's NEW-2.** An `IF`'s condition, a `SELECT CASE`'s
+/// An `IF`'s condition, a `SELECT CASE`'s
 /// expression and each listed `WHEN`'s condition are clauses in their own
 /// right, so a `CALL ON` handler queued by one runs at *that* clause's
 /// boundary -- before the branch, before the next `WHEN`, before

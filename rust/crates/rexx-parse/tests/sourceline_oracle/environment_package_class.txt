@@ -1,6 +1,6 @@
 count 23
 /* A class this file declares resolves by name from inside this file, with no
- * PUBLIC keyword on the directive. Phase 5a Task 6.
+ * PUBLIC keyword on the directive.
  *
  * PackageClass::findClass consults findInstalledClass first, which is the
  * package's own class table and is not the environment: nothing installs a

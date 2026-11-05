@@ -21,11 +21,11 @@ count 139
  * ~newFile IS NEVER CALLED HERE. Its file is this one, so calling what it
  * answers would re-run this program from inside itself.
  *
- * NO ::ROUTINE EXTERNAL HERE. It is a Phase 7 gap that refuses at INSTALL
- * time, so one such directive would make every row above it unreachable on
- * this crate; the external arm of ~source and ~setSecurityManager is
+ * NO ::ROUTINE EXTERNAL HERE. A ::ROUTINE ... EXTERNAL directive binds at
+ * INSTALL time, so the external arm of ~source and ~setSecurityManager is
  * witnessed on the Method side instead, where ::METHOD ... EXTERNAL
  * 'LIBRARY REXX ...' installs.
+
  */
 
 parse source . . source

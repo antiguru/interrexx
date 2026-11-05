@@ -22,11 +22,8 @@ use std::rc::Rc;
 
 /// Pushes a fresh top-level activation for `program`, the same setup
 /// `Interp::run` does, so a test can drive `eval` through a live
-/// activation without running the instruction loop. `step`'s
-/// `Assignment` arm has handled all three targets (`Variable`/`Stem`/
-/// `Compound`) since Task 9, so this is no longer needed to work around
-/// a gap in `run` -- it stays because this module's tests are about
-/// `eval` itself, isolated from `step`'s surrounding dispatch, the same
+/// activation without running the instruction loop: this module's tests
+/// are about `eval` itself, isolated from `step`'s surrounding dispatch, the same
 /// reason `run.rs`'s own test module keeps its own copy of the same
 /// helper rather than sharing one through `run`.
 fn activate(interp: &mut Interp, program: Program) -> Rc<Program> {
@@ -407,9 +404,8 @@ fn a_dot_variable_beyond_the_three_resolves_falls_back_or_is_loud() {
 fn prefix_plus_and_minus_are_arithmetic_not_a_sign_flip() {
     // numeric digits 1 ; say -12345 -> -1E+4 ; say +12345 -> 1E+4
     // (measured: the same rounding `0 - 12345`/`0 + 12345` gives).
-    // `NUMERIC` is not run through `step` (Task 9's instruction), so
-    // `DIGITS` is set directly on the activation the same way Task 9's
-    // own implementation eventually will.
+    // `NUMERIC` is not run through `step`, so
+    // `DIGITS` is set directly on the activation.
     let mut interp = Interp::new();
     activate(
         &mut interp,
@@ -541,9 +537,7 @@ fn a_non_numeric_power_exponent_raises_26_8_not_41_1() {
 #[test]
 fn a_number_created_by_arithmetic_renders_under_the_digits_that_made_it() {
     // numeric digits 1 ; x = 15 + 0 ; x is 20, so x + 6 is 3E+1 while
-    // 15 + 6 is 2E+1 -- D15's own SmallInt-admissibility transcript,
-    // reachable end to end through eval now rather than constructed by
-    // hand as Task 4 had to.
+    // 15 + 6 is 2E+1 -- the SmallInt-admissibility transcript.
     let mut interp = Interp::new();
     activate(
         &mut interp,
@@ -760,10 +754,8 @@ fn logical_operators_check_the_left_operand_first() {
 /// cannot reach one at all.
 fn eval_condition(interp: &mut Interp, source: &[u8]) -> Result<ObjRef, Failure> {
     let program = parse_program(source.to_vec()).expect("test program parses");
-    // Activated like `eval_source`'s own programs, where this used to
-    // evaluate against a bare `Interp`: `eval`'s own intermediate-value
-    // gate reads the *running activation's* `TRACE` since Task 3 moved
-    // `trace_mode` off `Interp`, so there has to be one.
+    // Activated like `eval_source`'s own programs: `eval`'s own intermediate-value
+    // gate reads the *running activation's* `TRACE`, so there has to be one.
     let program = activate(interp, program);
     let code = Code {
         body: &program.main,
@@ -847,15 +839,12 @@ fn a_comma_list_short_circuits_on_the_first_false_element() {
     assert_eq!((raised.number, raised.sub), (42, 3));
 }
 
-// ---- D19's evaluation-depth limit ----
+// ---- the evaluation-depth limit ----
 
 /// A left-deep chain of `terms` `SAY`-able terms, joined by `||''` --
 /// the concatenation analogue `records_the_stack_cost_of_one_eval_frame`
-/// (`tests/spike.rs`) already establishes recurses exactly once per
-/// term (`outcome.stack.max_depth == TERMS`, asserted there), reused
-/// here rather than a fresh arithmetic chain invented for this test:
-/// one already-measured relationship between term count and `eval`
-/// depth is worth more than two unrelated ones.
+/// (`tests/core_execution.rs`) recurses exactly once per
+/// term (`outcome.stack.max_depth == TERMS`, asserted there).
 fn chain(terms: usize) -> Vec<u8> {
     let mut program = b"say 'a'".to_vec();
     for _ in 1..terms {
@@ -912,7 +901,7 @@ fn a_native_chain_past_the_eval_limit_runs() {
 /// default 2 MiB is far smaller than what this depth needs, and `eval`
 /// would die natively, as an unreported guard-page abort, long before
 /// reaching either boundary this pair tests -- precisely the silent
-/// failure D19's limit exists to prevent, so a plain `#[cfg(test)]`
+/// failure the limit exists to prevent, so a plain `#[cfg(test)]`
 /// unit test calling `eval` directly cannot exercise this at all. This
 /// is a unit test file, not `tests/`, but the subject it is testing
 /// (`run_program`'s own observable behaviour at the limit) is public
@@ -937,7 +926,7 @@ fn eval_survives_exactly_max_eval_depth_terms_and_prints_the_oracles_own_answer(
     );
     assert_eq!(
         outcome.stdout, b"a\n",
-        "the oracle's own answer for this exact depth (Deviation 2, phase-4-exclusions.txt)"
+        "the oracle's own answer for this exact depth (Deviation 2)"
     );
     assert_eq!(outcome.stack.max_depth, MAX_EVAL_DEPTH);
 }
@@ -1014,10 +1003,9 @@ fn a_parse_pattern_and_an_expression_share_the_eval_depth_limit() {
     assert_eq!(past.stdout, b"");
 }
 
-// ---- ExprKind::Call (Task 4, 4b): the internal-function expression
-// form ----
+// ---- ExprKind::Call: the internal-function expression form ----
 
-/// The task brief's own Step 1: an internal routine called from inside
+/// An internal routine called from inside
 /// an expression, not a `CALL` clause of its own, returns its value into
 /// the enclosing arithmetic.
 #[test]
@@ -1057,15 +1045,9 @@ fn an_unresolvable_name_raises_43_1() {
 }
 
 /// **`CallTarget::Literal` never searches the label table**, symmetric
-/// with `CALL "SUB"` (Task 3). Measured independently on the oracle in a
-/// clean directory (never the scratchpad root, which sits on the
-/// external-routine search path and holds a stale `f.rex` -- the first
-/// attempt at exactly this measurement found it and reported the wrong
-/// answer): `say "f"(1)` with `f:` present is Error 43.1 rc 213, "Routine
-/// not found", where `say f(1)` runs the label instead. That is this
-/// crate's answer too now that the builtin and `::ROUTINE` steps behind
-/// the label search exist: "not a label" and "not anything at all" are
-/// separable, so the condition is the oracle's own rather than fabricated.
+/// with `CALL "SUB"`. Measured on the oracle in a
+/// clean directory: `say "f"(1)` with `f:` present is Error 43.1 rc 213, "Routine
+/// not found", where `say f(1)` runs the label instead.
 #[test]
 fn a_literal_call_target_never_reaches_the_label_table() {
     let outcome = crate::run_program(
@@ -1132,11 +1114,10 @@ fn an_exit_inside_a_routine_reached_by_expression_call_ends_the_whole_program() 
     assert_eq!(outcome.stderr, b"");
 }
 
-/// **Review finding M4, Task 4 fix round 1.** `Failure::Exited` has two
+/// `Failure::Exited` has two
 /// producers -- an `EXIT` instruction (the test above) and a routine
 /// falling off its own end (`run_activation`'s own `Ok(Ended::Exited(
-/// None))` when its instruction loop runs out) -- and only the first had
-/// a test. The two are genuinely distinct events reaching the same
+/// None))` when its instruction loop runs out). The two are distinct events reaching the same
 /// `Ended::Exited` arm in `eval_call`, and the risk this test closes is
 /// specific: a version that only checked for an explicit `Exit` value
 /// while treating "no more instructions" as `Ended::Returned(None)`

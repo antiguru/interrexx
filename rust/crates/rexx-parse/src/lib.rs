@@ -1,7 +1,7 @@
 //! The Rexx parser: source retention, scanning, and the grammar.
 
-// Phase 3 built this crate bottom up, one layer per task, so a layer's entry
-// point had no non-test caller until the layer above it landed. `cargo clippy
+// A layer's entry
+// point can have no non-test caller. `cargo clippy
 // --all-targets` compiles the library once with `cfg(test)` off, and there each
 // such item was dead.
 
@@ -61,7 +61,7 @@ pub struct Program {
     /// The `::` directives, in source order, each carrying its own assembled
     /// body.
     pub directives: Vec<Directive>,
-    /// Retained because a `SymbolId` is meaningless without it: Phase 4
+    /// Retained because a `SymbolId` is meaningless without it: the executor
     /// resolves names back to text to report them.
     pub symbols: SymbolTable,
 }
@@ -154,7 +154,7 @@ pub fn fragment_from(source: ProgramSource) -> Result<Fragment, Rejected> {
         parsed.directives.is_empty(),
         "INTERPRET text cannot carry a directive: `parse` raises 99.914 first"
     );
-    // Measured in Task 1: a label inside `INTERPRET` text is 47.1, already
+    // Measured: a label inside `INTERPRET` text is 47.1, already
     // enforced where `parse_instruction` builds a `Label` node, so this map is
     // always empty rather than load-bearing.
     debug_assert!(

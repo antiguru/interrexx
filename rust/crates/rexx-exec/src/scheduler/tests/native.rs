@@ -1,4 +1,4 @@
-//! Native calls that leave their driver (spec 2026-09-29 P6-3, 2.6), over
+//! Native calls that leave their driver, over
 //! the test libraries in the worktree's `build/lib`.
 
 use crate::{Interp, Invocation, Outcome, SwitchMode};
@@ -118,8 +118,7 @@ fn a_native_call_where_another_activity_lives_leaves_its_driver() {
     assert_eq!(run.exits, 2);
 }
 
-/// A lone activity's call runs on the baton, with no driver exit
-/// (ruling P43).
+/// A lone activity's call runs on the baton, with no driver exit.
 #[test]
 fn a_lone_activitys_native_call_keeps_its_driver() {
     let run = counted(
@@ -262,7 +261,7 @@ fn a_function_whose_call_left_its_driver_and_answered_nothing_is_44_1() {
 }
 
 /// The timer is armed while a native call is in flight, with no other
-/// activity ready (spec 2026-09-29 section 4).
+/// activity ready.
 #[test]
 fn the_timer_is_armed_for_a_call_in_flight() {
     let mut interp = Interp::new();
@@ -463,7 +462,7 @@ fn a_library_routine_called_again_reaches_the_row_its_name_finds() {
 /// A started activity's loud refusal, met while main's call has left its
 /// driver and waits to finish, ends main's park in place of the completion:
 /// the call is abandoned, its frame popped, and the run ends with the
-/// refusal. The empty stdout is that refusal's (P40), not a schedule the
+/// refusal. The empty stdout is that refusal's, not a schedule the
 /// oracle takes: measured over 5 runs, the oracle answers the entry and
 /// prints `5` and `after` in every one.
 #[test]

@@ -1,6 +1,6 @@
 count 17
 /* ~hasMethod reads the receiver's own flattened behaviour back, which is
- * what a send resolves against. Phase 5a Task 5.
+ * what a send resolves against.
  *
  * The argument is upcased before the lookup, measured: 'abc'~hasMethod('length')
  * is 1. The last two lines are the pair that makes the answer mean something

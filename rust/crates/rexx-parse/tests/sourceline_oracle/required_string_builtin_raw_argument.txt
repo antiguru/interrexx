@@ -23,7 +23,7 @@ count 60
  * required_string_nostring_no_directive.rex declares nothing and is what
  * witnesses that site.
  *
- * Phase 5a Task 14, fix round 1; the arming claim corrected in fix round 2.
+ *.
  */
 
 say 'before'

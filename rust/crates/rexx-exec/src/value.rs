@@ -1,5 +1,5 @@
-//! The value model (D15): four functions every later task manipulates a
-//! value through, and the two rules the oracle makes observable everywhere.
+//! The value model (D15): four functions every caller manipulates a value
+//! through, and the two rules the oracle makes observable everywhere.
 
 use crate::{Failure, Interp};
 use rexx_core::{
@@ -219,7 +219,7 @@ impl Interp {
         self.alloc_with(BehaviourId::STRING, Body::Text { bytes, num: None })
     }
 
-    /// Creates a number value, applying D15's `SmallInt` admissibility rule.
+    /// Creates a number value, applying the `SmallInt` admissibility rule.
     pub(crate) fn number(
         &mut self,
         value: Number,
@@ -696,7 +696,7 @@ impl Interp {
 
     #[allow(
         clippy::wrong_self_convention,
-        reason = "the interface name is D15's, and `&mut self` is load-bearing \
+        reason = "the interface name is the value model's, and `&mut self` is load-bearing \
                    for the lazy cache fill, not a style slip"
     )]
     pub(crate) fn to_text(&mut self, value: ObjRef) -> Cow<'_, [u8]> {
@@ -727,8 +727,7 @@ impl Interp {
                 return Cow::Borrowed(self.not_in_arena(value));
             };
             // A class renders its own name rather than anything the value
-            // model holds. Since Phase 5j a class resolves like any other
-            // object, so this is an arm and no longer rides the `None`.
+            // model holds.
             if matches!(object.body, Body::Class { .. }) {
                 return Cow::Borrowed(self.not_in_arena(value));
             }
@@ -959,7 +958,7 @@ impl Interp {
     // `Body::Text`'s `num` cache in place, which `to_*` alone would not imply.
     #[allow(
         clippy::wrong_self_convention,
-        reason = "the interface name is D15's, and `&mut self` is load-bearing \
+        reason = "the interface name is the value model's, and `&mut self` is load-bearing \
                    for the lazy cache fill, not a style slip"
     )]
     #[inline]

@@ -73,7 +73,7 @@ fn wrap(line: &str) -> Vec<String> {
 }
 
 /// The stamp line every row set carries, naming the upstream revision the
-/// rows were derived at (D56).
+/// rows were derived at.
 pub fn stamp_line(revision: &str) -> String {
     format!("derived-at: oodocs/{REXXREF} {revision}")
 }

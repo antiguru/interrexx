@@ -355,7 +355,7 @@ fn secondary_code(stderr: &[u8]) -> Option<String> {
 /// Whether this crate answering `ours` where the oracle answers `oracle` is
 /// a licensed Deviation: 38, a `TO` or `BY` after a `DO OVER` or `DO WITH`
 /// header's `FOR` count, and 39, a `THEN` followed by a colon
-/// (`phase-4-exclusions.txt`, pinned by `rexx-parse/tests/errors.rs`).
+/// (pinned by `rexx-parse/tests/errors.rs`).
 fn licensed(ours: &str, oracle: &str) -> bool {
     matches!(
         (ours, oracle),

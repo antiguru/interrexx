@@ -1,6 +1,6 @@
 //! The five native methods the `rxregexp` library exports, which
 //! `rxregexp.cls` binds to `RegularExpression`
-//! (`docs/superpowers/specs/extensions-behaviour.md`, "rxregexp"). The
+//! (`docs/design/extensions.md`). The
 //! compiled pattern and the match mode live in the instance's own native
 //! state; `!POS` is the receiver's variable in the method's scope.
 

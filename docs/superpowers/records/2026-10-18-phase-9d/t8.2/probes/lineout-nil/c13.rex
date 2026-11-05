@@ -1,1 +1,0 @@
-x = .stdout~qualify(.nil)

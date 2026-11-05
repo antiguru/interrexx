@@ -1,2 +1,0 @@
-command: cd rust && cargo fmt --all --check
-fmt exit 0

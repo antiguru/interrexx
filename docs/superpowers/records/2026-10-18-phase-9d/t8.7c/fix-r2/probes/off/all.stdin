@@ -1,3 +1,0 @@
-say 'typed' zzunset
-say 'ru' ru()
-say 'typed' linein('/nonexistent/bb') 'done'

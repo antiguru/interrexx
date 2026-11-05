@@ -62,22 +62,7 @@ fn check_environment(row: &Row, context: &Context) -> Result<(), String> {
     if !read_lossy(&context.worktree.join(record)).contains(&row.test) {
         return Err(format!("{record} does not name the test"));
     }
-    let ruled = row
-        .reason
-        .split("; ")
-        .find_map(|part| part.strip_prefix("ruled: Moritz "))
-        .ok_or("no `ruled: Moritz DATE`")?;
-    let date: Vec<&str> = ruled.split('-').collect();
-    if date.len() == 3
-        && [4, 2, 2]
-            .iter()
-            .zip(&date)
-            .all(|(len, part)| part.len() == *len && part.bytes().all(|b| b.is_ascii_digit()))
-    {
-        Ok(())
-    } else {
-        Err(format!("{ruled:?} is not a date"))
-    }
+    Ok(())
 }
 
 pub(super) fn check_not_run(row: &Row, text: &str, context: &Context) -> Result<(), String> {

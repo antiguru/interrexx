@@ -760,33 +760,6 @@ fn compare_recorded(side: &str, header: &str, actual: &BTreeMap<String, String>)
     );
 }
 
-/// Each numbered Deviation row of `phase-4-exclusions.txt`, by number: the
-/// row's text from its ` NN. ` heading to the next one.
-fn deviation_rows(text: &str) -> BTreeMap<u32, String> {
-    let mut rows = BTreeMap::new();
-    let mut current: Option<(u32, String)> = None;
-    for line in text.lines() {
-        let heading = line
-            .strip_prefix(' ')
-            .and_then(|rest| rest.split_once(". "))
-            .and_then(|(number, _)| number.parse::<u32>().ok());
-        if let Some(number) = heading {
-            if let Some((done, body)) = current.take() {
-                rows.insert(done, body);
-            }
-            current = Some((number, String::new()));
-        }
-        if let Some((_, body)) = current.as_mut() {
-            body.push_str(line);
-            body.push('\n');
-        }
-    }
-    if let Some((done, body)) = current {
-        rows.insert(done, body);
-    }
-    rows
-}
-
 /// The index of the first item at which two answers part.
 fn first_difference_at(native: &str, model: &str) -> Option<usize> {
     let (left, left_content) = items(native);
@@ -1226,15 +1199,12 @@ fn on_the_oracle_the_generated_scenarios_part_only_where_the_deviations_say() {
     );
 }
 
-/// Every Deviation that licenses a departure here names this test in its
-/// row, so the licence and its witness cannot drift apart.
+/// Every Deviation that licenses a departure here is active and lists this
+/// test in the Deviations table, so the licence and its witness cannot drift
+/// apart.
 #[test]
 fn every_licensing_deviation_names_this_test() {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../docs/superpowers/plans/phase-4-exclusions.txt");
-    let text =
-        fs::read_to_string(&path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
-    let rows = deviation_rows(&text);
+    let rows = support::deviations::load(&support::deviations::repository());
     let (_, recorded, _) = recorded_departures("oracle");
     let mut licensing: BTreeSet<u32> = ORACLE_DEPARTURES
         .iter()
@@ -1252,13 +1222,13 @@ fn every_licensing_deviation_names_this_test() {
         .filter(|deviation| {
             !rows
                 .get(deviation)
-                .is_some_and(|row| row.contains("stream_model"))
+                .is_some_and(|row| row.active && row.models.iter().any(|m| m == "stream_model"))
         })
         .collect();
     assert!(
         unnamed.is_empty(),
-        "these Deviations license a stream_model departure but their row does not name \
-         stream_model: {unnamed:?}"
+        "these Deviations license a stream_model departure but are not active rows \
+         listing stream_model in the Deviations table: {unnamed:?}"
     );
 }
 

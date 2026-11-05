@@ -38,7 +38,7 @@ pub use pinning::{ParkKind, PinKind, PinReport};
 // and a `SmallInt` is admissible only within the DIGITS that produced it).
 mod value;
 
-// Stems and compound variables (D15a): tail resolution, the tombstone rule,
+// Stems and compound variables: tail resolution, the tombstone rule,
 // and the "replace the object, mutate a tail in place" split.
 mod stem;
 
@@ -71,13 +71,13 @@ mod input;
 mod lines;
 use input::Input;
 
-// The per-body resolution plan (D16): `Plan`, `BodyKey`, `ProgramId`, the
+// The per-body resolution plan: `Plan`, `BodyKey`, `ProgramId`, the
 // plan cache, and the full name-resolution order (plan, then `extra`, then
 // growth).
 mod plan;
 use plan::{BodyKey, BodyKind, ClassPackage, CompoundName, Package, Plan, ProgramId};
 
-// One activation: everything about the frame currently executing (D16).
+// One activation: everything about the frame currently executing.
 mod activation;
 use activation::{Activation, ActivationId, CallType, InstanceVar};
 mod activity;
@@ -98,11 +98,9 @@ mod eval;
 // reaches for a name `resolve_call` answered `Resolved::Builtin` for.
 pub(crate) mod builtin;
 
-// The instruction loop (D16's "Control flow"): `Flow`, and `step` and its two
+// The instruction loop: `Flow`, and `step` and its two
 // callers, together with the borrow discipline `run_activation` is written
-// down to prove (Task 3's spike). Extended task by task with the branches and
-// calls later tasks add; Task 9 is the first to extend it, with the seven
-// instructions that do not branch.
+// down to prove.
 mod clause;
 mod run;
 use run::Ended;
@@ -141,7 +139,7 @@ mod parse_template;
 // what `PARSE VERSION`, `PARSE SOURCE`, `.ENDOFLINE` and `RexxInfo` answer.
 mod version;
 
-// `TRACE` (D17): the mode, the nine reachable prefixes' own byte formatting,
+// `TRACE`: the mode, the nine reachable prefixes' own byte formatting,
 // and the classification a `TRACE`/`TRACE VALUE` setting goes through to
 // become one. The `Op::Clause` region and its loop drivers, and
 // `eval.rs`'s `eval`, own *when* to call into this module; this module owns
@@ -149,23 +147,22 @@ mod version;
 mod trace;
 use trace::ChunkTrace;
 
-// The register-based instruction stream (Phase 4e): `Op`, `Chunk`, and
+// The register-based instruction stream: `Op`, `Chunk`, and
 // `compile`, the one pass that turns a body into a `Chunk`. `Interp::chunk_for`
 // (`plan.rs`, beside `plan_for`) is the cache that makes compiling a body once
 // rather than once per entry.
 mod ir;
 
-// Message dispatch (Phase 5a): the object model a send resolves against, the
-// `resolve`/`invoke` pair D24 asks for, and the one security chokepoint D45
-// asks for.
+// Message dispatch: the object model a send resolves against, the
+// `resolve`/`invoke` pair, and the one security chokepoint (D12).
 mod dispatch;
 
-// `.environment`, `.local`, `.context` and `.methods` as objects (D33), the
+// `.environment`, `.local`, `.context` and `.methods` as objects, the
 // order `PackageClass::findClass` resolves a `.NAME` in, and the one directory
-// chokepoint D45 asks for.
+// chokepoint (D12).
 mod environment;
 
-// `::OPTIONS` (Phase 5c): the numeric, trace and condition settings a file's
+// `::OPTIONS`: the numeric, trace and condition settings a file's
 // directives leave on its own package, and which every activation of that
 // package's code starts from.
 mod options;
@@ -177,7 +174,7 @@ pub mod launcher;
 // The compiled program image `rexxc` writes.
 pub mod compiled;
 
-// `::REQUIRES` (Phase 5d): the routes a required file's name is searched over
+// `::REQUIRES`: the routes a required file's name is searched over
 // and the extensions appended to it.
 mod require;
 
@@ -373,8 +370,7 @@ pub struct Outcome {
     pub error: Option<i32>,
     pub stdout: Vec<u8>,
     pub stderr: Vec<u8>,
-    /// What the run cost in stack. Task 11 reads this to set the
-    /// evaluation-depth limit; see `StackSpan`.
+    /// What the run cost in stack; see `StackSpan`.
     pub stack: StackSpan,
     /// How many times `Heap::collect` ran during this program.
     pub collections: u64,
@@ -394,8 +390,8 @@ pub struct Outcome {
     pub sharing: SharingReport,
 }
 
-/// The sharing fraction's counts (spec 2026-09-29 section 5): objects
-/// touched means resolved through the heap's accessors, or made.
+/// The sharing fraction's counts: objects touched means resolved through
+/// the heap's accessors, or made.
 #[cfg(feature = "sharing")]
 #[derive(Copy, Clone, Debug, Default)]
 pub struct SharingReport {
@@ -534,8 +530,7 @@ impl Loud {
     }
 
     /// A `Sys*Sem` routine given a name: on Unix a named semaphore is a POSIX
-    /// semaphore from `sem_open`, shared between processes and outliving them
-    /// (`.superpowers/sdd/queued/2026-10-13-named-semaphores-design.md`).
+    /// semaphore from `sem_open`, shared between processes and outliving them.
     /// Not supported (Deviation 43).
     #[cold]
     fn named_semaphore(name: &[u8]) -> Loud {
@@ -550,8 +545,7 @@ impl Loud {
 
     /// `SysFork`: a forked child holds the calling thread only, and every run
     /// has a timer thread and a joining main thread beside it, so the child
-    /// cannot continue the program
-    /// (`.superpowers/sdd/queued/2026-10-13-sysfork-design.md`).
+    /// cannot continue the program.
     /// Not supported (Deviation 42).
     #[cold]
     fn fork_child(name: &[u8]) -> Loud {
@@ -612,11 +606,7 @@ impl Loud {
 
     /// A receiver or argument no program holds: a handle whose object is gone,
     /// a kind `receiver_kind` has no arm for, a `Method` object or routine
-    /// context this crate did not build. Probes that tried, each answering or
-    /// refusing elsewhere: scout A's `b11_ctx_exec_*` (a routine's
-    /// `.context~executable` by every route a routine is made) and weak
-    /// reference sends (`b_weakref_*`, `b2_run_hasmethod_on_weakref`), and a
-    /// `Method` copy passed to `define`, `setMethod` and `run`.
+    /// context this crate did not build. No program reaches it.
     #[cold]
     fn unknown_receiver(kind: &str) -> Loud {
         Loud {
@@ -625,10 +615,7 @@ impl Loud {
     }
 
     /// An operator whose **left** operand is an object that answers no
-    /// operator message. No program reaches it: scout A's `spec-op.txt`
-    /// probes, every dyadic and prefix operator on `.array`, `.local`,
-    /// `.context`, `.methods`, an instance, an array, a variable reference, a
-    /// stem holding an array and `.stdout`, refused none.
+    /// operator message. No program reaches it.
     fn operator_operand(op: &str, kind: &str) -> Loud {
         Loud {
             message: owned_message(&format!("the operator `{op}` applied to {kind}")),
@@ -637,13 +624,7 @@ impl Loud {
 
     /// A `.NAME` the oracle's `.environment` or `.local` answers and this
     /// crate builds nothing for: an entry the library bootstrap fills, or
-    /// `.STREAM` before `StreamClasses.orx` installs, and no program reaches
-    /// it: each `.environment` and `.local` index read in
-    /// its own program (scout A's `envx_*`), from a started activity and a
-    /// REPLY continuation (`env_new_activity`, `env_reply_activity`), and a
-    /// stream as the first clause (`c2_stream_first_clause`,
-    /// `c2_address_with_stream_first`) refused only `STDQUE`, which is Phase
-    /// 10's.
+    /// `.STREAM` before `StreamClasses.orx` installs. No program reaches it.
     fn environment_symbol(name: &[u8]) -> Loud {
         let shown = String::from_utf8_lossy(name);
         Loud {
@@ -727,7 +708,7 @@ impl Loud {
     /// A collection this crate can name but cannot read: one whose entries
     /// the oracle has and this crate answers per name through
     /// [`Loud::environment_entry`] instead of building: one holding an entry
-    /// the library bootstrap fills, which no program reaches (`env_supplier` refused only `STDQUE`, Phase 10's).
+    /// the library bootstrap fills, which no program reaches.
     fn unreadable_collection() -> Loud {
         Loud {
             message: owned_message("a directory whose entries this crate does not fill"),
@@ -806,8 +787,7 @@ impl Loud {
     }
 
     /// An extension's local handle used after the call that made it ended,
-    /// which the API does not define (the exclusions row "A LOCAL HANDLE KEPT
-    /// FROM AN EARLIER CALL IS STILL REFUSED").
+    /// which the API does not define (Deviation 95).
     fn stale_handle() -> Loud {
         Loud {
             message: owned_message("the handle is no longer held by this activation"),
@@ -892,7 +872,7 @@ impl Loud {
 
     /// A body the compiler refused: one needing more registers, slots or call
     /// arguments than a `u16` indexes, or more ops than a `u32` does
-    /// (`docs/superpowers/plans/2026-08-09-phase-4e-ir.md`, `ChunkTooLarge`).
+    /// (`ChunkTooLarge`).
     fn chunk_refused() -> Loud {
         Loud {
             message: "a body does not fit the compiled stream's index widths, and there is no \
@@ -991,7 +971,7 @@ impl Loud {
     }
 
     /// A pinned wait for `what` that only an activity pinned below it can end
-    /// (spec 2026-09-29 section 2.6, an inverted wait; Deviation 14).
+    /// (an inverted wait; Deviation 14).
     fn inverted_wait(what: &str) -> Loud {
         Loud {
             message: owned_message(&format!(
@@ -1001,8 +981,7 @@ impl Loud {
     }
 
     /// A `REPLY` with Rust frames between its method body's driver and
-    /// itself, which cannot move to a new activity (spec 2026-09-29 section
-    /// 5; Deviation 15).
+    /// itself, which cannot move to a new activity (Deviation 15).
     fn immovable_reply() -> Loud {
         Loud {
             message: owned_message("a REPLY its method body runs on a nested Rust frame"),
@@ -1041,8 +1020,7 @@ fn form_name(kind: &ExprKind) -> String {
     name.to_string()
 }
 
-/// The `REXX` and `REXXUTIL` packages' routine names and the phase owing each
-/// a body, consulted between the running package's `::ROUTINE`s and the
+/// The `REXX` and `REXXUTIL` packages' routine names and their bodies, consulted between the running package's `::ROUTINE`s and the
 /// external file search.
 pub(crate) mod internal_routines;
 
@@ -1331,14 +1309,13 @@ struct Interp {
     sim: Option<Box<crate::sim::Sim>>,
     /// Whether the pending `SLICE` has been counted as deferred.
     slice_deferred: bool,
-    /// The chunk cache (Phase 4e): D16's discipline applied to a second cache
-    /// rather than invented afresh for it, under `plans`' own `BodyKey`
-    /// **paired with the trace setting the chunk was compiled under**.
+    /// The chunk cache, under `plans`' own `BodyKey` **paired with the trace
+    /// setting the chunk was compiled under**.
     chunks: NameMap<(BodyKey, ChunkTrace), Rc<crate::ir::Chunk>>,
     /// How many times `chunk_for` has refused a body because it does not fit
     /// the index widths the compiled stream commits to (`ChunkTooLarge`) --
     /// never because a body contains a construct the compiler does not
-    /// know, which does not exist (D21: every instruction compiles).
+    /// know, which does not exist: every instruction compiles.
     chunks_refused: usize,
     /// Whether a program has written any package's `.ROUTINES` table, which
     /// is the one test a routine lookup makes while none has.
@@ -1364,8 +1341,8 @@ struct Interp {
     /// [`rexx_classes::ClassRegistry`] is the one class model here (R9), not
     /// one of two.
     object_model: Option<dispatch::ObjectModel>,
-    /// `.environment`, `.local` and what `.context`/`.methods` are built from
-    /// (D33). `None` until a `.NAME` is resolved, for the reason
+    /// `.environment`, `.local` and what `.context`/`.methods` are built from.
+    /// `None` until a `.NAME` is resolved, for the reason
     /// [`Interp::object_model`] is: building it forces the native class set.
     environment: Option<environment::EnvironmentModel>,
     /// The arena object holding each class object's own variable pools and
@@ -1638,8 +1615,7 @@ struct Interp {
     out_bound: usize,
     /// Whether standard output is a terminal.
     out_lines: bool,
-    /// Task 16's collect-on-every-allocation gate criterion (4a exit gate,
-    /// criterion 4): when true, [`Interp::alloc_with`] collects before every
+    /// Collect-on-every-allocation stress mode: when true, [`Interp::alloc_with`] collects before every
     /// allocation. Off by default. The allocation path reads `collect_due`,
     /// which this keeps true: [`Interp::enable_stress_collect`] sets both and
     /// `collect_now` resets `collect_due` to this.
@@ -2193,7 +2169,7 @@ struct CallContext {
     /// left as `None` rather than closed up. Measured: that call into `use
     /// arg p, q, r` gives `[1] [Q] [3]`, so an omission holds its place.
     arguments: Rc<[Option<ObjRef>]>,
-    /// **The receiver, which is part of the calling convention** (D24): the
+    /// **The receiver, which is part of the calling convention**: the
     /// object a message send was addressed to, and `None` for a call that has
     /// none.
     receiver: Option<ObjRef>,
@@ -2723,7 +2699,7 @@ impl Interp {
         // A called program's level is a `ROUTINE` frame named as it was called,
         // whose line while its directives install is the one installing.
         let called = matches!(call_type, CallType::Subroutine | CallType::Function);
-        // D19/I6, as `Interp::begin_call` takes it: this body runs on a nested
+        // As `Interp::begin_call` takes it: this body runs on a nested
         // driver, so recursion through programs is bounded by the same count.
         let nested = self.running_activation().is_some();
         let probe = 0u8;
@@ -3181,10 +3157,8 @@ impl Interp {
     }
 
     // `plan_for` and `activation`/`activation_mut` live in `plan.rs`/
-    // `activation.rs` (Task 6), beside the types they operate on.
-
-    // `fragment_plan` and `slot_of` live in `plan.rs` (Task 6), beside
-    // `Plan` itself.
+    // `activation.rs`, and `fragment_plan` and `slot_of` in `plan.rs`, beside
+    // the types they operate on.
 
     /// Converts `EXIT`'s result into the raw exit code, before `rexx`'s
     /// own 8-bit truncation (`bin/rexx.rs`) narrows it to a process exit
@@ -3206,7 +3180,7 @@ impl Interp {
         self.roots.add_global(EXIT_VALUE_ROOT, value);
     }
 
-    /// Turns on Task 16's collect-on-every-allocation stress mode. Only
+    /// Turns on the collect-on-every-allocation stress mode. Only
     /// `execute_as`'s `Entry::CollectEveryAlloc` arm calls this, right after
     /// construction and before `run`; nothing else needs to flip it, and
     /// nothing can un-flip it once a run has started.
@@ -3216,7 +3190,7 @@ impl Interp {
     }
 
     /// The one allocation entry point every value/stem constructor in this
-    /// crate goes through, so that Task 16's stress mode has exactly one
+    /// crate goes through, so that the stress mode has exactly one
     /// place to hook rather than one per call site.
     pub(crate) fn alloc_with(
         &mut self,
@@ -3343,7 +3317,7 @@ impl Interp {
             routines_tables: _,
             // **Not a root, deliberately.** Its values are class handles, and
             // rooting them would pin every class a `.NAME` ever resolved --
-            // which is exactly the pinning Phase 5j removed. A cached handle
+            // which is exactly the pinning to avoid. A cached handle
             // is instead dropped before it can go stale:
             // `Interp::collect_now` clears the cache on every collection, and
             // every write to a table it is derived from clears it too.
@@ -3843,7 +3817,7 @@ impl Interp {
 
     // ---- values ----
 
-    // `eval`/`eval_node`/`stack_span` live in `eval.rs` (Task 7), beside the
+    // `eval`/`eval_node`/`stack_span` live in `eval.rs`, beside the
     // operators they evaluate. `depth`/`max_depth`/`stack_entry`/
     // `stack_first`/`stack_deepest` stay here, on `Interp`'s own struct
     // definition, exactly like every other field a sibling module's
@@ -3853,10 +3827,10 @@ impl Interp {
 // ---- the public entry point ----
 
 /// Installs the SIGINT, SIGTERM and SIGHUP handlers that halt every live
-/// interpreter, once per process (spec 2026-09-29 section 4, ruling P62): for
+/// interpreter, once per process: for
 /// a process entry point that starts Rexx for a user. An embedding that does
 /// not call it keeps its own dispositions. Blocks them in the calling thread:
-/// the interpreter's thread and its blocking waits take them (ruling P67).
+/// the interpreter's thread and its blocking waits take them.
 pub fn install_signal_handlers() {
     timer::install_signals();
     signal::block();
@@ -3912,10 +3886,7 @@ pub(crate) fn run_program_on_stack(
 }
 
 /// `run_program`, except that `Heap::collect` runs after every allocation
-/// instead of never. The 4a exit gate's criterion 4: the named L0 subset
-/// has to pass again under this mode, with the mode proved to have actually
-/// collected (`Outcome::collections` non-zero) rather than merely having
-/// been requested.
+/// instead of never. `Outcome::collections` shows the mode collected.
 #[doc(hidden)]
 pub fn run_program_collect_every_alloc(
     path: &str,
@@ -3961,7 +3932,7 @@ pub fn render_ir(text: Vec<u8>, setting: &[u8]) -> Result<String, String> {
 
 // ---- the registry projection ----
 
-/// One row of the `LIBRARY REXX` entry-point registry (D37), for a caller
+/// One row of the `LIBRARY REXX` entry-point registry, for a caller
 /// that walks it.
 pub struct NativeEntryPoint {
     /// The name the `REXX` package exports the entry point under, spelled as
@@ -4433,7 +4404,7 @@ fn execute_kept(
 
     // The oracle's termination waits for every activity
     // (`InterpreterInstance::terminate`); a refusal in main ends the run
-    // without the wait (ruling P40).
+    // without the wait.
     let started = if refused_main {
         interp.take_late_failures()
     } else {
@@ -4447,7 +4418,7 @@ fn execute_kept(
     // whatever the program's own outcome was. Measured, oracle: a program
     // whose main body raises 42.3 still prints its class `UNINIT` and exits
     // 214, and one ending `exit 7` prints it and exits 7.
-    // An activity those `UNINIT`s start is not waited for (ruling P39).
+    // An activity those `UNINIT`s start is not waited for.
     refused.extend(interp.terminate());
     refused.extend(interp.sim_finish());
     for loud in refused {

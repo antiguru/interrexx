@@ -480,37 +480,24 @@ fn corpus_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus")
 }
 
-/// Every corpus program named by a phase subset file, each once, sorted.
+/// Every corpus program `differential.txt` names, each once, sorted.
 fn corpus_programs() -> Vec<String> {
-    let dir = corpus_dir();
-    let entries =
-        fs::read_dir(&dir).unwrap_or_else(|e| panic!("cannot read {}: {e}", dir.display()));
-    let mut lists: Vec<String> = entries
-        .flatten()
-        .filter_map(|entry| entry.file_name().into_string().ok())
-        .filter(|name| name.starts_with("phase-") && name.ends_with(".txt"))
+    let path = corpus_dir().join("differential.txt");
+    let text =
+        fs::read_to_string(&path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+    let mut names: Vec<String> = text
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(str::to_string)
         .collect();
-    lists.sort();
-    assert!(
-        !lists.is_empty(),
-        "no phase subset files under {} -- this sweep would run on nothing",
-        dir.display()
-    );
-
-    let mut names: Vec<String> = Vec::new();
-    for list in lists {
-        let path = dir.join(&list);
-        let text = fs::read_to_string(&path)
-            .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
-        for line in text.lines().map(str::trim) {
-            if line.is_empty() || line.starts_with('#') {
-                continue;
-            }
-            names.push(line.to_string());
-        }
-    }
     names.sort();
     names.dedup();
+    assert!(
+        !names.is_empty(),
+        "{} names no program -- this sweep would run on nothing",
+        path.display()
+    );
     names
 }
 
@@ -528,7 +515,7 @@ fn every_corpus_body_compiles_the_minimum_promotion_set_to_its_own_ops() {
     // overflowed and why it is this sweep that asks for a stack rather than
     // the callers around it. `INTERPRETER_STACK_BYTES` is the size because
     // that is what `on_interpreter_thread` gives the same walk in production.
-    // Measured 2026-08-12 with the sweep called inline instead: it aborts the
+    // Measured with the sweep called inline instead: it aborts the
     // whole test binary at `RUST_MIN_STACK=2621440` and passes at `2883584`,
     // against a libtest thread's own 2 MiB.
     let sweep = std::thread::Builder::new()
@@ -590,7 +577,7 @@ fn sweep_every_corpus_body() {
     // without checking anything.
     assert!(
         programs.len() > 1,
-        "the phase subset files named {} programs",
+        "differential.txt named {} programs",
         programs.len()
     );
     assert!(bodies_checked >= programs.len());

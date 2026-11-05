@@ -1,56 +1,24 @@
-# Every extracted `base/bif` row that does not pass today, and what would
-# actually make it pass. One `GROUP::METHOD#N<TAB>unblocked_by` per line, `N`
-# being the 1-based position of the row among the rows its own method yielded;
-# lines starting with # are comments.
+# Every extracted `base/bif` row that does not pass today. One
+# `GROUP::METHOD#N<TAB>unblocked_by` per line, `N` being the 1-based position
+# of the row among the rows its own method yielded; lines starting with # are
+# comments.
 #
 # Measured at ooTest r13347. This is the committed set `bif_assertions.rs`
 # polices in both directions: a row here that starts passing is as red as a row
 # not here that starts failing, so an improvement shows up in a diff rather than
-# being quietly absorbed.
+# being quietly absorbed. The assertion runs under a plain `cargo test`.
 #
-# THE SET ASSERTION OVER THIS FILE IS NOT BEHIND AN ENV VAR. The harness's
-# headline -- how many rows pass -- is explicitly a measurement rather than a
-# threshold, because base/bif covers the whole builtin surface including the
-# names D4 excludes and everything Phase 5 and Phase 7 own. A measurement
-# nobody gates on, policed by an assertion nobody runs, is coverage that does
-# not exist, so `the_exempt_set_matches_the_current_failures` runs under a
-# plain `cargo test`.
+# For a row that fails loudly the `unblocked_by` column is not hand-written: it
+# is the owner the refusal's own message names, re-derived on every run, so this
+# file cannot drift from `rexx-exec`'s refusals. A derived owner says what a row
+# hits first, not what would make it pass.
 #
-# The `unblocked_by` column is NOT hand-written FOR A ROW THAT FAILS LOUDLY:
-# there it is the owning phase `rexx-exec`'s own message names, re-derived on
-# every run, so this file cannot drift from `rexx-exec`'s refusals and a
-# blocker moving between phases goes red here.
-#
-# Two limits on that, the same two `keyword-exempt.txt` carries:
-#
-#   * A derived owner says what a row hits FIRST, not what would make it pass.
-#
-#   * A derived owner is `4c` for every builtin name rexx-exec runs nothing
-#     for, whichever phase actually owns it: `Loud::unresolved_call` carries a
-#     fixed "4c". No row below carries it today -- Phase 7 gave the stream
-#     builtins a refusal that names their real owner, so the rows that were
-#     `4c` now read `Phase 7`, and the RXQUEUE rows read `Phase 10 Rxapi`. A `4c` row
-#     reappearing means a name reached `unresolved_call` again. Read the owner
-#     off the run's own "first construct hit" breakdown, not off this file.
-#
-#   ANOMALY  Not an attribution at all: the harness's own word for "exited
-#       non-zero and named no construct". No row carries it today. The three
-#       that did were all BEEP, which is not a builtin function but a routine
-#       the interpreter's internal package registers
-#       (`interpreter/runtime/InternalPackage.cpp:199`) -- correctly absent
-#       from `rexx_inventory::builtins::NAMES`, and so a 43.1 here until
-#       Phase 7 gave the `REXX` package's own routines their bodies. The rows
-#       pass and are gone from the set.
-#
-# THE THREE DERIVED CATEGORIES CARRY PINNED COUNTS, NOT JUST PINNED SPELLINGS.
-# MISMATCH, RAISE-MISMATCH and ANOMALY name neither an owner nor a construct,
-# so a row carrying one is a divergence nothing is holding. MISMATCH is the
-# sharp one: both renderings produced output and they DIFFER, which is the
-# single thing this whole differential exists to detect.
+# MISMATCH, RAISE-MISMATCH and ANOMALY name neither an owner nor a construct, so
+# a row carrying one is a divergence nothing is holding. MISMATCH is the sharp
+# one: both renderings produced output and they differ.
 # `every_exempt_attribution_is_a_known_phase_or_a_declared_outcome` pins them
-# at 0, 0 and 3. If it goes red, the repair is NOT to move the number: rule on
-# the row first -- give it a phase, or record it as a KNOWN GAP -- and then
-# move the number to match, deliberately.
+# at 2, 0 and 0. If it goes red, rule on the row first -- give it an owner, or
+# record it as a known gap -- and then move the number to match.
 #
 STREAM::test_relative_file_exists#1	MISMATCH
 STREAM::test_relative_file_exists2#1	MISMATCH

@@ -35,8 +35,8 @@
    resident respectively on this crate (2026-08-09) -- no measurable
    per-iteration cost from the extra six bytes, consistent with both
    lengths landing in the same allocator size class well under the 96-byte
-   `Heap::Slot` overhead that dominates a short string's retained cost
-   (`docs/superpowers/plans/phase-4d-retention.md`). */
+   `Heap::Slot` overhead that dominates a short string's retained cost.
+   */
 n = 1010000
 total = 0
 do i = 1 to n

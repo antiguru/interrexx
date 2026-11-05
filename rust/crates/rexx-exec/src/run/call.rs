@@ -197,7 +197,7 @@ pub(crate) enum Started<T> {
     Entered,
 }
 
-/// The receiver the callee's calling convention carries (D24), given the
+/// The receiver the callee's calling convention carries, given the
 /// caller's own.
 pub(super) fn entered_receiver(
     entered: Entered,
@@ -239,7 +239,7 @@ impl Interp {
     /// The half of a call's resolution the oracle decides before its
     /// arguments run: a label (`RexxExpressionFunction::resolve`,
     /// `expression/ExpressionFunction.cpp:154`) or a builtin (the parser's
-    /// `builtinIndex`), or the refusal of a builtin Phase 4 excludes. `None`
+    /// `builtinIndex`), or the refusal of a builtin this crate excludes. `None`
     /// for a name that is none of those.
     pub(crate) fn resolve_fixed_call(
         &self,
@@ -274,7 +274,7 @@ impl Interp {
             // and `is_builtin(name)` agree on every name. It costs the same
             // one lookup and keeps which builtin it found.
             None if let Some(target) = builtin::resolve(name) => Resolved::Builtin(target),
-            // A builtin Phase 4 excludes outright is still a builtin, so it
+            // A builtin excluded outright is still a builtin, so it
             // sits here rather than behind the routine lookup -- see
             // `builtin::is_excluded_builtin`'s own doc for why neither the
             // routine step nor 43.1 is an acceptable answer for one.
@@ -1191,7 +1191,7 @@ impl Interp {
             self.set_sigl(self.activity.clause_state.line());
         }
 
-        // D19/I6: one Rust frame per activation, plus this counter, so an
+        // One Rust frame per activation, plus this counter, so an
         // unbounded recursion becomes a reportable condition instead of a
         // native abort. `Raised::insufficient_stack` already existed
         // (`error.rs`); measured, the oracle answers the same 11.1 at rc 245

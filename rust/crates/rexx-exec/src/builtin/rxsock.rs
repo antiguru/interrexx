@@ -1,5 +1,5 @@
 //! The `rxsock` extension library, run in Rust: the IPv4 socket routines
-//! `docs/superpowers/specs/extensions-behaviour.md` ("rxsock") describes.
+//! `docs/design/extensions.md` describes.
 //!
 //! A socket is its descriptor number, as on the oracle. Each call borrows the
 //! number for the call ([`rxsock_sys::with_socket`]) and makes its OS calls
@@ -1038,8 +1038,8 @@ pub(crate) fn get_host_name(interp: &mut Interp, args: &[Option<ObjRef>]) -> Res
 }
 
 /// `SockGetHostId()`: the first interface address, in interface-list order,
-/// whose text does not begin `127`, the last interface never examined (D9);
-/// 40.1 where none qualifies (Rulings), `0.0.0.0` where the list cannot be
+/// whose text does not begin `127`, the last interface never examined, as
+/// ooRexx does; 40.1 where none qualifies, `0.0.0.0` where the list cannot be
 /// read.
 pub(crate) fn get_host_id(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result<ObjRef> {
     check_arity(args, 0)?;

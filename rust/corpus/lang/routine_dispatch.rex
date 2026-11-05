@@ -29,8 +29,8 @@
  *      treating it as a program exit prints nothing after line D1.
  *
  * E -- >I>/<I<, on stderr. The routine's own TRACE LABELS is the only route
- *      4c implements (::OPTIONS TRACE LABELS is the other and is a declared
- *      Phase 5 gap). rtn_traced's TRACE must stay its FIRST instruction: a
+ *      used here (::OPTIONS TRACE LABELS is the other). rtn_traced's TRACE
+ *      must stay its FIRST instruction: a
  *      clause in front of it, a label included, suppresses both lines on the
  *      oracle. rtn_quiet beside it is the neighbouring silent case, so this
  *      block also pins that the announcement is per activation and not per

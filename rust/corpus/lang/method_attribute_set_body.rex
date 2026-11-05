@@ -20,7 +20,7 @@
    its own >E>/>L>/>A> lines and no >I> at all.
 
    Neither accessor stores anything, and that is a property of these bodies
-   rather than of the phase: a method activation's frame is its own, so a name
+   rather than of anything else: a method activation's frame is its own, so a name
    assigned in the setter is not the name the getter reads. Neither body
    exposes anything, which is the whole difference from the generated pair
    corpus/lang/method_attribute_generated.rex runs -- that pair reaches the

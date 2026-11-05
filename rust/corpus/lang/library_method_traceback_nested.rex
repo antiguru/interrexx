@@ -1,5 +1,5 @@
 /* Two library frames at once, which is what says the sourceless frame is
- * built per activation rather than once for the innermost. Phase 5a Task 23.
+ * built per activation rather than once for the innermost.
  *
  * `.TimeSpan~fromDays` validates through `.Validate~number`, so the
  * traceback carries `NUMBER with scope "Validate"` above `FROMDAYS with

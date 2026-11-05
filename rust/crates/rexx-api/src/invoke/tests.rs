@@ -841,7 +841,7 @@ fn a_special_code_as_the_result_is_refused() {
 }
 
 /// `ARGLIST` lifts the check for arguments the signature does not consume,
-/// in a method and in a routine, which share it (ruling S2); the
+/// in a method and in a routine, which share it; the
 /// signature's other parameters still convert. Measured, oracle:
 /// `ForgeRoutineIntThenArglist(7, 2, 3)` answers `7` and
 /// `TestIntArg(1, 2)` is 88.922.

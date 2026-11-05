@@ -1,4 +1,3 @@
-// D-U1, 2026-09-14
 #![allow(unsafe_code)]
 #![expect(
     clippy::disallowed_methods,

@@ -277,7 +277,7 @@ pub(crate) fn render(chunk: &Chunk) -> String {
                 ));
             }
             // No `site` to render, unlike `Op::Call` above: a send resolves
-            // afresh every time (D28), so this op carries nothing but the
+            // afresh every time, so this op carries nothing but the
             // clause it runs.
             Op::Message { index: at } => {
                 out.push_str(&format!("{index}: Message index={at}\n"));

@@ -112,7 +112,7 @@ pub enum Failure {
     /// match it. The oracle raises
     /// this once the extension has run (`NativeActivation.cpp:1301-1310`).
     ResultSignature,
-    /// The extension reached an interface member this phase has not written,
+    /// The extension reached an interface member this crate has not written,
     /// named `Table.Member`; the member recorded itself and returned.
     UnfilledSlot { entry: &'static str },
     /// The argument has no value as a C `double`.
@@ -167,18 +167,18 @@ impl Failure {
     /// implementation's gap rather than a condition a program can see.
     pub fn error_number(&self, method: bool) -> Option<u32> {
         match self {
-            // Measured 2026-09-14 against the oracle: a required CSTRING left
+            // Measured against the oracle: a required CSTRING left
             // off `RegularExpression~parse` answers "Error 88.901".
             Failure::MissingArgument { .. } => Some(88901),
             // Measured the same way, passing an instance of a class with no
             // string value: "Error 88.909".
             Failure::NoStringValue { .. } => Some(88909),
-            // Measured 2026-09-15 against the oracle through `RxCalcSqrt`:
+            // Measured against the oracle through `RxCalcSqrt`:
             // `'abc'` answers "Error 88.921" and a precision of `0` "Error
             // 88.905".
             Failure::InvalidDouble { .. } => Some(88921),
             Failure::NotPositive { .. } => Some(88905),
-            // Measured 2026-09-15 against the oracle through `orxmethod` and
+            // Measured against the oracle through `orxmethod` and
             // `orxfunction`'s echo methods and routines.
             Failure::NotNonnegative { .. } => Some(88904),
             Failure::OutOfRange { .. } => Some(88907),
@@ -187,12 +187,12 @@ impl Failure {
             Failure::NotInstance { .. } => Some(88914),
             Failure::NotPointerString { .. } => Some(88919),
             Failure::NoStem { .. } => Some(if method { 93969 } else { 40919 }),
-            // Measured 2026-09-15 against the oracle through a forged routine
+            // Measured against the oracle through a forged routine
             // library: a routine declaring `CSELF` answers "Error 40.918".
             Failure::Signature | Failure::ResultSignature => {
                 Some(if method { 93968 } else { 40918 })
             }
-            // Measured 2026-09-14 against the oracle: a third argument to
+            // Measured against the oracle: a third argument to
             // `RegularExpression~new` answers "Error 88.922".
             Failure::TooManyArguments { .. } => Some(88922),
             Failure::UnfilledSlot { .. }
@@ -528,7 +528,7 @@ pub trait Host {
     /// and refuses one that is not a variable name, and both belong to the
     /// interpreter rather than to the boundary. The scope is the method's,
     /// not the receiver's class (`NativeActivation.cpp:1878`) -- measured
-    /// 2026-09-14 against the oracle, a subclass method's `expose CSELF`
+    /// against the oracle, a subclass method's `expose CSELF`
     /// reads an unset variable where the defining class's reads the pointer.
     fn set_object_variable(&mut self, name: &[u8], value: Option<ObjRef>);
 
@@ -648,8 +648,7 @@ pub trait Host {
     /// serving, which is where a handle handed to an extension is registered
     /// and where the collector reads it back from.
     ///
-    /// The table lives behind the host rather than beside it (ruling 19,
-    /// Moritz 2026-09-14) so that a collection a callback triggers can see
+    /// The table lives behind the host rather than beside it so that a collection a callback triggers can see
     /// it, and so that an implementation holding the table inside itself
     /// needs no second mutable borrow of that same object. `NativeActivation`
     /// both serves the context and owns the save list
@@ -726,7 +725,6 @@ pub struct Constants<T> {
 }
 
 /// The right to touch a host's state, which one thread holds at a time
-/// (spec 2026-09-29 P6-3).
 pub trait Baton {
     /// Takes the baton unless this thread holds it, waiting for it if
     /// another thread does, and answers whether it took it.

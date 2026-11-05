@@ -87,16 +87,15 @@ pub(crate) use loops::{
 /// Where control goes after one instruction (the design's "Control flow").
 pub(crate) enum Flow {
     Next,
-    /// Live since Task 10: `If`/`Select` each resolve to one `Goto` that
+    /// `If`/`Select` each resolve to one `Goto` that
     /// skips straight to their construct's true resume point, and
     /// `run_bounded`'s own internal loop applies one whenever a nested
     /// construct's target lands inside its range.
     Goto(usize),
     Exit(Option<ObjRef>),
     /// `RETURN`, with the expression's value or `None` for the bare form.
-    /// Live since Task 3.
     Return(Option<ObjRef>),
-    /// `LEAVE`, bare (`None`) or by name. Live since Task 11.
+    /// `LEAVE`, bare (`None`) or by name.
     Leave(Option<SymbolId>, Box<LeaveOrigin>),
     /// `ITERATE`, bare or by name. See `Leave`'s own doc comment; the two
     /// variants are handled by nearly identical logic in `Do`/`Select`'s own
@@ -447,7 +446,7 @@ impl FailureLevels {
 }
 
 impl Interp {
-    // ---- the instruction loop, which is what this spike is for ----
+    // ---- the instruction loop ----
 
     /// Runs the current activation's body to completion.
     /// ```text
@@ -643,7 +642,7 @@ impl Interp {
                 }
                 return Ok(Some(Ended::Returned(value)));
             }
-            // Task 11: a `LEAVE`/`ITERATE` that reached the very top of the
+            // A `LEAVE`/`ITERATE` that reached the very top of the
             // program -- nothing anywhere, at any nesting depth, ever
             // matched it. This is the exhausted-search family, 28.1 (bare
             // `LEAVE`)/28.2 (bare `ITERATE`)/28.3 (named `LEAVE`)/28.4
@@ -651,8 +650,8 @@ impl Interp {
             // own answer by the time it gets here -- every `Select`/`Do`
             // frame the search walked through on the way up has already
             // reset it to its own `static_indent` as it forwarded past
-            // (`LeaveOrigin`'s own doc comment has the rule, corrected after
-            // review: it is **not** always zero, only when every popped
+            // (`LeaveOrigin`'s own doc comment has the rule: it is **not**
+            // always zero, only when every popped
             // frame along the way happened to sit at top level). 28.5 (a
             // named `ITERATE` that *did* match something, just not a loop)
             // is a different family, raised where the match was found, in
@@ -818,7 +817,7 @@ impl Interp {
                 Ok(Flow::Next)
             }
 
-            // `TRACE` (D17): sets the running activation's own trace mode, or
+            // `TRACE`: sets the running activation's own trace mode, or
             // raises 24.901 for
             // the interactive-only skip-count forms. See `exec_trace`.
             InstructionKind::Trace(setting) => {
@@ -826,9 +825,7 @@ impl Interp {
                 Ok(Flow::Next)
             }
 
-            // `EXIT`, bare or with a result: the spike had only the bare form
-            // (`expression: None` matched literally, nothing else reaching
-            // this arm at all). The value crosses out of the instruction loop
+            // `EXIT`, bare or with a result. The value crosses out of the instruction loop
             // as `Flow::Exit`, unconverted -- `Interp::exit_code_for` (`lib.rs`)
             // is what turns it into a process exit code, and it runs once in
             // `execute` rather than here, because a `Flow::Exit` can also
@@ -844,7 +841,7 @@ impl Interp {
             }
 
             // A label is a traced no-op: the C++'s own `execute` on a label
-            // instruction only traces it (Task 13's own construct -- a
+            // instruction only traces it (a
             // `Label` clause is echoed here via `Op::Clause`'s region, same
             // as any other instruction) and does nothing else besides.
             // `SIGNAL`/`CALL` reach a label by jumping to the instruction
@@ -895,8 +892,7 @@ impl Interp {
                 // clause's printed indent exactly, with no bump of its own --
                 // unlike a called routine's, which the same measurements put
                 // two spaces further in (`call sub1` at printed indent 4 into
-                // a flat routine echoes the callee's clause at 6), and which
-                // is Task 3's to add.
+                // a flat routine echoes the callee's clause at 6).
                 let base_indent = self.activity.clause_state.current_value_indent;
                 let base_line = self.clause_site(source, instruction).map(|(line, _)| line);
                 let saved_base =
@@ -1075,7 +1071,7 @@ impl Interp {
             | InstructionKind::If { .. }
             | InstructionKind::Select { .. } => Err(Loud::instruction(&instruction.kind).into()),
 
-            // `LEAVE`/`ITERATE`, bare or by name -- Task 11. Resolves to
+            // `LEAVE`/`ITERATE`, bare or by name. Resolves to
             // data, not a failure (`Flow::Leave`'s own doc comment): whether
             // this instruction's own name matches anything is answered by
             // whichever `Do`/`Select` (or `run_activation`'s own top level,
@@ -1265,8 +1261,8 @@ impl Interp {
             // this instruction and is not derivable from the grammar.
             InstructionKind::Raise(raise) => self.exec_raise(code, raise),
 
-            // `PUSH`/`QUEUE line` (I15). One arm, not two copies that can
-            // drift (review round 1's M4): the two spellings differ only in
+            // `PUSH`/`QUEUE line`. One arm, not two copies that can
+            // drift: the two spellings differ only in
             // which end of the queue the value lands on, decided below by
             // which variant matched. The rendering, the `>>>` line and the
             // write are `Interp::queue_evaluated`'s, shared with
@@ -2553,7 +2549,7 @@ impl Interp {
         // a routine's first clause announced the pair here and nothing on the
         // oracle.
         activation.trace_entry = activation.trace_entry.stepped();
-        // `TRACE`'s own `*-*` clause echo (D17), and the single insertion
+        // `TRACE`'s own `*-*` clause echo, and the single insertion
         // point for it -- exactly the analogue of `eval`'s own split from
         // `eval_node`, since this is the one place `run_bounded`'s loop
         // (this function's only non-test caller) visits every flat
@@ -3788,9 +3784,9 @@ impl Interp {
         })
     }
 
-    // `fragment_plan` and `slot_of` live in `plan.rs` (Task 6), beside `Plan`
+    // `fragment_plan` and `slot_of` live in `plan.rs`, beside `Plan`
     // itself; `stem_assign`/`stem_set`/`stem_drop`/`stem_drop_tail`/
-    // `tail_key` live in `stem.rs` (Task 5), beside the rest of the D15a
+    // `tail_key` live in `stem.rs`, beside the rest of the stem
     // library. `read` lives in `variables.rs`, beside `Interp`'s other variable
     // entry points.
 }

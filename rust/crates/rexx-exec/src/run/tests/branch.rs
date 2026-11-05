@@ -68,7 +68,7 @@ fn if_then_with_no_else_falls_through_on_false() {
 }
 
 /// The `ast.rs`/`block.rs`-derived discriminating case: an `IF`/`ELSE
-/// IF`/`ELSE` chain (no `DO`, which Task 11 owns) where each link's
+/// IF`/`ELSE` chain (no `DO`) where each link's
 /// `false_target` is the next link's own condition and the whole
 /// chain's resume point sits after all of them. Run once per branch so
 /// a wrong `false_target` (skipping or re-testing a link) and a wrong
@@ -161,7 +161,7 @@ fn select_when_runs_exactly_the_first_matching_when() {
 }
 
 /// The `select_when_bodies.rex` discriminating shape, reproduced without
-/// `DO` (Task 11's): each `WHEN`'s consequence is a nested `SELECT`
+/// `DO`: each `WHEN`'s consequence is a nested `SELECT`
 /// spanning several flat instructions of its own
 /// (`Select`/`When`/`Then`/two assignments/`End`), so a wrong exit that
 /// lands even one instruction into a *later* `WHEN`'s span, rather than
@@ -654,7 +654,7 @@ fn whencase_comma_is_an_or_of_equals_the_opposite_of_a_plain_whens_and() {
 }
 
 /// `==` is strict: byte-for-byte, no padding, no numeric awareness.
-/// Measured (D15's own example, restated in the brief): `'007'` does not
+/// Measured: `'007'` does not
 /// match `when 7`, because the two are not byte-identical.
 #[test]
 fn select_case_compares_with_strict_equality_not_numeric_equality() {

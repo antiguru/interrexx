@@ -1,6 +1,5 @@
 //! The `rxsock` library and its packages run in Rust, against the oracle's
-//! `librxsock.so` (`docs/superpowers/specs/extensions-behaviour.md`,
-//! "rxsock"). Every program runs as its own `rexx` process from a fresh
+//! `librxsock.so` (`docs/design/extensions.md`). Every program runs as its own `rexx` process from a fresh
 //! directory, `{dir}` in a case's text, and talks to nothing but loopback
 //! sockets it opens itself. Descriptor numbers are never printed: this
 //! crate's process holds one more descriptor than the oracle's at start.

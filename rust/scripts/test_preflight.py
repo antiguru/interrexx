@@ -36,9 +36,9 @@ def main(argv):
         print(f"Rust test prerequisites missing in {root}:", file=sys.stderr)
         for path in missing:
             print(f"  {root / path}", file=sys.stderr)
-        print("Run from the checkout root:\n"
-              "  memcap 8G cmake -S . -B build -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release\n"
-              "  memcap 8G cmake --build build --target rxregexp rxmath orxmethod orxfunction rxsock -j4\n"
+        print("Run from the checkout root, under a memory cap:\n"
+              "  systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0 cmake -S . -B build -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_BUILD_TYPE=Release\n"
+              "  systemd-run --user --scope -p MemoryMax=8G -p MemorySwapMax=0 cmake --build build --target rxregexp rxmath orxmethod orxfunction rxsock -j4\n"
               "  svn checkout -r 13347 https://svn.code.sf.net/p/oorexx/code-0/test/trunk ootest\n"
               "  svn checkout -r 13347 https://svn.code.sf.net/p/oorexx/code-0/docs/trunk/rexxref oodocs/rexxref\n"
               "Keep these checkout-local libraries separate from the read-only oracle build.\n"

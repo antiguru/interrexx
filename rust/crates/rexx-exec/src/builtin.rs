@@ -39,7 +39,7 @@ pub(crate) mod rxmath;
 /// The `rxsock` extension library's routines, run in Rust.
 pub(crate) mod rxsock;
 /// The `unsafe` `rxsock` is granted: descriptor borrows and raw socket
-/// options (Moritz, 2026-11-03).
+/// options.
 mod rxsock_sys;
 /// The `rxunixsys` extension library's routines, run in Rust.
 pub(crate) mod rxunixsys;
@@ -639,7 +639,7 @@ const IMPLEMENTED: &[Builtin] = &[
     },
 ];
 
-/// The builtin names Phase 4 dispatches, as a set built once.
+/// The builtin names this crate dispatches, as a set built once.
 fn in_scope() -> &'static FxHashSet<&'static str> {
     static NAMES: OnceLock<FxHashSet<&'static str>> = OnceLock::new();
     NAMES.get_or_init(|| rexx_inventory::builtins::in_scope().into_iter().collect())
@@ -650,7 +650,7 @@ pub(crate) fn is_builtin(name: &[u8]) -> bool {
     std::str::from_utf8(name).is_ok_and(|name| in_scope().contains(name))
 }
 
-/// The builtin names Phase 4 excludes **outright**, as a set built once --
+/// The builtin names excluded **outright**, as a set built once --
 /// the same derivation [`in_scope`] uses, from the complement
 /// `rexx_inventory::builtins::wholly_excluded()`. A *partially* excluded name
 /// is not here: its in-scope form still dispatches, and its excluded form is
@@ -664,7 +664,7 @@ fn wholly_excluded() -> &'static FxHashSet<&'static str> {
     })
 }
 
-/// Whether `name` is a builtin function name Phase 4 runs nothing for.
+/// Whether `name` is a builtin function name this crate runs nothing for.
 pub(crate) fn is_excluded_builtin(name: &[u8]) -> bool {
     std::str::from_utf8(name).is_ok_and(|name| wholly_excluded().contains(name))
 }
@@ -733,9 +733,9 @@ pub(crate) fn run(
     let BuiltinTarget::Row(row) = target else {
         // A builtin name this crate has no code for. It reads as the same
         // declared gap an unresolved name gets, and deliberately so: a
-        // builtin *is* a routine as far as the message is concerned, the
-        // owning phase is the same one, and `tests/keyword_assertions.rs`
-        // reads the owner out of exactly this shape.
+        // builtin *is* a routine as far as the message is concerned, and
+        // `tests/keyword_assertions.rs` reads the construct out of exactly
+        // this shape.
         return Err(Loud::unresolved_call(name).into());
     };
     let builtin = &IMPLEMENTED[row as usize];

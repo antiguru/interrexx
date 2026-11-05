@@ -315,8 +315,7 @@ pub(crate) fn set_priority(
     Ok(answer(interp, i64::from(code)))
 }
 
-/// `SysFork()`: refuses, as [`Loud::fork_child`] says
-/// (`.superpowers/sdd/queued/2026-10-13-sysfork-design.md`).
+/// `SysFork()`: refuses, as [`Loud::fork_child`] says.
 pub(crate) fn fork(
     _interp: &mut Interp,
     name: &'static [u8],

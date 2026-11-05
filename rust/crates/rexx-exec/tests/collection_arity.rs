@@ -1,4 +1,4 @@
-//! `corpus/collection-arity.tsv` (Phase 5g Task 0b): what each documented
+//! `corpus/collection-arity.tsv`: what each documented
 //! collection method does when it is sent an argument list it could accept.
 
 mod support;
@@ -7,15 +7,14 @@ use support::arity;
 
 const HEADER: &str = "\
 # What each documented collection method does when sent an argument list it
-# could accept (Phase 5g Task 0b). Derived by
+# could accept. Derived by
 # crates/rexx-exec/tests/collection_arity.rs; edit that, never this.
 #
 # class<TAB>method<TAB>verdict<TAB>evidence
 #
 # THIS TABLE REPLACES corpus/method-bodies.txt's verdict column for these
 # classes. That column sends no arguments, so for a method that needs them it
-# records agreement about an arity error. No task in this phase may cite it as
-# a reason a row needs no work.
+# records agreement about an arity error.
 #
 #   agree          the oracle and the crate give identical descriptors
 #   send-differs   the receiver was built on both sides and the send differs

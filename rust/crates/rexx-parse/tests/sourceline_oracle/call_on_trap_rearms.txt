@@ -1,14 +1,14 @@
 count 71
-/* A trap that resumes and then raises again (4b Task 10), under trace r
+/* A trap that resumes and then raises again, under trace r
  * throughout. `condition_traps.rex`'s own CALL ON block fires exactly once;
  * this program raises the *same* trapped condition twice and pins that
  * CALL ON, unlike SIGNAL ON (`condition_traps.rex`'s block 2, which
  * re-arms SYNTAX under a fresh label because the first trap is disabled
  * once it fires), does **not** disarm on firing -- the second raise below
  * reaches the identical handler with no re-arming instruction anywhere in
- * the program. A `SIGNAL` to a label (Task 6) sits between the two raises,
+ * the program. A `SIGNAL` to a label sits between the two raises,
  * so what runs between them is genuinely a jump, not just the next
- * sequential clause -- crossing Task 6 and Task 7's own machinery rather
+ * sequential clause -- crossing SIGNAL's and CALL ON's own machinery rather
  * than exercising either alone.
  *
  * ZLOG accumulates one segment per event, so a missing or extra handler
@@ -40,8 +40,8 @@ count 71
  *   '2:V'        RESULT read back after the second `call raiser` resumes.
  *
  * Checked against a mutation: with `deliver_pending_trap`'s release of the
- * fired trap skipped (run.rs, `trap.delayed = false`; a re-insertion until
- * 4c Task 10, re-measured since), ZLOG reads `S[H54]1:VK2:V` -- the '[H60]'
+ * fired trap skipped (run.rs, `trap.delayed = false`),
+ * ZLOG reads `S[H54]1:VK2:V` -- the '[H60]'
  * segment is simply gone, because the second `raise user zx return 'V'`
  * finds no trap armed and returns 'V' to its caller unhandled, exactly the
  * "nothing traps it" arm `exec_raise` already has for an unarmed condition.

@@ -1,4 +1,3 @@
-// D-U1, 2026-09-14
 #![allow(unsafe_code)]
 
 //! The inbound FFI boundary: caller-supplied pointers into validated handles.
@@ -102,7 +101,7 @@ unsafe impl Send for Value {}
 
 /// How a native call's conversions reach the host: its address, from which
 /// each access derives a fresh `&mut`, and for a call that runs with the
-/// baton released (spec 2026-09-29 2.4, ruling P50) the baton, which a
+/// baton released the baton, which a
 /// thread holds while it reaches the host.
 pub struct HostRef<'a> {
     host: NonNull<dyn Host + 'a>,
@@ -209,7 +208,7 @@ impl<'a> std::ops::DerefMut for HostRef<'a> {
 /// `interpreter/api/MethodContextStubs.cpp:374`).
 ///
 /// A plain initializer nothing patches, so it lives at one address for the
-/// process; the members this phase has not written still refuse loudly.
+/// process; the members this crate has not written still refuse loudly.
 ///
 /// A member trusts the context it is handed, so calling one is `unsafe`:
 ///
@@ -712,7 +711,7 @@ thread_local! {
     /// The native call entered last on this OS thread and not yet returned,
     /// on any context: what a callback from this thread is made by. Per OS
     /// thread, as `layout.rs`'s `REFUSED` is, since a thread's calls nest on
-    /// its own stack (spec 2026-09-29 2.4, 2.5).
+    /// its own stack.
     static CALLING: Cell<*const Entered<'static>> = const { Cell::new(std::ptr::null()) };
 
     /// The thread contexts this OS thread is attached to by `AttachThread`,
@@ -7013,8 +7012,7 @@ mod tests {
     }
 
     /// A callback takes the baton before it borrows the call's conversion
-    /// state, which a thread holding the baton may test from another call
-    /// (ruling P50).
+    /// state, which a thread holding the baton may test from another call.
     #[test]
     fn a_callback_takes_the_baton_before_it_borrows_the_conversion() {
         let mut host = FakeHost::new();

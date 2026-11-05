@@ -74,7 +74,7 @@ enum HeaderClause {
 /// stands for, carried so that a re-test which *fails* can be blamed on it.
 /// `LeaveOrigin` captured this the instant the `ITERATE` stepped; without
 /// carrying it the pair is gone by the time the next header runs, and the
-/// failure is misattributed to the `DO` clause (review round 1, F2).
+/// failure is misattributed to the `DO` clause.
 /// **Not** `LeaveOrigin::indent`, which is that clause's own lexical one:
 /// measured, an `ITERATE` nested two blocks deep inside the body echoes at
 /// its own depth when it steps and at the *loop body's* depth on the failure
@@ -242,7 +242,7 @@ enum LoopState {
     },
     /// `DO name OVER expr`: binds `control` to each of `items` in turn. A
     /// stem target iterates its tails in this crate's order rather than the
-    /// oracle's (Deviation 1, `phase-4-exclusions.txt`).
+    /// oracle's (Deviation 1).
     OverItems {
         control: SymbolId,
         /// [`control_slot`], taken once when this loop was entered.
@@ -1139,8 +1139,7 @@ impl Interp {
                     // unlike a repeating loop, a `Simple` block never runs
                     // this arm again, so one explicit echo here is the
                     // whole story, not a per-pass one the way
-                    // `run_repeating`'s own is. Measured, Task 11's
-                    // report: `if 1 = 1 then do / say 'x' / end` traces
+                    // `run_repeating`'s own is. Measured: `if 1 = 1 then do / say 'x' / end` traces
                     // `end` on its own line even though the block never
                     // repeats.
                     DoOutcome::FellThrough | DoOutcome::Iterated { .. } => {
@@ -1308,7 +1307,7 @@ impl Interp {
     /// `Simple`, which never repeats and runs through
     /// `run_loop_with_header`'s own arm directly):
     /// advance-test-run-test-advance, in the order the oracle is measured to
-    /// use it in (`report`'s own transcripts) --
+    /// use it in --
     /// `WHILE` tested before the body, `UNTIL` after, and a `LEAVE`/
     /// `ITERATE` handled identically to falling off the bottom of the body
     /// normally, because that is what the oracle's own `ITERATE` does
@@ -1316,11 +1315,10 @@ impl Interp {
     /// terminates immediately rather than skipping straight to the next
     /// pass's top, because `ITERATE` jumps to the loop's own
     /// bottom-of-iteration bookkeeping, which for an `UNTIL` loop includes
-    /// testing `UNTIL` right there -- see the report for the full
-    /// transcript).
+    /// testing `UNTIL` right there).
     #[allow(
         clippy::too_many_arguments,
-        reason = "every parameter is load-bearing state one repeating DO/LOOP needs; splitting it into a struct is Task 13's to consider if it too needs this shape"
+        reason = "every parameter is load-bearing state one repeating DO/LOOP needs"
     )]
     fn run_repeating(
         &mut self,
@@ -1351,8 +1349,7 @@ impl Interp {
         // instruction step), so it has not moved.
         let do_indent = self.activity.clause_state.current_value_indent;
         let loop_indent = do_indent + 2;
-        // `TRACE`'s own per-iteration re-echo (D17, this task's report,
-        // "Step 6"): the oracle's `DO`/`LOOP` instruction is re-executed
+        // `TRACE`'s own per-iteration re-echo: the oracle's `DO`/`LOOP` instruction is re-executed
         // once per pass (`DoBlock::checkControl`, read directly), so its
         // own clause -- and `END`'s -- echo again on every pass, unlike
         // every other construct in this crate, which resolves its whole
@@ -1370,9 +1367,9 @@ impl Interp {
         let end_line = self
             .clause_line_at(code, end_index, &code.body.instructions[end_index], source)
             .unwrap_or(0);
-        // Hoisted out of the loop body (review round 1, F2): the header's own
-        // failure path needs it one statement *before* the body that used to
-        // bind it. Derived from `code`, so it borrows nothing this function
+        // Hoisted out of the loop body: the header's own
+        // failure path needs it one statement *before* the body.
+        // Derived from `code`, so it borrows nothing this function
         // mutates.
         let end_instruction = &code.body.instructions[end_index];
 
@@ -1404,7 +1401,7 @@ impl Interp {
                 // **A header that fails is blamed on the clause that
                 // transferred control back here, at the loop body's indent**
                 // -- not on the `DO` clause, which is where the enclosing
-                // `Op::Clause`'s region would put it (review round 1, F2).
+                // `Op::Clause`'s region would put it.
                 // Reachable since the control variable is genuinely re-read:
                 // a body that leaves it non-numeric fails the `BY` addition
                 // on the next re-test. Measured, three shapes, all `trace r`
@@ -1475,9 +1472,8 @@ impl Interp {
             match self.do_body_outcome(code, do_index, label, true, resume, flow)? {
                 DoOutcome::Escaped(escape) => return Ok(escape),
                 // **`END` is not reached at all when an `ITERATE` ended the
-                // pass**, so it neither echoes nor owns the re-test. Measured
-                // (fix round 4, found while measuring NEW-1's `SIGL`
-                // divergence): under `trace r`, `do while zn < 2 / zn = zn +
+                // pass**, so it neither echoes nor owns the re-test. Measured:
+                // under `trace r`, `do while zn < 2 / zn = zn +
                 // 1 / iterate / end` echoes `iterate` and then the `do`
                 // clause again, with no `end` line between them, where the
                 // same loop without the `ITERATE` does echo `end`. The
@@ -1588,13 +1584,11 @@ impl Interp {
                     }
                 }
             }
-            // Nothing happens at the bottom of a pass any more. A
-            // `Controlled` loop's `BY` increment used to, as `loop_step`;
-            // Task 9 moved it into `loop_advance`, where the oracle does it,
+            // Nothing happens at the bottom of a pass: a `Controlled` loop's
+            // `BY` increment is `loop_advance`'s, where the oracle does it,
             // because the two `>>>` lines the oracle traces straddle that
             // addition and the value on the near side of it is gone by the
-            // time the next `loop_advance` runs. `loop_advance`'s own doc
-            // comment has the citation and why nothing else moved with it.
+            // time the next `loop_advance` runs.
         }
     }
 
@@ -2336,8 +2330,7 @@ impl Interp {
                 shape,
                 stepped,
             } => {
-                // **The re-tested pass's own four lines** (Task 9, closing
-                // the KNOWN GAP this arm used to disclose).
+                // **The re-tested pass's own four lines.**
                 // `DoBlock::checkControl` (`DoBlock.cpp:182`-`205`, read
                 // directly) is called as `checkControl(context, stack,
                 // !first)` (`ControlledDoInstruction.cpp:162`), and its
@@ -2643,9 +2636,7 @@ impl Interp {
         loop_indent: usize,
     ) -> Result<ObjRef, Failure> {
         // **`read`, not `read_by_name`: this is an evaluation and
-        // it can raise `NOVALUE`** (review round 1 re-review,
-        // NEW-1 -- a defect this arm shipped with, not a
-        // pre-existing one). The oracle's own `control->evaluate`
+        // it can raise `NOVALUE`**. The oracle's own `control->evaluate`
         // is a full expression evaluation, so a body that
         // `DROP`s the control variable makes the next re-test
         // raise `NOVALUE` rather than read a derived name.

@@ -1,4 +1,0 @@
---- stdout
-HALT 41 4
---- stderr
---- rc 0

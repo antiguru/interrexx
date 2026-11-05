@@ -5,7 +5,7 @@
    that removes the items being copied.  Under ordinary allocation the copy
    survives because nothing collects; under collect-on-every-allocation it is
    a dangling reference unless the copy is rooted.  This program is in the
-   phase subset so `collect_stress` runs it. */
+   differential list so `collect_stress` runs it. */
 
 a = .Array~new
 do i = 1 to 6

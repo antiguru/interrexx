@@ -1,4 +1,4 @@
-//! `corpus/collection-scopes.tsv` (D89): which scope defines each documented
+//! `corpus/collection-scopes.tsv`: which scope defines each documented
 //! collection method, whether that scope's body is C++ or Rexx, and for a C++
 //! body the `Setup.cpp` token and arity operand.
 
@@ -268,7 +268,7 @@ fn committed() -> Vec<Scoped> {
 
 const HEADER: &str = "\
 # Which scope defines each documented collection method, and whether that
-# scope's body is C++ or Rexx (D89). Derived by
+# scope's body is C++ or Rexx. Derived by
 # crates/rexx-exec/tests/collection_scopes.rs, which re-derives it on every
 # run; edit that, never this.
 #
@@ -290,7 +290,7 @@ const HEADER: &str = "\
 # `arity` is Setup.cpp's third operand verbatim: a literal is a MAXIMUM,
 # A_COUNT is Arity::Counted.
 #
-# RexxQueue is deliberately absent -- spec D93, the external data queue.
+# RexxQueue is deliberately absent: it is the external data queue.
 ";
 
 fn refreshing() -> bool {

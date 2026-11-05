@@ -1,7 +1,6 @@
 //! `smtp.cls` and `mime.cls` against a scripted SMTP server on loopback:
 //! the client's byte stream and its `cmdresponse` are the session
-//! `docs/superpowers/specs/extensions-behaviour.md` ("smtp.cls") records
-//! from the oracle, byte for byte.
+//! `docs/design/extensions.md` records from the oracle, byte for byte.
 //!
 //! `SMTP_WIRE_ORACLE=1` runs the same session on the oracle
 //! (`REXX_ORACLE_ROOT`) as well, which finds this crate's packages through

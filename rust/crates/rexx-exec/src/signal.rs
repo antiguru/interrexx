@@ -1,8 +1,8 @@
-//! The signal handlers (D-U3; spec 2026-09-29 section 4). A process entry
-//! point that starts Rexx for a user installs them once (ruling P62): SIGINT
+//! The signal handlers. A process entry
+//! point that starts Rexx for a user installs them once: SIGINT
 //! and SIGTERM where the action is the default or ignored, SIGHUP only where
 //! it is the default, never over a handler, without `SA_RESTART`
-//! (`platform/unix/SystemInterpreter.cpp:117-145`, ruling P61); SIGPIPE is
+//! (`platform/unix/SystemInterpreter.cpp:117-145`); SIGPIPE is
 //! ignored (`:146-148`). A handler sets [`PENDING`] and writes one byte to
 //! the timer's wake socket, nothing else; the timer thread serves it. These
 //! statics are the signal half of the timer's wake source.
@@ -151,7 +151,7 @@ fn mask(how: libc::c_int, set: &libc::sigset_t) -> libc::sigset_t {
 }
 
 /// Blocks the halting signals in this thread, so the kernel delivers them
-/// only to a thread that takes them (ruling P67).
+/// only to a thread that takes them.
 pub(crate) fn block() {
     mask(libc::SIG_BLOCK, &halting());
 }
@@ -197,7 +197,7 @@ pub(crate) fn unblocked<R>(wait: impl FnOnce() -> R) -> R {
 
 /// Runs `start` with the halting signals blocked in this thread and the
 /// thread's mask restored after, so a thread `start` spawns, such as the API
-/// connection's reader, never takes them (ruling P67).
+/// connection's reader, never takes them.
 pub(crate) fn blocked<R>(start: impl FnOnce() -> R) -> R {
     struct Restore(libc::sigset_t);
     impl Drop for Restore {
@@ -312,7 +312,7 @@ pub(crate) fn take_pending() -> bool {
 #[expect(clippy::disallowed_methods, reason = "these tests time real signals")]
 mod tests {
     /// Running a program installs no handler: only a process entry point
-    /// does (ruling P62), so this test binary keeps its dispositions.
+    /// does, so this test binary keeps its dispositions.
     #[test]
     fn running_a_program_installs_no_handler() {
         let outcome = crate::run_program(

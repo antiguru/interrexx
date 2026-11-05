@@ -554,15 +554,9 @@ fn a_short_value_holds_its_bytes_in_the_slot_and_a_long_one_does_not() {
     }
 }
 
-// The plan's own draft sketched these five tests as calls to
-// `interp.eval_str(...)`/`interp.eval_with(...)`, which do not exist and
-// cannot without pulling Task 6's `Activation`/`Settings` and Task 7's
-// arithmetic forward into this task -- scaffolding Task 7 would then have
-// to unwind. So every `Number` below is built directly through
-// `rexx-num`, which Phase 2 already tested; what these tests check is
-// only what `text`/`number`/`to_text`/`to_number` do with it afterwards.
-// The oracle transcripts remain the source of truth and are re-run
-// against `build/bin/rexx` in the task report.
+// Every `Number` below is built directly through `rexx-num`; what these
+// tests check is only what `text`/`number`/`to_text`/`to_number` do with it
+// afterwards.
 
 #[test]
 fn a_numbers_rendering_is_fixed_when_it_is_created() {

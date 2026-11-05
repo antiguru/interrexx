@@ -70,7 +70,7 @@ pub enum Body {
         text: Option<Vec<u8>>,
     },
     /// A stem: its own name, an optional default, and its tails keyed by the
-    /// tail's value verbatim (D15a). A tail entry present and mapped to
+    /// tail's value verbatim. A tail entry present and mapped to
     /// `None` is a tombstone -- an explicitly dropped tail, which must not
     /// fall back to the default -- and is distinct from the key being
     /// absent, which does.
@@ -102,7 +102,7 @@ pub enum Body {
     },
     /// A user-defined object: the class it belongs to, the behaviour it
     /// dispatches against, the name something gave it, and its instance
-    /// variables, one pool per scope (D40).
+    /// variables, one pool per scope.
     Instance {
         class: ObjRef,
         behaviour: BehaviourHandle,
@@ -130,7 +130,7 @@ pub enum Body {
     Cell(u32, Box<[u8]>),
 }
 
-// A heap value names no borrowed frame (spec 2026-09-29 section 5, D3).
+// A heap value names no borrowed frame.
 const _: () = {
     const fn require_static<T: 'static>() {}
     require_static::<Body>();
@@ -665,7 +665,7 @@ pub struct BufferState {
 }
 
 /// A `MutableBuffer`'s bytes, whose address native calls in flight may hold
-/// (spec 2026-09-29 2.5). While any does ([`BufferBytes::lend`]), growth
+/// While any does ([`BufferBytes::lend`]), growth
 /// moves the bytes to new storage and keeps the old until the last of those
 /// calls ends ([`BufferBytes::release`]); a shrink keeps the storage.
 ///

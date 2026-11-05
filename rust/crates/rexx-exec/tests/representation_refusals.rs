@@ -1,6 +1,5 @@
 //! Refusal text that names a representation instead of a language rule
-//! (spec `docs/superpowers/specs/2026-10-14-phase-9b1-uniform-object-model.md`,
-//! section 6). Every string literal in `crates/*/src` containing one of
+//! Every string literal in `crates/*/src` containing one of
 //! [`PHRASES`] must be on [`ALLOWED`], and every row of [`ALLOWED`] must still
 //! match a literal. Test code (`tests.rs` and `tests/` under `src`) and
 //! comments are not refusal text.
@@ -30,9 +29,9 @@ const PHRASES: &[&str] = &[
 ];
 
 /// `(file:substring, owner)`: a literal in `file` (relative to `crates/`)
-/// containing `substring` is allowed. The owner is a permanent Deviation, the
-/// phase that owes the construct, or "internal guard" for a refusal no Rexx
-/// program reaches, with the reason beside the row.
+/// containing `substring` is allowed. The owner is a permanent Deviation, or
+/// "internal guard" for a refusal no Rexx program reaches, with the reason
+/// beside the row.
 const ALLOWED: &[(&str, &str)] = &[
     (
         "rexx-exec/src/lib.rs:a metaclass NEW answering a class Class~new did not build",
@@ -43,17 +42,19 @@ const ALLOWED: &[(&str, &str)] = &[
         "Deviation 36",
     ),
     (
-        "rexx-exec/src/lib.rs:a directory whose entries this crate does not fill",
-        "Phase 10",
-    ),
-    (
         "rexx-exec/src/environment/identities.rs:a .ROUTINES entry that is not a routine this crate built",
         "Deviation 28",
     ),
-    // Internal guards, which no Rexx program reaches. A handle whose slot the
-    // sweep freed is held only where the collector's roots do not reach, which
-    // is a rooting defect: a program names only values reachable from a root,
-    // and a WeakReference answers `.nil` once its referent is swept.
+    // Internal guards, which no Rexx program reaches. A collection holding an
+    // entry the library bootstrap fills:
+    (
+        "rexx-exec/src/lib.rs:a directory whose entries this crate does not fill",
+        "internal guard",
+    ),
+    // A handle whose slot the sweep freed is held only where the collector's
+    // roots do not reach, which is a rooting defect: a program names only
+    // values reachable from a root, and a WeakReference answers `.nil` once
+    // its referent is swept.
     (
         "rexx-exec/src/dispatch/construct.rs:a value whose object is no longer live",
         "internal guard",
@@ -122,7 +123,6 @@ const OWNERS: &[&str] = &[
     "Deviation 28",
     "Deviation 32",
     "Deviation 36",
-    "Phase 10",
     "internal guard",
 ];
 

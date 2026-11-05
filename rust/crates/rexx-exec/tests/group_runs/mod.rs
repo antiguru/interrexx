@@ -299,7 +299,7 @@ fn the_alarm_and_ticker_groups_pass_in_both_modes() {
                 let mut label = row.outcome.label().to_string();
                 let key = format!("base/class/{group}.testGroup {}", row.test);
                 if !matches!(row.outcome, Outcome::Pass) && WALL_CLOCK.contains(&key.as_str()) {
-                    eprintln!("P48 rerun: {key} {name}: {label}");
+                    eprintln!("wall-clock rerun: {key} {name}: {label}");
                     let run = scratch(&format!("{name}-rerun"));
                     let one = std::slice::from_ref(&row.test);
                     let again = on_a_quiet_machine(|| {
@@ -307,8 +307,14 @@ fn the_alarm_and_ticker_groups_pass_in_both_modes() {
                     });
                     fs::remove_dir_all(run.parent().expect("a parent"))
                         .expect("cannot remove the run");
-                    label = format!("{label}, then {} (P48 rerun)", again[0].outcome.label());
-                    eprintln!("P48 rerun: {key} {name}: {}", again[0].outcome.label());
+                    label = format!(
+                        "{label}, then {} (wall-clock rerun)",
+                        again[0].outcome.label()
+                    );
+                    eprintln!(
+                        "wall-clock rerun: {key} {name}: {}",
+                        again[0].outcome.label()
+                    );
                     if !matches!(again[0].outcome, Outcome::Pass) {
                         not_passing.push(format!("{group} {name} {} {label}", row.test));
                     }
@@ -373,7 +379,7 @@ fn the_message_start_tests_under_every_opportunity() {
     assert!(failing.is_empty(), "not passing: {failing:?}");
 }
 
-/// The features of criterion 1's list that S2 covers; a row naming none
+/// The features of the derived list that the first stage covers; a row naming none
 /// of them belongs to a later stage.
 const S2_FEATURES: &[&str] = &[
     "REPLY",
@@ -384,13 +390,13 @@ const S2_FEATURES: &[&str] = &[
     "TraceObject field",
 ];
 
-/// Where the both-modes table of the S2 rows is written when set.
+/// Where the both-modes table of the first-stage rows is written when set.
 const CRITERION_ONE_TABLE_ENV: &str = "REXX_CRITERION_ONE_TABLE";
 
-/// The S2 rows whose runs differ between the two modes, in the assertion
+/// The first-stage rows whose runs differ between the two modes, in the assertion
 /// count alone: each asserts after a `REPLY` in the continuation, which
 /// races the end of the program. The shipped scheduler ends first;
-/// `EveryOpportunity` runs the continuation first (ruling P41).
+/// `EveryOpportunity` runs the continuation first.
 const MODE_DIFFERING: &[&str] = &[
     "base/keyword/REPLY.testGroup TEST_REPLY_TWICE_REPLYASSERT",
     "base/keyword/REPLY.testGroup TEST_REPLY_RETURN_CODE_REPLYASSERT",
@@ -426,7 +432,7 @@ const TRACE_INTERLEAVES: &[&str] =
 
 /// The rows whose outcome on this crate depends on a wall-clock boundary or
 /// a sleep's duration, each with the lines that make it so: a failing check
-/// on one is run again once, and only a second failure counts (ruling P48).
+/// on one is run again once, and only a second failure counts.
 const WALL_CLOCK: &[&str] = &[
     // STREAM.testGroup:866-876
     "base/bif/STREAM.testGroup TEST_QUERYDIR_EXISTS",
@@ -471,11 +477,9 @@ const WALL_CLOCK: &[&str] = &[
 ];
 
 /// The row whose run under `EveryOpportunity` hangs at the test's own
-/// race (ruling P46): main takes the mutex between the worker's
+/// race: main takes the mutex between the worker's
 /// `step = 6` and its last `acquire` and never releases it. The oracle
-/// hangs in the same interleaving, 3 of 3 at rc 137, on
-/// `docs/superpowers/records/2026-10-01-phase-6-s2-s5/exclusion-every-hang.rex`.
-/// Allowed only while the unswitched run passes at rc 0 and the switched
+/// hangs in the same interleaving. Allowed only while the unswitched run passes at rc 0 and the switched
 /// one ends at the deadline.
 const EVERY_FORCES_THE_RACE: &str = "base/class/MutexSemaphore.testGroup TEST_EXCLUSION";
 
@@ -583,13 +587,13 @@ fn cell(outcome: &Outcome) -> (String, String) {
     }
 }
 
-/// The features of criterion 1's list that S3 covers.
+/// The features of the derived list that the second stage covers.
 const S3_FEATURES: &[&str] = &["GUARD", "semaphore class", "Sys*Sem", "Alarm", "Ticker"];
 
-/// Where the both-modes table of the S3 rows is written when set.
+/// Where the both-modes table of the second-stage rows is written when set.
 const S3_TABLE_ENV: &str = "REXX_CRITERION_ONE_S3_TABLE";
 
-/// Every S2 row of the derived list, run on both sides with the shipped
+/// Every first-stage row of the derived list, run on both sides with the shipped
 /// scheduler and under `EveryOpportunity`.
 #[test]
 fn the_s2_rows_of_the_derived_list_in_both_modes() {
@@ -598,7 +602,7 @@ fn the_s2_rows_of_the_derived_list_in_both_modes() {
     });
 }
 
-/// Every row of the derived list naming an S3 feature and no S2 one, as
+/// Every row of the derived list naming a second-stage feature and no first-stage one, as
 /// [`the_s2_rows_of_the_derived_list_in_both_modes`] runs the others.
 #[test]
 fn the_s3_rows_of_the_derived_list_in_both_modes() {
@@ -719,7 +723,7 @@ fn row_in_both_modes(
         if raced {
             let modes = (
                 "every mode forces the test's own race; the oracle hangs in the \
-                     same interleaving (P46)"
+                     same interleaving"
                     .to_string(),
                 true,
             );
@@ -734,9 +738,9 @@ fn row_in_both_modes(
     };
     let (mut judged, mut hung) = judge();
     if (!judged.1 || !hung.is_empty()) && WALL_CLOCK.contains(&row.as_str()) {
-        eprintln!("P48 rerun: {row}: {} {hung:?}", judged.0);
+        eprintln!("wall-clock rerun: {row}: {} {hung:?}", judged.0);
         (judged, hung) = judge();
-        judged.0.push_str(" (P48 rerun)");
+        judged.0.push_str(" (wall-clock rerun)");
     }
     (normal, judged, hung)
 }

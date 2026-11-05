@@ -1,6 +1,0 @@
-
-running 4 tests
-test tests::reshaped_arrays_are_collected_on_their_bytes ... ok
-test tests::a_cyclic_reference_is_insufficient_stack_in_every_conversion ... ok
-test tests::a_long_chain_of_stem_subclass_instances_is_walked_once ... FAILED
-test tests::a_join_rendering_itself_through_defaultname_runs_out_of_stack has been running for over 60 seconds

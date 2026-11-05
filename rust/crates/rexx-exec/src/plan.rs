@@ -1,4 +1,4 @@
-//! The per-body resolution plan (D16): a name-to-slot table built by one
+//! The per-body resolution plan: a name-to-slot table built by one
 //! upfront walk over a body's AST at first execution, and cached on
 //! `Interp` rather than on the body itself (an `Rc<Program>` gives shared
 //! immutable access, so nothing could be written into a `CodeBody` reached
@@ -217,7 +217,7 @@ pub(crate) enum ClassPackage {
     Null,
 }
 
-/// Which code body of which loaded program a cached plan belongs to (D16).
+/// Which code body of which loaded program a cached plan belongs to.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub(crate) struct BodyKey {
     pub(crate) program: ProgramId,
@@ -282,7 +282,7 @@ impl CompoundName {
 }
 
 /// One body's variable-resolution plan, built by one upfront pass at first
-/// execution (D16).
+/// execution.
 #[derive(Debug, Default)]
 pub(crate) struct Plan {
     pub(crate) names: rexx_core::NameMap<Box<[u8]>, usize>,
@@ -413,8 +413,8 @@ impl Plan {
         self.compounds.get(id.index())?.as_ref()
     }
 
-    /// Walks `body` once and returns a finished table (D16: "built by one
-    /// upfront pass", not populated lazily one name at a time).
+    /// Walks `body` once and returns a finished table, built by one
+    /// upfront pass rather than populated lazily one name at a time.
     pub(crate) fn build(
         body: &CodeBody,
         symbols: &SymbolTable,
@@ -730,7 +730,7 @@ impl Plan {
 
     /// Registers every name a compound-shaped spelling's decomposition
     /// touches: the stem itself, and any tail piece that is a variable
-    /// (D15a) -- a constant piece (a bare digit run, or the empty piece a
+    /// -- a constant piece (a bare digit run, or the empty piece a
     /// trailing period leaves) names nothing. `name` is either a `Compound`
     /// expression's own interned spelling, or a `Drop`/`Expose`/
     /// `Procedure`/`Use Local` target's, once `note_variable_ref` has
@@ -872,8 +872,8 @@ impl Plan {
         self.names.len()
     }
 
-    /// Looks up `name` in this plan alone: the first of the two steps D16's
-    /// own resolution order names, `plan.slot_of(name).or_else(|| extra.get(name))`.
+    /// Looks up `name` in this plan alone: the first of the two steps of the
+    /// resolution order, `plan.slot_of(name).or_else(|| extra.get(name))`.
     /// Consults neither `extra` nor growth -- `Interp::slot_of` is the full
     /// three-source resolution this is one third of.
     pub(crate) fn slot_of(&self, name: &[u8]) -> Option<usize> {
@@ -882,8 +882,8 @@ impl Plan {
 }
 
 impl Interp {
-    /// The plan for one body, from the cache or built and cached (D16:
-    /// "cached on `Interp`, not on the body", because an `Rc<Program>` gives
+    /// The plan for one body, from the cache or built and cached on
+    /// `Interp` rather than on the body, because an `Rc<Program>` gives
     /// shared immutable access and nothing can be written into a `CodeBody`
     /// reached through one).
     pub(crate) fn plan_for(
@@ -932,7 +932,7 @@ impl Interp {
     }
 
     /// The chunk for one body **under one trace setting**, from the cache or
-    /// compiled and cached (D16's discipline, with the key D23 widens it by).
+    /// compiled and cached, keyed as plans are plus the trace setting.
     pub(crate) fn chunk_for(
         &mut self,
         key: BodyKey,

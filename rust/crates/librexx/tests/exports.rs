@@ -12,7 +12,7 @@ fn library() -> std::path::PathBuf {
     deps_dir().join("librexx.so")
 }
 
-/// `librexx.so.4` owns the API's state (Moritz, 2026-11-03, option A) and needs no library of
+/// `librexx.so.4` owns the API's state and needs no library of
 /// the API: `librexxapi.so.4` needs it, never the reverse.
 #[test]
 fn the_library_names_itself_and_needs_no_other_api_library() {

@@ -1,6 +1,6 @@
 count 40
 /* What an operator, a condition and a builtin do with one of these objects
- * as an operand. Phase 5a Task 6, fix round 1.
+ * as an operand.
  *
  * Making .NAME resolve turned every one of these from a refusal into an
  * answer, so each line is a place a wrong answer could hide. The ones here

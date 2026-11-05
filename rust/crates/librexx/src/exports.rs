@@ -1,6 +1,6 @@
 //! The `librexx` C entry points: shims over `rexx_exec`. The `rexx` executable compiles this file
 //! too, so an extension it loads reaches its interpreter.
-// D-U1 as extended 2026-11-02: one export module per C library.
+// One export module per C library.
 #![allow(unsafe_code)]
 #![allow(non_snake_case)]
 

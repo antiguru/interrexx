@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-# A class's identity is an `ObjRef` (D29); this crate does not touch the
+# A class's identity is an `ObjRef`; this crate does not touch the
 # heap, `Object` or dispatch, only the identity type a class is keyed by.
 rexx-core = { path = "../rexx-core" }
 

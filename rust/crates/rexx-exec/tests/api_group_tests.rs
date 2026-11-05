@@ -1,4 +1,5 @@
-//! The native-API ooTest groups this phase owns, run through `testOORexx.rex`'s
+//! The native-API ooTest groups whose libraries need no embedding API or
+//! registry, run through `testOORexx.rex`'s
 //! single-group form on both sides, one test per run, each run from a fresh
 //! copy of the framework and the group's directory at the same path, stdout
 //! compared with its timings and timestamps masked. A test whose outcome,
@@ -29,20 +30,19 @@ use std::path::PathBuf;
 use group_runner::{
     GATE_ENV, SwitchMode, VERBOSITY, directive_bodies, excerpt, first_difference, fresh_copy,
     gate_mode, group_file, masked, outcome, passes, run_crate, run_oracle, skip, test_names,
-    uses_rxapi, worktree,
+    uses_rxapi,
 };
 use support::oracle;
 
 /// The directory of the groups below `ootest/ooRexx`.
 const DIR: &str = "API/oo";
 
-/// The groups `api_group_partition.rs` derives as Phase 8's.
+/// The groups whose libraries import nothing from the embedding API or the
+/// registries.
 const GROUPS: &[&str] = &["CONVERSION", "FUNCTION", "METHOD"];
 
-/// The tests this crate does not pass, as `GROUP.TEST`, each recorded with its
-/// cause and the phase that owns it in
-/// `docs/superpowers/plans/phase-4-exclusions.txt`; `false` for one that runs
-/// on neither side.
+/// The tests this crate does not pass, as `GROUP.TEST`; `false` for one that
+/// runs on neither side.
 const RECORDED: &[(&str, bool)] = &[];
 
 /// The tests whose outcome, assertion count, stderr and exit status agree while
@@ -166,29 +166,12 @@ fn a_constant_holding_a_queue_reaches_rxapi_from_the_tests_naming_it() {
 }
 
 #[test]
-fn every_test_of_the_phase_8_groups_passes_and_matches_the_oracle_but_the_recorded() {
+fn every_test_of_the_api_groups_passes_and_matches_the_oracle_but_the_recorded() {
     if !gate_mode() {
         eprintln!("api_group_tests: skipped without {GATE_ENV}");
         return;
     }
     private_service();
-    let exclusions =
-        fs::read_to_string(worktree().join("docs/superpowers/plans/phase-4-exclusions.txt"))
-            .expect("the exclusions file");
-    // A record names each test on a line of its own.
-    let record_lines: BTreeSet<&str> = exclusions.lines().map(str::trim).collect();
-    for name in RECORDED
-        .iter()
-        .chain(DETAIL_DIFFERS.iter())
-        .map(|(name, _)| name)
-    {
-        let test = name.split_once('.').expect("GROUP.TEST").1;
-        assert!(
-            record_lines.contains(test),
-            "{name} has no record in phase-4-exclusions.txt"
-        );
-    }
-
     let oracle = oracle::locate();
     let run = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("api-group-tests-{}", std::process::id()))
@@ -320,7 +303,7 @@ const TICKER_LINES: &[&str] = &[
     "Executing automated test suite",
 ];
 
-/// Exit criterion 2 of the Phase 6 spec: the framework's ticker, a `REPLY`
+/// The framework's ticker, a `REPLY`
 /// thread and a `GUARD ON WHEN`, runs on this crate without `-U`. How many
 /// dots it prints depends on wall time, so they are checked for presence
 /// only; every other line equals the `-U` run's.

@@ -18,9 +18,9 @@ pub(crate) struct ParseCtx<'a> {
     pub(crate) source: &'a ProgramSource,
     pub(crate) tokens: &'a [Token],
     /// Read-only by the time parsing starts: `scan` has already interned every
-    /// symbol in the program. Tasks 3.6 and 3.7 need it to compare a clause's
-    /// first symbol against the pre-interned keyword ids, and Task 3.6 needs it
-    /// to recover a label's spelling when it builds `Program::labels`.
+    /// symbol in the program. It compares a clause's
+    /// first symbol against the pre-interned keyword ids and recovers a
+    /// label's spelling when `Program::labels` is built.
     pub(crate) symbols: &'a SymbolTable,
     /// The message names this parse has interned, which is what
     /// `ExprKind::Message` holds one of.
@@ -61,7 +61,7 @@ impl TokenCursor {
 
     /// Yield the next token index and step past it. Deliberately not called
     /// `next`: `clippy::should_implement_trait` fires on an inherent `next`
-    /// with this signature, and the phase gate runs clippy with `-D warnings`.
+    /// with this signature, and the workspace runs clippy with `-D warnings`.
     pub(crate) fn advance(&mut self) -> Option<usize> {
         let i = self.peek()?;
         self.pos += 1;

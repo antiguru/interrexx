@@ -1,4 +1,4 @@
-//! One activation: everything about the frame currently executing (D16).
+//! One activation: everything about the frame currently executing.
 
 use crate::Interp;
 use crate::options::ConditionSyntax;
@@ -316,7 +316,7 @@ pub(crate) struct Activation {
     /// `::OPTIONS <condition> SYNTAX` on its own package, minus whatever a
     /// `SIGNAL ON`/`OFF` here has turned off since.
     pub(crate) condition_syntax: ConditionSyntax,
-    /// This activation's own `TRACE` setting (D17).
+    /// This activation's own `TRACE` setting.
     pub(crate) trace_mode: TraceMode,
     /// The interactive-debug bookkeeping this activation owns, which is why
     /// debug is scoped to a call: measured, a `trace ?r` inside an internal

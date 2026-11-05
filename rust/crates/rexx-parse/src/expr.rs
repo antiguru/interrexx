@@ -832,7 +832,7 @@ impl<'a, 'c> Parser<'a, 'c> {
     /// `parseArgList` (`LanguageParser.cpp:3083`): comma-separated arguments
     /// up to `closer`, which is consumed.
     fn arg_list(&mut self, closer: Option<Tag>) -> Result<Vec<Option<Expr>>, ParseError> {
-        // Task 3d: an argument list re-enters expression parsing, so
+        // An argument list re-enters expression parsing, so
         // `f(f(f(...)))` and `a[a[a[...]]]` recurse once per nesting level
         // exactly as grouping parentheses do, through different code and off
         // the same stack. Counted against the same budget for the reason
@@ -954,7 +954,7 @@ impl<'a, 'c> Parser<'a, 'c> {
         match &token.kind {
             TokenKind::LeftParen => {
                 self.advance();
-                // Task 3c: one more level would recurse past MAX_EXPR_DEPTH,
+                // One more level would recurse past MAX_EXPR_DEPTH,
                 // so raise the same condition the oracle raises somewhere
                 // past its own, differently-sized cliff, rather than
                 // descending into `full_subexpression` at all. See

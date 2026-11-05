@@ -40,7 +40,7 @@ pub(crate) struct DeadlineCounted(());
 /// `Op::Clause`'s region calls overwrite these exactly as the caller's own
 /// next clause would.
 pub(crate) struct ClauseState {
-    /// The indent (Task 11's `static_indent` quantity, spaces already
+    /// The indent (`static_indent`, spaces already
     /// doubled) an intermediate value line traces at right now -- the one
     /// piece of state `eval`'s own single insertion point needs that
     /// `eval`'s signature does not otherwise carry, mirroring the oracle's
@@ -244,14 +244,11 @@ impl Interp {
         // already zero. Measured: 200,000 abandoned pushes grew the process
         // by 3.3 MB without it.
         self.activity.value_buffer.clear();
-        // **The fourth-site tripwire** (fix round 4). A condition queued by
+        // **Tripwire.** A condition queued by
         // this activation's clause at line L that is still waiting when a
         // clause at a *different* line begins means some construct resolved
         // an instruction inside its own `step` without ending its header
-        // clause first -- the defect behind re-review finding NEW-2's four
-        // sites and three rounds' worth before them, always silently. The
-        // handler will now report `SIGL` for the wrong clause, which is the
-        // half of the defect that has recurred every round.
+        // clause first. The handler would then report `SIGL` for the wrong clause.
         // Keyed as `deliver_pending_traps` keys a delivery: a condition queued
         // in an enclosing fragment's queue waits for that fragment's boundary.
         debug_assert!(

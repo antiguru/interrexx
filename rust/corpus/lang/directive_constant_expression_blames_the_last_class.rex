@@ -1,5 +1,5 @@
 /* A failing ::CONSTANT expression blames the LAST ::CLASS directive in the
- * whole file, not the one nearest above it -- review round 1, finding 1.
+ * whole file, not the one nearest above it
  *
  * No other ::CONSTANT witness can tell "nearest preceding" from "last in
  * file" apart: none has a ::CLASS directive following the failing constant,

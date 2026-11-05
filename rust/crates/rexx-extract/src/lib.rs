@@ -19,7 +19,7 @@
 //! [`docs`] is a fifth mode, and the only one that does not read `ootest`. Its
 //! subject is `oodocs/`, the DocBook reference the object model is documented
 //! in, and its output is not a program or an assertion but the **row sets** the
-//! Phase 5 gate tables are checked against -- committed under
+//! gate tables are checked against -- committed under
 //! `rust/corpus/docs/`, stamped with the upstream revision, and re-derived in
 //! both directions by a test. See that module's own doc.
 
@@ -66,7 +66,7 @@ pub fn extract(source: &str) -> Vec<TestMethod> {
             // `"` left the quotes in the name, which then failed the
             // "starts with test" filter below and silently dropped the
             // method: 8 whole methods and 864 assertSame calls in that one
-            // file (measured 2026-07-30, extracting base/expressions).
+            // file (measured extracting base/expressions).
             let name = rest
                 .split_whitespace()
                 .next()

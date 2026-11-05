@@ -1,3 +1,0 @@
-  1816 *-* address system "xsltproc" xslFile xsdFile -    with output using (outXsd) error using (errXsd)
-       >>>   "xsltproc /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-331-crate-extensions__json__json_02/run/ooRexx/extensions/json/docbook/xmlToJson.xsl /home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/tmp/suite-4099622-331-crate-extensions__json__json_02/run/ooRexx/extensions/json/test_xslt_xsd_tmp.xml"
-       +++   "RC(127)"

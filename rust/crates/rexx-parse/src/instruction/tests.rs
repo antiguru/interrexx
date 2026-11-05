@@ -1518,9 +1518,8 @@ fn the_trace_number_gate_is_exactly_the_oracles() {
     assert_eq!(err("trace 1e-2"), (24, 1));
     // An unknown option letter. Measured: 24.1.
     assert_eq!(err("trace zzz"), (24, 1));
-    // A number with blanks around it is still a number, which Task 3.6 got
-    // wrong: the conversion did not strip them, so this raised 24.1 where the
-    // oracle takes it as a skip count. Measured, `trace " 9 "` is rc 0 and
+    // A number with blanks around it is still a number, a skip count.
+    // Measured, `trace " 9 "` is rc 0 and
     // `trace "9 5"` is 24.1, so the blanks may surround the number and not sit
     // inside it.
     assert_eq!(setting_shape("trace ' 9 '"), "skip 9");
@@ -1844,10 +1843,10 @@ const CORPUS: &[(&str, &str, usize)] = &[
     (
         "lang/interpret_dynamic.rex",
         include_str!("../../../../corpus/lang/interpret_dynamic.rex"),
-        // 8 until 4b's Task 1 appended `interpret "zork = 42"` and
-        // `interpret "say zork"`, so that the program witnesses a name bound
+        // The program ends with `interpret "zork = 42"` and
+        // `interpret "say zork"`, so that it witnesses a name bound
         // in one fragment and read from a later one -- the `Activation::extra`
-        // path, which nothing in the differential corpus reached before.
+        // path.
         10,
     ),
     (
@@ -1974,9 +1973,9 @@ fn select_rejects_a_non_keyword_after_its_label() {
 
 #[test]
 fn a_label_after_an_if_is_rejected_by_the_label_guard() {
-    // The one deviation this task records, and the only test that keeps the
-    // guard alive. `parse_instruction` excludes a label clause from being the
-    // THEN of a pending IF, because Task 3.4 has already split the colon off
+    // The only test that keeps the guard alive.
+    // `parse_instruction` excludes a label clause from being the
+    // THEN of a pending IF, because the colon is already split off
     // and the C++'s own failure path -- carry on into the leftover `:` -- no
     // longer exists here.
     assert_eq!(err("if 1 = 1\nthen: nop"), (18, 1));

@@ -1,4 +1,4 @@
-//! Phase 5j Task 1: a `WeakReference` to a live class answers the class.
+//! A `WeakReference` to a live class answers the class.
 
 use std::path::PathBuf;
 
