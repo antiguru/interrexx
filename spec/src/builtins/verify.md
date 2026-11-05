@@ -106,9 +106,9 @@ g: say condition('o')~code
 93.915
 ```
 
-The reference manual names error 93.915 for a method option that is not
-one of those allowed. The ANSI draft (9.3.24) checks the option with its
-other arguments and raises 40.28.
+> **Note.** The reference manual names error 93.915 for a method option that is not
+> one of those allowed. The ANSI draft (9.3.24) checks the option with its
+> other arguments and raises 40.28.
 
 r[bif.verify.start.default]
 When `start` is omitted, it is 1: the scan starts at the first character of
@@ -225,9 +225,9 @@ say verify('abc', '') verify('abc', '', 'N', 3) verify('abc', '', 'N', 2, 0),
 1 3 2 0 0
 ```
 
-The Nomatch answer for a `length` of 0 follows the reference manual, which
-gives `start` for a null `reference` without a condition on `length`; the
-ANSI draft has no `length` argument.
+> **Note.** The Nomatch answer for a `length` of 0 follows the reference manual, which
+> gives `start` for a null `reference` without a condition on `length`; the
+> ANSI draft has no `length` argument.
 
 r[bif.verify.length.zero]
 When `length` is 0 and `reference` is not the null string, the run has no
@@ -241,6 +241,6 @@ say verify('abc', 'x', 'N', 1, 0) verify('abc', 'a', 'M', 1, 0)
 0 0
 ```
 
-VERIFY's answer, a position or `0`, is a count: it is
-[written as a count](r:bif.count.answer), and whether it is a new object is
-[not specified](r:bif.count.answer.deviation.4).
+> **Note.** VERIFY's answer, a position or `0`, is a count: it is
+> [written as a count](r:bif.count.answer), and whether it is a new object is
+> [not specified](r:bif.count.answer.deviation.4).

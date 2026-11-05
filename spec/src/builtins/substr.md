@@ -59,12 +59,12 @@ say '['substr('abcde', 2)']' '['substr('abcde', 5)']',
 [bcde] [e] [] []
 ```
 
-The ANSI draft (9.3.21) computes the omitted length as
-`LENGTH(string) + 1 - n` and repeats that many times, so for `n` two or
-more past the end its count is negative and its definition raises
-`SYNTAX 26.2` from inside the builtin. This page follows ooRexx, where the
-reference manual says the rest of the string is returned and positions past
-the end select nothing, so the result is the null string.
+> **Note.** The ANSI draft (9.3.21) computes the omitted length as
+> `LENGTH(string) + 1 - n` and repeats that many times, so for `n` two or
+> more past the end its count is negative and its definition raises
+> `SYNTAX 26.2` from inside the builtin. This page follows ooRexx, where the
+> reference manual says the rest of the string is returned and positions past
+> the end select nothing, so the result is the null string.
 
 r[bif.substr.pad.default]
 When `pad` is omitted, it is the blank, `'20'x`.
@@ -162,7 +162,7 @@ all of it unchanged as `substr(s, 1)` does, or as an equal string produced
 some other way, such as the literal `'abc'` beside `substr('abcdef', 1, 3)`.
 Through `identityHash`, or as a key of an `IdentityTable` or `IdentitySet`,
 the answer may be either, and a program can rely only on the value, which
-is equal under `==`. The oracle differs: it often answers a new object
+is equal under `==`. ooRexx differs: it often answers a new object
 where interrexx answers the existing one.
 
 ```rexx

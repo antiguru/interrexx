@@ -19,15 +19,37 @@ assumes you can read Rexx, and it does not teach the language.
 
 ## Authority
 
-This book is the authority on the language interrexx implements. When the
-interpreter and this book disagree, one of them has a defect, and the
+This book is normative in its own right: its rules define the language
+interrexx implements, and no other document or implementation does. When
+the interpreter and a rule disagree, one of them has a defect, and the
 disagreement is settled here before it is settled in code. Behavior the book
-does not state is not promised.
+does not state is not promised, and where a reader might expect a promise
+the book says explicitly that a behavior is not specified.
 
-Where interrexx knowingly differs from the reference it follows, the page
-for the element says so and names the numbered deviation. Deviations are
-listed in the project's register, and a page lists only the ones that touch
-its element.
+Rules and examples are normative. Everything else is informative: the
+overview at the top of a page, and every note, which is set as a block
+quote that begins **Note.** A note explains where a rule comes from or how
+another definition of Rexx differs; it never adds to or changes a rule.
+
+## Terms
+
+**ooRexx.** The open-source C++ implementation of Object Rexx, version 5. interrexx is
+written to run ooRexx programs, and the book's examples are also run on
+ooRexx to measure where the two agree.
+
+**Deviation.** A declared difference between interrexx and ooRexx, numbered in the
+project's register. A page lists in its front matter the deviations that
+touch its element, and states each as a rule whose identifier ends
+`deviation.N`. Every example on which interrexx and ooRexx answer
+differently belongs to such a rule; any other difference is a defect.
+
+**String method.** A method of the `String` class. Many builtins run as one, as
+[the conventions](r:conv.method) define.
+
+**Identity.** Whether two values are the same object, as opposed to equal strings. It
+is observable only through `identityHash` and the identity collections
+(`IdentityTable`, `IdentitySet`), and the book says where it is not
+specified.
 
 ## Reading a rule
 
@@ -50,10 +72,10 @@ evidence, not decoration. An example belongs to the rule above it.
 ## Sources
 
 Two documents are cited by section and are not copied: the ooRexx reference
-manual and the ANSI Rexx standard. A page's front matter names the sections
-that describe its element. The wording of this book is its own, and the
-rules state what the language does, derived from those sources and from
-reasoning about the semantics, not from observing any particular
-implementation. Where the reference manual and the ANSI standard are both
-silent, a rule follows the observed behavior of the reference
-implementation, ooRexx, and its page says so.
+manual and the ANSI Rexx standard (X3.274-1996, cited from its final public
+draft, so the notes call it the ANSI draft). A page's front matter names the
+sections that describe its element. Both are informative: the rules are
+derived from them and from reasoning about the semantics, and where the two
+disagree the rule follows ooRexx and a note says how ANSI differs. Where
+both are silent, a rule matches ooRexx, and a note says so. The wording of
+this book is its own.

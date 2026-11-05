@@ -147,7 +147,7 @@ around its words, or as an equal string produced some other way, such as
 the literal `'a b'` beside `subword('a b c', 1, 2)`. Through
 `identityHash`, or as a key of an `IdentityTable` or `IdentitySet`, the
 answer may be either, and a program can rely only on the value, which is
-equal under `==`. The oracle differs: it often answers a new object where
+equal under `==`. ooRexx differs: it often answers a new object where
 interrexx answers the existing one.
 
 ```rexx

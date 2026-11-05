@@ -97,8 +97,8 @@ y
 
 ## Whole-number arguments
 
-Position and length arguments are whole numbers. The two rules below say
-which strings a whole-number argument accepts and what value it then has.
+> **Note.** Position and length arguments are whole numbers. The two rules below say
+> which strings a whole-number argument accepts and what value it then has.
 
 r[conv.whole.form]
 A whole-number argument must be a string of this form: optional whitespace;
@@ -174,14 +174,27 @@ b a
 
 ## Builtins that run as String methods
 
-Many builtins do their work by sending a message of the same name to a
-`String` object. One of the arguments, usually the first and for a few
-builtins the second, is the receiver; the others become the message's
-arguments, in their order. The reference manual (Functions > Built-in
-Functions) names these builtins, and a builtin page says when its builtin
-is one of them. The range checks below, and
-the order in [conv.check.order](r:conv.check.order), are rules for these
-builtins only; any other builtin's page states its own range checks.
+r[conv.method]
+A builtin that runs as a String method does its work by sending the
+`String` message of the same name. One of its arguments, usually the first
+and for a few builtins the second, is the receiver; the others become the
+message's arguments, in their order. The builtin and the message then give
+the same result for the same arguments. A builtin page says when its
+builtin is one of these. The range checks below, and the
+[order of the checks](r:conv.check.order), are rules for these builtins
+only; any other builtin's page states its own range checks.
+
+```rexx
+say substr('abcd', 2, 2) 'abcd'~substr(2, 2) upper('ab', 2) 'ab'~upper(2)
+```
+
+```output
+bc bc aB aB
+```
+
+> **Note.** The ooRexx reference manual (Functions > Built-in Functions)
+> names the builtins that run this way; the ANSI standard, which has no
+> String methods, does not.
 
 r[conv.position.check]
 In a builtin that runs as a String method, a position argument is a
@@ -224,12 +237,12 @@ a: say condition('o')~code
 93.923
 ```
 
-These two codes follow from the reference manual: a builtin of this kind
-sends a String message, the range of a position or length is checked by
-that method, and an incorrect call to a method is error 93, whose subcodes
-924 and 923 are the position and length cases. The ANSI draft (9.2.1),
-which has no such methods, raises 40.14 for a position and 40.13 for a
-length.
+> **Note.** These two codes follow from the reference manual: a builtin of this kind
+> sends a String message, the range of a position or length is checked by
+> that method, and an incorrect call to a method is error 93, whose subcodes
+> 924 and 923 are the position and length cases. The ANSI draft (9.2.1),
+> which has no such methods, raises 40.14 for a position and 40.13 for a
+> length.
 
 ## Pad arguments
 
@@ -334,12 +347,12 @@ f: say condition('o')~code
 93.924
 ```
 
-The range checks come last because they belong to the String method, which
-runs only once the call has been made. The reference manual does not say
-that the function call checks the form of its arguments, under error 40,
-before it sends the message; that part follows the observed behaviour. The
-ANSI draft (9.2.1) checks each argument's form and range together, one
-argument at a time.
+> **Note.** The range checks come last because they belong to the String method, which
+> runs only once the call has been made. The reference manual does not say
+> that the function call checks the form of its arguments, under error 40,
+> before it sends the message; that part matches ooRexx. The
+> ANSI draft (9.2.1) checks each argument's form and range together, one
+> argument at a time.
 
 ## Errors and results
 
@@ -381,7 +394,7 @@ interrexx does not convert an argument whose `STRING` method answers an
 object that is not a string, such as a `Directory`. When a builtin receives
 such an argument where its page calls for a string, interrexx ends the
 program with exit code 120 and a message that this is not implemented,
-after raising `NOSTRING` when a trap for it is set. The oracle reads the
+after raising `NOSTRING` when a trap for it is set. ooRexx reads the
 answer as a string, and what it does then depends on the builtin: `UPPER`
 ends the program with Error 5, `LENGTH` answers an unrelated number, and `STRIP`
 crashes the interpreter. A program can rely on none of these answers.

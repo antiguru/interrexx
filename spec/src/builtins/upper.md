@@ -97,11 +97,11 @@ Q-Z 0?_ E9C3A9FF 60415A7B
 1
 ```
 
-The reference manual's UPPER section does not name the characters it
-changes; its TRANSLATE section, which uppercases the same way, names the
-letters `a` to `z`, and this rule follows that. The ANSI draft has no UPPER
-builtin, and leaves the uppercase form of each character to the
-configuration (5.4.3).
+> **Note.** The reference manual's UPPER section does not name the characters it
+> changes; its TRANSLATE section, which uppercases the same way, names the
+> letters `a` to `z`, and this rule follows that. The ANSI draft has no UPPER
+> builtin, and leaves the uppercase form of each character to the
+> configuration (5.4.3).
 
 r[bif.upper.result]
 UPPER returns a string of `LENGTH(string)` characters. The character at
@@ -156,9 +156,9 @@ say '['upper('')']' '['upper('', 3, 2)']'
 
 ## Deviations
 
-An argument whose `STRING` method answers an object that is not a string
-falls under [Deviation 30](r:conv.string.deviation.30), as it does for
-every builtin.
+> **Note.** An argument whose `STRING` method answers an object that is not a string
+> falls under [Deviation 30](r:conv.string.deviation.30), as it does for
+> every builtin.
 
 r[bif.upper.deviation.4]
 interrexx does not specify whether the result of UPPER is the same object
@@ -167,7 +167,7 @@ it changes, as in `upper(s)` for an `s` with no lowercase letter, or as an
 equal string produced some other way, such as the literal `'GHIJ'` beside
 `upper('gh' || 'ij')`. Through `identityHash`, or as a key of an
 `IdentityTable` or `IdentitySet`, the answer may be either, and a program
-can rely only on the value, which is equal under `==`. The oracle differs:
+can rely only on the value, which is equal under `==`. ooRexx differs:
 it often answers a new object where interrexx answers the existing one.
 
 ```rexx

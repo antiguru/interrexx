@@ -152,9 +152,9 @@ d: say condition('o')~code
 40.5
 ```
 
-The ANSI draft (9.2.1) checks the arguments from left to right, raising
-40.5 at an omitted required argument before it reaches the ones after it,
-and makes the range checks only once every argument is present.
+> **Note.** The ANSI draft (9.2.1) checks the arguments from left to right, raising
+> 40.5 at an omitted required argument before it reaches the ones after it,
+> and makes the range checks only once every argument is present.
 
 ## Words
 
@@ -178,10 +178,10 @@ say word('one  two', 2) c2x(word('a'||'0a000c'x||'b c', 1))
 two 610A000C62
 ```
 
-The ANSI draft (9.3.26 and the other word builtins) separates words by a
-set of blank characters that it leaves to the configuration: the blank and
-any others the configuration names. ooRexx fixes that set as the blank and
-the horizontal tab, and so does this book.
+> **Note.** The ANSI draft (9.3.26 and the other word builtins) separates words by a
+> set of blank characters that it leaves to the configuration: the blank and
+> any others the configuration names. ooRexx fixes that set as the blank and
+> the horizontal tab, and so does this book.
 
 r[bif.words.number]
 Where a word builtin's page calls an argument a word number, that argument
@@ -206,13 +206,11 @@ e: say condition('o')~code
 
 ## Answers that are counts
 
+r[bif.count.answer]
 WORDINDEX, WORDLENGTH, WORDPOS and VERIFY each answer a count: of
 characters or of words, or a position, which counts characters or words up
-to the one it names. The rules in this section hold for each of them.
-
-r[bif.count.answer]
-A builtin that answers a count writes it as a whole number in decimal
-digits only: no sign, no leading zero, no period and no exponent, and `0`
+to the one it names. A builtin that answers a count writes it as a whole
+number in decimal digits only: no sign, no leading zero, no period and no exponent, and `0`
 for zero. The caller's NUMERIC DIGITS setting plays no part, so the answer
 is exact however many digits it has.
 
@@ -229,8 +227,8 @@ say verify(copies('a', 1200) || 'b', 'a') verify(copies('a', 1300), '', 'N', 123
 1201 1234 0
 ```
 
-The reference manual does not say how these answers are written or whether
-NUMERIC DIGITS applies to them; this follows the observed behaviour.
+> **Note.** The reference manual does not say how these answers are written or whether
+> NUMERIC DIGITS applies to them; this rule matches ooRexx.
 
 r[bif.count.answer.deviation.4]
 interrexx does not specify whether the answer of a builtin that answers a
@@ -239,7 +237,7 @@ number the program already holds, such as the `start` argument of a call
 that answers it, or a literal such as `'1201'`, or the equal answer of
 another call. Through `identityHash`, or as a key of an `IdentityTable` or
 `IdentitySet`, the answer may be either, and a program can rely only on the
-value, which is equal under `==`. The oracle differs: it often answers a
+value, which is equal under `==`. ooRexx differs: it often answers a
 new object where interrexx answers the existing one.
 
 ```rexx

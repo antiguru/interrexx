@@ -95,7 +95,7 @@ merged. A rule that is withdrawn is deleted, and its ID is not reused; the check
 withdrawn IDs in `spec/withdrawn.txt` and rejects them.
 
 A Deviation is a rule whose ID has the form `….deviation.N` (`bif.syswordexp.deviation.90`). Its
-paragraph states what interrexx does, then "The oracle differs:" and what it does. The page lists `N`
+paragraph states what interrexx does, then "ooRexx differs:" and what it does. The page lists `N`
 in `deviations`. The register (`docs/superpowers/plans/phase-4-exclusions.txt`) stays the one source
 of Deviation numbers: every `deviation.N` rule names a register entry `N`, and a new Deviation takes
 the next register number and adds its register entry in the same PR, after Moritz's ruling. Moving
@@ -208,6 +208,11 @@ CI runs only the checker.
 * Own words; no CPL content (2026-11-05).
 * No history archiving yet (2026-11-05).
 * PRs are merged only with his explicit approval.
+* The specification is normative in its own right; ooRexx and the ANSI standard are informative
+  references (2026-11-05, "go ahead" on the proposal). Rules and examples are normative; a page's
+  overview and its notes, set as block quotes beginning `**Note.**`, are informative, and the
+  checker rejects any other prose after a page's first rule. The pages name the C++ implementation
+  ooRexx; "the oracle" names only the test tool that runs it.
 
 ## My calls, to check
 

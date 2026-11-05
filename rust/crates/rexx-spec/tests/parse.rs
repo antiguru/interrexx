@@ -323,7 +323,7 @@ fn a_fence_markdown_accepts_but_the_format_does_not_is_reported() {
 
 #[test]
 fn a_rule_with_no_text_is_reported() {
-    for after in ["\n\nText.\n", "\n```text\nx\n```\n", "\n"] {
+    for after in ["\n\n> **Note.** Text.\n", "\n```text\nx\n```\n", "\n"] {
         let p = problems(&format!("{FRONT}\nr[bif.a.b]{after}"));
         assert_eq!(p.len(), 1, "{after:?}: {p:?}");
         assert_eq!(p[0].0, 8);
@@ -348,4 +348,16 @@ fn a_direct_link_to_a_rule_anchor_is_reported() {
     ))
     .unwrap();
     assert_eq!(page.links.len(), 1);
+}
+
+#[test]
+fn prose_after_the_first_rule_must_be_a_note() {
+    // FRONT is lines 1-6.
+    let text = format!(
+        "{FRONT}\n# SUBSTR\n\nAn overview, informative.\n\nr[bif.substr.result]\nReturns the part.\n\n## Section\n\n> **Note.** Where it\n> comes from.\n\nStray prose,\ntwo lines.\n\nMore stray prose.\n"
+    );
+    let found = problems(&text);
+    let lines: Vec<usize> = found.iter().map(|(l, _)| *l).collect();
+    assert_eq!(lines, [20, 23], "{found:?}");
+    assert!(found[0].1.contains("informative note"), "{found:?}");
 }

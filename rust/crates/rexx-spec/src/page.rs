@@ -82,6 +82,9 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
     let mut fence: Option<Fence> = None;
     let mut pending_rexx: Option<(usize, String)> = None;
     let mut collecting = false; // inside a rule's paragraph
+    // Inside a paragraph after the first rule that belongs to no rule; it is
+    // reported once, at its first line.
+    let mut stray_prose = false;
     let mut err = |line: usize, message: String| {
         problems.push(Problem {
             path: path.to_path_buf(),
@@ -140,6 +143,7 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
 
         if text.is_empty() {
             collecting = false;
+            stray_prose = false;
             continue;
         }
         pending_rexx = None;
@@ -183,6 +187,17 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
                 rule.text.push('\n');
             }
             rule.text.push_str(text);
+        } else if !rules.is_empty()
+            && !text.starts_with('#')
+            && !text.starts_with('>')
+            && !std::mem::replace(&mut stray_prose, true)
+        {
+            err(
+                line,
+                "text after the first rule must be a rule, an example, a heading or an \
+                 informative note (a `>` block quote)"
+                    .into(),
+            );
         }
         scan_links(text, line, &mut links, &mut err);
     }

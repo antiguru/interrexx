@@ -190,7 +190,7 @@ say wordpos('a', '') wordpos('a', '  ' || '09'x, 1)
 0 0
 ```
 
-The ANSI draft (9.3.28) defines WORDPOS by comparing the phrase, with its
-whitespace reduced to single blanks, against each run of the same number
-of words of the string, reduced the same way, from `start` on. That gives
-the answers above.
+> **Note.** The ANSI draft (9.3.28) defines WORDPOS by comparing the phrase, with its
+> whitespace reduced to single blanks, against each run of the same number
+> of words of the string, reduced the same way, from `start` on. That gives
+> the answers above.
