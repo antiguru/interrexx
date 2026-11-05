@@ -20,7 +20,7 @@ do i = 1 to 1000
 
                             WIDER THAN SEVEN BYTES, which is the same collapse
                             reached a second way: a string of up to
-                            rexx_core::INLINE_TEXT bytes lives in the Rust
+                            interrexx_core::INLINE_TEXT bytes lives in the Rust
                             handle and allocates nothing, so "e" || j builds a
                             ~1001-object graph on that side while the oracle
                             builds ~1,001,001 either way. Measured 2026-09-03,

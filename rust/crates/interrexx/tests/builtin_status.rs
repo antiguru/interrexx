@@ -1,0 +1,619 @@
+//! Where the builtin implemented/not-implemented boundary sits, measured
+//! rather than described, and committed as `rust/corpus/builtin-status.txt`.
+
+#![expect(
+    clippy::disallowed_methods,
+    reason = "this harness times or bounds real runs"
+)]
+
+mod support;
+
+use std::collections::BTreeMap;
+use std::fmt::Write as _;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use interrexx::NOT_IMPLEMENTED_EXIT;
+use support::oracle::{Oracle, descriptor_diffs, did_not_finish};
+
+/// One row's classification. The spelling of each is the token that appears
+/// in `builtin-status.txt`, so the file and this enum cannot disagree about
+/// what a status is called.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Status {
+    Implemented,
+    Loud,
+    Divergent,
+    Excluded,
+}
+
+impl Status {
+    fn as_str(self) -> &'static str {
+        match self {
+            Status::Implemented => "implemented",
+            Status::Loud => "loud",
+            Status::Divergent => "divergent",
+            Status::Excluded => "excluded",
+        }
+    }
+
+    fn parse(token: &str) -> Option<Status> {
+        match token {
+            "implemented" => Some(Status::Implemented),
+            "loud" => Some(Status::Loud),
+            "divergent" => Some(Status::Divergent),
+            "excluded" => Some(Status::Excluded),
+            _ => None,
+        }
+    }
+}
+
+fn corpus_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus")
+}
+
+fn probes_path() -> PathBuf {
+    corpus_dir().join("builtin-probes.txt")
+}
+
+fn status_path() -> PathBuf {
+    corpus_dir().join("builtin-status.txt")
+}
+
+/// Splits a `NAME<TAB>rest` file into pairs, skipping `#` comments and blank
+/// lines. Both committed files this test reads have that shape, and reading
+/// them the same way is what keeps "a row exists" meaning the same thing in
+/// each.
+fn read_tab_rows(path: &Path) -> Vec<(String, String)> {
+    let text =
+        fs::read_to_string(path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+    let mut rows = Vec::new();
+    for (index, line) in text.lines().enumerate() {
+        if line.trim().is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let (name, rest) = line.split_once('\t').unwrap_or_else(|| {
+            panic!(
+                "{}:{} has no tab separator: {line:?}",
+                path.display(),
+                index + 1
+            )
+        });
+        rows.push((name.to_string(), rest.to_string()));
+    }
+    rows
+}
+
+/// A run directory nothing else has written to, under Cargo's own per-target
+/// temporary directory. Named with the pid and the clock so two concurrent
+/// runs of this binary cannot collide -- `cargo test` runs test binaries in
+/// parallel and a shared fixed path would let one run's probes appear in
+/// another's search path, which is precisely what the module doc says must
+/// not happen.
+fn fresh_run_root() -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("the clock is after the epoch")
+        .as_nanos();
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("builtin-status-{}-{nanos}", std::process::id()));
+    if root.exists() {
+        fs::remove_dir_all(&root)
+            .unwrap_or_else(|e| panic!("cannot clear {}: {e}", root.display()));
+    }
+    fs::create_dir_all(&root).unwrap_or_else(|e| panic!("cannot create {}: {e}", root.display()));
+    root
+}
+
+/// What one probe produced, beyond its status: kept so the assertions below
+/// can say *why* a row reads the way it does without running anything twice.
+struct Measured {
+    status: Status,
+    /// The executor's stderr. Only read for a `loud` row, where it must name
+    /// the builtin the row is about.
+    rust_stderr: Vec<u8>,
+    /// The executor's whole reply, for `Run::rust_outcomes`.
+    rust_outcome: (Vec<u8>, Vec<u8>, i32),
+    /// A bounded rendering of both sides and which channels disagreed, for
+    /// the report a flipped or divergent row prints.
+    detail: String,
+}
+
+/// Bounds a byte string to a short, readable excerpt, so a divergence's
+/// report stays diagnosable without reprinting a program's entire output.
+fn excerpt(bytes: &[u8]) -> String {
+    const BOUND: usize = 200;
+    let text = String::from_utf8_lossy(bytes);
+    if text.len() > BOUND {
+        format!("{}...", &text[..BOUND])
+    } else {
+        text.into_owned()
+    }
+}
+
+/// Runs one probe under both interpreters and classifies the result.
+fn measure(oracle: &Oracle, run_root: &Path, name: &str, program: &str) -> Measured {
+    let dir = run_root.join(name);
+    fs::create_dir_all(&dir).unwrap_or_else(|e| panic!("cannot create {}: {e}", dir.display()));
+    let file = dir.join("probe.rex");
+    fs::write(&file, format!("{program}\n"))
+        .unwrap_or_else(|e| panic!("cannot write {}: {e}", file.display()));
+    let abs = fs::canonicalize(&file)
+        .unwrap_or_else(|e| panic!("cannot resolve {}: {e}", file.display()));
+    let path_str = abs
+        .to_str()
+        .unwrap_or_else(|| panic!("probe path {} is not valid UTF-8", abs.display()));
+
+    let text = fs::read(&abs).unwrap_or_else(|e| panic!("cannot read {}: {e}", abs.display()));
+    // **The same working directory the oracle gets.** `Oracle::run` runs from
+    // the program's own directory; the crate used to run from the test
+    // process's, which no probe could see until the interpreter grew a current
+    // directory of its own. A `QUALIFY` or `DIRECTORY` probe would otherwise
+    // read as divergent for a reason that is not the builtin.
+    let directory = abs
+        .parent()
+        .unwrap_or_else(|| panic!("{} has no parent directory", abs.display()))
+        .to_path_buf();
+    let rust = interrexx::run_program(
+        path_str,
+        text,
+        interrexx::Invocation::none()
+            .with_directory(directory)
+            .with_deadline(support::oracle::RUN_DEADLINE),
+    );
+    let cpp = oracle.run(&abs);
+
+    // Checked here rather than left to `descriptor_diffs`'s own
+    // `expect_exit_code()` call: that panic has no `name` in it and fires
+    // from inside `support/oracle.rs`, naming neither this builtin nor any
+    // other -- this loop's caller (`classify`) sweeps every in-scope name,
+    // so a panic without one leaves an operator knowing only that some
+    // builtin's probe stopped finishing.
+    assert!(
+        !did_not_finish(&cpp),
+        "{name}: the oracle did not finish: {:?} -- a structural failure, not a \
+         byte comparison",
+        cpp.termination
+    );
+
+    let diffs = descriptor_diffs(&rust, &cpp);
+    // Order matters: a loud failure is a loud failure whatever the oracle
+    // did, and asking "did all three match" first would classify a builtin
+    // whose probe the oracle also rejects as `implemented`.
+    let status = if rust.exit_code == NOT_IMPLEMENTED_EXIT {
+        Status::Loud
+    } else if diffs.is_empty() {
+        Status::Implemented
+    } else {
+        Status::Divergent
+    };
+
+    let detail = format!(
+        "differing: [{}]\n        rust:   stdout={:?} stderr={:?} exit={}\n        \
+         oracle: stdout={:?} stderr={:?} exit={}",
+        diffs.join(", "),
+        excerpt(&rust.stdout),
+        excerpt(&rust.stderr),
+        rust.exit_code,
+        excerpt(&cpp.stdout),
+        excerpt(&cpp.stderr),
+        cpp.expect_exit_code()
+    );
+
+    Measured {
+        status,
+        rust_outcome: (rust.stdout, rust.stderr.clone(), rust.exit_code),
+        rust_stderr: rust.stderr,
+        detail,
+    }
+}
+
+/// Whether `haystack` contains `name` as a whole word -- neither preceded nor
+/// followed by an ASCII alphanumeric.
+fn mentions_as_word(haystack: &[u8], name: &str) -> bool {
+    let text = String::from_utf8_lossy(haystack);
+    let bytes = text.as_bytes();
+    let needle = name.as_bytes();
+    bytes.windows(needle.len()).enumerate().any(|(at, window)| {
+        window == needle
+            && !at
+                .checked_sub(1)
+                .is_some_and(|i| bytes[i].is_ascii_alphanumeric())
+            && !bytes
+                .get(at + needle.len())
+                .is_some_and(u8::is_ascii_alphanumeric)
+    })
+}
+
+/// The measurement itself, plus the derived table it produces.
+struct Run {
+    derived: Vec<(String, Status)>,
+    measured: BTreeMap<String, Measured>,
+    oracle_invocations: usize,
+    /// Every distinct `(stdout, stderr, exit)` this crate's executor produced.
+    rust_outcomes: usize,
+    in_scope: Vec<&'static str>,
+}
+
+/// Classifies every name in `NAMES`, running a probe for each in-scope one.
+fn classify() -> Run {
+    let probes: BTreeMap<String, String> = read_tab_rows(&probes_path()).into_iter().collect();
+    let in_scope = interrexx_inventory::builtins::in_scope();
+    let whole = interrexx_inventory::builtins::wholly_excluded();
+
+    // Both directions between the probe file and the in-scope set, before
+    // anything runs: a missing probe would otherwise surface as a confusing
+    // panic inside the loop, and a spurious one would never be noticed.
+    for name in &in_scope {
+        assert!(
+            probes.contains_key(*name),
+            "{name} is in scope but has no probe in {}",
+            probes_path().display()
+        );
+    }
+    for name in probes.keys() {
+        assert!(
+            in_scope.contains(&name.as_str()),
+            "{} has a probe for {name}, which is not an in-scope builtin",
+            probes_path().display()
+        );
+    }
+
+    let oracle = support::oracle::locate();
+    let run_root = fresh_run_root();
+
+    let mut derived = Vec::new();
+    let mut measured = BTreeMap::new();
+    for name in interrexx_inventory::builtins::NAMES {
+        if whole.contains(name) {
+            derived.push(((*name).to_string(), Status::Excluded));
+            continue;
+        }
+        let program = &probes[*name];
+        let result = measure(&oracle, &run_root, name, program);
+        derived.push(((*name).to_string(), result.status));
+        measured.insert((*name).to_string(), result);
+    }
+
+    // Only on success: a failing run's probe directories are the evidence.
+    let _ = fs::remove_dir_all(&run_root);
+
+    let rust_outcomes = measured
+        .values()
+        .map(|m| &m.rust_outcome)
+        .collect::<std::collections::BTreeSet<_>>()
+        .len();
+
+    Run {
+        derived,
+        measured,
+        oracle_invocations: oracle.invocations(),
+        rust_outcomes,
+        in_scope,
+    }
+}
+
+/// Renders the derived table in `builtin-status.txt`'s data format, so a
+/// task whose change flipped a row can see exactly what to commit.
+fn render(derived: &[(String, Status)]) -> String {
+    let mut out = String::new();
+    for (name, status) in derived {
+        writeln!(out, "{name}\t{}", status.as_str()).expect("writing to a String cannot fail");
+    }
+    out
+}
+
+/// The whole derivation, against the committed file, both directions, plus
+/// the counts and the invocation total. See the module doc for why the
+/// invocation total is the assertion that stops a name-table classifier.
+#[test]
+fn the_status_file_matches_a_live_differential_run() {
+    let run = classify();
+    let committed = read_tab_rows(&status_path());
+
+    for (name, token) in &committed {
+        assert!(
+            Status::parse(token).is_some(),
+            "{}: {name} has status {token:?}, which is not one of implemented/loud/\
+             divergent/excluded",
+            status_path().display()
+        );
+    }
+    let committed: Vec<(String, Status)> = committed
+        .into_iter()
+        .map(|(name, token)| (name, Status::parse(&token).expect("checked just above")))
+        .collect();
+
+    // Set equality, said in both directions with a message that names which
+    // way it went -- "the sets differ" leaves a reader to work out whether
+    // they must re-run the harness or fix the file.
+    let derived_by_name: BTreeMap<&str, Status> = run
+        .derived
+        .iter()
+        .map(|(name, status)| (name.as_str(), *status))
+        .collect();
+    let committed_by_name: BTreeMap<&str, Status> = committed
+        .iter()
+        .map(|(name, status)| (name.as_str(), *status))
+        .collect();
+
+    let derived_text = render(&run.derived);
+    let scratch = Path::new(env!("CARGO_TARGET_TMPDIR")).join("builtin-status.derived.txt");
+    let _ = fs::write(&scratch, &derived_text);
+    let how_to_fix = format!(
+        "The measured table has been written to {}; copy its rows into {} if \
+         the change was intended.",
+        scratch.display(),
+        status_path().display()
+    );
+
+    let missing: Vec<&str> = derived_by_name
+        .keys()
+        .copied()
+        .filter(|name| !committed_by_name.contains_key(name))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "measured but absent from {}: {missing:?}. {how_to_fix}",
+        status_path().display()
+    );
+    let extra: Vec<&str> = committed_by_name
+        .keys()
+        .copied()
+        .filter(|name| !derived_by_name.contains_key(name))
+        .collect();
+    assert!(
+        extra.is_empty(),
+        "committed in {} but not produced by the run: {extra:?} -- either the \
+         name left BuiltinFunctions.cpp's table or the row is a typo",
+        status_path().display()
+    );
+
+    let mut flipped = String::new();
+    for (name, derived_status) in &derived_by_name {
+        let committed_status = committed_by_name[name];
+        if *derived_status != committed_status {
+            let detail = run
+                .measured
+                .get(*name)
+                .map(|m| format!("\n        {}", m.detail))
+                .unwrap_or_default();
+            writeln!(
+                flipped,
+                "  {name}: committed {}, measured {}{detail}",
+                committed_status.as_str(),
+                derived_status.as_str()
+            )
+            .expect("writing to a String cannot fail");
+        }
+    }
+    assert!(
+        flipped.is_empty(),
+        "rows whose measured status differs from {}:\n{flipped}{how_to_fix}",
+        status_path().display()
+    );
+
+    // The counts. `NAMES.len()` and the size of the whole-exclusion set are
+    // both stable facts about the C++ table and the exclusions file, not
+    // facts about how much is implemented, so asserting them here cannot rot
+    // as a task lands.
+    assert_eq!(
+        run.derived.len(),
+        interrexx_inventory::builtins::NAMES.len(),
+        "one row per builtin"
+    );
+    let excluded = run
+        .derived
+        .iter()
+        .filter(|(_, status)| *status == Status::Excluded)
+        .count();
+    assert_eq!(
+        excluded,
+        interrexx_inventory::builtins::wholly_excluded().len(),
+        "the excluded rows are exactly the names excluded outright"
+    );
+    assert_eq!(excluded, 0, "no builtin is wholly excluded");
+    assert_eq!(
+        run.derived.len() - excluded,
+        81,
+        "all 81 builtins are in scope"
+    );
+
+    // The assertion a classifier that consults only name tables cannot pass.
+    assert_eq!(
+        run.oracle_invocations,
+        run.in_scope.len(),
+        "the oracle was invoked {} times for {} in-scope builtins; every \
+         in-scope name must be measured by running its probe, and no excluded \
+         name may run anything",
+        run.oracle_invocations,
+        run.in_scope.len()
+    );
+    // With the pair above: one probe per in-scope name.
+    assert_eq!(
+        run.oracle_invocations, 81,
+        "one oracle run per in-scope name"
+    );
+
+    // The other side's guard, and it is not an invocation count: a
+    // `run_program` replaced by a canned reply is still called once per
+    // name, so counting calls proves nothing. What proves the executor read
+    // its input is that its replies differ across inputs.
+    assert!(
+        run.rust_outcomes >= 2,
+        "this crate's executor produced the same (stdout, stderr, exit) for \
+         all {} in-scope probes; a constant reply satisfies every other \
+         assertion in this test, so the differential is only a measurement \
+         if the executor's answer depends on the program it was given",
+        run.in_scope.len()
+    );
+}
+
+/// A `loud` row must be loud about *its own* builtin.
+#[test]
+fn every_loud_row_is_loud_about_its_own_builtin() {
+    let run = classify();
+    let mut wrong = String::new();
+    for (name, result) in &run.measured {
+        if result.status != Status::Loud {
+            continue;
+        }
+        if !mentions_as_word(&result.rust_stderr, name) {
+            writeln!(
+                wrong,
+                "  {name}: {:?}",
+                String::from_utf8_lossy(&result.rust_stderr)
+            )
+            .expect("writing to a String cannot fail");
+        }
+    }
+    assert!(
+        wrong.is_empty(),
+        "these rows exited NOT_IMPLEMENTED_EXIT without their own builtin's \
+         name in the message, so the row is answering for something else:\n{wrong}"
+    );
+}
+
+/// The names `src/builtin/string.rs` runs, which must every one read
+/// `implemented`.
+const STRING_FAMILY: &[&str] = &[
+    "ABBREV",
+    "CENTER",
+    "CENTRE",
+    "CHANGESTR",
+    "COMPARE",
+    "COPIES",
+    "COUNTSTR",
+    "DELSTR",
+    "INSERT",
+    "LASTPOS",
+    "LEFT",
+    "LENGTH",
+    "LOWER",
+    "OVERLAY",
+    "POS",
+    "REVERSE",
+    "RIGHT",
+    "SPACE",
+    "STRIP",
+    "SUBSTR",
+    "TRANSLATE",
+    "UPPER",
+    "VERIFY",
+];
+
+/// Every name in [`STRING_FAMILY`] is committed `implemented`.
+#[test]
+fn every_string_builtin_is_implemented() {
+    let committed: BTreeMap<_, _> = read_tab_rows(&status_path()).into_iter().collect();
+    let mut wrong = String::new();
+    for name in STRING_FAMILY {
+        match committed.get(*name).map(String::as_str) {
+            Some("implemented") => {}
+            Some(other) => {
+                writeln!(wrong, "  {name}: {other}").expect("writing to a String cannot fail");
+            }
+            None => {
+                writeln!(wrong, "  {name}: no row at all")
+                    .expect("writing to a String cannot fail");
+            }
+        }
+    }
+    assert!(
+        wrong.is_empty(),
+        "these string builtins are not committed as implemented in {}:\n{wrong}",
+        status_path().display()
+    );
+}
+
+/// The names `src/builtin/state.rs` runs. [`STRING_FAMILY`]'s own doc has
+/// the argument for writing the list down rather than deriving it.
+const STATE_FAMILY: &[&str] = &[
+    "ADDRESS",
+    "ARG",
+    "CONDITION",
+    "DIGITS",
+    "ERRORTEXT",
+    "FORM",
+    "FUZZ",
+    "GC",
+    "QUEUED",
+    "SOURCELINE",
+    "TRACE",
+];
+
+/// Every name in [`STATE_FAMILY`] is committed `implemented`, for
+/// [`every_string_builtin_is_implemented`]'s reason.
+#[test]
+fn every_state_builtin_is_implemented() {
+    let committed: BTreeMap<_, _> = read_tab_rows(&status_path()).into_iter().collect();
+    let mut wrong = String::new();
+    for name in STATE_FAMILY {
+        match committed.get(*name).map(String::as_str) {
+            Some("implemented") => {}
+            Some(other) => {
+                writeln!(wrong, "  {name}: {other}").expect("writing to a String cannot fail");
+            }
+            None => {
+                writeln!(wrong, "  {name}: no row at all")
+                    .expect("writing to a String cannot fail");
+            }
+        }
+    }
+    assert!(
+        wrong.is_empty(),
+        "these state builtins are not committed as implemented in {}:\n{wrong}",
+        status_path().display()
+    );
+}
+
+/// Committing a `divergent` row requires a `# KNOWN GAP: <NAME> #<N>` comment
+/// line in the status file, `<N>` being the GitHub issue that tracks it. A
+/// divergence is a wrong answer, and absorbing one into the status file must
+/// cost more than a one-line edit.
+#[test]
+fn every_divergent_row_has_a_known_gap() {
+    let committed = read_tab_rows(&status_path());
+    let text = fs::read_to_string(status_path()).expect("the status file");
+    for (name, token) in &committed {
+        if Status::parse(token) != Some(Status::Divergent) {
+            continue;
+        }
+        let prefix = format!("# KNOWN GAP: {name} #");
+        assert!(
+            text.lines()
+                .any(|line| line.strip_prefix(&prefix).is_some_and(
+                    |issue| !issue.is_empty() && issue.chars().all(|c| c.is_ascii_digit())
+                )),
+            "{name} is committed as divergent, which records a wrong answer \
+             rather than a missing one. That needs a comment line reading \
+             \"{prefix}<N>\" in {}, <N> being the GitHub issue that tracks it.",
+            status_path().display()
+        );
+    }
+}
+
+/// The word-boundary rule [`mentions_as_word`] rests on, pinned in both
+/// directions. Without the negative case the function could return `true`
+/// unconditionally and every caller would still look satisfied.
+#[test]
+fn a_name_is_only_mentioned_when_it_stands_alone() {
+    assert!(mentions_as_word(
+        br#"rexx-exec: routine "WORD" is not implemented"#,
+        "WORD"
+    ));
+    assert!(mentions_as_word(
+        b"rexx-exec: ADDRESS is not implemented",
+        "ADDRESS"
+    ));
+    assert!(!mentions_as_word(
+        br#"rexx-exec: routine "WORDS" is not implemented"#,
+        "WORD"
+    ));
+    assert!(!mentions_as_word(
+        br#"rexx-exec: routine "C2X" is not implemented"#,
+        "BITAND"
+    ));
+    assert!(!mentions_as_word(b"", "LENGTH"));
+}

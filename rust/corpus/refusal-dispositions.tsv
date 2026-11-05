@@ -1,7 +1,7 @@
 # Why each loud refusal stays.
 #
-# crates/rexx-exec/tests/refusal_dispositions.rs reads every `Loud` constructor in
-# crates/rexx-exec/src and requires a row here for each one; it fails on a constructor
+# crates/interrexx/tests/refusal_dispositions.rs reads every `Loud` constructor in
+# crates/interrexx/src and requires a row here for each one; it fails on a constructor
 # with no row, on a row whose constructor is gone, and on a citation that does not
 # resolve.
 #
@@ -28,16 +28,16 @@ expose_receiver	GUARD	EXPOSE from methods of Directory, .local, .environment and
 expression	GUARD	every ExprKind evaluates (tests/owners.rs: EXPR_TAGS are all in scope, EXPECTED_OUT_OF_SCOPE is empty); each site is a match arm for a form its caller routes elsewhere (census d-guard)
 fork_child	DEVIATION	Deviation 42: SysFork, whose forked child cannot continue without the timer thread and the joining main thread; not supported
 frame_without_executable	GUARD	the probes reached this site only on a library routine's frame, which answers its Routine object (rust/corpus/lang/stackframe_library_routine_executable.rex, rust/corpus/lang/stackframe_merged_library_executable.rex) and refused on no other frame
-handle_descriptor	DEVIATION	Deviation 35: a HANDLE: stream on a descriptor other than 0, 1 or 2 needs unsafe to adopt; the oracle's HANDLE: stream never reaches its descriptor (crates/rexx-exec/tests/stream_handle.rs)
+handle_descriptor	DEVIATION	Deviation 35: a HANDLE: stream on a descriptor other than 0, 1 or 2 needs unsafe to adopt; the oracle's HANDLE: stream never reaches its descriptor (crates/interrexx/tests/stream_handle.rs)
 hash_collection_without_store	DEVIATION	oracle-crashes.txt entry 50: the oracle dies on a hash class instance Class~new builds with .Class as the scope; the other hash.rs refusals (the condition object, a subclass whose INIT does not forward, the package tables) answer before this site
 immovable_reply	LIMIT	Deviation 15
 instruction	GUARD	every InstructionKind executes (tests/owners.rs: INSTRUCTION_TAGS are all in scope, EXPECTED_OUT_OF_SCOPE is empty); each site is a match arm for a kind its caller routes elsewhere (census d-guard)
-internal_routine	GUARD	every row of the internal-package routine table has a body: rexx-exec tests/internal_routines.rs every_internal_routine_row_runs
+internal_routine	GUARD	every row of the internal-package routine table has a body: interrexx tests/internal_routines.rs every_internal_routine_row_runs
 interpreter_table_copy	GUARD	a sweep found no such receiver, since every native_instance caller builds another class and .environment, .local, .methods and .routines are instance stores
 inverted_wait	LIMIT	Deviation 14
 jump_out_of_range	GUARD	compiler invariant: a jump stays inside its range (census d-guard)
 library_procedure_gone	GUARD	a held library is never released (refusal-sites.tsv: library_method_package_blame.rex, library_routine_package_blame.rex agree)
-library_source	GUARD	rexx-lib pins each embedded .orx by sha256, and every probe ran past the library bootstrap
+library_source	GUARD	interrexx-lib pins each embedded .orx by sha256, and every probe ran past the library bootstrap
 loop_op_off_its_node	GUARD	compiler invariant: a DO/LOOP op names its own loop (census d-guard)
 metaclass_new_reused_class	DEVIATION	Deviation 32: a metaclass NEW answering a class Class~new did not build or a subclass already took, which the oracle rewires into the new subclass in place
 missing_body	GUARD	every body selector names a directive index the parser fills (refusal-sites.tsv: an instance reading a generated accessor agrees)
@@ -65,9 +65,9 @@ stale_handle	DEVIATION	Deviation 95: a local reference protects its object only 
 store_op_off_its_node	GUARD	compiler invariant: a Store op names its own assignment (census d-guard)
 string_answer_not_a_string	DEVIATION	Deviation 30: a user STRING method answering an object with no string value, which the oracle converts to .nil, read by a consumer of its bytes
 unbound_method	GUARD	a sweep sent every documented method with its required arguments and every scope override, and Interp::invocable found each resolved method in a table
-unfilled_slot	GUARD	no populated interface table keeps a refusing stub: rexx-api tests/layout.rs no_populated_table_member_refuses compares every member of every populated table with its stub
+unfilled_slot	GUARD	no populated interface table keeps a refusing stub: interrexx-api tests/layout.rs no_populated_table_member_refuses compares every member of every populated table with its stub
 unknown_receiver	GUARD	context and weak reference sends (b_weakref_*, b2_run_hasmethod_on_weakref) and a Method copy passed to define, setMethod and run answer; the rest are handles whose object is gone or kinds receiver_kind has no arm for
 unrecorded_executable	GUARD	invariant: every Method and Routine object is recorded where it is built and its record is dropped only with the object; copies, Method and Routine subclass instances, setMethod, define and defineMethods with method objects answer as the oracle does
 unreadable_collection	GUARD	env_supplier; with no owner it is a directory holding an entry the library bootstrap fills, and only STDQUE refused
-unresolved_call	GUARD	built for an excluded builtin, and rexx-exec tests/coverage.rs the_builtin_exclusion_set_matches_the_committed_file holds the exclusions empty; and for BuiltinTarget::Gap, which src/builtin/tests.rs resolve_partitions_the_in_scope_set_into_rows_and_gaps asserts no name reaches
+unresolved_call	GUARD	built for an excluded builtin, and interrexx tests/coverage.rs the_builtin_exclusion_set_matches_the_committed_file holds the exclusions empty; and for BuiltinTarget::Gap, which src/builtin/tests.rs resolve_partitions_the_in_scope_set_into_rows_and_gaps asserts no name reaches
 unsatisfiable_wait	LIMIT	Deviation 20

@@ -1,0 +1,12 @@
+[package]
+name = "interrexx-extract"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Extracts test programs and reference tables from the ooTest and documentation sources"
+publish = false
+
+[lints]
+workspace = true

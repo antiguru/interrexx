@@ -1,0 +1,21 @@
+[package]
+name = "interrexx-rxapi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The API service of interrexx: external queues, registrations and the macrospace"
+
+[features]
+# Exposes `transport::direct`; never in a default build.
+test-direct = []
+
+[dependencies]
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
+rustix = { version = "1.1.4", features = ["fs", "net", "process"] }
+# `classic_procedure`: `rxsubcom LOAD` loads a registration's library and finds its handler.
+interrexx-api.workspace = true
+
+[lints]
+workspace = true

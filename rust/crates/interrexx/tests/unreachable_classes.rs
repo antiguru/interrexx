@@ -1,0 +1,131 @@
+//! A class `corpus/docs/class-set.txt` marks `unreachable` still
+//! has no route to an instance, on both engines and on the oracle.
+
+mod gate_tables;
+mod support;
+mod watchdog;
+
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use gate_tables::{Report, excerpt};
+use interrexx::{Invocation, Outcome};
+use support::oracle::{CppOutcome, did_not_finish, wrapped_exit_code};
+
+/// The `class-set.txt` status this guard is about.
+const UNREACHABLE_STATUS: &str = "unreachable";
+
+/// The `class-set.txt` placeholder for a class with no construction program.
+const NO_PROGRAM: &str = "-";
+
+fn corpus_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus")
+}
+
+/// The classes `class-set.txt` marks `unreachable`, each with the documented
+/// construction route gate table C's instance arm asks.
+fn unreachable_classes() -> Vec<(String, String)> {
+    let path = corpus_dir().join("docs/class-set.txt");
+    let text =
+        fs::read_to_string(&path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+    let mut rows = Vec::new();
+    for line in text.lines() {
+        if line.trim().is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let row: Vec<&str> = line.split('\t').collect();
+        assert_eq!(row.len(), 9, "{}: {line:?}", path.display());
+        if row[4] != UNREACHABLE_STATUS {
+            continue;
+        }
+        let route = match row[6] {
+            NO_PROGRAM => format!(".{}~new", row[0]),
+            program => program.to_string(),
+        };
+        rows.push((row[0].to_string(), route));
+    }
+    rows
+}
+
+/// Whether an outcome is a run that reached the `say` below the construction.
+fn constructed(stdout: &[u8]) -> bool {
+    !stdout.is_empty()
+}
+
+#[test]
+fn a_class_marked_unreachable_still_has_no_route_to_an_instance() {
+    let oracle = support::oracle::locate();
+    let classes = unreachable_classes();
+    assert!(
+        !classes.is_empty(),
+        "no row of class-set.txt carries the `{UNREACHABLE_STATUS}` status, so this guard has \
+         no subject. Derived from the column rather than from a list of names, an empty set is \
+         the one way it could pass while asserting nothing"
+    );
+
+    let staging = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("unreachable-classes-{}", std::process::id()));
+    let mut report = Report::new(
+        "interrexx -- every class-set.txt row marked `unreachable` still refuses its \
+         documented construction route",
+    );
+    let mut answered: Vec<String> = Vec::new();
+
+    for (name, route) in &classes {
+        let dir = staging.join(name);
+        fs::create_dir_all(&dir).unwrap_or_else(|e| panic!("cannot create {}: {e}", dir.display()));
+        let file = dir.join("probe.rex");
+        let text = format!(
+            "/* {name} is `{UNREACHABLE_STATUS}` in corpus/docs/class-set.txt, so its\n\
+             \x20  documented construction route must not answer an instance. Derived by\n\
+             \x20  crates/interrexx/tests/unreachable_classes.rs on every run. */\n\
+             o = {route}\n\
+             say o\n"
+        );
+        fs::write(&file, &text).unwrap_or_else(|e| panic!("cannot write {}: {e}", file.display()));
+        let abs = fs::canonicalize(&file)
+            .unwrap_or_else(|e| panic!("cannot canonicalize {}: {e}", file.display()));
+        let path = abs.to_str().expect("the staging path is valid UTF-8");
+
+        let crate_side: Outcome =
+            watchdog::run_bounded(path, text.clone().into_bytes(), Invocation::none());
+        let cpp: CppOutcome = oracle.run(&abs);
+        assert!(
+            !did_not_finish(&cpp),
+            "the oracle did not finish {route}: {:?}",
+            cpp.termination
+        );
+
+        report.line("");
+        report.line(&format!("  {name}: {route}"));
+        for (side, exit, stdout, stderr) in [
+            (
+                "crate",
+                wrapped_exit_code(crate_side.exit_code),
+                &crate_side.stdout,
+                &crate_side.stderr,
+            ),
+            ("oracle", cpp.expect_exit_code(), &cpp.stdout, &cpp.stderr),
+        ] {
+            report.line(&format!(
+                "      {side:<12} rc={exit:<4} out={} err={}",
+                excerpt(stdout),
+                excerpt(stderr),
+            ));
+            if constructed(stdout) {
+                answered.push(format!("{name} ({route}) on the {side}"));
+            }
+        }
+    }
+
+    gate_tables::emit_uncaptured(&report.finish());
+    assert!(
+        answered.is_empty(),
+        "a class-set.txt row marked `{UNREACHABLE_STATUS}` has a route to an instance after \
+         all: {answered:?}. Gate table C reads that status as the reason a whole instance arm \
+         can never agree, so a construction that answers makes those rows a claim about \
+         nothing",
+    );
+
+    let _ = fs::remove_dir_all(&staging);
+}

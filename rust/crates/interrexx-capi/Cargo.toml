@@ -1,0 +1,24 @@
+[package]
+name = "interrexx-capi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The shared library librexx.so exporting interrexx's C entry points"
+
+[lib]
+name = "rexx"
+# `rlib` beside the `cdylib` so `cargo test` builds the shared object its tests read.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# The interpreter the exports drive.
+interrexx.workspace = true
+# The `#[repr(C)]` structs of `api/rexx.h` and `api/oorexxapi.h`.
+interrexx-api.workspace = true
+# `malloc` and `free`, which `librexxapi`'s exports, owned here, use.
+libc = "0.2.186"
+
+[lints]
+workspace = true

@@ -1,0 +1,16 @@
+[package]
+name = "interrexx-classes"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Class and method-dictionary model for interrexx"
+
+[dependencies]
+# A class's identity is an `ObjRef`; this crate does not touch the
+# heap, `Object` or dispatch, only the identity type a class is keyed by.
+interrexx-core.workspace = true
+
+[lints]
+workspace = true

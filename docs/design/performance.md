@@ -48,7 +48,7 @@ budget is a small whole-process percentage per program, so cumulative drift is v
 activities). `rust/bench-rexxcps/rexxcps.rex` is REXXCPS with fixed loop counts, so both sides do
 identical work. Each program's output is deterministic, and the README says what each covers.
 
-`rust/crates/rexx-bench` has the tools: `rexx-bench-suite` (interleaved interrexx against ooRexx
+`rust/crates/interrexx-bench` has the tools: `rexx-bench-suite` (interleaved interrexx against ooRexx
 with counters), `rexx-arms` (two builds of interrexx, instruction counts), `rexx-time` (cold
 start) and `rexx-bench-band` (run-to-run spread of one comparison).
 

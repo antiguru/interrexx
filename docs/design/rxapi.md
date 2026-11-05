@@ -1,7 +1,7 @@
 # The API service
 
 External data queues, the macrospace, and the function, subcommand and exit registries live in a
-per-user service process, `rxapi`, written in Rust (`rust/crates/rexx-rxapi`). It does not speak
+per-user service process, `rxapi`, written in Rust (`rust/crates/interrexx-rxapi`). It does not speak
 ooRexx's protocol, and an interrexx client never talks to ooRexx's daemon or the reverse.
 
 Return codes below are the `rexxapidefs.h` values. Names of queues, macros, registrations and
@@ -100,9 +100,9 @@ past 256 MiB of images returns 1. Load with a name list loads only those names.
 A Unix stream socket. A connection opens with `hello` and `welcome`, carrying the protocol version.
 After that each direction carries frames: an 8-byte length, an 8-byte call number, and a body
 encoding one request or one reply, little-endian and length-prefixed. The vocabulary is the
-`Request` and `Reply` enums in `rexx-rxapi/src/message.rs`.
+`Request` and `Reply` enums in `interrexx-rxapi/src/message.rs`.
 
-The core is a state machine (`rexx-rxapi/src/core`) that takes one request and answers one reply,
+The core is a state machine (`interrexx-rxapi/src/core`) that takes one request and answers one reply,
 with no sockets, threads or clocks. A request that must wait answers "parked", and its reply is sent
 when a later request satisfies it. The daemon is a thread per client around one owner of the core.
 A direct in-process transport serves tests, so each test owns a fresh core.

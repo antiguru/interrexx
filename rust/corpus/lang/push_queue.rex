@@ -14,9 +14,9 @@
 /* store anything at all -- a test that cannot fail -- so the >>> lines below*/
 /* are the whole point, not decoration. The interleaved storage order, and   */
 /* whether run.rs's arms write to the queue at all, are pinned by queue.rs's */
-/* own unit tests instead (rust/crates/rexx-exec/src/queue.rs).              */
+/* own unit tests instead (rust/crates/interrexx/src/queue.rs).              */
 /* lang/pull_queue.rex reads the order back on stdout, and                   */
-/* crates/rexx-exec/tests/input_oracle.rs's `queue-round-trip` row does it   */
+/* crates/interrexx/tests/input_oracle.rs's `queue-round-trip` row does it   */
 /* against a console holding different lines.                                */
 /*                                                                           */
 /* Ends with a bare EXIT, whose value line is pinned against the oracle by   */

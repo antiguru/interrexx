@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Insert COUNT never-called functions, kept by a #[used] static, into TREE's
-rust/crates/rexx-exec/src/ir/drive.rs.
+rust/crates/interrexx/src/ir/drive.rs.
 
 usage: layout-pad.py TREE COUNT
 TREE is an extracted copy of the repository, not the working tree.
@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 tree, count = Path(sys.argv[1]), int(sys.argv[2])
-drive = tree / "rust/crates/rexx-exec/src/ir/drive.rs"
+drive = tree / "rust/crates/interrexx/src/ir/drive.rs"
 text = drive.read_text()
 anchor = "\nimpl Interp {\n"
 assert text.count(anchor) >= 1 and "layout_pad_" not in text, drive

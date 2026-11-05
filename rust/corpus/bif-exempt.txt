@@ -10,7 +10,7 @@
 #
 # For a row that fails loudly the `unblocked_by` column is not hand-written: it
 # is the owner the refusal's own message names, re-derived on every run, so this
-# file cannot drift from `rexx-exec`'s refusals. A derived owner says what a row
+# file cannot drift from `interrexx`'s refusals. A derived owner says what a row
 # hits first, not what would make it pass.
 #
 # MISMATCH, RAISE-MISMATCH and ANOMALY name neither an owner nor a construct, so

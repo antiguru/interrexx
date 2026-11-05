@@ -1,0 +1,1948 @@
+//! `CALL` and function calls: resolving the name, running the arguments, entering the callee.
+
+use crate::activity::LevelName;
+
+use super::{
+    Activation, BehaviourId, Body, BodyKey, CallContext, CallType, Code, Ended, Expr, ExprKind,
+    Failure, Flow, Inherited, InstalledRoutine, Interp, Loud, ObjRef, Raised, Rc, Resolved,
+    VarRefHome, body_of, builtin,
+};
+
+/// The name an internal routine's call passes it, which its frame and
+/// traceback line report.
+#[derive(Clone, Copy)]
+pub(crate) enum InternalName<'a> {
+    /// The row's name, upcased: a call that found the row by its own name.
+    Upper,
+    /// The row's name as the row spells it: `Routine~call`.
+    Row,
+    /// The name it was called by.
+    Called(&'a [u8]),
+}
+
+/// Swaps `args` with the buffer `slot` holds, which nothing else shares
+/// between calls.
+#[inline(always)]
+fn lend_arguments(slot: &mut Rc<Vec<Option<ObjRef>>>, args: &mut Vec<Option<ObjRef>>) {
+    match Rc::get_mut(slot) {
+        Some(buffer) => std::mem::swap(buffer, args),
+        None => lend_shared_arguments(slot, args),
+    }
+}
+
+/// [`lend_arguments`] where something else holds `slot` too.
+#[cold]
+#[inline(never)]
+fn lend_shared_arguments(slot: &mut Rc<Vec<Option<ObjRef>>>, args: &mut Vec<Option<ObjRef>>) {
+    let mut owned = Vec::clone(slot);
+    std::mem::swap(&mut owned, args);
+    *slot = Rc::new(owned);
+}
+
+/// A new slot on `levels`, for a call deeper than any before it.
+#[cold]
+#[inline(never)]
+fn add_internal_level(
+    levels: &mut Vec<crate::activity::InternalLevel>,
+) -> &mut crate::activity::InternalLevel {
+    levels.push(crate::activity::InternalLevel::spare());
+    levels.last_mut().expect("just pushed")
+}
+
+/// A call's target as it stands when its arguments are about to run.
+#[derive(Clone, Copy)]
+pub(crate) enum CallResolution<'a> {
+    /// Decided before the arguments: a label or a builtin, a namespace-qualified
+    /// routine, or a `findRoutine` answer a call site keeps.
+    Settled(Resolved),
+    /// Searched for once the arguments have run, as `externalCall` is
+    /// (`expression/ExpressionFunction.cpp:185-210`): what `site` keeps by
+    /// then, or a search whose answer `site` keeps once the call returns.
+    AfterArguments {
+        site: Option<crate::ir::CallSiteSlot<'a>>,
+    },
+}
+
+/// What a call site keeps once the call through it that found `resolved`
+/// under `generation` returns: the oracle sets `externalTarget` only after
+/// `externalCall` comes back (`instructions/CallInstruction.cpp:191-197`,
+/// `expression/ExpressionFunction.cpp:206-210`), so a call that raised keeps
+/// nothing. The copy `resolved` names is pinned until the call ends.
+#[derive(Clone, Copy)]
+pub(crate) struct SiteKeep {
+    pub(crate) site: u16,
+    resolved: Resolved,
+    generation: u32,
+    /// The hold the site takes on a `::ROUTINE` of another program.
+    hold: Option<crate::run::SiteHold>,
+}
+
+/// How a call through a call site ended, for its [`SiteKeep`].
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SiteCall {
+    /// The callee came back, with or without a value.
+    Returned,
+    /// The callee's body was entered and has yet to end.
+    Entered,
+    /// The call raised.
+    Raised,
+}
+
+impl SiteCall {
+    /// How a start `started` ended.
+    pub(crate) fn of<T>(started: &Result<Started<T>, Failure>) -> SiteCall {
+        match started {
+            Ok(Started::Ran(_)) => SiteCall::Returned,
+            Ok(Started::Entered) => SiteCall::Entered,
+            Err(_) => SiteCall::Raised,
+        }
+    }
+
+    /// How a begun call `begun` ended.
+    fn of_begun(begun: &Result<Begun, Failure>) -> SiteCall {
+        match begun {
+            Ok(Begun::Done(_)) => SiteCall::Returned,
+            Ok(Begun::Entered) => SiteCall::Entered,
+            Err(_) => SiteCall::Raised,
+        }
+    }
+}
+
+/// Which of the two activation-pushing outcomes a resolved call took, kept
+/// past the push so the decisions that follow it can read it.
+#[derive(Copy, Clone)]
+pub(super) enum Entered {
+    Label(usize),
+    Routine(InstalledRoutine),
+}
+
+/// How the callee was reached: written in the program, or delivered to it.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub(crate) enum CallEntry {
+    /// A `CALL`, an internal function call, or either form reaching a
+    /// `::ROUTINE` -- a call the program's own text asked for.
+    Written,
+    /// A `CALL ON` handler, run because a condition was delivered.
+    Trap,
+}
+
+/// What [`Interp::begin_call`] left for its caller to do.
+pub(crate) enum Begun {
+    /// The callee ran no activation, and this is what it answered.
+    Done(Ended),
+    /// The callee's activation is pushed and its body has yet to run.
+    Entered,
+}
+
+/// The caller's level state a pushed call saved on
+/// [`Activity::call_tails`](crate::activity::Activity), which
+/// [`Interp::finish_call`] puts back.
+pub(crate) struct CallTail {
+    kind: TailKind,
+    saved_clause_state: crate::clause::SavedClauseState,
+    saved_base: usize,
+    saved_offset: usize,
+    saved_line: Option<usize>,
+    saved_context: CallContext,
+    stack: LentStack,
+}
+
+/// Which activation a [`CallTail`] was pushed for.
+#[derive(Copy, Clone, PartialEq, Eq)]
+enum TailKind {
+    /// An internal label, sharing its caller's pool unless it says otherwise.
+    Label,
+    /// A `::ROUTINE`.
+    Routine,
+    /// A `::METHOD` body entered by a send, or the rest of one a `REPLY`
+    /// moved to a new activity.
+    Method,
+}
+
+impl CallTail {
+    /// The tail a method activation just pushed leaves, holding the
+    /// caller's level state it replaced.
+    pub(crate) fn method(
+        saved_context: CallContext,
+        saved_clause_state: crate::clause::SavedClauseState,
+        saved_base: usize,
+        saved_offset: usize,
+        saved_line: Option<usize>,
+    ) -> CallTail {
+        CallTail {
+            kind: TailKind::Method,
+            saved_clause_state,
+            saved_base,
+            saved_offset,
+            saved_line,
+            saved_context,
+            stack: LentStack::Kept,
+        }
+    }
+}
+
+/// What a call does with the argument stack when it finishes.
+enum LentStack {
+    /// Leaves it as the callee left it.
+    Kept,
+    /// Empties it: the call's run was the whole of it.
+    Emptied,
+    /// Puts back the caller's, which the call took.
+    Lent(Vec<Option<ObjRef>>),
+}
+
+/// A call op's start: answered without running a body, or its callee entered.
+pub(crate) enum Started<T> {
+    Ran(T),
+    Entered,
+}
+
+/// The receiver the callee's calling convention carries, given the
+/// caller's own.
+pub(super) fn entered_receiver(
+    entered: Entered,
+    entry: CallEntry,
+    caller: Option<ObjRef>,
+) -> Option<ObjRef> {
+    match (entered, entry) {
+        (Entered::Label(_), CallEntry::Written) => caller,
+        (Entered::Label(_), CallEntry::Trap) | (Entered::Routine(_), _) => None,
+    }
+}
+
+/// How many activations may be live at once before `CALL` raises 11.1
+/// ("Insufficient control stack space", `Raised::insufficient_stack`).
+/// ```text
+/// enclosing DO blocks per activation | deepest surviving (debug) | (release)
+///                                  0 |                    22,534 |   133,150
+///                                  1 |                    14,062 |    94,518
+///                                  5 |                     5,616 |         -
+///                                 25 |                     1,403 |         -
+/// ```
+pub(crate) const MAX_ACTIVATION_DEPTH: usize = 10_000;
+
+impl Interp {
+    /// Resolves `name` to the thing a call of it runs, with no argument
+    /// evaluated and nothing entered: [`Interp::resolve_fixed_call`], then
+    /// [`Interp::resolve_routine_call`].
+    pub(crate) fn resolve_call(
+        &mut self,
+        name: &[u8],
+        search_labels: bool,
+    ) -> Result<Resolved, Failure> {
+        match self.resolve_fixed_call(name, search_labels)? {
+            Some(resolved) => Ok(resolved),
+            None => self.resolve_routine_call(name),
+        }
+    }
+
+    /// The half of a call's resolution the oracle decides before its
+    /// arguments run: a label (`RexxExpressionFunction::resolve`,
+    /// `expression/ExpressionFunction.cpp:154`) or a builtin (the parser's
+    /// `builtinIndex`), or the refusal of a builtin this crate excludes. `None`
+    /// for a name that is none of those.
+    pub(crate) fn resolve_fixed_call(
+        &self,
+        name: &[u8],
+        search_labels: bool,
+    ) -> Result<Option<Resolved>, Failure> {
+        // **Resolved against the running *activation's* body, not against the
+        // body a caller is walking, and the two differ inside an `INTERPRET`
+        // fragment.** A fragment's `labels` is always empty -- a label in
+        // interpreted text is error 47.1 -- so searching the walked body would
+        // make every `CALL` inside a fragment unresolvable. Measured on the
+        // oracle: `interpret "call sub"` runs the enclosing program's `sub:`.
+        // Found by running the composition rather than by reading the code:
+        // the first version of this searched the walked body and passed every
+        // test that had no `INTERPRET` in it.
+        let program = Rc::clone(&self.activation().program);
+        let selector = self.activation().body;
+        let Some(activation_body) = body_of(&program, selector) else {
+            return Err(Loud::missing_body().into());
+        };
+        let label = if search_labels {
+            activation_body.labels.get(name).copied()
+        } else {
+            None
+        };
+        let resolved = match label {
+            Some(target) => Resolved::Label(target),
+            // **`resolve` rather than `is_builtin`, and it answers the same
+            // question.** Every row's name is in scope
+            // (`every_implemented_row_names_an_in_scope_builtin`) and a name in
+            // scope with no row comes back `Gap`, so `resolve(name).is_some()`
+            // and `is_builtin(name)` agree on every name. It costs the same
+            // one lookup and keeps which builtin it found.
+            None if let Some(target) = builtin::resolve(name) => Resolved::Builtin(target),
+            // A builtin excluded outright is still a builtin, so it
+            // sits here rather than behind the routine lookup -- see
+            // `builtin::is_excluded_builtin`'s own doc for why neither the
+            // routine step nor 43.1 is an acceptable answer for one.
+            None if builtin::is_excluded_builtin(name) => {
+                return Err(Loud::unresolved_call(name).into());
+            }
+            None => return Ok(None),
+        };
+        Ok(Some(resolved))
+    }
+
+    /// The half of a call's resolution the oracle searches once the
+    /// arguments have run (`RexxActivation::externalCall`,
+    /// `execution/RexxActivation.cpp:3062-3105`), for a name
+    /// [`Interp::resolve_fixed_call`] answered `None` for.
+    pub(crate) fn resolve_routine_call(&mut self, name: &[u8]) -> Result<Resolved, Failure> {
+        let resolved = match self.package_routine_lookup(name)? {
+            Some(resolved) => resolved,
+            // **Ahead of the external file search and behind
+            // everything above it.** `Setup.cpp` resolves
+            // `CoreClasses.orx`'s two `CALL`s against the interpreter's
+            // own directory, which is neither a label, a builtin nor a
+            // `::ROUTINE`; this crate embeds those files instead. Gated
+            // on the bootstrap running, so the names mean nothing to a
+            // program.
+            None if self.library_bootstrap
+                && let Some(program) = interrexx_lib::lookup(&String::from_utf8_lossy(name)) =>
+            {
+                Resolved::Library(program)
+            }
+            // A macro searched before the routines below
+            // (`SystemInterpreter::invokeExternalFunction`).
+            None if crate::builtin::rexxutil::macros::macro_position(name)
+                == Some(crate::builtin::rexxutil::macros::BEFORE) =>
+            {
+                Resolved::Macro
+            }
+            // **A routine of the oracle's own internal packages**, which
+            // it consults here -- after the running package's routines and
+            // before the external file search. Answering 43.1 for one of
+            // these says "no such routine" for a name the oracle does
+            // have, which a program cannot tell from its own typo.
+            None if let Some(row) = crate::internal_routines::lookup(name) => match row.body {
+                Some(_) => Resolved::Internal(row),
+                None => return Err(Loud::internal_routine(name).into()),
+            },
+            // **A routine a loaded library exports**, whichever load
+            // registered it. The oracle keeps these in the table the
+            // internal packages' routines are in, where a library routine
+            // replaces an internal one of the same name; here the internal
+            // one is found first.
+            None if let Some(slot) = self.package_routine(name) => Resolved::LibraryRoutine(slot),
+            // **The external file search, which the oracle performs
+            // before answering 43.1.** Only whether it resolves is
+            // decided here; the path is searched for again where the
+            // file is entered, because a `Resolved` is `Copy` and this
+            // resolver is `&self`.
+            // **A registered classic function**, which `SystemInterpreter::invokeExternalFunction`
+            // tries after the macros searched first and before the external file search.
+            None if self.classic_function(name).is_some() => Resolved::Registered,
+            None if self.external_program(name).is_some() => Resolved::External,
+            None if crate::builtin::rexxutil::macros::macro_position(name)
+                == Some(crate::builtin::rexxutil::macros::AFTER) =>
+            {
+                Resolved::Macro
+            }
+            // 43.1, once the search above has found nothing, and
+            // raised by the consumer rather than here. Measured in a
+            // clean directory with nothing of that name beside the
+            // program: `call zorkolo` gives 43.1 rc 213 `Could not find
+            // routine "ZORKOLO".`
+            None => Resolved::Unresolved,
+        };
+        Ok(resolved)
+    }
+
+    /// The routine `name` reaches from the running package, through
+    /// [`Interp::find_routine`].
+    ///
+    /// **The parent step is what code built by a send resolves through**:
+    /// `Routine~newFile` and `Method~newFile` record the context's package or,
+    /// with none, the caller's (`new_file_executable`), and `Package~new`
+    /// records a context's (`package_from_source`). A file reached by a
+    /// *call* records none, so it still sees its own package alone --
+    /// measured, the same body finds the caller's `::ROUTINE` through
+    /// `Routine~newFile` and raises 43.1 through `call`.
+    fn package_routine_lookup(&mut self, name: &[u8]) -> Result<Option<Resolved>, Failure> {
+        let Some(program) = self.running_activation().map(|running| running.program_id) else {
+            return Ok(None);
+        };
+        let upper = name.to_ascii_uppercase();
+        let package = self.program_package(program);
+        if !self.routines_written {
+            return Ok(self
+                .find_routine(package, &upper)
+                .map(crate::MergedRoutine::resolved));
+        }
+        match self.find_written_routine(package, &upper)? {
+            Some(crate::FoundRoutine::Merged(merged)) => Ok(Some(merged.resolved())),
+            Some(crate::FoundRoutine::Object(object)) => {
+                self.routine_object_resolution(object).map(Some)
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// Takes the shared value buffer **with the caller's run intact**, and the
+    /// depth to build above it.
+    pub(crate) fn take_value_buffer(&mut self) -> (Vec<Option<ObjRef>>, usize) {
+        let buffer = std::mem::take(&mut self.activity.value_buffer);
+        let mark = buffer.len();
+        (buffer, mark)
+    }
+
+    /// Hands the value buffer back with this run removed, whichever way the
+    /// send ended.
+    pub(crate) fn give_value_buffer(&mut self, mut buffer: Vec<Option<ObjRef>>, mark: usize) {
+        buffer.truncate(mark);
+        self.activity.value_buffer = buffer;
+    }
+
+    /// One builtin call: its arguments evaluated in the caller, then the row
+    /// run over them.
+    pub(crate) fn invoke_builtin_call(
+        &mut self,
+        code: &Code<'_>,
+        target: crate::builtin::BuiltinTarget,
+        name: &[u8],
+        args: &[Option<Expr>],
+    ) -> Result<ObjRef, Failure> {
+        // **Pushed onto the shared stack one at a time**, rather than into a
+        // buffer lent for the whole loop: each argument's evaluation calls
+        // back into `&mut self`, so nothing may hold the `Vec` across it, and
+        // a run that is only ever appended to needs no borrow between pushes.
+        // The compiled path's `Op::PushArg` writes the same stack.
+        let mark = self.activity.value_buffer.len();
+        for arg in args {
+            let value = match arg {
+                None => {
+                    self.trace_argument(self.activity.clause_state.current_value_indent, b"");
+                    None
+                }
+                Some(expr) if self.leaf_argument(expr) => {
+                    Some(self.eval_leaf_argument(code, expr)?)
+                }
+                Some(expr) => Some(pinned!(
+                    self,
+                    crate::pinning::PinKind::TreeEval,
+                    self.eval_traced_argument(code, expr)
+                )?),
+            };
+            self.activity.value_buffer.push(value);
+        }
+        self.run_over_pushed_args(mark, |interp, values| {
+            builtin::run(interp, name, target, values)
+        })
+    }
+
+    /// Evaluates a call's arguments, settles `resolution` once they have run,
+    /// and runs the call, in its own nested activation where it has one.
+    pub(crate) fn invoke_call(
+        &mut self,
+        code: &Code<'_>,
+        resolution: CallResolution<'_>,
+        name: &[u8],
+        args: &[Option<Expr>],
+        call_type: CallType,
+        entry: CallEntry,
+    ) -> Result<Ended, Failure> {
+        let begun = self.begin_invoke_call(code, resolution, name, args, call_type, entry)?;
+        self.complete_call(begun)
+    }
+
+    /// [`Interp::invoke_call`] up to the point its callee's body would run.
+    pub(crate) fn begin_invoke_call(
+        &mut self,
+        code: &Code<'_>,
+        resolution: CallResolution<'_>,
+        name: &[u8],
+        args: &[Option<Expr>],
+        call_type: CallType,
+        entry: CallEntry,
+    ) -> Result<Begun, Failure> {
+        // **Evaluated in the caller, before anything is pushed**, which is
+        // where the argument expressions' own variables live. Observable
+        // through failure, and the failure is real and measured: `call sub
+        // 1/0` is Error 42.3
+        // reported against the `CALL` clause, at rc 214, and a version that
+        // skipped evaluation would run the callee instead.
+        if let CallResolution::Settled(Resolved::Builtin(target)) = resolution {
+            return Ok(Begun::Done(Ended::Returned(Some(
+                self.invoke_builtin_call(code, target, name, args)?,
+            ))));
+        }
+        // A fresh `Vec` and not a lent one: this path always hands the
+        // arguments to the callee, which keeps them, so there is nothing to
+        // give back and a pool would allocate on every call anyway.
+        let mut arguments: Vec<Option<ObjRef>> = Vec::with_capacity(args.len());
+        for arg in args {
+            match arg {
+                None => {
+                    // An omitted position traces an **empty** value line, not
+                    // no line: `traceArgument(GlobalNames::NULLSTRING)`,
+                    // `RexxInstruction.cpp:161`, and measured above.
+                    self.trace_argument(self.activity.clause_state.current_value_indent, b"");
+                    arguments.push(None);
+                }
+                Some(expr) if self.leaf_argument(expr) => {
+                    arguments.push(Some(self.eval_leaf_argument(code, expr)?));
+                }
+                Some(expr) => arguments.push(Some(pinned!(
+                    self,
+                    crate::pinning::PinKind::TreeEval,
+                    self.eval_traced_argument(code, expr)
+                )?)),
+            }
+        }
+        let (resolved, keep) = self.settle_after_arguments(resolution, name)?;
+        let begun = self.begin_evaluated_call(resolved, name, arguments, call_type, entry);
+        if let Some((slot, keep)) = keep {
+            self.site_call(slot, keep, SiteCall::of_begun(&begun));
+        }
+        begun
+    }
+
+    /// [`Interp::begin_invoke_call`] past its argument loop, over `arguments`
+    /// already evaluated, for any callee but a builtin.
+    fn begin_evaluated_call(
+        &mut self,
+        resolved: Resolved,
+        name: &[u8],
+        mut arguments: Vec<Option<ObjRef>>,
+        call_type: CallType,
+        entry: CallEntry,
+    ) -> Result<Begun, Failure> {
+        // An internal-package routine runs no activation, and neither does a
+        // library routine, so they take the builtin discipline over the values.
+        if let Resolved::Internal(_) | Resolved::LibraryRoutine(_) = resolved {
+            if let Some(handled) = self.call_checkpoint(name, &arguments)? {
+                return Ok(Begun::Done(Ended::Returned(handled)));
+            }
+            return match resolved {
+                Resolved::Internal(row) => {
+                    Ok(internal_begun(self.run_internal(row, &mut arguments, 0)?))
+                }
+                Resolved::LibraryRoutine(slot) => self
+                    .run_package_routine(slot, name, &arguments)
+                    .map(library_begun),
+                _ => unreachable!("only the two arms above reach here"),
+            };
+        }
+        let begun = self.begin_call(resolved, name, &mut arguments, 0, call_type, entry)?;
+        // An enclosing builtin's run stands on the stack while this call's
+        // callee clears it at its first clause.
+        if let Begun::Entered = begun {
+            let values = std::mem::take(&mut self.activity.value_buffer);
+            self.lend_stack(true, values);
+        }
+        Ok(begun)
+    }
+
+    /// What a call runs, once its arguments have run, and what its site is
+    /// to keep once it returns.
+    fn settle_after_arguments<'c>(
+        &mut self,
+        resolution: CallResolution<'c>,
+        name: &[u8],
+    ) -> Result<(Resolved, Option<(crate::ir::CallSiteSlot<'c>, SiteKeep)>), Failure> {
+        let site = match resolution {
+            CallResolution::Settled(resolved) => return Ok((resolved, None)),
+            CallResolution::AfterArguments { site } => site,
+        };
+        let generation = self.routine_generation;
+        if let Some(site) = site
+            && let Some(resolved) = site.resolved(generation)
+        {
+            return Ok((resolved, None));
+        }
+        let resolved = self.resolve_routine_call(name)?;
+        Ok((
+            resolved,
+            site.map(|site| (site, self.site_keep(site.site(), resolved, generation))),
+        ))
+    }
+
+    /// A [`SiteKeep`] for call site `site`, its copy pinned.
+    pub(crate) fn site_keep(&mut self, site: u16, resolved: Resolved, generation: u32) -> SiteKeep {
+        let copy = resolved.copy();
+        if copy != ObjRef::NIL {
+            self.pin_copy(copy);
+        }
+        let holder = self.activation().program_id;
+        let hold = match resolved {
+            Resolved::Routine(installed) if installed.program != holder => {
+                Some(crate::run::SiteHold {
+                    holder,
+                    program: installed.program,
+                })
+            }
+            _ => None,
+        };
+        SiteKeep {
+            site,
+            resolved,
+            generation,
+            hold,
+        }
+    }
+
+    /// Ends or hands on `keep`, for its call through `slot` that `ended`: a
+    /// call that entered a body files it on the activity under the index its
+    /// op's parked call takes ([`Interp::take_entered_keep`]).
+    pub(crate) fn site_call(
+        &mut self,
+        slot: crate::ir::CallSiteSlot<'_>,
+        keep: SiteKeep,
+        ended: SiteCall,
+    ) {
+        match ended {
+            SiteCall::Entered => {
+                let at = self.activity.parked_calls.len();
+                debug_assert!(
+                    self.activity
+                        .parked_keeps
+                        .last()
+                        .is_none_or(|(filed, _)| *filed < at),
+                    "an entered call's keep was left unclaimed"
+                );
+                self.activity.parked_keeps.push((at, keep));
+            }
+            SiteCall::Returned | SiteCall::Raised => {
+                self.end_site_keep(slot.chunk(), keep, ended == SiteCall::Returned);
+            }
+        }
+    }
+
+    /// Ends `keep`: its site keeps the resolution where the call `returned`.
+    pub(crate) fn end_site_keep(
+        &mut self,
+        chunk: &crate::ir::Chunk,
+        keep: SiteKeep,
+        returned: bool,
+    ) {
+        if returned {
+            let repin =
+                chunk
+                    .call_site_slot(keep.site)
+                    .remember(keep.resolved, keep.generation, keep.hold);
+            self.repin(repin);
+        }
+        let copy = keep.resolved.copy();
+        if copy != ObjRef::NIL {
+            self.unpin_copy(copy);
+        }
+    }
+
+    /// The keep filed for the parked call the next push would make, which
+    /// a call op entered with no parked call: one its own callee has not had
+    /// the chance to file under the same index.
+    pub(crate) fn take_entered_keep(&mut self) -> Option<SiteKeep> {
+        let at = self.activity.parked_calls.len();
+        match self.activity.parked_keeps.last() {
+            Some((filed, _)) if *filed == at => {
+                self.activity.parked_keeps.pop().map(|(_, keep)| keep)
+            }
+            _ => None,
+        }
+    }
+
+    /// Ends the keep an entered call filed, if it filed one, for its callee
+    /// that `returned` or not.
+    pub(crate) fn end_entered_keep(&mut self, chunk: &crate::ir::Chunk, returned: bool) {
+        if let Some(keep) = self.take_entered_keep() {
+            self.end_site_keep(chunk, keep, returned);
+        }
+    }
+
+    /// The resolution a call without a site of its own starts from: what
+    /// [`Interp::resolve_fixed_call`] decided, or a search once the arguments
+    /// have run.
+    pub(crate) fn unkept_resolution(fixed: Option<Resolved>) -> CallResolution<'static> {
+        match fixed {
+            Some(resolved) => CallResolution::Settled(resolved),
+            None => CallResolution::AfterArguments { site: None },
+        }
+    }
+
+    /// One compiled call over the arguments its own ops already evaluated, up
+    /// to the point its callee's body would run. The run above `mark` is
+    /// removed; an entered callee keeps the stack until
+    /// [`Interp::finish_function`] hands it back.
+    pub(crate) fn begin_call_over_pushed_args(
+        &mut self,
+        resolved: Resolved,
+        name: &[u8],
+        mark: usize,
+    ) -> Result<Started<ObjRef>, Failure> {
+        // The builtin path, which runs no activation -- the same shortcut
+        // `begin_eval_call` takes and for the same measured reason.
+        if let Resolved::Builtin(target) = resolved {
+            return self
+                .run_over_pushed_args(mark, |interp, values| {
+                    builtin::run(interp, name, target, values)
+                })
+                .map(Started::Ran);
+        }
+        let mut values = std::mem::take(&mut self.activity.value_buffer);
+        let started = self.begin_call_over_values(resolved, name, &mut values, mark);
+        values.truncate(mark);
+        self.lend_stack(self.entered_body(&started), values);
+        started
+    }
+
+    /// [`Interp::begin_call_over_pushed_args`] for a call whose site `slot`
+    /// keeps `keep` once the call returns, which no builtin is.
+    pub(crate) fn begin_kept_call_over_pushed_args(
+        &mut self,
+        resolved: Resolved,
+        name: &[u8],
+        mark: usize,
+        slot: crate::ir::CallSiteSlot<'_>,
+        keep: SiteKeep,
+    ) -> Result<Started<ObjRef>, Failure> {
+        let mut values = std::mem::take(&mut self.activity.value_buffer);
+        let started =
+            self.begin_kept_call_over_values(resolved, name, &mut values, mark, slot, keep);
+        values.truncate(mark);
+        self.lend_stack(self.entered_body(&started), values);
+        started
+    }
+
+    /// Hands the argument stack back with a call's run removed from it, or,
+    /// for a call whose callee was `entered`, lends the rest to that callee's
+    /// [`CallTail`].
+    #[inline(always)]
+    pub(crate) fn lend_stack(&mut self, entered: bool, values: Vec<Option<ObjRef>>) {
+        if entered {
+            self.lend_stack_to_callee(values);
+        } else {
+            self.activity.value_buffer = values;
+        }
+    }
+
+    /// [`Interp::lend_stack`] for a call whose callee was entered.
+    #[inline(always)]
+    fn lend_stack_to_callee(&mut self, values: Vec<Option<ObjRef>>) {
+        match self.activity.call_tails.last_mut() {
+            Some(tail) if !values.is_empty() => tail.stack = LentStack::Lent(values),
+            Some(tail) => {
+                tail.stack = LentStack::Emptied;
+                self.activity.value_buffer = values;
+            }
+            None => self.activity.value_buffer = values,
+        }
+    }
+
+    /// Runs `body` over the argument run standing above `mark`, with the
+    /// stack lent out for the duration and this run removed on the way back.
+    fn run_over_pushed_args(
+        &mut self,
+        mark: usize,
+        body: impl FnOnce(&mut Interp, &[Option<ObjRef>]) -> Result<ObjRef, Failure>,
+    ) -> Result<ObjRef, Failure> {
+        let mut values = std::mem::take(&mut self.activity.value_buffer);
+        let outcome = body(self, &values[mark..]);
+        values.truncate(mark);
+        self.activity.value_buffer = values;
+        outcome
+    }
+
+    /// The security manager's `CALL` checkpoint
+    /// (`execution/SecurityManager.cpp:203`-`:225`), asked for every name
+    /// that gets past the running package's own `::ROUTINE`s -- including
+    /// one nothing answers, which is why it runs before 43.1.
+    ///
+    /// `Some(result)` where the manager handled the call, nothing then
+    /// running; `None` where it declined or none is installed.
+    fn call_checkpoint(
+        &mut self,
+        name: &[u8],
+        values: &[Option<ObjRef>],
+    ) -> Result<Option<Option<ObjRef>>, Failure> {
+        if self.effective_security_manager().is_none() {
+            return Ok(None);
+        }
+        let called = self.text(name);
+        self.roots.activity_mut().push_temp(called);
+        let arguments = self.security_arguments_array(values);
+        let entries = [
+            (crate::security::key::NAME, called),
+            (crate::security::key::ARGUMENTS, arguments),
+        ];
+        let Some(info) = self.security_check(crate::security::message::CALL, &entries)? else {
+            return Ok(None);
+        };
+        let result = self.security_entry(info, crate::security::key::RESULT)?;
+        Ok(Some(result))
+    }
+
+    /// One internal-package routine over the evaluated arguments in `args`
+    /// from `from`. No activation, no `SIGL`, no depth guard -- the builtin
+    /// discipline, since the oracle runs these as native code too. `Entered`
+    /// where it parked the activity, with the park on its record.
+    fn run_internal(
+        &mut self,
+        row: &'static crate::internal_routines::InternalRoutine,
+        args: &mut Vec<Option<ObjRef>>,
+        from: usize,
+    ) -> Result<Started<ObjRef>, Failure> {
+        self.run_internal_as(row, InternalName::Upper, args, from)
+    }
+
+    /// [`Interp::run_internal`] for a call that passes the routine a `name`
+    /// other than its upcased row name, which is what a `::ROUTINE` bound to
+    /// the row and `Routine~call` pass. `args` is lent to the routine's
+    /// level while it runs, so a live `.context~stackFrames` reads the
+    /// arguments without a copy, and is handed back unchanged.
+    #[inline(always)]
+    pub(crate) fn run_internal_as(
+        &mut self,
+        row: &'static crate::internal_routines::InternalRoutine,
+        name: InternalName<'_>,
+        args: &mut Vec<Option<ObjRef>>,
+        from: usize,
+    ) -> Result<Started<ObjRef>, Failure> {
+        self.run_internal_given(row, name, args, from, ObjRef::NIL)
+    }
+
+    /// [`Interp::run_internal_as`] for the `Routine` object `executable`
+    /// standing for the row, `.nil` for the row's own, which its frame
+    /// answers.
+    pub(crate) fn run_internal_given(
+        &mut self,
+        row: &'static crate::internal_routines::InternalRoutine,
+        name: InternalName<'_>,
+        args: &mut Vec<Option<ObjRef>>,
+        from: usize,
+        executable: ObjRef,
+    ) -> Result<Started<ObjRef>, Failure> {
+        let Some(body) = row.body else {
+            return Err(Loud::internal_routine(row.name.as_bytes()).into());
+        };
+        let caller = self.running_activation().map(|activation| activation.id);
+        let depth = self.activity.internal_depth;
+        let level = match self.activity.internal_levels.get_mut(depth) {
+            Some(level) => level,
+            None => add_internal_level(&mut self.activity.internal_levels),
+        };
+        level.caller = caller;
+        level.row = row;
+        level.from = from;
+        level.executable = executable;
+        level.name = match name {
+            InternalName::Upper => LevelName::Upper,
+            InternalName::Row => LevelName::Row,
+            InternalName::Called(name) => {
+                level.called.clear();
+                level.called.extend_from_slice(name);
+                LevelName::Called
+            }
+        };
+        lend_arguments(&mut level.arguments, args);
+        let shared = Rc::clone(&level.arguments);
+        self.activity.internal_depth = depth + 1;
+        let outcome = body(self, row.name.as_bytes(), &shared[from..]);
+        self.activity.internal_depth = depth;
+        drop(shared);
+        if let Some(level) = self.activity.internal_levels.get_mut(depth) {
+            lend_arguments(&mut level.arguments, args);
+        }
+        if let Err(failure) = &outcome {
+            // The oracle reports one of these under its own routine line,
+            // whether the argument marshalling or the body raised -- measured,
+            // `filespec('D')` and `SysSleep('abc')` both carry it.
+            let values = &args[from..];
+            match name {
+                InternalName::Upper => {
+                    let upper = row.name.to_ascii_uppercase();
+                    self.blame_internal_routine(row, upper.as_bytes(), values, failure, executable);
+                }
+                InternalName::Row => {
+                    self.blame_internal_routine(
+                        row,
+                        row.name.as_bytes(),
+                        values,
+                        failure,
+                        executable,
+                    );
+                }
+                InternalName::Called(name) => {
+                    self.blame_internal_routine(row, name, values, failure, executable);
+                }
+            }
+        }
+        let value = outcome?;
+        Ok(match self.activity.native_park {
+            Some(_) => Started::Entered,
+            None => Started::Ran(value),
+        })
+    }
+
+    /// [`Interp::begin_call_over_values`] for a call whose site `slot` keeps
+    /// `keep` once the call returns.
+    #[cold]
+    #[inline(never)]
+    fn begin_kept_call_over_values(
+        &mut self,
+        resolved: Resolved,
+        name: &[u8],
+        values: &mut Vec<Option<ObjRef>>,
+        mark: usize,
+        slot: crate::ir::CallSiteSlot<'_>,
+        keep: SiteKeep,
+    ) -> Result<Started<ObjRef>, Failure> {
+        if let Resolved::Internal(_) | Resolved::LibraryRoutine(_) = resolved {
+            let started = self.begin_call_over_values(resolved, name, values, mark);
+            self.site_call(slot, keep, SiteCall::of(&started));
+            return started;
+        }
+        // Kept before the callee's value is checked: the oracle keeps a
+        // routine that returned nothing to a function call
+        // (`expression/ExpressionFunction.cpp:206-216`).
+        let begun = self.begin_call(
+            resolved,
+            name,
+            values,
+            mark,
+            CallType::Function,
+            CallEntry::Written,
+        );
+        self.site_call(slot, keep, SiteCall::of_begun(&begun));
+        function_started(begun?, name)
+    }
+
+    /// [`Interp::begin_call_over_pushed_args`] with the run in hand.
+    #[inline(always)]
+    fn begin_call_over_values(
+        &mut self,
+        resolved: Resolved,
+        name: &[u8],
+        values: &mut Vec<Option<ObjRef>>,
+        mark: usize,
+    ) -> Result<Started<ObjRef>, Failure> {
+        if let Resolved::Internal(row) = resolved {
+            if let Some(handled) = self.call_checkpoint(name, &values[mark..])? {
+                return handled
+                    .map(Started::Ran)
+                    .ok_or_else(|| Raised::no_data_returned(name).into());
+            }
+            return self.run_internal(row, values, mark);
+        }
+        if let Resolved::LibraryRoutine(slot) = resolved {
+            let answered = match self.call_checkpoint(name, &values[mark..])? {
+                Some(handled) => Started::Ran(handled),
+                None => self.run_package_routine(slot, name, &values[mark..])?,
+            };
+            return match answered {
+                Started::Ran(value) => value
+                    .map(Started::Ran)
+                    .ok_or_else(|| Raised::no_data_returned(name).into()),
+                Started::Entered => Ok(Started::Entered),
+            };
+        }
+        let begun = self.begin_call(
+            resolved,
+            name,
+            values,
+            mark,
+            CallType::Function,
+            CallEntry::Written,
+        )?;
+        function_started(begun, name)
+    }
+
+    /// Runs a started function call's callee body on this Rust stack, and
+    /// answers the call's value.
+    pub(crate) fn complete_function(
+        &mut self,
+        started: Started<ObjRef>,
+    ) -> Result<ObjRef, Failure> {
+        match started {
+            Started::Ran(value) => Ok(value),
+            Started::Entered if self.activity.native_park.is_some() => {
+                Err(self.refuse_unrooted_park())
+            }
+            Started::Entered => {
+                let ended = self.run_activation();
+                self.finish_function(ended)
+            }
+        }
+    }
+
+    /// Whether `started` entered a body that pushed an activation, rather
+    /// than answering or parking the activity.
+    #[inline(always)]
+    pub(crate) fn entered_body<T>(&self, started: &Result<Started<T>, Failure>) -> bool {
+        matches!(started, Ok(Started::Entered)) && self.activity.native_park.is_none()
+    }
+
+    /// A function call's value, once its callee's body has ended `ended`.
+    pub(crate) fn finish_function(
+        &mut self,
+        ended: Result<Ended, Failure>,
+    ) -> Result<ObjRef, Failure> {
+        // The callee's convention is still in force, and its name is the one
+        // a callee answering nothing is reported under.
+        let name = matches!(
+            &ended,
+            Ok(Ended::Returned(None) | Ended::Exited(None)) | Err(Failure::Exited(None))
+        )
+        .then(|| Rc::clone(&self.activity.call_context.name));
+        let ended = self.finish_call(ended)?;
+        function_value(ended, name.as_deref().unwrap_or_default())
+    }
+
+    /// `RoutineClass::runProgram`, which `CallProgram` runs a file's routine
+    /// through: as a command, and its `EXIT` ending that program alone.
+    pub(crate) fn run_routine_as_program(
+        &mut self,
+        installed: InstalledRoutine,
+        arguments: Vec<Option<ObjRef>>,
+    ) -> Result<Option<ObjRef>, Failure> {
+        let mut arguments = arguments;
+        let begun = self.begin_call(
+            Resolved::Routine(installed),
+            b"CALL",
+            &mut arguments,
+            0,
+            CallType::Command,
+            CallEntry::Written,
+        )?;
+        // An embedding instance's initial environment, which its programs
+        // start with as a top-level program starts with the platform's.
+        if matches!(begun, Begun::Entered)
+            && let Some(name) = self.default_address.clone()
+        {
+            let address = &mut self.activation_mut().address;
+            address.current = Some(Rc::clone(&name));
+            address.alternate = Some(name);
+        }
+        match self.complete_call(begun)? {
+            Ended::Exited(value) | Ended::Returned(value) => Ok(value),
+        }
+    }
+
+    /// [`Interp::invoke_call`] past its argument evaluation: everything a
+    /// callee needs once its arguments are values.
+    pub(crate) fn invoke_call_over(
+        &mut self,
+        resolved: Resolved,
+        name: &[u8],
+        mut arguments: Vec<Option<ObjRef>>,
+        call_type: CallType,
+        entry: CallEntry,
+    ) -> Result<Ended, Failure> {
+        let begun = self.begin_call(resolved, name, &mut arguments, 0, call_type, entry)?;
+        self.complete_call(begun)
+    }
+
+    /// Runs a begun call's callee body on this Rust stack.
+    pub(crate) fn complete_call(&mut self, begun: Begun) -> Result<Ended, Failure> {
+        match begun {
+            Begun::Done(ended) => Ok(ended),
+            Begun::Entered => {
+                let ended = self.run_activation();
+                self.finish_call(ended)
+            }
+        }
+    }
+
+    /// [`Interp::invoke_call_over`] up to the point its callee's body would
+    /// run: the whole call for a callee that runs no activation, or the
+    /// activation pushed and the caller's level state saved. The arguments
+    /// are `arguments` from `from`.
+    pub(crate) fn begin_call(
+        &mut self,
+        resolved: Resolved,
+        name: &[u8],
+        arguments: &mut Vec<Option<ObjRef>>,
+        from: usize,
+        call_type: CallType,
+        entry: CallEntry,
+    ) -> Result<Begun, Failure> {
+        // **The builtin outcome ends here**, before `SIGL`, before the depth
+        // guard and before any activation is pushed -- each of those three is
+        // the label path's, and the oracle answers that the builtin path has
+        // none of them (`builtin`'s own module doc carries the probe for
+        // each). Every argument is still rooted by the loop above, so the
+        // allocation a builtin's result costs happens with the inputs
+        // reachable, and the value handed back is rooted by whichever caller
+        // receives it exactly as a callee's `RETURN` value already is.
+        // **The library outcome ends here too**, and for a reason unlike the
+        // builtin's: an embedded `.orx` source is a whole program, with its
+        // own directives to install and its own `ProgramId`, so it is
+        // entered the way the command line's program is rather than the way
+        // a routine is. `Entered` has no arm for it because none of the
+        // decisions that enum exists to carry -- `SIGL`, the callee's pool,
+        // the indent, the calling convention's receiver -- is a question
+        // about it.
+        // **Every arm below the running package's own `::ROUTINE`s passes
+        // the manager first**, an unresolvable name included.
+        if matches!(
+            resolved,
+            Resolved::Library(_)
+                | Resolved::External
+                | Resolved::Macro
+                | Resolved::Registered
+                | Resolved::Unresolved
+        ) {
+            if let Some(handled) = self.call_checkpoint(name, &arguments[from..])? {
+                return Ok(Begun::Done(Ended::Returned(handled)));
+            }
+            // The function exits next (`RexxActivation::externalCall` steps 2a and 2b).
+            if self.exits.is_some()
+                && let Some(handled) = self.function_exits(name, call_type, &arguments[from..])?
+            {
+                return Ok(Begun::Done(Ended::Returned(handled)));
+            }
+        }
+        if let Resolved::Unresolved = resolved {
+            // The scripting exit, after every search (step 4).
+            if self.exits.is_some()
+                && let Some(handled) = self.scripting_exit(name, call_type, &arguments[from..])?
+            {
+                return Ok(Begun::Done(Ended::Returned(handled)));
+            }
+            return Err(Raised::routine_not_found(name).into());
+        }
+        if let Resolved::Library(program) = resolved {
+            return self
+                .enter_library_program(program, Some(arguments[from..].to_vec()))
+                .map(|value| Begun::Done(Ended::Returned(value)));
+        }
+        // **And the external file ends here for the same reason**, which is
+        // the whole of why it is not an `Entered`: a file the search found is
+        // a program, entered the way the command line's is.
+        if let Resolved::External = resolved {
+            return self
+                .enter_external_program(name, arguments[from..].to_vec(), call_type)
+                .map(|value| Begun::Done(Ended::Returned(value)));
+        }
+        if let Resolved::Macro = resolved {
+            return self
+                .enter_macro(name, arguments[from..].to_vec(), call_type)
+                .map(|value| Begun::Done(Ended::Returned(value)));
+        }
+        if let Resolved::Registered = resolved {
+            return self
+                .call_classic_function(name, &arguments[from..])
+                .map(|value| Begun::Done(Ended::Returned(value)));
+        }
+
+        // A library routine merged into the package, and a `::ROUTINE` bound
+        // to native code, run no activation either, and are found before the
+        // manager is asked.
+        if let Resolved::MergedLibraryRoutine(code, copy) = resolved {
+            let executable = self.found_routine_object(code, copy);
+            return self
+                .run_library_routine(code, name, &arguments[from..], executable)
+                .map(library_begun);
+        }
+        if let Resolved::MergedInternal(row, copy) = resolved {
+            return self
+                .run_internal_given(row, InternalName::Called(name), arguments, from, copy)
+                .map(internal_begun);
+        }
+        if let Resolved::Routine(installed) = resolved {
+            if let Some(code) = self.library_routine_code(installed) {
+                return self
+                    .run_library_routine(
+                        code,
+                        name,
+                        &arguments[from..],
+                        crate::RoutineObject::OfCode,
+                    )
+                    .map(library_begun);
+            }
+            if let Some(row) = self.rexx_routine_row(installed) {
+                return self
+                    .run_internal_as(row, InternalName::Called(name), arguments, from)
+                    .map(internal_begun);
+            }
+        }
+
+        let entered = match resolved {
+            // Answered above, before the loop that just ran.
+            Resolved::Builtin(_) => unreachable!("the builtin path returns before this"),
+            Resolved::Internal(_) => unreachable!("the internal path returns before this"),
+            Resolved::LibraryRoutine(_)
+            | Resolved::MergedLibraryRoutine(..)
+            | Resolved::MergedInternal(..) => {
+                unreachable!("a library or merged internal routine is run before this")
+            }
+            Resolved::Label(target) => Entered::Label(target),
+            Resolved::Routine(installed) => Entered::Routine(installed),
+            Resolved::Library(_) => unreachable!("the library path returns just above"),
+            Resolved::External => unreachable!("the external path returns just above"),
+            Resolved::Macro => unreachable!("the macro path returns just above"),
+            Resolved::Registered => unreachable!("the registered path returns just above"),
+            Resolved::Unresolved => unreachable!("an unresolved name raises just above"),
+        };
+
+        // `SIGL`, set here rather than before the argument loop above: the
+        // oracle's own `internalCall` (`RexxActivation.cpp`, read directly)
+        // receives its arguments already evaluated by its caller, so they
+        // are evaluated under whatever `SIGL` was already in force, and only
+        // then does the transfer overwrite it. Measured: `signal there` /
+        // `there: call sub sigl` into `sub: use arg a` reports the argument
+        // as `1` (the `SIGNAL`'s own line, still in force during evaluation)
+        // and `sub`'s own `SIGL` as the `CALL`'s line -- a version setting
+        // `SIGL` before evaluating arguments would report the argument as
+        // the `CALL`'s own line instead.
+        if matches!(entered, Entered::Label(_)) {
+            self.set_sigl(self.activity.clause_state.line());
+        }
+
+        // One Rust frame per activation, plus this counter, so an
+        // unbounded recursion becomes a reportable condition instead of a
+        // native abort. `Raised::insufficient_stack` already existed
+        // (`error.rs`); measured, the oracle answers the same 11.1 at rc 245
+        // for the same program, at its own depth of 27,314.
+        let probe = 0u8;
+        if self.activation_depth() >= MAX_ACTIVATION_DEPTH || self.stack_exhausted(&raw const probe)
+        {
+            return Err(Raised::insufficient_stack().into());
+        }
+
+        let callee_id = self.next_activation_id();
+        match entered {
+            Entered::Label(target) => {
+                // **D9r's default: a shared pool.** The callee reuses the
+                // caller's `SlotFrame`, so it reads and writes the caller's
+                // variables and its writes survive the return -- measured,
+                // and `pop_slots` is deliberately not called on the way out
+                // because the frame is not this activation's to free. Task
+                // 5's `PROCEDURE` is what will ever push a frame of its own.
+                let caller = self.activation();
+                // The caller's own program and body selector, which a label
+                // callee inherits: the same pair `resolve_call` searched.
+                let program = Rc::clone(&caller.program);
+                let program_id = caller.program_id;
+                let selector = caller.body;
+                let plan = Rc::clone(&caller.plan);
+                let frame = caller.frame;
+                // The `call_type` parameter is deliberately not read here: an
+                // internal label answers `PARSE SOURCE`'s second word from the
+                // activation it was called out of, whichever form called it.
+                // Measured, a `::routine` invoked as a function whose body
+                // `CALL`s a label reads `FUNCTION` inside that label, not
+                // `SUBROUTINE`.
+                let caller_call_type = caller.call_type;
+                let caller_rs = caller.rs;
+                let settings = caller.settings.clone();
+                let trace_mode = caller.trace_mode;
+                // Inherited with `settings` and for its reason: a `SIGNAL ON`
+                // in the caller turned the package's escalation off for the
+                // rest of that activation, and an internal call is still
+                // inside it.
+                let condition_syntax = caller.condition_syntax;
+                let extra = caller.extra.clone();
+                // Cloned with `extra`, and for the same reason: a label
+                // reached without `PROCEDURE` shares the caller's pool, and an
+                // exposed name is part of that pool. Measured -- a class
+                // method exposing `v`, calling a label that assigns `v`, and a
+                // second class method reading `v` back -- the assignment
+                // reaches the object variable. Without this the label writes
+                // the frame slot the exposure left empty and the write is
+                // lost.
+                let exposed = caller.exposed.clone();
+                // Cloned in and never written back, exactly like `settings`
+                // and `trace_mode` beside it -- `Activation::traps`' own doc
+                // comment has the three probes that measure the inheritance
+                // and its one-way direction.
+                let traps = caller.traps.clone();
+                // Both halves of the pair, not just the current one:
+                // measured, a callee's own bare `ADDRESS` swaps to the
+                // *caller's* alternate. `Activation::address`' own doc
+                // comment has the transcript.
+                let address = caller.address.clone();
+                let caller_io_configs = caller.io_configs.clone();
+                // Same one-way rule again: an internal call sees the caller's
+                // `CONDITION()` answers and a reset inside the callee dies
+                // with it. `TrappedCondition`'s own doc comment has the
+                // four-line transcript. `RAISE PROPAGATE`'s condition and the
+                // elapsed clock are copied the same way.
+                let cold = caller
+                    .cold
+                    .as_deref()
+                    .and_then(crate::activation::ActivationCold::inherited);
+                let (cached_clock, elapsed_anchor, elapsed_reset) = (
+                    caller.cached_clock,
+                    caller.elapsed_anchor,
+                    caller.flags.elapsed_reset(),
+                );
+                let debug = caller.debug;
+                let mut callee = Activation::nested(
+                    callee_id,
+                    program,
+                    program_id,
+                    selector,
+                    plan,
+                    frame,
+                    target,
+                    Inherited {
+                        call_type: caller_call_type,
+                        rs: caller_rs,
+                        settings,
+                        condition_syntax,
+                        trace_mode,
+                        address,
+                        // The refcount, not the table: a write in the callee
+                        // clones first, which is how the oracle keeps the
+                        // inheritance one-way (`checkIOConfigTable`).
+                        io_configs: caller_io_configs,
+                        traps,
+                        cold,
+                        cached_clock,
+                        elapsed_anchor,
+                        elapsed_reset,
+                        debug,
+                    },
+                );
+                callee.extra = extra;
+                callee.exposed = exposed;
+                self.push_activation(callee);
+            }
+            // **A pool of its own, and not one of the five inheritances**
+            // -- `Activation::routine` is where that is stated and
+            // `Activation::nested`'s own doc carries the six probes. The
+            // plan is the routine body's own, cached under its own
+            // `BodyKey`, and it is what sizes the frame: a routine's names
+            // are not the caller's, so a frame sized from the caller's plan
+            // would be the wrong length.
+            Entered::Routine(installed) => {
+                // Reached through `programs` rather than through the running
+                // activation's own `Rc`, so the plan's cache key and the
+                // activation's program are the same program by construction
+                // (`InstalledRoutine`'s own doc).
+                let Some(routine_program) = self.programs.get(installed.program).map(Rc::clone)
+                else {
+                    return Err(Loud::missing_body().into());
+                };
+                let Some(body) = body_of(&routine_program, Some(installed.directive)) else {
+                    return Err(Loud::missing_body().into());
+                };
+                let plan = self.plan_for(
+                    BodyKey {
+                        program: installed.program,
+                        directive: Some(installed.directive),
+                    },
+                    body,
+                    &routine_program.symbols,
+                    &routine_program.source,
+                );
+                // The routine's own package, which is not always the caller's
+                // -- `installed.program` is where the `::ROUTINE` was
+                // declared. The caller's settings go with it for
+                // `::OPTIONS NUMERIC INHERIT`, the one option that reads
+                // them.
+                // A routine started on an activity of its own has no caller.
+                let start = self.package_start(
+                    installed.program,
+                    self.running_activation().map(|caller| &caller.settings),
+                );
+                let frame = self.roots.push_slots(plan.len());
+                let mut callee = Activation::routine(
+                    callee_id,
+                    routine_program,
+                    installed.program,
+                    installed.directive,
+                    plan,
+                    frame,
+                    call_type,
+                );
+                if let Some(start) = start {
+                    start.apply(&mut callee);
+                }
+                self.push_activation(callee);
+                self.trace_package_invocation_entry();
+            }
+        }
+
+        // Level state for the callee, five pieces, saved here and restored
+        // on both paths by `finish_call`. `Interpret`'s own arm is the model for four
+        // of them, and one differs from it deliberately -- the fifth,
+        // `clause_state`, is not level state for the callee at all, and is
+        // saved and restored for a different reason stated where it is:
+        let saved_clause_state = self.save_clause_state();
+        let callee_indent = match entered {
+            Entered::Label(_) => saved_clause_state.value_indent() + 2,
+            Entered::Routine(_) => 0,
+        };
+        let saved_base = std::mem::replace(&mut self.activity.activation_indent, callee_indent);
+        let saved_offset = std::mem::take(&mut self.activity.indent_offset);
+        let saved_line = std::mem::take(&mut self.activity.clause_line_override);
+        let inherited = entered_receiver(entered, entry, self.activity.call_context.receiver);
+        let arguments = self.shared_arguments(&arguments[from..]);
+        let name = self.activity.invocation_name(name);
+        let saved_context = std::mem::replace(
+            &mut self.activity.call_context,
+            CallContext {
+                name,
+                arguments,
+                // Read out of the caller's own convention before this
+                // replaces it, which is the only place it can be read from:
+                // `entered_receiver` carries the rule and the measurement
+                // for each of its arms.
+                receiver: inherited,
+            },
+        );
+
+        self.activity.call_tails.push(CallTail {
+            kind: match entered {
+                Entered::Label(_) => TailKind::Label,
+                Entered::Routine(_) => TailKind::Routine,
+            },
+            saved_clause_state,
+            saved_base,
+            saved_offset,
+            saved_line,
+            saved_context,
+            stack: LentStack::Kept,
+        });
+        // A routine is a program-level call, which runs the initialization exit before its
+        // first clause (`RexxActivation::run`); its failure ends the call there.
+        if matches!(entered, Entered::Routine(_))
+            && self.calls_program_exits()
+            && let Err(failure) = self.initialization_exit()
+        {
+            return match self.finish_call(Err(failure)) {
+                Err(failure) => Err(failure),
+                Ok(_) => Err(Loud::scheduler_inconsistency(
+                    "a failed initialization exit ended its call normally",
+                )
+                .into()),
+            };
+        }
+        Ok(Begun::Entered)
+    }
+
+    /// [`Interp::invoke_call_over`] from the point its callee's body has run
+    /// and ended `ended`.
+    #[inline(always)]
+    pub(crate) fn finish_call(&mut self, ended: Result<Ended, Failure>) -> Result<Ended, Failure> {
+        let Some(CallTail {
+            kind,
+            saved_clause_state,
+            saved_base,
+            saved_offset,
+            saved_line,
+            saved_context,
+            stack,
+        }) = self.activity.call_tails.pop()
+        else {
+            return Err(Loud::op_not_driven("a call with no saved level state").into());
+        };
+        // A routine that returned or exited runs the termination exit while its variables are
+        // live (`RexxActivation::exitFrom`, `implicitExit`); its failure is the call's.
+        let ended = if kind == TailKind::Routine
+            && self.calls_program_exits()
+            && matches!(ended, Ok(_) | Err(Failure::Exited(_)))
+        {
+            match self.termination_exit() {
+                Ok(()) => ended,
+                Err(failure) => Err(failure),
+            }
+        } else {
+            ended
+        };
+        if let Err(failure) = &ended {
+            self.capture_activation_frame(failure);
+        }
+
+        // `RexxActivation::termination` releases the guard lock first. With one
+        // activity there is nothing to release; a `<I<` drops the flag first.
+        if kind == TailKind::Method
+            && (self.activities.guards.is_live() || !self.activity.guard_waits.is_empty())
+        {
+            self.guard_off_at_end();
+        }
+        // Before the pop, because both halves of `<I<`'s gate are the
+        // callee's own -- its `trace_entry` state and its `TRACE` setting.
+        // `RexxActivation::termination` is where the C++ puts it, which is
+        // likewise inside the activation.
+        self.trace_invocation_exit(|| match &ended {
+            Ok(ended) => ended.value_ref(),
+            Err(Failure::Exited(value)) => *value,
+            Err(_) => None,
+        });
+
+        // Popped on both paths, and unconditionally: `run_activation`'s own
+        // loop asserts the activation stack is where it found it after every
+        // step, so a `CALL` that returned with the callee still on it would
+        // trip that assertion in the caller rather than quietly running the
+        // wrong frame's `pc`.
+        let mut callee = self.pop_activation().expect("the activation just pushed");
+        let mut ended = ended;
+        match kind {
+            TailKind::Method => {
+                if let Some(replied) = self.release_method_activation(callee, saved_context)
+                    && ended.is_ok()
+                {
+                    ended = Ok(Ended::Returned(replied));
+                }
+            }
+            TailKind::Label | TailKind::Routine => {
+                // **The two halves of "was the pool shared" are one bool, and
+                // both are needed.** A `PROCEDURE` callee pushed a frame of its
+                // own, so that frame is popped here -- on the error path as
+                // well, which is why this is not inside the `Ok` arm below. It
+                // also keeps its own run-time name bindings, so they are *not*
+                // moved back: doing that would overwrite the caller's `extra`
+                // with the callee's isolated one. A shared-pool callee is the
+                // opposite on both counts, and its `extra` write-back is what
+                // makes a name bound inside it survive the return (measured,
+                // `interpret "zork = 42"` in a callee).
+                if callee.owns_frame {
+                    self.roots.activity_mut().pop_slots(callee.frame);
+                } else {
+                    // Taken rather than moved out, so the box stays whole and
+                    // can be parked: moving a field out of a `Box` moves the
+                    // whole of it out and frees the box, which is the
+                    // allocation the pool exists to keep. What is left behind
+                    // is the empty map a fresh activation starts with.
+                    self.activation_mut().extra = std::mem::take(&mut callee.extra);
+                }
+                self.recycle_activation(callee);
+                self.activity.call_context = saved_context;
+            }
+        }
+        self.activity.activation_indent = saved_base;
+        self.activity.indent_offset = saved_offset;
+        self.activity.clause_line_override = saved_line;
+        self.restore_clause_state(saved_clause_state);
+        match stack {
+            LentStack::Kept => {}
+            LentStack::Emptied => self.activity.value_buffer.clear(),
+            LentStack::Lent(values) => self.activity.value_buffer = values,
+        }
+        // A returning activation runs the `UNINIT`s a collection readied
+        // (`memoryObject.checkUninitQueue()`, `RexxActivation.cpp:705`). A
+        // method's run in `Interp::finish_send`, once the primitive methods
+        // waiting on it have finished, since an `UNINIT`'s own send would
+        // otherwise find their tails at its depth.
+        if !self.uninit_ready.is_empty()
+            && kind != TailKind::Method
+            && let Ok(Ended::Returned(value) | Ended::Exited(value)) = &ended
+        {
+            self.run_uninits_at_return(*value)?;
+        }
+
+        // **`EXIT` inside a `::ROUTINE` ends the routine, not the program**,
+        // where `EXIT` inside a `CALL`ed label ends the program. The C++'s
+        // `implicitExit` sets `RETURNED` outright for an `isProgramLevelCall`
+        // activation and only otherwise walks up through `exitFrom`
+        // (`RexxActivation.cpp:1455`-`1469`), and a routine invocation is one
+        // of those. Measured on the oracle, rc 0 every time, and the shapes
+        // matter because the exit arrives here by three different routes:
+        // ```text
+        // call rtn / say result       ::routine rtn ; exit 5      ->  5, and main runs on
+        // n1 = rtn() / say n1         ::routine rtn ; exit 7      ->  7
+        // call rtn / say result       ::routine rtn ; exit        ->  RESULT, unset
+        // call rtn / say 'after'      a label INSIDE the routine exits 9 -> "after" runs
+        // call rtn / say 'after'      interpret "exit 4" in the routine  -> "after" runs
+        // ```
+        // A method body's `EXIT` answers its sender the same way.
+        let ended = match ended {
+            Ok(Ended::Exited(value)) | Err(Failure::Exited(value)) if kind != TailKind::Label => {
+                return Ok(Ended::Returned(value));
+            }
+            other => other,
+        };
+
+        match ended {
+            Ok(ended) => Ok(ended),
+            Err(failure) => {
+                // Seal before the failure leaves the callee, never after --
+                // `seal_site_level`'s own rule, and the same one
+                // `run_fragment` follows. Without it the callee's clause
+                // would win `record_failure_at`'s first-wins race outright
+                // and the call would never be echoed. Measured, the oracle
+                // prints one echo per level, innermost first: a `say 1/0` in
+                // a routine called from a routine called from a `DO` gives
+                // three lines, at indents 6, 4 and 2.
+                self.seal_site_level();
+                Err(failure)
+            }
+        }
+    }
+
+    /// [`Interp::resolve_fixed_call`], then the routine search, then the call,
+    /// over `arguments` already evaluated, as a `CALL ON` trap passes its
+    /// condition object.
+    pub(crate) fn resolve_and_run_call_over(
+        &mut self,
+        name: &[u8],
+        search_labels: bool,
+        arguments: Vec<Option<ObjRef>>,
+        call_type: CallType,
+        entry: CallEntry,
+    ) -> Result<Ended, Failure> {
+        let resolved = match self.resolve_fixed_call(name, search_labels)? {
+            Some(resolved) => resolved,
+            None => self.resolve_routine_call(name)?,
+        };
+        if let Resolved::Builtin(target) = resolved {
+            let mark = self.activity.value_buffer.len();
+            self.activity.value_buffer.extend(arguments);
+            let value = self.run_over_pushed_args(mark, |interp, values| {
+                builtin::run(interp, name, target, values)
+            })?;
+            return Ok(Ended::Returned(Some(value)));
+        }
+        let begun = self.begin_evaluated_call(resolved, name, arguments, call_type, entry)?;
+        self.complete_call(begun)
+    }
+
+    /// Builds the object a `>name` or `<name` term answers: the variable
+    /// `inner` names, rather than the value it holds.
+    pub(crate) fn variable_reference(
+        &mut self,
+        code: &Code<'_>,
+        inner: &Expr,
+    ) -> Result<ObjRef, Failure> {
+        let id = match &inner.kind {
+            ExprKind::Variable(id) | ExprKind::Stem(id) => *id,
+            other => return Err(Loud::expression(other).into()),
+        };
+        let slot = match code.slot_for(id) {
+            Some(slot) => slot,
+            None => self.slot_of(code.symbols.name(id).as_bytes()),
+        };
+        let frame = self.activation().frame;
+        let spelling = code.symbols.name(id).as_bytes();
+        // A reference uses the stem variable it names, which creates it.
+        if matches!(inner.kind, ExprKind::Stem(_)) && self.variable(frame, slot).is_none() {
+            self.create_stem_variable(frame, slot, spelling);
+        }
+        // Resolved here, where the name's own home is: an alias this
+        // activation holds is still addressable, which is what makes `>p`
+        // work when its `p` came from *its* caller, and an `EXPOSE` binding
+        // is on this activation, which is what makes it work on an object
+        // variable. Chasing the slot for an exposed name would name the
+        // empty slot the exposure left behind. Either way the reference names
+        // the variable the name resolves to, under that variable's own name:
+        // an alias of the caller's `v` is a reference to `V`.
+        let (home, name) = match self.exposure(frame, slot) {
+            Some(var) => (
+                VarRefHome::Instance {
+                    owner: var.owner,
+                    scope: var.scope,
+                },
+                var.name.clone(),
+            ),
+            None => {
+                let cell = self.promote_slot(frame, slot, spelling);
+                let name = self.cell_owner_name(frame, slot).unwrap_or(spelling).into();
+                (VarRefHome::Cell(cell), name)
+            }
+        };
+        // A reference's string value is its referenced value's conversion,
+        // which a rendering of the reference does not give.
+        self.reqstr_armed = true;
+        Ok(self.alloc_with(
+            BehaviourId::OBJECT,
+            Body::VarRef(Box::new(interrexx_core::VarRef { name, home })),
+        ))
+    }
+
+    /// One call argument, evaluated, rooted and traced -- the step both call
+    /// paths share.
+    #[inline(always)]
+    fn leaf_argument(&self, expr: &Expr) -> bool {
+        !self.tracing_intermediates()
+            && matches!(
+                expr.kind,
+                ExprKind::Literal(_) | ExprKind::Constant(_) | ExprKind::Variable(_)
+            )
+    }
+
+    /// One argument's value, for a shape whose evaluation produces that
+    /// value and nothing else.
+    fn eval_leaf_argument(&mut self, code: &Code<'_>, expr: &Expr) -> Result<ObjRef, Failure> {
+        let anchor = 0u8;
+        self.enter_eval_node(&raw const anchor)?;
+        let value = self.eval_node(code, expr);
+        self.activity.depth -= 1;
+        let value = value?;
+        self.roots.activity_mut().push_temp(value);
+        Ok(value)
+    }
+
+    pub(crate) fn eval_traced_argument(
+        &mut self,
+        code: &Code<'_>,
+        expr: &Expr,
+    ) -> Result<ObjRef, Failure> {
+        let argument = self.eval(code, expr)?;
+        self.roots.activity_mut().push_temp(argument);
+        if let Some(rendered) = self.intermediate_text(argument)? {
+            self.trace_argument(self.activity.clause_state.current_value_indent, &rendered);
+        }
+        Ok(argument)
+    }
+
+    /// A call's resolution, held back until its arguments have run: the oracle
+    /// evaluates a call's arguments before its external search
+    /// (`expression/ExpressionFunction.cpp:184`, `instructions/CallInstruction.cpp:166`).
+    #[inline(always)]
+    pub(crate) fn resolved_after_arguments<T>(
+        &mut self,
+        code: &Code<'_>,
+        resolution: Result<T, Failure>,
+        args: &[Option<Expr>],
+    ) -> Result<T, Failure> {
+        match resolution {
+            Ok(resolved) => Ok(resolved),
+            Err(failure) => Err(self.arguments_before_failure(code, args, failure)),
+        }
+    }
+
+    /// [`Interp::resolved_after_arguments`]' failing half: run the arguments
+    /// for their trace lines and their own conditions, then report the
+    /// resolution failure if none of them raised first.
+    #[cold]
+    #[inline(never)]
+    fn arguments_before_failure(
+        &mut self,
+        code: &Code<'_>,
+        args: &[Option<Expr>],
+        failure: Failure,
+    ) -> Failure {
+        // The same three shapes `invoke_call`'s own loop has, for their trace
+        // lines and their failures; the values themselves are dropped, since
+        // there is no callee to hand them to.
+        for arg in args {
+            let raised = match arg {
+                None => {
+                    self.trace_argument(self.activity.clause_state.current_value_indent, b"");
+                    continue;
+                }
+                Some(expr) if self.leaf_argument(expr) => self.eval_leaf_argument(code, expr).err(),
+                Some(expr) => pinned!(
+                    self,
+                    crate::pinning::PinKind::TreeEval,
+                    self.eval_traced_argument(code, expr)
+                )
+                .err(),
+            };
+            if let Some(raised) = raised {
+                return raised;
+            }
+        }
+        failure
+    }
+
+    /// Runs one named `CALL`: `resolve_fixed_call`, then
+    /// [`Interp::invoke_named_call`].
+    pub(super) fn exec_call(
+        &mut self,
+        code: &Code<'_>,
+        name: &[u8],
+        search_labels: bool,
+        args: &[Option<Expr>],
+    ) -> Result<Flow, Failure> {
+        let fixed = self.resolve_fixed_call(name, search_labels);
+        let fixed = self.resolved_after_arguments(code, fixed, args)?;
+        self.invoke_named_call(code, Self::unkept_resolution(fixed), name, args)
+    }
+
+    /// The `CALL` instruction past its resolution: [`Interp::invoke_call`],
+    /// then settle `RESULT` and translate the outcome into this instruction's
+    /// own `Flow`.
+    pub(crate) fn invoke_named_call(
+        &mut self,
+        code: &Code<'_>,
+        resolution: CallResolution<'_>,
+        name: &[u8],
+        args: &[Option<Expr>],
+    ) -> Result<Flow, Failure> {
+        // Captured before `invoke_call` runs the callee, which overwrites
+        // `current_value_indent` with its own clauses' -- this is the `CALL`
+        // clause's own printed indent, needed below for the caller-side
+        // `RESULT` trace.
+        let base_indent = self.activity.clause_state.current_value_indent;
+        let ended = self.invoke_call(
+            code,
+            resolution,
+            name,
+            args,
+            CallType::Subroutine,
+            CallEntry::Written,
+        )?;
+        self.settle_call_result(ended, base_indent)
+    }
+
+    /// What a `CALL` does with the outcome its callee handed back: the
+    /// caller's own `>>>` and `RESULT`.
+    pub(crate) fn settle_call_result(
+        &mut self,
+        ended: Ended,
+        base_indent: usize,
+    ) -> Result<Flow, Failure> {
+        let value = match ended {
+            // `EXIT` inside the callee ends the program rather than the
+            // call, and so does running off the end of the body -- measured
+            // both ways. Forwarded unchanged; `RESULT` is never touched on
+            // this path.
+            Ended::Exited(value) => return Ok(Flow::Exit(value)),
+            Ended::Returned(value) => value,
+        };
+
+        // **`RESULT` is settled on return and not at the call.** Measured:
+        // a caller setting `result = 'before'` and calling a no-`PROCEDURE`
+        // routine has the callee print `inside result= before`, so nothing
+        // is cleared on the way in. After `return 42` the caller reads `42`;
+        // after a bare `return` it reads the derived name `RESULT`, which is
+        // what an unset variable renders as.
+        let slot = self.reserved_result_slot();
+        let frame = self.activation().frame;
+        match value {
+            Some(value) => {
+                // Re-rooted in the caller: `Op::Clause`'s region popped the
+                // callee's temps frame around every clause it ran, this one
+                // included, so the `push_temp` the `RETURN` arm did is gone
+                // by now. Same window `Flow::Exit`'s own arm documents,
+                // closed here rather than left open, because unlike an exit
+                // value this one goes on to be stored and read.
+                self.roots.activity_mut().push_temp(value);
+                // The caller's own `>>>`, at the `CALL` clause's indent --
+                // `base_indent`, saved before the callee overwrote
+                // `current_value_indent` with its own clauses'.
+                if let Some(rendered) = self.result_text(value)? {
+                    self.trace_result(base_indent, &rendered);
+                }
+                self.set_variable(frame, slot, value);
+            }
+            None => self.clear_variable(frame, slot),
+        }
+        Ok(Flow::Next)
+    }
+
+    /// Runs a started `CALL`'s callee body on this Rust stack, and settles its
+    /// `RESULT` at `base_indent`.
+    pub(crate) fn complete_subroutine(
+        &mut self,
+        started: Started<Ended>,
+        base_indent: usize,
+    ) -> Result<Flow, Failure> {
+        let ended = match started {
+            Started::Ran(ended) => ended,
+            Started::Entered if self.activity.native_park.is_some() => {
+                return Err(self.refuse_unrooted_park());
+            }
+            Started::Entered => {
+                let ended = self.run_activation();
+                self.finish_call(ended)?
+            }
+        };
+        self.settle_call_result(ended, base_indent)
+    }
+
+    /// A `CALL` over arguments the compiled stream has already evaluated onto
+    /// the argument stack above `mark`, up to the point its callee's body
+    /// would run: the argument run is lent out, turned into `Argument`s, and
+    /// removed again whichever way the call went on.
+    #[inline(always)]
+    pub(crate) fn begin_subroutine_over_pushed_args(
+        &mut self,
+        resolved: Resolved,
+        name: &[u8],
+        mark: usize,
+    ) -> Result<Started<Ended>, Failure> {
+        let mut values = std::mem::take(&mut self.activity.value_buffer);
+        let outcome = match resolved {
+            // No activation, no `Argument`s built -- the shortcut
+            // `begin_call_over_values` takes, and the reason a `CALL` to a builtin
+            // reaches `Ended::Returned(Some(_))` with a value to settle.
+            Resolved::Builtin(target) => builtin::run(self, name, target, &values[mark..])
+                .map(|value| Started::Ran(Ended::Returned(Some(value)))),
+            // **Named rather than left to the arm below**, which has a
+            // catch-all: an internal routine sent into `invoke_call_over`
+            // would reach a `match` that has no arm for it.
+            Resolved::Internal(row) => match self.call_checkpoint(name, &values[mark..]) {
+                Ok(Some(handled)) => Ok(Started::Ran(Ended::Returned(handled))),
+                Ok(None) => self
+                    .run_internal(row, &mut values, mark)
+                    .map(|started| subroutine_started(internal_begun(started))),
+                Err(failure) => Err(failure),
+            },
+            Resolved::LibraryRoutine(slot) => match self.call_checkpoint(name, &values[mark..]) {
+                Ok(Some(handled)) => Ok(Started::Ran(Ended::Returned(handled))),
+                Ok(None) => self
+                    .run_package_routine(slot, name, &values[mark..])
+                    .map(|started| subroutine_started(library_begun(started))),
+                Err(failure) => Err(failure),
+            },
+            _ => self
+                .begin_call(
+                    resolved,
+                    name,
+                    &mut values,
+                    mark,
+                    CallType::Subroutine,
+                    CallEntry::Written,
+                )
+                .map(subroutine_started),
+        };
+        values.truncate(mark);
+        self.lend_stack(self.entered_body(&outcome), values);
+        outcome
+    }
+}
+
+/// A begun function call as a call op starts it.
+#[inline(always)]
+pub(crate) fn function_started(begun: Begun, name: &[u8]) -> Result<Started<ObjRef>, Failure> {
+    match begun {
+        Begun::Done(ended) => function_value(ended, name).map(Started::Ran),
+        Begun::Entered => Ok(Started::Entered),
+    }
+}
+
+/// An internal routine's start as a begun call: `Entered` where it parked.
+fn internal_begun(started: Started<ObjRef>) -> Begun {
+    match started {
+        Started::Ran(value) => Begun::Done(Ended::Returned(Some(value))),
+        Started::Entered => Begun::Entered,
+    }
+}
+
+/// A library routine's start as a begun call: `Entered` where it parked for
+/// its driver exit.
+fn library_begun(started: Started<Option<ObjRef>>) -> Begun {
+    match started {
+        Started::Ran(value) => Begun::Done(Ended::Returned(value)),
+        Started::Entered => Begun::Entered,
+    }
+}
+
+/// A begun `CALL` as a call op starts it.
+pub(crate) fn subroutine_started(begun: Begun) -> Started<Ended> {
+    match begun {
+        Begun::Done(ended) => Started::Ran(ended),
+        Begun::Entered => Started::Entered,
+    }
+}
+
+/// A function call's value, from the way its callee ended.
+#[inline(always)]
+fn function_value(ended: Ended, name: &[u8]) -> Result<ObjRef, Failure> {
+    match ended {
+        // `EXIT` inside the routine, or the routine falling off its own
+        // end, ends the whole program exactly as it does when the same
+        // routine is reached through `CALL` (`Interp::invoke_call`'s
+        // own doc, `run/call.rs`). Propagated as `Failure::Exited` because
+        // `eval`'s own return type is a plain `ObjRef` with no `Flow` to
+        // carry the event through instead -- see that variant's own doc
+        // (`error.rs`) for why every intervening `?` needs no special
+        // handling to still unwind every nested `CALL` correctly.
+        Ended::Exited(value) => Err(Failure::Exited(value)),
+        Ended::Returned(Some(value)) => Ok(value),
+        // Measured on the oracle: a routine reached through the
+        // expression form and returning nothing (a bare `RETURN`) is
+        // Error 44.1 rc 212, "No data returned from function "NAME""
+        // -- the expression form's own answer to "nothing to use here",
+        // which `CALL` never has to give since its own value only ever
+        // reaches `RESULT`, unset or not.
+        Ended::Returned(None) => Err(Raised::no_data_returned(name).into()),
+    }
+}

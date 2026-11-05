@@ -1,0 +1,14 @@
+[package]
+name = "interrexx-inventory"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Builtin function and error message tables for interrexx"
+
+[build-dependencies]
+quick-xml = "0.37"
+
+[lints]
+workspace = true

@@ -1,6 +1,6 @@
 # What each documented collection method does when sent an argument list it
 # could accept. Derived by
-# crates/rexx-exec/tests/collection_arity.rs; edit that, never this.
+# crates/interrexx/tests/collection_arity.rs; edit that, never this.
 #
 # class<TAB>method<TAB>verdict<TAB>evidence
 #

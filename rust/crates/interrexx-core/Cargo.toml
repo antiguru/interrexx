@@ -1,0 +1,32 @@
+[package]
+name = "interrexx-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Object model, heap and garbage collector for interrexx"
+
+[dependencies]
+# `Body::Text` holds a cached `Number` parse and `Body::Num` holds the
+# `Number`/`Form` a value's identity is fixed to at creation (D15), so the
+# object model depends on the arithmetic core.
+interrexx-num.workspace = true
+
+# The hasher behind `NameMap`, the two hot name-keyed tables. See that alias
+# for what it replaces and why the default one costs what it does.
+rustc-hash = "2.1.2"
+
+[features]
+# The sharing-fraction instrument's tags, `Heap::sharing_counts`.
+sharing = []
+
+[dev-dependencies]
+criterion = "0.8.2"
+
+[[bench]]
+name = "heap"
+harness = false
+
+[lints]
+workspace = true

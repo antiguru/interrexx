@@ -6,7 +6,7 @@
    evaluate, render and trace their expression, and says in its own header that
    it cannot pin which end of the queue a line landed on, because nothing that
    reads a line back existed when it was written. Block A is that reader, on
-   stdout rather than only in a trace. crates/rexx-exec/tests/input_oracle.rs's
+   stdout rather than only in a trace. crates/interrexx/tests/input_oracle.rs's
    `queue-round-trip` row is the same property with lines on the console as
    well, which no program here can have.
 
@@ -41,7 +41,7 @@
    RUN and assign the null string rather than leaving their targets unset, and
    that a bare ARG and a bare PARSE ARG are legal and do nothing observable.
    The case split and a non-empty argument need a command line, which no
-   corpus program has; they are witnessed in crates/rexx-exec/tests/
+   corpus program has; they are witnessed in crates/interrexx/tests/
    input_oracle.rs instead.
 
    E: the trace shape, under TRACE R and then TRACE I, because a target's own

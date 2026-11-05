@@ -1,0 +1,22 @@
+[package]
+name = "interrexx-bench"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Benchmark harness for interrexx"
+publish = false
+
+[dependencies]
+interrexx-oracle.workspace = true
+
+[dev-dependencies]
+criterion = "0.8.2"
+
+[[bench]]
+name = "interpreter"
+harness = false
+
+[lints]
+workspace = true

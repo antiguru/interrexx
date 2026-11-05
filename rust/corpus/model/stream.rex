@@ -27,7 +27,7 @@
    position 1 returns what was written there, and a repositioned write loses
    only what it overwrites. Where the documentation leaves a point open, the
    model takes this crate's answer and says so at the rule, naming the
-   function in rust/crates/rexx-exec/src/dispatch/stream.rs and its line.
+   function in rust/crates/interrexx/src/dispatch/stream.rs and its line.
 
    stream_model runs one scenario. `initial` is the file's content before
    it, `transient` says the stream is transient, and `ops` is an array of

@@ -33,7 +33,7 @@ shared-library path. A program that is about that path names `rxmathc`,
 `LD_LIBRARY_PATH` after `{oraclelib}`: the harness's directory of links to the
 oracle's `librxmath.so`, `librxregexp.so`, `librxsock.so` and
 `librxunixsys.so` under those names (`INSTRUMENTS` in
-`crates/rexx-exec/tests/support/sidecar.rs`), so both sides load the same C
+`crates/interrexx/tests/support/sidecar.rs`), so both sides load the same C
 binary. Each such program has a `_rust` copy naming the Rust library.
 
 **Hash iteration order.** The order `DO OVER` yields a hash collection's
@@ -66,7 +66,7 @@ stored constant, so `.nil` is reproducible too. The collection this reaches is
 the collector's own uninit table, whose iteration order is the order class
 `UNINIT`s run at termination. `lang/uninit_class_sweep_order.rex` prints that
 order and is allowed to; the sequences it and the oracle produce are asserted in
-`crates/rexx-classes/tests/uninit_sweep_order.rs`. An instance in the same table
+`crates/interrexx-classes/tests/uninit_sweep_order.rs`. An instance in the same table
 is not reproducible (its hash is the inherited `identityHash`): a program whose
 termination sweep mixes an instance `UNINIT` with a class `UNINIT` is the shape
 the rule forbids -- measured, twenty runs of one class at bucket 16 beside one
@@ -113,7 +113,7 @@ negative control is what makes a zero meaningful.
 One path per line, relative to this directory; `#` starts a comment.
 
 * `differential.txt` -- every program the differential harnesses run under both
-  interpreters (`crates/rexx-exec/tests/corpus.rs`, `coverage.rs`,
+  interpreters (`crates/interrexx/tests/corpus.rs`, `coverage.rs`,
   `collect_stress.rs`, `ir_recorded.rs`, `trace_oracle.rs`, and the IR shape
   sweep). Every `lang/*.rex` is either listed here or named in `unfiled.txt`
   with a reason; the entries outside `lang/` are pinned by `corpus.rs`'s
@@ -133,11 +133,11 @@ What a listed program may not print, beyond the determinism rule above:
 * **Not `PARSE SOURCE`'s third word**, the program's own absolute path.
   `lang/parse_sources.rex` and `lang/source_arg.rex` project it away.
 * **Not `PARSE VERSION`**: all three fields are the interpreter's own build
-  identity. `crates/rexx-exec/tests/parse_version_oracle.rs` checks it instead.
+  identity. `crates/interrexx/tests/parse_version_oracle.rs` checks it instead.
 
 The command line and a non-empty console are outside every corpus program's
 reach: the harness passes no arguments and an empty stdin. Both are compared
-against the oracle in `crates/rexx-exec/tests/input_oracle.rs`, which drives the
+against the oracle in `crates/interrexx/tests/input_oracle.rs`, which drives the
 `rexx` binary with an `argv` and a fed stdin instead.
 
 ## Directories
@@ -150,15 +150,15 @@ against the oracle in `crates/rexx-exec/tests/input_oracle.rs`, which drives the
   `differential.txt`.
 * `expr/` -- not a `rexx-diff` corpus. `precedence.tsv` is a table of generated
   expressions with the value or error number the oracle gave for each, read by
-  `rexx-parse`'s differential test so that `cargo test` needs no built C++
+  `interrexx-parse`'s differential test so that `cargo test` needs no built C++
   interpreter. Its own header records how it was generated and what the columns
   mean.
 * `errors/` -- not a `rexx-diff` corpus either. `parse-errors.tsv` holds one row
   per program with the answer `build/bin/rexxc` gave for it: the major number,
   sub-number, reported line and secondary message when it refused, and `ok` when
-  it translated. `rexx-parse`'s `tests/errors.rs` reads it and checks both
+  it translated. `interrexx-parse`'s `tests/errors.rs` reads it and checks both
   directions, so a parser that rejected nothing and one that rejected everything
-  both fail; `rexx-exec`'s `tests/rexxc.rs` checks this crate's `rexxc` against
+  both fail; `interrexx`'s `tests/rexxc.rs` checks this crate's `rexxc` against
   each row. The `class` field says whether the oracle refused to *translate* the
   program or rejected it later, while installing the package, and is recorded per
   row rather than derived from the error number: the two install-time classes
@@ -173,7 +173,7 @@ against the oracle in `crates/rexx-exec/tests/input_oracle.rs`, which drives the
   `rexx-diff`'s walk is recursive and its self-test reads every `.rex` under
   `corpus/`; agreement between the two interpreters does not.
 * `model/` -- the executable numeric and stream models, checked against the
-  native implementations by `crates/rexx-exec/tests/numeric_model.rs` and
+  native implementations by `crates/interrexx/tests/numeric_model.rs` and
   `stream_model.rs`.
 * `docs/` -- tables extracted from the reference documentation (class set,
   class methods, directive options, hierarchy edges, `provide` sections).
@@ -226,9 +226,9 @@ memory-safe reimplementation neither can nor should reproduce a C++ segfault.
 
 **Editing a `corpus/lang/*.rex` file invalidates its `sourceline_oracle`
 expectation, even if you only touched a comment.**
-`rust/crates/rexx-parse/tests/sourceline_oracle/<name>.txt` records the oracle's
+`rust/crates/interrexx-parse/tests/sourceline_oracle/<name>.txt` records the oracle's
 line count and every one of its lines by position, so any edit to the text or the
-line count desyncs it. The only tell is `cargo test -p rexx-parse` failing a
+line count desyncs it. The only tell is `cargo test -p interrexx-parse` failing a
 `sourceline`-named test. To change a comment, keep the line count and every
 non-comment line, then regenerate with the driver named in
 `sourceline_oracle.rs`'s own module comment: save it to a scratch file as
@@ -241,7 +241,7 @@ for f in rust/corpus/lang/*.rex; do
           2>/dev/null ) | grep '^%SRCG%' )
   count=$(printf '%s\n' "$out" | sed -n 's/^%SRCG%COUNT //p')
   { echo "count $count"; printf '%s\n' "$out" | sed -n 's/^%SRCG%L//p'; } \
-    > rust/crates/rexx-parse/tests/sourceline_oracle/$name.txt
+    > rust/crates/interrexx-parse/tests/sourceline_oracle/$name.txt
 done
 ```
 

@@ -1,0 +1,828 @@
+//! Runs every row `interrexx-extract`'s `bif` module
+//! lifts out of `ootest/ooRexx/base/bif/` through `interrexx`'s public entry
+//! point, and checks each the way the ooTest framework's own `assertSame`
+//! does.
+
+mod watchdog;
+
+use interrexx::{NOT_IMPLEMENTED_EXIT, Outcome};
+use interrexx_extract::bif::{DropReason, RaiseRow, extract_bif};
+use interrexx_extract::keyword::count_assert_same;
+use interrexx_extract::{AssertionRow, Form, RaiseExpectation, find_test_groups};
+use rayon::prelude::*;
+use std::collections::BTreeMap;
+use std::env;
+use std::fmt::Write as _;
+use std::fs;
+use std::io::Write as _;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+
+/// The path every row is reported under. There is no real file behind one --
+/// the program is assembled from one `.testGroup` assertion -- so this is a
+/// label, in the same spirit as `assertions.rs`'s `ROW_PATH`.
+const ROW_PATH: &str = "/nonexistent/bif-row.rex";
+
+/// Env var that flips this test from a progress report into a run that fails
+/// on an unaccounted row. Named separately from the other three gates because
+/// the four measure independent things.
+const GATE_ENV: &str = "REXX_BIF_GATE";
+
+/// The env var that rewrites `corpus/bif-exempt.txt` from the run, the way
+/// `method-bodies.txt` and `collection-arity.tsv` are rewritten from theirs.
+/// **The diff is the review**: this writes whatever the run measured, so a row
+/// that newly started failing is absorbed as readily as one whose blocker
+/// moved, and only reading the diff tells them apart.
+const REFRESH_ENV: &str = "REXX_BIF_EXEMPT_REFRESH";
+
+/// The ooTest revision this harness's committed exempt set was measured at.
+/// `ootest/` is git-ignored and is an SVN working copy, not checked-in test
+/// data, so it can move with nothing in this repository changing; read it back
+/// with `svn info ootest`.
+const OOTEST_REVISION: &str = "r13347";
+
+fn gate_mode() -> bool {
+    match env::var(GATE_ENV) {
+        Ok(value) => !value.is_empty() && value != "0",
+        Err(_) => false,
+    }
+}
+
+fn suite_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../ootest/ooRexx/base/bif")
+}
+
+fn exempt_path() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/bif-exempt.txt")
+}
+
+/// One row, either kind, with the identity the exempt set keys on.
+struct Row {
+    /// `GROUP::METHOD#N`, `N` being the 1-based position of this row among the
+    /// rows its own method yielded.
+    key: String,
+    kind: RowKind,
+}
+
+enum RowKind {
+    Value(AssertionRow),
+    Raise(RaiseRow),
+}
+
+/// Every row in the suite, in sorted file order, plus the per-reason
+/// accounting for the `assertSame` calls that did not become one.
+fn collect() -> (Vec<Row>, BTreeMap<DropReason, (usize, usize)>, usize) {
+    let dir = suite_root();
+    let groups = find_test_groups(&dir);
+    assert!(
+        !groups.is_empty(),
+        "no .testGroup files under {} -- suite_root points at the wrong directory, or the \
+         ootest checkout is missing base/bif entirely",
+        dir.display()
+    );
+
+    let mut rows = Vec::new();
+    let mut dropped: BTreeMap<DropReason, (usize, usize)> = BTreeMap::new();
+    let mut calls = 0usize;
+    for path in &groups {
+        let bytes =
+            fs::read(path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+        let source = String::from_utf8_lossy(&bytes);
+        let group = path.file_stem().and_then(|s| s.to_str()).unwrap_or("group");
+        let extraction = extract_bif(group, &source);
+        calls += count_assert_same(&source);
+        for blocked in &extraction.blocked {
+            let entry = dropped.entry(blocked.reason).or_default();
+            entry.0 += 1;
+            entry.1 += blocked.dropped;
+        }
+        let mut seen: BTreeMap<String, usize> = BTreeMap::new();
+        for row in extraction.rows {
+            let key = next_key(&mut seen, &row.group, &row.method);
+            rows.push(Row {
+                key,
+                kind: RowKind::Value(row),
+            });
+        }
+        for row in extraction.raises {
+            let key = next_key(&mut seen, &row.group, &row.method);
+            rows.push(Row {
+                key,
+                kind: RowKind::Raise(row),
+            });
+        }
+    }
+    assert!(
+        !rows.is_empty(),
+        "extract_bif produced no rows at all -- that is an extraction defect, not an empty pass"
+    );
+    (rows, dropped, calls)
+}
+
+fn next_key(seen: &mut BTreeMap<String, usize>, group: &str, method: &str) -> String {
+    let stem = format!("{group}::{method}");
+    let n = seen.entry(stem.clone()).or_insert(0);
+    *n += 1;
+    format!("{stem}#{n}")
+}
+
+/// A program that establishes one row's state and then `SAY`s each of
+/// `clauses` in order.
+fn program(digits: u32, form: Form, prelude: &[String], clauses: &[&str]) -> Vec<u8> {
+    let mut text = String::new();
+    writeln!(text, "numeric digits {digits}").unwrap();
+    writeln!(
+        text,
+        "numeric form {}",
+        match form {
+            Form::Scientific => "scientific",
+            Form::Engineering => "engineering",
+        }
+    )
+    .unwrap();
+    for line in prelude {
+        writeln!(text, "{line}").unwrap();
+    }
+    for clause in clauses {
+        writeln!(text, "say {clause}").unwrap();
+    }
+    text.into_bytes()
+}
+
+/// What running one row decided.
+#[derive(Debug)]
+enum RowOutcome {
+    /// A value row whose two `SAY` lines were byte-identical, or a raise row
+    /// whose program raised exactly the expected major and sub.
+    Pass,
+    /// A value row whose two lines both rendered and differ.
+    Mismatch,
+    /// A raise row whose program did not raise the expected condition: either
+    /// it did not raise at all, or it raised a *different* `major.sub`.
+    /// Checked as a pair, so a row expecting `40.5` cannot be satisfied by
+    /// `40.9`.
+    RaiseMismatch,
+    /// Hit [`NOT_IMPLEMENTED_EXIT`]. `construct` is what the program ran into
+    /// first; `owner` is the owner its refusal names, if any.
+    Blocked {
+        construct: String,
+        owner: Option<String>,
+    },
+    /// A real condition escaped a value row the ooTest suite asserts passes,
+    /// or a raise row's stderr could not be read back as a `major.sub`.
+    Anomaly { detail: String },
+}
+
+impl RowOutcome {
+    /// What this row is exempt under, in the vocabulary the committed exempt
+    /// file uses. `None` for a passing row.
+    fn attribution(&self) -> Option<String> {
+        match self {
+            RowOutcome::Pass => None,
+            RowOutcome::Blocked { owner, construct } => Some(
+                owner
+                    .clone()
+                    .unwrap_or_else(|| format!("UNATTRIBUTED:{construct}")),
+            ),
+            RowOutcome::Mismatch => Some("MISMATCH".to_string()),
+            RowOutcome::RaiseMismatch => Some("RAISE-MISMATCH".to_string()),
+            RowOutcome::Anomaly { .. } => Some("ANOMALY".to_string()),
+        }
+    }
+}
+
+/// Splits a `rexx-exec: X is not implemented (OWNER)` line into `X` and
+/// `OWNER`. The owner is optional.
+fn parse_loud(stderr: &[u8]) -> (String, Option<String>) {
+    let text = String::from_utf8_lossy(stderr);
+    const MARKER: &str = "rexx-exec: ";
+    const SUFFIX: &str = " is not implemented";
+    let Some(after) = text.find(MARKER).map(|at| &text[at + MARKER.len()..]) else {
+        return ("<unnamed>".to_string(), None);
+    };
+    let Some(end) = after.find(SUFFIX) else {
+        return ("<unnamed>".to_string(), None);
+    };
+    let construct = after[..end].to_string();
+    let owner = after[end + SUFFIX.len()..]
+        .trim_start()
+        .strip_prefix('(')
+        .and_then(|rest| rest.split(')').next())
+        .map(str::to_string);
+    (construct, owner)
+}
+
+/// A directory of this row's own for the interpreter to resolve relative
+/// paths against. **Not the test process's**: an extracted row that writes a
+/// file -- `STREAM.testGroup`'s do, now that the stream builtins run -- would
+/// otherwise drop it in the crate directory, and one that reads a relative
+/// path would resolve it against wherever the harness happened to start.
+///
+/// **Keyed by the row, not by the program.** A value row runs its expression
+/// and its expected value as two programs, and a row like `QUALIFY`'s
+/// `assertSame(directory(), qualify("."))` compares two readings of the
+/// working directory -- so the two sides have to share one. Rows still get
+/// their own, which they need because `evaluate` runs them under `par_iter`.
+/// Two assertions in one test method share a directory, as they do in the
+/// suite itself.
+fn row_directory(group: &str, method: &str) -> PathBuf {
+    let safe: String = format!("{group}.{method}")
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '.' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join("bif-rows")
+        .join(safe);
+    fs::create_dir_all(&dir).unwrap_or_else(|e| panic!("cannot create {}: {e}", dir.display()));
+    dir
+}
+
+/// Points the process's API connection at a service of its own below the
+/// target directory, which `RXQUEUE`'s rows reach, and starts a watcher that
+/// stops that service and removes its directory once this process has ended:
+/// queues a row leaves behind would keep it running.
+fn private_service() {
+    static CHOSEN: std::sync::Once = std::sync::Once::new();
+    CHOSEN.call_once(|| {
+        let dir =
+            Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("bif-api-{}", std::process::id()));
+        let daemon = Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi");
+        interrexx::use_api_service(&dir, &daemon);
+        let _ = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(
+                "while kill -0 \"$0\" 2>/dev/null; do sleep 1; done; \
+                 REXX_API_DIR=\"$1\" \"$2\" --stop >/dev/null 2>&1; rm -rf \"$1\"",
+            )
+            .arg(std::process::id().to_string())
+            .arg(&dir)
+            .arg(&daemon)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+    });
+}
+
+fn evaluate(row: &RowKind) -> RowOutcome {
+    private_service();
+    match row {
+        // **Two runs, not one program printing two lines.** A single program
+        // whose output is split on `\n` cannot compare operands that are
+        // themselves binary: `BITAND.testGroup`'s expected values include
+        // `'0A'x`, so its rows print four lines from two `SAY`s and every one
+        // of them reads as a malformed run. Running each operand alone and
+        // comparing the two stdouts byte for byte has no such blind spot, and
+        // it keeps `assertions.rs`'s reason for not asking `interrexx` to
+        // evaluate `==` itself: the rendering is what is under test, so the
+        // executor's own comparison operator must not be the judge.
+        RowKind::Value(r) => {
+            let dir = row_directory(&r.group, &r.method);
+            let left = watchdog::run_bounded(
+                ROW_PATH,
+                program(r.digits, r.form, &r.prelude, &[&r.expr]),
+                interrexx::Invocation::none().with_directory(dir.clone()),
+            );
+            let right = watchdog::run_bounded(
+                ROW_PATH,
+                program(r.digits, r.form, &r.prelude, &[&r.expected]),
+                interrexx::Invocation::none().with_directory(dir),
+            );
+            classify_value(left, right)
+        }
+        RowKind::Raise(r) => {
+            let operands: Vec<&str> = r.operands.iter().map(String::as_str).collect();
+            classify_raise(
+                r.expect,
+                watchdog::run_bounded(
+                    ROW_PATH,
+                    program(r.digits, r.form, &r.prelude, &operands),
+                    interrexx::Invocation::none()
+                        .with_directory(row_directory(&r.group, &r.method)),
+                ),
+            )
+        }
+    }
+}
+
+/// The classification step for a value row, apart from running anything, so
+/// the constructed witnesses below can reuse it.
+fn classify_value(left: Outcome, right: Outcome) -> RowOutcome {
+    for side in [&left, &right] {
+        if side.exit_code == NOT_IMPLEMENTED_EXIT {
+            let (construct, owner) = parse_loud(&side.stderr);
+            return RowOutcome::Blocked { construct, owner };
+        }
+    }
+    for side in [&left, &right] {
+        if side.exit_code != 0 {
+            return RowOutcome::Anomaly {
+                detail: format!(
+                    "exit {} (a real condition escaped a row the oracle's own suite asserts \
+                     passes); stderr={}",
+                    side.exit_code,
+                    excerpt(&side.stderr)
+                ),
+            };
+        }
+    }
+    if left.stdout == right.stdout {
+        RowOutcome::Pass
+    } else {
+        RowOutcome::Mismatch
+    }
+}
+
+fn classify_raise(expect: RaiseExpectation, outcome: Outcome) -> RowOutcome {
+    if outcome.exit_code == NOT_IMPLEMENTED_EXIT {
+        let (construct, owner) = parse_loud(&outcome.stderr);
+        return RowOutcome::Blocked { construct, owner };
+    }
+    if outcome.exit_code == 0 {
+        return RowOutcome::RaiseMismatch;
+    }
+    let Some((major, sub)) = parse_condition_number(&outcome.stderr) else {
+        return RowOutcome::Anomaly {
+            detail: format!(
+                "exit {} but no parseable \"Error major.sub:\" line in stderr: {}",
+                outcome.exit_code,
+                excerpt(&outcome.stderr)
+            ),
+        };
+    };
+    if major == expect.major && sub == expect.sub {
+        RowOutcome::Pass
+    } else {
+        RowOutcome::RaiseMismatch
+    }
+}
+
+/// Finds `major`/`sub` in the oracle-format report's second line, `Error
+/// <major>.<sub>:  <message>.`.
+fn parse_condition_number(stderr: &[u8]) -> Option<(u32, u32)> {
+    let text = String::from_utf8_lossy(stderr);
+    for line in text.lines() {
+        // `continue`, never `?`: the report's *first* line is the traced clause
+        // (`   4 *-* say ABS('a')`), which does not start `Error ` at all, so a
+        // short-circuit here abandons the scan before reaching the line that
+        // carries the number and reports every raise as unreadable.
+        let Some(rest) = line.strip_prefix("Error ") else {
+            continue;
+        };
+        let Some(colon) = rest.find(':') else {
+            continue;
+        };
+        let Some((major, sub)) = rest[..colon].split_once('.') else {
+            continue;
+        };
+        if let (Ok(major), Ok(sub)) = (major.trim().parse::<u32>(), sub.trim().parse::<u32>()) {
+            return Some((major, sub));
+        }
+    }
+    None
+}
+
+fn excerpt(bytes: &[u8]) -> String {
+    const BOUND: usize = 200;
+    let text = String::from_utf8_lossy(bytes);
+    if text.chars().count() > BOUND {
+        format!("{}...", text.chars().take(BOUND).collect::<String>())
+    } else {
+        text.into_owned()
+    }
+}
+
+/// The committed exempt set, `GROUP::METHOD#N -> unblocked_by`.
+fn committed_exempt() -> BTreeMap<String, String> {
+    let path = exempt_path();
+    let text =
+        fs::read_to_string(&path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+    let mut out = BTreeMap::new();
+    for line in text.lines() {
+        let line = line.trim_end();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let (key, attribution) = line.split_once('\t').unwrap_or_else(|| {
+            panic!(
+                "{}: line is not `GROUP::METHOD#N<TAB>unblocked_by`: {line:?}",
+                path.display()
+            )
+        });
+        if let Some(previous) = out.insert(key.to_string(), attribution.to_string()) {
+            panic!(
+                "{}: {key} is listed twice ({previous:?} and {attribution:?})",
+                path.display()
+            );
+        }
+    }
+    out
+}
+
+/// Polices the committed exempt set itself, in every mode, independent of
+/// [`GATE_ENV`]: the current failure set must equal the committed one exactly,
+/// attribution included.
+#[test]
+fn the_exempt_set_matches_the_current_failures() {
+    let (rows, _, _) = collect();
+    let committed = committed_exempt();
+
+    let outcomes: Vec<RowOutcome> = rows.par_iter().map(|row| evaluate(&row.kind)).collect();
+    let mut measured: BTreeMap<String, String> = BTreeMap::new();
+    for (row, outcome) in rows.iter().zip(outcomes) {
+        if let Some(attribution) = outcome.attribution() {
+            measured.insert(row.key.clone(), attribution);
+        }
+    }
+
+    let mut problems = Vec::new();
+    for (key, attribution) in &measured {
+        match committed.get(key) {
+            None => problems.push(format!(
+                "{key} is failing ({attribution}) and is not on the committed exempt list"
+            )),
+            Some(listed) if listed != attribution => problems.push(format!(
+                "{key} is listed as {listed:?} but now measures {attribution:?} -- its blocker \
+                 moved"
+            )),
+            Some(_) => {}
+        }
+    }
+    for key in committed.keys() {
+        if !measured.contains_key(key) {
+            problems.push(format!(
+                "{key} now PASSES but is still on the committed exempt list -- remove it"
+            ));
+        }
+    }
+
+    // Under [`REFRESH_ENV`], write what this run measured and stop. Both
+    // listings below are bounded at 40 rows, so a committed set larger than
+    // that could not be rebuilt by reading a failing run's output -- which is
+    // how this file came to need a writer at all.
+    if matches!(env::var(REFRESH_ENV), Ok(value) if !value.is_empty() && value != "0") {
+        let path = exempt_path();
+        let existing = fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+        let mut out = String::new();
+        for line in existing.lines().take_while(|line| line.starts_with('#')) {
+            out.push_str(line);
+            out.push('\n');
+        }
+        for (key, attribution) in &measured {
+            out.push_str(key);
+            out.push('\t');
+            out.push_str(attribution);
+            out.push('\n');
+        }
+        fs::write(&path, out).unwrap_or_else(|e| panic!("cannot write {}: {e}", path.display()));
+        return;
+    }
+
+    // Bounded, because the set can legitimately be thousands of rows wide and a
+    // failure message that long is unreadable; the count above it is the figure
+    // that matters and is never truncated.
+    const SHOWN: usize = 40;
+    let shown: Vec<&String> = problems.iter().take(SHOWN).collect();
+    assert!(
+        problems.is_empty(),
+        "the committed exempt set ({}) no longer describes reality ({} failing). Measured at \
+         ooTest {OOTEST_REVISION}; check `svn info ootest` first if the corpus may have moved.\n\
+         {} problem(s), first {}:\n{}",
+        committed.len(),
+        measured.len(),
+        problems.len(),
+        shown.len(),
+        shown
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+}
+
+/// The runner and the report. Always green in REPORT mode; under [`GATE_ENV`]
+/// it additionally fails on a row with no matching exempt entry, which is the
+/// same condition [`the_exempt_set_matches_the_current_failures`] asserts in
+/// one direction.
+#[test]
+fn bif_assertions_differential() {
+    let (rows, dropped, calls) = collect();
+    let committed = committed_exempt();
+
+    let mut value_total = 0usize;
+    let mut value_pass = 0usize;
+    let mut raise_total = 0usize;
+    let mut raise_pass = 0usize;
+    let mut by_attribution: BTreeMap<String, usize> = BTreeMap::new();
+    let mut by_construct: BTreeMap<String, usize> = BTreeMap::new();
+    let mut per_group: BTreeMap<String, (usize, usize)> = BTreeMap::new();
+    let mut unaccounted = Vec::new();
+    let mut anomalies = Vec::new();
+
+    let outcomes: Vec<RowOutcome> = rows.par_iter().map(|row| evaluate(&row.kind)).collect();
+    for (row, outcome) in rows.iter().zip(outcomes) {
+        let (group, raise) = match &row.kind {
+            RowKind::Value(r) => (r.group.clone(), false),
+            RowKind::Raise(r) => (r.group.clone(), true),
+        };
+        let entry = per_group.entry(group).or_insert((0, 0));
+        entry.0 += 1;
+        if raise {
+            raise_total += 1;
+        } else {
+            value_total += 1;
+        }
+
+        if let RowOutcome::Blocked { construct, .. } = &outcome {
+            *by_construct.entry(construct.clone()).or_insert(0) += 1;
+        }
+        if let RowOutcome::Anomaly { detail } = &outcome {
+            anomalies.push(format!("  {}: {detail}", row.key));
+        }
+        match outcome.attribution() {
+            None => {
+                entry.1 += 1;
+                if raise {
+                    raise_pass += 1;
+                } else {
+                    value_pass += 1;
+                }
+            }
+            Some(attribution) => {
+                *by_attribution.entry(attribution.clone()).or_insert(0) += 1;
+                if committed.get(&row.key) != Some(&attribution) {
+                    unaccounted.push(format!("  {}: {attribution}", row.key));
+                }
+            }
+        }
+    }
+
+    let gate = gate_mode();
+    emit_uncaptured(&build_report(
+        calls,
+        (value_pass, value_total),
+        (raise_pass, raise_total),
+        &dropped,
+        &by_attribution,
+        &by_construct,
+        &per_group,
+        &anomalies,
+        &unaccounted,
+        gate,
+    ));
+
+    assert!(
+        !gate || unaccounted.is_empty(),
+        "STRICT ({GATE_ENV}) mode: {} row(s) are failing with no matching entry in the committed \
+         exempt list; see the report above.",
+        unaccounted.len()
+    );
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "a report formatter with one parameter per measured column; bundling them into a \
+              struct used once would move the same list three lines up"
+)]
+fn build_report(
+    calls: usize,
+    value: (usize, usize),
+    raise: (usize, usize),
+    dropped: &BTreeMap<DropReason, (usize, usize)>,
+    by_attribution: &BTreeMap<String, usize>,
+    by_construct: &BTreeMap<String, usize>,
+    per_group: &BTreeMap<String, (usize, usize)>,
+    anomalies: &[String],
+    unaccounted: &[String],
+    gate: bool,
+) -> String {
+    let banner = "=".repeat(78);
+    let mut report = String::new();
+    let w = &mut report;
+    writeln!(w, "{banner}").unwrap();
+    writeln!(
+        w,
+        "interrexx bif row report -- ootest/ooRexx/base/bif @ {OOTEST_REVISION}"
+    )
+    .unwrap();
+    if gate {
+        writeln!(w, "mode: STRICT -- {GATE_ENV} is set").unwrap();
+    } else {
+        writeln!(
+            w,
+            "*** REPORT MODE. Set {GATE_ENV}=1 to fail on an unaccounted row. ***"
+        )
+        .unwrap();
+    }
+    writeln!(
+        w,
+        "THIS HEADLINE IS A MEASUREMENT, NOT A THRESHOLD -- base/bif covers the whole builtin \
+         surface."
+    )
+    .unwrap();
+    writeln!(
+        w,
+        "{} of {} value rows passing, {} of {} raise rows passing, out of {calls} assertSame calls",
+        value.0, value.1, raise.0, raise.1
+    )
+    .unwrap();
+
+    writeln!(w, "per group (rows passing/total):").unwrap();
+    for (group, (total, passing)) in per_group {
+        writeln!(w, "  {group:<14} {passing:>5}/{total}").unwrap();
+    }
+
+    writeln!(
+        w,
+        "outside the extracted population, by reason (bodies, assertSame calls):"
+    )
+    .unwrap();
+    for reason in DropReason::ALL {
+        let (bodies, count) = dropped.get(reason).copied().unwrap_or((0, 0));
+        writeln!(w, "  {:<45} {bodies:>5} {count:>7}", reason.label()).unwrap();
+    }
+
+    writeln!(w, "not passing, by what would unblock it:").unwrap();
+    for (attribution, count) in by_attribution {
+        writeln!(w, "  {attribution:<45} {count}").unwrap();
+    }
+    writeln!(w, "first construct hit, for a row that failed loudly:").unwrap();
+    for (construct, count) in by_construct {
+        writeln!(w, "  {construct:<45} {count}").unwrap();
+    }
+    if !anomalies.is_empty() {
+        writeln!(
+            w,
+            "anomalies ({}) -- neither a gap nor a comparison this harness can read:",
+            anomalies.len()
+        )
+        .unwrap();
+        for line in anomalies.iter().take(20) {
+            writeln!(w, "{line}").unwrap();
+        }
+    }
+    if !unaccounted.is_empty() {
+        writeln!(
+            w,
+            "NOT on the committed exempt list ({}) -- what STRICT would fail on:",
+            unaccounted.len()
+        )
+        .unwrap();
+        for line in unaccounted.iter().take(40) {
+            writeln!(w, "{line}").unwrap();
+        }
+    }
+    writeln!(w, "{banner}").unwrap();
+    report
+}
+
+/// Writes `text` to the real, process-level stderr. Identical mechanism to
+/// `corpus.rs::emit_uncaptured` -- see that file's own doc for why `println!`
+/// cannot do this from inside a `#[test]`.
+fn emit_uncaptured(text: &str) {
+    let mut child = Command::new("sh")
+        .arg("-c")
+        .arg("cat >&2")
+        .stdin(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .expect("spawning `sh -c 'cat >&2'` to bypass libtest's output capture");
+    child
+        .stdin
+        .take()
+        .expect("stdin was requested as piped")
+        .write_all(text.as_bytes())
+        .expect("writing the report to the uncaptured-output child's stdin");
+    let status = child
+        .wait()
+        .expect("waiting for the uncaptured-output child");
+    assert!(
+        status.success(),
+        "the uncaptured-output child (`sh -c 'cat >&2'`) exited abnormally: {status}"
+    );
+}
+
+/// The falsification proof: perturbing one passing value row's expression must
+/// make exactly that row fail.
+#[test]
+fn the_falsification_proof() {
+    let (rows, _, _) = collect();
+    let row = rows
+        .iter()
+        .find_map(|row| match &row.kind {
+            RowKind::Value(r) if matches!(evaluate(&row.kind), RowOutcome::Pass) => Some(r),
+            _ => None,
+        })
+        .expect("at least one value row passes; if none does, this harness measures nothing");
+
+    let mut perturbed = row.clone();
+    perturbed.expr = format!("('ZZZ-FALSIFICATION-MARKER' || ({}))", row.expr);
+    assert!(
+        matches!(evaluate(&RowKind::Value(perturbed)), RowOutcome::Mismatch),
+        "perturbing a row's expression did not make it fail -- the harness is not sensitive to \
+         what the rows compare, which is exactly the vacuous-table shape this exists to avoid. \
+         Row: {} == {}",
+        row.expr,
+        row.expected
+    );
+
+    // The other direction: the unperturbed row still passes, so the failure
+    // above is the perturbation and not something leaking between runs.
+    assert!(matches!(
+        evaluate(&RowKind::Value(row.clone())),
+        RowOutcome::Pass
+    ));
+}
+
+/// A raise row is satisfied by the exact `major.sub`, not by the major alone.
+#[test]
+fn a_raise_row_needs_the_sub_number_too() {
+    let row = RaiseRow {
+        group: "SYNTHETIC".to_string(),
+        method: "raises_40_12".to_string(),
+        prelude: Vec::new(),
+        operands: vec!["substr('abc', 'x')".to_string()],
+        digits: 9,
+        form: Form::Scientific,
+        expect: RaiseExpectation { major: 40, sub: 12 },
+    };
+    assert!(
+        matches!(evaluate(&RowKind::Raise(row.clone())), RowOutcome::Pass),
+        "the control does not raise 40.12, so the negative below would prove nothing: {:?}",
+        evaluate(&RowKind::Raise(row.clone()))
+    );
+
+    let wrong_sub = RaiseRow {
+        expect: RaiseExpectation { major: 40, sub: 5 },
+        ..row.clone()
+    };
+    assert!(
+        matches!(
+            evaluate(&RowKind::Raise(wrong_sub)),
+            RowOutcome::RaiseMismatch
+        ),
+        "a raise row expecting 40.5 was satisfied by a program raising 40.12 -- the sub number is \
+         not being checked"
+    );
+
+    let no_raise = RaiseRow {
+        operands: vec!["'quiet'".to_string()],
+        ..row
+    };
+    assert!(
+        matches!(
+            evaluate(&RowKind::Raise(no_raise)),
+            RowOutcome::RaiseMismatch
+        ),
+        "a raise row whose program raised nothing at all was not distinguished from one that \
+         raised what it expected"
+    );
+}
+
+/// The exempt file's `unblocked_by` column is a refusal's construct or one of the
+/// categories [`RowOutcome::attribution`] emits for a row that neither passes
+/// nor names a construct. Nothing else, so a typo cannot quietly become a new
+/// category that the set-equality test then happily matches against itself.
+#[test]
+fn every_exempt_attribution_is_a_declared_outcome() {
+    // The count is the whole point of this table, not decoration on it.
+    // `MISMATCH`'s two rows are `STREAM::test_relative_file_exists` and `...2`.
+    // Both assert against `.ooTest.dir`, which does not resolve outside the
+    // ooTest framework -- both interpreters render it as the literal
+    // `.OOTEST.DIR`, so the expected value is a string no implementation can
+    // produce. The group's own `::method setup` supplies it, and this harness
+    // lifts one assertion out without it.
+    //
+    // `RAISE-MISMATCH` and `ANOMALY` are 0.
+    const DERIVED: &[(&str, usize)] = &[("MISMATCH", 2), ("RAISE-MISMATCH", 0), ("ANOMALY", 0)];
+
+    let names: Vec<&str> = DERIVED.iter().map(|(name, _)| *name).collect();
+    let mut counts = vec![0usize; DERIVED.len()];
+    for (key, attribution) in committed_exempt() {
+        assert!(
+            names.contains(&attribution.as_str()) || attribution.starts_with("UNATTRIBUTED:"),
+            "{key} is attributed to {attribution:?}, which is none of {names:?}"
+        );
+        if let Some(i) = names.iter().position(|name| *name == attribution) {
+            counts[i] += 1;
+        }
+    }
+    for (count, (name, expected)) in counts.iter().zip(DERIVED) {
+        assert_eq!(
+            count,
+            expected,
+            "{count} rows of {} carry the derived attribution {name}, against the {expected} \
+             pinned here. A row with this attribution names no owner and no construct, so it is \
+             a divergence nothing accounts for: record it as a Deviation, and move this number deliberately rather than letting the set-equality test \
+             absorb it",
+            exempt_path().display()
+        );
+    }
+}

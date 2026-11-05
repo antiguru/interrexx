@@ -1,0 +1,4609 @@
+//! The executor.
+
+// Under `--cfg loom` only `tests/loom.rs` runs: the unit tests would meet
+// `loom`'s primitives outside a model (`sync.rs`).
+#![cfg(not(all(loom, test)))]
+
+use interrexx_classes::MethodId;
+use interrexx_core::{Heap, NameMap, ObjRef, RootSet, SlotRef};
+use interrexx_num::Settings;
+use interrexx_parse::{
+    CodeBody, ExprKind, InstructionKind, Operator, Program, SymbolId, SymbolTable, compound_parts,
+    parse_known_program,
+};
+use rustc_hash::FxHashMap;
+use std::rc::Rc;
+
+// `pinned!` and `park_point!`, ahead of every module that uses them.
+#[macro_use]
+mod pinning;
+
+/// `$body`, a read the program does not make (a debug-only check), with the
+/// sharing instrument's touches paused.
+macro_rules! unshared {
+    ($interp:expr, $body:expr) => {{
+        #[cfg(feature = "sharing")]
+        $interp.heap.sharing_pause(true);
+        let answer = $body;
+        #[cfg(feature = "sharing")]
+        $interp.heap.sharing_pause(false);
+        answer
+    }};
+}
+#[cfg(feature = "pinning")]
+pub use pinning::{ParkKind, PinKind, PinReport};
+
+// The value model: `text`/`number`/`to_text`/`to_number` on `Interp`, and the
+// two rules D15 exists to enforce (a number's rendering is fixed at creation,
+// and a `SmallInt` is admissible only within the DIGITS that produced it).
+mod value;
+
+// Stems and compound variables: tail resolution, the tombstone rule,
+// and the "replace the object, mutate a tail in place" split.
+mod stem;
+
+// The in-process external data queue (I15) `PUSH`/`QUEUE` write to and
+// `PULL`/`PARSE PULL` read back.
+mod queue;
+use queue::Queue;
+
+// The process's connection to the API service.
+mod rxapi_client;
+pub use rxapi_client::use_api_service;
+pub mod capi;
+mod classic;
+pub mod embedding;
+mod exits;
+
+// What a command line supplies to a top-level program: the one argument string
+// it can carry, how a list of words becomes that string, and where `.input`
+// reads from.
+mod invocation;
+pub use interrexx_core::FrameBlock;
+pub use invocation::{Invocation, ProgramInput, Sinks, StartType, SwitchMode, join_command_line};
+pub use sim::{
+    ClockOrigin, Decision, Knobs, Order, Policy, Replay, SIM_CHILD_ENV, SimConfig, SimReport,
+};
+
+// `.input`: one line position, shared by every construct that reads a line,
+// and the queue-first rule `PULL` follows on top of it.
+mod input;
+mod lines;
+use input::Input;
+
+// The per-body resolution plan: `Plan`, `BodyKey`, `ProgramId`, the
+// plan cache, and the full name-resolution order (plan, then `extra`, then
+// growth).
+mod plan;
+use plan::{BodyKey, BodyKind, ClassPackage, CompoundName, Package, Plan, ProgramId};
+
+// One activation: everything about the frame currently executing.
+mod activation;
+use activation::{Activation, ActivationId, CallType, InstanceVar};
+mod activity;
+use activity::Activity;
+
+// `Raised` (the payload of a real Rexx condition) and `Failure` (either a
+// `Loud` not-implemented marker or a `Raised` condition, the one type
+// `step` and everything above it propagate).
+mod error;
+use error::{ClauseSite, Failure, FailureSite, Raised};
+
+// Expression evaluation (`eval`/`eval_node`): terms, arithmetic and
+// concatenation.
+mod eval;
+
+// The builtin functions: the name set (read from `interrexx_inventory`, never
+// copied), the per-name arity, and the `dispatch` `Interp::invoke_call`
+// reaches for a name `resolve_call` answered `Resolved::Builtin` for.
+pub(crate) mod builtin;
+
+// The instruction loop: `Flow`, and `step` and its two
+// callers, together with the borrow discipline `run_activation` is written
+// down to prove.
+mod clause;
+mod run;
+use run::Ended;
+
+// The scheduler seam and the activity table.
+mod scheduler;
+
+// The guard locks and the deadlock check.
+mod guards;
+
+// The semaphore classes' and the unnamed `Sys*Sem` routines' state.
+mod semaphores;
+
+// The live-interpreter registry, the timer thread and the inbox.
+mod timer;
+
+// The deterministic simulation mode: seed, streams and the clock seam.
+mod sim;
+
+// The signal handlers (D-U3).
+mod signal;
+
+// The baton, and the synchronisation shim it, the inbox and the timer use.
+mod baton;
+mod sync;
+
+// The interpreter's state on another OS thread (D-U2).
+mod island;
+
+// The `PARSE` template engine: the movement cursor (source-independent, one
+// struct, unit-tested against measured oracle bytes) and the driver that
+// evaluates trigger operands, traces, and assigns the targets.
+mod parse_template;
+
+// The interpreter's version string, platform name and line terminator:
+// what `PARSE VERSION`, `PARSE SOURCE`, `.ENDOFLINE` and `RexxInfo` answer.
+mod version;
+
+// `TRACE`: the mode, the nine reachable prefixes' own byte formatting,
+// and the classification a `TRACE`/`TRACE VALUE` setting goes through to
+// become one. The `Op::Clause` region and its loop drivers, and
+// `eval.rs`'s `eval`, own *when* to call into this module; this module owns
+// only the bytes.
+mod trace;
+use trace::ChunkTrace;
+
+// The register-based instruction stream: `Op`, `Chunk`, and
+// `compile`, the one pass that turns a body into a `Chunk`. `Interp::chunk_for`
+// (`plan.rs`, beside `plan_for`) is the cache that makes compiling a body once
+// rather than once per entry.
+mod ir;
+
+// Message dispatch: the object model a send resolves against, the
+// `resolve`/`invoke` pair, and the one security chokepoint (D12).
+mod dispatch;
+
+// `.environment`, `.local`, `.context` and `.methods` as objects, the
+// order `PackageClass::findClass` resolves a `.NAME` in, and the one directory
+// chokepoint (D12).
+mod environment;
+
+// `::OPTIONS`: the numeric, trace and condition settings a file's
+// directives leave on its own package, and which every activation of that
+// package's code starts from.
+mod options;
+use options::PackageOptions;
+
+// The `rexx` and `rexxc` command lines' library half.
+pub mod launcher;
+
+// The compiled program image `rexxc` writes.
+pub mod compiled;
+
+// `::REQUIRES`: the routes a required file's name is searched over
+// and the extensions appended to it.
+mod require;
+
+// Command clauses: the handler an `ADDRESS` environment names, the
+// child it runs, and the return code that becomes `RC`, `.RS` and a
+// condition.
+mod command;
+
+// The condition object `CONDITION('O')` answers: the Directory a
+// raise builds, whose indexes depend on the condition's own kind.
+mod condition;
+
+/// `ADDRESS ... WITH`: the permanent per-environment configuration, and the
+/// per-command context that says where one command's three streams go.
+mod redirect;
+
+// The security manager (D12): the manager a package carries, and the one
+// send each checkpoint makes to it.
+mod security;
+
+// The libraries a name has been resolved to, in a module of their own so
+// that the map is private to the rule that a resolved name is never given up.
+mod libraries;
+use libraries::Libraries;
+
+// What a program's directives say before any of them is installed.
+mod directives;
+use directives::{accessor_setter_name, accessor_variable, delegate_variable};
+
+// Variable storage and reads: a slot's own storage, what an `EXPOSE` bound it
+// to, and the scope pools.
+mod variables;
+
+// Installing a program's directives, and the libraries and executable records
+// they bind.
+mod install;
+
+// The rows filed per method identity.
+mod method_rows;
+
+// The fields a `Package` object holds.
+mod package_state;
+
+/// The exit code for a construct this crate does not implement.
+pub const NOT_IMPLEMENTED_EXIT: i32 = 120;
+
+/// The status a run abandoned at its own deadline exits with
+/// ([`Invocation::with_deadline`]).
+pub const DEADLINE_EXIT: i32 = 121;
+
+/// The stderr line a run abandoned at its deadline leaves behind.
+pub const DEADLINE_REPORT: &[u8] = b"rexx-exec: the run exceeded its deadline\n";
+
+/// The name the interpreter's own package answers to -- `PackageClass::
+/// getProgramName`'s answer for internal code (`classes/PackageClass.hpp:147`).
+pub(crate) const LIBRARY_PACKAGE_NAME: &[u8] = b"REXX";
+
+/// The interpreter thread's stack, in bytes.
+/// ```text
+/// interpreter stack: 536870912 bytes, eval depth reached: 100000, span: 183998160 bytes, per frame: 1840.0 bytes
+/// ```
+/// ```text
+/// interpreter stack: 536870912 bytes, eval depth reached: 100000, span: 47999520 bytes, per frame: 480.0 bytes
+/// ```
+pub const INTERPRETER_STACK_BYTES: usize = 512 * 1024 * 1024;
+
+/// A new interpreter's pool.
+#[cfg(not(test))]
+fn new_pool() -> crate::scheduler::Pool {
+    crate::scheduler::Pool::new(
+        crate::scheduler::POOL_STACK_BYTES,
+        crate::scheduler::POOL_BOUND,
+    )
+}
+
+#[cfg(test)]
+thread_local! {
+    /// The pool stack size and bound a test sets for the interpreters this
+    /// thread makes.
+    static POOL_SHAPE: std::cell::Cell<(Option<usize>, Option<usize>)> =
+        const { std::cell::Cell::new((None, None)) };
+}
+
+#[cfg(test)]
+fn new_pool() -> crate::scheduler::Pool {
+    let (stack, bound) = POOL_SHAPE.with(std::cell::Cell::get);
+    let pool = crate::scheduler::Pool::new(
+        stack.unwrap_or(crate::scheduler::POOL_STACK_BYTES),
+        bound.unwrap_or(crate::scheduler::POOL_BOUND),
+    );
+    if POOL_FIXED.with(std::cell::Cell::get) {
+        pool.fix_at_bound();
+    }
+    pool
+}
+
+#[cfg(test)]
+thread_local! {
+    /// Whether the pools of interpreters this thread makes stop at their
+    /// bound.
+    static POOL_FIXED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Has the pools of interpreters this thread makes spawn no thread beyond
+/// their bound, so a call that finds every thread busy runs on the baton.
+#[cfg(test)]
+pub(crate) fn set_pool_fixed() {
+    POOL_FIXED.with(|fixed| fixed.set(true));
+}
+
+/// Gives the pool threads of interpreters this thread makes `bytes` of stack.
+#[cfg(test)]
+pub(crate) fn set_pool_stack(bytes: usize) {
+    POOL_SHAPE.with(|shape| shape.set((Some(bytes), shape.get().1)));
+}
+
+/// Bounds the pools of interpreters this thread makes at `threads`.
+#[cfg(test)]
+pub(crate) fn set_pool_bound(threads: usize) {
+    POOL_SHAPE.with(|shape| shape.set((shape.get().0, Some(threads))));
+}
+
+#[cfg(test)]
+thread_local! {
+    /// [`Interp::panic_at_call_end`] for the interpreters this thread makes.
+    static PANIC_AT_CALL_END: std::cell::RefCell<Option<std::path::PathBuf>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Has a pool thread of each interpreter this thread makes append `end` to
+/// `path` and panic at a native call's end, under the lend.
+#[cfg(test)]
+pub(crate) fn set_panic_at_call_end(path: std::path::PathBuf) {
+    PANIC_AT_CALL_END.with(|panics| *panics.borrow_mut() = Some(path));
+}
+
+#[cfg(test)]
+thread_local! {
+    /// [`Interp::fail_native_wait`] for the interpreters this thread makes.
+    static FAIL_NATIVE_WAIT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Has each interpreter this thread makes answer main's first wait for a
+/// native call with Error 11.1, which abandons the call.
+#[cfg(test)]
+pub(crate) fn set_fail_native_wait() {
+    FAIL_NATIVE_WAIT.with(|fail| fail.set(true));
+}
+
+/// The arena size below which no ordinary run ever collects, and the floor
+/// every later growth allowance is raised to (see `Interp::collect_at`).
+const COLLECT_FLOOR: usize = 65_536;
+
+/// The body bytes allocated since a collection below which no ordinary run
+/// collects on bytes, and the floor every later byte allowance is raised to
+/// (see `Interp::bytes_due`).
+const COLLECT_BYTES_FLOOR: usize = 32 << 20;
+
+/// The bytes a loaded program is charged toward the next collection, with
+/// [`PROGRAM_BYTES_PER_SOURCE_BYTE`] for each byte of its source. Measured on
+/// `Package~new` before any collection: about 30 kB for a one-line program,
+/// and 83 kB more for 2100 more bytes of source.
+const PROGRAM_BYTES: usize = 24 << 10;
+const PROGRAM_BYTES_PER_SOURCE_BYTE: usize = 40;
+
+/// The bytes a program's package object is charged toward the next
+/// collection. Measured on `Package~copy` before any collection: about 3 kB.
+pub(crate) const PACKAGE_BYTES: usize = 3 << 10;
+
+/// The buffered output past which a sink takes it whatever it ends with, so
+/// a long-running program's output stays bounded and reaches its reader.
+const OUTPUT_BOUND: usize = 64 << 10;
+
+/// Whether a write ends a line for a line-buffered sink: it holds a newline
+/// or a carriage return, Python's own test.
+fn ends_a_line(bytes: &[u8]) -> bool {
+    bytes.iter().any(|&byte| byte == b'\n' || byte == b'\r')
+}
+
+/// The globals entry [`Interp::root_exit_value`] writes. A name rather than an
+/// index because `RootSet::add_global` is keyed by name and replaces in place,
+/// which is the behaviour wanted here.
+const EXIT_VALUE_ROOT: &str = "the program's exit value";
+
+/// What one interpreter run produced.
+#[derive(Debug)]
+pub struct Outcome {
+    pub exit_code: i32,
+    /// The string the program returned or exited with, `None` for none.
+    pub result: Option<Vec<u8>>,
+    /// The error number of the condition the program ended on untrapped, or
+    /// `None` where it ended otherwise.
+    pub error: Option<i32>,
+    pub stdout: Vec<u8>,
+    pub stderr: Vec<u8>,
+    /// What the run cost in stack; see `StackSpan`.
+    pub stack: StackSpan,
+    /// How many times `Heap::collect` ran during this program.
+    pub collections: u64,
+    /// `Heap::peak_body_bytes` at the end of the run, for this crate's tests.
+    #[cfg(test)]
+    pub peak_body_bytes: usize,
+    /// How many times the run declined to compile a body because it does not
+    /// fit the compiled stream's index widths. Such a body raises
+    /// [`Loud::chunk_refused`]; there is no second engine to run it.
+    pub chunks_refused: usize,
+    /// The simulation mode's report, for a run in it.
+    pub sim: Option<SimReport>,
+    /// The would-be park points the run reached.
+    #[cfg(feature = "pinning")]
+    pub pinning: PinReport,
+    #[cfg(feature = "sharing")]
+    pub sharing: SharingReport,
+}
+
+/// The sharing fraction's counts: objects touched means resolved through
+/// the heap's accessors, or made.
+#[cfg(feature = "sharing")]
+#[derive(Copy, Clone, Debug, Default)]
+pub struct SharingReport {
+    /// The objects the interpreter and its library bootstrap made.
+    pub bootstrap: SharingCount,
+    /// The objects made after the bootstrap.
+    pub program: SharingCount,
+}
+
+#[cfg(feature = "sharing")]
+pub use interrexx_core::SharingCount;
+
+/// How deep evaluation went and how much stack it took to get there.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct StackSpan {
+    /// The deepest `eval` recursion the run reached. Zero if it never
+    /// evaluated an expression at all, and zero also for a run whose only
+    /// values came from ops that do not enter `eval` -- see this type's own doc
+    /// comment.
+    pub max_depth: usize,
+    /// Stack bytes between the first `eval` level and the deepest one, both
+    /// on the chain that reached `max_depth`. Meaningless unless `max_depth`
+    /// is above 1, which is what `bytes_per_frame` checks before dividing.
+    pub bytes: usize,
+}
+
+impl StackSpan {
+    /// Stack bytes one further level of `eval` costs, or `None` when the run
+    /// never recursed and there is nothing to divide by.
+    pub fn bytes_per_frame(self) -> Option<f64> {
+        (self.max_depth > 1).then(|| self.bytes as f64 / (self.max_depth - 1) as f64)
+    }
+}
+
+/// A construct this crate does not implement, on its way to becoming an exit
+/// code and a line on stderr.
+#[derive(Debug)]
+struct Loud {
+    message: String,
+}
+
+impl Loud {
+    /// An instruction handed to a site its caller routes elsewhere -- an
+    /// internal inconsistency, never a program error: every variant executes.
+    /// `keyword()` is `None`
+    /// for the clause shapes no keyword introduces, and their names come from
+    /// the shape rather than from a keyword table.
+    fn instruction(kind: &InstructionKind) -> Loud {
+        let name = match kind {
+            // The four clause shapes no keyword introduces.
+            InstructionKind::Assignment { .. } => "an assignment",
+            InstructionKind::Label { .. } => "a label",
+            InstructionKind::Message { .. } => "a message send",
+            InstructionKind::Command { .. } => "a command",
+            // Everything else is named by the keyword that introduced it.
+            InstructionKind::Address { .. }
+            | InstructionKind::Arg { .. }
+            | InstructionKind::Call { .. }
+            | InstructionKind::Do { .. }
+            | InstructionKind::Drop { .. }
+            | InstructionKind::Else { .. }
+            | InstructionKind::End { .. }
+            | InstructionKind::Exit { .. }
+            | InstructionKind::Expose { .. }
+            | InstructionKind::Forward { .. }
+            | InstructionKind::Guard { .. }
+            | InstructionKind::If { .. }
+            | InstructionKind::Interpret { .. }
+            | InstructionKind::Iterate { .. }
+            | InstructionKind::Leave { .. }
+            | InstructionKind::Loop { .. }
+            | InstructionKind::Nop
+            | InstructionKind::Numeric { .. }
+            | InstructionKind::Options { .. }
+            | InstructionKind::Otherwise
+            | InstructionKind::Parse { .. }
+            | InstructionKind::Procedure { .. }
+            | InstructionKind::Pull { .. }
+            | InstructionKind::Push { .. }
+            | InstructionKind::Queue { .. }
+            | InstructionKind::Raise { .. }
+            | InstructionKind::Reply { .. }
+            | InstructionKind::Return { .. }
+            | InstructionKind::Say { .. }
+            | InstructionKind::Select { .. }
+            | InstructionKind::Signal { .. }
+            | InstructionKind::Then
+            | InstructionKind::Trace { .. }
+            | InstructionKind::Use { .. }
+            | InstructionKind::When { .. }
+            | InstructionKind::WhenCase { .. } => kind.keyword().unwrap_or("an instruction"),
+        };
+        Loud {
+            message: owned_message(name),
+        }
+    }
+
+    /// An expression form handed to a site its caller routes elsewhere -- an
+    /// internal inconsistency, never a program error: every form evaluates.
+    fn expression(kind: &ExprKind) -> Loud {
+        Loud {
+            message: owned_message(&form_name(kind)),
+        }
+    }
+
+    /// A binary operator that no family of `Interp::apply_binary` claims -- an
+    /// internal inconsistency, never a program error.
+    fn binary_operator(op: Operator) -> Loud {
+        Loud {
+            message: format!("binary operator {op:?} has no implementation"),
+        }
+    }
+
+    /// A call that resolved to a **builtin this crate runs nothing for**.
+    fn unresolved_call(name: &[u8]) -> Loud {
+        const LIMIT: usize = 128;
+        let shown = if name.len() > LIMIT {
+            format!("{}...", String::from_utf8_lossy(&name[..LIMIT]))
+        } else {
+            String::from_utf8_lossy(name).into_owned()
+        };
+        Loud {
+            message: owned_message(&format!("routine \"{shown}\"")),
+        }
+    }
+
+    /// A call that resolved to a routine one of the oracle's internal packages
+    /// exports and this crate has no body for. Distinct from
+    /// [`Loud::unresolved_call`] only in where the name comes from; the
+    /// message a program sees is the same shape.
+    fn internal_routine(name: &[u8]) -> Loud {
+        let shown = String::from_utf8_lossy(name).into_owned();
+        Loud {
+            message: owned_message(&format!("routine \"{shown}\"")),
+        }
+    }
+
+    /// A `Sys*Sem` routine given a name: on Unix a named semaphore is a POSIX
+    /// semaphore from `sem_open`, shared between processes and outliving them.
+    /// Not supported (Deviation 43).
+    #[cold]
+    fn named_semaphore(name: &[u8]) -> Loud {
+        let shown = String::from_utf8_lossy(name).to_ascii_uppercase();
+        Loud {
+            message: format!(
+                "routine \"{shown}\" with a named semaphore, a POSIX sem_open semaphore \
+                 shared between processes, is not supported (Deviation 43)"
+            ),
+        }
+    }
+
+    /// `SysFork`: a forked child holds the calling thread only, and every run
+    /// has a timer thread and a joining main thread beside it, so the child
+    /// cannot continue the program.
+    /// Not supported (Deviation 42).
+    #[cold]
+    fn fork_child(name: &[u8]) -> Loud {
+        let shown = String::from_utf8_lossy(name).to_ascii_uppercase();
+        Loud {
+            message: format!(
+                "routine \"{shown}\", whose forked child cannot continue without the timer \
+                 thread and the joining main thread, is not supported (Deviation 42)"
+            ),
+        }
+    }
+
+    /// A native method whose receiver is not of the type the method reads,
+    /// reached by running a primitive's own row on an object of another class.
+    /// The oracle reads such a receiver through the wrong layout: it crashes
+    /// (`corpus/oracle-crashes.txt` entry 33) or answers an accident of memory
+    /// (Deviation 28).
+    #[cold]
+    fn receiver_class(kind: &str) -> Loud {
+        Loud {
+            message: owned_message(&format!("a message send to {kind}")),
+        }
+    }
+
+    /// A metaclass `NEW` answering a class that `Class~new` did not build, or
+    /// one an earlier `~subclass` already rewired, which the oracle rewires
+    /// into a subclass in place (Deviation 32).
+    #[cold]
+    fn metaclass_new_reused_class() -> Loud {
+        Loud {
+            message: owned_message(
+                "a metaclass NEW answering a class Class~new did not build or a subclass already took",
+            ),
+        }
+    }
+
+    /// `OBJECTNAME=` on a value-based value, which carries no per-object
+    /// state (Deviation 36).
+    #[cold]
+    fn object_name_of_a_value() -> Loud {
+        Loud {
+            message: "OBJECTNAME= on a String is refused because a String is value-based \
+                      (Deviation 36)"
+                .to_string(),
+        }
+    }
+
+    /// A user `STRING` method that answered an object with no string value of
+    /// its own (not a string, a number, an array or a buffer), read by a
+    /// consumer of its bytes. The oracle's `primitiveMakeString` answers
+    /// `.nil` for it and reads that as a string (Deviation 30).
+    #[cold]
+    fn string_answer_not_a_string() -> Loud {
+        Loud {
+            message: owned_message("a STRING method answering an object with no string value"),
+        }
+    }
+
+    /// A receiver or argument no program holds: a handle whose object is gone,
+    /// a kind `receiver_kind` has no arm for, a `Method` object or routine
+    /// context this crate did not build. No program reaches it.
+    #[cold]
+    fn unknown_receiver(kind: &str) -> Loud {
+        Loud {
+            message: owned_message(&format!("a message send to {kind}")),
+        }
+    }
+
+    /// An operator whose **left** operand is an object that answers no
+    /// operator message. No program reaches it.
+    fn operator_operand(op: &str, kind: &str) -> Loud {
+        Loud {
+            message: owned_message(&format!("the operator `{op}` applied to {kind}")),
+        }
+    }
+
+    /// A `.NAME` the oracle's `.environment` or `.local` answers and this
+    /// crate builds nothing for: an entry the library bootstrap fills, or
+    /// `.STREAM` before `StreamClasses.orx` installs. No program reaches it.
+    fn environment_symbol(name: &[u8]) -> Loud {
+        let shown = String::from_utf8_lossy(name);
+        Loud {
+            message: owned_message(&format!("environment symbol \"{shown}\"")),
+        }
+    }
+
+    /// A directory index the oracle's own `.environment` or `.local` has an
+    /// entry for and this crate builds nothing for: an entry the library
+    /// bootstrap fills, which no program reaches, by the
+    /// probes [`Loud::environment_symbol`] names.
+    fn environment_entry(index: &[u8]) -> Loud {
+        let shown = String::from_utf8_lossy(index);
+        Loud {
+            message: owned_message(&format!("directory entry \"{shown}\"")),
+        }
+    }
+
+    /// A message that **resolved** to a method no table holds code for. No
+    /// program reaches it: the probes behind `refusals.tsv`'s `dispatch.rs`
+    /// row sent every documented method with its required arguments, and
+    /// every scope override, and each resolved method answered.
+    #[cold]
+    fn unbound_method(name: &[u8], scope: &str) -> Loud {
+        let shown = String::from_utf8_lossy(name);
+        Loud {
+            message: owned_message(&format!("method \"{shown}\" of class \"{scope}\"")),
+        }
+    }
+
+    /// A hash collection method sent to an instance of `class` that has no
+    /// store, which only `Class~new` sent with `.Class` as the scope builds,
+    /// and which the oracle answers by dying (`corpus/oracle-crashes.txt`
+    /// entry 50).
+    #[cold]
+    fn hash_collection_without_store(method: &[u8], class: &str) -> Loud {
+        let shown = String::from_utf8_lossy(method);
+        Loud {
+            message: owned_message(&format!(
+                "method \"{shown}\" of a \"{class}\" built without its store"
+            )),
+        }
+    }
+
+    /// `StackFrame~executable` on a frame built with no executable: a package
+    /// hook's, one built from a failure's site rather than from an
+    /// activation, and one whose activation answered none. No program reaches
+    /// it: `refusals.tsv`'s `context.rs` row found only a library routine's
+    /// frame, which answers.
+    #[cold]
+    fn frame_without_executable() -> Loud {
+        Loud {
+            message: owned_message("the executable of a stack frame built without one"),
+        }
+    }
+
+    /// `Object~copy` through a scope override on a `Directory` or
+    /// `StringTable` the interpreter built for itself. No program reaches it:
+    /// by `refusals.tsv`'s `object_protocol.rs` rows, the interpreter builds
+    /// neither for a program, and `.environment`, `.local` and a package's
+    /// tables are instance stores.
+    #[cold]
+    fn interpreter_table_copy(class: &str) -> Loud {
+        Loud {
+            message: owned_message(&format!("Object~copy of the interpreter's own {class}")),
+        }
+    }
+
+    /// A `receiver~NAME=` entry-method send that carried no value argument,
+    /// which the oracle stores whatever its evaluation stack holds for
+    /// (Deviation 29).
+    fn entry_method_without_a_value(index: &[u8]) -> Loud {
+        let shown = String::from_utf8_lossy(index);
+        Loud {
+            message: owned_message(&format!(
+                "an entry-method assignment to \"{shown}\" with no value"
+            )),
+        }
+    }
+
+    /// A collection this crate can name but cannot read: one whose entries
+    /// the oracle has and this crate answers per name through
+    /// [`Loud::environment_entry`] instead of building: one holding an entry
+    /// the library bootstrap fills, which no program reaches.
+    fn unreadable_collection() -> Loud {
+        Loud {
+            message: owned_message("a directory whose entries this crate does not fill"),
+        }
+    }
+
+    /// A library procedure that resolved when it was bound and no longer
+    /// does -- an internal inconsistency, never a program error: a held
+    /// library is never released.
+    fn library_procedure_gone() -> Loud {
+        Loud {
+            message: "a library procedure that resolved when it was bound no longer resolves"
+                .to_string(),
+        }
+    }
+
+    /// A `SETMETHOD` or `UNSETMETHOD` whose receiver is neither an instance
+    /// nor a class object, the two kinds that hold methods of their own here.
+    /// No program reaches it: the routes tried are `SETMETHOD` sent to an
+    /// `Array` and a `String` (private, 97.2 on both engines),
+    /// a `define` or `inherit` on `.Object` and `.String` (98.985), and a
+    /// borrowed `Object` `SETMETHOD` row a `Directory`'s own method sends to
+    /// that `Directory` (88.901, the entry method arrives with no arguments).
+    fn object_method(what: &str) -> Loud {
+        Loud {
+            message: owned_message(what),
+        }
+    }
+
+    /// One of the interpreter's own embedded `.orx` sources will not parse.
+    /// No program reaches it: `interrexx-lib` pins each file's sha256, and every
+    /// probe runs past the library bootstrap.
+    fn library_source(name: &str, error: &str) -> Loud {
+        Loud {
+            message: owned_message(&format!("{name} does not parse here: {error}")),
+        }
+    }
+
+    /// One of the two methods `Setup.cpp` puts on `.Class` for the image
+    /// build and `removeSetupMethods` deletes, given something it cannot
+    /// use. No program reaches it: `b_define_class_method_setup` and
+    /// `b_inherit_instance_methods` are 97.1 on both engines.
+    fn setup_method(what: &str) -> Loud {
+        Loud {
+            message: owned_message(what),
+        }
+    }
+
+    /// `EXPOSE`, or a generated accessor, in a method whose receiver is
+    /// neither an instance nor a class object, the two kinds that hold
+    /// variable pools here. No program reaches it, by the routes
+    /// [`Loud::object_method`] names: a method body runs on such a receiver
+    /// only through a dictionary no program can add to.
+    fn expose_receiver() -> Loud {
+        Loud {
+            message: owned_message("EXPOSE on an object with no variable pool"),
+        }
+    }
+
+    /// `NUMERIC FORM VALUE` with no expression, which the parser rejects
+    /// (35.917) -- an internal inconsistency, never a program error.
+    fn numeric_form_without_expression() -> Loud {
+        Loud {
+            message: "NUMERIC FORM VALUE with no expression".to_string(),
+        }
+    }
+
+    /// A native conversion that raised, which both callers of
+    /// `Interp::refusal` answer before reaching it. No program reaches it:
+    /// `c_native_raised` (an argument whose `STRING` raises, passed to
+    /// `RxCalcSqrt`) raises the callee's condition on both engines.
+    fn conversion_raised() -> Loud {
+        Loud {
+            message: owned_message("the interpreter raised a condition while converting"),
+        }
+    }
+
+    /// An extension's local handle used after the call that made it ended,
+    /// which the API does not define (Deviation 95).
+    fn stale_handle() -> Loud {
+        Loud {
+            message: owned_message("the handle is no longer held by this activation"),
+        }
+    }
+
+    /// A call to a `ROUTINE_CLASSIC_STYLE` row of a loaded package's routine
+    /// table. No library this crate loads on Linux carries one: `git grep
+    /// --no-index -n -I -e REXX_CLASSIC_ROUTINE -e ROUTINE_CLASSIC_STYLE --
+    /// ootest testbinaries extensions samples` finds only
+    /// `extensions/platform/windows/rxwinsys/rxwinsys.cpp`.
+    fn classic_style_routine() -> Loud {
+        Loud {
+            message: owned_message("a call to a ROUTINE_CLASSIC_STYLE routine"),
+        }
+    }
+
+    /// An interface member `entry` an extension reached that its table still
+    /// holds a refusing stub for. No populated table holds one: interrexx-api's
+    /// `no_populated_table_member_refuses` compares every member of every
+    /// populated table with its stub.
+    fn unfilled_slot(entry: &str) -> Loud {
+        Loud {
+            message: owned_message(entry),
+        }
+    }
+
+    /// A `HANDLE:n` stream for a descriptor other than `0`, `1` or `2`,
+    /// which only `unsafe` could adopt (Deviation 35).
+    fn handle_descriptor(descriptor: i64) -> Loud {
+        Loud {
+            message: owned_message(&format!("a HANDLE: stream on descriptor {descriptor}")),
+        }
+    }
+
+    /// A `PARSE` template trigger that needs an operand and has none -- a
+    /// parser guarantee, never a program error.
+    fn parse_trigger_operand() -> Loud {
+        Loud {
+            message: "a PARSE template trigger carries no position operand".to_string(),
+        }
+    }
+
+    /// An activation's body selector named something that is not a routine
+    /// body -- an internal inconsistency, never a program error.
+    #[cold]
+    #[inline(never)]
+    fn missing_body() -> Loud {
+        Loud {
+            message: "an activation's body selector names no routine body".to_string(),
+        }
+    }
+
+    /// A class the `REXX` package defines that it does not hold: an internal
+    /// inconsistency, never a program error.
+    #[cold]
+    #[inline(never)]
+    fn missing_rexx_class(name: &str) -> Loud {
+        Loud {
+            message: format!("the REXX package holds no class {name}"),
+        }
+    }
+
+    /// A `Method` or `Routine` object with no executable record. Each one is
+    /// recorded where it is built and its record goes only with it, so this
+    /// is an internal inconsistency, never a program error.
+    #[cold]
+    #[inline(never)]
+    fn unrecorded_executable() -> Loud {
+        Loud {
+            message: "a Method or Routine object with no executable record".to_string(),
+        }
+    }
+
+    /// A chunk's instruction map is shorter than the body it was compiled
+    /// from -- an internal inconsistency, never a program error.
+    fn chunk_map_too_short() -> Loud {
+        Loud {
+            message: "a compiled chunk has no op for an instruction of its own body".to_string(),
+        }
+    }
+
+    /// A body the compiler refused: one needing more registers, slots or call
+    /// arguments than a `u16` indexes, or more ops than a `u32` does
+    /// (`ChunkTooLarge`).
+    fn chunk_refused() -> Loud {
+        Loud {
+            message: "a body does not fit the compiled stream's index widths, and there is no \
+                      longer a second engine to run it"
+                .to_string(),
+        }
+    }
+
+    /// The driver reached an op it has no arm for.
+    fn op_not_driven(what: &'static str) -> Loud {
+        Loud {
+            message: format!("a compiled {what} op has no driver arm"),
+        }
+    }
+
+    /// A compiled jump names an op past the end of the range it is running in
+    /// -- an internal inconsistency, never a program error.
+    fn jump_out_of_range() -> Loud {
+        Loud {
+            message: "a compiled jump leaves the range it is running in".to_string(),
+        }
+    }
+
+    /// A register a branch op reads holds something that is not a Rexx
+    /// logical value -- an internal inconsistency, never a program error.
+    fn register_not_logical() -> Loud {
+        Loud {
+            message: "a compiled branch read a register holding no logical value".to_string(),
+        }
+    }
+
+    /// A compiled `SELECT` op does not describe the `SELECT` it was emitted
+    /// for -- an internal inconsistency, never a program error.
+    fn select_op_off_its_node() -> Loud {
+        Loud {
+            message: "a compiled SELECT op does not name a SELECT of its own body".to_string(),
+        }
+    }
+
+    /// A compiled `DO`/`LOOP` op does not describe the loop it was emitted for
+    /// -- an internal inconsistency, never a program error.
+    fn loop_op_off_its_node() -> Loud {
+        Loud {
+            message: "a compiled DO/LOOP op does not name a DO/LOOP of its own body".to_string(),
+        }
+    }
+
+    /// A compiled `Signal` op carries an operand its instruction's own form
+    /// does not have, or lacks the one it does -- an internal inconsistency,
+    /// never a program error.
+    fn signal_op_off_its_node() -> Loud {
+        Loud {
+            message: "a compiled SIGNAL op does not match the form of the SIGNAL it names"
+                .to_string(),
+        }
+    }
+
+    /// A compiled `Store` op does not describe the assignment it was emitted
+    /// for -- an internal inconsistency, never a program error.
+    fn store_op_off_its_node() -> Loud {
+        Loud {
+            message: "a compiled Store op does not name an assignment of its own body".to_string(),
+        }
+    }
+
+    /// A compiled op that runs or traces a call does not describe the call it
+    /// was emitted for -- an internal inconsistency, never a program error.
+    fn call_op_off_its_node() -> Loud {
+        Loud {
+            message: "a compiled call op does not name a call of its own body".to_string(),
+        }
+    }
+
+    /// A compiled `Const` op names a constant its own chunk does not carry --
+    /// an internal inconsistency, never a program error.
+    fn constant_out_of_range() -> Loud {
+        Loud {
+            message: "a compiled Const op names no constant of its own chunk".to_string(),
+        }
+    }
+
+    /// A wait that nothing left to run can end. The oracle blocks for ever
+    /// (`corpus/oracle-crashes.txt`, the unsent-message block; Deviation 20).
+    fn unsatisfiable_wait() -> Loud {
+        Loud {
+            message: owned_message("a wait that nothing left to run can end"),
+        }
+    }
+
+    /// A state of the activity table nothing should produce: an internal
+    /// inconsistency, never a program error.
+    fn scheduler_inconsistency(what: &'static str) -> Loud {
+        Loud {
+            message: format!("the scheduler found {what}"),
+        }
+    }
+
+    /// A pinned wait for `what` that only an activity pinned below it can end
+    /// (an inverted wait; Deviation 14).
+    fn inverted_wait(what: &str) -> Loud {
+        Loud {
+            message: owned_message(&format!(
+                "a pinned wait for {what} that only an activity pinned below it can end"
+            )),
+        }
+    }
+
+    /// A `REPLY` with Rust frames between its method body's driver and
+    /// itself, which cannot move to a new activity (Deviation 15).
+    fn immovable_reply() -> Loud {
+        Loud {
+            message: owned_message("a REPLY its method body runs on a nested Rust frame"),
+        }
+    }
+}
+
+/// Names an expression form in **bounded** text, for a loud failure to quote.
+fn form_name(kind: &ExprKind) -> String {
+    let name = match kind {
+        ExprKind::Literal(_) => "a literal",
+        ExprKind::Constant(_) => "a constant symbol",
+        ExprKind::Variable(_) => "a simple variable",
+        ExprKind::Stem(_) => "a stem",
+        ExprKind::Compound(_) => "a compound variable",
+        ExprKind::DotVariable(_) => "an environment symbol",
+        // The two operator forms name the operator, because "a dyadic
+        // operator is not implemented" does not tell a reader which one to
+        // go and implement. Each asks its own operator type for the spelling,
+        // which is where the canonical bytes live and what the trace line for
+        // that operator carries.
+        ExprKind::Prefix { op, .. } => {
+            return format!("the prefix operator `{}`", op.spelling());
+        }
+        ExprKind::Binary { op, .. } => {
+            return format!("the operator `{}`", op.spelling());
+        }
+        ExprKind::Call { .. } => "a function call",
+        ExprKind::QualifiedCall { .. } => "a namespace-qualified call",
+        ExprKind::ClassResolver { .. } => "a namespace-qualified class lookup",
+        ExprKind::Message { .. } => "a message send",
+        ExprKind::List(_) => "a parenthesised list",
+        ExprKind::Logical(_) => "a comma list in a condition",
+        ExprKind::VariableReference(_) => "a variable reference",
+    };
+    name.to_string()
+}
+
+/// The `REXX` and `REXXUTIL` packages' routine names and their bodies, consulted between the running package's `::ROUTINE`s and the
+/// external file search.
+pub(crate) mod internal_routines;
+
+/// Turning a name a program wrote into the path this interpreter opens, against
+/// the interpreter's own current directory rather than the process's.
+pub(crate) mod paths;
+
+/// The `rxregexp` pattern language and its matcher.
+pub(crate) mod regexp;
+
+/// The extension libraries this crate runs in Rust.
+pub(crate) mod extensions;
+
+/// The Rexx packages this crate ships, found by `::REQUIRES` after every
+/// search route.
+pub(crate) mod packages;
+
+/// Every internal-package routine name, for the test that re-derives them from
+/// the C++ tree.
+pub fn internal_routine_names() -> Vec<&'static str> {
+    internal_routines::INTERNAL_ROUTINES
+        .iter()
+        .map(|row| row.name)
+        .collect()
+}
+
+/// Every internal-package routine as `(name, package, runs)`, for the test
+/// that re-derives the two packages from the C++ tree separately. `runs` is
+/// whether this crate has a body for the row.
+pub fn internal_routine_rows() -> Vec<(&'static str, &'static str, bool)> {
+    internal_routines::INTERNAL_ROUTINES
+        .iter()
+        .map(|row| (row.name, row.package.label(), row.body.is_some()))
+        .collect()
+}
+
+/// A loud message for `name`: `"{name} is not implemented"`.
+fn owned_message(name: &str) -> String {
+    format!("{name} is not implemented")
+}
+
+/// The code a step is executing, all of it borrowed from the caller's local
+/// `Rc` and none of it from `self`.
+struct Code<'a> {
+    body: &'a CodeBody,
+    symbols: &'a SymbolTable,
+    /// Slot per `SymbolId` **of this code's own table**. For a fragment those
+    /// ids are the fragment's, resolved against the enclosing frame, which is
+    /// why this is a field of `Code` rather than something read back off the
+    /// activation.
+    slots: &'a [Option<usize>],
+    /// The upfront pass's answers about **this** body: its clause indents
+    /// (`Plan::indents`), the line each of its clauses sits on
+    /// (`Plan::lines`), and how each of its compound names splits
+    /// (`Plan::compounds`).
+    plan: Option<&'a Plan>,
+}
+
+impl<'a> Code<'a> {
+    /// The slot this body's upfront pass bound `id` to, or `None` when it
+    /// bound it none.
+    pub(crate) fn slot_for(&self, id: SymbolId) -> Option<usize> {
+        let at = self.slots.get(id.index()).copied().flatten();
+        debug_assert!(
+            at.is_none()
+                || self.plan.is_none_or(|plan| {
+                    plan.names.get(self.symbols.name(id).as_bytes()).copied() == at
+                }),
+            "the plan's slot for {} is {at:?}, which its own name map does not agree with",
+            self.symbols.name(id),
+        );
+        at
+    }
+
+    /// How the compound `id` names splits, from the upfront pass when this
+    /// body had one, and by splitting the interned spelling when it did not.
+    fn compound(&self, id: SymbolId) -> Option<&'a CompoundName> {
+        self.plan?.compound(id)
+    }
+
+    /// The stem half of the compound `id` names, its trailing period
+    /// included -- the name whose slot holds the stem object a tail is read
+    /// out of or written into -- **and that slot, when the entry carries
+    /// one**.
+    fn stem(&self, id: SymbolId) -> (&'a [u8], Option<usize>) {
+        match self.compound(id) {
+            Some(entry) => (&entry.stem, entry.stem_at),
+            None => (compound_parts(self.symbols.name(id)).0.as_bytes(), None),
+        }
+    }
+}
+
+/// A program's main body as a `Code`, carrying the plan the upfront pass
+/// builds for it -- which is what `run.rs` hands every step.
+#[cfg(test)]
+fn planned_code<'a>(program: &'a Program, plan: &'a Plan) -> Code<'a> {
+    Code {
+        body: &program.main,
+        symbols: &program.symbols,
+        slots: &plan.by_symbol,
+        plan: Some(plan),
+    }
+}
+
+/// Whether a variable read found a value or derived one from the name.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+enum Novalue {
+    Set,
+    Unset,
+}
+
+/// The condition a running handler was entered for, kept so `RAISE
+/// PROPAGATE` can re-raise it.
+/// ```text
+///      8 *-*   say 1/0          <- line 8 raised; line 12 propagated
+///      3 *-* call fun
+/// Error 42:  Arithmetic overflow/underflow.
+/// ```
+struct ActiveCondition {
+    raised: Raised,
+    site: Option<FailureSite>,
+    sites: Vec<FailureSite>,
+    /// Whether the trapping activation had replied when its trap fired.
+    replied: bool,
+}
+
+/// A condition waiting for the current clause to finish before its `CALL ON`
+/// handler runs.
+struct PendingTrap {
+    condition: Box<[u8]>,
+    rc: Option<Vec<u8>>,
+    /// `RAISE ... DESCRIPTION`'s rendered value, held for the same reason
+    /// `rc` is: the raising clause's temps frame is long gone by the time
+    /// the handler reads it back through `CONDITION('D')`.
+    description: Option<Vec<u8>>,
+    /// `CONDITION('O')`'s directory, built when this was **queued** rather
+    /// than when the handler runs. Everything in it is a raise-time fact that
+    /// delivery cannot recover: `POSITION` is the raising clause's own line
+    /// (measured 7 for a command inside a routine, not the caller's `call`
+    /// line), `STACKFRAMES` is the stack as it stood then, and `RESULT` is
+    /// carried by a command's condition and by no other.
+    ///
+    /// An `ObjRef` reachable only through this queue, so
+    /// [`Activity::object_roots`] names it: that destructure guards `Activity`'s
+    /// own fields and would not have caught one added inside a `VecDeque`.
+    object: Option<ObjRef>,
+    /// The activation this may be delivered to: the raising activation's
+    /// **caller**, which is the one whose trap table matched.
+    activation: ActivationId,
+    /// Whether this was queued by a **handler** running at a clause boundary,
+    /// or by a `HALT` request served there, rather than by that clause's own
+    /// work.
+    queued_during_delivery: bool,
+    /// A `HALT` `Message~halt` asked of this activity rather than a condition
+    /// raised: delivered by raising it (`Interp::raise_requested_halt`).
+    request: bool,
+    /// [`Activity::fragment_depth`] as it stood when this was queued: which
+    /// `INTERPRET` fragment, if any, was running.
+    fragment_depth: usize,
+    /// What a trace line's delivery raised (`Activity::traceOutput` lets a
+    /// failed `LINEOUT` propagate): delivered by raising it in the traced
+    /// activation.
+    trace_failure: Option<Failure>,
+}
+
+/// A `CALL ON` trap held in the delayed state while its handler runs, and the
+/// conditions raised for it meanwhile, which rexxref (`condtra.xml`, CALL ON)
+/// delays until the handler returns or a `CALL ON`, `SIGNAL ON`, `CALL OFF`
+/// or `SIGNAL OFF` for the trap's condition is processed.
+struct DelayedTrap {
+    /// The trap table entry delayed: the condition's own, or `ANY`.
+    key: Box<[u8]>,
+    /// In the order raised.
+    held: Vec<PendingTrap>,
+}
+
+/// The interpreter. Owns the heap, the root set, the activity, the
+/// plan cache and the two sinks, and **does not own the AST**.
+struct Interp {
+    heap: Heap,
+    roots: RootSet,
+    /// The one activity: the state of the execution now running.
+    activity: Activity,
+    /// A buffer lent out for building a compound's tail key, and handed back.
+    key_buffer: Vec<u8>,
+    /// What a `.local~novalue` hook a read sent came to, answered or failed,
+    /// held from that read to the `novalue_check` after it.
+    novalue_hooked: std::cell::Cell<Option<Result<(), Failure>>>,
+    /// Buffers lent out for a `PARSE` instruction's source strings, and
+    /// handed back when the template walk is done with them.
+    parse_buffers: Vec<Vec<u8>>,
+    /// Where an inline string's bytes, or a tagged integer's rendering, are
+    /// put so that [`Interp::to_text`] can hand back a borrow of them.
+    text_scratch: [u8; crate::value::TEXT_SCRATCH],
+    /// The name `~objectName=` gave `.nil`, which every rendering of it
+    /// answers; `None` for `The NIL object`.
+    nil_name: Option<Box<[u8]>>,
+    /// How many call sites keep each `Routine` copy alive ([`Interp::repin`]),
+    /// each copy rooted once while any does.
+    pinned_copies: FxHashMap<ObjRef, u32>,
+    /// The packages installing before an activation of their own runs, each
+    /// with the security manager it had when its install began once one is
+    /// set on it during the install.
+    installing_managers: Vec<(ProgramId, Option<Option<ObjRef>>)>,
+    /// How many call-site holds are taken and not dropped
+    /// ([`Interp::hold_site_program`]); a dead program's chunks take theirs
+    /// with them ([`Interp::prune_program_rows`]).
+    site_hold_count: u32,
+    /// The parse cache a handle-inline string has nowhere to keep. See
+    /// `value::TextNumbers`, which owns the rule and the measurement.
+    text_numbers: crate::value::TextNumbers,
+    /// A buffer lent out for building a builtin's result, and handed back.
+    result_buffer: std::cell::Cell<Vec<u8>>,
+    /// The environment this interpreter reads and writes, initialised from the
+    /// process and never written back. `std::env::set_var` is `unsafe` in this
+    /// edition, and the test harnesses run interpreters on threads in one
+    /// process, so a write reaching the process would reach every other run.
+    env: Vec<(Vec<u8>, Vec<u8>)>,
+    /// The directories `LD_LIBRARY_PATH` named in the environment this
+    /// interpreter was started with, which a bare library name is looked for
+    /// in before the undecorated `dlopen`.
+    ///
+    /// Taken once, as the process loader takes the variable once: measured,
+    /// oracle rc 0, a program that writes a directory holding a copy of the
+    /// library into `LD_LIBRARY_PATH` through `VALUE` still loads nothing
+    /// from it.
+    library_search: Vec<std::path::PathBuf>,
+    /// The directory relative paths resolve against, for the same reason:
+    /// `std::env::set_current_dir` is process-wide. `DIRECTORY()` moves this
+    /// and nothing else.
+    cwd: std::path::PathBuf,
+    /// The next [`ActivationId`] to hand out. Monotonic, never reset, never
+    /// reused -- see that type for the two defects that needed an identity a
+    /// stack depth could not supply.
+    next_activation_id: u64,
+    /// The counter `RexxContext~invocation` mints from --
+    /// `RexxActivation.cpp:94`'s file-scope `counter`.
+    next_invocation: u32,
+    /// Every loaded program and the object standing for its package. A
+    /// program is freed at the collection after its last package object goes.
+    programs: plan::Programs,
+    /// What `.Package~defaultOptions` writes keep.
+    option_writes: crate::options::OptionWrites,
+    /// Whether any package has ever carried a security manager, which is
+    /// the one test a checkpoint makes while none has.
+    security_armed: bool,
+    /// Set by a call that runs a method object without a send (a
+    /// `Directory` entry, `Object~run`) and consumed by that call's own pass
+    /// through the dispatch seam, which then asks no manager. Only set while
+    /// [`Interp::security_armed`] holds.
+    unasked_run: bool,
+    /// Whether any package has ever carried settings, which is the one test
+    /// an activation's start makes while none has.
+    options_armed: bool,
+    /// **`NameHasher` and not `RandomState`**, for the reason that alias's own
+    /// doc gives and with the same shape of key behind it: a `BodyKey` is a
+    /// pair of small integers this interpreter mints itself, so the
+    /// chosen-collision resistance `RandomState` buys is resistance to an
+    /// input nothing outside can choose, and SipHash's setup dominates a key
+    /// this short. Measured on a probe whose loop is one `CALL` into a label
+    /// that returns at once, the two lookups here and on `chunks` cost 9.7% of
+    /// the program between them.
+    plans: NameMap<BodyKey, Rc<Plan>>,
+    /// The entry of `plans` `Interp::plan_for` answered last, which it asks
+    /// ahead of the map. Cleared with the rows of a freed program.
+    last_plan: Option<(BodyKey, Rc<Plan>)>,
+    /// The wall-clock bound `Interp::count_clause_against_deadline` honours,
+    /// or `None` for the unbounded run every shipped caller asks for.
+    deadline: Option<crate::clause::Deadline>,
+    /// Clauses left before `Interp::countdown_reached` runs.
+    clause_countdown: u32,
+    /// The address of a local at the base of the thread running this
+    /// interpreter, and how far below it the stack may reach before
+    /// [`Interp::stack_exhausted`]; `usize::MAX` where the thread's stack is
+    /// not known.
+    stack_base: usize,
+    stack_room: usize,
+    /// This interpreter's entry in the live-interpreter registry, with the
+    /// inbox and the request word the timer sets.
+    timer: crate::timer::Registration,
+    /// The right to touch this interpreter's state.
+    baton: crate::sync::Arc<crate::island::InterpBaton>,
+    /// The deterministic switch mode, where a test set one.
+    switch: Option<crate::scheduler::Switch>,
+    /// The simulation mode's state, where the switch mode is `Sim`.
+    sim: Option<Box<crate::sim::Sim>>,
+    /// Whether the pending `SLICE` has been counted as deferred.
+    slice_deferred: bool,
+    /// The chunk cache, under `plans`' own `BodyKey` **paired with the trace
+    /// setting the chunk was compiled under**.
+    chunks: NameMap<(BodyKey, ChunkTrace), Rc<crate::ir::Chunk>>,
+    /// How many times `chunk_for` has refused a body because it does not fit
+    /// the index widths the compiled stream commits to (`ChunkTooLarge`) --
+    /// never because a body contains a construct the compiler does not
+    /// know, which does not exist: every instruction compiles.
+    chunks_refused: usize,
+    /// Whether a program has written any package's `.ROUTINES` table, which
+    /// is the one test a routine lookup makes while none has.
+    routines_written: bool,
+    /// Whether any package's `.ROUTINES` table has been built, which is the
+    /// one test a hash write makes before asking whether it wrote one.
+    routines_tables: bool,
+    /// `.NAME` answers [`Interp::rexx_package_class`] has already found,
+    /// keyed by the bare uppercased name.
+    rexx_class_cache: NameMap<Box<[u8]>, ObjRef>,
+    /// Whether any package's local directory has been built, which is the
+    /// one test a `.NAME` makes before probing the running package's.
+    package_locals: bool,
+    /// The last package local [`Interp::package_local_entry`] read, with a
+    /// reading of its pool; one that is not current is read again.
+    package_local_view: Option<(ObjRef, dispatch::hash::StoreView)>,
+    /// The last name `.NAME` found absent from a program's package local.
+    package_local_miss: environment::PackageLocalMiss,
+    /// The object model message dispatch resolves against: `Setup.cpp`'s
+    /// native classes, whatever `::CLASS`/`::METHOD`/`::ATTRIBUTE` have
+    /// installed beside them, and the primitive methods this crate
+    /// implements. `interrexx-classes`' own
+    /// [`interrexx_classes::ClassRegistry`] is the one class model here (R9), not
+    /// one of two.
+    object_model: Option<dispatch::ObjectModel>,
+    /// `.environment`, `.local` and what `.context`/`.methods` are built from.
+    /// `None` until a `.NAME` is resolved, for the reason
+    /// [`Interp::object_model`] is: building it forces the native class set.
+    environment: Option<environment::EnvironmentModel>,
+    /// The arena object holding each class object's own variable pools and
+    /// its `setMethod` methods, by class identity.
+    class_variables: FxHashMap<ObjRef, ObjRef>,
+    /// Which program's `::CLASS` directive created a class, which `~package`
+    /// reads.
+    class_packages: FxHashMap<ObjRef, ClassPackage>,
+    /// The one empty argument list every call that has none shares.
+    empty_arguments: Rc<[Option<ObjRef>]>,
+    /// The REXX package's object, once built.
+    rexx_package: Option<ObjRef>,
+    /// The one `Routine` object standing for each installed routine.
+    routine_objects: FxHashMap<InstalledRoutine, ObjRef>,
+    /// The one `Routine` object standing for each library routine an
+    /// imported-routine table holds, by its [`Interp::library_codes`] row:
+    /// `mergeLibrary` merges the library package's own routine objects, so
+    /// every package importing one answers the same object.
+    library_routine_objects: FxHashMap<usize, ObjRef>,
+    /// The one `Routine` object of each internal package row, by its
+    /// [`internal_routines::INTERNAL_ROUTINES`] index, built on the first ask:
+    /// the routine table of `LibraryPackage` (`package/LibraryPackage.cpp`),
+    /// which every path naming the row answers from.
+    internal_routine_objects: Vec<Option<ObjRef>>,
+    /// The `StringTable` each annotated thing's `~annotations` answers, keyed
+    /// by the thing -- see [`environment::Annotated`] for the key space and
+    /// [`Interp::annotation_table`] for why the table is kept rather than
+    /// rebuilt.
+    annotations: FxHashMap<environment::Annotated, ObjRef>,
+    /// How many methods have been compiled from source text, which is what
+    /// [`environment::Annotated::Compiled`] counts -- see that variant for
+    /// why a compiled method's annotation table is keyed by a count and not
+    /// by the dictionary entry it is installed into.
+    compiled_methods: usize,
+    /// The `Method` object `Class~method` answers, keyed by the class, whether
+    /// the entry is on its class side, and the dictionary name. See
+    /// [`Interp::method_object`] for the two oracle answers that make one
+    /// object per entry observable.
+    method_objects: FxHashMap<(ObjRef, bool, Box<[u8]>), ObjRef>,
+    /// Which `(program, directive)` a [`interrexx_classes::MethodId`] `install_directives`
+    /// minted names -- the "bodies are stored" half of R9, addressed by the
+    /// same identity `ClassRegistry::add_instance_method`/`add_class_method`
+    /// already returns.
+    method_bodies: NameMap<MethodId, InstalledMethodBody>,
+    /// Whether the interpreter's own Rexx-written library is running.
+    library_bootstrap: bool,
+    /// How many collections the heap had performed when the library
+    /// bootstrap finished, which is what `Outcome::collections` is counted
+    /// from -- see `Interp::bootstrap_library` for why the boundary is
+    /// there and not at process start.
+    collections_before_program: u64,
+    #[cfg(feature = "pinning")]
+    pinning: pinning::Pinning,
+    /// Every activity but the running one.
+    activities: scheduler::Activities,
+    /// The programs the library bootstrap loaded, in load order.
+    library_programs: Vec<ProgramId>,
+    /// The name a program compiled from method source text reports under.
+    compiled_method_names: FxHashMap<ProgramId, Box<[u8]>>,
+    /// Whether any object has been given a method of its own, which is what
+    /// keeps the per-object dictionary off a send's path in a program that
+    /// never sends `SETMETHOD` -- see `Interp::own_method_entry`.
+    object_methods: bool,
+    /// The `Method` object standing for each method identity one was built
+    /// for, which is what `.context~executable` answers from a method no
+    /// class dictionary reaches by its name.
+    executable_objects: method_rows::MethodRows<ObjRef>,
+    /// What each `Method` and `Routine` object this crate has handed out
+    /// reports on and runs -- see [`ExecutableRecord`].
+    executable_sources: FxHashMap<ObjRef, ExecutableRecord>,
+    /// For a stem some other stem's `EXPOSE` made tails of, a weak reference
+    /// to each such stem. The stems are not roots through this.
+    stem_exposers: FxHashMap<ObjRef, Vec<ObjRef>>,
+    /// The trace lines being delivered, innermost last. Kept here and not on
+    /// the activity, which every switch moves: a delivery is pinned, so
+    /// another activity's runs only inside this one's pinned yield, and the
+    /// innermost is the running activity's whenever it is routing.
+    deliveries: Vec<crate::activity::Delivery>,
+    /// A refusal a trace line's delivery met where no clause end of its
+    /// activity is left to raise it: that activity, ending next, ends with it.
+    trace_refusal: Option<Failure>,
+    /// For a `>V>` or `>=>` line being routed, the variable it names.
+    traced_variable: Option<crate::trace::TracedVariable>,
+    /// What `Method`'s four setters have written on each object they have
+    /// been sent to, over what its directive declared -- see
+    /// [`dispatch::executable::MethodFlagWrites`].
+    method_flag_writes: FxHashMap<ObjRef, dispatch::executable::MethodFlagWrites>,
+    /// What the send behind each `Message` object this crate has built ended
+    /// with -- `MessageClass`'s `flagResultReturned` and `flagRaiseError`
+    /// (`classes/MessageClass.hpp:61`-`:62`) and its `condition` field (`:135`).
+    message_outcomes: FxHashMap<ObjRef, Option<Box<Raised>>>,
+    /// The `Message` objects a start has been sent to, which cannot be sent,
+    /// started or replied again -- `MessageClass`'s `flagMsgActivated`.
+    started_messages: rustc_hash::FxHashSet<ObjRef>,
+    /// The completed `Message` objects whose notification of the objects
+    /// `~notify` named is running or failed; every other completed message
+    /// has `MessageClass`'s `flagAllNotified`.
+    unnotified_messages: rustc_hash::FxHashSet<ObjRef>,
+    /// The methods a directive implements itself -- see [`GeneratedMethod`]
+    /// for why these are not rows of [`method_bodies`], which is a
+    /// measurement rather than a taxonomy.
+    generated_methods: FxHashMap<MethodId, GeneratedMethod>,
+    /// Which `LIBRARY REXX` entry point each `::METHOD ... EXTERNAL` bound
+    /// to, keyed by the identity [`Interp::install_one_method`] minted for
+    /// its dictionary key.
+    native_externals: FxHashMap<MethodId, &'static dispatch::native::NativeExternal>,
+    /// The `EXTERNAL` methods whose directive leaves them guarded.
+    guarded_externals: rustc_hash::FxHashSet<MethodId>,
+    /// Every object an extension made a global reference, which a handle to
+    /// it resolves to from any native call for as long as the interpreter
+    /// runs (`InterpreterInstance::addGlobalReference`).
+    global_references: interrexx_api::handles::Table,
+    /// The terminated copies `StringData` and its kin answered, by the object
+    /// they copy. Not roots: a collection drops the copy of an object it
+    /// frees, and of a handle-carried value, which no collection frees, that
+    /// no call in flight ([`Interp::kept_holders`]) and no global reference
+    /// holds.
+    kept_strings: rustc_hash::FxHashMap<ObjRef, Box<[u8]>>,
+    /// The terminated copies of message and routine names answered, by name.
+    kept_names: rustc_hash::FxHashMap<Box<[u8]>, Box<[u8]>>,
+    /// For each handle-carried value in [`Interp::kept_strings`], how many
+    /// native calls in flight asked for its copy.
+    kept_holders: rustc_hash::FxHashMap<ObjRef, usize>,
+    /// How many of [`Interp::kept_strings`]' copies are of handle-carried
+    /// values, and the count past which they are pruned without waiting for
+    /// a collection.
+    kept_carried: usize,
+    kept_carried_limit: usize,
+    /// Every native library a name has loaded, by the name it was resolved
+    /// under -- `PackageManager::packages`
+    /// (`interpreter/package/PackageManager.cpp:229-248`). A miss is not held,
+    /// because the oracle removes the package on a failed load and asks again;
+    /// a library whose version check refused is, because that check raises
+    /// between the `put` and the `remove`.
+    libraries: Libraries,
+    /// The thread context [`Interp::terminate`] ran on, which an extension
+    /// may have kept. Declared after `libraries`, so a library's destructor
+    /// run when they drop still finds it allocated.
+    termination_thread: Option<interrexx_api::ffi::ThreadContext>,
+    /// The command handlers extensions registered, by upper-cased environment
+    /// name (`InterpreterInstance::commandHandlers`). Emptied at the first
+    /// library close, since nothing ties a handler's code to its library.
+    command_handlers: FxHashMap<Box<[u8]>, Rc<interrexx_api::load::CommandHandler>>,
+    /// The environments `.CommandHandler` has stacked handlers on, the
+    /// objects of the native handlers, and the commands handlers written in
+    /// Rexx are running.
+    environments: command::Environments,
+    /// Whether the next native call leaves its driver whatever else runs:
+    /// an embedding instance's root call, which waits for the thread that
+    /// created the instance while the driver serves that thread's callbacks.
+    pub(crate) leave_next_native: bool,
+    /// An embedding instance's `INITIAL_ADDRESS_ENVIRONMENT`, the `ADDRESS` a
+    /// program `CallProgram` runs starts with; `None` the platform default.
+    pub(crate) default_address: Option<Rc<[u8]>>,
+    /// An embedding instance's `REGISTERED_ENVIRONMENTS`: the classic
+    /// subcommand handler an upper-cased environment name is served by.
+    pub(crate) subcom_aliases: FxHashMap<Vec<u8>, Vec<u8>>,
+    /// The system exits an embedding installed (`RexxStart`'s exit list, or
+    /// `RexxCreateInterpreter`'s `REGISTERED_EXITS` and `DIRECT_EXITS`), `None` where it
+    /// installed none.
+    pub(crate) exits: Option<Box<crate::exits::Exits>>,
+    /// Whether the halt or the trace exit is installed and so runs at each clause boundary
+    /// (`Activity::queryTrcHlt`).
+    pub(crate) clause_exits: bool,
+    /// Whether another thread can switch the trace of this run at a clause boundary
+    /// (`RexxSetTrace`), so that no chunk may settle a clause's trace setting at compile time.
+    pub(crate) trace_switchable: bool,
+    /// A native call posted to this interpreter's own inbox, which the clause boundary that
+    /// ends the calling clause serves: the activation depth of that clause. It sets
+    /// `clause_exits` to be reached there.
+    pub(crate) boundary_posts: Option<usize>,
+    /// An embedding instance's `EXTERNAL_CALL_PATH` and
+    /// `EXTERNAL_CALL_EXTENSIONS`, which every external search uses.
+    pub(crate) call_search: require::Instance,
+    /// How many times [`Interp::resolve_library`] has asked `load::open` for a
+    /// name nothing held, whether or not a library loaded, which is what a
+    /// test reads to see that a held one is not asked for again.
+    #[cfg(test)]
+    library_open_attempts: usize,
+    /// How many `Method` objects `.context~executable` has built because no
+    /// live one stood for the running body, which is what a test reads to
+    /// see that it reached that path.
+    #[cfg(test)]
+    executables_rebuilt: usize,
+    /// A file a pool thread appends `end` to, then panics, at the end of a
+    /// native call, while it holds the baton by a lend.
+    #[cfg(test)]
+    panic_at_call_end: Option<std::path::PathBuf>,
+    /// Whether main's next wait for a native call is answered with Error
+    /// 11.1 in place of the call's completion.
+    #[cfg(test)]
+    fail_native_wait: bool,
+    /// Which library procedure each `::METHOD`/`::ATTRIBUTE ... EXTERNAL
+    /// "LIBRARY <name>"` bound to, keyed by the identity
+    /// [`Interp::install_one_method`] minted for its dictionary key.
+    library_externals: FxHashMap<MethodId, LibraryBinding>,
+    /// Which package declared each `EXTERNAL` binding, keyed the same way.
+    /// A raise the native boundary makes for itself is reported against this
+    /// package rather than against the running program.
+    external_packages: FxHashMap<MethodId, ProgramId>,
+    /// The package of each library procedure's shared code object, `None`
+    /// until a directive binds it, indexed by [`ExecutableSource::Loaded`].
+    ///
+    /// `NativeCode::setPackageObject` (`execution/NativeCode.cpp:130-140`)
+    /// sets the package in place on the first binding and copies on every
+    /// later one, so an object a `loadExternal*` send answered earlier
+    /// reports the first binder's package from then on. A `::ROUTINE`
+    /// directive discards that copy and stores the shared routine
+    /// (`parser/DirectiveParser.cpp:2691-2693`), so a later routine binder's
+    /// own routine reports the first binder too.
+    library_codes: Vec<Option<ProgramId>>,
+    /// Which [`Interp::library_codes`] row each procedure owns.
+    library_code_rows: FxHashMap<LibraryCodeKey, usize>,
+    /// The procedure each [`Interp::library_codes`] row is, by row.
+    library_code_keys: Vec<LibraryCodeKey>,
+    /// The routine row each [`Interp::library_codes`] row resolved to, once
+    /// called: a held library is never replaced and its tables never change,
+    /// so the row stays the one its name finds.
+    library_code_routines: Vec<Option<u32>>,
+    /// The [`Interp::library_codes`] row each library-backed `::ROUTINE`
+    /// directive bound, which is the package its routine reports.
+    library_routine_codes: FxHashMap<InstalledRoutine, usize>,
+    /// The internal package routine each `::ROUTINE ... EXTERNAL "LIBRARY
+    /// REXX"` or `"LIBRARY rexxutil"` directive bound.
+    rexx_routine_rows: FxHashMap<InstalledRoutine, &'static internal_routines::InternalRoutine>,
+    /// The [`Interp::library_codes`] row of each method a `~define` installed
+    /// from a `loadExternalMethod` answer, which is the package it reports.
+    defined_library_codes: FxHashMap<MethodId, usize>,
+    /// `PackageManager::packageRoutines`
+    /// (`interpreter/package/PackageManager.cpp:524`): every routine a loaded
+    /// library exports, by upcased name, as the index of its slot in
+    /// [`Interp::package_routine_codes`]. A later library exporting the same
+    /// name replaces the slot's row and keeps its index, so a call site that
+    /// resolved to the slot calls the replacement.
+    package_routines: FxHashMap<Vec<u8>, usize>,
+    /// The [`Interp::library_codes`] row each [`Interp::package_routines`]
+    /// slot calls.
+    package_routine_codes: Vec<usize>,
+    /// Moved by every write to a routine table an existing call site's
+    /// lookup reads: a library registering routines
+    /// ([`Interp::register_package_routines`]), a merge that adds a name
+    /// ([`Interp::merge_routines`]), and `~addRoutine`/`~addPublicRoutine`.
+    /// See `Resolved::kept_until_routines_change`.
+    pub(crate) routine_generation: u32,
+    /// [`capi::changes`] when this interpreter last moved
+    /// [`Interp::routine_generation`] for it: a macrospace or registration
+    /// change made through the C API, which an extension's native call makes.
+    pub(crate) api_changes_seen: u64,
+    /// The classic function handlers calls have resolved, by uppercased name, kept until
+    /// `RxFuncDrop` names them: a handler dropped by any other route stays callable here.
+    pub(crate) classic_functions: FxHashMap<Vec<u8>, interrexx_api::load::ClassicEntry>,
+    /// The classic subcommand handlers commands have resolved, by uppercased environment, kept for
+    /// the interpreter's life.
+    pub(crate) classic_subcoms: FxHashMap<Vec<u8>, interrexx_api::load::ClassicEntry>,
+    /// The access scope and protection of every method that has one -- the
+    /// oracle's `isSpecial()` set, which is what `RexxObject::messageSend`
+    /// consults before it runs anything.
+    special_methods: method_rows::MethodRows<dispatch::AccessScope>,
+    /// The output sink. `SAY` writes here and `Outcome::stdout` is what it
+    /// becomes.
+    out: Vec<u8>,
+    /// The trace sink, which becomes `Outcome::stderr`.
+    trace: Vec<u8>,
+    /// The length past which `out` is handed to the stdout sink after a
+    /// `SAY`: `0` for a terminal, which takes each line, [`OUTPUT_BOUND`] for
+    /// a redirected standard output, and never without sinks.
+    say_bound: usize,
+    /// The same for any other write to `out`, which a terminal also takes at
+    /// a line end.
+    out_bound: usize,
+    /// Whether standard output is a terminal.
+    out_lines: bool,
+    /// Collect-on-every-allocation stress mode: when true, [`Interp::alloc_with`] collects before every
+    /// allocation. Off by default. The allocation path reads `collect_due`,
+    /// which this keeps true: [`Interp::enable_stress_collect`] sets both and
+    /// `collect_now` resets `collect_due` to this.
+    stress_collect: bool,
+    /// Whether the next allocation collects whatever the slot test says:
+    /// always in the stress mode, and otherwise once the body bytes charged
+    /// since the last collection reach `bytes_due`.
+    collect_due: bool,
+    /// The objects a collection found unreachable and flagged for `UNINIT`,
+    /// oldest first, awaiting [`Interp::run_ready_uninits`] -- oracle's
+    /// `setReadyForUninit` list (`memory/RexxMemory.cpp:274`).
+    uninit_ready: Vec<ObjRef>,
+    /// Whether a `UNINIT` sweep is running -- oracle's `processingUninits`
+    /// (`memory/RexxMemory.cpp:341`-`:347`, cleared at `:383`).
+    processing_uninits: bool,
+    /// The `.STDERR` the bundle minted, for recognising a trace route no
+    /// program has redirected: the monitor chain still ends here, and a direct
+    /// write is then the same bytes a delivery would produce.
+    bootstrap_stderr: Option<ObjRef>,
+    /// The `.STDOUT` the bundle minted, which is the same recognition for
+    /// `SAY`'s own route. Measured, delivering every `SAY` through the monitor
+    /// costs 16,360 instructions a line where writing costs none of it.
+    bootstrap_stdout: Option<ObjRef>,
+    /// Bumped by every write that could move a route's far end: a `.local`
+    /// entry, a directory put or removal, and an array write, which is how a
+    /// monitor's destination queue changes.
+    route_generation: u64,
+    /// What a `dispatch::hash::StoreView` is valid against.
+    /// `hash::bump_store_generation` moves it.
+    store_generation: u64,
+    /// Bumped by every slot a hash store's arrays are written at.
+    store_writes: u64,
+    /// `SAY`'s route as of [`Interp::route_generation`]: `None` writes
+    /// straight to the buffer. Deciding it afresh costs 764 instructions a
+    /// line -- measured, `sayloop` at 1.40x -- and both halves of that are
+    /// hash lookups, so the decision is cached rather than either half.
+    output_route: Option<(u64, Option<ObjRef>)>,
+    /// The arena size at or past which [`Interp::alloc_with`] collects when
+    /// the arena must grow (`Heap::will_grow`): the slot half of the trigger
+    /// policy. The byte half is `bytes_due`.
+    collect_at: usize,
+    /// The body bytes charged since the last collection at which
+    /// [`Interp::charge_body_bytes`] makes a collection due: the larger of
+    /// `COLLECT_BYTES_FLOOR` and the bytes the last collection found live.
+    bytes_due: usize,
+    /// The in-process external data queue (I15): every line
+    /// `PUSH`/`QUEUE` has written and `PULL`/`PARSE PULL` have not yet
+    /// removed. See `queue.rs`'s own module doc for the LIFO/FIFO split, and
+    /// `Interp::pull_line` (`input.rs`) for the queue-first-then-`.input`
+    /// rule that reads it.
+    queue: Queue,
+    /// `.input`'s position: the one line cursor `PULL`, `PARSE PULL` and
+    /// `PARSE LINEIN` all advance. See `input.rs` for the shared-position
+    /// measurement and the line rule; `ProgramInput`'s own doc has why the
+    /// process's real standard input is never what this holds by default.
+    input: Input,
+    /// Whether each standard descriptor -- input, output, error, in that
+    /// order -- is transient, which decides `QUERY STREAMTYPE` and whether
+    /// positioning a standard stream is 93.958. Taken from the `Invocation`,
+    /// never from this process: see `Invocation::standard_transient`.
+    standard_transient: [bool; 3],
+    /// The errno with which the [`Sinks`] last refused standard output's and
+    /// standard error's bytes, which every stream write to that descriptor
+    /// answers from then on.
+    pub(crate) sink_errors: [Option<i32>; 2],
+    /// Where the two output buffers go before a read that would wait on a
+    /// live standard input, or `None` for an embedding that reads them out of
+    /// the `Outcome` at the end. See [`crate::Sinks`].
+    sinks: Option<crate::invocation::Sinks>,
+    /// The command-line words `.SYSCARGS` answers, before they become the one
+    /// `Array` `.local` holds -- see `Invocation::words` for why the joined
+    /// argument string cannot supply them.
+    command_words: Vec<Vec<u8>>,
+    /// The index `.SYSCARGS` holds [`Interp::command_words`]' first word at, or
+    /// `None` for a run whose `.local` has no `SYSCARGS` entry.
+    command_words_base: Option<usize>,
+    /// Whether the required-string protocol can answer anything other than
+    /// the value it was handed -- `Interp::required_string_value`'s gate.
+    reqstr_armed: bool,
+    /// The condition a trace op's rendering raised, held from that op until
+    /// the region it ran in exits with it. On the interpreter rather than
+    /// the activity: measured by callgrind, a field there costs `pingguard`
+    /// +0.30% and `pingsem` +0.26%.
+    pub(crate) held_trace_failure: Option<Failure>,
+    /// One entry per activity inside a stem's forward ([`Interp::forwarded`]).
+    forwardings: Vec<crate::value::Forwarding>,
+    /// Whether anything in this run could take `LOSTDIGITS`: a `SIGNAL ON
+    /// LOSTDIGITS` or `SIGNAL ON ANY` trap, an installed `::OPTIONS ...
+    /// LOSTDIGITS SYNTAX` or a `Package~options` write. It only ever sets.
+    /// The gate on [`Interp::lostdigits_check`].
+    lostdigits_armed: bool,
+    /// The running program's own location, as `PARSE SOURCE`'s third word.
+    program_path: Vec<u8>,
+    /// The resolved location of each program a `::REQUIRES` loaded, which is
+    /// what that program's own `PARSE SOURCE`, `~package~name` and traceback
+    /// report in place of [`Interp::program_path`].
+    required_paths: FxHashMap<ProgramId, Box<[u8]>>,
+    /// The package each `::REQUIRES` name has already loaded, keyed both by
+    /// the name as written and by the file it resolved to. An entry goes when
+    /// its package object is collected.
+    required_packages: FxHashMap<Box<[u8]>, ProgramId>,
+    /// The packages `LoadPackageFromData` loaded, which their
+    /// [`Interp::required_packages`] entries keep for as long as the
+    /// interpreter runs.
+    data_packages: Vec<ObjRef>,
+    /// The programs whose first walk of [`Interp::install_directives`], which is
+    /// this crate's translation, started and did not finish. The oracle gives
+    /// the package of a translation that raised no routine, method or resource
+    /// table (`parser/LanguageParser.cpp:1893-1908`) and no prolog (`:656-665`).
+    untranslated: rustc_hash::FxHashSet<ProgramId>,
+    /// Whether [`Interp::install_directives`] stops after its first walk:
+    /// a translation that runs nothing, as `rexxc` makes.
+    translate_only: bool,
+    /// While [`Interp::run_loaded`] installs a program's directives, the
+    /// settings `::OPTIONS NUMERIC INHERIT` inherits from there: the outer
+    /// `Some` says an install is running, the inner value is its caller's.
+    /// The install runs in the activation that then runs the main body, so
+    /// a `::CONSTANT` expression and a `::REQUIRES` prologue start from it.
+    install_caller: Option<Option<Settings>>,
+    /// While a package's directives install, how the activation that installs
+    /// them was entered, which a `::CONSTANT` expression's level lists below
+    /// it.
+    install_call: Option<CallType>,
+    /// The threads native calls and blocking operations run on; last, so
+    /// that every island value is dropped before its threads end.
+    pool: crate::scheduler::Pool,
+}
+
+/// Where one installed `::ROUTINE` lives: which loaded program, and which of
+/// its directives.
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+struct InstalledRoutine {
+    program: ProgramId,
+    directive: usize,
+}
+
+/// What a freshly built activation takes from its own package's `::OPTIONS`.
+struct PackageStart {
+    settings: Settings,
+    syntax: options::ConditionSyntax,
+    trace: Option<crate::trace::TraceMode>,
+}
+
+impl PackageStart {
+    #[inline]
+    fn apply(self, activation: &mut Activation) {
+        activation.settings = self.settings;
+        activation.condition_syntax = self.syntax;
+        if let Some(trace) = self.trace {
+            activation.trace_mode = trace;
+        }
+    }
+}
+
+/// One entry of [`Interp::merged_public_routines`].
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+enum MergedRoutine {
+    /// A `::ROUTINE` a required package declared or imported, and the
+    /// package object of its program, which the entry holds.
+    Installed(InstalledRoutine, ObjRef),
+    /// A library routine, as its [`Interp::library_codes`] row.
+    Library(usize),
+    /// An internal package's routine, as its
+    /// [`internal_routines::INTERNAL_ROUTINES`] index.
+    Internal(usize),
+    /// A [`MergedRoutine::Library`] row, as a `Routine` object other than the
+    /// one that row answers for: a copy a program added.
+    LibraryObject(usize, ObjRef),
+    /// A [`MergedRoutine::Internal`] row, as a `Routine` object other than
+    /// the one that row answers for: a copy a program added.
+    InternalObject(usize, ObjRef),
+}
+
+/// What a routine lookup through a package whose `.ROUTINES` table a
+/// program wrote finds: a routine the tables beside it hold, or the object
+/// the written table holds.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub(crate) enum FoundRoutine {
+    Merged(MergedRoutine),
+    Object(ObjRef),
+}
+
+impl MergedRoutine {
+    /// What a call that finds this entry runs.
+    pub(crate) fn resolved(self) -> run::Resolved {
+        match self {
+            MergedRoutine::Installed(installed, _) => run::Resolved::Routine(installed),
+            MergedRoutine::Library(code) => run::Resolved::MergedLibraryRoutine(code, ObjRef::NIL),
+            MergedRoutine::LibraryObject(code, object) => {
+                run::Resolved::MergedLibraryRoutine(code, object)
+            }
+            MergedRoutine::Internal(index) => run::Resolved::MergedInternal(
+                &internal_routines::INTERNAL_ROUTINES[index],
+                ObjRef::NIL,
+            ),
+            MergedRoutine::InternalObject(index, object) => {
+                run::Resolved::MergedInternal(&internal_routines::INTERNAL_ROUTINES[index], object)
+            }
+        }
+    }
+}
+
+/// One `Method` or `Routine` object this crate has handed out, as its own
+/// readers see it.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub(crate) struct ExecutableRecord {
+    /// What the seven flags, `~source` and `~package` report on.
+    pub(crate) source: ExecutableSource,
+    /// The method identity this object runs under: the dictionary entry it
+    /// *is* where a class holds it, which is what makes `Method~setPrivate`
+    /// change how a send resolves, and one minted for it otherwise.
+    /// `setMethod`, `run`, `enhanced` and `define` install this identity.
+    /// `None` for a `Routine`.
+    pub(crate) installed: Option<MethodId>,
+    /// The `::ROUTINE` directive `Routine~call` enters, which is not always
+    /// the directive [`ExecutableRecord::source`] names: a `Routine`
+    /// compiled from source text reports the whole of its own program as its
+    /// source and runs the sole directive that program carries.
+    pub(crate) routine: Option<(ProgramId, usize)>,
+    /// Whether [`ExecutableRecord::installed`] was minted for this object
+    /// alone, so that its rows go at the sweep that frees the object. Every
+    /// holder of such an identity holds the object too: a class or object
+    /// method dictionary, a `run` activation's `executable` and the one
+    /// `.context~executable` answered.
+    pub(crate) owns_installed: bool,
+}
+
+impl ExecutableRecord {
+    /// Whether this record names a program `dead` answers for.
+    fn names_program(&self, dead: impl Fn(&ProgramId) -> bool) -> bool {
+        let source = match &self.source {
+            ExecutableSource::Directive { program, .. }
+            | ExecutableSource::ConstantExpression { program, .. }
+            | ExecutableSource::Main { program }
+            | ExecutableSource::External { program } => Some(program),
+            ExecutableSource::Native | ExecutableSource::Loaded { .. } => None,
+        };
+        source.is_some_and(&dead) || self.routine.is_some_and(|(program, _)| dead(&program))
+    }
+}
+
+/// What a `Method` or `Routine` object's own readers report on -- its seven
+/// flags, its `~source` and its `~package`.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub(crate) enum ExecutableSource {
+    /// A directive of a program: a `::METHOD`, an `::ATTRIBUTE`, a
+    /// `::CONSTANT` or a `::ROUTINE`.
+    Directive {
+        program: ProgramId,
+        directive: usize,
+    },
+    /// The method a `::CONSTANT` directive's parenthesised expression runs
+    /// as, which reports on that directive's own clause.
+    ConstantExpression {
+        program: ProgramId,
+        directive: usize,
+    },
+    /// A program's own main section, which is what a body compiled from
+    /// source text is: `translateBlock` starts such a block at line 1
+    /// (`parser/LanguageParser.cpp:1193`) where a directive's starts after
+    /// the directive clause.
+    Main { program: ProgramId },
+    /// A primitive, which has no directive to report on:
+    /// `BaseCode::getSource` answers an empty array
+    /// (`execution/BaseCode.cpp:120`) and `BaseCode::setSecurityManager`
+    /// answers `0` (`:133`).
+    Native,
+    /// An `EXTERNAL` binding a directive of `program` installed, which reads
+    /// as [`ExecutableSource::Native`] except that its package is `program`.
+    External { program: ProgramId },
+    /// A `loadExternalMethod` or `loadExternalRoutine` answer over a library
+    /// procedure, which reads as [`ExecutableSource::Native`] except that its
+    /// package is whatever [`Interp::library_codes`] row `code` holds when
+    /// asked.
+    Loaded { code: usize },
+}
+
+/// The code object a library shares between every binding of one procedure.
+///
+/// A method's is cached per spelling asked for
+/// (`LibraryPackage::resolveMethod`, `package/LibraryPackage.cpp:374-400`); a
+/// routine's is built once per routine table entry when the library loads,
+/// and found by its exact spelling or else by the first entry matching
+/// without regard to case (`LibraryPackage::loadRoutines` and
+/// `::resolveRoutine`, `:270-299`, `:410-435`), as `Library::routine` finds it.
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub(crate) struct LibraryCodeKey {
+    /// The library name byte for byte, as [`Interp::libraries`] keys it.
+    pub(crate) library: Vec<u8>,
+    /// A method's procedure name byte for byte as asked, or the name a
+    /// routine table entry declares.
+    pub(crate) procedure: Vec<u8>,
+    /// Whether this is the routine table's entry rather than the method
+    /// table's.
+    pub(crate) routine: bool,
+}
+
+/// What a namespace qualifier resolved to.
+#[derive(Copy, Clone)]
+enum Namespace {
+    Rexx,
+    Package(ObjRef),
+}
+
+/// Where one installed `::METHOD`/`::ATTRIBUTE` accessor's own body lives --
+/// the same shape as [`InstalledRoutine`], for the same reason: a
+/// [`interrexx_classes::MethodId`] alone names neither the program nor the
+/// directive, and both are needed to find the [`interrexx_parse::CodeBody`]
+/// (or its absence, for a generated accessor or an `ABSTRACT`/`DELEGATE`
+/// method) later.
+#[derive(Copy, Clone)]
+struct InstalledMethodBody {
+    program: ProgramId,
+    directive: usize,
+}
+
+/// An equality rather than a bound, for the reason `crate::ir::Op`'s own
+/// width assertion is one: every send to a `::METHOD` body copies one of
+/// these out of [`Interp::method_bodies`], and a field added here costs that
+/// path -- measured, `bench-programs/dispatchclass.rex` at +1.88% and 121
+/// `instructions:u` per send when a [`GeneratedKind`] discriminant sat
+/// beside `program` and `directive` (see [`GeneratedMethod`]).
+const _: () = assert!(size_of::<InstalledMethodBody>() == 16);
+
+/// One installed method that the *directive* implements rather than a body:
+/// a generated accessor, or an `ABSTRACT` declaration.
+#[derive(Copy, Clone)]
+struct GeneratedMethod {
+    program: ProgramId,
+    directive: usize,
+    kind: GeneratedKind,
+}
+
+/// Which method a directive generated.
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+enum GeneratedKind {
+    /// A generated getter: it answers the attribute's variable in the
+    /// declaring scope's pool on the receiver.
+    Getter,
+    /// A generated setter: it assigns that variable and answers nothing.
+    Setter,
+    /// `ABSTRACT`, on either directive and on either half of a generated
+    /// accessor pair: the send is 93.965 whatever the arguments are.
+    Abstract,
+    /// `DELEGATE`, on either directive and on both halves of the pair a
+    /// `::ATTRIBUTE` or a `::METHOD ... ATTRIBUTE` generates: the message is
+    /// re-sent, under the name it arrived under and with the arguments it
+    /// arrived with, to the value of the delegate variable in the declaring
+    /// scope's pool on the receiver.
+    Delegate,
+    /// A `::CONSTANT` accessor: it answers the value its package holds for
+    /// the directive.
+    Constant,
+    /// The method a `::CONSTANT` expression is evaluated by: run again, it
+    /// evaluates the expression on its receiver and answers nothing.
+    ConstantExpression,
+}
+
+/// The directories `LD_LIBRARY_PATH` names in `environment`.
+///
+/// The process loader read that variable before any interpreter existed, so a
+/// value an interpreter is handed reaches the search no other way. Writing it
+/// back to the process is forbidden here and would reach every other
+/// interpreter in the process besides.
+fn library_search_of(environment: &[(Vec<u8>, Vec<u8>)]) -> Vec<std::path::PathBuf> {
+    use std::os::unix::ffi::OsStrExt;
+    let Some((_, value)) = environment
+        .iter()
+        .find(|(name, _)| name.as_slice() == b"LD_LIBRARY_PATH")
+    else {
+        return Vec::new();
+    };
+    value
+        .split(|byte| *byte == b':')
+        .filter(|part| !part.is_empty())
+        .map(|part| std::path::PathBuf::from(std::ffi::OsStr::from_bytes(part)))
+        .collect()
+}
+
+/// A native library the interpreter has tried to resolve.
+pub(crate) enum LibraryLoad {
+    Loaded(Rc<interrexx_api::load::Library>),
+    /// No shared object of that name loaded, or one loaded and published no
+    /// package entry. `LibraryPackage::load` (`package/LibraryPackage.cpp:147`)
+    /// answers false for both, because `getPackageTable` returns null for each
+    /// (`:204`, `:216`), and its callers cannot tell them apart.
+    Missing,
+    /// The package entry asks for a newer interpreter than this one. This ask
+    /// raises; the library is held, and every later ask answers it loaded.
+    Version,
+    /// The package loader raised or refused. This ask raises the failure; the
+    /// library is held, and every later ask answers it loaded.
+    Raised(Failure),
+}
+
+/// One dictionary key bound to one procedure of one loaded library.
+#[derive(Clone)]
+pub(crate) struct LibraryBinding {
+    pub(crate) library: Rc<interrexx_api::load::Library>,
+    /// The procedure's row in `library`'s method table, `None` where it
+    /// exports none of that name.
+    pub(crate) method: Option<usize>,
+}
+
+/// One running `INTERPRET` fragment, which the oracle runs as an activation
+/// of its own and this crate inside its owner's.
+pub(crate) struct FragmentLevel {
+    /// The activation it runs in.
+    pub(crate) owner: crate::activation::ActivationId,
+    /// Its parsed text, once parsed.
+    pub(crate) fragment: Option<Rc<interrexx_parse::Fragment>>,
+    /// The `INTERPRET` clause's line, which each of its clauses reports.
+    pub(crate) line: usize,
+    /// The `INTERPRET` clause's printed indent.
+    pub(crate) indent: usize,
+    /// [`Activity::fragment_clause`] as the enclosing fragment left it.
+    pub(crate) outer_clause: usize,
+    /// Its frame's `~invocation`, minted on the first ask.
+    pub(crate) invocation: Option<u32>,
+}
+
+/// One native activation: what an extension writes its object variables
+/// through, and the handles it has been given.
+struct NativeFrame {
+    /// The object whose [`interrexx_core::ScopePools`] the write lands in, which
+    /// is [`Interp::pool_owner`] of the receiver.
+    owner: ObjRef,
+    /// The running method's own scope, not the receiver's class --
+    /// `receiver->getObjectVariables(getScope())`
+    /// (`execution/NativeActivation.cpp:1878`).
+    scope: ObjRef,
+    /// A method's activation rather than a routine's, which is what decides
+    /// whether a signature may ask for the receiver's state.
+    method: bool,
+    /// The method's receiver, `.nil` for a routine.
+    receiver: ObjRef,
+    /// The name the method was sent by or the routine called by.
+    name: Vec<u8>,
+    /// The call's arguments, an omitted one `None`.
+    arguments: Vec<Option<ObjRef>>,
+    /// The array [`NativeFrame::arguments`] became, once a conversion asked.
+    argument_list: Option<ObjRef>,
+    locals: interrexx_api::handles::Table,
+    /// The condition an argument's string conversion or a callback raised,
+    /// held for the call to raise once it has returned.
+    raised: Option<Failure>,
+    /// The held condition's `ADDITIONAL` object, where the raise named one.
+    additional: Option<ObjRef>,
+    /// The held condition's `RESULT` object, where the raise named one.
+    result: Option<ObjRef>,
+    /// The held condition's object, once a callback asked for it.
+    condition: Option<ObjRef>,
+    /// Whether the held condition is one Rexx code a `CallRoutine` or
+    /// `CallProgram` call ran `RAISE`d with no Rexx caller to offer it to:
+    /// kept for `CheckCondition` and `GetConditionInfo`, and not raised again
+    /// when the call returns (`NativeActivation::setCalleeConditionInfo`,
+    /// `execution/NativeActivation.cpp:2739`).
+    callee: bool,
+    /// The levels the held condition left on the activity before it was
+    /// held, which its condition object lists and which go back on the
+    /// activity where the call raises it again.
+    levels: Option<crate::run::FailureLevels>,
+    /// A routine's [`Interp::library_codes`] row, `None` for a method or a
+    /// package hook.
+    code: Option<usize>,
+    /// What a routine's `StackFrame` answers for `~executable`.
+    executable: RoutineObject,
+    /// The handle-carried values this call asked a kept `CSTRING` of, each
+    /// counted once in [`Interp::kept_holders`].
+    kept: rustc_hash::FxHashSet<ObjRef>,
+    /// The `MutableBuffer`s this call was handed the address of, each lent
+    /// once ([`interrexx_core::BufferBytes::lend`]).
+    lent: Vec<ObjRef>,
+    /// The activation the call was made from.
+    caller: Option<crate::activation::ActivationId>,
+    /// Whether the call has no calling activation whose context and
+    /// variables it reaches: none was running, or `caller` is the one a
+    /// `CallRoutine` call that runs it was made from
+    /// (`NativeActivation::accessCallerContext`,
+    /// `execution/NativeActivation.cpp:1789`).
+    callerless: bool,
+    /// This native activation's number among its activity's, which is what
+    /// interrexx-api names the frame by.
+    id: u32,
+    /// Whether the code reports a package, which then leads a condition it
+    /// raises with no line, so the condition has no `POSITION`.
+    packaged: bool,
+    /// Whether a method's call holds its guard lock (`objectScope`).
+    reserved: bool,
+    /// The temporaries' length when the call began, below which
+    /// `register_local` pops nothing.
+    temps_floor: usize,
+}
+
+/// What a library routine's `StackFrame` answers for `~executable`.
+#[derive(Copy, Clone, Debug)]
+pub(crate) enum RoutineObject {
+    /// The one `Routine` object standing for the frame's library code, which
+    /// `.routines`, `findRoutine` and `loadExternalRoutine` answer.
+    OfCode,
+    /// This `Routine` object: the one `~call` was sent to, or the copy a call
+    /// by name found.
+    Given(ObjRef),
+}
+
+impl NativeFrame {
+    fn object_roots(&self, out: &mut Vec<ObjRef>) {
+        out.extend(self.locals.roots());
+        out.extend([self.owner, self.scope, self.receiver]);
+        out.extend(self.arguments.iter().copied().flatten());
+        out.extend(self.argument_list);
+        if let RoutineObject::Given(object) = self.executable {
+            out.push(object);
+        }
+        out.extend(self.lent.iter().copied());
+        out.extend(
+            [self.additional, self.result, self.condition]
+                .into_iter()
+                .flatten(),
+        );
+        if let Some(levels) = &self.levels {
+            levels.object_roots(out);
+        }
+    }
+}
+
+/// What one just-installed dictionary key resolves to, handed to
+/// [`Interp::install_one_method`] by whichever installer minted it.
+#[derive(Clone)]
+enum InstallBody {
+    /// The directive's own Rexx body: a row of [`Interp::method_bodies`].
+    Written,
+    /// A method the directive implements itself: a row of
+    /// [`Interp::generated_methods`].
+    Generated(GeneratedKind),
+    /// A procedure of a loaded shared library: a row of
+    /// [`Interp::library_externals`].
+    Library(LibraryBinding),
+    /// A `LIBRARY REXX` entry point: a row of [`Interp::native_externals`].
+    Native(&'static dispatch::native::NativeExternal),
+}
+
+/// The name, arguments and receiver of one call in progress.
+#[derive(Default)]
+struct CallContext {
+    /// The resolved routine name, as errors 40.3 and 40.4 spell it --
+    /// measured, `Not enough arguments in invocation of SUB2`, the label's
+    /// own upcased spelling.
+    name: Rc<[u8]>,
+    /// The arguments in source order, an omitted position (`call sub 1,,3`)
+    /// left as `None` rather than closed up. Measured: that call into `use
+    /// arg p, q, r` gives `[1] [Q] [3]`, so an omission holds its place.
+    arguments: Rc<[Option<ObjRef>]>,
+    /// **The receiver, which is part of the calling convention**: the
+    /// object a message send was addressed to, and `None` for a call that has
+    /// none.
+    receiver: Option<ObjRef>,
+}
+
+impl Interp {
+    /// `values` as the shared slice a [`CallContext`] carries, without
+    /// allocating for an empty one -- see [`Interp::empty_arguments`].
+    pub(crate) fn shared_arguments(&self, values: &[Option<ObjRef>]) -> Rc<[Option<ObjRef>]> {
+        if values.is_empty() {
+            return Rc::clone(&self.empty_arguments);
+        }
+        Rc::from(values)
+    }
+}
+
+/// Where a variable lives: a frame slot, or a name in a scope pool on some
+/// object.
+#[derive(Clone, Debug)]
+enum VarHome {
+    Slot(SlotRef),
+    Instance(Box<InstanceVar>),
+}
+
+impl CallContext {
+    /// Appends every `ObjRef` this convention holds to `out`.
+    fn object_roots(&self, out: &mut Vec<ObjRef>) {
+        let CallContext {
+            name: _,
+            arguments,
+            receiver,
+        } = self;
+        out.extend(arguments.iter().flatten().copied());
+        out.extend(*receiver);
+    }
+}
+
+impl Interp {
+    /// **Every field a caller might want to vary starts at a fixed value
+    /// here and is set after construction**, so this signature does not grow
+    /// a parameter for each one. `stress_collect` and `engine` are both of
+    /// that shape: `execute` sets each from what it was handed, and every
+    /// other caller -- the unit tests throughout this crate, which is nearly
+    /// all of them -- gets the value below.
+    fn new() -> Interp {
+        let env: Vec<(Vec<u8>, Vec<u8>)> = {
+            use std::os::unix::ffi::OsStrExt;
+            std::env::vars_os()
+                .map(|(name, value)| (name.as_bytes().to_vec(), value.as_bytes().to_vec()))
+                .collect()
+        };
+        // The creating thread holds the baton until a driver exit releases it.
+        let baton = crate::sync::Arc::new(crate::island::InterpBaton::new());
+        baton.acquire();
+        let timer = crate::timer::Registration::new();
+        let requester = crate::dispatch::library::Requester::new(&baton, timer.inbox());
+        let thread_table =
+            interrexx_api::ffi::ThreadTable::requesting(crate::sync::Arc::new(requester));
+        Interp {
+            heap: Heap::new(),
+            roots: RootSet::new(),
+            activity: Activity::new(),
+            key_buffer: Vec::new(),
+            novalue_hooked: std::cell::Cell::new(None),
+            parse_buffers: Vec::new(),
+            text_scratch: [0; crate::value::TEXT_SCRATCH],
+            nil_name: None,
+            pinned_copies: FxHashMap::default(),
+            installing_managers: Vec::new(),
+            site_hold_count: 0,
+            text_numbers: crate::value::TextNumbers::new(),
+            result_buffer: std::cell::Cell::new(Vec::new()),
+            library_search: library_search_of(&env),
+            env,
+            cwd: std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/")),
+            programs: plan::Programs::default(),
+            option_writes: crate::options::OptionWrites::default(),
+            security_armed: false,
+            unasked_run: false,
+            options_armed: false,
+            plans: NameMap::default(),
+            last_plan: None,
+            deadline: None,
+            clause_countdown: crate::clause::Deadline::CLAUSES_PER_CHECK,
+            stack_base: 0,
+            stack_room: usize::MAX,
+            timer,
+            baton,
+            switch: None,
+            sim: None,
+            slice_deferred: false,
+            chunks: NameMap::default(),
+            chunks_refused: 0,
+            routines_written: false,
+            routines_tables: false,
+            rexx_class_cache: NameMap::default(),
+            package_locals: false,
+            package_local_view: None,
+            package_local_miss: environment::PackageLocalMiss::default(),
+            object_model: None,
+            class_variables: FxHashMap::default(),
+            environment: None,
+            class_packages: FxHashMap::default(),
+            empty_arguments: Rc::from(&[][..]),
+            rexx_package: None,
+            routine_objects: FxHashMap::default(),
+            library_routine_objects: FxHashMap::default(),
+            internal_routine_objects: vec![None; internal_routines::INTERNAL_ROUTINES.len()],
+            annotations: FxHashMap::default(),
+            compiled_methods: 0,
+            method_objects: FxHashMap::default(),
+            library_bootstrap: false,
+            collections_before_program: 0,
+            #[cfg(feature = "pinning")]
+            pinning: pinning::Pinning::default(),
+            activities: scheduler::Activities::new(thread_table),
+            library_programs: Vec::new(),
+            method_bodies: NameMap::default(),
+            compiled_method_names: FxHashMap::default(),
+            object_methods: false,
+            executable_objects: method_rows::MethodRows::new(),
+            executable_sources: FxHashMap::default(),
+            stem_exposers: FxHashMap::default(),
+            deliveries: Vec::new(),
+            trace_refusal: None,
+            traced_variable: None,
+            method_flag_writes: FxHashMap::default(),
+            message_outcomes: FxHashMap::default(),
+            started_messages: rustc_hash::FxHashSet::default(),
+            unnotified_messages: rustc_hash::FxHashSet::default(),
+            generated_methods: FxHashMap::default(),
+            native_externals: FxHashMap::default(),
+            guarded_externals: rustc_hash::FxHashSet::default(),
+            libraries: Libraries::new(),
+            termination_thread: None,
+            #[cfg(test)]
+            library_open_attempts: 0,
+            #[cfg(test)]
+            executables_rebuilt: 0,
+            #[cfg(test)]
+            panic_at_call_end: PANIC_AT_CALL_END.with(|path| path.borrow().clone()),
+            #[cfg(test)]
+            fail_native_wait: FAIL_NATIVE_WAIT.with(std::cell::Cell::get),
+            library_externals: FxHashMap::default(),
+            external_packages: FxHashMap::default(),
+            library_codes: Vec::new(),
+            library_code_rows: FxHashMap::default(),
+            library_code_keys: Vec::new(),
+            library_code_routines: Vec::new(),
+            library_routine_codes: FxHashMap::default(),
+            defined_library_codes: FxHashMap::default(),
+            rexx_routine_rows: FxHashMap::default(),
+            package_routines: FxHashMap::default(),
+            package_routine_codes: Vec::new(),
+            routine_generation: 0,
+            api_changes_seen: capi::changes(),
+            classic_functions: FxHashMap::default(),
+            classic_subcoms: FxHashMap::default(),
+            global_references: interrexx_api::handles::Table::new(),
+            command_handlers: FxHashMap::default(),
+            environments: command::Environments::default(),
+            leave_next_native: false,
+            default_address: None,
+            subcom_aliases: FxHashMap::default(),
+            exits: None,
+            clause_exits: false,
+            trace_switchable: false,
+            boundary_posts: None,
+            call_search: require::Instance::default(),
+            kept_strings: rustc_hash::FxHashMap::default(),
+            kept_names: rustc_hash::FxHashMap::default(),
+            kept_holders: rustc_hash::FxHashMap::default(),
+            kept_carried: 0,
+            kept_carried_limit: 4096,
+            special_methods: method_rows::MethodRows::new(),
+            out: Vec::new(),
+            trace: Vec::new(),
+            say_bound: usize::MAX,
+            out_bound: usize::MAX,
+            out_lines: false,
+            next_activation_id: 0,
+            next_invocation: 0,
+            stress_collect: false,
+            collect_due: false,
+            uninit_ready: Vec::new(),
+            processing_uninits: false,
+            bootstrap_stderr: None,
+            bootstrap_stdout: None,
+            route_generation: 0,
+            store_generation: 0,
+            store_writes: 0,
+            output_route: None,
+            collect_at: COLLECT_FLOOR,
+            bytes_due: COLLECT_BYTES_FLOOR,
+            queue: Queue::new(rxapi_client::session().inherited()),
+            // Nothing to read, which is what makes it impossible for a unit
+            // test to reach the harness's own standard input: only `execute`
+            // ever replaces this, and only from an `Invocation` that named a
+            // source. `ProgramInput`'s own doc has the argument.
+            input: Input::new(ProgramInput::Nothing),
+            // All transient, for the same reason `input` reads nothing: only
+            // `execute` replaces this, and only from an `Invocation` whose
+            // caller owns real descriptors.
+            standard_transient: [true; 3],
+            sink_errors: [None; 2],
+            sinks: None,
+            command_words: Vec::new(),
+            command_words_base: Some(1),
+            reqstr_armed: false,
+            held_trace_failure: None,
+            forwardings: Vec::new(),
+            lostdigits_armed: false,
+            program_path: Vec::new(),
+            required_paths: FxHashMap::default(),
+            required_packages: FxHashMap::default(),
+            data_packages: Vec::new(),
+            untranslated: rustc_hash::FxHashSet::default(),
+            translate_only: false,
+            install_caller: None,
+            install_call: None,
+            pool: new_pool(),
+        }
+    }
+
+    // ---- loading and the activation stack ----
+
+    /// Loads `program`, runs its main body in a fresh activation, and tears
+    /// the activation down again.
+    #[cfg(test)]
+    fn run(&mut self, program: Program) -> Result<Option<ObjRef>, Failure> {
+        self.run_as_started(program, StartType::Command, None)
+    }
+
+    /// [`Interp::run`] as an embedding starts it: called as `start` says,
+    /// with `address` the initial environment.
+    fn run_as_started(
+        &mut self,
+        program: Program,
+        start: StartType,
+        address: Option<Vec<u8>>,
+    ) -> Result<Option<ObjRef>, Failure> {
+        let program = Rc::new(program);
+        let program_id = self.load_program(Rc::clone(&program));
+        let call_type = match start {
+            StartType::Command => CallType::Command,
+            StartType::Subroutine => CallType::Subroutine,
+            StartType::Function => CallType::Function,
+        };
+        let address = address.map(|name| {
+            let name: Rc<[u8]> = Rc::from(name);
+            crate::activation::AddressState {
+                current: Some(Rc::clone(&name)),
+                alternate: Some(name),
+            }
+        });
+        self.run_loaded(program, program_id, call_type, address, None)
+    }
+
+    /// Loads `program` and translates its directives, running none of its
+    /// code: `TranslateDispatcher::run`'s `LanguageParser::createProgram`.
+    fn translate(&mut self, program: Program) -> Result<Option<ObjRef>, Failure> {
+        let program = Rc::new(program);
+        let program_id = self.load_program(Rc::clone(&program));
+        self.translate_only = true;
+        self.install_directives(program_id, &program)?;
+        Ok(None)
+    }
+
+    /// Runs the interpreter's own Rexx-written library -- `Setup.cpp:1786`'s
+    /// `resolveProgramName(BASEIMAGELOAD)` and the `runProgram` at `:1795`,
+    /// which hands the entry program `TheRexxPackage` as its one argument.
+    pub(crate) fn bootstrap_library(&mut self) -> Result<(), Failure> {
+        debug_assert!(
+            self.object_model.is_none(),
+            "the library bootstrap must build the object model, so nothing may have forced \
+             the shipped one before it runs"
+        );
+        let model = dispatch::ObjectModel::bootstrap_for_library(&mut || self.heap.mint_class());
+        self.install_object_model(model);
+        self.library_bootstrap = true;
+        #[cfg(test)]
+        ir::drive::suspend_counters();
+        let entry = interrexx_lib::lookup(interrexx_lib::ENTRY)
+            .unwrap_or_else(|| panic!("{} is embedded", interrexx_lib::ENTRY));
+        let outcome = self.enter_library_program(entry, None);
+        self.library_bootstrap = false;
+        self.special_methods.seal();
+        self.executable_objects.seal();
+        self.classes().keep_retired_behaviours();
+        interrexx_classes::remove_setup_methods(self.classes());
+        if outcome.is_ok() {
+            self.mint_local_directory();
+        }
+        // **Every per-run instrument reads from here, not from process
+        // start.** `Outcome::collections` and `Outcome::chunks_refused`
+        // answer a question about the program, and so do the compiled
+        // engine's own counters; the bootstrap is the interpreter starting
+        // up. Without this, `run_program_collect_every_alloc`'s
+        // "collections non-zero" criterion is met by the library allocating
+        // rather than by the program, which is the criterion measuring
+        // nothing.
+        self.collections_before_program = self.heap.collections_performed();
+        #[cfg(feature = "sharing")]
+        self.heap.sharing_program_starts();
+        #[cfg(feature = "pinning")]
+        self.pinning.reset();
+        self.chunks_refused = 0;
+        #[cfg(test)]
+        ir::drive::resume_counters();
+        outcome.map(|_| ())
+    }
+
+    /// The file the external search resolves `name` to, or `None` when no
+    /// route holds one. `&self`, which is what lets the call resolver use it.
+    pub(crate) fn external_program(&self, name: &[u8]) -> Option<Vec<u8>> {
+        let program = self.running_activation()?.program_id;
+        self.resolve_in_package(program, name, false)
+    }
+
+    /// One external Rexx file, entered by a call: read, parsed, registered and
+    /// run, with `arguments` as its calling convention.
+    ///
+    /// **Registered afresh every time, and never in the requires cache.**
+    /// Measured: a file rewritten between two calls runs both versions, so
+    /// nothing here may serve the first parse to the second call, and a later
+    /// `::REQUIRES` of the same file must still run its prologue.
+    fn enter_external_program(
+        &mut self,
+        name: &[u8],
+        arguments: Vec<Option<ObjRef>>,
+        call_type: CallType,
+    ) -> Result<Option<ObjRef>, Failure> {
+        let Some(resolved) = self.external_program(name) else {
+            return Err(Raised::routine_not_found(name).into());
+        };
+        // Resolved and then unreadable is 3.1 naming the file, not the 43.1
+        // of a name that resolved to nothing -- measured on a mode-000 file.
+        let Ok(text) =
+            std::fs::read(<std::ffi::OsStr as std::os::unix::ffi::OsStrExt>::from_bytes(&resolved))
+        else {
+            return Err(Raised::executable_file_unreadable(&resolved).into());
+        };
+        self.enter_program_text(name, &resolved, text, arguments, call_type)
+    }
+
+    /// Enters the macro `name` names, from the image the service holds now.
+    pub(crate) fn enter_macro(
+        &mut self,
+        name: &[u8],
+        arguments: Vec<Option<ObjRef>>,
+        call_type: CallType,
+    ) -> Result<Option<ObjRef>, Failure> {
+        let Some(image) = crate::builtin::rexxutil::macros::macro_image(name) else {
+            return Err(Raised::routine_not_found(name).into());
+        };
+        self.enter_program_text(name, name, image, arguments, call_type)
+    }
+
+    /// Parses `text`, the program `resolved` names, and runs it as the external routine `name`
+    /// with `arguments`, merging what it makes public into the caller's package.
+    fn enter_program_text(
+        &mut self,
+        name: &[u8],
+        resolved: &[u8],
+        text: Vec<u8>,
+        arguments: Vec<Option<ObjRef>>,
+        call_type: CallType,
+    ) -> Result<Option<ObjRef>, Failure> {
+        let parsed = Rc::new(self.parse_file(text, resolved)?);
+        let caller = self
+            .running_activation()
+            .map(|activation| activation.program_id);
+        let program_id = self.load_program(Rc::clone(&parsed));
+        // Its own path, so the callee's `PARSE SOURCE`, `~package~name` and
+        // traceback name the file rather than the program that called it.
+        self.required_paths.insert(program_id, resolved.into());
+        let address = self.activation().address.clone();
+        let settings = self.activation().settings.clone();
+        let saved = std::mem::replace(
+            &mut self.activity.call_context,
+            CallContext {
+                name: Rc::from(name),
+                arguments: Rc::from(arguments),
+                receiver: None,
+            },
+        );
+        // Both packages are built before the call, the callee's rooted as a
+        // temp of this frame: once the callee returns, nothing else reaches
+        // its package before the merge below reads it.
+        let merge = match caller {
+            Some(caller) => {
+                let into = self.package_object(Package::Program(caller))?;
+                self.roots.activity_mut().push_temp(into);
+                Some((into, self.package_object(Package::Program(program_id))?))
+            }
+            None => None,
+        };
+        let outcome = self.run_loaded(parsed, program_id, call_type, Some(address), Some(settings));
+        self.activity.call_context = saved;
+        let value = outcome?;
+        // What the callee made public becomes the caller's, and transitively
+        // what the callee itself required.
+        if let Some((into, from)) = merge {
+            if let Some(value) = value {
+                self.roots.activity_mut().push_temp(value);
+            }
+            self.merge_package(into, from);
+        }
+        Ok(value)
+    }
+
+    /// Parses one embedded library program, registers it, and runs its body
+    /// with `arguments` as its calling convention.
+    fn enter_library_program(
+        &mut self,
+        program: &'static interrexx_lib::Program,
+        arguments: Option<Vec<Option<ObjRef>>>,
+    ) -> Result<Option<ObjRef>, Failure> {
+        let parsed = match parse_known_program(program.source.to_vec()) {
+            Ok(parsed) => parsed,
+            // A parse failure here is the embedded source, not a program's:
+            // `interrexx-lib` pins each file's sha256, so this can only fire on a
+            // file this crate cannot yet parse.
+            Err(error) => {
+                return Err(Loud::library_source(program.name, &format!("{error}")).into());
+            }
+        };
+        let parsed = Rc::new(parsed);
+        // Not charged: a library program is never freed.
+        let program_id = self.programs.insert(Rc::clone(&parsed));
+        // `rexx_package_class` searches this list, so a new library package
+        // can turn a miss into a hit and shadow an earlier answer.
+        self.invalidate_rexx_class_cache();
+        self.library_programs.push(program_id);
+        let arguments = arguments.unwrap_or_else(|| {
+            let package = self.held_package_object(Package::Program(program_id));
+            // Rooted for the whole of the bootstrap: `call_context` is not
+            // walked by the collector, and the prologue allocates before it
+            // reads `rexxPackage`.
+            self.roots.activity_mut().push_temp(package);
+            vec![Some(package)]
+        });
+        let saved = std::mem::replace(
+            &mut self.activity.call_context,
+            CallContext {
+                name: Rc::from(program.name.as_bytes()),
+                arguments: Rc::from(arguments),
+                receiver: None,
+            },
+        );
+        let outcome = self.run_loaded(parsed, program_id, CallType::Command, None, None);
+        self.activity.call_context = saved;
+        outcome
+    }
+
+    /// What `program`'s own `::OPTIONS` directives left on its package, or
+    /// `None` for a program carrying none.
+    #[inline]
+    fn options_of(&self, program: ProgramId) -> Option<&PackageOptions> {
+        if !self.options_armed {
+            return None;
+        }
+        self.program_data(program)?.options.as_ref()
+    }
+
+    /// The numeric settings the running activation's own package declares --
+    /// what a bare `NUMERIC DIGITS`, `FUZZ` or `FORM` there resets to, and
+    /// the language defaults for a package carrying no `::OPTIONS`.
+    pub(crate) fn package_default_numeric(&self) -> Settings {
+        self.options_of(self.activation().program_id)
+            .map_or_else(Settings::default, |options| options.numeric.clone())
+    }
+
+    /// What an activation of `program`'s code starts from, or `None` where
+    /// its package carries no settings. Taken before the activation is built,
+    /// so that nothing the lookup calls can see the activation.
+    #[inline]
+    fn package_start(&self, program: ProgramId, caller: Option<&Settings>) -> Option<PackageStart> {
+        let options = self.options_of(program)?;
+        Some(PackageStart {
+            settings: match caller {
+                Some(caller) if options.numeric_inherit => caller.clone(),
+                _ => options.numeric.clone(),
+            },
+            syntax: options.syntax,
+            trace: options.trace,
+        })
+    }
+
+    /// The numeric settings an activation of `program`'s code starts with,
+    /// called from where `caller` is in force.
+    fn start_settings(&self, program: ProgramId, caller: Option<&Settings>) -> Settings {
+        self.package_start(program, caller)
+            .map_or_else(Settings::default, |start| start.settings)
+    }
+
+    /// Whether the running activation turns an untrapped raise of `condition`
+    /// into a SYNTAX error -- `::OPTIONS <condition> SYNTAX`, and `ALL` for
+    /// all six at once.
+    pub(crate) fn condition_raises_syntax(&self, condition: &[u8]) -> bool {
+        self.running_activation()
+            .is_some_and(|activation| activation.condition_syntax.raises(condition))
+    }
+
+    /// Installs `program`'s directives and runs its main body, for a program
+    /// already registered under `program_id`.
+    ///
+    /// `address` is the environment pair the body starts with, `None` for one
+    /// that starts at the platform default: a file reached by a **call**
+    /// inherits its caller's, and measured, nothing else does.
+    /// `caller_settings` is what `::OPTIONS NUMERIC INHERIT` inherits from,
+    /// `None` where there is no call site above the body.
+    fn run_loaded(
+        &mut self,
+        program: Rc<Program>,
+        program_id: ProgramId,
+        call_type: CallType,
+        address: Option<crate::activation::AddressState>,
+        caller_settings: Option<Settings>,
+    ) -> Result<Option<ObjRef>, Failure> {
+        // **Before the first clause, and its failures print nothing on
+        // stdout.** That is the oracle's own shape rather than a choice
+        // here: measured, `say 'main ran'` followed by `::requires
+        // 'no_such_file_zz.rex'` is 43.901 at rc 213 with stdout EMPTY, and
+        // `::class foo subclass zzznotaclass` is 98.909 at rc 158, likewise
+        // empty. A program whose directives all install runs its main body
+        // exactly as one with no directives does.
+        // A called program's level is a `ROUTINE` frame named as it was called,
+        // whose line while its directives install is the one installing.
+        let called = matches!(call_type, CallType::Subroutine | CallType::Function);
+        // As `Interp::begin_call` takes it: this body runs on a nested
+        // driver, so recursion through programs is bounded by the same count.
+        let nested = self.running_activation().is_some();
+        let probe = 0u8;
+        if nested
+            && (self.activation_depth() >= crate::run::MAX_ACTIVATION_DEPTH
+                || self.stack_exhausted(&raw const probe))
+        {
+            return Err(Raised::insufficient_stack().into());
+        }
+        let outer = self.install_caller.replace(caller_settings.clone());
+        let outer_call = self.install_call.replace(call_type);
+        // The activation this installs ahead of keeps the manager its package
+        // had before the install (`RexxActivation.cpp:176`, `:508`).
+        self.installing_managers.push((program_id, None));
+        let installed = self.install_directives(program_id, &program);
+        let kept = self
+            .installing_managers
+            .iter()
+            .rposition(|(installing, _)| *installing == program_id)
+            .and_then(|row| self.installing_managers.remove(row).1);
+        if let Some(Some(manager)) = kept {
+            self.roots.activity_mut().push_temp(manager);
+        }
+        self.install_caller = outer;
+        self.install_call = outer_call;
+        if let Err(failure) = installed {
+            if called {
+                let arguments = Rc::clone(&self.activity.call_context.arguments);
+                let name = Rc::clone(&self.activity.call_context.name);
+                self.capture_site_frame(&failure, b"ROUTINE", &name, &arguments, program_id);
+                self.seal_site_level();
+            } else if call_type == CallType::Requires {
+                self.seal_package_level(&failure, program_id);
+            }
+            return Err(failure);
+        }
+
+        // **`::OPTIONS NOPROLOG` suppresses the leading code section of a
+        // package a `::REQUIRES` loaded, and of nothing else** --
+        // `PackageClass::runProlog` installs and stops where
+        // `isPrologEnabled()` is false (`classes/PackageClass.cpp:2131`),
+        // and the top-level program never goes through it. Measured, oracle
+        // rc 0: the same file prints its first clause when it is the program
+        // and does not when another file requires it, its public routines and
+        // classes reachable either way.
+        if call_type == CallType::Requires
+            && self
+                .options_of(program_id)
+                .is_some_and(|options| options.suppress_prolog)
+        {
+            return Ok(None);
+        }
+        if call_type == CallType::Requires {
+            return self.run_prologue(program, program_id, caller_settings, kept);
+        }
+        self.run_main(
+            program,
+            program_id,
+            call_type,
+            address,
+            caller_settings,
+            kept,
+        )
+    }
+
+    /// A package's prologue, run under the package's own name and no
+    /// arguments, as `PackageClass::runProlog` calls it
+    /// (`classes/PackageClass.cpp:2128`-`:2137`).
+    #[inline(never)]
+    fn run_prologue(
+        &mut self,
+        program: Rc<Program>,
+        program_id: ProgramId,
+        caller_settings: Option<Settings>,
+        kept: Option<Option<ObjRef>>,
+    ) -> Result<Option<ObjRef>, Failure> {
+        let name = Rc::from(self.program_display_name(program_id));
+        let saved = std::mem::replace(
+            &mut self.activity.call_context,
+            CallContext {
+                name,
+                arguments: Rc::from(&[][..]),
+                receiver: None,
+            },
+        );
+        let ran = self.run_main(
+            program,
+            program_id,
+            CallType::Requires,
+            None,
+            caller_settings,
+            kept,
+        );
+        self.activity.call_context = saved;
+        ran
+    }
+
+    /// `Routine~call` on the `Routine` object standing for a program's own
+    /// main section, which runs that section again as a subroutine over
+    /// `arguments` -- measured, oracle rc 0, its `PARSE SOURCE` answers
+    /// `SUBROUTINE` and the caller's variables are untouched.
+    pub(crate) fn call_program_main(
+        &mut self,
+        program_id: ProgramId,
+        arguments: Vec<Option<ObjRef>>,
+        name: &[u8],
+    ) -> Result<Option<ObjRef>, Failure> {
+        let probe = 0u8;
+        if self.activation_depth() >= crate::run::MAX_ACTIVATION_DEPTH
+            || self.stack_exhausted(&raw const probe)
+        {
+            return Err(Raised::insufficient_stack().into());
+        }
+        let Some(program) = self.programs.get(program_id).map(Rc::clone) else {
+            return Err(Loud::missing_body().into());
+        };
+        let address = self.activation().address.clone();
+        let settings = self.activation().settings.clone();
+        let saved = std::mem::replace(
+            &mut self.activity.call_context,
+            CallContext {
+                name: Rc::from(name),
+                arguments: Rc::from(arguments),
+                receiver: None,
+            },
+        );
+        let outcome = self.run_main(
+            program,
+            program_id,
+            CallType::Subroutine,
+            Some(address),
+            Some(settings),
+            None,
+        );
+        self.activity.call_context = saved;
+        outcome
+    }
+
+    /// The empty routine `PackageClass::install` calls to install a package
+    /// whose `program` has an empty main body: one activation over that body.
+    pub(crate) fn run_install_stub(
+        &mut self,
+        program: Rc<Program>,
+        program_id: ProgramId,
+        caller_settings: Option<Settings>,
+    ) -> Result<(), Failure> {
+        debug_assert!(program.main.instructions.is_empty());
+        self.run_main(
+            program,
+            program_id,
+            CallType::Requires,
+            None,
+            caller_settings,
+            None,
+        )?;
+        Ok(())
+    }
+
+    /// [`Interp::run_loaded`] past the install: one activation over the main
+    /// body, run to its end. `kept_manager` is the security manager the
+    /// activation keeps where one was set on its package during the install.
+    fn run_main(
+        &mut self,
+        program: Rc<Program>,
+        program_id: ProgramId,
+        call_type: CallType,
+        address: Option<crate::activation::AddressState>,
+        caller_settings: Option<Settings>,
+        kept_manager: Option<Option<ObjRef>>,
+    ) -> Result<Option<ObjRef>, Failure> {
+        let called = matches!(call_type, CallType::Subroutine | CallType::Function);
+        let nested = self.running_activation().is_some();
+        // Note what does *not* happen here: the plan is looked up through
+        // `&program.main`, a borrow of the local `Rc`, while `self` is
+        // borrowed mutably by `plan_for`. Reaching the same body through
+        // `self.programs`' own `main` instead would be the `E0502` that
+        // `run_activation` writes out.
+        let plan = self.plan_for(
+            BodyKey {
+                program: program_id,
+                directive: None,
+            },
+            &program.main,
+            &program.symbols,
+            &program.source,
+        );
+
+        // With no call site above a main body, `::OPTIONS NUMERIC INHERIT` has
+        // nothing to inherit and the package's own settings stand -- measured,
+        // `::options digits 12 numeric inherit` alone in a file reports 12.
+        // A file reached by a call has one, and passes it.
+        let start = self.package_start(program_id, caller_settings.as_ref());
+        let frame = self.roots.push_slots(plan.len());
+        let id = self.next_activation_id();
+        let mut main = Activation::new(id, Rc::clone(&program), program_id, plan, frame);
+        main.call_type = call_type;
+        if let Some(address) = address {
+            main.address = address;
+        }
+        if let Some(start) = start {
+            start.apply(&mut main);
+        }
+        if let Some(kept) = kept_manager {
+            main.cold_mut().security_manager = Some(kept);
+        }
+        // `SysInterpreterInstance::setupProgram`
+        // (`platform/unix/SysInterpreterInstance.cpp:105`-`:112`), which runs
+        // for every top-level program activation and not only the first --
+        // measured, a called external program and a `::REQUIRES` prologue
+        // each trace and prompt under `RXTRACE=ON` too. **Not the library
+        // bootstrap**, whose programs are this crate's stand-in for
+        // `Setup.cpp` and have no activation on the oracle to trace.
+        let external_trace = !self.library_bootstrap && self.external_trace_enabled();
+        // The caller's clause, which its `StackFrame` goes on reporting while
+        // this runs and which a program this installs must not leave behind.
+        let caller_clause = self.save_clause_state();
+        // A called program's clauses trace from the margin, as a routine's do,
+        // and so do a `::REQUIRES` prologue's.
+        let own_level = called || call_type == CallType::Requires;
+        let caller_levels = own_level.then(|| {
+            (
+                std::mem::take(&mut self.activity.activation_indent),
+                std::mem::take(&mut self.activity.indent_offset),
+                self.activity.clause_line_override.take(),
+            )
+        });
+        self.push_activation(main);
+        // `traceEntry()` before the first clause, which a body this
+        // announces makes under its package's `::OPTIONS TRACE`, even an
+        // empty one.
+        if own_level {
+            self.trace_package_invocation_entry();
+        }
+        // Through the same route a `TRACE` instruction takes, because
+        // `enableExternalTrace` is `setTrace` and that calls `traceEntry()`:
+        // a called program announces itself with `>I>` where the top-level
+        // one, which has nothing to announce, prints the debug banner
+        // instead.
+        if external_trace {
+            self.set_trace_mode(crate::trace::TraceMode {
+                debug: true,
+                ..crate::trace::TraceMode::RESULTS
+            });
+            self.trace_invocation_entry();
+        }
+
+        // `Returned` and `Exited` are the same thing at the top: measured,
+        // `return 5` in a main body with no active call exits 5, exactly like
+        // `exit 5`, and a bare `return` there exits 0. `Ended` keeps the two
+        // apart because a *callee* has to tell them apart, not because the
+        // program's own exit value ever depends on which arrived.
+        // A program is a program-level call: the initialization exit before its first clause,
+        // and the termination exit once it has returned or exited, its variables still live
+        // (`RexxActivation::run`, `exitFrom`, `implicitExit`). An embedding instance's own root
+        // program runs neither.
+        let program_exits = if nested {
+            self.calls_program_exits()
+        } else {
+            self.main_calls_program_exits()
+        };
+        let initialized = if program_exits {
+            self.initialization_exit()
+        } else {
+            Ok(())
+        };
+        let exit = match initialized {
+            Err(failure) => Err(failure),
+            Ok(()) => if nested {
+                pinned!(
+                    self,
+                    crate::pinning::PinKind::Program,
+                    self.run_activation()
+                )
+            } else {
+                self.run_activity_root()
+            }
+            .map(Ended::value),
+        };
+        let exit = if program_exits && matches!(exit, Ok(_) | Err(Failure::Exited(_))) {
+            match self.termination_exit() {
+                Ok(()) => exit,
+                Err(failure) => Err(failure),
+            }
+        } else {
+            exit
+        };
+        if own_level && let Err(failure) = &exit {
+            self.capture_activation_frame(failure);
+        }
+        if own_level {
+            self.trace_invocation_exit(|| match &exit {
+                Ok(value) | Err(Failure::Exited(value)) => *value,
+                Err(_) => None,
+            });
+        }
+        // Main's untrapped failure gives its failed sends their object while
+        // main's level is still live, as the oracle's is built at the raise.
+        let exit = match exit {
+            Err(Failure::Raised(raised)) if !nested => match self.settle_failed_sends(&raised) {
+                Ok(()) => Err(Failure::Raised(raised)),
+                Err(failure) => Err(failure),
+            },
+            other => other,
+        };
+
+        // Popped whether or not the body raised, so the root set is left the
+        // way it was found even on the failure path.
+        let activation = self.pop_activation().expect("the frame just pushed");
+        self.roots.activity_mut().pop_slots(activation.frame);
+        self.restore_clause_state(caller_clause);
+        if let Some((base, offset, line)) = caller_levels {
+            self.activity.activation_indent = base;
+            self.activity.indent_offset = offset;
+            self.activity.clause_line_override = line;
+        }
+        let exit = if !nested && let Some(refusal) = self.trace_refusal.take() {
+            Err(refusal)
+        } else {
+            exit
+        };
+        if own_level && exit.is_err() {
+            self.seal_site_level();
+        }
+        exit
+    }
+
+    /// The value of one environment variable, or `None` for a name the
+    /// interpreter's environment does not hold.
+    pub(crate) fn env_get(&self, name: &[u8]) -> Option<&[u8]> {
+        self.env
+            .iter()
+            .find(|(held, _)| held == name)
+            .map(|(_, value)| value.as_slice())
+    }
+
+    /// Sets, replaces or (with `None`) removes one environment variable.
+    /// `setenv` declines a name that is empty or holds `=` and stores nothing,
+    /// which the oracle passes through as a silent no-op -- measured.
+    pub(crate) fn env_set(&mut self, name: &[u8], value: Option<Vec<u8>>) {
+        if name.is_empty() || name.contains(&b'=') {
+            return;
+        }
+        let at = self.env.iter().position(|(held, _)| held == name);
+        match (at, value) {
+            (Some(at), None) => {
+                self.env.remove(at);
+            }
+            (Some(at), Some(value)) => self.env[at].1 = value,
+            (None, Some(value)) => self.env.push((name.to_vec(), value)),
+            (None, None) => {}
+        }
+    }
+
+    /// The directory this interpreter resolves relative paths against, as
+    /// the bytes the file system holds.
+    pub(crate) fn cwd_bytes(&self) -> &[u8] {
+        use std::os::unix::ffi::OsStrExt as _;
+        self.cwd.as_os_str().as_bytes()
+    }
+
+    /// Moves it.
+    pub(crate) fn set_cwd(&mut self, cwd: std::path::PathBuf) {
+        self.cwd = cwd;
+    }
+
+    /// Appends bytes to what the program has written on standard output --
+    /// the same buffer `SAY` appends to, so anything written here interleaves
+    /// with it in program order.
+    pub(crate) fn write_out(&mut self, bytes: &[u8]) {
+        self.out.extend_from_slice(bytes);
+        if self.out.len() > self.out_bound || (self.out_lines && ends_a_line(bytes)) {
+            self.hand_over_stdout();
+        }
+    }
+
+    /// What `SAY` writes: `line` and its newline.
+    #[inline(always)]
+    pub(crate) fn write_out_line(&mut self, line: &[u8]) {
+        self.out.extend_from_slice(line);
+        self.out.push(b'\n');
+        if self.out.len() > self.say_bound {
+            self.hand_over_stdout();
+        }
+    }
+
+    /// [`Interp::write_out`] for the other descriptor: the trace sink, which
+    /// becomes `Outcome::stderr`. `.STDERR`'s writes land here, so they
+    /// interleave with trace output and never with `SAY`'s.
+    pub(crate) fn write_err(&mut self, bytes: &[u8]) {
+        self.trace.extend_from_slice(bytes);
+        if ends_a_line(bytes) || self.trace.len() > OUTPUT_BOUND {
+            self.hand_over_stderr();
+        }
+    }
+
+    /// `SETLOCAL`: saves the directory and the whole environment on the
+    /// nearest top-level activation's list (`pushEnvironment`), and answers
+    /// whether it saved one.
+    pub(crate) fn push_local_environment(&mut self) -> bool {
+        let saved = (self.cwd.clone(), self.env.clone());
+        match self.top_level_activation_mut() {
+            Some(activation) => {
+                activation.cold_mut().locals.push(saved);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// `ENDLOCAL`: restores the innermost pair the nearest top-level
+    /// activation saved, answering whether there was one.
+    pub(crate) fn pop_local_environment(&mut self) -> bool {
+        let saved = self
+            .top_level_activation_mut()
+            .and_then(|activation| activation.cold.as_deref_mut()?.locals.pop());
+        match saved {
+            Some(saved) => {
+                self.restore_local_environment(saved);
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Puts back one saved `SETLOCAL` pair. **A restore puts back the names
+    /// it saved and removes nothing added since** -- measured on the oracle,
+    /// and `restoreEnvironment` only re-`putenv`s what it holds.
+    pub(crate) fn restore_local_environment(
+        &mut self,
+        (cwd, saved): (std::path::PathBuf, Vec<(Vec<u8>, Vec<u8>)>),
+    ) {
+        self.cwd = cwd;
+        for (name, value) in saved {
+            let at = self.env.iter().position(|(held, _)| *held == name);
+            match at {
+                Some(at) => self.env[at].1 = value,
+                None => self.env.push((name, value)),
+            }
+        }
+    }
+
+    /// `RXTRACE=ON` in the interpreter's own environment, which starts every
+    /// top-level program under `TRACE ?R` -- `setExternalTrace` is
+    /// `setTraceResults` plus the debug flag
+    /// (`execution/TraceSetting.hpp`'s own definition).
+    ///
+    /// Caseless, and only that word: `SysInterpreterInstance::initialize`
+    /// compares against `ON` with `strCaselessCompare`, so any other value
+    /// leaves tracing alone.
+    fn external_trace_enabled(&self) -> bool {
+        self.env
+            .iter()
+            .find(|(name, _)| name == b"RXTRACE")
+            .is_some_and(|(_, value)| value.eq_ignore_ascii_case(b"ON"))
+    }
+
+    // `plan_for` and `activation`/`activation_mut` live in `plan.rs`/
+    // `activation.rs`, and `fragment_plan` and `slot_of` in `plan.rs`, beside
+    // the types they operate on.
+
+    /// Converts `EXIT`'s result into the raw exit code, before `rexx`'s
+    /// own 8-bit truncation (`bin/rexx.rs`) narrows it to a process exit
+    /// status.
+    fn exit_code_for(&mut self, value: Option<ObjRef>) -> i32 {
+        let Some(value) = value else { return 0 };
+        let Ok(number) = self.to_number(value) else {
+            return 0;
+        };
+        match number.whole_value(interrexx_num::ARGUMENT_DIGITS) {
+            Some(whole) => i32::try_from(whole).unwrap_or(0),
+            None => 0,
+        }
+    }
+
+    /// Roots a value that has to outlive the clause that produced it, all the
+    /// way to [`Interp::exit_code_for`].
+    fn root_exit_value(&mut self, value: ObjRef) {
+        self.roots.add_global(EXIT_VALUE_ROOT, value);
+    }
+
+    /// Turns on the collect-on-every-allocation stress mode. Only
+    /// `execute_as`'s `Entry::CollectEveryAlloc` arm calls this, right after
+    /// construction and before `run`; nothing else needs to flip it, and
+    /// nothing can un-flip it once a run has started.
+    fn enable_stress_collect(&mut self) {
+        self.stress_collect = true;
+        self.collect_due = true;
+    }
+
+    /// The one allocation entry point every value/stem constructor in this
+    /// crate goes through, so that the stress mode has exactly one
+    /// place to hook rather than one per call site.
+    pub(crate) fn alloc_with(
+        &mut self,
+        behaviour: interrexx_core::BehaviourId,
+        body: interrexx_core::Body,
+    ) -> ObjRef {
+        self.collect_if_due();
+        self.heap.alloc_with_uncollected(behaviour, body)
+    }
+
+    /// The collection decision every allocation site makes, without the
+    /// allocation.
+    pub(crate) fn collect_if_due(&mut self) {
+        if self.collect_due
+            || (self.heap.will_grow() && self.heap.slot_capacity() >= self.collect_at)
+        {
+            if self.sim_declines_collection() {
+                return;
+            }
+            self.collect_now();
+        }
+    }
+
+    /// Charges `bytes` of a body allocated outside its slot. When the bytes
+    /// since the last collection reach `bytes_due`, the next allocation
+    /// collects.
+    #[inline]
+    pub(crate) fn charge_body_bytes(&mut self, bytes: usize) {
+        self.heap.hold_body_bytes(bytes);
+        let since = self.heap.charge_body_bytes(bytes);
+        self.collect_due |= since >= self.bytes_due;
+    }
+
+    /// Files `program` under a fresh id, charging its weight toward the
+    /// next collection.
+    pub(crate) fn load_program(&mut self, program: Rc<Program>) -> ProgramId {
+        let source = &program.source;
+        let bytes = source
+            .line_span(source.line_count())
+            .map_or(0, |span| span.end);
+        self.charge_unheld(PROGRAM_BYTES + bytes * PROGRAM_BYTES_PER_SOURCE_BYTE);
+        self.programs.insert(program)
+    }
+
+    /// Counts `bytes` a body holds outside its slot toward the next
+    /// collection without holding them, for a body whose
+    /// [`interrexx_core::Body::held_bytes`] does not report them: a `String`
+    /// subclass instance's text.
+    pub(crate) fn charge_unheld(&mut self, bytes: usize) {
+        let since = self.heap.charge_body_bytes(bytes);
+        self.collect_due |= since >= self.bytes_due;
+    }
+
+    /// [`Interp::charge_body_bytes`] for a body that may have grown by
+    /// nothing.
+    pub(crate) fn charge_growth(&mut self, bytes: usize) {
+        if bytes > 0 {
+            self.charge_body_bytes(bytes);
+        }
+    }
+
+    /// [`Interp::alloc_with`] for a body built whole elsewhere, an array's or
+    /// a copy's, charging what it holds outside its slot.
+    pub(crate) fn alloc_charged(
+        &mut self,
+        behaviour: interrexx_core::BehaviourId,
+        body: interrexx_core::Body,
+    ) -> ObjRef {
+        let held = body.held_bytes();
+        let object = self.alloc_with(behaviour, body);
+        self.charge_growth(held);
+        object
+    }
+
+    /// Appends every `ObjRef` the interpreter must hand the collector to
+    /// `out`, and names every field that does not need to be handed over.
+    fn object_roots(&self, out: &mut Vec<ObjRef>) {
+        let Interp {
+            heap: _,
+            roots: _,
+            activity,
+            key_buffer: _,
+            // Held only from a read to the check right after it, which
+            // allocates nothing in between.
+            novalue_hooked: _,
+            parse_buffers: _,
+            text_scratch: _,
+            nil_name: _,
+            // Held through the global roots they name.
+            pinned_copies: _,
+            installing_managers,
+            // A count; the holds are traced through the holding packages.
+            site_hold_count: _,
+            // Handle-inline strings, which are their own bytes and have no
+            // slot to recycle.
+            text_numbers: _,
+            result_buffer: _,
+            next_activation_id: _,
+            next_invocation: _,
+            // A package handle per program, not a root: the package lives
+            // while something reaches it, and its program goes with it.
+            programs: _,
+            option_writes: _,
+            security_armed: _,
+            unasked_run: _,
+            options_armed: _,
+            plans: _,
+            last_plan: _,
+            deadline: _,
+            clause_countdown: _,
+            stack_base: _,
+            stack_room: _,
+            timer: _,
+            baton: _,
+            pool: _,
+            switch: _,
+            sim: _,
+            slice_deferred: _,
+            // A chunk's interned literals are allocated immortal, and
+            // released when the chunk is dropped.
+            chunks: _,
+            chunks_refused: _,
+            routines_written: _,
+            routines_tables: _,
+            // **Not a root, deliberately.** Its values are class handles, and
+            // rooting them would pin every class a `.NAME` ever resolved --
+            // which is exactly the pinning to avoid. A cached handle
+            // is instead dropped before it can go stale:
+            // `Interp::collect_now` clears the cache on every collection, and
+            // every write to a table it is derived from clears it too.
+            rexx_class_cache: _,
+            package_locals: _,
+            // The directory is a package's local, and its view's store
+            // arrays are held as `environment`'s views' are.
+            package_local_view: _,
+            // A program, two counters and a name.
+            package_local_miss: _,
+            // Handles into the class registry, so class identities again.
+            object_model: _,
+            // `.environment`, `.local` and the owed placeholders are globals;
+            // the rest are classes. A `StoreView`'s store arrays are held by
+            // its directory's own pool while its generation is current, and a
+            // view whose generation is not current is not read.
+            environment: _,
+            // A lookup index. Both halves are held by the class itself --
+            // the key is the class, the value is in its `owned` list.
+            class_variables: _,
+            // Keyed by class identity, and `ClassPackage` holds no `ObjRef`.
+            class_packages: _,
+            // Zero length.
+            empty_arguments: _,
+            // The REXX package is a `RootSet::add_global` under
+            // `package_root_key`. A program's package is held by whatever
+            // reaches it and by `Interp::package_roots`. A package's body
+            // traces every object its fields hold.
+            rexx_package: _,
+            // Rooted by the `.ROUTINES` table each entry is also in.
+            routine_objects: _,
+            // `RootSet::add_global`, under `library_routine_root_key`.
+            library_routine_objects: _,
+            // `RootSet::add_global`, under `internal_routine_root_key`.
+            internal_routine_objects: _,
+            // A lookup index. A class-owned site's table is held by that
+            // class; every other site's is a global under
+            // `annotation_root_key`.
+            annotations: _,
+            compiled_methods: _,
+            // A lookup index. The `Method` object is held by the class whose
+            // dictionary entry it answers for.
+            method_objects: _,
+            method_bodies: _,
+            library_bootstrap: _,
+            collections_before_program: _,
+            #[cfg(feature = "pinning")]
+                pinning: _,
+            activities,
+            library_programs: _,
+            compiled_method_names: _,
+            object_methods: _,
+            // A lookup index holding objects it does not keep: a swept one
+            // reads as absent, because the generation bump makes the handle
+            // name nothing.
+            executable_objects: _,
+            // Keyed by an object and holding none: a swept key is a lookup
+            // miss, because the generation bump makes the handle unequal.
+            executable_sources: _,
+            stem_exposers,
+            // Plain counts, and a failure no other root set holds either.
+            deliveries: _,
+            trace_refusal: _,
+            traced_variable,
+            method_flag_writes: _,
+            message_outcomes: _,
+            started_messages: _,
+            unnotified_messages: _,
+            generated_methods: _,
+            native_externals: _,
+            guarded_externals: _,
+            // Library handles and procedure names, no `ObjRef` in either.
+            libraries: _,
+            termination_thread: _,
+            #[cfg(test)]
+                library_open_attempts: _,
+            #[cfg(test)]
+                executables_rebuilt: _,
+            #[cfg(test)]
+                panic_at_call_end: _,
+            #[cfg(test)]
+                fail_native_wait: _,
+            library_externals: _,
+            // Program identities, not objects.
+            external_packages: _,
+            library_codes: _,
+            library_code_rows: _,
+            library_code_keys: _,
+            library_code_routines: _,
+            library_routine_codes: _,
+            defined_library_codes: _,
+            rexx_routine_rows: _,
+            // Routine names and row indices.
+            package_routines: _,
+            package_routine_codes: _,
+            routine_generation: _,
+            api_changes_seen: _,
+            // Entry points, not objects.
+            classic_functions: _,
+            classic_subcoms: _,
+            global_references,
+            // Entry points, not objects.
+            command_handlers: _,
+            environments,
+            leave_next_native: _,
+            default_address: _,
+            subcom_aliases: _,
+            // Entry points, not objects.
+            exits: _,
+            clause_exits: _,
+            trace_switchable: _,
+            boundary_posts: _,
+            call_search: _,
+            // Copies keyed by object, dropped with it rather than keeping it.
+            kept_strings: _,
+            kept_names: _,
+            kept_holders: _,
+            kept_carried: _,
+            kept_carried_limit: _,
+            special_methods: _,
+            out: _,
+            trace: _,
+            say_bound: _,
+            out_bound: _,
+            out_lines: _,
+            stress_collect: _,
+            collect_due: _,
+            // The collector's own resurrection flag holds each object until
+            // its finalizer clears it.
+            uninit_ready: _,
+            processing_uninits: _,
+            // `.local` holds these streams and is a global root, so the
+            // handles here root nothing of their own; they are only compared.
+            bootstrap_stderr: _,
+            bootstrap_stdout: _,
+            route_generation: _,
+            store_generation: _,
+            store_writes: _,
+            // The route it names is `.local`'s own entry, which that global
+            // root holds; this caches the decision, not the object.
+            output_route: _,
+            collect_at: _,
+            bytes_due: _,
+            queue: _,
+            input: _,
+            reqstr_armed: _,
+            // A condition, whose ADDITIONAL `pending_additional` roots.
+            held_trace_failure: _,
+            // Each receiver is a forward's, rooted by that send too; handed
+            // over so the handle it is compared with never names a slot the
+            // collector has freed.
+            forwardings,
+            lostdigits_armed: _,
+            program_path: _,
+            required_paths: _,
+            // Weak: pruned in `Interp::collect_now`.
+            required_packages: _,
+            data_packages,
+            untranslated: _,
+            translate_only: _,
+            install_caller: _,
+            install_call: _,
+            // Bytes and paths, no `ObjRef` in any of them: the interpreter's
+            // own environment, current directory and `SETLOCAL` snapshots are
+            // not the collector's.
+            env: _,
+            library_search: _,
+            cwd: _,
+            // The embedding's own writers, which take bytes and hold nothing
+            // of this interpreter's.
+            sinks: _,
+            // Three flags describing the embedding's descriptors, and the
+            // command-line words as bytes: no `ObjRef` in either, so nothing
+            // here is reachable from the collector.
+            standard_transient: _,
+            sink_errors: _,
+            command_words: _,
+            command_words_base: _,
+        } = self;
+        activity.object_roots(out);
+        activities.object_roots(out);
+        environments.object_roots(out);
+        out.extend(stem_exposers.values().flatten().copied());
+        out.extend(traced_variable.as_ref().and_then(|traced| traced.value));
+        out.extend(global_references.roots());
+        out.extend(data_packages.iter().copied());
+        out.extend(
+            installing_managers
+                .iter()
+                .filter_map(|(_, kept)| kept.flatten()),
+        );
+        out.extend(
+            forwardings
+                .iter()
+                .filter_map(|forwarding| forwarding.anchor.map(|(receiver, _)| receiver)),
+        );
+    }
+
+    /// The package of each program an activation on any activity runs, of
+    /// each program of the interpreter's own library, and of each program a
+    /// library code row names, which the oracle keeps for the run: measured,
+    /// the package whose `::ROUTINE` first bound `rxmath`'s `RxCalcSqrt` is
+    /// never collected.
+    fn package_roots(&self, out: &mut Vec<ObjRef>) {
+        let mut programs = Vec::new();
+        self.activity.running_programs(&mut programs);
+        self.activities.running_programs(&mut programs);
+        programs.extend(self.library_programs.iter().copied());
+        programs.extend(self.library_codes.iter().flatten().copied());
+        out.extend(
+            programs
+                .into_iter()
+                .filter_map(|program| self.program_package(program)),
+        );
+    }
+
+    /// The collection itself, kept out of [`Interp::collect_if_due`]'s body so
+    /// that what an allocation pays when nothing is due is the test alone.
+    #[inline(never)]
+    fn collect_now(&mut self) {
+        // Nothing a collection reads is the running activity's resolution.
+        #[cfg(feature = "sharing")]
+        self.heap.sharing_pause(true);
+        crate::scheduler::Scheduler::stop_the_world(self);
+        // Everything the interpreter holds outside `RootSet`, handed to the
+        // collector as temporaries for the length of the sweep.
+        let mut anchor: Vec<ObjRef> = Vec::new();
+        self.object_roots(&mut anchor);
+        self.package_roots(&mut anchor);
+        let frame = self.roots.activity_mut().push_frame();
+        for object in anchor {
+            self.roots.activity_mut().push_temp(object);
+        }
+        let stats = self.heap.collect(&self.roots);
+        self.roots.activity_mut().pop_frame(frame);
+        self.roots.release_cells(&stats.freed_cells);
+        let heap = &self.heap;
+        self.kept_strings.retain(|object, _| {
+            !matches!(object.decode(), interrexx_core::Decoded::Heap { .. })
+                || heap.peek(*object).is_some()
+        });
+        self.drop_loose_kept_strings();
+        let heap = &self.heap;
+        self.activities.guards.prune_pools(|object| {
+            !matches!(object.decode(), interrexx_core::Decoded::Heap { .. })
+                || heap.peek(object).is_some()
+        });
+        self.activities.semaphores.prune(|object| {
+            !matches!(object.decode(), interrexx_core::Decoded::Heap { .. })
+                || heap.peek(object).is_some()
+        });
+        self.activities
+            .prune_messages(|message| heap.peek(message).is_some());
+        self.prune_dead_object_rows();
+        let freed = self.programs.free_unheld();
+        if !freed.is_empty() {
+            self.prune_program_rows(&freed);
+        }
+        let (heap, programs) = (&self.heap, &self.programs);
+        self.required_packages.retain(|_, program| {
+            programs
+                .package(*program)
+                .is_some_and(|package| heap.peek(package).is_some())
+        });
+        // A sweep can free a class the registry named, which unlinks its row
+        // and leaves any `.NAME` answer derived from it naming nothing.
+        self.invalidate_rexx_class_cache();
+        // `pending_uninit` is what the collector resurrected so a finalizer
+        // could run against a whole graph. The finalizer is not sent from
+        // here: the oracle's collector only marks
+        // (`MemoryObject::checkUninit`), and `runUninits` is reached from
+        // `GC('force')`, an activation's return (`RexxActivation.cpp:705`,
+        // `NativeActivation.cpp:1361`), an activity's dispatch loop
+        // (`Activity.cpp:249`) and the termination sweep.
+        self.uninit_ready.extend(stats.pending_uninit);
+        // The rows `interrexx-classes` keys by a class go with the class. Done
+        // here rather than in a pass of its own: the sweeper already knows
+        // which slots it freed, and a scan of the registry per collection
+        // would cost the whole class population to find the few that died.
+        if !stats.freed_classes.is_empty() {
+            self.prune_freed_classes(&stats.freed_classes);
+        }
+        if self.has_retired_behaviours() {
+            self.free_unheld_behaviours();
+        }
+        // **Not raised for the stress mode**, which collects on every
+        // allocation by definition and must not have its watermark moved
+        // out from under it.
+        if !self.stress_collect {
+            self.collect_at = COLLECT_FLOOR.max(stats.live.saturating_mul(2));
+        }
+        self.bytes_due = COLLECT_BYTES_FLOOR.max(stats.live_bytes);
+        self.collect_due = self.stress_collect || self.sim_collects_at_random();
+        #[cfg(feature = "sharing")]
+        self.heap.sharing_pause(false);
+    }
+
+    /// Drops every row keyed by one of the `dead` classes.
+    #[cold]
+    #[inline(never)]
+    fn prune_freed_classes(&mut self, dead: &[ObjRef]) {
+        self.classes().expunge(dead);
+        for class in dead {
+            self.class_variables.remove(class);
+            self.class_packages.remove(class);
+        }
+        self.method_objects
+            .retain(|(class, _, _), _| !dead.contains(class));
+        self.annotations.retain(|site, _| match site {
+            environment::Annotated::Class(class) | environment::Annotated::Member(class, _, _) => {
+                !dead.contains(class)
+            }
+            _ => true,
+        });
+    }
+
+    /// Drops every row keyed by, or naming, a `Method`, `Routine` or
+    /// `Message` object the sweep freed, and the rows of each method identity
+    /// a freed object owned.
+    fn prune_dead_object_rows(&mut self) {
+        let heap = &self.heap;
+        let live = |object: &ObjRef| heap.peek(*object).is_some();
+        let mut orphaned = Vec::new();
+        self.executable_sources.retain(|object, record| {
+            let keep = live(object);
+            if !keep
+                && record.owns_installed
+                && let Some(method) = record.installed
+            {
+                orphaned.push(method);
+            }
+            keep
+        });
+        for method in orphaned {
+            self.forget_method_identity(method);
+        }
+        let heap = &self.heap;
+        let live = |object: &ObjRef| heap.peek(*object).is_some();
+        self.method_flag_writes.retain(|object, _| live(object));
+        self.executable_objects.retain(live);
+        self.message_outcomes.retain(|message, _| live(message));
+        self.started_messages.retain(live);
+        self.unnotified_messages.retain(live);
+    }
+
+    /// Drops every row that names one of the `freed` programs.
+    #[cold]
+    #[inline(never)]
+    fn prune_program_rows(&mut self, freed: &[ProgramId]) {
+        let freed: rustc_hash::FxHashSet<ProgramId> = freed.iter().copied().collect();
+        let dead = |program: &ProgramId| freed.contains(program);
+        self.plans.retain(|key, _| !dead(&key.program));
+        if self
+            .last_plan
+            .as_ref()
+            .is_some_and(|(key, _)| dead(&key.program))
+        {
+            self.last_plan = None;
+        }
+        let mut interned = Vec::new();
+        let mut pinned = Vec::new();
+        let mut holds = 0;
+        self.chunks.retain(|(key, _), chunk| {
+            let keep = !dead(&key.program);
+            if !keep {
+                interned.extend(chunk.interned_values());
+                pinned.extend(chunk.pinned_copies());
+                holds += chunk.site_holds().count() as u32;
+            }
+            keep
+        });
+        for copy in pinned {
+            self.unpin_copy(copy);
+        }
+        // The holder is the dead program, whose package went with it, so only
+        // the count is left to drop.
+        debug_assert!(
+            holds <= self.site_hold_count,
+            "a dead program's chunks hold more than are counted"
+        );
+        self.site_hold_count -= holds;
+        if !interned.is_empty() {
+            let interned: rustc_hash::FxHashSet<ObjRef> = interned.into_iter().collect();
+            self.heap
+                .release_immortal(0, |handle| interned.contains(&handle));
+        }
+        self.compiled_method_names
+            .retain(|program, _| !dead(program));
+        self.required_paths.retain(|program, _| !dead(program));
+        self.untranslated.retain(|program| !dead(program));
+        self.required_packages.retain(|_, program| !dead(program));
+        let mut methods = rustc_hash::FxHashSet::default();
+        self.method_bodies.retain(|method, body| {
+            let keep = !dead(&body.program);
+            if !keep {
+                methods.insert(*method);
+            }
+            keep
+        });
+        self.generated_methods.retain(|method, generated| {
+            let keep = !dead(&generated.program);
+            if !keep {
+                methods.insert(*method);
+            }
+            keep
+        });
+        self.external_packages.retain(|method, program| {
+            let keep = !dead(program);
+            if !keep {
+                methods.insert(*method);
+            }
+            keep
+        });
+        if !methods.is_empty() {
+            self.executable_objects
+                .retain_entries(|method, _| !methods.contains(&method));
+            self.native_externals
+                .retain(|method, _| !methods.contains(method));
+            self.library_externals
+                .retain(|method, _| !methods.contains(method));
+            self.guarded_externals
+                .retain(|method| !methods.contains(method));
+        }
+        self.special_methods
+            .retain(|scope| !matches!(scope.package, Package::Program(program) if dead(&program)));
+        self.routine_objects
+            .retain(|installed, _| !dead(&installed.program));
+        self.library_routine_codes
+            .retain(|installed, _| !dead(&installed.program));
+        self.rexx_routine_rows
+            .retain(|installed, _| !dead(&installed.program));
+        self.executable_sources
+            .retain(|_, record| !record.names_program(dead));
+        let mut unrooted = Vec::new();
+        self.annotations.retain(|site, _| {
+            let program = match site {
+                environment::Annotated::Package(Package::Program(program))
+                | environment::Annotated::Unattached(program, _)
+                | environment::Annotated::Routine(program, _) => program,
+                _ => return true,
+            };
+            if dead(program) {
+                unrooted.push(site.clone());
+            }
+            !dead(program)
+        });
+        for site in unrooted {
+            self.unroot_annotation_table(&site);
+        }
+    }
+
+    /// Flags a class carrying a class-side `UNINIT` so the collector
+    /// resurrects it rather than freeing it, exactly as it does for an
+    /// instance.
+    pub(crate) fn flag_class_uninit(&mut self, class: ObjRef) {
+        if self.classes().has_pending_class_uninit(class) {
+            self.heap.set_uninit(class);
+        }
+    }
+
+    /// Records that `class` keeps `object` alive.
+    fn class_owns(&mut self, class: ObjRef, object: ObjRef) {
+        match self.heap.get_mut(class).map(|held| &mut held.body) {
+            Some(interrexx_core::Body::Class { owned }) => owned.push(object),
+            _ => panic!("class_owns on a handle that is not a live class object"),
+        }
+    }
+
+    /// Undoes every [`Interp::class_owns`] of `object` by `class`.
+    fn class_disowns(&mut self, class: ObjRef, object: ObjRef) {
+        if let Some(interrexx_core::Body::Class { owned }) =
+            self.heap.get_mut(class).map(|held| &mut held.body)
+        {
+            owned.retain(|held| *held != object);
+        }
+    }
+
+    /// A class object a program made, which the collector may take.
+    fn mint_class(&mut self) -> ObjRef {
+        let class = self.alloc_with(
+            interrexx_core::BehaviourId::OBJECT,
+            interrexx_core::Body::Class { owned: Vec::new() },
+        );
+        self.roots.activity_mut().push_temp(class);
+        class
+    }
+
+    /// [`alloc_with`], for an object the collector must never take.
+    fn alloc_immortal_with(
+        &mut self,
+        behaviour: interrexx_core::BehaviourId,
+        body: interrexx_core::Body,
+    ) -> ObjRef {
+        self.collect_if_due();
+        self.heap.alloc_immortal(behaviour, body)
+    }
+
+    // ---- values ----
+
+    // `eval`/`eval_node`/`stack_span` live in `eval.rs`, beside the
+    // operators they evaluate. `depth`/`max_depth`/`stack_entry`/
+    // `stack_first`/`stack_deepest` stay here, on `Interp`'s own struct
+    // definition, exactly like every other field a sibling module's
+    // `impl Interp` block reaches into.
+}
+
+// ---- the public entry point ----
+
+/// Installs the SIGINT, SIGTERM and SIGHUP handlers that halt every live
+/// interpreter, once per process: for
+/// a process entry point that starts Rexx for a user. An embedding that does
+/// not call it keeps its own dispositions. Blocks them in the calling thread:
+/// the interpreter's thread and its blocking waits take them.
+pub fn install_signal_handlers() {
+    timer::install_signals();
+    signal::block();
+}
+
+/// Runs a Rexx program and returns what it produced.
+pub fn run_program(path: &str, text: Vec<u8>, invocation: Invocation) -> Outcome {
+    run_program_named(path.as_bytes(), text, invocation)
+}
+
+/// [`run_program`] for a program whose name is any bytes.
+pub fn run_program_named(path: &[u8], text: Vec<u8>, invocation: Invocation) -> Outcome {
+    let path = path.to_vec();
+    on_interpreter_thread(move || {
+        execute_kept(
+            &path,
+            text,
+            Entry::Run,
+            invocation,
+            Some(INTERPRETER_STACK_BYTES),
+        )
+    })
+}
+
+/// Translates the program `text` names `path` without running any of it,
+/// and reports a refusal as [`run_program_named`] would. The translation
+/// binds each `EXTERNAL` library name as the run does.
+pub fn translate_program(path: &[u8], text: Vec<u8>) -> Outcome {
+    let path = path.to_vec();
+    on_interpreter_thread(move || {
+        execute_kept(
+            &path,
+            text,
+            Entry::Translate,
+            Invocation::none(),
+            Some(INTERPRETER_STACK_BYTES),
+        )
+    })
+}
+
+/// [`run_program`] on an interpreter thread of `stack` bytes.
+#[cfg(test)]
+pub(crate) fn run_program_on_stack(
+    path: &str,
+    text: Vec<u8>,
+    invocation: Invocation,
+    stack: usize,
+) -> Outcome {
+    let path = path.as_bytes().to_vec();
+    on_thread_of(stack, move || {
+        execute_kept(&path, text, Entry::Run, invocation, Some(stack))
+    })
+}
+
+/// `run_program`, except that `Heap::collect` runs after every allocation
+/// instead of never. `Outcome::collections` shows the mode collected.
+#[doc(hidden)]
+pub fn run_program_collect_every_alloc(
+    path: &str,
+    text: Vec<u8>,
+    invocation: Invocation,
+) -> Outcome {
+    let path = path.as_bytes().to_vec();
+    on_interpreter_thread(move || {
+        execute_kept(
+            &path,
+            text,
+            Entry::CollectEveryAlloc,
+            invocation,
+            Some(INTERPRETER_STACK_BYTES),
+        )
+    })
+}
+
+/// Every body of `text`, compiled to a chunk and rendered as text: what the
+/// `rexx-ir` binary prints.
+pub fn render_ir(text: Vec<u8>, setting: &[u8]) -> Result<String, String> {
+    let mode = trace::mode_from_setting(setting).map_err(|byte| {
+        format!(
+            "not a TRACE setting: {} (at {:?})",
+            String::from_utf8_lossy(setting),
+            char::from(byte)
+        )
+    })?;
+    let trace = trace::ChunkTrace::of(mode);
+    let program = interrexx_parse::parse_program(text).map_err(|error| format!("{error:?}"))?;
+
+    let mut out = String::new();
+    for (body, what, kind) in ir_bodies(&program) {
+        out.push_str(&format!("=== {what} ===\n"));
+        let plan = plan::Plan::build(body, &program.symbols, Some(&program.source), kind);
+        match ir::compile(body, &plan, trace) {
+            Ok(chunk) => out.push_str(&ir::render_annotated(&chunk, body, &program.source)),
+            Err(error) => out.push_str(&format!("(refused: {error:?})\n")),
+        }
+    }
+    Ok(out)
+}
+
+// ---- the registry projection ----
+
+/// One row of the `LIBRARY REXX` entry-point registry, for a caller
+/// that walks it.
+pub struct NativeEntryPoint {
+    /// The name the `REXX` package exports the entry point under, spelled as
+    /// `interpreter/runtime/NativeMethods.h` spells it. The lookup that
+    /// matches it is caseless.
+    pub entry: &'static str,
+    /// The family it belongs to, lower case: the interpreter subsystem whose
+    /// C++ translation unit defines it.
+    pub family: &'static str,
+    /// The label of the owner that owes this entry point a body, as its
+    /// refusal prints it, or `None` for one this crate runs, which every
+    /// entry point of the registry is.
+    pub owner: Option<&'static str>,
+    /// Whether this crate runs the entry point rather than refusing a send to
+    /// it, which it does for every entry point of the registry.
+    pub implemented: bool,
+}
+
+/// Every entry point a `::METHOD ... EXTERNAL 'LIBRARY REXX name'` can bind
+/// to. See [`NativeEntryPoint`].
+pub fn native_entry_points() -> Vec<NativeEntryPoint> {
+    dispatch::native::entry_points().collect()
+}
+
+/// Every body [`render_ir`] compiles, in source order, each with the name it is
+/// printed under.
+fn ir_bodies(
+    program: &interrexx_parse::Program,
+) -> Vec<(&interrexx_parse::CodeBody, String, BodyKind)> {
+    use interrexx_parse::DirectiveKind;
+
+    let mut out = vec![(&program.main, "main".to_string(), BodyKind::Plain)];
+    for directive in &program.directives {
+        let (body, what, kind) = match &directive.kind {
+            DirectiveKind::Method(method) => (method.body.as_ref(), "::METHOD", BodyKind::Method),
+            DirectiveKind::Attribute(attribute) => {
+                (attribute.body.as_ref(), "::ATTRIBUTE", BodyKind::Method)
+            }
+            DirectiveKind::Routine(routine) => {
+                (routine.body.as_ref(), "::ROUTINE", BodyKind::Plain)
+            }
+            DirectiveKind::Annotate(_)
+            | DirectiveKind::Class(_)
+            | DirectiveKind::Constant(_)
+            | DirectiveKind::Options(_)
+            | DirectiveKind::Requires(_)
+            | DirectiveKind::Resource(_) => (None, "", BodyKind::Plain),
+        };
+        if let Some(body) = body {
+            out.push((body, what.to_string(), kind));
+        }
+    }
+    out
+}
+
+/// Reports what a body run after the main one failed with: a refusal on its
+/// own line and in the exit status, a condition as its traceback; the status
+/// stays the main body's otherwise.
+fn report_late_failures(
+    interp: &mut Interp,
+    failures: Vec<(Failure, Vec<FailureSite>)>,
+    path: &[u8],
+    exit_code: &mut i32,
+) {
+    for (failure, mut sites) in failures {
+        match failure {
+            // A started activity answers `Ok` for this variant, exactly as a
+            // send does; the arm is what makes this match exhaustive and
+            // nothing else.
+            Failure::Exited(_) => {}
+            // The guard below the `UNINIT` sweep is what reports this, for
+            // the reason the main body's own arm gives.
+            Failure::Deadline => {}
+            Failure::Loud(loud) => {
+                interp
+                    .trace
+                    .extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+                *exit_code = NOT_IMPLEMENTED_EXIT;
+            }
+            Failure::Slice => {
+                let loud = Loud::scheduler_inconsistency("a slice outside a root driver");
+                interp
+                    .trace
+                    .extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+                *exit_code = NOT_IMPLEMENTED_EXIT;
+            }
+            Failure::Raised(raised) => {
+                if sites.is_empty() {
+                    sites.push(FailureSite::Clause {
+                        line: 0,
+                        text: b"<no failing clause recorded>".to_vec(),
+                        indent: 0,
+                    });
+                }
+                let site = ClauseSite {
+                    path,
+                    sites: &sites,
+                };
+                interp.write_trace_report_lines(&raised.report_lines(&site));
+            }
+        }
+    }
+}
+
+/// Runs `body` on a thread with `INTERPRETER_STACK_BYTES` of stack.
+fn on_interpreter_thread(
+    body: impl FnOnce() -> (Outcome, Option<Interp>) + Send + 'static,
+) -> Outcome {
+    on_thread_of(INTERPRETER_STACK_BYTES, body)
+}
+
+/// Runs `body` on a thread with `stack` bytes of stack and answers its
+/// outcome as soon as it has one. An interpreter `body` hands back still has
+/// calls in flight: it stays on that thread, serving them, and is dropped
+/// once they have ended ([`Interp::wind_down`]), while the caller goes on.
+fn on_thread_of(
+    stack: usize,
+    body: impl FnOnce() -> (Outcome, Option<Interp>) + Send + 'static,
+) -> Outcome {
+    let (deliver, delivered) = std::sync::mpsc::channel();
+    let interpreter = std::thread::Builder::new()
+        .name("rexx-interp".to_string())
+        .stack_size(stack)
+        .spawn(move || {
+            signal::receive();
+            let (outcome, kept) = body();
+            let _ = deliver.send(outcome);
+            if let Some(interp) = kept {
+                interp.wind_down();
+            }
+        })
+        .expect("spawning the interpreter thread");
+    match delivered.recv() {
+        Ok(outcome) => outcome,
+        Err(_) => match interpreter.join() {
+            Err(panic) => std::panic::resume_unwind(panic),
+            Ok(()) => unreachable!("the interpreter thread ended without an outcome"),
+        },
+    }
+}
+
+/// [`execute_on`] on a thread whose stack size is not known.
+#[cfg(test)]
+fn execute(
+    path: &str,
+    text: Vec<u8>,
+    collect_every_alloc: bool,
+    invocation: Invocation,
+) -> Outcome {
+    execute_on(path.as_bytes(), text, collect_every_alloc, invocation, None)
+}
+
+/// What a program that does not parse produces: the standard error report,
+/// its clause the only traceback line, and nothing else runs.
+fn parse_failure_outcome(path: &[u8], rejected: &interrexx_parse::Rejected) -> Outcome {
+    let line = rejected.error.line(&rejected.source);
+    let (raised, text) = Raised::parse_failure(&rejected.error, &rejected.source, line);
+    let sites = [FailureSite::Clause {
+        line,
+        text,
+        indent: 0,
+    }];
+    Outcome {
+        exit_code: raised.exit_code(),
+        result: None,
+        error: Some(i32::from(raised.number)),
+        stdout: Vec::new(),
+        stderr: raised.report(&ClauseSite {
+            path,
+            sites: &sites,
+        }),
+        stack: StackSpan::default(),
+        collections: 0,
+        #[cfg(test)]
+        peak_body_bytes: 0,
+        chunks_refused: 0,
+        sim: None,
+        #[cfg(feature = "pinning")]
+        pinning: PinReport::default(),
+        #[cfg(feature = "sharing")]
+        sharing: SharingReport::default(),
+    }
+}
+
+/// The outcome of a program file whose image cannot be restored: the
+/// condition displayed with no position, as a failure to start.
+#[cold]
+#[inline(never)]
+fn unrestorable_outcome(raised: Raised) -> Outcome {
+    let number = i32::from(raised.number);
+    let (stderr, exit_code) = launcher::positionless(raised);
+    Outcome {
+        exit_code,
+        result: None,
+        error: Some(number),
+        stdout: Vec::new(),
+        stderr,
+        stack: StackSpan::default(),
+        collections: 0,
+        #[cfg(test)]
+        peak_body_bytes: 0,
+        chunks_refused: 0,
+        sim: None,
+        #[cfg(feature = "pinning")]
+        pinning: PinReport::default(),
+        #[cfg(feature = "sharing")]
+        sharing: SharingReport::default(),
+    }
+}
+
+/// What [`execute_as`] does with the program it parses.
+#[derive(Copy, Clone, PartialEq, Eq)]
+enum Entry {
+    /// Runs it.
+    Run,
+    /// Runs it with `Heap::collect` after every allocation.
+    CollectEveryAlloc,
+    /// Translates it and runs none of it.
+    Translate,
+}
+
+/// Everything that happens on the interpreter thread: parse, run, report.
+/// `stack` is the thread's stack size, where known.
+#[cfg(test)]
+fn execute_on(
+    path: &[u8],
+    text: Vec<u8>,
+    collect_every_alloc: bool,
+    invocation: Invocation,
+    stack: Option<usize>,
+) -> Outcome {
+    let entry = if collect_every_alloc {
+        Entry::CollectEveryAlloc
+    } else {
+        Entry::Run
+    };
+    execute_as(path, text, entry, invocation, stack)
+}
+
+/// [`execute_on`] for any [`Entry`]; an interpreter left with calls in
+/// flight serves them on this thread before this returns.
+#[cfg(test)]
+fn execute_as(
+    path: &[u8],
+    text: Vec<u8>,
+    entry: Entry,
+    invocation: Invocation,
+    stack: Option<usize>,
+) -> Outcome {
+    let (outcome, kept) = execute_kept(path, text, entry, invocation, stack);
+    if let Some(interp) = kept {
+        interp.wind_down();
+    }
+    outcome
+}
+
+/// [`execute_as`], answering the interpreter with the outcome where a call is
+/// still in flight: a pool thread still running a call ends it under the
+/// baton, through this interpreter's state, which therefore outlives the
+/// run until [`Interp::wind_down`] has served that end.
+fn execute_kept(
+    path: &[u8],
+    text: Vec<u8>,
+    entry: Entry,
+    invocation: Invocation,
+    stack: Option<usize>,
+) -> (Outcome, Option<Interp>) {
+    let probe = 0u8;
+    let base = &raw const probe as usize;
+    // `rexxc` translates its input as source, an image included: measured,
+    // the oracle's `rexxc` answers 13.1 at the `@` of a `.rxo` it is given.
+    let source = if entry == Entry::Translate {
+        interrexx_parse::ProgramSource::new(text, interrexx_parse::SourceKind::Program)
+    } else {
+        match compiled::program_source(text, path) {
+            Ok(source) => source,
+            Err(raised) => return (unrestorable_outcome(raised), None),
+        }
+    };
+    // A rejected source that passed an `EXTERNAL`'s resolution point needs an
+    // interpreter to resolve it in, which `Interp::raise_parse_failure` does.
+    let program = match interrexx_parse::program_from(source) {
+        Ok(program) => Ok(program),
+        Err(rejected) if rejected.binds.is_empty() => {
+            return (parse_failure_outcome(path, &rejected), None);
+        }
+        Err(rejected) => Err(rejected),
+    };
+
+    let mut interp = Interp::new();
+    if let Some(stack) = stack {
+        interp.measure_stack(base, stack);
+    }
+    interp.program_path = path.to_vec();
+    if entry == Entry::CollectEveryAlloc {
+        interp.enable_stress_collect();
+    }
+    // The command line is the top-level program's caller, so what it supplied
+    // goes into the same `call_context` a `CALL` fills -- see that field's own
+    // doc for what reads it and for the three measured invocations that tell
+    // "no argument" from "one empty argument" apart.
+    interp.activity.call_context.name = Rc::from(path);
+    let parts = invocation.into_parts();
+    interp
+        .roots
+        .activity_mut()
+        .set_frame_block(parts.frame_block);
+    let (argument, deadline, switch_mode) = (parts.argument, parts.deadline, parts.switch_mode);
+    let (arguments, start, address) = (parts.arguments, parts.start, parts.address);
+    let exits = parts.exits;
+    // Reachable by `RexxSetHalt` and `RexxSetTrace` through either thread while it runs.
+    interp.trace_switchable = parts.classic_thread.is_some();
+    let _classic = parts.classic_thread.map(|caller| {
+        embedding::ClassicRun::register([caller, signal::current_thread()], interp.timer.inbox())
+    });
+    interp.input = Input::new(parts.input);
+    interp.standard_transient = parts.standard_transient;
+    if let Some(sinks) = &parts.sinks {
+        interp.out_lines = sinks.stdout_terminal;
+        interp.out_bound = OUTPUT_BOUND;
+        interp.say_bound = if sinks.stdout_terminal {
+            0
+        } else {
+            OUTPUT_BOUND
+        };
+    }
+    interp.sinks = parts.sinks;
+    interp.command_words = parts.words;
+    interp.command_words_base = parts.words_base;
+    let default_options = parts.default_options;
+    if let Some(directory) = parts.directory {
+        interp.cwd = directory;
+    }
+    if let Some(environment) = parts.environment {
+        interp.adopt_environment(environment);
+    }
+    // Armed here rather than in `Interp::new`, and after the parse, so that
+    // what it bounds is the running of this program. `Interp::bootstrap_library`
+    // below runs clauses of its own and is inside the bound, which is what a
+    // caller asking for a bounded run wants: a bootstrap that did not finish
+    // is a run that did not finish.
+    interp.deadline = deadline.map(crate::clause::Deadline::starting_now);
+    // **The library bootstrap runs before the command line's own program is
+    // installed or run, and before its argument string exists.** The program
+    // has already been *parsed* above, which is where a syntax error is
+    // reported from and is why that report does not wait on this. The
+    // library's classes have to be
+    // in `.environment` by the time the program's first clause runs --
+    // `Interp::bootstrap_library` carries why that is at start rather than on
+    // demand -- and running it first leaves nothing of this program's to keep
+    // reachable across the allocation it does.
+    let result = interp.bootstrap_library().and_then(|()| {
+        if let Some(arguments) = &arguments {
+            let mut values = Vec::with_capacity(arguments.len());
+            for argument in arguments {
+                values.push(argument.as_deref().map(|bytes| {
+                    let value = interp.text(bytes);
+                    // Rooted as the one argument below is.
+                    interp.roots.activity_mut().push_temp(value);
+                    value
+                }));
+            }
+            interp.activity.call_context.arguments = Rc::from(values);
+        } else if let Some(argument) = argument {
+            let value = interp.text(&argument);
+            // Rooted with a `push_temp` taken before `run`, which is what makes it
+            // outlive every clause: `Op::Clause`'s region truncates the
+            // temporaries stack back to a watermark it takes on entry, and every
+            // such watermark sits above this push. This is the same mechanism
+            // `Interp::invoke_call` uses to keep a call's own arguments reachable
+            // (`run/call.rs`, the `push_temp(argument.value())` beside the argument
+            // list it builds); `call_context` itself is not walked by the
+            // collector, so without this the value is unreachable the first time
+            // anything allocates.
+            interp.roots.activity_mut().push_temp(value);
+            interp.activity.call_context.arguments = Rc::from(&[Some(value)][..]);
+        }
+        if let Some((directive, count)) = default_options {
+            interp.send_default_options(&directive, count)?;
+        }
+        if !exits.is_empty() {
+            interp.install_exits(&exits, &[], false);
+        }
+        // After the bootstrap, so `SwitchMode::AtClause` counts this program's
+        // clauses alone.
+        if let Some(mode) = switch_mode {
+            interp.set_switch_mode(mode);
+        }
+        match (entry, program) {
+            (_, Err(rejected)) => Err(interp.raise_parse_failure(&rejected, None)),
+            (Entry::Translate, Ok(program)) => interp.translate(program),
+            (Entry::Run | Entry::CollectEveryAlloc, Ok(program)) => {
+                interp.run_as_started(program, start, address)
+            }
+        }
+    });
+    // The whole echo stack, innermost first: the levels `seal_site_level`
+    // already closed, then the level that was still unwinding when the
+    // condition reached the top. See `Activity::failure_sites` for why the two
+    // are separate fields, and `Raised::report` for what the order means.
+    let mut failure_sites = std::mem::take(&mut interp.activity.failure_sites);
+    failure_sites.extend(interp.activity.failure_site.take());
+    // `exit_code_for` needs `&mut interp` (`to_number` fills a lazy cache),
+    // so this has to run before `interp.trace`/`interp.out` move out of
+    // `interp` below -- a partial move of one field ends `interp`'s usability
+    // as a whole value, and every other call above this one only reads or
+    // takes a single field, never the whole struct.
+    let refused_main = matches!(result, Err(Failure::Loud(_) | Failure::Slice));
+    let error = match &result {
+        Err(Failure::Raised(raised)) => Some(i32::from(raised.number)),
+        _ => None,
+    };
+    let returned = match &result {
+        Ok(Some(value)) | Err(Failure::Exited(Some(value))) => {
+            interp.string_value_text(*value).ok()
+        }
+        _ => None,
+    };
+    let mut exit_code = match result {
+        // `Failure::Exited` is not a failure -- it is `EXIT` (or falling off
+        // the routine's own end) reached through `ExprKind::Call`'s
+        // expression form, tunnelled here through `Err`/`?` only because
+        // `eval`'s own return type has no `Flow` to carry it through instead
+        // (`Failure::Exited`'s own doc, `error.rs`, has the full argument).
+        // Treated exactly like an ordinary `Ok(value)`: same exit-code rule,
+        // no stderr report, because it is not one.
+        Ok(value) | Err(Failure::Exited(value)) => interp.exit_code_for(value),
+        Err(Failure::Loud(loud)) => {
+            interp
+                .trace
+                .extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+            NOT_IMPLEMENTED_EXIT
+        }
+        Err(Failure::Slice) => {
+            let loud = Loud::scheduler_inconsistency("a slice outside a root driver");
+            interp
+                .trace
+                .extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+            NOT_IMPLEMENTED_EXIT
+        }
+        Err(Failure::Raised(raised)) => {
+            // `run_activation` records the site on the way out. An empty
+            // stack here would mean a condition escaped without passing an
+            // instruction loop, which nothing in this crate can do; it
+            // renders visibly rather than panicking, on the error path's
+            // standing rule that a reportable condition must never become a
+            // crash.
+            if failure_sites.is_empty() {
+                failure_sites.push(FailureSite::Clause {
+                    line: 0,
+                    text: b"<no failing clause recorded>".to_vec(),
+                    indent: 0,
+                });
+            }
+            let site = ClauseSite {
+                path,
+                sites: &failure_sites,
+            };
+            interp.write_trace_report_lines(&raised.report_lines(&site));
+            raised.exit_code()
+        }
+        // No report and no status here: the run may still have activities
+        // and `UNINIT`s to abandon, and the one place that says a deadline
+        // fired is the guard below them.
+        Err(Failure::Deadline) => 0,
+    };
+
+    // Main's dispatch has ended (`Activity::exitCurrentThread`,
+    // `concurrency/Activity.cpp:324`).
+    let mut refused = interp.run_ready_uninits();
+
+    // The oracle's termination waits for every activity
+    // (`InterpreterInstance::terminate`); a refusal in main ends the run
+    // without the wait.
+    let started = if refused_main {
+        interp.take_late_failures()
+    } else {
+        interp.run_started_to_end()
+    };
+    report_late_failures(&mut interp, started, path, &mut exit_code);
+
+    // `MemoryObject::lastChanceUninit` (`memory/RexxMemory.cpp:324`), reached
+    // from `Interpreter::terminateInterpreter` (`runtime/Interpreter.cpp:279`)
+    // -- after everything the program and its activities do, and reached
+    // whatever the program's own outcome was. Measured, oracle: a program
+    // whose main body raises 42.3 still prints its class `UNINIT` and exits
+    // 214, and one ending `exit 7` prints it and exits 7.
+    // An activity those `UNINIT`s start is not waited for.
+    refused.extend(interp.terminate());
+    refused.extend(interp.sim_finish());
+    for loud in refused {
+        interp
+            .trace
+            .extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+        exit_code = NOT_IMPLEMENTED_EXIT;
+    }
+
+    // **The one place a deadline becomes an answer**, below everything that
+    // runs clauses, so that a run abandoned part-way cannot report the status
+    // its main body happened to reach. It is here rather than in the three
+    // arms above because one of the paths between them discards failures on
+    // purpose: `Interp::run_one_uninit` throws away a raised condition and an
+    // `EXIT` because the oracle's own dispatcher does, and a deadline reaching
+    // it would otherwise vanish. `Interp::deadline_expired` reads the flag the
+    // check itself set, not the clock, so a run that finished inside its bound
+    // is untouched however narrow the margin was.
+    if interp.deadline_expired() {
+        interp.trace.extend_from_slice(DEADLINE_REPORT);
+        exit_code = DEADLINE_EXIT;
+    }
+
+    // Read after the activities above, so a collection or a refused chunk
+    // inside one is counted: `run_program_collect_every_alloc` decides that its
+    // mode ran from `collections`.
+    let stack = interp.stack_span();
+    let collections = interp.heap.collections_performed() - interp.collections_before_program;
+    let chunks_refused = interp.chunks_refused;
+    #[cfg(test)]
+    crate::dispatch::library::note_callback_takes(interp.baton.takes());
+    #[cfg(test)]
+    crate::scheduler::note_abandoned_held(&interp.activities);
+
+    let outcome = Outcome {
+        exit_code,
+        result: returned,
+        error,
+        stdout: std::mem::take(&mut interp.out),
+        stderr: std::mem::take(&mut interp.trace),
+        stack,
+        collections,
+        #[cfg(test)]
+        peak_body_bytes: interp.heap.peak_body_bytes(),
+        chunks_refused,
+        sim: interp.sim_report(),
+        #[cfg(feature = "pinning")]
+        pinning: interp.pinning.take(&interp.activity.pins),
+        #[cfg(feature = "sharing")]
+        sharing: {
+            let [bootstrap, program] = interp.heap.sharing_counts();
+            SharingReport { bootstrap, program }
+        },
+    };
+    let kept = interp.activities.in_flight().then_some(interp);
+    (outcome, kept)
+}
+
+/// The program an embedding instance's root activity runs: the native call
+/// it waits in, which the thread that created the instance acts as until
+/// `Terminate`. A halt that finds it running is taken quietly.
+const INSTANCE_ROOT: &[u8] = b"signal on halt name done\n\
+call WAIT\n\
+done:\n\
+exit\n\
+::routine WAIT external 'LIBRARY REXXEMBEDDING WAIT'\n";
+
+/// The name the root program's library is registered under.
+const INSTANCE_LIBRARY: &[u8] = b"REXXEMBEDDING";
+
+/// Everything an embedding instance's interpreter thread does: the
+/// interpreter is built and bootstrapped, `options` applied, `started` told
+/// the root thread context and the inbox, and the root activity waits in a
+/// native call that leaves the driver free to serve the attached threads'
+/// callbacks; once it returns, the run ends as a program's does.
+pub(crate) fn run_instance(
+    options: embedding::InstanceOptions,
+    started: Box<dyn FnOnce(usize, crate::sync::Arc<timer::Inbox<timer::Posted>>) + Send>,
+) -> (Outcome, Option<Interp>) {
+    use interrexx_api::callbacks::Surface as _;
+    let probe = 0u8;
+    let base = &raw const probe as usize;
+    let program = interrexx_parse::program_from(interrexx_parse::ProgramSource::new(
+        INSTANCE_ROOT.to_vec(),
+        interrexx_parse::SourceKind::Program,
+    ))
+    .unwrap_or_else(|_| panic!("the instance's root program parses"));
+    let mut interp = Interp::new();
+    interp.measure_stack(base, INTERPRETER_STACK_BYTES);
+    interp.program_path = b"RexxCreateInterpreter".to_vec();
+    interp.activity.call_context.name = Rc::from(&b"RexxCreateInterpreter"[..]);
+    interp.input = Input::new(ProgramInput::Stdin);
+    let stdout_terminal = std::io::IsTerminal::is_terminal(&std::io::stdout());
+    interp.out_lines = stdout_terminal;
+    interp.out_bound = OUTPUT_BOUND;
+    interp.say_bound = if stdout_terminal { 0 } else { OUTPUT_BOUND };
+    // After what the embedding C program wrote through stdio, as the oracle orders them.
+    interp.sinks = Some(Sinks {
+        stdout: Box::new(|bytes| {
+            use std::io::Write;
+            signal::flush_c_streams();
+            let mut stdout = std::io::stdout();
+            stdout.write_all(bytes).and_then(|()| stdout.flush())
+        }),
+        stderr: Box::new(|bytes| {
+            use std::io::Write;
+            signal::flush_c_streams();
+            std::io::stderr().write_all(bytes)
+        }),
+        stdout_terminal,
+        own_descriptors: true,
+    });
+    let result = interp.bootstrap_library().and_then(|()| {
+        interp.default_address = options.initial_address.as_deref().map(Rc::from);
+        interp.call_search = require::Instance {
+            path: options.external_call_path,
+            extensions: options.external_call_extensions,
+        };
+        for (name, handler) in options.command_handlers {
+            interp.add_command_handler(&name, handler.into_inner());
+        }
+        for (name, registered) in options.registered_environments {
+            interp
+                .subcom_aliases
+                .insert(name.to_ascii_uppercase(), registered);
+        }
+        for (name, package) in options.registered_libraries {
+            let library = package.into_library(&String::from_utf8_lossy(&name));
+            interp.register_library(&name, library);
+        }
+        for library in &options.load_libraries {
+            interp.load_library(library);
+        }
+        interp.install_exits(&options.registered_exits, &options.context_exits, true);
+        let library = interrexx_api::load::embedding_library(embedding::wait_in_root);
+        interp.register_library(INSTANCE_LIBRARY, Ok(Some(library)));
+        let thread = interp.thread_context();
+        thread.keep();
+        thread.set_application_data(options.application_data);
+        started(thread.address(), interp.timer.inbox());
+        interp.leave_next_native = true;
+        let program = Rc::new(program);
+        let program_id = interp.load_program(Rc::clone(&program));
+        interp.set_instance_root(program_id);
+        interp.run_loaded(program, program_id, CallType::Command, None, None)
+    });
+    let mut stderr = Vec::new();
+    if let Err(Failure::Loud(loud)) = &result {
+        stderr.extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+    }
+    let mut refused = interp.run_ready_uninits();
+    let late = interp.run_started_to_end();
+    report_late_failures(&mut interp, late, b"RexxCreateInterpreter", &mut 0);
+    refused.extend(interp.terminate());
+    for loud in refused {
+        stderr.extend_from_slice(format!("rexx-exec: {}\n", loud.message).as_bytes());
+    }
+    let mut trace = std::mem::take(&mut interp.trace);
+    trace.extend(stderr);
+    let outcome = Outcome {
+        exit_code: 0,
+        result: None,
+        error: None,
+        stdout: std::mem::take(&mut interp.out),
+        stderr: trace,
+        stack: interp.stack_span(),
+        collections: 0,
+        #[cfg(test)]
+        peak_body_bytes: 0,
+        chunks_refused: 0,
+        sim: None,
+        #[cfg(feature = "pinning")]
+        pinning: PinReport::default(),
+        #[cfg(feature = "sharing")]
+        sharing: SharingReport::default(),
+    };
+    let kept = interp.activities.in_flight().then_some(interp);
+    (outcome, kept)
+}
+
+#[cfg(test)]
+mod tests;
+
+#[cfg(test)]
+mod test_process;

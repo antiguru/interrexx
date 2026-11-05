@@ -1,6 +1,6 @@
 # What each documented introspection method does when sent an argument list it
 # could accept. Derived by
-# crates/rexx-exec/tests/introspection_arity.rs; edit that, never this.
+# crates/interrexx/tests/introspection_arity.rs; edit that, never this.
 #
 # class<TAB>method<TAB>arm<TAB>verdict<TAB>evidence
 #

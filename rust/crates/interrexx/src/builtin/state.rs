@@ -1,0 +1,976 @@
+//! The builtins that read interpreter state rather than transform a value:
+//! `ADDRESS`, `ARG`, `CONDITION`, `DIGITS`, `ERRORTEXT`, `FORM`, `FUZZ`,
+//! `GC`, `QUEUED`, `SOURCELINE` and `TRACE`.
+
+use interrexx_core::{BehaviourId, Body, ObjRef};
+
+use super::{Args, optional_string, whole_number};
+use crate::Interp;
+use crate::activation::TrappedCondition;
+use crate::error::{Failure, Raised};
+
+/// The environment `ADDRESS()` names before any `ADDRESS` instruction has
+/// run, and after a bare `ADDRESS` swaps back to it.
+#[cfg(unix)]
+pub(crate) const DEFAULT_ENVIRONMENT: &[u8] = b"sh";
+#[cfg(not(unix))]
+pub(crate) const DEFAULT_ENVIRONMENT: &[u8] = b"CMD";
+
+/// The first byte of an option argument, upcased, or `None` when the
+/// argument was not supplied at all.
+fn option_letter(
+    interp: &mut Interp,
+    name: &[u8],
+    args: Args<'_>,
+    position: usize,
+    valid: &str,
+) -> Result<Option<u8>, Failure> {
+    let Some(text) = optional_string(interp, args, position) else {
+        return Ok(None);
+    };
+    match text.first() {
+        Some(byte) => Ok(Some(byte.to_ascii_uppercase())),
+        None => Err(Raised::argument_not_in_list(name, position, valid, &text).into()),
+    }
+}
+
+/// `ADDRESS()`: the environment a command clause would be sent to.
+/// ```text
+/// say address()   ->  sh
+/// address envA
+/// address envB
+/// say address()   ->  ENVB
+/// address ; say address()  ->  ENVA
+/// address ; say address()  ->  ENVB
+/// address ; say address()  ->  ENVA
+/// ```
+pub(crate) fn address(
+    interp: &mut Interp,
+    _name: &[u8],
+    _args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    let current = interp.activation().address.current.clone();
+    let bytes = match &current {
+        Some(name) => &name[..],
+        None => DEFAULT_ENVIRONMENT,
+    };
+    Ok(interp.text(bytes))
+}
+
+/// `DIGITS()`: the running activation's own `NUMERIC DIGITS`.
+pub(crate) fn digits(
+    interp: &mut Interp,
+    _name: &[u8],
+    _args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    let digits = interp.activation().settings.digits();
+    Ok(interp.text(digits.to_string().as_bytes()))
+}
+
+/// `FUZZ()`: the running activation's own `NUMERIC FUZZ`.
+pub(crate) fn fuzz(interp: &mut Interp, _name: &[u8], _args: Args<'_>) -> Result<ObjRef, Failure> {
+    let fuzz = interp.activation().settings.fuzz();
+    Ok(interp.text(fuzz.to_string().as_bytes()))
+}
+
+/// `FORM()`: `SCIENTIFIC` or `ENGINEERING`, upper case.
+pub(crate) fn form(interp: &mut Interp, _name: &[u8], _args: Args<'_>) -> Result<ObjRef, Failure> {
+    let text: &[u8] = match interp.activation().settings.form() {
+        interrexx_num::Form::Scientific => b"SCIENTIFIC",
+        interrexx_num::Form::Engineering => b"ENGINEERING",
+    };
+    Ok(interp.text(text))
+}
+
+/// `QUEUED()`: how many lines the external data queue holds.
+pub(crate) fn queued(
+    interp: &mut Interp,
+    _name: &[u8],
+    _args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    // The queue exit's first pass (`BUILTIN(QUEUED)`).
+    if interp.exits.is_some()
+        && let Some(size) = interp.queue_size_exit()?
+    {
+        return Ok(interp.text(size.to_string().as_bytes()));
+    }
+    let Some(queue) = interp.local_route(b"STDQUE")? else {
+        let count = interp.queue.len();
+        return Ok(interp.text(count.to_string().as_bytes()));
+    };
+    let caller = interp.caller();
+    let answer = pinned!(
+        interp,
+        crate::pinning::PinKind::PullWrapper,
+        interp.send_message(queue, b"QUEUED", None, &[], caller)
+    )?;
+    Ok(answer.unwrap_or_else(|| interp.text(b"0")))
+}
+
+/// `GC()` / `GC('Force')`: whether a collection was run.
+pub(crate) fn gc(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
+    const VALID: &str = "\"force\", \"Force\", \"f\", \"F\"";
+    let Some(text) = optional_string(interp, args, 1) else {
+        return Ok(interp.text(b"0"));
+    };
+    if !matches!(text.first(), Some(b'f' | b'F')) {
+        return Err(Raised::argument_not_in_list(name, 1, VALID, &text).into());
+    }
+    // Really collect, the way `memoryObject.collectAndUninit` does, rather
+    // than report `1` for something that did not happen. Safe at exactly the
+    // point every allocation is: this crate's own collect-stress mode
+    // (`Interp::alloc_with`) runs a collection immediately before every
+    // allocation, so a caller's values are already rooted by the time any
+    // builtin can be entered.
+    interp.collect_now();
+    // `collectAndUninit` is collect *and* run, and `GC('force')` is the one
+    // path that runs the finalizers inline rather than leaving them to a
+    // later safe point. Measured, oracle rc 0: `o = .K~new` / `say 'b'` /
+    // `drop o` / `call gc 'force'` / `say 'c'` answers `a b uninit c`, five
+    // runs of five, where 200,000 unforced allocations in place of the
+    // `GC('force')` defer the same finalizer to termination.
+    if let Some(loud) = interp.run_ready_uninits().into_iter().next() {
+        return Err(Failure::Loud(Box::new(loud)));
+    }
+    Ok(interp.text(b"1"))
+}
+
+/// `ERRORTEXT(n)`: the major error message for `n`, or the null string when
+/// the catalogue has no entry.
+pub(crate) fn errortext(
+    interp: &mut Interp,
+    name: &[u8],
+    args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    let number = whole_number(interp, name, args, 1)?.expect("check_arity admitted argument 1");
+    if !(0..=99).contains(&number) {
+        return Err(Raised::argument_out_of_range(name, 1, converted(number).as_bytes()).into());
+    }
+    let text = u16::try_from(number)
+        .ok()
+        .and_then(|major| interrexx_inventory::errors::lookup(major, 0))
+        .map(|message| message.text)
+        .unwrap_or_default();
+    Ok(interp.text(text.as_bytes()))
+}
+
+/// `SOURCELINE()`: the program's line count, or `SOURCELINE(n)`: line `n`.
+pub(crate) fn sourceline(
+    interp: &mut Interp,
+    name: &[u8],
+    args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    let source = &interp.activation().program.source;
+    // A restored program shows no source: measured, `SOURCELINE()` answers
+    // 0 and `SOURCELINE(1)` raises 40.34 naming 0 lines.
+    let lines = match source.is_traceable() {
+        true => source.line_count(),
+        false => 0,
+    };
+    let Some(number) = whole_number(interp, name, args, 1)? else {
+        return Ok(interp.text(lines.to_string().as_bytes()));
+    };
+    if number <= 0 {
+        return Err(Raised::argument_not_positive(name, 1, converted(number).as_bytes()).into());
+    }
+    let requested = usize::try_from(number).unwrap_or(usize::MAX);
+    if requested > lines {
+        return Err(Raised::sourceline_out_of_range(converted(number).as_bytes(), lines).into());
+    }
+    let line = interp
+        .activation()
+        .program
+        .source
+        .line(requested)
+        .expect("a line number within the count")
+        .to_vec();
+    Ok(interp.text_built(line))
+}
+
+/// `TRACE()` / `TRACE(setting)`: the setting in force, and optionally a new
+/// one.
+/// ```text
+/// trace value 5     24.901  Numeric TRACE requests are valid only from interactive debugging.
+/// say trace('5')    24.1    TRACE request letter must be one of "ACEFILNOR"; found "5".
+/// ```
+pub(crate) fn trace(interp: &mut Interp, _name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
+    let before = interp.trace_mode();
+    // **The builtin has no debug guard where the instruction does.**
+    // Measured, `call trace 'O'` from a program under `?R` ends debug and
+    // stops the tracing that a `trace off` *instruction* there would not.
+    if let Some(text) = optional_string(interp, args, 1) {
+        let request = crate::trace::parse_trace_request(&text)
+            .map_err(crate::trace::raised_invalid_trace_letter)?;
+        let merged = crate::trace::applied(before, &request);
+        interp.set_trace_mode(merged);
+    }
+    let mut answer = Vec::with_capacity(2);
+    if before.debug {
+        answer.push(b'?');
+    }
+    answer.push(before.letter);
+    Ok(interp.text_built(answer))
+}
+
+/// `ARG()`, `ARG(n)` and `ARG(n, option)`: the current routine's own
+/// argument list.
+/// ```text
+/// arg(2)        ''      an omitted position reads as the null string
+/// arg(2,'E')    0       ... and 'E'xists says so
+/// arg(2,'O')    1       'O'mitted is its complement
+/// arg(4,'E')    0       past the end is neither existing ...
+/// arg(4,'O')    1       ... nor supplied
+/// arg(2,'N')    ''      'N'ormal is `arg(n)` again
+/// ```
+/// ```text
+/// arg(1,'A')    ~size 3, ~items 2, ~dimension 1, ~hasIndex(2) 0
+/// arg(2,'A')    ~size 2, ~items 1, ~dimension 1
+/// arg(4,'A')    ~size 0,           ~dimension 0
+/// ```
+/// ```text
+/// arg('x','q')   40.12  argument 1 must be a whole number
+/// arg(,'')       40.5   argument 1 is required     (an empty option is still an option)
+/// arg(0,'')      40.14  argument 1 must be positive
+/// arg(1,'')      40.904 argument 2 must be one of AENO; found ""
+/// ```
+pub(crate) fn arg(interp: &mut Interp, name: &[u8], args: Args<'_>) -> Result<ObjRef, Failure> {
+    const VALID: &str = "AENO";
+    let position = whole_number(interp, name, args, 1)?;
+    // Read but not validated here: `optional_string` is all the C++ does
+    // with it until the switch below.
+    let option = optional_string(interp, args, 2);
+    let Some(position) = position else {
+        // No position at all: any option, empty or not, is 40.5, and
+        // otherwise this is the count.
+        if option.is_some() {
+            return Err(Raised::missing_argument(name, 1).into());
+        }
+        let count = interp.activity.call_context.arguments.len();
+        return Ok(interp.text(count.to_string().as_bytes()));
+    };
+    if position <= 0 {
+        return Err(Raised::argument_not_positive(name, 1, converted(position).as_bytes()).into());
+    }
+    let index = usize::try_from(position).unwrap_or(usize::MAX);
+    let supplied = interp
+        .activity
+        .call_context
+        .arguments
+        .get(index - 1)
+        .cloned()
+        .flatten();
+    let letter = option
+        .as_ref()
+        .map(|text| text.first().copied().unwrap_or(0).to_ascii_uppercase());
+    match letter {
+        None | Some(b'N') => Ok(match supplied {
+            Some(argument) => argument,
+            None => interp.text(b""),
+        }),
+        Some(b'E') => Ok(interp.text(if supplied.is_some() { b"1" } else { b"0" })),
+        Some(b'O') => Ok(interp.text(if supplied.is_some() { b"0" } else { b"1" })),
+        Some(b'A') => {
+            let arguments = &interp.activity.call_context.arguments;
+            let slots: Vec<Option<ObjRef>> = if index == 1 {
+                arguments.to_vec()
+            } else if index > arguments.len() {
+                Vec::new()
+            } else {
+                arguments[index - 1..].to_vec()
+            };
+            // `new_array()` leaves the shape unset, while `ArrayClass(objs,
+            // count)` fixes it when `count` is zero
+            // (`classes/ArrayClass.cpp:314`) -- and position 1 takes the
+            // second even when there are no arguments at all, because the
+            // C++ tests it before the past-the-end arm.
+            let dimensions: Option<Box<[usize]>> =
+                (index == 1 && slots.is_empty()).then(|| Box::from([0].as_slice()));
+            let object = interp.alloc_charged(
+                BehaviourId::ARRAY,
+                Body::Array {
+                    slots: slots.into(),
+                    dimensions,
+                },
+            );
+            // The array's only root: nothing else names it between here and
+            // the caller storing it.
+            interp.roots.activity_mut().push_temp(object);
+            Ok(object)
+        }
+        Some(_) => {
+            let found = option.unwrap_or_default();
+            Err(Raised::argument_not_in_list(name, 2, VALID, &found).into())
+        }
+    }
+}
+
+/// `CONDITION()` and `CONDITION(option)`: what the handler now running was
+/// entered for.
+/// ```text
+///          SYNTAX (1/0)   NOVALUE      USER via SIGNAL   USER via CALL   no condition
+///  bare    SIGNAL         SIGNAL       SIGNAL            CALL            ''
+///  A       <Array 0>      .NIL         the ADDITIONAL    same            .NIL
+///  C       SYNTAX         NOVALUE      USER UC           same            ''
+///  D       ''             ZUNSETVAR    the DESCRIPTION   same            ''
+///  E       3              ''           ''                same            ''
+///  I       SIGNAL         SIGNAL       SIGNAL            CALL            ''
+///  O       <Directory 14> <Dir 9>      <Dir 10>          same            .NIL
+///  S       OFF            OFF          OFF               DELAY           ''
+/// ```
+/// ```text
+/// before rearm  I SIGNAL  S OFF
+/// signal on syntax name sh1
+/// after  rearm  I SIGNAL  S ON
+/// signal off syntax
+/// after  off    I SIGNAL  S OFF
+/// ```
+pub(crate) fn condition(
+    interp: &mut Interp,
+    name: &[u8],
+    args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    const VALID: &str = "ACDEIORS";
+    let style = option_letter(interp, name, args, 1, VALID)?.unwrap_or(b'I');
+    // Resolved before the option is answered, because two of the options
+    // have a distinct answer when there is no condition at all and the rest
+    // share one.
+    let active: Option<TrappedCondition> = interp.activation().condition().cloned();
+    match (style, &active) {
+        // `.NIL` with nothing active, and not the null string the letters
+        // below answer -- measured, `say condition('O')` and `condition('A')`
+        // in a program that has trapped nothing both print `The NIL object`
+        // where `condition('C')` prints nothing at all.
+        (b'A', active) => {
+            let additional = active
+                .as_ref()
+                .and_then(|condition| condition.object)
+                .and_then(|object| interp.condition_entry(object, b"ADDITIONAL"));
+            Ok(additional.unwrap_or(ObjRef::NIL))
+        }
+        (b'O', active) => match active.as_ref().and_then(|condition| condition.object) {
+            Some(object) => interp.condition_copy(object),
+            None => Ok(ObjRef::NIL),
+        },
+        (b'R', _) => {
+            interp.activation_mut().replace_condition(None);
+            Ok(interp.text(b""))
+        }
+        (b'C' | b'D' | b'E' | b'I' | b'S', None) => Ok(interp.text(b"")),
+        (b'C', Some(condition)) => {
+            let name = condition.name.to_vec();
+            Ok(interp.text_built(name))
+        }
+        (b'D', Some(condition)) => match &condition.description {
+            Some(description) => {
+                let description = description.clone();
+                Ok(interp.text_built(description))
+            }
+            None => Ok(interp.text(b"")),
+        },
+        (b'E', Some(condition)) => match condition.code_sub {
+            Some(sub) => Ok(interp.text(sub.to_string().as_bytes())),
+            None => Ok(interp.text(b"")),
+        },
+        (b'I', Some(condition)) => {
+            let text: &[u8] = if condition.call { b"CALL" } else { b"SIGNAL" };
+            Ok(interp.text(text))
+        }
+        (b'S', Some(condition)) => {
+            // Live, not stored: `trapState` reads the trap table by the
+            // condition's *own* name, so an `ANY` trap that caught a
+            // `SYNTAX` condition reports `OFF` even before it is removed.
+            let text: &[u8] = match interp.activation().traps.get(&condition.name) {
+                None => b"OFF",
+                Some(trap) if trap.delayed => b"DELAY",
+                Some(_) => b"ON",
+            };
+            Ok(interp.text(text))
+        }
+        _ => {
+            let found = optional_string(interp, args, 1).unwrap_or_default();
+            Err(Raised::argument_not_in_list(name, 1, VALID, &found).into())
+        }
+    }
+}
+
+/// A converted argument as a 40.x range message spells it in `found "..."`:
+/// **the integer the conversion produced, never the value's own rendering.**
+/// ```text
+/// arg(0.0)                                found "0"          not "0.0"
+/// arg('+0')                               found "0"          not "+0"
+/// errortext(1e2)                          found "100"        not "1E2"
+/// errortext(' 100 ')                      found "100"        not " 100 "
+/// sourceline(1e1)                         ("10")             not ("1E1")
+/// numeric digits 3; errortext(999999+1)   found "1000000"    not "1.00E+6"
+/// ```
+fn converted(value: i64) -> String {
+    value.to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::dispatch;
+    use crate::error::Failure;
+    use crate::{Interp, Invocation, run_program};
+
+    /// Runs `source` as a whole program and hands back the stdout it
+    /// produced, having first insisted the run ended cleanly.
+    fn output(source: &[u8]) -> String {
+        let outcome = run_program("/t.rex", source.to_vec(), Invocation::none());
+        assert_eq!(
+            outcome.exit_code,
+            0,
+            "stderr: {}",
+            String::from_utf8_lossy(&outcome.stderr)
+        );
+        String::from_utf8(outcome.stdout).expect("ASCII output")
+    }
+
+    /// Dispatches `name` with no arguments and renders the answer.
+    fn answer(interp: &mut Interp, name: &[u8]) -> Vec<u8> {
+        let result = dispatch(interp, name, &[])
+            .expect("a builtin name")
+            .expect("the call succeeds");
+        interp.to_text(result).into_owned()
+    }
+
+    /// Runs `source` expecting it to fail, and hands back the exit code and
+    /// the whole of stderr.
+    fn failure(source: &[u8]) -> (i32, String) {
+        let outcome = run_program("/t.rex", source.to_vec(), Invocation::none());
+        (
+            outcome.exit_code,
+            String::from_utf8(outcome.stderr).expect("ASCII stderr"),
+        )
+    }
+
+    fn raised(name: &[u8], arguments: &[&[u8]]) -> (u16, u16, Vec<Vec<u8>>) {
+        let mut interp = Interp::new();
+        let values: Vec<Option<interrexx_core::ObjRef>> = arguments
+            .iter()
+            .map(|bytes| Some(interp.text(bytes)))
+            .collect();
+        let failure = dispatch(&mut interp, name, &values)
+            .expect("a builtin name")
+            .expect_err("the call fails");
+        let Failure::Raised(condition) = failure else {
+            panic!("expected Raised, got {failure:?}");
+        };
+        (condition.number, condition.sub, condition.additional)
+    }
+
+    /// The default environment is answered before any `ADDRESS` instruction
+    /// runs, and the swap is followed three deep -- one toggle cannot tell a
+    /// swap from a pop.
+    #[test]
+    fn address_reports_the_default_and_then_follows_the_swap() {
+        assert_eq!(
+            output(b"say address()\naddress envA\naddress envB\nsay address()\naddress\nsay address()\naddress\nsay address()\naddress\nsay address()\n"),
+            "sh\nENVB\nENVA\nENVB\nENVA\n"
+        );
+    }
+
+    /// The initial `TRACE` setting is `N`, and each of the nine letters
+    /// comes back as itself. `TRACE OFF` is `O` and bare `TRACE` is `N`,
+    /// which is the pair the four booleans alone cannot tell apart.
+    #[test]
+    fn trace_reports_the_setting_it_was_given_and_not_only_its_behaviour() {
+        assert_eq!(output(b"say trace()\n"), "N\n");
+        assert_eq!(output(b"trace off\nsay trace()\n"), "O\n");
+        assert_eq!(output(b"trace off\ntrace\nsay trace()\n"), "N\n");
+        assert_eq!(output(b"trace commands\nsay trace()\n"), "C\n");
+        assert_eq!(output(b"trace errors\nsay trace()\n"), "E\n");
+        assert_eq!(output(b"trace failure\nsay trace()\n"), "F\n");
+        assert_eq!(output(b"trace labels\nsay trace('O')\n"), "L\n");
+        // The setter answers the *old* setting and installs the new one.
+        assert_eq!(
+            output(b"trace off\nsay trace('L')\nsay trace('O')\n"),
+            "O\nL\n"
+        );
+    }
+
+    /// `DIGITS`/`FUZZ`/`FORM` read the running activation's own settings,
+    /// including after a `NUMERIC` instruction has moved them.
+    #[test]
+    fn the_numeric_settings_are_read_back_after_they_change() {
+        assert_eq!(
+            output(b"say digits() fuzz() form()\nnumeric digits 12\nnumeric fuzz 3\nnumeric form engineering\nsay digits() fuzz() form()\n"),
+            "9 0 SCIENTIFIC\n12 3 ENGINEERING\n"
+        );
+    }
+
+    /// A callee's `NUMERIC` does not leak back, so the same builtin answers
+    /// differently either side of the call. Without this the three could be
+    /// reading one interpreter-wide setting and every single-frame test
+    /// would still pass.
+    #[test]
+    fn the_numeric_settings_are_the_running_activations_own() {
+        assert_eq!(
+            output(b"numeric digits 12\ncall sub\nsay digits()\nexit\nsub:\nnumeric digits 4\nsay digits()\nreturn\n"),
+            "4\n12\n"
+        );
+    }
+
+    /// `QUEUED` counts what `PUSH`/`QUEUE` wrote and `PULL` has not taken.
+    #[test]
+    fn queued_counts_the_lines_still_waiting() {
+        assert_eq!(
+            output(b"say queued()\nqueue 'a'\npush 'b'\nsay queued()\npull v\nsay queued() v\n"),
+            "0\n2\n1 B\n"
+        );
+    }
+
+    /// `GC()` answers 0 and `GC('Force')` answers 1 after really running a
+    /// collection -- the count of collections performed is what separates
+    /// "returned 1" from "collected".
+    #[test]
+    fn gc_forces_a_collection_only_when_asked() {
+        let mut interp = Interp::new();
+        let before = interp.heap.collections_performed();
+        assert_eq!(answer(&mut interp, b"GC"), b"0");
+        assert_eq!(
+            interp.heap.collections_performed(),
+            before,
+            "GC() must not collect"
+        );
+        let forced = interp.text(b"Force");
+        let result = dispatch(&mut interp, b"GC", &[Some(forced)])
+            .expect("a builtin name")
+            .expect("the call succeeds");
+        assert_eq!(interp.to_text(result).into_owned(), b"1");
+        assert!(
+            interp.heap.collections_performed() > before,
+            "GC('Force') must collect"
+        );
+        // Only the first byte is examined, and case-insensitively.
+        let spelling = interp.text(b"fnord");
+        let result = dispatch(&mut interp, b"GC", &[Some(spelling)])
+            .expect("a builtin name")
+            .expect("the call succeeds");
+        assert_eq!(interp.to_text(result).into_owned(), b"1");
+    }
+
+    /// `ERRORTEXT` answers the major message inside the range, the null
+    /// string for a number the catalogue has no entry for, and 40.903 either
+    /// side of it.
+    #[test]
+    fn errortext_answers_the_major_message_and_refuses_the_range_ends() {
+        assert_eq!(
+            output(b"say errortext(5)\nsay '['errortext(0)']'\nsay errortext(99)\n"),
+            "System resources exhausted.\n[]\nTranslation error.\n"
+        );
+        assert_eq!(
+            raised(b"ERRORTEXT", &[b"-1"]),
+            (
+                40,
+                903,
+                vec![b"ERRORTEXT".to_vec(), b"1".to_vec(), b"-1".to_vec()]
+            )
+        );
+        assert_eq!(
+            raised(b"ERRORTEXT", &[b"100"]),
+            (
+                40,
+                903,
+                vec![b"ERRORTEXT".to_vec(), b"1".to_vec(), b"100".to_vec()]
+            )
+        );
+    }
+
+    /// `SOURCELINE` counts the program's own lines and hands one back
+    /// verbatim; the two out-of-range failures are different sub-codes.
+    #[test]
+    fn sourceline_reads_the_programs_own_text() {
+        assert_eq!(
+            output(b"say sourceline()\nsay sourceline(1)\n"),
+            "2\nsay sourceline()\n"
+        );
+        // The two failures are different sub-codes with different
+        // substitutions, and the whole message is what the oracle is
+        // compared against -- both transcripts below were measured on it,
+        // against a one-line program, at rc 216.
+        assert_eq!(
+            failure(b"say sourceline(0)\n"),
+            (
+                216,
+                concat!(
+                    "     1 *-* say sourceline(0)\n",
+                    "Error 40 running /t.rex line 1:  Incorrect call to routine.\n",
+                    "Error 40.14:  SOURCELINE argument 1 must be positive; found \"0\".\n",
+                )
+                .to_string()
+            )
+        );
+        assert_eq!(
+            failure(b"say sourceline(99)\n"),
+            (
+                216,
+                concat!(
+                    "     1 *-* say sourceline(99)\n",
+                    "Error 40 running /t.rex line 1:  Incorrect call to routine.\n",
+                    "Error 40.34:  SOURCELINE argument 1 (\"99\") must be less than or equal to the number of lines in the program (1).\n",
+                )
+                .to_string()
+            )
+        );
+    }
+
+    /// `ARG`'s four options over a call with an interior omission, plus the
+    /// two out-of-range answers a position past the end gives.
+    #[test]
+    fn arg_reads_the_calls_own_positions_with_omissions_in_place() {
+        assert_eq!(
+            output(
+                b"call sub 'p1',,'p3'\nexit\nsub:\nsay arg()\nsay '['arg(1)']['arg(2)']['arg(3)']['arg(4)']'\nsay arg(1,'E') arg(2,'E') arg(3,'E') arg(4,'E')\nsay arg(1,'O') arg(2,'O') arg(3,'O') arg(4,'O')\nsay '['arg(2,'N')']'\nsay arg(1,'exists')\nreturn\n"
+            ),
+            "3\n[p1][][p3][]\n1 0 1 0\n0 1 0 1\n[]\n1\n"
+        );
+    }
+
+    /// `ARG(n,'A')` over the same call: the hole survives into the array,
+    /// and a position past the end answers a shapeless empty one.
+    #[test]
+    fn arg_option_a_copies_the_list_holes_and_all() {
+        assert_eq!(
+            output(
+                b"call sub 'p1',,'p3'\nexit\nsub:\na = arg(1,'A')\nsay a~size a~items a~dimension a~hasIndex(2) '['a[1]']['a[3]']'\nb = arg(2,'A')\nsay b~size b~items b~dimension\nc = arg(3,'A')\nsay c~size c~items c~dimension\nd = arg(4,'A')\nsay d~size d~items d~dimension d~class\ne = arg(99,'A')\nsay e~size e~items e~dimension\nreturn\n"
+            ),
+            "3 2 1 0 [p1][p3]\n2 1 1\n1 1 1\n0 0 0 The Array class\n0 0 0\n"
+        );
+    }
+
+    /// The adjacent success for the arm above: with no arguments at all,
+    /// position 1 still answers a shaped array where position 2 does not.
+    #[test]
+    fn arg_option_a_shapes_position_one_even_with_no_arguments() {
+        assert_eq!(
+            output(
+                b"call sub\nexit\nsub:\na = arg(1,'A')\nsay a~size a~items a~dimension\nb = arg(2,'A')\nsay b~size b~items b~dimension\nreturn\n"
+            ),
+            "0 0 1\n0 0 0\n"
+        );
+    }
+
+    /// An option with no position is the missing-argument error, not the
+    /// bad-option one -- the C++ checks for the position first.
+    #[test]
+    fn an_arg_option_without_a_position_is_a_missing_argument() {
+        let mut interp = Interp::new();
+        let option = interp.text(b"E");
+        let failure = dispatch(&mut interp, b"ARG", &[None, Some(option)])
+            .expect("a builtin name")
+            .expect_err("argument 1 is required");
+        let Failure::Raised(missing) = failure else {
+            panic!("expected Raised, got {failure:?}");
+        };
+        assert_eq!((missing.number, missing.sub), (40, 5));
+        assert_eq!(missing.additional, vec![b"ARG".to_vec(), b"1".to_vec()]);
+        assert_eq!(
+            raised(b"ARG", &[b"0"]),
+            (40, 14, vec![b"ARG".to_vec(), b"1".to_vec(), b"0".to_vec()])
+        );
+        assert_eq!(
+            raised(b"ARG", &[b"1", b"x"]),
+            (
+                40,
+                904,
+                vec![
+                    b"ARG".to_vec(),
+                    b"2".to_vec(),
+                    b"AENO".to_vec(),
+                    b"x".to_vec()
+                ]
+            )
+        );
+    }
+
+    /// The order of `ARG`'s three checks, one probe per adjacent pair.
+    #[test]
+    fn args_three_checks_run_in_the_oracles_order() {
+        // A bad *type* in position 1 beats everything after it.
+        assert_eq!(
+            raised(b"ARG", &[b"x", b"q"]),
+            (40, 12, vec![b"ARG".to_vec(), b"1".to_vec(), b"x".to_vec()])
+        );
+        // A bad *range* in position 1 beats the option switch ...
+        assert_eq!(
+            raised(b"ARG", &[b"0", b""]),
+            (40, 14, vec![b"ARG".to_vec(), b"1".to_vec(), b"0".to_vec()])
+        );
+        // ... and with the position good, that same empty option is the
+        // switch's own 40.904. Same two arguments, one changed, opposite
+        // answers: this is the pair, not two independent checks.
+        assert_eq!(
+            raised(b"ARG", &[b"1", b""]),
+            (
+                40,
+                904,
+                vec![
+                    b"ARG".to_vec(),
+                    b"2".to_vec(),
+                    b"AENO".to_vec(),
+                    b"".to_vec()
+                ]
+            )
+        );
+        // With no position at all, an option -- empty or not -- is 40.5.
+        let mut interp = Interp::new();
+        for spelling in [b"".as_slice(), b"x".as_slice()] {
+            let option = interp.text(spelling);
+            let failure = dispatch(&mut interp, b"ARG", &[None, Some(option)])
+                .expect("a builtin name")
+                .expect_err("argument 1 is required");
+            let Failure::Raised(missing) = failure else {
+                panic!("expected Raised, got {failure:?}");
+            };
+            assert_eq!((missing.number, missing.sub), (40, 5));
+        }
+    }
+
+    /// A range check reports the integer the conversion produced, and 40.12
+    /// -- raised when that conversion fails -- reports the value's own
+    /// rendering. [`converted`] has the oracle transcripts.
+    #[test]
+    fn a_range_message_substitutes_the_converted_integer() {
+        assert_eq!(
+            raised(b"ARG", &[b"0.0"]),
+            (40, 14, vec![b"ARG".to_vec(), b"1".to_vec(), b"0".to_vec()])
+        );
+        assert_eq!(
+            raised(b"ARG", &[b"+0"]),
+            (40, 14, vec![b"ARG".to_vec(), b"1".to_vec(), b"0".to_vec()])
+        );
+        assert_eq!(
+            raised(b"ARG", &[b"-1.0"]),
+            (40, 14, vec![b"ARG".to_vec(), b"1".to_vec(), b"-1".to_vec()])
+        );
+        for spelling in [b"1e2".as_slice(), b" 100 ".as_slice(), b"100.0".as_slice()] {
+            assert_eq!(
+                raised(b"ERRORTEXT", &[spelling]),
+                (
+                    40,
+                    903,
+                    vec![b"ERRORTEXT".to_vec(), b"1".to_vec(), b"100".to_vec()]
+                ),
+                "{}",
+                String::from_utf8_lossy(spelling)
+            );
+        }
+        // The opposite half, and the reason this is a split rather than one
+        // rule: the conversion failed here, so there is no integer to
+        // report and all twenty digits come back verbatim.
+        assert_eq!(
+            raised(b"ERRORTEXT", &[b"99999999999999999999"]),
+            (
+                40,
+                12,
+                vec![
+                    b"ERRORTEXT".to_vec(),
+                    b"1".to_vec(),
+                    b"99999999999999999999".to_vec()
+                ]
+            )
+        );
+        // `SOURCELINE` needs a running program for its line count, so both
+        // of its range messages are asserted whole.
+        let (code, stderr) = failure(b"say sourceline(1e1)\n");
+        assert_eq!(code, 216, "{stderr}");
+        assert!(
+            stderr.contains(
+                "Error 40.34:  SOURCELINE argument 1 (\"10\") must be less than or \
+                             equal to the number of lines in the program (1)."
+            ),
+            "{stderr}"
+        );
+        let (code, stderr) = failure(b"say sourceline(0.0)\n");
+        assert_eq!(code, 216, "{stderr}");
+        assert!(
+            stderr.contains("Error 40.14:  SOURCELINE argument 1 must be positive; found \"0\"."),
+            "{stderr}"
+        );
+    }
+
+    /// The D15 crossing: the `NUMERIC DIGITS` a value was *rendered* under
+    /// against the integer its conversion produces.
+    #[test]
+    fn a_range_message_ignores_the_digits_the_value_was_rendered_under() {
+        for (source, expected) in [
+            (
+                b"numeric digits 3; say errortext(999999+1)\n".as_slice(),
+                "Error 40.903:  ERRORTEXT argument 1 must be in the range 0-99; found \"1000000\".",
+            ),
+            (
+                b"numeric digits 3; z = 999999+1; numeric digits 9; say errortext(z)\n".as_slice(),
+                "Error 40.903:  ERRORTEXT argument 1 must be in the range 0-99; found \"1000000\".",
+            ),
+            (
+                b"numeric digits 3; say arg(-(999999+1))\n".as_slice(),
+                "Error 40.14:  ARG argument 1 must be positive; found \"-1000000\".",
+            ),
+            (
+                b"numeric digits 3; say sourceline(999999+1)\n".as_slice(),
+                "Error 40.34:  SOURCELINE argument 1 (\"1000000\") must be less than or equal to \
+                 the number of lines in the program (1).",
+            ),
+            // And the 40.12 half under the same crossing, which does read
+            // the captured rendering: `1/3` at `DIGITS 3` is `0.333`, and
+            // stays `0.333` after `DIGITS 9`.
+            (
+                b"numeric digits 3; z = 1/3; numeric digits 9; say errortext(z)\n".as_slice(),
+                "Error 40.12:  ERRORTEXT argument 1 must be a whole number; found \"0.333\".",
+            ),
+        ] {
+            let (code, stderr) = failure(source);
+            assert_eq!(code, 216, "{stderr}");
+            assert!(
+                stderr.contains(expected),
+                "expected {expected:?} in:\n{stderr}"
+            );
+        }
+    }
+
+    /// `TRACE(setting)` and the `TRACE` instruction disagree about a digit
+    /// string, and the disagreement is the oracle's own.
+    #[test]
+    fn a_digit_string_is_a_bad_letter_to_the_builtin_and_a_skip_count_to_the_instruction() {
+        let (code, stderr) = failure(b"say trace('5')\n");
+        assert_eq!(code, 232, "{stderr}");
+        assert!(
+            stderr.contains(
+                "Error 24.1:  TRACE request letter must be one of \"ACEFILNOR\"; \
+                             found \"5\"."
+            ),
+            "{stderr}"
+        );
+        let (code, stderr) = failure(b"trace value 5\n");
+        assert_eq!(code, 232, "{stderr}");
+        assert!(stderr.contains("Error 24.901:"), "{stderr}");
+        // The rejected byte is the first one, not the whole string.
+        let (_, stderr) = failure(b"say trace('-3')\n");
+        assert!(stderr.contains("found \"-\"."), "{stderr}");
+    }
+
+    /// The option letters `CONDITION` answers, read from inside a live
+    /// `SIGNAL ON SYNTAX` handler. Outside one they are all empty, so a stub
+    /// returning `''` passes any test taken from the top level.
+    #[test]
+    fn condition_answers_a_syntax_handler_from_inside_it() {
+        assert_eq!(
+            output(
+                b"signal on syntax name h\nsay 1/0\nexit\nh:\nsay '['condition()']['condition('C')']['condition('D')']['condition('E')']['condition('I')']['condition('S')']'\n"
+            ),
+            "[SIGNAL][SYNTAX][][3][SIGNAL][OFF]\n"
+        );
+    }
+
+    /// Outside a handler every string option is the null string, and the
+    /// bare form is `I` rather than `C`.
+    #[test]
+    fn condition_is_empty_outside_a_handler_and_defaults_to_the_instruction() {
+        assert_eq!(
+            output(b"say '['condition()']['condition('C')']['condition('I')']['condition('S')']['condition('E')']['condition('D')']'\n"),
+            "[][][][][][]\n"
+        );
+    }
+
+    /// `I` and `S` are not one bit: re-arming the trap inside its own
+    /// handler moves `S` and leaves `I` alone. Turning it off again moves
+    /// `S` back, which is what separates "reads the table" from "reports a
+    /// second stored constant".
+    #[test]
+    fn the_instruction_is_stored_and_the_state_is_looked_up_live() {
+        assert_eq!(
+            output(
+                b"signal on syntax name h\nsay 1/0\nexit\nh:\nsay condition('I') condition('S')\nsignal on syntax name h\nsay condition('I') condition('S')\nsignal off syntax\nsay condition('I') condition('S')\n"
+            ),
+            "SIGNAL OFF\nSIGNAL ON\nSIGNAL OFF\n"
+        );
+    }
+
+    /// A `CALL ON` handler reports `CALL` and `DELAY`, and the condition
+    /// does not survive its return.
+    #[test]
+    fn a_call_handler_reports_call_and_delay_and_leaves_nothing_behind() {
+        assert_eq!(
+            output(
+                b"call on user uc name uh\ncall r1\nsay '['condition()']['condition('C')']'\nexit\nuh:\nsay condition('I') condition('S') condition('C')\nreturn\nr1:\nraise user uc description 'cd' return 1\n"
+            ),
+            "CALL DELAY USER UC\n[][]\n"
+        );
+    }
+
+    /// `R` clears the running activation's copy and nobody else's.
+    #[test]
+    fn a_reset_dies_with_the_activation_that_asked_for_it() {
+        assert_eq!(
+            output(
+                b"signal on syntax name h\nsay 1/0\nexit\nh:\ncall clearer\nsay '['condition('C')']'\nexit\nclearer:\nsay '['condition('C')']['condition('R')']['condition('C')']'\nreturn\n"
+            ),
+            "[SYNTAX][][]\n[SYNTAX]\n"
+        );
+    }
+
+    /// `RAISE ... DESCRIPTION` reaches `CONDITION('D')`, and a raise without
+    /// one answers the null string rather than the previous raise's value.
+    #[test]
+    fn a_description_survives_as_far_as_the_handler() {
+        assert_eq!(
+            output(
+                b"signal on syntax name h\ncall r1\nexit\nh:\nsay '['condition('D')']['condition('E')']'\nexit\nr1:\nraise syntax 40.4 description 'zd' return 1\n"
+            ),
+            "[zd][4]\n"
+        );
+    }
+
+    /// The bad-option error, and the null string counted as a bad option
+    /// rather than as an omitted one.
+    #[test]
+    fn condition_rejects_an_unknown_option_and_the_null_string() {
+        for (source, found) in [
+            (b"say condition('Z')\n".as_slice(), "Z"),
+            (b"say condition('')\n".as_slice(), ""),
+        ] {
+            let (code, stderr) = failure(source);
+            assert_eq!(code, 216);
+            let echo = String::from_utf8_lossy(&source[..source.len() - 1]).into_owned();
+            assert_eq!(
+                stderr,
+                format!(
+                    "     1 *-* {echo}\n\
+                     Error 40 running /t.rex line 1:  Incorrect call to routine.\n\
+                     Error 40.904:  CONDITION argument 1 must be one of ACDEIORS; found \"{found}\".\n"
+                )
+            );
+        }
+    }
+
+    /// The two options whose answer is an object answer one. With nothing
+    /// trapped both are `.NIL` -- **not** the null string the letter options
+    /// beside them give, measured -- and inside a handler `O` is the
+    /// condition's directory and `A` its `ADDITIONAL`.
+    #[test]
+    fn the_object_valued_options_answer_their_objects() {
+        assert_eq!(output(b"say condition('A')\n"), "The NIL object\n");
+        assert_eq!(output(b"say condition('O')\n"), "The NIL object\n");
+        let trapped = b"signal on syntax name h\nsay 1/0\nexit\nh:\nsay condition('O')~class~id condition('A')~class~id\n";
+        assert_eq!(output(trapped.as_slice()), "Directory Array\n");
+    }
+
+    /// `CONDITION('D')` for a `NOVALUE` is the variable's own derived name.
+    /// It refused until the condition object needed it, and `novalue_raised`
+    /// had the name in hand the whole time -- it builds exactly this for its
+    /// `::OPTIONS NOVALUE SYNTAX` branch.
+    #[test]
+    fn novalues_description_is_the_variables_own_name() {
+        assert_eq!(
+            output(b"signal on novalue name h\nsay zunsetvar\nexit\nh:\nsay condition('D')\n"),
+            "ZUNSETVAR\n"
+        );
+        // The adjacent success: the same option, the same handler shape, a
+        // condition whose description this crate does carry.
+        assert_eq!(
+            output(b"signal on syntax name h\nsay 1/0\nexit\nh:\nsay '['condition('D')']'\n"),
+            "[]\n"
+        );
+    }
+}

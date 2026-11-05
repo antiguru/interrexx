@@ -1,0 +1,2290 @@
+use super::*;
+
+/// The caller a resolution asked for outside any send is asking as:
+/// neither a receiver nor a package, which is the state
+/// `RexxObject::checkPrivate` and `RexxObject::checkPackage` each refuse
+/// (`classes/ObjectClass.cpp:622`-`:626`, `:665`-`:669`).
+fn no_caller() -> Caller {
+    Caller {
+        receiver: None,
+        package: CallerPackage::NoActivation,
+    }
+}
+
+/// The object model is built on first use and not in `Interp::new`.
+#[test]
+fn the_object_model_is_built_on_first_use() {
+    let mut interp = Interp::new();
+    assert!(interp.object_model.is_none());
+    let _ = interp.classes();
+    assert!(interp.object_model.is_some());
+}
+
+/// A program that neither declares a class nor sends a message never
+/// touches the object model.
+#[test]
+fn a_program_with_no_send_and_no_class_never_builds_the_object_model() {
+    let mut interp = Interp::new();
+    let program = interrexx_parse::parse_program(b"say 1 + 1\n".to_vec()).expect("it parses");
+    let program = std::rc::Rc::new(program);
+    let id = interp.programs.insert(std::rc::Rc::clone(&program));
+    interp
+        .install_directives(id, &program)
+        .expect("no directives to install");
+    assert!(interp.object_model.is_none());
+}
+
+/// An ordinary resolution answers the class the definition came from,
+/// which is not always the receiver's own class: `LENGTH` is `String`'s
+/// and `ISNIL` is `Object`'s, and one string receiver reaches both.
+#[test]
+fn an_ordinary_resolution_answers_the_defining_scope() {
+    let mut interp = Interp::new();
+    let receiver = interp.text(b"abc");
+    let string = interp.classes().lookup("String").expect("String is native");
+    let object = interp.classes().lookup("Object").expect("Object is native");
+
+    let own = interp
+        .resolve(receiver, b"LENGTH", None, no_caller())
+        .expect("String answers LENGTH");
+    assert_eq!(own.scope, string);
+    let inherited = interp
+        .resolve(receiver, b"ISNIL", None, no_caller())
+        .expect("Object's ISNIL reaches a String receiver");
+    assert_eq!(inherited.scope, object);
+    assert_eq!(
+        interp
+            .resolve(receiver, b"NOSUCHMETHOD", None, no_caller())
+            .err(),
+        Some(Miss::NoMethod)
+    );
+}
+
+/// **The start-scope argument, at the seam rather than through a
+/// program.**
+#[test]
+fn a_start_scope_hides_a_method_defined_after_it_and_not_one_defined_before() {
+    let mut interp = Interp::new();
+    let receiver = interp.text(b"abc");
+    let string = interp.classes().lookup("String").expect("String is native");
+    let object = interp.classes().lookup("Object").expect("Object is native");
+
+    assert!(
+        interp
+            .resolve(receiver, b"ISNIL", Some(object), no_caller())
+            .is_ok()
+    );
+    assert!(
+        interp
+            .resolve(receiver, b"LENGTH", Some(object), no_caller())
+            .is_err()
+    );
+    assert!(
+        interp
+            .resolve(receiver, b"ISNIL", Some(string), no_caller())
+            .is_ok()
+    );
+    assert!(
+        interp
+            .resolve(receiver, b"LENGTH", Some(string), no_caller())
+            .is_ok()
+    );
+}
+
+/// A name the class answers with no implementation here is **loud**, and
+/// a name it does not answer is the oracle's own 97.1. The two are
+/// different answers and the pair is what keeps them apart: a build that
+/// raised for both would let a program expecting a working `String`
+/// method pass against a gap.
+#[test]
+fn an_unimplemented_method_is_loud_where_an_unknown_one_is_a_condition() {
+    let mut interp = Interp::new();
+    // A `Method` object: every name `String` answers now has an
+    // implementation, `COPY` last.
+    let method = interp.method_class();
+    let receiver = interp.native_instance(method);
+    let answered = interp.classes().instance_method_names(method);
+    // **The candidate is found in the registry and only then sent.**
+    // Sending every name until one refuses used to do it, and that stopped
+    // working the moment a numeric method landed early in the order: a
+    // body that reads `NUMERIC DIGITS` wants a live activation, and this
+    // test has none, so the search panicked before it reached a loud name.
+    let rows: Vec<&str> = NATIVE_METHODS
+        .iter()
+        .chain(string::NATIVE_METHODS)
+        .chain(hash::NATIVE_METHODS)
+        .chain(collection::list::NATIVE_METHODS)
+        .chain(collection::queue::NATIVE_METHODS)
+        .chain(array::sort::NATIVE_METHODS)
+        .chain(array::surface::NATIVE_METHODS)
+        .chain(collection::supplier::NATIVE_METHODS)
+        .filter(|(class, ..)| *class == "Method")
+        .map(|(_, method, ..)| *method)
+        .collect();
+    let mut unimplemented = None;
+    for name in &answered {
+        if rows.contains(&name.as_str()) {
+            continue;
+        }
+        if matches!(
+            interp.send_message(receiver, name.as_bytes(), None, &[], no_caller()),
+            Err(Failure::Loud(_))
+        ) {
+            unimplemented = Some(name.clone());
+            break;
+        }
+    }
+    assert!(
+        unimplemented.is_some(),
+        "every name .Method's behaviour answers now has an implementation, so this test \
+         has no subject left and its pair has to be rebuilt on something else"
+    );
+    assert!(matches!(
+        interp.send_message(receiver, b"NOSUCHMETHOD", None, &[], no_caller()),
+        Err(Failure::Raised(_))
+    ));
+}
+
+/// **A class identity used as a receiver resolves against that class's
+/// own class behaviour, never through the arena.**
+#[test]
+fn a_class_identity_used_as_a_receiver_answers_from_the_class_side() {
+    let mut interp = Interp::new();
+    // Each is longer than a handle can hold, so each really takes a slot
+    // instead of travelling inline.
+    let mut last = ObjRef::NIL;
+    for text in [
+        &b"first-occupant!"[..],
+        b"second-occupant!",
+        b"third-occupant!!!",
+    ] {
+        last = interp.text(text);
+        assert!(
+            interp.heap.get(last).is_some(),
+            "the occupant went inline instead of into a slot"
+        );
+    }
+    let Decoded::Heap { slot, .. } = last.decode() else {
+        panic!("an arena handle")
+    };
+    assert_eq!(
+        slot, 2,
+        "this test rests on the third occupant holding the slot .String's identity would \
+         have been equal to; the arena's allocation order moved"
+    );
+
+    let class = interp.classes().lookup("String").expect("String is native");
+    assert!(matches!(
+        interp.send_message(class, b"LENGTH", None, &[], no_caller()),
+        Err(Failure::Raised(_))
+    ));
+    let name = interp.text(b"LENGTH");
+    assert_eq!(
+        interp
+            .send_message(class, b"HASMETHOD", None, &[Some(name)], no_caller())
+            .expect("Object's HASMETHOD reaches a class object"),
+        Some(interp.counted(0)),
+        "a class object was asked about its instances' behaviour instead of its own"
+    );
+}
+
+/// A `.Pointer` over `address`, minted the way the API's `NewPointer`
+/// does: nothing in a Rexx program can build one, which is why this
+/// stands where a source program would.
+fn pointer(interp: &mut Interp, address: usize) -> ObjRef {
+    let class = interp
+        .classes()
+        .lookup("Pointer")
+        .expect("Pointer is a native class");
+    let behaviour = interp.classes().instance_behaviour_handle(class);
+    let body = Body::pointer(class, behaviour, std::ptr::without_provenance_mut(address));
+    let object = interp.alloc_with(interrexx_core::BehaviourId::OBJECT, body);
+    interp.roots.activity_mut().push_temp(object);
+    object
+}
+
+/// A `.Pointer` answers its address, its class and its own name, all
+/// measured against the oracle through a `CSELF` an
+/// `expose`-ing method handed back.
+#[test]
+fn a_pointer_renders_as_its_address_and_names_its_class() {
+    let mut interp = Interp::new();
+    let object = pointer(&mut interp, 0x55f0_6283_2410);
+    assert_eq!(interp.to_text(object).into_owned(), b"0x55f062832410");
+    assert_eq!(interp.text_len(object), 14);
+
+    let class = interp
+        .send_message(object, b"CLASS", None, &[], no_caller())
+        .expect("a Pointer answers CLASS")
+        .expect("a class");
+    let id = interp
+        .send_message(class, b"ID", None, &[], no_caller())
+        .expect("a class answers ID")
+        .expect("an id");
+    assert_eq!(interp.to_text(id).into_owned(), b"Pointer");
+    let named = interp
+        .send_message(object, b"OBJECTNAME", None, &[], no_caller())
+        .expect("a Pointer answers OBJECTNAME")
+        .expect("a name");
+    assert_eq!(interp.to_text(named).into_owned(), b"a Pointer");
+    let rendered = interp
+        .send_message(object, b"STRING", None, &[], no_caller())
+        .expect("a Pointer answers STRING")
+        .expect("a string");
+    assert_eq!(interp.to_text(rendered).into_owned(), b"0x55f062832410");
+
+    // `~objectName=` renames the object without touching its string
+    // value, which is the arm a buffer is in too.
+    let renamed = interp.text(b"a name of its own");
+    interp
+        .send_message(object, b"OBJECTNAME=", None, &[Some(renamed)], no_caller())
+        .expect("a Pointer answers OBJECTNAME=");
+    assert_eq!(interp.to_text(object).into_owned(), b"0x55f062832410");
+}
+
+/// A null address renders as `0x0` and answers `~isNull`, where any other
+/// address does not (`interpreter/runtime/Numerics.cpp:882`,
+/// `classes/PointerClass.cpp:163`).
+#[test]
+fn a_null_pointer_renders_as_zero_and_answers_is_null() {
+    let mut interp = Interp::new();
+    let null = pointer(&mut interp, 0);
+    let held = pointer(&mut interp, 0x1234);
+    assert_eq!(interp.to_text(null).into_owned(), b"0x0");
+    for (object, expected) in [(null, 1usize), (held, 0)] {
+        let answer = interp
+            .send_message(object, b"ISNULL", None, &[], no_caller())
+            .expect("a Pointer answers ISNULL");
+        assert_eq!(answer, Some(interp.counted(expected)));
+    }
+}
+
+/// Every comparison spelling: two `.Pointer`s compare on their addresses
+/// and anything else compares unequal.
+#[test]
+fn a_pointer_compares_on_its_address_and_nothing_else() {
+    let mut interp = Interp::new();
+    let object = pointer(&mut interp, 0x1234);
+    let same = pointer(&mut interp, 0x1234);
+    let other = pointer(&mut interp, 0x5678);
+    let string = interp.text(b"abc");
+    let yes = interp.counted(1);
+    let no = interp.counted(0);
+
+    for name in [b"=".as_slice(), b"=="] {
+        for (against, expected) in [(object, yes), (same, yes), (other, no), (string, no)] {
+            let answer = interp
+                .send_message(object, name, None, &[Some(against)], no_caller())
+                .expect("a Pointer answers its comparisons");
+            assert_eq!(answer, Some(expected), "{}", String::from_utf8_lossy(name));
+        }
+    }
+    for name in [b"\\=".as_slice(), b"\\=="] {
+        for (against, expected) in [(object, no), (same, no), (other, yes), (string, yes)] {
+            let answer = interp
+                .send_message(object, name, None, &[Some(against)], no_caller())
+                .expect("a Pointer answers its comparisons");
+            assert_eq!(answer, Some(expected), "{}", String::from_utf8_lossy(name));
+        }
+    }
+}
+
+/// A comparison with no argument is 93.903, measured against the oracle
+/// as `p~'=='()`.
+#[test]
+fn a_pointer_comparison_needs_its_argument() {
+    let mut interp = Interp::new();
+    let object = pointer(&mut interp, 0x1234);
+    let outcome = interp.send_message(object, b"==", None, &[], no_caller());
+    let Err(Failure::Raised(raised)) = outcome else {
+        panic!("a comparison with no argument answered instead of raising");
+    };
+    assert_eq!((raised.number, raised.sub), (93, 903));
+}
+
+/// Runs `source` and hands back `(exit code, stdout, stderr)`.
+fn run_source(source: &str) -> (i32, String, String) {
+    let outcome = crate::run_program(
+        "/t.rex",
+        source.as_bytes().to_vec(),
+        crate::Invocation::none(),
+    );
+    (
+        outcome.exit_code,
+        String::from_utf8_lossy(&outcome.stdout).into_owned(),
+        String::from_utf8_lossy(&outcome.stderr).into_owned(),
+    )
+}
+
+/// `Array~append`, `items`, `last` and `List~append`, and a SYNTAX unwind
+/// through deep frames (which appends each frame to its TRACEBACK and
+/// STACKFRAMES lists), copy a bounded number of slots per operation: twice
+/// the work copies about twice the slots, where copying the whole collection
+/// on each append copies about four times as many.
+#[test]
+fn appends_and_reads_copy_slots_linearly() {
+    let copied = |n: usize| {
+        let program = format!(
+            "a = .array~new\nl = .list~new\n\
+             do j = 1 to {n}\n  a~append(j)\n  l~append(j)\n  m = a~items a~last\nend\n\
+             say a~items a~last a[{n}] l~items l~lastItem\n\
+             signal on syntax name h\nsay f(0)\nexit\n\
+             h: say 'h' condition('O')~traceback~items\nexit\n\
+             ::routine f\n  use arg n\n  if n = {depth} then exit\n  return f(n + 1)\n",
+            depth = n / 4
+        );
+        std::thread::Builder::new()
+            .stack_size(crate::INTERPRETER_STACK_BYTES)
+            .spawn(move || {
+                let outcome = crate::execute_on(
+                    b"/t.rex",
+                    program.into_bytes(),
+                    false,
+                    crate::Invocation::none(),
+                    Some(crate::INTERPRETER_STACK_BYTES),
+                );
+                (
+                    String::from_utf8_lossy(&outcome.stdout).into_owned(),
+                    super::array::slots_copied(),
+                )
+            })
+            .expect("the interpreter thread")
+            .join()
+            .expect("the run did not panic")
+    };
+    let (once, small) = copied(2000);
+    assert_eq!(once, "2000 2000 2000 2000 2000\nh 501\n");
+    let (twice, large) = copied(4000);
+    assert_eq!(twice, "4000 4000 4000 4000 4000\nh 1001\n");
+    assert!(
+        large * 10 < small * 25,
+        "{small} slots copied at 2000, {large} at 4000"
+    );
+}
+
+/// One `Array~append` shape: `setup` builds `s` (`2N` standing for twice
+/// `n`), then `n` appends, then one more and the array's readings, which
+/// must be the oracle's `expected(n)` (measured at 2,000 and 200,000, twice
+/// each). A release build runs 200,000 appends and must take under 5 s,
+/// where the oracle takes under 0.1 s and an append that scans the trailing
+/// empty slots takes over 5 s at 100,000.
+#[expect(clippy::disallowed_methods, reason = "the bound is on real time")]
+fn append_shape(setup: &str, expected: impl Fn(usize) -> String) {
+    let n = if cfg!(debug_assertions) {
+        2_000
+    } else {
+        200_000
+    };
+    let setup = setup.replace("2N", &(2 * n).to_string());
+    let program = format!(
+        "{setup}\ndo i = 1 to {n}; s~append(i); end\n\
+         say s~append(0) s~items s~last s~lastItem s~size s~dimension s~first s~firstItem\n"
+    );
+    let started = std::time::Instant::now();
+    let (rc, stdout, stderr) = run_source(&program);
+    let took = started.elapsed();
+    assert_eq!((rc, stdout, stderr), (0, expected(n) + "\n", String::new()));
+    if !cfg!(debug_assertions) {
+        assert!(took.as_secs() < 5, "{n} appends took {took:?}");
+    }
+}
+
+#[test]
+fn append_to_a_dense_array() {
+    append_shape("s = .array~new", |n| {
+        format!("{0} {0} {0} 0 {0} 1 1 1", n + 1)
+    });
+}
+
+#[test]
+fn append_after_a_sparse_put_and_empty() {
+    append_shape("s = .array~new; s[2N] = 1; s~empty", |n| {
+        format!("{0} {0} {0} 0 {1} 1 1 1", n + 1, 2 * n)
+    });
+}
+
+#[test]
+fn append_after_a_sized_new_and_empty() {
+    append_shape("s = .array~new(2N); s~empty", |n| {
+        format!("{0} {0} {0} 0 {1} 1 1 1", n + 1, 2 * n)
+    });
+}
+
+#[test]
+fn append_after_a_sparse_put() {
+    append_shape("s = .array~new; s[2N] = 1", |n| {
+        format!("{0} {1} {0} 0 {0} 1 {2} 1", 3 * n + 1, n + 2, 2 * n)
+    });
+}
+
+#[test]
+fn append_after_appends_and_empty() {
+    append_shape(
+        "s = .array~new; do i = 1 to 2N; s~append(i); end; s~empty",
+        |n| format!("{0} {0} {0} 0 {1} 1 1 1", n + 1, 2 * n),
+    );
+}
+
+/// `append` after each write that moves an array's last item, oracle rc 0
+/// twice. In a debug build every `append` asserts the kept last item against
+/// the slots.
+#[test]
+fn append_after_every_kind_of_write() {
+    let program = "a = .array~of(1, 2, 3)\n\
+        a~remove(3); say 'remove last' a~append('x') a~size a~items\n\
+        a~delete(4); say 'delete last' a~append('y') a~size a~items\n\
+        a[10] = 'p'; say 'sparse put' a~append('z') a~size a~items\n\
+        a~remove(11); say 'remove past' a~append('w') a~size a~items\n\
+        a~insert('i', .nil); say 'insert front' a~append('v') a~size a~items\n\
+        a~insert(, a~last); say 'insert hole' a~append('u') a~size a~items\n\
+        a~put(.nil, 1); say 'put nil' a~append('t') a~size a~items\n\
+        a~fill('f'); say 'fill' a~append('s') a~size a~items\n\
+        a~empty; say 'empty' a~append('r') a~size a~items\n\
+        b = .array~of('c', 'a', 'b'); b~sort; b~remove(3)\n\
+        say 'sort' b~append('q') b~size b~items b~makestring('l', ',')\n\
+        b~stableSortWith(.caselessComparator~new)\n\
+        say 'stable sort' b~append('p') b~size b~items\n\
+        c = .array~new(5); say 'new(5)' c~append('o') c~size c~items\n\
+        d = .array~of(1, 2); d~delete(2); d~delete(1); say 'deleted all' d~append('n') d~size d~items\n\
+        e = .array~new; e[3] = 'm'; e~remove(3); say 'sparse removed' e~append('l') e~size e~items\n\
+        f = .array~of(1,2,3)~section(2); say 'section' f~append('k') f~size f~items\n\
+        g = 'a b c'~makeArray(' '); g~remove(3); say 'makearray' g~append('j') g~size g~items\n\
+        q = .queue~of(1, 2, 3); q~remove(3); say 'queue' q~append('h') q~size q~items\n\
+        q[2] = .nil; say 'queue put' q~append('g') q~items\n\
+        l = .list~of(1, 2); l~empty; say 'list' l~append('f') l~items\n";
+    assert_eq!(
+        run_source(program),
+        (
+            0,
+            "remove last 3 3 3\ndelete last 4 4 4\nsparse put 11 11 6\nremove past 11 11 6\n\
+             insert front 13 13 8\ninsert hole 14 14 9\nput nil 15 15 10\nfill 16 16 16\n\
+             empty 1 16 1\nsort 3 3 3 a,b,q\nstable sort 4 4 4\nnew(5) 1 5 1\n\
+             deleted all 1 1 1\nsparse removed 1 3 1\nsection 3 3 3\nmakearray 3 3 3\n\
+             queue 3 3 3\nqueue put 4 4\nlist 0 1\n"
+                .to_owned(),
+            String::new()
+        )
+    );
+}
+
+/// A `Routine` or `Method` compiled from source resolves routines and
+/// classes, private ones included, through its package's parent: the
+/// caller's package, or the context given to `NEW`; a source with
+/// directives does too.
+#[test]
+fn a_compiled_source_resolves_through_its_package_parent() {
+    assert_eq!(
+        run_source(include_str!(
+            "../../../../corpus/lang/routine_new_package_parent.rex"
+        )),
+        (
+            0,
+            "routine, no context: helper\nroutine, context: helper\n\
+             class, no context: hidden\nmethod, no context: helper hidden\n\
+             method, context: helper hidden\ndirectives, context: pub hidden own helper\n\
+             directives, no context: pub hidden own helper\nrexx context: 43.1\n"
+                .to_owned(),
+            String::new()
+        )
+    );
+}
+
+/// A compiled source's package object finds classes and routines through
+/// its parent package, as the `.NAME` lookup does.
+#[test]
+fn a_compiled_sources_package_finds_through_its_parent() {
+    assert_eq!(
+        run_source(include_str!(
+            "../../../../corpus/lang/package_find_through_parent.rex"
+        )),
+        (
+            0,
+            "none    1 1 1 1 ClassPublic RoutinePublic Class Routine\n\
+             this    1 1 1 1 ClassPublic RoutinePublic Class Routine\n\
+             routine 1 1 1 1 ClassPublic RoutinePublic Class Routine\n\
+             imp     0 0\n"
+                .to_owned(),
+            String::new()
+        )
+    );
+}
+
+/// A primitive's native method run on an instance of a plain class refuses
+/// as a receiver of the wrong type, owner none (Deviation 28), where a
+/// `Directory` with no store keeps its own method's refusal and a
+/// `MutableBuffer` subclass whose `INIT` does not forward still answers.
+#[test]
+fn a_native_row_on_a_receiver_of_another_class_refuses_its_type() {
+    let run = |class: &str, method: &str| {
+        run_source(&format!(
+            "say .t~new~go(.{class}~method('{method}'))\n::class t\n::method go\n\
+             use arg m\nreturn self~run(m)\n"
+        ))
+    };
+    for (class, method, kind) in [
+        ("directory", "ITEMS", "a hash collection"),
+        ("stringtable", "ITEMS", "a hash collection"),
+        ("set", "ITEMS", "a hash collection"),
+        ("bag", "ITEMS", "a hash collection"),
+        ("relation", "ITEMS", "a hash collection"),
+        ("table", "ITEMS", "a hash collection"),
+        ("stem", "ITEMS", "a stem"),
+        ("mutablebuffer", "LENGTH", "a mutable buffer"),
+        ("message", "SEND", "a message"),
+        ("message", "START", "a message"),
+        ("message", "REPLY", "a message"),
+        ("stackframe", "NAME", "a stack frame"),
+        ("stackframe", "EXECUTABLE", "a stack frame"),
+    ] {
+        assert_eq!(
+            run(class, method),
+            (
+                120,
+                String::new(),
+                format!(
+                    "rexx-exec: a message send to a value that is not {kind} is not implemented\n"
+                )
+            ),
+            "{class}~{method}"
+        );
+    }
+    assert_eq!(
+        run_source("say .context~package~local~items\n"),
+        (0, "0\n".to_owned(), String::new())
+    );
+    assert_eq!(
+        run_source(
+            "b = .b~new\nsay b~length\nb~append('xy')\nsay b~string\n\
+             ::class b subclass mutablebuffer\n::method init\n"
+        ),
+        (0, "0\nxy\n".to_owned(), String::new())
+    );
+}
+
+/// Every mutator a `StringTable` answers changes what a package's routine
+/// names resolve to once written, as `PackageClass::findLocalRoutine` reads
+/// the same table: each answer measured on the oracle.
+#[test]
+fn a_write_to_a_packages_routines_table_moves_call_resolution() {
+    let tail =
+        "call foo\nsay result\n::routine foo\n  return 'foo'\n::routine bar\n  return 'bar'\n";
+    let missing = "     2 *-* call foo\nError 43 running /t.rex line 2:  Routine not found.\n\
+                   Error 43.1:  Could not find routine \"FOO\".\n";
+    for (write, expected) in [
+        (".routines~put(.routines~bar, 'FOO')", (0, "bar\n", "")),
+        (".routines['FOO'] = .routines~bar", (0, "bar\n", "")),
+        (".routines~foo = .routines~bar", (0, "bar\n", "")),
+        (".routines~setEntry('FOO', .routines~bar)", (0, "bar\n", "")),
+        (".routines~remove('BAR')", (0, "foo\n", "")),
+        (".routines~removeItem(.routines~bar)", (0, "foo\n", "")),
+        (".routines~removeEntry('BAR')", (0, "foo\n", "")),
+        (
+            ".routines~putAll(.stringtable~new~~put(1, 'X'))",
+            (0, "foo\n", ""),
+        ),
+        (".routines~empty", (213, "", missing)),
+        (".routines~remove('FOO')", (213, "", missing)),
+    ] {
+        let (code, stdout, stderr) = expected;
+        assert_eq!(
+            run_source(&format!("{write}\n{tail}")),
+            (code, stdout.to_owned(), stderr.to_owned()),
+            "{write}"
+        );
+    }
+    assert_eq!(
+        run_source(&format!(
+            "say .routines~items .routines~hasIndex('BAR')\n\
+             .context~package~addRoutine('ADDED', .routine~new('added', 'return 1'))\n\
+             say .routines~items\n.methods['X'] = 5\nsay .methods~x\n{tail}::method m\n"
+        )),
+        (0, "2 1\n3\n5\nfoo\n".to_owned(), String::new())
+    );
+}
+
+/// A user `STRING` method's answer reads as `primitiveMakeString` reads it:
+/// an array (or an `Array` subclass) joins its items and a buffer is its
+/// text. A `Queue`, `.nil` or any other object is `.nil` there: a truth
+/// value and a logical operator judge `.nil`, and a consumer of its bytes
+/// (concatenation, `LENGTH`) refuses (Deviation 30).
+#[test]
+fn a_string_answer_reads_as_primitive_make_string_reads_it() {
+    let program = |answer: &str| {
+        format!(
+            "say 'x' .k~new\n::class k\n::method string\n  return {answer}\n\
+             ::class sub subclass array\n"
+        )
+    };
+    for (answer, stdout) in [
+        (".array~of('a', 'b')", "x a\nb\n"),
+        (".sub~of('p')", "x p\n"),
+        (".mutablebuffer~new('buf')", "x buf\n"),
+        ("12 + 3", "x 15\n"),
+    ] {
+        assert_eq!(
+            run_source(&program(answer)),
+            (0, stdout.to_owned(), String::new()),
+            "{answer}"
+        );
+    }
+    let refusal = "rexx-exec: a STRING method answering an object with no string value \
+                   is not implemented\n";
+    for answer in [".directory~new", ".queue~of('a')", ".nil", ".object~new"] {
+        assert_eq!(
+            run_source(&program(answer)),
+            (120, String::new(), refusal.to_owned()),
+            "{answer}"
+        );
+        // The ordering operators, PARSE and OPTIONS read `.nil` through the
+        // oracle's string layout, so they refuse with the bytes consumers.
+        for statement in [
+            "say '' << .k~new",
+            "say 'abc' < .k~new",
+            "parse value .k~new with p",
+            "parse value .k~new with p q",
+            "call r .k~new\nexit\nr: parse arg p\nreturn",
+            "options .k~new",
+        ] {
+            let program =
+                format!("{statement}\nexit\n::class k\n::method string\n  return {answer}\n");
+            assert_eq!(
+                run_source(&program),
+                (120, String::new(), refusal.to_owned()),
+                "{statement} over {answer}"
+            );
+        }
+        let length = format!("say length(.k~new)\n::class k\n::method string\n  return {answer}\n");
+        assert_eq!(
+            run_source(&length),
+            (120, String::new(), refusal.to_owned()),
+            "length over {answer}"
+        );
+        let judged = format!(
+            "o = .k~new\nsignal on syntax name s1\nif o then nop\n\
+             s1: say condition('O')~code condition('O')~message\n\
+             signal on syntax name s2\nsay 1 & o\n\
+             s2: say condition('O')~code condition('O')~message\n\
+             exit\n::class k\n::method string\n  return {answer}\n"
+        );
+        assert_eq!(
+            run_source(&judged),
+            (
+                0,
+                "34.1 Value of expression following IF keyword must be exactly \"0\" or \"1\"; \
+                 found \"The NIL object\".\n\
+                 34.901 Logical value must be exactly \"0\" or \"1\"; found \"The NIL object\".\n"
+                    .to_owned(),
+                String::new()
+            ),
+            "truth over {answer}"
+        );
+    }
+}
+
+/// **The `SmallInt` behaviour arm is taken for a small integer
+/// receiver**, where the general path is what a receiver whose bytes are
+/// in the arena takes.
+#[test]
+fn a_small_integer_receiver_takes_the_small_int_arm() {
+    let mut interp = Interp::new();
+    let integer = ObjRef::small_int(12345).expect("12345 fits the tag");
+    assert!(
+        matches!(integer.decode(), Decoded::SmallInt(_)),
+        "the value model stopped holding 12345 in the tag, so this test's subject is gone"
+    );
+    let text = interp.text(b"12345");
+    assert!(
+        matches!(text.decode(), Decoded::Text(_)),
+        "the same digits as bytes went somewhere other than the handle's text arm"
+    );
+
+    assert_eq!(
+        interp
+            .receiver_kind(integer)
+            .expect("a small integer answers"),
+        Primitive::SmallInt,
+        "a tagged integer receiver went down the general path"
+    );
+    assert_eq!(
+        interp.receiver_kind(text).expect("a text handle answers"),
+        Primitive::String
+    );
+
+    let string = interp.classes().lookup("String").expect("String is native");
+    let string_behaviour = Behaviour::Instance {
+        methods: interp.classes().instance_behaviour_handle(string),
+        owner: string,
+    };
+    assert_eq!(
+        interp
+            .receiver_behaviour(integer)
+            .expect("a small integer resolves"),
+        string_behaviour,
+        "the arm sends a small integer's messages somewhere other than String"
+    );
+    assert_eq!(
+        interp
+            .receiver_behaviour(text)
+            .expect("a text handle resolves"),
+        string_behaviour
+    );
+
+    assert_eq!(
+        run_source("say 12345~length\n"),
+        (0, "5\n".to_string(), String::new())
+    );
+}
+
+/// **The receiver in the calling convention**: `SELF` is the object the
+/// send was addressed to, taken from `crate::CallContext`, and not the
+/// scope the resolution found the method at.
+#[test]
+fn a_method_send_binds_self_from_the_receiver_in_the_calling_convention() {
+    assert_eq!(
+        run_source(
+            "say .J~m\n\
+             ::class K\n\
+             ::method m class\n  return self\n\
+             ::class J subclass K\n"
+        ),
+        (0, "The J class\n".to_string(), String::new()),
+        "SELF is not the receiver of the send"
+    );
+
+    let interp = Interp::new();
+    assert!(
+        interp.caller().receiver().is_none(),
+        "a frame that is not a method's carries a receiver"
+    );
+}
+
+/// **`SELF` and `SUPER` are bound before the body's first instruction**,
+/// to the receiver and to the scope after the method's own.
+#[test]
+fn self_and_super_are_bound_before_the_bodys_first_instruction() {
+    assert_eq!(
+        run_source(
+            "say .K~m\n\
+             ::class K\n\
+             ::method m class\n  return self '/' super\n"
+        ),
+        (
+            0,
+            "The K class / The Class class\n".to_string(),
+            String::new()
+        )
+    );
+    assert_eq!(
+        run_source(
+            "say .K~m\n\
+             ::class K\n\
+             ::method m class\n  interpret \"zz = self '/' super\"\n  return zz\n"
+        ),
+        (
+            0,
+            "The K class / The Class class\n".to_string(),
+            String::new()
+        )
+    );
+}
+
+/// A native method's argument that has no string value raises 88.909,
+/// and the neighbouring arguments that have one still answer.
+#[test]
+fn an_argument_with_no_string_value_raises_where_one_with_a_string_value_answers() {
+    for source in [
+        "say 'abc'~hasMethod(.String)\n",
+        "say 'abc'~hasMethod(.environment)\n",
+        "say 'abc'~hasMethod(.nil)\n",
+        "a. = .array\nsay 'abc'~hasMethod(a.)\n",
+        "a. = .nil\nsay 'abc'~hasMethod(a.)\n",
+        "say .K~hasMethod(.String)\n::class K\n",
+    ] {
+        let (code, stdout, stderr) = run_source(source);
+        assert_eq!((code, stdout.as_str()), (168, ""), "{source:?}");
+        assert!(
+            stderr.contains("Error 88.909:  Argument 1 must have a string value."),
+            "{source:?} raised {stderr:?}"
+        );
+        assert!(
+            stderr.contains("Compiled method \"HASMETHOD\" with scope \"Object\"."),
+            "{source:?} lost the method's own traceback line: {stderr:?}"
+        );
+    }
+
+    for (source, expected) in [
+        ("say 'abc'~hasMethod('LENGTH')\n", "1\n"),
+        ("say 'abc'~hasMethod(5)\n", "0\n"),
+        ("a. = 'LENGTH'\nsay 'abc'~hasMethod(a.)\n", "1\n"),
+        ("say 'abc'~hasMethod(d.)\n", "0\n"),
+    ] {
+        assert_eq!(
+            run_source(source),
+            (0, expected.to_string(), String::new()),
+            "{source:?}"
+        );
+    }
+}
+
+/// The `::METHOD` and `::ATTRIBUTE` shapes beside the plain one each run.
+#[test]
+fn a_method_body_of_each_shape_runs() {
+    for (source, expected) in [
+        (
+            "say .K~m\n::class K\n::method m class protected\n  return 7\n",
+            "7\n",
+        ),
+        (
+            "say .K~m\n::class K\n::method m class unguarded\n  return 7\n",
+            "7\n",
+        ),
+        (
+            "say .K~m\n::class K\n::method m class package\n  return 7\n",
+            "7\n",
+        ),
+        (
+            "say .K~a\n::class K\n::attribute a class get\n  return 11\n",
+            "11\n",
+        ),
+        // A generated accessor over a stem and over a compound, oracle rc 0:
+        // the stem's round trip, and the compound's derived name in the
+        // attribute's own spelling.
+        (
+            ".K~'A.' = 5\nsay .K~'A.'\n::class K\n::attribute \"a.\" class\n",
+            "5\n",
+        ),
+        (
+            "say .K~'A.B'\n::class K\n::attribute \"a.b\" class\n",
+            "a.b\n",
+        ),
+        // Oracle rc 0: `USE LOCAL` keeps its listed name local.
+        (
+            "say .K~m\n::class K\n::method m class\n  use local zz\n  zz = 4\n  return zz\n",
+            "4\n",
+        ),
+    ] {
+        assert_eq!(
+            run_source(source),
+            (0, expected.to_string(), String::new()),
+            "{source:?}"
+        );
+    }
+}
+
+/// **A `DELEGATE` directive installs a forwarding method under every key
+/// it claims**, including the setter half of the pair a `ATTRIBUTE`
+/// modifier adds, and every row's bytes are the oracle's own.
+#[test]
+fn a_delegate_directive_forwards_under_every_key_it_claims() {
+    for (source, message) in [
+        ("say .K~m\n::class K\n::method m class delegate p\n", "M"),
+        ("say .K~a\n::class K\n::attribute a class delegate p\n", "A"),
+        (
+            "say .K~a\n::class K\n::method a class delegate p attribute\n\
+             ::attribute p class\n",
+            "A",
+        ),
+        (
+            ".K~a = 5\nsay 'stored'\n::class K\n\
+             ::method a class delegate p attribute\n::attribute p class\n",
+            "A=",
+        ),
+    ] {
+        let clause = source.lines().next().expect("a first clause");
+        let expected = format!(
+            "     1 *-* {clause}\n\
+             Error 97 running /t.rex line 1:  Object method not found.\n\
+             Error 97.1:  Object \"P\" does not understand message \"{message}\".\n"
+        );
+        assert_eq!(
+            run_source(source),
+            (159, String::new(), expected),
+            "{source:?}"
+        );
+    }
+}
+
+/// **A generated accessor pair reads and writes one variable in the
+/// declaring scope's pool on the receiver**, and every row is measured on
+/// the oracle.
+#[test]
+fn a_generated_accessor_pair_reads_and_writes_the_declaring_scopes_pool() {
+    for (source, expected) in [
+        // The round trip, through each directive.
+        (
+            ".K~a = 5\nsay .K~a\n::class K\n::attribute a class\n",
+            "5\n",
+        ),
+        (
+            ".K~a = 5\nsay .K~a\n::class K\n::method a class attribute\n",
+            "5\n",
+        ),
+        // An unassigned variable reads as its derived name, which is the
+        // directive's name **as written** and not the accessor's upcased
+        // dictionary key: `getRetriever(name)` against
+        // `addMethod(internalname)`. The quoted row is what tells the two
+        // apart -- an accessor keyed on the message name would answer
+        // `AB` here.
+        ("say .K~a\n::class K\n::attribute a class\n", "A\n"),
+        ("say .K~ab\n::class K\n::attribute \"aB\" class\n", "aB\n"),
+        // And it is the same pool entry `EXPOSE` reaches, in both
+        // directions.
+        (
+            ".K~a = 'through the setter'\nsay .K~read\n::class K\n::attribute a class\n\
+             ::method read class\n  expose a\n  return a\n",
+            "through the setter\n",
+        ),
+        (
+            "x = .K~write\nsay .K~a\n::class K\n::attribute a class\n\
+             ::method write class\n  expose a\n  a = 'through EXPOSE'\n  return 1\n",
+            "through EXPOSE\n",
+        ),
+        // **Keyed on the declaring scope and on the receiver**, which is
+        // one property from both sides. `.J~a` and `.K~a` name different
+        // receivers and so different pools: measured, the second answers
+        // its derived name after the first was assigned.
+        (
+            ".J~a = 5\nsay .J~a .K~a\n::class K\n::attribute a class\n\
+             ::class J subclass K\n",
+            "5 A\n",
+        ),
+        // A value is stored, not a rendering of one: the receiver goes in
+        // and comes back out.
+        (
+            ".K~a = .K\nsay .K~a\n::class K\n::attribute a class\n",
+            "The K class\n",
+        ),
+        // `GET` and `SET` each generate one half, and the generated half
+        // reads the same pool a generated pair does.
+        ("say .K~a\n::class K\n::attribute a class get\n", "A\n"),
+        // A trailing omission leaves the getter's own bound satisfied.
+        ("say .K~a(,)\n::class K\n::attribute a class\n", "A\n"),
+        (
+            ".K~a = 5\nsay 'stored'\n::class K\n::attribute a class set\n",
+            "stored\n",
+        ),
+    ] {
+        assert_eq!(
+            run_source(source),
+            (0, expected.to_string(), String::new()),
+            "{source:?}"
+        );
+    }
+
+    // **Neither `GET` nor `SET` installs the other half**, so the
+    // message the directive did not generate is a name miss. Measured at
+    // rc 159, one program each.
+    for (source, missing) in [
+        (
+            ".K~a = 5\nsay 'x'\n::class K\n::attribute a class get\n",
+            "A=",
+        ),
+        ("say .K~a\n::class K\n::attribute a class set\n", "A"),
+    ] {
+        let (code, stdout, stderr) = run_source(source);
+        assert_eq!((code, stdout.as_str()), (159, ""), "{source:?}");
+        assert!(
+            stderr.contains(&format!(
+                "Error 97.1:  Object \"The K class\" does not understand message \
+                 \"{missing}\"."
+            )),
+            "{source:?} reported {stderr:?}"
+        );
+    }
+
+    // The setter answers nothing, which a program can read: measured,
+    // `91.999` at rc 165 rather than a value the assignment produced.
+    let (code, stdout, stderr) =
+        run_source("r = .K~'A='(9)\nsay r\n::class K\n::attribute a class\n");
+    assert_eq!((code, stdout.as_str()), (165, ""));
+    assert!(
+        stderr.contains("Error 91.999:  Message \"A=\" did not return a result."),
+        "the setter answered a value: {stderr:?}"
+    );
+
+    // The argument bounds, which are the accessor pair's own and are the
+    // C++'s (`execution/CPPCode.cpp:284`, `:334`, `:339`). Each row is
+    // measured at rc 163.
+    for (source, catalogue) in [
+        (
+            "say .K~a(1)\n::class K\n::attribute a class\n",
+            "Error 93.902:  Too many arguments in invocation of method; 0 expected.",
+        ),
+        (
+            "say .K~'A='(1,2)\n::class K\n::attribute a class\n",
+            "Error 93.902:  Too many arguments in invocation of method; 1 expected.",
+        ),
+        (
+            "say .K~'A='()\n::class K\n::attribute a class\n",
+            "Error 93.903:  Missing argument in method; argument 1 is required.",
+        ),
+        // **A trailing omission is not an argument that arrived, and a
+        // leading one is.** Measured, both at rc 163: `(,)` reaches the
+        // setter as no arguments at all, and `(,5)` as two. The getter's
+        // side of the same rule is the `(,)` row below, which answers.
+        (
+            "say .K~'A='(,)\n::class K\n::attribute a class\n",
+            "Error 93.903:  Missing argument in method; argument 1 is required.",
+        ),
+        (
+            "say .K~'A='(,5)\n::class K\n::attribute a class\n",
+            "Error 93.902:  Too many arguments in invocation of method; 1 expected.",
+        ),
+    ] {
+        let (code, stdout, stderr) = run_source(source);
+        assert_eq!((code, stdout.as_str()), (163, ""), "{source:?}");
+        assert!(stderr.contains(catalogue), "{source:?} reported {stderr:?}");
+        // **No frame of its own**, which is what separates an accessor
+        // from a `NativeMethod` taking the same refusal: measured,
+        // `'abc'~length(1)` carries a `Compiled method "LENGTH"` line
+        // above the sending clause and none of these do.
+        assert!(
+            !stderr.contains("Compiled method"),
+            "{source:?} grew a traceback frame the oracle does not write: {stderr:?}"
+        );
+    }
+}
+
+/// **An `ABSTRACT` method installs and is refused when it is sent**,
+/// naming the message rather than the directive.
+#[test]
+fn an_abstract_send_is_refused_at_the_send_naming_the_message() {
+    for (source, named) in [
+        ("say .K~m\n::class K\n::method m class abstract\n", "M"),
+        (
+            "say .K~\"MiXeD\"\n::class K\n::method \"MiXeD\" class abstract\n",
+            "MIXED",
+        ),
+        (
+            "say .K~m\n::class K\n::method m class abstract attribute\n",
+            "M",
+        ),
+        ("say .K~a\n::class K\n::attribute a class abstract\n", "A"),
+        (".K~a = 3\n::class K\n::attribute a class abstract\n", "A="),
+    ] {
+        let (code, stdout, stderr) = run_source(source);
+        assert_eq!((code, stdout.as_str()), (163, ""), "{source:?}");
+        assert!(
+            stderr.contains(&format!(
+                "Error 93.965:  Method {named} is ABSTRACT and cannot be directly invoked."
+            )),
+            "{source:?} reported {stderr:?}"
+        );
+        assert!(
+            !stderr.contains("Compiled method"),
+            "{source:?} grew a traceback frame the oracle does not write: {stderr:?}"
+        );
+    }
+
+    // **Installing one is not sending one**: the directive is rc 0 with
+    // the program's own output, which is what makes the row above a send
+    // refusal rather than an install refusal. Measured on the oracle.
+    assert_eq!(
+        run_source("say 'installed'\n::class K\n::method m class abstract\n"),
+        (0, "installed\n".to_string(), String::new())
+    );
+}
+
+/// **A private send is refused by who is sending, and the refusal names
+/// the scope that refused it.**
+#[test]
+fn private_sends_are_refused_by_who_is_sending() {
+    let class = "\n::CLASS K\n::METHOD m CLASS PRIVATE\n  return 'inner'\n";
+    for source in [
+        // The program's own frame, which has no receiver.
+        &format!("say .K~m{class}"),
+        // A routine's frame, which has none either.
+        &format!("say r(){class}::ROUTINE r\n  return .K~m\n"),
+        // A sibling class in the same package.
+        &format!("say .S~poke{class}::CLASS S\n::METHOD poke CLASS\n  return .K~m\n"),
+    ] {
+        let (code, stdout, stderr) = run_source(source);
+        assert_eq!((code, stdout.as_str()), (159, ""), "{source:?}");
+        assert!(
+            stderr.contains(
+                "Error 97.2:  Object \"The K class\" cannot accept private message \
+                 \"M\" from this context."
+            ),
+            "a refused private send must report 97.2 naming the receiver and the \
+             message, got {stderr:?} for {source:?}"
+        );
+    }
+    for source in [
+        // The declaring class's own class method, sending to itself.
+        &format!("say .K~outer{class}::METHOD outer CLASS\n  return self~m\n"),
+        // A subclass's own class method, sending to itself: the same
+        // object, and the limb a rule written over the defining scope
+        // alone would refuse.
+        "say .Sub~poke\n::CLASS Base\n::METHOD m CLASS PRIVATE\n  return 'inner'\n\
+         ::CLASS Sub SUBCLASS Base\n::METHOD poke CLASS\n  return self~m\n",
+        // A class object whose hierarchy contains the declaring scope,
+        // sending to a different object.
+        "say .Sub~poke\n::CLASS Base\n::METHOD m CLASS PRIVATE\n  return 'inner'\n\
+         ::CLASS Sub SUBCLASS Base\n::METHOD poke CLASS\n  return .Base~m\n",
+    ] {
+        assert_eq!(
+            run_source(source),
+            (0, "inner\n".to_string(), String::new()),
+            "{source:?}"
+        );
+    }
+}
+
+/// **The refusal is not raised at the send**: it drops the method and
+/// enters the receiver's own `UNKNOWN`, and the `UNKNOWN` lookup is not
+/// itself access-checked.
+#[test]
+fn a_refused_send_reaches_unknown_and_the_unknown_lookup_is_not_checked() {
+    assert_eq!(
+        run_source(
+            "say .K~m\n::CLASS K\n::METHOD m CLASS PRIVATE\n  return 'never'\n\
+             ::METHOD unknown CLASS\n  use arg name\n  return 'unknown saw' name\n"
+        ),
+        (0, "unknown saw M\n".to_string(), String::new())
+    );
+    assert_eq!(
+        run_source(
+            "say .K~zork\n::CLASS K\n::METHOD unknown CLASS PRIVATE\n\
+             \x20 use arg name\n  return 'private unknown saw' name\n"
+        ),
+        (0, "private unknown saw ZORK\n".to_string(), String::new())
+    );
+}
+
+/// **`PACKAGE`'s refusing arm**, called directly with the two callers the
+/// oracle refuses: one with no activation at all, which no program
+/// reaches, and one whose package is not the method's, which a
+/// `::REQUIRES` of a file declaring the method does --
+/// `corpus/refusal-sites.tsv`'s `package_scope_method` row names that
+/// program. The allowing arm has a corpus program
+/// (`corpus/lang/method_access_package_and_protected.rex`) and is
+/// asserted here too, so a check that refused everything fails rather
+/// than passing both refusals.
+#[test]
+fn package_scope_refuses_a_caller_from_another_package() {
+    let method_package = Package::Program(crate::ProgramId::nth(0));
+    assert_eq!(
+        Interp::check_package(method_package, no_caller()),
+        Err(Miss::PackageScope),
+        "a caller with no activation is `checkPackage`'s first refusal"
+    );
+    assert_eq!(
+        Interp::check_package(
+            method_package,
+            Caller {
+                receiver: None,
+                package: CallerPackage::Package(Package::Program(crate::ProgramId::nth(1))),
+            },
+        ),
+        Err(Miss::PackageScope),
+        "a caller in another program's package must be refused"
+    );
+    assert_eq!(
+        Interp::check_package(
+            method_package,
+            Caller {
+                receiver: None,
+                package: CallerPackage::Package(method_package),
+            },
+        ),
+        Ok(()),
+        "the same package must be allowed"
+    );
+    assert_eq!(
+        Interp::check_package(
+            Package::Rexx,
+            Caller {
+                receiver: None,
+                package: CallerPackage::Package(Package::Program(crate::ProgramId::nth(0))),
+            },
+        ),
+        Err(Miss::PackageScope),
+        "the interpreter's own package is not a program's"
+    );
+}
+
+/// **`checkPrivate`'s `isInstanceOf` limb, which no program can reach
+/// either.**
+#[test]
+fn a_private_send_from_another_instance_of_the_declaring_class_is_allowed() {
+    let mut interp = Interp::new();
+    let sender = interp.text(b"abc");
+    let receiver = interp.classes().lookup("Array").expect("Array is native");
+    let string = interp.string_class();
+    let caller = Caller {
+        receiver: Some(sender),
+        package: CallerPackage::NoActivation,
+    };
+    // `MethodId` is not read by the check at all -- the scope is -- so
+    // the resolution below names a method that exists for the receiver
+    // and nothing rests on which one it is.
+    let resolution = interp
+        .resolve(sender, b"LENGTH", None, no_caller())
+        .expect("String answers LENGTH");
+    assert_ne!(sender, receiver, "the two must not be the same object");
+    assert_eq!(
+        interp.check_private(
+            Resolution {
+                scope: string,
+                method: resolution.method
+            },
+            receiver,
+            caller,
+        ),
+        Ok(()),
+        "a sender whose class is the declaring scope must be allowed"
+    );
+    let object = interp.classes().lookup("Array").expect("Array is native");
+    assert_eq!(
+        interp.check_private(
+            Resolution {
+                scope: object,
+                method: resolution.method
+            },
+            receiver,
+            caller,
+        ),
+        Err(Miss::Private),
+        "a sender whose class is not compatible with the declaring scope must be refused"
+    );
+}
+
+/// A `target~name:scope` override answers **when the scope is a class
+/// object the receiver's behaviour holds**, is 88.914 when the scope is
+/// not a class object at all, and is 93.957 when it is a class the
+/// receiver's behaviour was never given.
+#[test]
+fn a_scope_override_answers_and_has_one_refusal_for_each_bad_scope() {
+    assert_eq!(
+        run_source("say 'abc'~length:.String\n"),
+        (0, "3\n".to_string(), String::new())
+    );
+    let (code, stdout, stderr) = run_source("say 'abc'~length:super\n");
+    assert_eq!((code, stdout.as_str()), (168, ""));
+    assert!(
+        stderr.contains("Error 88.914:"),
+        "a non-class scope must keep the oracle's own condition, got {stderr:?}"
+    );
+    let (code, stdout, stderr) = run_source("say 'abc'~length:.Array\n");
+    assert_eq!((code, stdout.as_str()), (163, ""));
+    assert!(
+        stderr.contains(
+            "Error 93.957:  Target object \"abc\" is not a subclass of the message \
+             override scope (The Array class)."
+        ),
+        "a class the receiver's behaviour does not hold must be 93.957, got {stderr:?}"
+    );
+}
+
+/// A `Stem` answers a message it has no method for by forwarding it to its
+/// VALUE -- `StemClass::unknownRexx`.
+#[test]
+fn a_stem_forwards_a_message_it_has_no_method_for_to_its_value() {
+    let mut interp = Interp::new();
+    let stem = interp.alloc_with(
+        interrexx_core::BehaviourId::STEM,
+        Body::Stem {
+            name: b"A."[..].into(),
+            default: None,
+            tails: interrexx_core::NameMap::default(),
+            exposed: None,
+        },
+    );
+    let answered = interp
+        .send_message(stem, b"LENGTH", None, &[], no_caller())
+        .expect("a stem forwards an unknown message to its value")
+        .expect("LENGTH answers a value");
+    assert_eq!(interp.to_text(answered).as_ref(), b"2");
+}
+
+/// `~identityHash` answers, and **the corpus cannot witness it**: the
+/// oracle's answer is derived from the object's address, so no differential
+/// row can compare the two and this test is the whole instrument.
+#[test]
+fn the_string_hash_matches_the_oracle_including_above_7f() {
+    // Measured with `c2x(<x>~hashCode)`, read back as little-endian.
+    assert_eq!(string_hash(b""), 0x0000_0000_0000_0000);
+    assert_eq!(string_hash(b"a"), 0x0000_0000_0000_0061);
+    assert_eq!(string_hash(b"abc"), 0x0000_0000_0001_7862);
+    assert_eq!(string_hash(b"5"), 0x0000_0000_0000_0035);
+    assert_eq!(string_hash(b"String"), 0x0000_0000_943a_4c31);
+    // Wraps the 64-bit register rather than saturating.
+    assert_eq!(
+        string_hash(b"abcdefghijklmnopqrstuvwxyz0123456789"),
+        0xa09f_2fd2_5824_3772
+    );
+    // Signed: one byte of 0xff contributes -1, not 255.
+    assert_eq!(string_hash(b"\xff"), 0xffff_ffff_ffff_ffff);
+    assert_eq!(string_hash(b"\x80"), 0xffff_ffff_ffff_ff80);
+    assert_eq!(string_hash(b"\x7f"), 0x0000_0000_0000_007f);
+}
+
+/// `==` and not `=`, and `numeric digits 20` rather than the default:
+/// measured, the answer is wider than nine significant digits, so a
+/// numeric comparison at the default `DIGITS` rounds two different
+/// handles' answers together and reports them equal.
+#[test]
+fn identity_hash_answers_a_number_that_follows_the_handle() {
+    assert_eq!(
+        run_source(
+            "numeric digits 20\n\
+             say (.Array~identityHash == .Array~identityHash)\n\
+             say (.Array~identityHash == .String~identityHash)\n\
+             say datatype(.Array~identityHash, 'W')\n"
+        ),
+        (0, "1\n0\n1\n".to_string(), String::new())
+    );
+}
+
+/// Every receiver kind answers `~identityHash`, and each line is the
+/// oracle's own answer, measured on three descriptors.
+#[test]
+fn identity_hash_answers_every_receiver_kind_as_the_oracle_does() {
+    assert_eq!(
+        run_source(
+            "numeric digits 20\n\
+             s. = 1\n\
+             o = s.\n\
+             say datatype(o~identityHash, 'W') datatype('abc'~identityHash, 'W')\n\
+             say datatype(.Object~new~identityHash, 'W') \
+                 datatype(.Array~new~identityHash, 'W') \
+                 datatype(.StringTable~new~identityHash, 'W') \
+                 datatype(.Directory~new~identityHash, 'W')\n\
+             a = .Object~new\n\
+             b = .Object~new\n\
+             say (a~identityHash == a~identityHash) (a~identityHash == b~identityHash)\n"
+        ),
+        (0, "1 1\n1 1 1 1\n1 0\n".to_string(), String::new())
+    );
+}
+
+/// Two equal short strings are **one** object here and two on the oracle,
+/// which is deviation 4's identity half rather than its rendering half.
+#[test]
+fn two_equal_inline_strings_share_one_handle() {
+    assert_eq!(
+        run_source(
+            "j = 5\n\
+             say ((\"eeeeee\"||j)~identityHash == (\"eeeeee\"||j)~identityHash)\n\
+             say ((\"eeeeeee\"||j)~identityHash == (\"eeeeeee\"||j)~identityHash)\n"
+        ),
+        (0, "1\n0\n".to_string(), String::new())
+    );
+}
+
+/// The reflection protocol answers on both engines for a receiver that is
+/// not a class object, which is where `~class` and `~isA` differ from the
+/// `.Class`-scope methods beside them.
+#[test]
+fn the_object_protocol_answers_a_receiver_that_is_not_a_class_object() {
+    assert_eq!(
+        run_source(
+            "say 'abc'~class~id\n\
+             say (12345)~class~id\n\
+             say .nil~class~id\n\
+             say .Class~superClasses~class~id\n\
+             say .Array~package~class~id\n\
+             say 'abc'~isA(.String) .nil~isA(.Object) 'abc'~isA(.Array)\n"
+        ),
+        (
+            0,
+            "String\nString\nObject\nArray\nPackage\n1 1 0\n".to_string(),
+            String::new()
+        )
+    );
+}
+
+/// A name in `.Class`'s own dictionary does not reach a receiver that is
+/// not a class object.
+#[test]
+fn a_class_scope_name_does_not_reach_a_receiver_that_is_not_a_class_object() {
+    for source in [
+        "say 'abc'~id\n",
+        "say .nil~id\n",
+        "say .Class~superClasses~id\n",
+        "say .Array~package~id\n",
+        "say 'abc'~superClasses\n",
+    ] {
+        let (code, stdout, stderr) = run_source(source);
+        assert_eq!((code, stdout.as_str()), (159, ""), "{source:?}");
+        assert!(
+            stderr.contains("Error 97.1:"),
+            "{source:?} answered or refused instead of raising: {stderr:?}"
+        );
+    }
+}
+/// Every class with a `NEW` row of its own answers an instance of the
+/// class the send was addressed to, or the oracle's own refusal.
+#[test]
+fn a_primitive_constructor_answers_an_instance_or_the_oracle_s_own_refusal() {
+    for class in [
+        "Bag",
+        "Directory",
+        "EventSemaphore",
+        "IdentityTable",
+        "List",
+        "MutableBuffer",
+        "MutexSemaphore",
+        "Queue",
+        "Relation",
+        "Set",
+        "Table",
+    ] {
+        let source = format!("say .{class}~new~class~id\n");
+        assert_eq!(
+            run_source(&source),
+            (0, format!("{class}\n"), String::new()),
+            "{class}"
+        );
+    }
+    for (class, status, catalogue) in [
+        ("Buffer", 163, "Error 93.967:"),
+        ("Class", 163, "Error 93.901:"),
+        ("Message", 163, "Error 93.901:"),
+        ("Pointer", 163, "Error 93.967:"),
+        ("Method", 168, "Error 88.901:"),
+        ("Package", 168, "Error 88.901:"),
+        ("Routine", 168, "Error 88.901:"),
+        ("String", 163, "Error 93.903:"),
+        ("Supplier", 163, "Error 93.903:"),
+        ("WeakReference", 163, "Error 93.903:"),
+    ] {
+        let (code, stdout, stderr) = run_source(&format!("say .{class}~new\n"));
+        assert_eq!((code, stdout.as_str()), (status, ""), "{class}");
+        assert!(stderr.contains(catalogue), "{class}: {stderr:?}");
+    }
+}
+
+/// The constructors whose argument list carries the instance's whole state
+/// answer one, and the state is either kept and read back or refused,
+/// never answered from nothing.
+#[test]
+fn a_constructor_taking_arguments_answers_an_instance_and_refuses_its_state() {
+    let message = ".Message~new(.Object~new, 'STRING')";
+    assert_eq!(
+        run_source(&format!("o = {message}\nsay o~class~id\n")),
+        (0, "Message\n".to_string(), String::new())
+    );
+    // `Message` keeps its send and makes it -- measured, oracle rc 0.
+    assert_eq!(
+        run_source(&format!("o = {message}\nsay o~send\n")),
+        (0, "an Object\n".to_string(), String::new())
+    );
+    assert_eq!(
+        run_source("o = .MutableBuffer~new('abc')\nsay o~class~id\nsay o~length\n"),
+        (0, "MutableBuffer\n3\n".to_string(), String::new())
+    );
+    // `WeakReference` keeps its referent and reads it back, so it is a
+    // readback row rather than a refusal one. That its reference is *weak*
+    // is not visible here and cannot be -- nothing on this path collects;
+    // `tests/collect_stress.rs` carries that half.
+    assert_eq!(
+        run_source(
+            "k = .Object~new\n\
+             o = .WeakReference~new(k)\n\
+             say o~class~id (o~value == k) o~value~class~id\n"
+        ),
+        (0, "WeakReference 1 Object\n".to_string(), String::new())
+    );
+    // `Supplier` keeps both arrays in the receiver's own pool and walks them.
+    assert_eq!(
+        run_source(
+            "o = .Supplier~new(.Array~of('i'), .Array~of('x'))\n\
+             say o~class~id o~available o~item o~index\n"
+        ),
+        (0, "Supplier 1 i x\n".to_string(), String::new())
+    );
+    // `say` reaches a `MutableBuffer` through the required-string
+    // protocol's `MAKESTRING`, which answers the contents; the
+    // receiver-side comparison stays an identity test, which is the
+    // oracle's `0` beside the `1` the other operand order answers.
+    assert_eq!(
+        run_source("say .MutableBuffer~new('abc')\n"),
+        (0, "abc\n".to_string(), String::new())
+    );
+    assert_eq!(
+        run_source(
+            "buf = .MutableBuffer~new('abc')\n\
+             say (buf == 'abc') ('abc' == buf) (buf = 'abc') ('abc' = buf)\n"
+        ),
+        (0, "0 1 0 1\n".to_string(), String::new())
+    );
+    // `~result` on a message nothing has sent blocks the oracle, so this
+    // is a refusal rather than an answer; `~completed` and `~hasError`
+    // beside it are the oracle's own `0`.
+    let (code, stdout, stderr) = run_source("say .Message~new(.Object~new, 'STRING')~result\n");
+    assert_eq!((code, stdout.as_str()), (120, ""));
+    assert_eq!(
+        stderr,
+        "rexx-exec: a wait that nothing left to run can end is not implemented\n"
+    );
+    assert_eq!(
+        run_source(
+            "m = .Message~new(.Object~new, 'STRING')\n\
+             say m~completed m~hasError\n"
+        ),
+        (0, "0 0\n".to_string(), String::new())
+    );
+}
+
+/// A `.Directory~new` reads `.nil` for every index until something puts
+/// an entry there, and then reads it back through all three spellings.
+#[test]
+fn a_new_directory_reads_nil_until_an_entry_is_put_there() {
+    assert_eq!(
+        run_source(
+            "d = .Directory~new\n\
+             say d['X'] d~at('X') d~zork\n\
+             d~put('v','X')\n\
+             say d['X'] d~at('X') d~zork\n\
+             d['Y'] = 'w'\n\
+             say d['Y'] d~at('Y') d~zork\n\
+             d~zork = 'z'\n\
+             say d['ZORK'] d~zork d~at('ZORK')\n\
+             d2 = .Directory~new\n\
+             say d2['zork'] d2~zork\n"
+        ),
+        (
+            0,
+            "The NIL object The NIL object The NIL object\n\
+             v v The NIL object\n\
+             w w The NIL object\n\
+             z z z\n\
+             The NIL object The NIL object\n"
+                .to_string(),
+            String::new()
+        )
+    );
+}
+
+/// A `Directory` subclass has a variable pool AND a store, so its
+/// `EXPOSE` answers and so do its entry writes.
+#[test]
+fn a_directory_subclass_keeps_the_instance() {
+    assert_eq!(
+        run_source(
+            "o = .K~new\n\
+             say o~class~id o~isA(.Directory) o~peek\n\
+             ::class K subclass Directory\n\
+             ::method init\n\
+             \x20 expose n\n\
+             \x20 n = 5\n\
+             \x20 self~init:super\n\
+             ::method peek\n\
+             \x20 expose n\n\
+             \x20 return n\n"
+        ),
+        (0, "K 1 5\n".to_string(), String::new())
+    );
+    let (code, stdout, stderr) = run_source(
+        "o = .Directory~subclass('K')~new\n\
+         o['A'] = 1\n\
+         say o['A']\n",
+    );
+    assert_eq!((code, stdout.as_str(), stderr.as_str()), (0, "1\n", ""));
+}
+
+/// A stem receiver answers `Stem` and renders as its own value, and a
+/// `Stem` method with no body refuses loudly rather than answering.
+#[test]
+fn a_stem_receiver_answers_stem_and_renders_its_own_value() {
+    assert_eq!(
+        run_source(
+            "s. = 'dflt'\n\
+             o = s.\n\
+             say o~class~id o~isA(.Stem) o~objectName o~defaultName\n\
+             say o o~string\n"
+        ),
+        (
+            0,
+            "Stem 1 a Stem a Stem\ndflt dflt\n".to_string(),
+            String::new()
+        )
+    );
+    assert_eq!(
+        run_source(
+            "say '[' || .Stem~new || ']' '[' || .Stem~new('FOO.') || ']'\n\
+             say .Stem~new~class~id .Stem~new('FOO.')~string\n"
+        ),
+        (0, "[] [FOO.]\nStem FOO.\n".to_string(), String::new())
+    );
+    // Each value is the oracle's: a tail never assigned answers the stem's default,
+    // and `items` counts only the tails that hold something.
+    for (send, answer) in [("o~at(1)", "dflt"), ("o[1]", "dflt"), ("o~items", "0")] {
+        assert_eq!(
+            run_source(&format!("s. = 'dflt'\no = s.\nsay {send}\n")),
+            (0, format!("{answer}\n"), String::new()),
+            "{send}"
+        );
+    }
+    // A subclass's instance holds a stem of its own and answers its class.
+    assert_eq!(
+        run_source("k = .K~new('K.')\nsay k~class~id k\n::class K subclass Stem\n"),
+        (0, "K K.\n".to_string(), String::new())
+    );
+}
+
+/// A `StringTable` subclass answers its own class and its own method set,
+/// and stores what its constructor puts in it -- `.TraceObject~new` is the
+/// one the image ships.
+#[test]
+fn a_string_table_subclass_answers_its_own_class_methods_and_entries() {
+    assert_eq!(
+        run_source(
+            "say .TraceObject~new~class~id .TraceObject~new~hasMethod('makeString')\n\
+             say .StringTable~new~class~id .StringTable~new~hasMethod('makeString')\n"
+        ),
+        (
+            0,
+            "TraceObject 1\nStringTable 0\n".to_string(),
+            String::new()
+        )
+    );
+    assert_eq!(
+        run_source(
+            "o = .TraceObject~new\n\
+             say o['OPTION'] o['NUMBER'] o~at('NUMBER') o['TIMESTAMP']~class~id\n"
+        ),
+        (0, "N 1 1 DateTime\n".to_string(), String::new())
+    );
+}
+
+/// A semaphore's `UNINIT` runs at collection rather than at a send, so a
+/// class that declares one needs a row even where the finalizer does
+/// nothing.
+#[test]
+fn a_semaphore_instance_runs_its_finalizer_without_refusing() {
+    for class in ["EventSemaphore", "MutexSemaphore"] {
+        let source = format!("o = .{class}~new\nsay 'built'\n");
+        assert_eq!(
+            run_source(&source),
+            (0, "built\n".to_string(), String::new()),
+            "{class}"
+        );
+    }
+}
+
+#[test]
+fn array_of_fills_its_slots_from_its_arguments() {
+    assert_eq!(
+        run_source(
+            "say .array~of(1,2,3)~size .array~of(1,2,3)~items .array~of(1,2,3)~dimension\n\
+             say .array~of()~size .array~of()~items .array~of()~dimension\n\
+             say .array~of(1,,3)~size .array~of(1,,3)~items\n\
+             say .array~of(1,2,)~size .array~of(1,2,)~items\n\
+             say .array~of(4,5)[2] .array~of('x')~class~id\n\
+             a = .array~of(7,8)\n\
+             a[3] = 9\n\
+             say a~size a~toString('l', ' ')\n"
+        ),
+        (
+            0,
+            "3 3 1\n0 0 1\n3 2\n2 2\n5 Array\n3 7 8 9\n".to_string(),
+            String::new()
+        )
+    );
+}
+
+/// `~of` sent to a subclass of `Array` answers an instance of that
+/// subclass.
+#[test]
+fn array_of_on_a_subclass_answers_an_instance_of_it() {
+    assert_eq!(
+        run_source("k = .array~subclass('K')\nsay k~of(1,2)~size\nsay k~of(1,2)~class~id\n"),
+        (0, "2\nK\n".to_string(), String::new())
+    );
+}
+
+/// A lone array argument is the subscript list, every slot of it, so a hole
+/// anywhere is 98.975 naming the first one (bug #2085, r13264). Measured on
+/// the oracle, rc 158 for each hole and rc 163 for the empty list.
+#[test]
+fn an_index_list_with_a_hole_is_98_975_naming_it() {
+    for (source, hole) in [
+        ("a = (1,2)\nsay a~at((,2))\n", 1),
+        ("a = (1,2)\nsay a~at((,,3))\n", 1),
+        ("a = (1,2)\nsay a[(,2)]\n", 1),
+        ("a = (1,2)\nsay a~at((1,))\n", 2),
+        ("a = (1,2)\nsay a~at((1,,3))\n", 2),
+        ("a = (1,2)\nsay a~at((,))\n", 1),
+    ] {
+        let (code, stdout, stderr) = run_source(source);
+        assert_eq!((code, stdout.as_str()), (158, ""), "{source:?}");
+        assert!(
+            stderr.ends_with(&format!(
+                "Error 98.975:  Missing array element at position {hole}.\n"
+            )),
+            "{source:?}: {stderr}"
+        );
+    }
+    // The neighbouring successes: a full one-slot list is the subscript.
+    assert_eq!(
+        run_source(
+            "a = (1,2)\n\
+             say a~at(.array~of(1))\n\
+             say a[.array~of(2)]\n"
+        ),
+        (0, "1\n2\n".to_string(), String::new())
+    );
+    let (code, stdout, stderr) = run_source("a = (1,2)\nsay a~at(.array~new)\n");
+    assert_eq!((code, stdout.as_str()), (163, ""));
+    assert!(stderr.contains("Error 93.901:"), "{stderr:?}");
+}
+
+/// The position a subscript refusal names is the subscript's place in the
+/// **method's own** argument list, which `putRexx`'s leading value moves
+/// by one -- and which index kind the subscript belongs to decides the
+/// error as well as the number, because `positionArgument` names no
+/// position at all where `requiredPositive` does.
+#[test]
+fn a_subscript_refusal_names_the_position_its_own_method_counts_from() {
+    for (source, message) in [
+        (
+            "m = .array~new(2,3)\nsay m[,2]\n",
+            "Error 93.903:  Missing argument in method; argument 2 is required.",
+        ),
+        (
+            "m = .array~new(2,3)\nm[,2] = 1\n",
+            "Error 93.903:  Missing argument in method; argument 3 is required.",
+        ),
+        (
+            "a = (1,2)\na~put('v',0)\n",
+            "Error 93.907:  Method argument 2 must be a positive whole number; found \"0\".",
+        ),
+        (
+            "m = .array~new(2,3)\nsay m[1,0]\n",
+            "Error 93.924:  Invalid position argument specified; found \"0\".",
+        ),
+        (
+            "say .array~new(2,'-1.0')~size\n",
+            "Error 93.906:  Method argument 2 must be zero or a positive whole \
+             number; found \"-1.0\".",
+        ),
+        (
+            "say .array~new(100000000000000001)~size\n",
+            "Error 93.959:  An array cannot contain more than 100000000000000000 elements.",
+        ),
+    ] {
+        let (code, stdout, stderr) = run_source(source);
+        assert_eq!((code, stdout.as_str()), (163, ""), "{source:?}");
+        assert!(stderr.contains(message), "{source:?} {stderr:?}");
+    }
+}
+/// A subclass of `Array` constructs, keeps its class, and carries both a
+/// store and an object variable pool.
+#[test]
+fn new_on_a_subclass_of_array_answers_an_instance_of_it() {
+    assert_eq!(
+        run_source("k = .array~subclass('K')\nsay k~id\nsay k~new(2,3)~size\nsay k~new~class~id\n"),
+        (0, "K\n6\nK\n".to_string(), String::new())
+    );
+}
+
+/// A name a hash collection's behaviour does not answer is **not** 97.1:
+/// the forward reaches the receiver's own `UNKNOWN`, whose body reads the
+/// name as an entry -- so a missing name is `.nil` and a present one is
+/// the entry.
+#[test]
+fn a_hash_collection_forwards_a_missing_name_to_its_own_unknown() {
+    assert_eq!(
+        run_source(
+            "say .environment~nosuch\n\
+             say .local~nosuch\n\
+             say .methods~nosuch\n\
+             ::method z\n"
+        ),
+        (
+            0,
+            "The NIL object\nThe NIL object\nThe NIL object\n".to_string(),
+            String::new()
+        )
+    );
+    let (code, stdout, stderr) = run_source("say 'abc'~nosuch\n");
+    assert_eq!((code, stdout.as_str()), (159, ""));
+    assert!(stderr.contains("Error 97.1:"), "{stderr:?}");
+}
+
+/// **The entry-method assignment with no value to store**, which the
+/// oracle answers by reading uninitialised memory -- see
+/// [`Loud::entry_method_without_a_value`] for the measurement.
+#[test]
+fn an_entry_method_send_with_no_value_is_loud() {
+    for source in [
+        ".local~\"MYTHING=\"()\n",
+        ".local~\"MYTHING=\"(,)\n",
+        ".methods~\"Q=\"()\n::method z\n",
+    ] {
+        let (code, stdout, stderr) = run_source(source);
+        assert_eq!((code, stdout.as_str()), (120, ""), "{source:?}");
+        assert!(
+            stderr.starts_with("rexx-exec: an entry-method assignment to ")
+                && stderr.ends_with("with no value is not implemented\n"),
+            "{source:?} refused with {stderr:?}"
+        );
+    }
+    assert_eq!(
+        run_source(
+            ".local~\"MYTHING=\"('v')\n\
+             say .MYTHING\n\
+             .local~MYTHING = 'w'\n\
+             say .MYTHING\n"
+        ),
+        (0, "v\nw\n".to_string(), String::new())
+    );
+}
+
+/// **A metaclass carrying its own `NEW` decides what `~subclass` builds**,
+/// and two answers are refused: one that is not a class, which the oracle
+/// casts unchecked (`oracle-crashes.txt` entry 8), and a class `Class~new`
+/// did not build or a subclass already took, which the oracle rewires in
+/// place (Deviation 32).
+#[test]
+fn a_metaclass_new_answering_no_new_class_is_loud() {
+    let program = |body: &str| {
+        format!(
+            "say 'id' .object~subclass(\"k\", .MyMeta)~id\n\
+             ::CLASS MyMeta SUBCLASS Class\n\
+             ::METHOD new CLASS\n\
+             {body}\n\
+             ::CLASS Foo SUBCLASS Directory\n"
+        )
+    };
+    for (answer, refusal) in [
+        (
+            "return 'x'",
+            "a message send to a metaclass whose NEW answers something other than a class",
+        ),
+        (
+            "return .array",
+            "a metaclass NEW answering a class Class~new did not build or a subclass already took",
+        ),
+        (
+            "return .Foo",
+            "a metaclass NEW answering a class Class~new did not build or a subclass already took",
+        ),
+    ] {
+        assert_eq!(
+            run_source(&program(answer)),
+            (
+                120,
+                String::new(),
+                format!("rexx-exec: {refusal} is not implemented\n")
+            ),
+            "{answer}"
+        );
+    }
+    assert_eq!(
+        run_source(&program("forward class (super)")),
+        (0, "id k\n".to_string(), String::new())
+    );
+    // The oracle answers `XX` then `Array`: the second `~subclass` rewires the
+    // class the first one already took.
+    assert_eq!(
+        run_source(
+            "x = .class~new('XX')\n\
+             .local~held = x\n\
+             say .object~subclass('k', .meta)~id\n\
+             say .array~subclass('k2', .meta)~superclass~id\n\
+             ::class meta subclass class\n\
+             ::method new class\n\
+             \x20 return .held\n"
+        ),
+        (
+            120,
+            "XX\n".to_string(),
+            "rexx-exec: a metaclass NEW answering a class Class~new did not build or a subclass \
+             already took is not implemented\n"
+                .to_string()
+        )
+    );
+}
+
+/// **`.RESOURCES` holds each `::RESOURCE` body as an `Array` of its own
+/// lines**, and this is the whole instrument for it.
+#[test]
+fn the_package_tables_hold_what_their_directives_declare() {
+    assert_eq!(
+        run_source(
+            "say .resources~class\n\
+             say .resources~x~class\n\
+             say .resources~x~items\n\
+             say .resources~x\n\
+             say .resources[\"X\"]~at(2)\n\
+             say .resources[\"x\"]\n\
+             say .resources~q\n\
+             ::resource \"x\"\n\
+             line one\n\
+             line two\n\
+             ::END\n"
+        ),
+        (
+            0,
+            "The StringTable class\nThe Array class\n2\nline one\nline two\n\
+             line two\nThe NIL object\nThe NIL object\n"
+                .to_string(),
+            String::new()
+        )
+    );
+    assert_eq!(
+        run_source(
+            "say .resources~x~items\n\
+             say '[' || .resources~x || ']'\n\
+             ::resource x\n\
+             ::END\n"
+        ),
+        (0, "0\n[]\n".to_string(), String::new())
+    );
+}
+
+/// An `~UNKNOWN` sent by hand rather than forwarded: its argument list is
+/// an `Array` on every forward and anything at all here, and the oracle
+/// converts what it is given with `requestArray`. Measured, oracle rc 0:
+/// `'y'` converts to a one-item array.
+#[test]
+fn an_unknown_sent_by_hand_converts_its_argument_list() {
+    assert_eq!(
+        run_source("say .environment~unknown('ARRAY', .Array~superClasses)\n"),
+        (0, "The Array class\n".to_string(), String::new())
+    );
+    assert_eq!(
+        run_source("say .environment~unknown('ARRAY', 'y')\n"),
+        (0, "The Array class\n".to_string(), String::new())
+    );
+}
+
+/// `.local`'s `STDQUE` is the session queue on every read, as on the oracle
+/// (measured, rc 0, each line below).
+#[test]
+fn local_stdque_answers_the_session_queue_on_every_read() {
+    assert_eq!(
+        run_source(
+            "say .local['STDQUE']\n\
+             say .context~package~findClass('stdque')\n\
+             say .local~entry('stdque')\n\
+             say .local~stdque\n\
+             say .local~allItems~items .local~index(.stdque) .stdque~class\n\
+             say .local~remove('STDQUE') .local~hasIndex('STDQUE')\n"
+        ),
+        (
+            0,
+            "SESSION\nSESSION\nSESSION\nSESSION\n10 STDQUE The RexxQueue class\nSESSION 0\n"
+                .to_string(),
+            String::new()
+        )
+    );
+    // The adjacent successes, each the oracle's own answer: the index and
+    // count reads never touch the item, and once a program has replaced
+    // the entry every item read answers.
+    assert_eq!(
+        run_source(
+            "say .local~items .local~allIndexes~items .local~hasIndex('STDQUE') \
+             .local~hasEntry('stdque')\n\
+             .local['STDQUE'] = 'q'\n\
+             say .local~allItems~items .stdque .local~index('q')\n"
+        ),
+        (0, "10 10 1 1\n10 q STDQUE\n".to_string(), String::new())
+    );
+    assert_eq!(
+        run_source(
+            "say .environment['STDOUT']\n\
+             say .local['ALARM']\n\
+             say .environment['ARRAY']~id\n\
+             say c2x(.environment['ENDOFLINE'])\n"
+        ),
+        (
+            0,
+            "The NIL object\nThe NIL object\nArray\n0A\n".to_string(),
+            String::new()
+        )
+    );
+    assert_eq!(
+        run_source(
+            "d = .local\n\
+             d~put('mine', 'STDOUT')\n\
+             say d['STDOUT']\n"
+        ),
+        (0, "mine\n".to_string(), String::new())
+    );
+}
+/// `COPY` and `StackFrame~executable` answer where this crate keeps what
+/// the copy or the frame needs, and refuse where it does not: a `Routine`
+/// copy's own `.context~executable` and a `Package` copy's own tables are
+/// not kept, and neither is a native level's executable. Measured, oracle
+/// rc 0 for each source below.
+#[test]
+fn a_copy_or_frame_executable_this_crate_does_not_keep_is_loud() {
+    for (source, expected) in [
+        (
+            "c = .method~new('m', 'return 1')~copy\nsay c~class\n",
+            "The Method class\n",
+        ),
+        (
+            "r = .routine~new('r', 'return .context~executable')\nc = r~copy\nsay (c~call == c)\n",
+            "1\n",
+        ),
+        (
+            "signal on syntax\nx = 'abc'~substr(-1)\nsyntax:\n\
+             say condition('O')['STACKFRAMES']~firstItem~executable~class\n",
+            "The Method class\n",
+        ),
+        (
+            "say .context~stackFrames[1]~executable~class\n",
+            "The Routine class\n",
+        ),
+    ] {
+        assert_eq!(
+            run_source(source),
+            (0, expected.to_string(), String::new()),
+            "{source:?}"
+        );
+    }
+    assert_eq!(
+        run_source("say .context~package~copy~class\n"),
+        (0, "The Package class\n".to_string(), String::new())
+    );
+    // A REXX package native routine level's executable is one `Routine` per
+    // name: measured, oracle rc 0.
+    assert_eq!(
+        run_source(
+            "signal on syntax\ncall sysSleep 'x'\nsyntax:\n\
+             say condition('O')['STACKFRAMES']~firstItem~executable~class\n"
+        ),
+        (0, "The Routine class\n".to_string(), String::new())
+    );
+}
+
+/// **The required-string protocol answers where it can and refuses where
+/// it cannot, and the refusals are only visible here.**
+#[test]
+fn a_conversion_this_phase_does_not_model_is_loud_where_the_ones_it_models_answer() {
+    // A String is value-based (Deviation 36).
+    for source in [
+        "'abc'~objectName = 'x'\n",
+        "5~objectName = 'x'\n",
+        "s = 'a string longer than a handle holds'\ns~objectName = 'x'\n",
+        "(1 = 1)~objectName = 'x'\n",
+    ] {
+        assert_eq!(
+            run_source(source),
+            (
+                120,
+                String::new(),
+                "rexx-exec: OBJECTNAME= on a String is refused because a String is \
+                 value-based (Deviation 36)\n"
+                    .to_string()
+            ),
+            "{source:?}"
+        );
+    }
+    // The neighbours, each measured on the oracle: a `MAKE` method the
+    // behaviour does not have falls through to the id match and then to
+    // `.nil`, and a receiver that does have somewhere to keep a name keeps
+    // it.
+    for (source, expected) in [
+        ("say .K~request('ARRAY')\n::class K\n", "The NIL object\n"),
+        ("say .Array~request('CLASS')\n", "The Array class\n"),
+        // A condition object is a store-backed `Directory`, which converts:
+        // measured, oracle rc 0 and the array holds `14` items.
+        (
+            "signal on syntax\nsay 1 + 'a'\nsyntax:\nsay condition('O')~request('ARRAY')~items\n",
+            "14\n",
+        ),
+        (".K~objectName = 'named'\nsay .K\n::class K\n", "named\n"),
+        (
+            "s = .K~new('abc')\ns~objectName = 'named'\nsay s~objectName\n::class K subclass string\n",
+            "named\n",
+        ),
+        (
+            "a = .array~new\na~objectName = 'named'\nsay a~string a~copy~objectName\n",
+            "named named\n",
+        ),
+        (
+            ".environment~objectName = 'named'\nsay .environment\n",
+            "named\n",
+        ),
+    ] {
+        assert_eq!(
+            run_source(source),
+            (0, expected.to_string(), String::new()),
+            "{source:?}"
+        );
+    }
+}
+
+/// A `lineIn` on the in-process session queue with no other activity to add a
+/// line is a wait nothing left to run can end, which the oracle blocks on for
+/// ever (Deviation 20). With another activity alive, it waits for that one.
+#[test]
+fn a_line_in_nothing_can_satisfy_is_an_unsatisfiable_wait() {
+    let outcome = crate::run_program(
+        "linein.rex",
+        b"say 'before'\nsay .RexxQueue~new~lineIn\n".to_vec(),
+        crate::Invocation::none().with_deadline(std::time::Duration::from_secs(20)),
+    );
+    assert_eq!(outcome.exit_code, crate::NOT_IMPLEMENTED_EXIT);
+    assert_eq!(outcome.stdout, b"before\n");
+    assert_eq!(
+        String::from_utf8_lossy(&outcome.stderr),
+        "rexx-exec: a wait that nothing left to run can end is not implemented\n"
+    );
+    assert_eq!(
+        run_source(
+            "t = .t~new; t~start('late')\nsay .RexxQueue~new~lineIn\n::class t\n\
+             ::method late\n  call SysSleep 0.05\n  queue 'arrived'\n"
+        ),
+        (0, "arrived\n".to_string(), String::new())
+    );
+}
+
+/// **A `reqstr` command reaches a `RexxQueue` redirection target**: the command
+/// is the class's `makeString`, and its output lines are queued in order.
+#[test]
+fn a_reqstr_command_writes_to_a_rexxqueue_target() {
+    assert_eq!(
+        run_source(
+            "q = .rexxqueue~new\naddress 'SYSTEM' .K with output using (q)\n\
+             say rc q~queued q~pull\n::class K\n\
+             ::method makeString class\n  return 'echo hi; echo there'\n"
+        ),
+        (0, "0 2 hi\n".to_string(), String::new())
+    );
+}
+
+/// An `Interp` whose class registry holds one class awaiting a class-side
+/// `UNINIT`, which is what a directive install leaves behind.
+fn interp_awaiting_a_class_uninit() -> Interp {
+    let mut interp = Interp::new();
+    let program = Rc::new(
+        interrexx_parse::parse_program(b"nop\n::class k\n::method uninit class\n  nop\n".to_vec())
+            .expect("it parses"),
+    );
+    // The id `install_directives` is given has to name a program in
+    // `Interp::programs`, which is what `Interp::run` pushes before it
+    // installs anything; without it a finalizer's body cannot be reached.
+    let id = interp.programs.insert(Rc::clone(&program));
+    interp
+        .install_directives(id, &program)
+        .expect("the directives install");
+    interp
+}
+
+/// [`Interp::run_termination_uninits`] refuses to re-enter itself, and
+/// refusing leaves its work pending rather than consuming it.
+#[test]
+fn an_interlocked_termination_sweep_runs_nothing_and_consumes_nothing() {
+    let mut fresh = interp_awaiting_a_class_uninit();
+    assert_eq!(
+        fresh.classes().take_uninit_classes_in_sweep_order().len(),
+        1,
+        "the setup must really leave a class pending, or both arms below \
+         are green over an empty registry"
+    );
+
+    let mut held = interp_awaiting_a_class_uninit();
+    held.processing_uninits = true;
+    assert!(
+        held.run_termination_uninits().is_empty(),
+        "an interlocked sweep answers no loud refusal because it runs nothing"
+    );
+    assert_eq!(
+        held.classes().take_uninit_classes_in_sweep_order().len(),
+        1,
+        "an interlocked sweep must leave the class for the caller holding \
+         the flag; an empty answer here means it swept anyway"
+    );
+
+    let mut free = interp_awaiting_a_class_uninit();
+    assert!(free.run_termination_uninits().is_empty());
+    assert!(
+        free.classes()
+            .take_uninit_classes_in_sweep_order()
+            .is_empty(),
+        "a sweep that is not interlocked consumes what it ran"
+    );
+}
+
+/// The message, receiver, scope and arguments a parked native tail holds
+/// are roots while it is parked, each one alone.
+#[test]
+fn a_native_tails_objects_are_rooted_only_while_it_is_parked() {
+    let mut interp = Interp::new();
+    let [then, scope, receiver, argument] = [
+        b"then-object-text",
+        b"scope-names-text",
+        b"receiver-of-send",
+        b"argument-to-send",
+    ]
+    .map(|text| interp.text(text));
+    interp.activity.native_tails.push(NativeTail {
+        depth: 0,
+        then: Then::Started(then),
+        blame: Some(NativeBlame {
+            name: b"SEND".as_slice().into(),
+            scope,
+            receiver,
+            args: [None, Some(argument)].into(),
+        }),
+        entered: None,
+    });
+    let held = [
+        (then, "started message"),
+        (scope, "scope"),
+        (receiver, "receiver"),
+        (argument, "argument"),
+    ];
+    interp.collect_now();
+    for (held, what) in held {
+        assert!(interp.heap.get(held).is_some(), "the {what} was collected");
+    }
+    interp.activity.native_tails.pop();
+    interp.collect_now();
+    for (held, what) in held {
+        assert!(
+            interp.heap.get(held).is_none(),
+            "the {what} outlived its tail, so something else roots it"
+        );
+    }
+}
+
+/// `.Object`'s COPY through a scope override on a class object, a
+/// `RexxContext` and `.RexxInfo` raises 93.970, as the plain `~copy` does on
+/// both sides: rexxref forbids copying each (`fundclasses.xml:63-65`,
+/// `utilityclasses.xml:7934-7942`, `:7549`). Measured, the oracle copies
+/// each through the override.
+#[test]
+fn a_scope_override_copy_of_an_uncopyable_object_raises() {
+    let source = "do o over .array~of(.Array, .zz, .context, .RexxInfo)\n\
+                  \x20 call override o\n\
+                  end\n\
+                  exit 0\n\
+                  override: procedure\n\
+                  \x20 use arg o\n\
+                  \x20 signal on syntax name d\n\
+                  \x20 c = .Message~new(o, .array~of('COPY', .Object))~send\n\
+                  \x20 say 'copied' c~class~id\n\
+                  \x20 return\n\
+                  d: say condition('O')~code condition('O')~message\n\
+                  \x20 return\n\
+                  ::class zz\n";
+    let expected = "93.970 COPY method is not supported for object The Array class.\n\
+                    93.970 COPY method is not supported for object The ZZ class.\n\
+                    93.970 COPY method is not supported for object a RexxContext.\n\
+                    93.970 COPY method is not supported for object a RexxInfo.\n";
+    assert_eq!(run_source(source), (0, expected.to_string(), String::new()));
+}
+
+/// A primitive running under a name of its own that the receiver's search
+/// order hides lists no frame, so no frame is built without its method. The
+/// oracle lists `METHOD HAS ... Compiled method "HAS" with scope "MYARR"`.
+#[test]
+fn a_hidden_primitive_lists_no_frame() {
+    let program = ".myarr~define('HAS', .array~method('HASITEM'))\n\
+                   .myarr~define('HASITEM')\n\
+                   a = .myarr~of(.k~new)\nsay a~has(.k~new)\nexit\n\
+                   ::class k\n::method '=='\n  \
+                   do f over .context~stackFrames\n    \
+                   if f~line == .nil then say f~name (f~executable == .nil)\n  \
+                   end\n  return 0\n\
+                   ::class myarr subclass array\n";
+    assert_eq!(run_source(program), (0, "0\n".to_string(), String::new()));
+}

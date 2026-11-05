@@ -56,19 +56,19 @@ From `rust/`, under the memory cap:
 * `cargo fmt --all --check` and `cargo clippy --workspace --all-targets -- -D warnings`.
 * `cargo test --workspace --no-fail-fast`, and the same with `REXX_CORPUS_GATE=1` in a debug build:
   release compiles out `debug_assert`, which carries some of the interpreter's invariants.
-* `REXX_SPEC_ORACLE=1 cargo test -p rexx-exec --test spec` after changing `spec/`.
+* `REXX_SPEC_ORACLE=1 cargo test -p interrexx --test spec` after changing `spec/`.
 * ThreadSanitizer runs take `TSAN_OPTIONS=suppressions=rust/tsan.supp`, which hides the dynamic
   linker's `dl_close` race that two interpreters in one process show.
 * Mutation runs build with `--profile mutation`, so a mutant never overwrites the release binary.
 * `cargo test NAME` exits 0 when nothing matches; check the count of tests that ran.
 
 Editing a `rust/corpus/lang/*.rex` program requires regenerating its recorded source lines; the
-module comment of `rust/crates/rexx-parse/tests/sourceline_oracle.rs` has the procedure.
+module comment of `rust/crates/interrexx-parse/tests/sourceline_oracle.rs` has the procedure.
 
 ## Code conventions
 
 * `unsafe_code = "deny"`. The granted modules are pinned by
-  `rust/crates/rexx-core/tests/unsafe_sites.rs`. A new site needs the owner's approval and must
+  `rust/crates/interrexx-core/tests/unsafe_sites.rs`. A new site needs the owner's approval and must
   clear the bar: the unsafety sits in one module behind a safe interface, its invariant is stated
   there and checkable from that module alone, a safe alternative was measured, and a test fails if
   the invariant breaks.

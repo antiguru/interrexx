@@ -1,5 +1,5 @@
 # Reds of the seeded gate ruled not to be defects, read by
-# crates/rexx-exec/tests/concurrency_tests.rs, sim_gate. Tab-separated columns: group, part,
+# crates/interrexx/tests/concurrency_tests.rs, sim_gate. Tab-separated columns: group, part,
 # test, kind, a text the red's line holds (its refusal where it has one), each * for any; then the
 # reason and its evidence. A kind is panic, crash, hang, invariant, determinism, design-limit,
 # check or no-report. Each row is as narrow as its evidence.

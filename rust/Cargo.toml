@@ -3,10 +3,28 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.package]
+version = "0.1.0"
 edition = "2024"
 rust-version = "1.96.1"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/antiguru/interrexx"
+
+[workspace.dependencies]
+interrexx = { path = "crates/interrexx", version = "0.1.0" }
+interrexx-api = { path = "crates/interrexx-api", version = "0.1.0" }
+interrexx-bench = { path = "crates/interrexx-bench", version = "0.1.0" }
+interrexx-capi = { path = "crates/interrexx-capi", version = "0.1.0" }
+interrexx-capi-rxapi = { path = "crates/interrexx-capi-rxapi", version = "0.1.0" }
+interrexx-classes = { path = "crates/interrexx-classes", version = "0.1.0" }
+interrexx-core = { path = "crates/interrexx-core", version = "0.1.0" }
+interrexx-extract = { path = "crates/interrexx-extract", version = "0.1.0" }
+interrexx-inventory = { path = "crates/interrexx-inventory", version = "0.1.0" }
+interrexx-lib = { path = "crates/interrexx-lib", version = "0.1.0" }
+interrexx-num = { path = "crates/interrexx-num", version = "0.1.0" }
+interrexx-oracle = { path = "crates/interrexx-oracle", version = "0.1.0" }
+interrexx-parse = { path = "crates/interrexx-parse", version = "0.1.0" }
+interrexx-rxapi = { path = "crates/interrexx-rxapi", version = "0.1.0" }
+interrexx-spec = { path = "crates/interrexx-spec", version = "0.1.0" }
 
 [workspace.lints.rust]
 # `deny` and not `forbid`.
@@ -24,11 +42,11 @@ repository = "https://github.com/antiguru/interrexx"
 # approved *module* needs; `deny` can. **The record of every granted site is
 # the set of `#[allow(unsafe_code)]` attributes in the tree**, which names the
 # module rather than the crate and is asserted rather than described --
-# `crates/rexx-core/tests/unsafe_sites.rs` fails if that set changes.
+# `crates/interrexx-core/tests/unsafe_sites.rs` fails if that set changes.
 unsafe_code = "deny"
 
 # `tests/loom.rs` builds the baton, inbox and timer sources under
-# `--cfg loom` (`rexx-exec/src/sync.rs`).
+# `--cfg loom` (`interrexx/src/sync.rs`).
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 
 # Adopted from `TimelyDataflow/timely-dataflow`'s `Cargo.toml`. Levels follow

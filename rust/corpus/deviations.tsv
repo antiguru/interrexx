@@ -1,6 +1,6 @@
 # One row per Deviation of spec/src/deviations.md: number, status (active or withdrawn),
 # the model tests whose oracle departures it licenses, and its witnesses in
-# rexx-exec/tests/licensed_divergences.rs; lists are comma-separated, `-` for none.
+# interrexx/tests/licensed_divergences.rs; lists are comma-separated, `-` for none.
 0	active	-	-
 1	active	-	-
 2	active	-	-

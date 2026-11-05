@@ -1,0 +1,462 @@
+//! What a command line supplies to a top-level program, as
+//! [`run_program`](crate::run_program)'s third parameter.
+//! ```text
+//! rexx p.rex            ->  arg() = 0, arg(1) omitted
+//! rexx p.rex a b c      ->  arg() = 1, arg(1) = "a b c"
+//! rexx p.rex "a b c"    ->  arg() = 1, arg(1) = "a b c"
+//! rexx p.rex a,b,c      ->  arg() = 1, arg(1) = "a,b,c"   (commas do not split)
+//! rexx p.rex ""         ->  arg() = 1, arg(1) = ""        (empty, but PRESENT)
+//! ```
+//! ```text
+//! rexx p.rex     ->  <P>   -- nothing bound, so `p` reads as its own name
+//! rexx p.rex ""  ->  <>    -- bound to the null string
+//! ```
+//! ```text
+//! ""      ""        ->  ""      (0)   -- not " " (1)
+//! ""      "x"       ->  "x"     (1)   -- not " x" (2)
+//! "x"     ""        ->  "x "    (2)
+//! "" "" "x"         ->  "x"     (1)
+//! "x" "" "y"        ->  "x  y"  (4)
+//! " " "x"           ->  "  x"   (3)   -- a blank word IS non-empty
+//! " x"              ->  " x"    (2)   -- nothing is stripped
+//! "a  b"  "c"       ->  "a  b c" (6)  -- internal spacing survives
+//! ```
+
+use std::time::Duration;
+
+use interrexx_core::FrameBlock;
+
+/// What a command line supplied to the program being run.
+pub struct Invocation {
+    /// The one argument string, or `None` when the command line supplied no
+    /// argument. See the module doc for why the two are different states and
+    /// how each is observable.
+    argument: Option<Vec<u8>>,
+    /// Where `.input` reads its lines from.
+    input: ProgramInput,
+    /// How long the run may take before the interpreter abandons it, or
+    /// `None` for no bound at all -- which is what every shipped caller
+    /// passes. See [`Invocation::with_deadline`].
+    deadline: Option<Duration>,
+    /// The directory the interpreter resolves relative paths against, or
+    /// `None` to take the process's. A harness running interpreters on threads
+    /// sets it, because the process's own directory is shared.
+    directory: Option<std::path::PathBuf>,
+    /// The environment the interpreter reads and writes, or `None` to copy the
+    /// process's at start.
+    environment: Option<Vec<(Vec<u8>, Vec<u8>)>>,
+    /// Whether each standard descriptor -- input, output, error, in that
+    /// order -- is transient: a terminal, a pipe or a character device rather
+    /// than a regular file.
+    ///
+    /// **A property of the embedding, not of this process.** The interpreter
+    /// never writes to a descriptor -- `SAY` appends to a buffer the caller
+    /// drains -- so the only honest source for this is whoever owns the
+    /// descriptors. Positioning a transient stream is 93.958 and
+    /// `QUERY STREAMTYPE` answers `TRANSIENT`, both Rexx-visible, so reading
+    /// the host's own `/proc/self/fd` here would make one program answer
+    /// differently under a binary, a test harness and a library embedding.
+    /// Defaults to all transient, which is what a terminal is.
+    standard_transient: [bool; 3],
+    /// Where the buffered output goes when the program is about to block on a
+    /// live standard input, or `None` for a caller that reads the whole of it
+    /// out of [`Outcome`](crate::Outcome) at the end.
+    sinks: Option<Sinks>,
+    /// The command-line words as separate strings, which `.SYSCARGS` answers.
+    ///
+    /// **Kept beside `argument` rather than derived from it**, because the
+    /// join is not invertible: measured, `1 "2 3" 4` gives one argument string
+    /// `1 2 3 4` and a `.SYSCARGS` of `1`, `2 3`, `4`, and nothing in the
+    /// string says where the second word ended. The two are independent
+    /// afterwards -- appending to `.SYSCARGS` leaves `ARG(1)` unchanged.
+    words: Vec<Vec<u8>>,
+    /// The index `.SYSCARGS` holds its first word at, or `None` for a run
+    /// whose `.local` has no `SYSCARGS` entry.
+    words_base: Option<usize>,
+    /// The `::OPTIONS` directive `.Package~defaultOptions` is sent before the
+    /// program is installed, and the override count sent after it.
+    default_options: Option<(Vec<u8>, i64)>,
+    /// The register frame arena's block size.
+    frame_block: FrameBlock,
+    switch_mode: Option<SwitchMode>,
+    /// What an embedding's `RexxStart` passes in place of the command line's
+    /// one string: each argument, `None` an omitted one.
+    arguments: Option<Vec<Option<Vec<u8>>>>,
+    /// How the program is called, `PARSE SOURCE`'s second word.
+    start: StartType,
+    /// The initial `ADDRESS` environment, or `None` for the platform's.
+    address: Option<Vec<u8>>,
+    /// The system exits an embedding's `RexxStart` names: each a function code and the name
+    /// of a registered exit handler.
+    exits: Vec<(std::ffi::c_int, Vec<u8>)>,
+    /// The thread an embedding's `RexxStart` was called on, which `RexxSetHalt` and
+    /// `RexxSetTrace` name to reach this run.
+    classic_thread: Option<usize>,
+}
+
+/// How an embedding calls a program (`RXCOMMAND`, `RXSUBROUTINE`,
+/// `RXFUNCTION`, `api/rexx.h`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StartType {
+    Command,
+    Subroutine,
+    Function,
+}
+
+/// Where a test sets `SLICE` itself in place of the timer (the
+/// deterministic switch mode).
+#[derive(Clone, Debug, PartialEq)]
+pub enum SwitchMode {
+    /// At the program's `k`-th clause, counting from 1.
+    AtClause(u64),
+    /// At every clause boundary.
+    EveryOpportunity,
+    /// The simulation mode.
+    Sim(crate::SimConfig),
+}
+
+/// What an embedding that owns real descriptors hands the interpreter's two
+/// output buffers to as the program runs.
+///
+/// **The interpreter never writes to a descriptor**: it appends to two
+/// buffers, and without sinks nothing is written until the caller drains
+/// [`Outcome`](crate::Outcome). With them, each buffer is handed over before
+/// a read, before the thread idles, before a command starts, and as
+/// [`Sinks::stdout_terminal`] says between those, which is the buffering of C
+/// stdio and Python 3 (Deviation 40). The rest stays for the `Outcome`.
+pub struct Sinks {
+    /// Takes what `SAY` and `.STDOUT` have written since the last handover,
+    /// answering the error that kept it from the descriptor, which the
+    /// stream writes to standard output then answer.
+    ///
+    /// **`Send`, because the interpreter runs on a thread of its own**
+    /// (`on_interpreter_thread`), which is where the sized stack it needs
+    /// comes from.
+    pub stdout: Box<dyn FnMut(&[u8]) -> std::io::Result<()> + Send>,
+    /// The same for the trace sink, which is `.STDERR`'s descriptor too.
+    pub stderr: Box<dyn FnMut(&[u8]) -> std::io::Result<()> + Send>,
+    /// Whether `stdout` writes to a terminal, which is handed each line as it
+    /// ends. Any other `stdout` is handed its buffer once it passes 64 KiB,
+    /// and `stderr` is handed each line whatever it writes to.
+    pub stdout_terminal: bool,
+    /// Whether `stdout` and `stderr` write this process's own standard
+    /// output and error. A command whose output or error is not redirected
+    /// then writes that descriptor itself, as the oracle's child does, once
+    /// the buffers have been handed over; otherwise its writes are read back
+    /// and handed over with the interpreter's own.
+    pub own_descriptors: bool,
+}
+
+/// Where `.input` -- the position `PULL`, `PARSE PULL` and `PARSE LINEIN` all
+/// advance -- reads its lines from.
+pub enum ProgramInput {
+    /// Nothing to read: every line read answers the null string.
+    Nothing,
+    /// The process's own standard input, read one line at a time.
+    Stdin,
+    /// A fixed buffer of bytes, read one line at a time -- what a test uses to
+    /// supply input deterministically.
+    Bytes(Vec<u8>),
+}
+
+impl Invocation {
+    /// No argument at all and nothing to read: the state `rexx p.rex` puts a
+    /// program in when its stdin is at `/dev/null`.
+    pub fn none() -> Invocation {
+        Invocation {
+            argument: None,
+            input: ProgramInput::Nothing,
+            deadline: None,
+            directory: None,
+            environment: None,
+            standard_transient: [true; 3],
+            sinks: None,
+            words: Vec::new(),
+            words_base: Some(1),
+            default_options: None,
+            frame_block: FrameBlock::DEFAULT,
+            switch_mode: None,
+            arguments: None,
+            start: StartType::Command,
+            address: None,
+            exits: Vec::new(),
+            classic_thread: None,
+        }
+    }
+
+    /// The same invocation, passing `arguments` (`None` an omitted one), as
+    /// `RexxStart` does, in place of one argument string.
+    pub fn with_arguments(self, arguments: Vec<Option<Vec<u8>>>) -> Invocation {
+        Invocation {
+            arguments: Some(arguments),
+            ..self
+        }
+    }
+
+    /// The same invocation, calling the program as `start` says.
+    pub fn with_start(self, start: StartType) -> Invocation {
+        Invocation { start, ..self }
+    }
+
+    /// The same invocation, with `address` the initial `ADDRESS` environment.
+    pub fn with_address(self, address: Vec<u8>) -> Invocation {
+        Invocation {
+            address: Some(address),
+            ..self
+        }
+    }
+
+    /// The same invocation, with the system exits `exits` names, each a function code and the
+    /// name of a registered exit handler.
+    pub fn with_exits(self, exits: Vec<(std::ffi::c_int, Vec<u8>)>) -> Invocation {
+        Invocation { exits, ..self }
+    }
+
+    /// The same invocation, run for a `RexxStart` called on the thread `thread`.
+    pub fn with_classic_thread(self, thread: usize) -> Invocation {
+        Invocation {
+            classic_thread: Some(thread),
+            ..self
+        }
+    }
+
+    /// The same invocation, resolving relative paths against `directory`.
+    pub fn with_directory(self, directory: std::path::PathBuf) -> Invocation {
+        Invocation {
+            directory: Some(directory),
+            ..self
+        }
+    }
+
+    /// The same invocation, told which standard descriptors are transient --
+    /// input, output, error, in that order. A caller that owns real
+    /// descriptors reads them here; one that does not leaves the default.
+    pub fn with_standard_transient(self, standard_transient: [bool; 3]) -> Invocation {
+        Invocation {
+            standard_transient,
+            ..self
+        }
+    }
+
+    /// The same invocation, reading and writing `environment` instead of a
+    /// copy of the process's.
+    pub fn with_environment(self, environment: Vec<(Vec<u8>, Vec<u8>)>) -> Invocation {
+        Invocation {
+            environment: Some(environment),
+            ..self
+        }
+    }
+
+    /// One argument string, exactly as supplied -- including the null string,
+    /// which is a present argument and not an absent one.
+    pub fn with_argument(argument: Vec<u8>) -> Invocation {
+        Invocation {
+            argument: Some(argument),
+            ..Invocation::none()
+        }
+    }
+
+    /// The same invocation, reading `.input` from `input`.
+    pub fn with_input(self, input: ProgramInput) -> Invocation {
+        Invocation { input, ..self }
+    }
+
+    /// The same invocation, handing the buffered output to `sinks` as it
+    /// runs.
+    pub fn with_sinks(self, sinks: Sinks) -> Invocation {
+        Invocation {
+            sinks: Some(sinks),
+            ..self
+        }
+    }
+
+    /// The same invocation, abandoned if the run is still executing clauses
+    /// `deadline` after it starts.
+    pub fn with_deadline(self, deadline: Duration) -> Invocation {
+        Invocation {
+            deadline: Some(deadline),
+            ..self
+        }
+    }
+
+    /// The same invocation, carving register frames from blocks of
+    /// `frame_block`. The size is validated when the `FrameBlock` is built.
+    pub fn with_frame_block(self, frame_block: FrameBlock) -> Invocation {
+        Invocation {
+            frame_block,
+            ..self
+        }
+    }
+
+    /// The same invocation, switching activities as `switch_mode` says rather
+    /// than when the timer says.
+    pub fn with_switch_mode(self, switch_mode: SwitchMode) -> Invocation {
+        Invocation {
+            switch_mode: Some(switch_mode),
+            ..self
+        }
+    }
+
+    /// The same invocation, with `.SYSCARGS` holding `words` from `index` on
+    /// and the slots below it empty.
+    pub fn with_syscargs(self, words: Vec<Vec<u8>>, index: usize) -> Invocation {
+        Invocation {
+            words,
+            words_base: Some(index),
+            ..self
+        }
+    }
+
+    /// The same invocation, with no `SYSCARGS` entry in `.local`.
+    pub fn without_syscargs(self) -> Invocation {
+        Invocation {
+            words_base: None,
+            ..self
+        }
+    }
+
+    /// The same invocation, sending `.Package~defaultOptions('D', directive)`
+    /// and then `('C', count)` before the program is installed.
+    pub fn with_default_options(self, directive: Vec<u8>, count: i64) -> Invocation {
+        Invocation {
+            default_options: Some((directive, count)),
+            ..self
+        }
+    }
+
+    /// The argument string, if there is one, where `.input` reads from, how
+    /// long the run may take, and the directory and environment it runs
+    /// against -- each `None` when the process's own is to be taken.
+    pub(crate) fn into_parts(self) -> InvocationParts {
+        InvocationParts {
+            argument: self.argument,
+            input: self.input,
+            deadline: self.deadline,
+            directory: self.directory,
+            environment: self.environment,
+            standard_transient: self.standard_transient,
+            sinks: self.sinks,
+            words: self.words,
+            words_base: self.words_base,
+            default_options: self.default_options,
+            frame_block: self.frame_block,
+            switch_mode: self.switch_mode,
+            arguments: self.arguments,
+            start: self.start,
+            address: self.address,
+            exits: self.exits,
+            classic_thread: self.classic_thread,
+        }
+    }
+}
+
+/// What [`Invocation::into_parts`] hands `run_program`, as named fields rather
+/// than a tuple whose arity grows with every phase.
+pub(crate) struct InvocationParts {
+    pub(crate) argument: Option<Vec<u8>>,
+    pub(crate) input: ProgramInput,
+    pub(crate) deadline: Option<Duration>,
+    pub(crate) directory: Option<std::path::PathBuf>,
+    pub(crate) environment: Option<Vec<(Vec<u8>, Vec<u8>)>>,
+    pub(crate) standard_transient: [bool; 3],
+    pub(crate) sinks: Option<Sinks>,
+    pub(crate) words: Vec<Vec<u8>>,
+    pub(crate) words_base: Option<usize>,
+    pub(crate) default_options: Option<(Vec<u8>, i64)>,
+    pub(crate) arguments: Option<Vec<Option<Vec<u8>>>>,
+    pub(crate) start: StartType,
+    pub(crate) address: Option<Vec<u8>>,
+    pub(crate) exits: Vec<(std::ffi::c_int, Vec<u8>)>,
+    pub(crate) classic_thread: Option<usize>,
+    pub(crate) frame_block: FrameBlock,
+    pub(crate) switch_mode: Option<SwitchMode>,
+}
+
+/// The one argument string a list of command-line words becomes, or `None`
+/// when the list is empty.
+pub fn join_command_line<I, W>(words: I) -> Invocation
+where
+    I: IntoIterator<Item = W>,
+    W: AsRef<[u8]>,
+{
+    let mut joined: Option<Vec<u8>> = None;
+    let mut kept: Vec<Vec<u8>> = Vec::new();
+    for word in words {
+        kept.push(word.as_ref().to_vec());
+        let buffer = joined.get_or_insert_with(Vec::new);
+        // The blank goes in only when something is already accumulated, which
+        // is what makes a leading empty word contribute neither text nor
+        // separator. `buffer` having been created by `get_or_insert_with`
+        // above is what keeps the *presence* of an argument independent of
+        // whether any word had bytes in it.
+        if !buffer.is_empty() {
+            buffer.push(b' ');
+        }
+        buffer.extend_from_slice(word.as_ref());
+    }
+    Invocation {
+        argument: joined,
+        words: kept,
+        ..Invocation::none()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The module doc's own measured table, row for row.
+    #[test]
+    fn command_line_words_join_the_way_the_oracle_joins_them() {
+        let cases: &[(&[&str], Option<&[u8]>)] = &[
+            (&[], None),
+            (&[""], Some(b"")),
+            (&["", ""], Some(b"")),
+            (&["", "x"], Some(b"x")),
+            (&["x", ""], Some(b"x ")),
+            (&["", "", "x"], Some(b"x")),
+            (&["x", "", "y"], Some(b"x  y")),
+            (&[" ", "x"], Some(b"  x")),
+            (&[" x"], Some(b" x")),
+            (&["x "], Some(b"x ")),
+            (&["a", "b", "c"], Some(b"a b c")),
+            (&["a b c"], Some(b"a b c")),
+            (&["a  b", "c"], Some(b"a  b c")),
+            (&["a,b,c"], Some(b"a,b,c")),
+            (&["x ", "y"], Some(b"x  y")),
+        ];
+        for (words, expected) in cases {
+            let joined = join_command_line(*words).into_parts().argument;
+            assert_eq!(
+                joined.as_deref(),
+                *expected,
+                "joining {words:?} gave {:?}",
+                joined.as_ref().map(|b| String::from_utf8_lossy(b))
+            );
+        }
+    }
+
+    /// The absent/empty split, on its own, because it is the one this type
+    /// exists for and the table above could satisfy it by accident.
+    #[test]
+    fn no_words_is_absent_and_one_empty_word_is_present() {
+        assert!(
+            join_command_line(Vec::<&str>::new())
+                .into_parts()
+                .argument
+                .is_none()
+        );
+        assert_eq!(
+            join_command_line([""]).into_parts().argument.as_deref(),
+            Some(&b""[..])
+        );
+        assert!(Invocation::none().into_parts().argument.is_none());
+        assert_eq!(
+            Invocation::with_argument(Vec::new())
+                .into_parts()
+                .argument
+                .as_deref(),
+            Some(&b""[..])
+        );
+    }
+}
