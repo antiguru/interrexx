@@ -10,7 +10,3 @@ rexxmsg.xml.
 
 ooTest and the ooRexx documentation are fetched by scripts/setup-third-party.sh
 and are not redistributed here.
-
-Test data under rust/corpus and rust/crates that still carries a Rexx Language
-Association header keeps that header and licence. Its bytes are compared with
-the oracle, so it is not edited.

@@ -1,7 +1,7 @@
 //! Every test here carries an oracle answer recorded *before* this crate's
 //! code was written, from a probe run as
-//! `( ulimit -v 1048576; LD_LIBRARY_PATH=.../ooRexx/build/lib .../ooRexx/build/bin/rexx FILE )`
-//! against `/home/moritz/dev/repos/ooRexx/build/bin/rexx`. Each test names
+//! `( ulimit -v 1048576; LD_LIBRARY_PATH=third_party/oracle/lib third_party/oracle/bin/rexx FILE )`
+//! against the oracle. Each test names
 //! its probe file (kept in the task report, not the tree) and states the
 //! exact recorded stdout it reproduces.
 
