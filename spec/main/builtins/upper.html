@@ -1,0 +1,357 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>UPPER - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">3.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">3.1.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">3.2.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">3.3.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html" class="active"><strong aria-hidden="true">3.4.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">3.5.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">3.6.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">3.7.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">3.8.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">3.9.</strong> WORDPOS</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="upper"><a class="header" href="#upper">UPPER</a></h1>
+<pre><code>UPPER(string [, n] [, length])
+</code></pre>
+<p class="references">rexxref: Functions &gt; Built-in Functions &gt; UPPER</p>
+<p class="deviations">Deviations: D4</p>
+<p>UPPER changes the lowercase letters of a string, or of a run of its
+characters, to uppercase, and leaves every other character as it is.</p>
+<h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
+<div class="rule" id="r-bif.upper.method"><a href="#r-bif.upper.method">[bif.upper.method]</a></div>
+<p>UPPER is a builtin that runs as a String method, and <code>string</code>, its first
+argument, is the receiver; <code>n</code> and <code>length</code> become the message's
+arguments, in that order. <code>string</code> is a <a href="../conventions.html#r-conv.string.null">string</a>, <code>n</code>
+is a <a href="../conventions.html#r-conv.position.check">position</a>, and <code>length</code> is a
+<a href="../conventions.html#r-conv.length.check">length</a>. The arguments are checked in the
+<a href="../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count by
+the <a href="index.html#r-bif.index.call.count">builtin call rules</a>: one is required and three is
+the most.</p>
+<pre><code class="language-rexx">say upper('mixed Case') 'mixed Case'~upper(7)
+signal on syntax name a
+say upper('abc', 0)
+a: say condition('o')~code
+signal on syntax name b
+say upper('abc', 1, -2)
+b: say condition('o')~code
+signal on syntax name c
+say upper('abc', 0, 'two')
+c: say condition('o')~code
+signal on syntax name d
+say upper('abc', 1, 1, 1)
+d: say condition('o')~code
+signal on syntax name f
+say upper(, 2)
+f: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">MIXED CASE mixed CASE
+93.924
+93.923
+40.12
+40.4
+40.5
+</code></pre>
+<div class="rule" id="r-bif.upper.n.default"><a href="#r-bif.upper.n.default">[bif.upper.n.default]</a></div>
+<p>When <code>n</code> is omitted, it is 1: the run starts at the first character of
+<code>string</code>.</p>
+<pre><code class="language-rexx">say upper('xyz', , 2) upper('xyz', 1, 2)
+</code></pre>
+<pre><code class="language-output">XYz XYz
+</code></pre>
+<div class="rule" id="r-bif.upper.length.default"><a href="#r-bif.upper.length.default">[bif.upper.length.default]</a></div>
+<p>When <code>length</code> is omitted, the run is every character of <code>string</code> at
+position <code>n</code> and after it, and no character when <code>n</code> is greater than
+<code>LENGTH(string)</code>.</p>
+<pre><code class="language-rexx">say upper('lower', 3) upper('lower', 5) upper('lower', 6)
+</code></pre>
+<pre><code class="language-output">loWER loweR lower
+</code></pre>
+<h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
+<div class="rule" id="r-bif.upper.case"><a href="#r-bif.upper.case">[bif.upper.case]</a></div>
+<p>Uppercasing changes exactly the 26 characters <code>'a'</code> to <code>'z'</code>, <code>'61'x</code> to
+<code>'7A'x</code>, each to the letter <code>'A'</code> to <code>'Z'</code> with the same place in the
+alphabet, <code>'41'x</code> to <code>'5A'x</code>. Every other character is left as it is: the
+uppercase letters, the digits, whitespace, <code>'00'x</code>, and every character from
+<code>'80'x</code> to <code>'FF'x</code>, including the bytes that an encoding such as Latin-1 or
+UTF-8 uses for a lowercase letter.</p>
+<pre><code class="language-rexx">say upper('q-z 0?_') c2x(upper('e9c3a9ff'x)) c2x(upper('60617a7b'x))
+all = xrange('00'x, 'ff'x)
+say (upper(all) == translate(all, xrange('A', 'Z'), xrange('a', 'z')))
+</code></pre>
+<pre><code class="language-output">Q-Z 0?_ E9C3A9FF 60415A7B
+1
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The reference manual's UPPER section does not name the characters it
+changes; its TRANSLATE section, which uppercases the same way, names the
+letters <code>a</code> to <code>z</code>, and this rule follows that. The ANSI draft has no UPPER
+builtin, and leaves the uppercase form of each character to the
+configuration (5.4.3).</p>
+</blockquote>
+<div class="rule" id="r-bif.upper.result"><a href="#r-bif.upper.result">[bif.upper.result]</a></div>
+<p>UPPER returns a string of <code>LENGTH(string)</code> characters. The character at
+each position from <code>n</code> to <code>n + length - 1</code> that <code>string</code> has is
+<a href="#r-bif.upper.case">uppercased</a>, and every other character of <code>string</code> is
+copied unchanged. A run that reaches past the end of <code>string</code> stops at the
+end, and nothing is added.</p>
+<pre><code class="language-rexx">say '['upper('string', 2, 3)']' '['upper('string', 4, 100)']' '['upper('ab cd')']'
+</code></pre>
+<pre><code class="language-output">[sTRIng] [strING] [AB CD]
+</code></pre>
+<div class="rule" id="r-bif.upper.past-end"><a href="#r-bif.upper.past-end">[bif.upper.past-end]</a></div>
+<p>When <code>n</code> is greater than <code>LENGTH(string)</code>, no character is changed and the
+result is <code>string</code>, for every <code>n</code> past the end that passes its check.</p>
+<pre><code class="language-rexx">say upper('abc', 4) upper('abc', 999999999999999999, 2)
+</code></pre>
+<pre><code class="language-output">abc abc
+</code></pre>
+<div class="rule" id="r-bif.upper.length.zero"><a href="#r-bif.upper.length.zero">[bif.upper.length.zero]</a></div>
+<p>When <code>length</code> is 0, no character is changed and the result is <code>string</code>,
+for every <code>n</code> that passes its check.</p>
+<pre><code class="language-rexx">say upper('abc', 2, 0) upper('abc', 50, 0)
+</code></pre>
+<pre><code class="language-output">abc abc
+</code></pre>
+<div class="rule" id="r-bif.upper.empty"><a href="#r-bif.upper.empty">[bif.upper.empty]</a></div>
+<p>When <code>string</code> is the null string, the result is the null string, for every
+<code>n</code> and <code>length</code> that pass their checks.</p>
+<pre><code class="language-rexx">say '['upper('')']' '['upper('', 3, 2)']'
+</code></pre>
+<pre><code class="language-output">[] []
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<blockquote>
+<p><strong>Note.</strong> An argument whose <code>STRING</code> method answers an object that is not a string
+falls under <a href="../conventions.html#r-conv.string.deviation.30">Deviation 30</a>, as it does for
+every builtin.</p>
+</blockquote>
+<div class="rule" id="r-bif.upper.deviation.4"><a href="#r-bif.upper.deviation.4">[bif.upper.deviation.4]</a></div>
+<p>interrexx does not specify whether the result of UPPER is the same object
+as another string of equal value: as <code>string</code> itself, when no character of
+it changes, as in <code>upper(s)</code> for an <code>s</code> with no lowercase letter, or as an
+equal string produced some other way, such as the literal <code>'GHIJ'</code> beside
+<code>upper('gh' || 'ij')</code>. Through <code>identityHash</code>, or as a key of an
+<code>IdentityTable</code> or <code>IdentitySet</code>, the answer may be either, and a program
+can rely only on the value, which is equal under <code>==</code>. ooRexx differs:
+it often answers a new object where interrexx answers the existing one.</p>
+<pre><code class="language-rexx">s = 'PQ' || 'RS'
+say (upper(s) == s) (upper('gh' || 'ij') == 'GHIJ')
+</code></pre>
+<pre><code class="language-output">1 1
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../builtins/translate.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../builtins/verify.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../builtins/translate.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../builtins/verify.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

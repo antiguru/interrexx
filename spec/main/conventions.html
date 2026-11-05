@@ -1,0 +1,545 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Conventions - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="conventions.html" class="active"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="builtins/index.html"><strong aria-hidden="true">3.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="builtins/substr.html"><strong aria-hidden="true">3.1.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="builtins/subword.html"><strong aria-hidden="true">3.2.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="builtins/translate.html"><strong aria-hidden="true">3.3.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="builtins/upper.html"><strong aria-hidden="true">3.4.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="builtins/verify.html"><strong aria-hidden="true">3.5.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="builtins/word.html"><strong aria-hidden="true">3.6.</strong> WORD</a></li><li class="chapter-item expanded "><a href="builtins/wordindex.html"><strong aria-hidden="true">3.7.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="builtins/wordlength.html"><strong aria-hidden="true">3.8.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="builtins/wordpos.html"><strong aria-hidden="true">3.9.</strong> WORDPOS</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="conventions"><a class="header" href="#conventions">Conventions</a></h1>
+<p class="references">ANSI: 9.2.1; rexxref: Functions &gt; Built-in Functions</p>
+<p class="deviations">Deviations: D30</p>
+<p>The rules on this page hold on every page that links to them. A builtin
+page states what its arguments are (a string, a position, a length, a pad)
+and links here for what that means, instead of restating it.</p>
+<h2 id="strings-and-characters"><a class="header" href="#strings-and-characters">Strings and characters</a></h2>
+<div class="rule" id="r-conv.string.chars"><a href="#r-conv.string.chars">[conv.string.chars]</a></div>
+<p>A string is a finite sequence of characters, and a character is one byte:
+any of the 256 values from <code>'00'x</code> to <code>'FF'x</code>. The length of a string is
+the number of bytes in it. No rule in this book decodes a string in UTF-8
+or any other encoding, so a character that such an encoding writes as two
+bytes is two characters here.</p>
+<pre><code class="language-rexx">say length('c3a9'x)
+say c2x(substr('c3a9'x, 2))
+</code></pre>
+<pre><code class="language-output">2
+A9
+</code></pre>
+<div class="rule" id="r-conv.string.null"><a href="#r-conv.string.null">[conv.string.null]</a></div>
+<p>The null string is the string of length 0, written <code>''</code>. A builtin makes no
+check of an argument its page calls a string: no string there raises an
+error, so the null string and a string of any bytes are as valid as any
+other.</p>
+<pre><code class="language-rexx">say length(upper(''))
+say c2x(upper('61007a'x))
+</code></pre>
+<pre><code class="language-output">0
+41005A
+</code></pre>
+<div class="rule" id="r-conv.string.object"><a href="#r-conv.string.object">[conv.string.object]</a></div>
+<p>An argument that a page calls a string and that is an object other than a
+string is replaced by the answer of its <code>STRING</code> method, and the builtin
+works on that answer. When the answer is not a string either, see
+<a href="#r-conv.string.deviation.30">Deviation 30</a>.</p>
+<pre><code class="language-rexx">say upper(.object~new) length(.array~of(1, 2))
+</code></pre>
+<pre><code class="language-output">AN OBJECT 3
+</code></pre>
+<div class="rule" id="r-conv.string.whitespace"><a href="#r-conv.string.whitespace">[conv.string.whitespace]</a></div>
+<p>Whitespace is the blank, <code>'20'x</code>, and the horizontal tab, <code>'09'x</code>, and no
+other character. Line feed, carriage return, form feed and vertical tab are
+not whitespace.</p>
+<pre><code class="language-rexx">signal on syntax name e
+say substr('abc', '09'x || '2 ')
+say substr('abc', '2' || '0a'x)
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">bc
+40.12
+</code></pre>
+<h2 id="positions"><a class="header" href="#positions">Positions</a></h2>
+<div class="rule" id="r-conv.position.origin"><a href="#r-conv.position.origin">[conv.position.origin]</a></div>
+<p>Positions count from 1. Position 1 is the first character of a string, or
+its first word where a page counts words, position 2 the one after it, and
+so on. No character or word is at position 0.</p>
+<pre><code class="language-rexx">say substr('abc', 1, 1) substr('abc', 3, 1)
+say word('x y z', 2)
+</code></pre>
+<pre><code class="language-output">a c
+y
+</code></pre>
+<h2 id="whole-number-arguments"><a class="header" href="#whole-number-arguments">Whole-number arguments</a></h2>
+<blockquote>
+<p><strong>Note.</strong> Position and length arguments are whole numbers. The two rules below say
+which strings a whole-number argument accepts and what value it then has.</p>
+</blockquote>
+<div class="rule" id="r-conv.whole.form"><a href="#r-conv.whole.form">[conv.whole.form]</a></div>
+<p>A whole-number argument must be a string of this form: optional whitespace;
+an optional sign, <code>+</code> or <code>-</code>, which may be followed by whitespace; one or
+more digits, with at most one period among or around them; optionally an
+exponent, which is <code>E</code> or <code>e</code> directly after the last digit or the period,
+an optional sign, and one or more digits; optional whitespace. Any other
+string raises <code>SYNTAX 40.12</code>, the null string and a string of only
+whitespace included.</p>
+<pre><code class="language-rexx">say substr('abcdef', ' + 2 ', 1) substr('abcdef', '2.', 1),
+    substr('abcdef', '.2E1', 1) substr('abcdef', '20e-1', 1),
+    substr('abcdef', '2.E0', 1)
+signal on syntax name a
+say substr('abc', '')
+a: say condition('o')~code
+signal on syntax name b
+say substr('abc', '1 E1')
+b: say condition('o')~code
+signal on syntax name c
+say substr('abc', '+-2')
+c: say condition('o')~code
+signal on syntax name d
+say substr('abc', '0x2')
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">b b b b b
+40.12
+40.12
+40.12
+40.12
+</code></pre>
+<div class="rule" id="r-conv.whole.digits"><a href="#r-conv.whole.digits">[conv.whole.digits]</a></div>
+<p>On a 64-bit host, which is what interrexx targets, the value of a
+whole-number argument is its number rounded to 18 significant digits; when
+the first digit dropped is 5 or more, the magnitude rounds up, otherwise
+down. The caller's NUMERIC DIGITS setting plays no part. If the rounded
+value has a fractional part other than zero, or its magnitude is 10**18 or
+more, the argument raises <code>SYNTAX 40.12</code>; otherwise its value is that
+integer. (The reference manual gives 9 digits for 32-bit hosts; this book
+does not specify those.)</p>
+<pre><code class="language-rexx">say substr('abcdef', '2.000', 1) substr('abcdef', '1.0000000000000000001', 1)
+say '['word('a b', 999999999999999999)']'
+numeric digits 3
+signal on syntax name a
+say substr('abcdef', 2, 1.0001)
+a: say condition('o')~code
+signal on syntax name b
+say substr('abc', '2.5')
+b: say condition('o')~code
+signal on syntax name c
+say word('a b', 1000000000000000000)
+c: say condition('o')~code
+signal on syntax name d
+say word('a b', '999999999999999999.5')
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">b a
+[]
+40.12
+40.12
+40.12
+40.12
+</code></pre>
+<h2 id="builtins-that-run-as-string-methods"><a class="header" href="#builtins-that-run-as-string-methods">Builtins that run as String methods</a></h2>
+<div class="rule" id="r-conv.method"><a href="#r-conv.method">[conv.method]</a></div>
+<p>A builtin that runs as a String method does its work by sending the
+<code>String</code> message of the same name. One of its arguments, usually the first
+and for a few builtins the second, is the receiver; the others become the
+message's arguments, in their order. The builtin and the message then give
+the same result for the same arguments. A builtin page says when its
+builtin is one of these. The range checks below, and the
+<a href="#r-conv.check.order">order of the checks</a>, are rules for these builtins
+only; any other builtin's page states its own range checks.</p>
+<pre><code class="language-rexx">say substr('abcd', 2, 2) 'abcd'~substr(2, 2) upper('ab', 2) 'ab'~upper(2)
+</code></pre>
+<pre><code class="language-output">bc bc aB aB
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The ooRexx reference manual (Functions &gt; Built-in Functions)
+names the builtins that run this way; the ANSI standard, which has no
+String methods, does not.</p>
+</blockquote>
+<div class="rule" id="r-conv.position.check"><a href="#r-conv.position.check">[conv.position.check]</a></div>
+<p>In a builtin that runs as a String method, a position argument is a
+whole-number argument whose value must be positive. A value of 0 or less
+raises <code>SYNTAX 93.924</code>; <code>-0</code> is 0.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say substr('abc', 0)
+a: say condition('o')~code
+signal on syntax name b
+say word('a b', '-0')
+b: say condition('o')~code
+signal on syntax name c
+say substr('abc', -1)
+c: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">93.924
+93.924
+93.924
+</code></pre>
+<div class="rule" id="r-conv.length.check"><a href="#r-conv.length.check">[conv.length.check]</a></div>
+<p>In a builtin that runs as a String method, a length argument is a
+whole-number argument whose value must not be negative. A negative value
+raises <code>SYNTAX 93.923</code>. A length of 0 is allowed, and so is <code>-0</code>, which is
+0.</p>
+<pre><code class="language-rexx">say '['substr('abc', 2, 0)']' '['substr('abc', 2, '-0')']'
+signal on syntax name a
+say substr('abc', 1, -1)
+a: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">[] []
+93.923
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> These two codes follow from the reference manual: a builtin of this kind
+sends a String message, the range of a position or length is checked by
+that method, and an incorrect call to a method is error 93, whose subcodes
+924 and 923 are the position and length cases. The ANSI draft (9.2.1),
+which has no such methods, raises 40.14 for a position and 40.13 for a
+length.</p>
+</blockquote>
+<h2 id="pad-arguments"><a class="header" href="#pad-arguments">Pad arguments</a></h2>
+<div class="rule" id="r-conv.pad"><a href="#r-conv.pad">[conv.pad]</a></div>
+<p>A pad argument must be a string of exactly one character. Any character may
+be the pad, the blank and <code>'00'x</code> included. A pad of any other length raises
+<code>SYNTAX 40.23</code>; so does the null string, and so does a character that an
+encoding writes as two bytes (<a href="#r-conv.string.chars">two characters</a>).</p>
+<pre><code class="language-rexx">say substr('ab', 1, 4, '*') c2x(substr('ab', 1, 3, '00'x))
+signal on syntax name a
+say substr('abc', 1, 2, '**')
+a: say condition('o')~code
+signal on syntax name b
+say substr('abc', 1, 2, '')
+b: say condition('o')~code
+signal on syntax name c
+say substr('abc', 1, 2, 'c3a9'x)
+c: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">ab** 616200
+40.23
+40.23
+40.23
+</code></pre>
+<h2 id="omitted-and-empty-arguments"><a class="header" href="#omitted-and-empty-arguments">Omitted and empty arguments</a></h2>
+<div class="rule" id="r-conv.arg.omitted"><a href="#r-conv.arg.omitted">[conv.arg.omitted]</a></div>
+<p>An argument is omitted when its place in the argument list holds no
+expression: nothing before the first comma, nothing between two commas, or
+nothing after the last one. An omitted optional argument takes the default
+that its page states.</p>
+<pre><code class="language-rexx">say substr('abc', 1, , '.') substr('abc', 2, )
+</code></pre>
+<pre><code class="language-output">abc bc
+</code></pre>
+<div class="rule" id="r-conv.arg.empty"><a href="#r-conv.arg.empty">[conv.arg.empty]</a></div>
+<p>An argument whose expression yields the null string is not omitted and never
+takes the default. It is checked like any other value: as a whole number it
+raises <code>SYNTAX 40.12</code> (<a href="#r-conv.whole.form">whole-number form</a>), as a pad
+<code>SYNTAX 40.23</code> (<a href="#r-conv.pad">pad</a>), and as a string it is the null string.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say substr('abc', 1, '')
+a: say condition('o')~code
+signal on syntax name b
+say substr('abc', 1, 5, '')
+b: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.12
+40.23
+</code></pre>
+<h2 id="the-order-of-the-checks"><a class="header" href="#the-order-of-the-checks">The order of the checks</a></h2>
+<div class="rule" id="r-conv.check.order"><a href="#r-conv.check.order">[conv.check.order]</a></div>
+<p>In a builtin that runs as a String method, when more than one argument
+fails, the form checks run first: the
+whole-number checks of <a href="#r-conv.whole.form">form</a> and
+<a href="#r-conv.whole.digits">value</a>, and the <a href="#r-conv.pad">pad</a> check, applied to
+the arguments from left to right, and the first failure is raised. Only when
+every argument passes them do the range checks of
+<a href="#r-conv.position.check">positions</a> and <a href="#r-conv.length.check">lengths</a> run,
+again from left to right. A builtin page that has checks of its own states
+where they fall in this order.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say substr('abc', 0, 'x')
+a: say condition('o')~code
+signal on syntax name b
+say substr('abc', 0, 1, '**')
+b: say condition('o')~code
+signal on syntax name c
+say substr('abc', 'x', 1, '**')
+c: say condition('o')~code
+signal on syntax name d
+say translate('abc', , , '**', 'x')
+d: say condition('o')~code
+signal on syntax name f
+say substr('abc', 0, -1)
+f: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.12
+40.23
+40.12
+40.23
+93.924
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The range checks come last because they belong to the String method, which
+runs only once the call has been made. The reference manual does not say
+that the function call checks the form of its arguments, under error 40,
+before it sends the message; that part matches ooRexx. The
+ANSI draft (9.2.1) checks each argument's form and range together, one
+argument at a time.</p>
+</blockquote>
+<h2 id="errors-and-results"><a class="header" href="#errors-and-results">Errors and results</a></h2>
+<div class="rule" id="r-conv.error.name"><a href="#r-conv.error.name">[conv.error.name]</a></div>
+<p>A rule that says something "raises <code>SYNTAX m.n</code>" means that the builtin
+returns no value and the SYNTAX condition is raised with error number <code>m</code>
+and subcode <code>n</code>. A trap for it sees <code>condition('C')</code> as <code>SYNTAX</code>,
+<code>condition('O')~code</code> as the string <code>m.n</code>, and the variable <code>RC</code> set to
+<code>m</code>. This book does not state the error message.</p>
+<pre><code class="language-rexx">signal on syntax name e
+x = substr('abc', 0)
+say 'not reached'
+e: say condition('c') condition('o')~code rc
+</code></pre>
+<pre><code class="language-output">SYNTAX 93.924 93
+</code></pre>
+<div class="rule" id="r-conv.returns"><a href="#r-conv.returns">[conv.returns]</a></div>
+<p>A rule that says a builtin "returns" a string means that the function
+call's value is exactly that string: the same characters in the same order,
+with no blanks added or removed.</p>
+<pre><code class="language-rexx">say '['substr('abc', 2)']' '['substr(' a ', 1)']'
+</code></pre>
+<pre><code class="language-output">[bc] [ a ]
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-conv.string.deviation.30"><a href="#r-conv.string.deviation.30">[conv.string.deviation.30]</a></div>
+<p>interrexx does not convert an argument whose <code>STRING</code> method answers an
+object that is not a string, such as a <code>Directory</code>. When a builtin receives
+such an argument where its page calls for a string, interrexx ends the
+program with exit code 120 and a message that this is not implemented,
+after raising <code>NOSTRING</code> when a trap for it is set. ooRexx reads the
+answer as a string, and what it does then depends on the builtin: <code>UPPER</code>
+ends the program with Error 5, <code>LENGTH</code> answers an unrelated number, and <code>STRIP</code>
+crashes the interpreter. A program can rely on none of these answers.</p>
+<pre><code class="language-rexx">o = .weird~new
+say 'before'
+say upper(o)
+say 'after'
+::class weird
+::method string
+  return .directory~new
+</code></pre>
+<pre><code class="language-output rc=120">before
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="introduction.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="builtins/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="introduction.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="builtins/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

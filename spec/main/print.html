@@ -1,0 +1,1907 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>The interrexx Language Specification</title>
+        <meta name="robots" content="noindex">
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="builtins/index.html"><strong aria-hidden="true">3.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="builtins/substr.html"><strong aria-hidden="true">3.1.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="builtins/subword.html"><strong aria-hidden="true">3.2.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="builtins/translate.html"><strong aria-hidden="true">3.3.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="builtins/upper.html"><strong aria-hidden="true">3.4.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="builtins/verify.html"><strong aria-hidden="true">3.5.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="builtins/word.html"><strong aria-hidden="true">3.6.</strong> WORD</a></li><li class="chapter-item expanded "><a href="builtins/wordindex.html"><strong aria-hidden="true">3.7.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="builtins/wordlength.html"><strong aria-hidden="true">3.8.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="builtins/wordpos.html"><strong aria-hidden="true">3.9.</strong> WORDPOS</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p>This book specifies the language that interrexx implements: the Rexx
+language as ooRexx extends it. It describes what a program means, and what
+the interpreter must do when it runs one.</p>
+<h2 id="who-it-is-for"><a class="header" href="#who-it-is-for">Who it is for</a></h2>
+<p>The book is written for three readers: an engineer changing the
+interpreter, who needs the exact behavior before touching code; an LLM
+agent doing the same work, which may read one page at a time with no
+history behind it; and a reviewer judging whether a change is correct. It
+assumes you can read Rexx, and it does not teach the language.</p>
+<h2 id="authority"><a class="header" href="#authority">Authority</a></h2>
+<p>This book is normative in its own right: its rules define the language
+interrexx implements, and no other document or implementation does. When
+the interpreter and a rule disagree, one of them has a defect, and the
+disagreement is settled here before it is settled in code. Behavior the book
+does not state is not promised, and where a reader might expect a promise
+the book says explicitly that a behavior is not specified.</p>
+<p>Rules and examples are normative. Everything else is informative: the
+overview at the top of a page, and every note, which is set as a block
+quote that begins <strong>Note.</strong> A note explains where a rule comes from or how
+another definition of Rexx differs; it never adds to or changes a rule.</p>
+<h2 id="terms"><a class="header" href="#terms">Terms</a></h2>
+<p><strong>ooRexx.</strong> The open-source C++ implementation of Object Rexx, version 5. interrexx is
+written to run ooRexx programs, and the book's examples are also run on
+ooRexx to measure where the two agree.</p>
+<p><strong>Deviation.</strong> A declared difference between interrexx and ooRexx, numbered in the
+project's register. A page lists in its front matter the deviations that
+touch its element, and states each as a rule whose identifier ends
+<code>deviation.N</code>. Every example on which interrexx and ooRexx answer
+differently belongs to such a rule; any other difference is a defect.</p>
+<p><strong>String method.</strong> A method of the <code>String</code> class. Many builtins run as one, as
+<a href="conventions.html#r-conv.method">the conventions</a> define.</p>
+<p><strong>Identity.</strong> Whether two values are the same object, as opposed to equal strings. It
+is observable only through <code>identityHash</code> and the identity collections
+(<code>IdentityTable</code>, <code>IdentitySet</code>), and the book says where it is not
+specified.</p>
+<h2 id="reading-a-rule"><a class="header" href="#reading-a-rule">Reading a rule</a></h2>
+<p>Every statement the book makes about behavior is a rule. A rule has an
+identifier of dotted lowercase words, and it is a single short paragraph.</p>
+<p>An identifier names the page that holds its rule, so a reader of the raw
+Markdown finds any rule from its identifier alone. The first word names the
+chapter: <code>bif</code> for built-in functions in <code>builtins/</code>, <code>instr</code> for
+<code>instructions/</code>, <code>expr</code> for <code>expressions/</code>, <code>parse</code> for <code>parsing/</code>, <code>cond</code>
+for <code>conditions/</code> and <code>class</code> for <code>classes/</code>. The second word is the page's
+file name: <code>bif.substr.pad</code> is in <code>builtins/substr.md</code>, and the rules for a
+whole chapter, such as <code>bif.index.call.count</code>, are in its <code>index.md</code>. The
+conventions are one page, <code>conventions.md</code>, and every <code>conv.</code> rule is there.
+The checker rejects a rule on any other page.</p>
+<p>Identifiers never change and are never reused. Other pages refer to a rule by
+that identifier, and so do comments in the test sources: a test that
+exercises a rule cites it, and the checker reports any rule that has neither
+a cited test nor an example.</p>
+<h2 id="reading-an-example"><a class="header" href="#reading-an-example">Reading an example</a></h2>
+<p>An example is a short program followed by the exact text it writes to
+standard output. When the program ends with a non-zero exit code, the output
+is marked with that code. The checker runs every example with an empty
+standard input and compares the output byte for byte, so an example is
+evidence, not decoration. An example belongs to the rule above it.</p>
+<h2 id="sources"><a class="header" href="#sources">Sources</a></h2>
+<p>Two documents are cited by section and are not copied: the ooRexx reference
+manual and the ANSI Rexx standard (X3.274-1996, cited from its final public
+draft, so the notes call it the ANSI draft). A page's front matter names the
+sections that describe its element. Both are informative: the rules are
+derived from them and from reasoning about the semantics, and where the two
+disagree the rule follows ooRexx and a note says how ANSI differs. Where
+both are silent, a rule matches ooRexx, and a note says so. The wording of
+this book is its own.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="conventions"><a class="header" href="#conventions">Conventions</a></h1>
+<p class="references">ANSI: 9.2.1; rexxref: Functions &gt; Built-in Functions</p>
+<p class="deviations">Deviations: D30</p>
+<p>The rules on this page hold on every page that links to them. A builtin
+page states what its arguments are (a string, a position, a length, a pad)
+and links here for what that means, instead of restating it.</p>
+<h2 id="strings-and-characters"><a class="header" href="#strings-and-characters">Strings and characters</a></h2>
+<div class="rule" id="r-conv.string.chars"><a href="conventions.html#r-conv.string.chars">[conv.string.chars]</a></div>
+<p>A string is a finite sequence of characters, and a character is one byte:
+any of the 256 values from <code>'00'x</code> to <code>'FF'x</code>. The length of a string is
+the number of bytes in it. No rule in this book decodes a string in UTF-8
+or any other encoding, so a character that such an encoding writes as two
+bytes is two characters here.</p>
+<pre><code class="language-rexx">say length('c3a9'x)
+say c2x(substr('c3a9'x, 2))
+</code></pre>
+<pre><code class="language-output">2
+A9
+</code></pre>
+<div class="rule" id="r-conv.string.null"><a href="conventions.html#r-conv.string.null">[conv.string.null]</a></div>
+<p>The null string is the string of length 0, written <code>''</code>. A builtin makes no
+check of an argument its page calls a string: no string there raises an
+error, so the null string and a string of any bytes are as valid as any
+other.</p>
+<pre><code class="language-rexx">say length(upper(''))
+say c2x(upper('61007a'x))
+</code></pre>
+<pre><code class="language-output">0
+41005A
+</code></pre>
+<div class="rule" id="r-conv.string.object"><a href="conventions.html#r-conv.string.object">[conv.string.object]</a></div>
+<p>An argument that a page calls a string and that is an object other than a
+string is replaced by the answer of its <code>STRING</code> method, and the builtin
+works on that answer. When the answer is not a string either, see
+<a href="conventions.html#r-conv.string.deviation.30">Deviation 30</a>.</p>
+<pre><code class="language-rexx">say upper(.object~new) length(.array~of(1, 2))
+</code></pre>
+<pre><code class="language-output">AN OBJECT 3
+</code></pre>
+<div class="rule" id="r-conv.string.whitespace"><a href="conventions.html#r-conv.string.whitespace">[conv.string.whitespace]</a></div>
+<p>Whitespace is the blank, <code>'20'x</code>, and the horizontal tab, <code>'09'x</code>, and no
+other character. Line feed, carriage return, form feed and vertical tab are
+not whitespace.</p>
+<pre><code class="language-rexx">signal on syntax name e
+say substr('abc', '09'x || '2 ')
+say substr('abc', '2' || '0a'x)
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">bc
+40.12
+</code></pre>
+<h2 id="positions"><a class="header" href="#positions">Positions</a></h2>
+<div class="rule" id="r-conv.position.origin"><a href="conventions.html#r-conv.position.origin">[conv.position.origin]</a></div>
+<p>Positions count from 1. Position 1 is the first character of a string, or
+its first word where a page counts words, position 2 the one after it, and
+so on. No character or word is at position 0.</p>
+<pre><code class="language-rexx">say substr('abc', 1, 1) substr('abc', 3, 1)
+say word('x y z', 2)
+</code></pre>
+<pre><code class="language-output">a c
+y
+</code></pre>
+<h2 id="whole-number-arguments"><a class="header" href="#whole-number-arguments">Whole-number arguments</a></h2>
+<blockquote>
+<p><strong>Note.</strong> Position and length arguments are whole numbers. The two rules below say
+which strings a whole-number argument accepts and what value it then has.</p>
+</blockquote>
+<div class="rule" id="r-conv.whole.form"><a href="conventions.html#r-conv.whole.form">[conv.whole.form]</a></div>
+<p>A whole-number argument must be a string of this form: optional whitespace;
+an optional sign, <code>+</code> or <code>-</code>, which may be followed by whitespace; one or
+more digits, with at most one period among or around them; optionally an
+exponent, which is <code>E</code> or <code>e</code> directly after the last digit or the period,
+an optional sign, and one or more digits; optional whitespace. Any other
+string raises <code>SYNTAX 40.12</code>, the null string and a string of only
+whitespace included.</p>
+<pre><code class="language-rexx">say substr('abcdef', ' + 2 ', 1) substr('abcdef', '2.', 1),
+    substr('abcdef', '.2E1', 1) substr('abcdef', '20e-1', 1),
+    substr('abcdef', '2.E0', 1)
+signal on syntax name a
+say substr('abc', '')
+a: say condition('o')~code
+signal on syntax name b
+say substr('abc', '1 E1')
+b: say condition('o')~code
+signal on syntax name c
+say substr('abc', '+-2')
+c: say condition('o')~code
+signal on syntax name d
+say substr('abc', '0x2')
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">b b b b b
+40.12
+40.12
+40.12
+40.12
+</code></pre>
+<div class="rule" id="r-conv.whole.digits"><a href="conventions.html#r-conv.whole.digits">[conv.whole.digits]</a></div>
+<p>On a 64-bit host, which is what interrexx targets, the value of a
+whole-number argument is its number rounded to 18 significant digits; when
+the first digit dropped is 5 or more, the magnitude rounds up, otherwise
+down. The caller's NUMERIC DIGITS setting plays no part. If the rounded
+value has a fractional part other than zero, or its magnitude is 10**18 or
+more, the argument raises <code>SYNTAX 40.12</code>; otherwise its value is that
+integer. (The reference manual gives 9 digits for 32-bit hosts; this book
+does not specify those.)</p>
+<pre><code class="language-rexx">say substr('abcdef', '2.000', 1) substr('abcdef', '1.0000000000000000001', 1)
+say '['word('a b', 999999999999999999)']'
+numeric digits 3
+signal on syntax name a
+say substr('abcdef', 2, 1.0001)
+a: say condition('o')~code
+signal on syntax name b
+say substr('abc', '2.5')
+b: say condition('o')~code
+signal on syntax name c
+say word('a b', 1000000000000000000)
+c: say condition('o')~code
+signal on syntax name d
+say word('a b', '999999999999999999.5')
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">b a
+[]
+40.12
+40.12
+40.12
+40.12
+</code></pre>
+<h2 id="builtins-that-run-as-string-methods"><a class="header" href="#builtins-that-run-as-string-methods">Builtins that run as String methods</a></h2>
+<div class="rule" id="r-conv.method"><a href="conventions.html#r-conv.method">[conv.method]</a></div>
+<p>A builtin that runs as a String method does its work by sending the
+<code>String</code> message of the same name. One of its arguments, usually the first
+and for a few builtins the second, is the receiver; the others become the
+message's arguments, in their order. The builtin and the message then give
+the same result for the same arguments. A builtin page says when its
+builtin is one of these. The range checks below, and the
+<a href="conventions.html#r-conv.check.order">order of the checks</a>, are rules for these builtins
+only; any other builtin's page states its own range checks.</p>
+<pre><code class="language-rexx">say substr('abcd', 2, 2) 'abcd'~substr(2, 2) upper('ab', 2) 'ab'~upper(2)
+</code></pre>
+<pre><code class="language-output">bc bc aB aB
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The ooRexx reference manual (Functions &gt; Built-in Functions)
+names the builtins that run this way; the ANSI standard, which has no
+String methods, does not.</p>
+</blockquote>
+<div class="rule" id="r-conv.position.check"><a href="conventions.html#r-conv.position.check">[conv.position.check]</a></div>
+<p>In a builtin that runs as a String method, a position argument is a
+whole-number argument whose value must be positive. A value of 0 or less
+raises <code>SYNTAX 93.924</code>; <code>-0</code> is 0.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say substr('abc', 0)
+a: say condition('o')~code
+signal on syntax name b
+say word('a b', '-0')
+b: say condition('o')~code
+signal on syntax name c
+say substr('abc', -1)
+c: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">93.924
+93.924
+93.924
+</code></pre>
+<div class="rule" id="r-conv.length.check"><a href="conventions.html#r-conv.length.check">[conv.length.check]</a></div>
+<p>In a builtin that runs as a String method, a length argument is a
+whole-number argument whose value must not be negative. A negative value
+raises <code>SYNTAX 93.923</code>. A length of 0 is allowed, and so is <code>-0</code>, which is
+0.</p>
+<pre><code class="language-rexx">say '['substr('abc', 2, 0)']' '['substr('abc', 2, '-0')']'
+signal on syntax name a
+say substr('abc', 1, -1)
+a: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">[] []
+93.923
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> These two codes follow from the reference manual: a builtin of this kind
+sends a String message, the range of a position or length is checked by
+that method, and an incorrect call to a method is error 93, whose subcodes
+924 and 923 are the position and length cases. The ANSI draft (9.2.1),
+which has no such methods, raises 40.14 for a position and 40.13 for a
+length.</p>
+</blockquote>
+<h2 id="pad-arguments"><a class="header" href="#pad-arguments">Pad arguments</a></h2>
+<div class="rule" id="r-conv.pad"><a href="conventions.html#r-conv.pad">[conv.pad]</a></div>
+<p>A pad argument must be a string of exactly one character. Any character may
+be the pad, the blank and <code>'00'x</code> included. A pad of any other length raises
+<code>SYNTAX 40.23</code>; so does the null string, and so does a character that an
+encoding writes as two bytes (<a href="conventions.html#r-conv.string.chars">two characters</a>).</p>
+<pre><code class="language-rexx">say substr('ab', 1, 4, '*') c2x(substr('ab', 1, 3, '00'x))
+signal on syntax name a
+say substr('abc', 1, 2, '**')
+a: say condition('o')~code
+signal on syntax name b
+say substr('abc', 1, 2, '')
+b: say condition('o')~code
+signal on syntax name c
+say substr('abc', 1, 2, 'c3a9'x)
+c: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">ab** 616200
+40.23
+40.23
+40.23
+</code></pre>
+<h2 id="omitted-and-empty-arguments"><a class="header" href="#omitted-and-empty-arguments">Omitted and empty arguments</a></h2>
+<div class="rule" id="r-conv.arg.omitted"><a href="conventions.html#r-conv.arg.omitted">[conv.arg.omitted]</a></div>
+<p>An argument is omitted when its place in the argument list holds no
+expression: nothing before the first comma, nothing between two commas, or
+nothing after the last one. An omitted optional argument takes the default
+that its page states.</p>
+<pre><code class="language-rexx">say substr('abc', 1, , '.') substr('abc', 2, )
+</code></pre>
+<pre><code class="language-output">abc bc
+</code></pre>
+<div class="rule" id="r-conv.arg.empty"><a href="conventions.html#r-conv.arg.empty">[conv.arg.empty]</a></div>
+<p>An argument whose expression yields the null string is not omitted and never
+takes the default. It is checked like any other value: as a whole number it
+raises <code>SYNTAX 40.12</code> (<a href="conventions.html#r-conv.whole.form">whole-number form</a>), as a pad
+<code>SYNTAX 40.23</code> (<a href="conventions.html#r-conv.pad">pad</a>), and as a string it is the null string.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say substr('abc', 1, '')
+a: say condition('o')~code
+signal on syntax name b
+say substr('abc', 1, 5, '')
+b: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.12
+40.23
+</code></pre>
+<h2 id="the-order-of-the-checks"><a class="header" href="#the-order-of-the-checks">The order of the checks</a></h2>
+<div class="rule" id="r-conv.check.order"><a href="conventions.html#r-conv.check.order">[conv.check.order]</a></div>
+<p>In a builtin that runs as a String method, when more than one argument
+fails, the form checks run first: the
+whole-number checks of <a href="conventions.html#r-conv.whole.form">form</a> and
+<a href="conventions.html#r-conv.whole.digits">value</a>, and the <a href="conventions.html#r-conv.pad">pad</a> check, applied to
+the arguments from left to right, and the first failure is raised. Only when
+every argument passes them do the range checks of
+<a href="conventions.html#r-conv.position.check">positions</a> and <a href="conventions.html#r-conv.length.check">lengths</a> run,
+again from left to right. A builtin page that has checks of its own states
+where they fall in this order.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say substr('abc', 0, 'x')
+a: say condition('o')~code
+signal on syntax name b
+say substr('abc', 0, 1, '**')
+b: say condition('o')~code
+signal on syntax name c
+say substr('abc', 'x', 1, '**')
+c: say condition('o')~code
+signal on syntax name d
+say translate('abc', , , '**', 'x')
+d: say condition('o')~code
+signal on syntax name f
+say substr('abc', 0, -1)
+f: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.12
+40.23
+40.12
+40.23
+93.924
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The range checks come last because they belong to the String method, which
+runs only once the call has been made. The reference manual does not say
+that the function call checks the form of its arguments, under error 40,
+before it sends the message; that part matches ooRexx. The
+ANSI draft (9.2.1) checks each argument's form and range together, one
+argument at a time.</p>
+</blockquote>
+<h2 id="errors-and-results"><a class="header" href="#errors-and-results">Errors and results</a></h2>
+<div class="rule" id="r-conv.error.name"><a href="conventions.html#r-conv.error.name">[conv.error.name]</a></div>
+<p>A rule that says something "raises <code>SYNTAX m.n</code>" means that the builtin
+returns no value and the SYNTAX condition is raised with error number <code>m</code>
+and subcode <code>n</code>. A trap for it sees <code>condition('C')</code> as <code>SYNTAX</code>,
+<code>condition('O')~code</code> as the string <code>m.n</code>, and the variable <code>RC</code> set to
+<code>m</code>. This book does not state the error message.</p>
+<pre><code class="language-rexx">signal on syntax name e
+x = substr('abc', 0)
+say 'not reached'
+e: say condition('c') condition('o')~code rc
+</code></pre>
+<pre><code class="language-output">SYNTAX 93.924 93
+</code></pre>
+<div class="rule" id="r-conv.returns"><a href="conventions.html#r-conv.returns">[conv.returns]</a></div>
+<p>A rule that says a builtin "returns" a string means that the function
+call's value is exactly that string: the same characters in the same order,
+with no blanks added or removed.</p>
+<pre><code class="language-rexx">say '['substr('abc', 2)']' '['substr(' a ', 1)']'
+</code></pre>
+<pre><code class="language-output">[bc] [ a ]
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-conv.string.deviation.30"><a href="conventions.html#r-conv.string.deviation.30">[conv.string.deviation.30]</a></div>
+<p>interrexx does not convert an argument whose <code>STRING</code> method answers an
+object that is not a string, such as a <code>Directory</code>. When a builtin receives
+such an argument where its page calls for a string, interrexx ends the
+program with exit code 120 and a message that this is not implemented,
+after raising <code>NOSTRING</code> when a trap for it is set. ooRexx reads the
+answer as a string, and what it does then depends on the builtin: <code>UPPER</code>
+ends the program with Error 5, <code>LENGTH</code> answers an unrelated number, and <code>STRIP</code>
+crashes the interpreter. A program can rely on none of these answers.</p>
+<pre><code class="language-rexx">o = .weird~new
+say 'before'
+say upper(o)
+say 'after'
+::class weird
+::method string
+  return .directory~new
+</code></pre>
+<pre><code class="language-output rc=120">before
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="built-in-functions"><a class="header" href="#built-in-functions">Built-in functions</a></h1>
+<p class="references">ANSI: 9.2.1; rexxref: Functions &gt; Built-in Functions</p>
+<p class="deviations">Deviations: D4</p>
+<p>This chapter has a page for each builtin function, and each page specifies
+the function call. The rules here hold for every builtin call; the pages
+link to them, and to the <a href="builtins/../conventions.html">conventions</a>, instead of
+restating them.</p>
+<p>A page's syntax line names the arguments in order. A name in square
+brackets is an optional argument; every other argument is required. The
+number of names on the line is the most arguments the builtin takes, and
+the number of required ones is the fewest.</p>
+<div class="rule" id="r-bif.index.call.count"><a href="builtins/index.html#r-bif.index.call.count">[bif.index.call.count]</a></div>
+<p>The argument count of a call is the position of the last argument in it
+that is not <a href="builtins/../conventions.html#r-conv.arg.omitted">omitted</a>. Omitted places at the end of the
+list therefore add nothing to the count, and a call with only omitted
+places counts as a call with no arguments, a count of 0.</p>
+<pre><code class="language-rexx">say substr('abc', 2, , ) word('a b', 2, , , )
+</code></pre>
+<pre><code class="language-output">bc b
+</code></pre>
+<div class="rule" id="r-bif.index.call.too-few"><a href="builtins/index.html#r-bif.index.call.too-few">[bif.index.call.too-few]</a></div>
+<p>A call whose argument count is less than the number of required arguments
+raises <code>SYNTAX 40.3</code>.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say substr('abc')
+a: say condition('o')~code
+signal on syntax name b
+say substr('abc', )
+b: say condition('o')~code
+signal on syntax name c
+say word(, , )
+c: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.3
+40.3
+40.3
+</code></pre>
+<div class="rule" id="r-bif.index.call.too-many"><a href="builtins/index.html#r-bif.index.call.too-many">[bif.index.call.too-many]</a></div>
+<p>A call whose argument count is greater than the number of arguments on the
+syntax line raises <code>SYNTAX 40.4</code>, whatever the values of the arguments,
+and even when the arguments before the last are omitted.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say word('a b', 1, 2)
+a: say condition('o')~code
+signal on syntax name b
+say substr(, , , , 1)
+b: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.4
+40.4
+</code></pre>
+<div class="rule" id="r-bif.index.call.missing"><a href="builtins/index.html#r-bif.index.call.missing">[bif.index.call.missing]</a></div>
+<p>A required argument that is omitted, in a call whose argument count reaches
+past it, raises <code>SYNTAX 40.5</code>.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say substr(, 1)
+a: say condition('o')~code
+signal on syntax name b
+say wordpos('a', , 1)
+b: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.5
+40.5
+</code></pre>
+<div class="rule" id="r-bif.index.call.order.count-before-missing"><a href="builtins/index.html#r-bif.index.call.order.count-before-missing">[bif.index.call.order.count-before-missing]</a></div>
+<p>A call whose argument count is wrong raises the <a href="builtins/index.html#r-bif.index.call.too-few">too-few</a>
+or <a href="builtins/index.html#r-bif.index.call.too-many">too-many</a> error even when it also omits a
+<a href="builtins/index.html#r-bif.index.call.missing">required argument</a>.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say word(, 1, 2)
+a: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.4
+</code></pre>
+<div class="rule" id="r-bif.index.call.order.count-before-values"><a href="builtins/index.html#r-bif.index.call.order.count-before-values">[bif.index.call.order.count-before-values]</a></div>
+<p>A call whose argument count is wrong raises the too-few or too-many error
+even when an argument it does pass would fail its own check.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say substr('abc', 'x', 1, '**', 5)
+a: say condition('o')~code
+signal on syntax name b
+say word('a b', 0, 2)
+b: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.4
+40.4
+</code></pre>
+<div class="rule" id="r-bif.index.call.order.missing-before-values"><a href="builtins/index.html#r-bif.index.call.order.missing-before-values">[bif.index.call.order.missing-before-values]</a></div>
+<p>A call whose argument count is right but that omits a
+<a href="builtins/index.html#r-bif.index.call.missing">required argument</a> raises <code>SYNTAX 40.5</code> even when an
+argument it passes after the omitted one would fail its own check, a
+<a href="builtins/../conventions.html#r-conv.check.order">form check</a> or a range check.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say substr(, 'x')
+a: say condition('o')~code
+signal on syntax name b
+say subword(, 0)
+b: say condition('o')~code
+signal on syntax name c
+say wordpos(, 'a', 0)
+c: say condition('o')~code
+signal on syntax name d
+say verify('abc', , 'Y')
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.5
+40.5
+40.5
+40.5
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The ANSI draft (9.2.1) checks the arguments from left to right, raising
+40.5 at an omitted required argument before it reaches the ones after it,
+and makes the range checks only once every argument is present.</p>
+</blockquote>
+<h2 id="words"><a class="header" href="#words">Words</a></h2>
+<div class="rule" id="r-bif.index.words.split"><a href="builtins/index.html#r-bif.index.words.split">[bif.index.words.split]</a></div>
+<p>The builtins that count words split a string into words the same way. A
+word is a run of one or more characters, none of them
+<a href="builtins/../conventions.html#r-conv.string.whitespace">whitespace</a>, that has whitespace or an end of
+the string on each side. The words of a string are numbered from 1, left to
+right. Whitespace before the first word, between two words and after the
+last belongs to no word, so the null string and a string of only whitespace
+have no words. Every other character, line feed and <code>'00'x</code> among them, can
+be part of a word.</p>
+<pre><code class="language-rexx">say words(' a'||'09'x||'b  c ') words('') words('  '||'09'x)
+say word('one  two', 2) c2x(word('a'||'0a000c'x||'b c', 1))
+</code></pre>
+<pre><code class="language-output">3 0 0
+two 610A000C62
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The ANSI draft (9.3.26 and the other word builtins) separates words by a
+set of blank characters that it leaves to the configuration: the blank and
+any others the configuration names. ooRexx fixes that set as the blank and
+the horizontal tab, and so does this book.</p>
+</blockquote>
+<div class="rule" id="r-bif.index.words.number"><a href="builtins/index.html#r-bif.index.words.number">[bif.index.words.number]</a></div>
+<p>Where a word builtin's page calls an argument a word number, that argument
+is a <a href="builtins/../conventions.html#r-conv.position.check">position</a> that counts words: the word number
+<code>n</code> names word <code>n</code> of the string as <a href="builtins/index.html#r-bif.index.words.split">the word rule</a>
+numbers them. A word number greater than the number of words in the string
+is not an error, for every value that passes its check; it names no word,
+and the builtin's page says what the builtin answers then.</p>
+<pre><code class="language-rexx">say '['word('a b', 3)']' wordindex('a b', 3) wordlength('a b', 999999999999999999),
+    wordpos('a', 'a b', 3)
+signal on syntax name e
+say wordindex('a b', 0)
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">[] 0 0 0
+93.924
+</code></pre>
+<h2 id="answers-that-are-counts"><a class="header" href="#answers-that-are-counts">Answers that are counts</a></h2>
+<div class="rule" id="r-bif.index.count.answer"><a href="builtins/index.html#r-bif.index.count.answer">[bif.index.count.answer]</a></div>
+<p>WORDINDEX, WORDLENGTH, WORDPOS and VERIFY each answer a count: of
+characters or of words, or a position, which counts characters or words up
+to the one it names. A builtin that answers a count writes it as a whole
+number in decimal digits only: no sign, no leading zero, no period and no exponent, and <code>0</code>
+for zero. The caller's NUMERIC DIGITS setting plays no part, so the answer
+is exact however many digits it has.</p>
+<pre><code class="language-rexx">numeric digits 3
+say wordindex(copies(' ', 1000) || 'a', 1) wordlength(copies('z', 1234), 1),
+    wordpos('y', copies('x ', 1200) || 'y') wordpos('q', 'a b')
+say verify(copies('a', 1200) || 'b', 'a') verify(copies('a', 1300), '', 'N', 1234),
+    verify('ab', 'ab')
+</code></pre>
+<pre><code class="language-output">1001 1234 1201 0
+1201 1234 0
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The reference manual does not say how these answers are written or whether
+NUMERIC DIGITS applies to them; this rule matches ooRexx.</p>
+</blockquote>
+<div class="rule" id="r-bif.index.count.answer.deviation.4"><a href="builtins/index.html#r-bif.index.count.answer.deviation.4">[bif.index.count.answer.deviation.4]</a></div>
+<p>interrexx does not specify whether the answer of a builtin that answers a
+count is the same object as another string of equal value: as an equal
+number the program already holds, such as the <code>start</code> argument of a call
+that answers it, or a literal such as <code>'1201'</code>, or the equal answer of
+another call. Through <code>identityHash</code>, or as a key of an <code>IdentityTable</code> or
+<code>IdentitySet</code>, the answer may be either, and a program can rely only on the
+value, which is equal under <code>==</code>. ooRexx differs: it often answers a
+new object where interrexx answers the existing one.</p>
+<pre><code class="language-rexx">w = copies('x ', 1200) || 'y'
+n = 1200 + 1
+say (wordpos('y', w, n) == n) (wordindex(copies(' ', 1200) || 'a', 1) == '1201'),
+    (wordlength(copies('z', 1201), 1) == wordpos('y', w))
+v = copies('a', 1300)
+say (verify(v, '', 'N', n) == n) (verify(copies('a', 1200) || 'b', 'a') == '1201')
+</code></pre>
+<pre><code class="language-output">1 1 1
+1 1
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="substr"><a class="header" href="#substr">SUBSTR</a></h1>
+<pre><code>SUBSTR(string, n [, length] [, pad])
+</code></pre>
+<p class="references">ANSI: 9.3.21; rexxref: Functions &gt; Built-in Functions &gt; SUBSTR (Substring)</p>
+<p class="deviations">Deviations: D4</p>
+<p>SUBSTR selects a run of characters from a string by position, and pads the
+run when it reaches past the end of the string.</p>
+<h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
+<div class="rule" id="r-bif.substr.method"><a href="builtins/substr.html#r-bif.substr.method">[bif.substr.method]</a></div>
+<p>SUBSTR is a builtin that runs as a String method, and <code>string</code>, its first
+argument, is the receiver. <code>string</code> is a <a href="builtins/../conventions.html#r-conv.string.null">string</a>, <code>n</code>
+is a <a href="builtins/../conventions.html#r-conv.position.check">position</a>, <code>length</code> is a
+<a href="builtins/../conventions.html#r-conv.length.check">length</a>, and <code>pad</code> is a <a href="builtins/../conventions.html#r-conv.pad">pad</a>. The
+arguments are checked in the <a href="builtins/../conventions.html#r-conv.check.order">order</a> the conventions
+give, and the argument count by the <a href="builtins/index.html#r-bif.index.call.count">builtin call rules</a>:
+two are required and four is the most.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say substr('abc', 0)
+a: say condition('o')~code
+signal on syntax name b
+say substr('abc', 2, -1)
+b: say condition('o')~code
+signal on syntax name c
+say substr('abc', 1, 2, '..')
+c: say condition('o')~code
+signal on syntax name d
+say substr('abc', 1, 1, '.', 1)
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">93.924
+93.923
+40.23
+40.4
+</code></pre>
+<div class="rule" id="r-bif.substr.length.default"><a href="builtins/substr.html#r-bif.substr.length.default">[bif.substr.length.default]</a></div>
+<p>When <code>length</code> is omitted, it is the number of characters of <code>string</code> at
+position <code>n</code> and after it: <code>LENGTH(string) - n + 1</code> when <code>n</code> is at most
+<code>LENGTH(string)</code>, and 0 otherwise.</p>
+<pre><code class="language-rexx">say '['substr('abcde', 2)']' '['substr('abcde', 5)']',
+    '['substr('abcde', 6)']' '['substr('abcde', 100)']'
+</code></pre>
+<pre><code class="language-output">[bcde] [e] [] []
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The ANSI draft (9.3.21) computes the omitted length as
+<code>LENGTH(string) + 1 - n</code> and repeats that many times, so for <code>n</code> two or
+more past the end its count is negative and its definition raises
+<code>SYNTAX 26.2</code> from inside the builtin. This page follows ooRexx, where the
+reference manual says the rest of the string is returned and positions past
+the end select nothing, so the result is the null string.</p>
+</blockquote>
+<div class="rule" id="r-bif.substr.pad.default"><a href="builtins/substr.html#r-bif.substr.pad.default">[bif.substr.pad.default]</a></div>
+<p>When <code>pad</code> is omitted, it is the blank, <code>'20'x</code>.</p>
+<pre><code class="language-rexx">say '['substr('xyz', 3, 3)']'
+</code></pre>
+<pre><code class="language-output">[z  ]
+</code></pre>
+<h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
+<div class="rule" id="r-bif.substr.result"><a href="builtins/substr.html#r-bif.substr.result">[bif.substr.result]</a></div>
+<p>SUBSTR returns a string of exactly <code>length</code> characters. Its character at
+position <code>i</code>, for each <code>i</code> from 1 to <code>length</code>, is the character of <code>string</code>
+at position <code>n + i - 1</code> when <code>string</code> has a character there, and <code>pad</code>
+otherwise. So the result is the characters of <code>string</code> from position <code>n</code>
+on, at most <code>length</code> of them, followed by as many copies of <code>pad</code> as make
+up the length.</p>
+<pre><code class="language-rexx">say '['substr('abcdef', 2, 3)']' '['substr('abcdef', 4, 5, '.')']',
+    '['substr('abcdef', 1, 6)']'
+</code></pre>
+<pre><code class="language-output">[bcd] [def..] [abcdef]
+</code></pre>
+<div class="rule" id="r-bif.substr.past-end"><a href="builtins/substr.html#r-bif.substr.past-end">[bif.substr.past-end]</a></div>
+<p>When <code>n</code> is greater than <code>LENGTH(string)</code>, no character of <code>string</code> is
+selected: the result is <code>length</code> copies of <code>pad</code>, and the null string when
+<code>length</code> is omitted. This holds for every <code>n</code> past the end that passes its
+check.</p>
+<pre><code class="language-rexx">say '['substr('abc', 4, 2, '*')']' '['substr('abc', 999999999999999999, 3, '*')']',
+    '['substr('abc', 4)']'
+</code></pre>
+<pre><code class="language-output">[**] [***] []
+</code></pre>
+<div class="rule" id="r-bif.substr.length.zero"><a href="builtins/substr.html#r-bif.substr.length.zero">[bif.substr.length.zero]</a></div>
+<p>When <code>length</code> is 0, the result is the null string, for every <code>n</code> that
+passes its check. <code>pad</code> is still checked, as a <a href="builtins/../conventions.html#r-conv.pad">pad</a> always is.</p>
+<pre><code class="language-rexx">say '['substr('abc', 2, 0)']' '['substr('abc', 10, 0, '*')']'
+signal on syntax name e
+say substr('abc', 2, 0, '')
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">[] []
+40.23
+</code></pre>
+<div class="rule" id="r-bif.substr.empty"><a href="builtins/substr.html#r-bif.substr.empty">[bif.substr.empty]</a></div>
+<p>When <code>string</code> is the null string, every position is past its end, so the
+result is <code>length</code> copies of <code>pad</code>, or the null string when <code>length</code> is
+omitted.</p>
+<pre><code class="language-rexx">say '['substr('', 1)']' '['substr('', 1, 3)']' '['substr('', 5, 2, '-')']'
+</code></pre>
+<pre><code class="language-output">[] [   ] [--]
+</code></pre>
+<div class="rule" id="r-bif.substr.bytes"><a href="builtins/substr.html#r-bif.substr.bytes">[bif.substr.bytes]</a></div>
+<p>SUBSTR selects and pads by <a href="builtins/../conventions.html#r-conv.string.chars">character</a>, one byte each,
+and copies every byte unchanged: whitespace, control characters and
+<code>'00'x</code> are characters like any other, in <code>string</code> and as <code>pad</code>.</p>
+<pre><code class="language-rexx">say c2x(substr('61000962'x, 2, 4, '00'x))
+</code></pre>
+<pre><code class="language-output">00096200
+</code></pre>
+<h2 id="deviations-1"><a class="header" href="#deviations-1">Deviations</a></h2>
+<div class="rule" id="r-bif.substr.deviation.4"><a href="builtins/substr.html#r-bif.substr.deviation.4">[bif.substr.deviation.4]</a></div>
+<p>interrexx does not specify whether the result of SUBSTR is the same object
+as another string of equal value: as <code>string</code> itself, when the call returns
+all of it unchanged as <code>substr(s, 1)</code> does, or as an equal string produced
+some other way, such as the literal <code>'abc'</code> beside <code>substr('abcdef', 1, 3)</code>.
+Through <code>identityHash</code>, or as a key of an <code>IdentityTable</code> or <code>IdentitySet</code>,
+the answer may be either, and a program can rely only on the value, which
+is equal under <code>==</code>. ooRexx differs: it often answers a new object
+where interrexx answers the existing one.</p>
+<pre><code class="language-rexx">s = 'abc' || 'def'
+say (substr(s, 1) == s) (substr('abcdef', 1, 3) == 'abc')
+</code></pre>
+<pre><code class="language-output">1 1
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="subword"><a class="header" href="#subword">SUBWORD</a></h1>
+<pre><code>SUBWORD(string, n [, length])
+</code></pre>
+<p class="references">ANSI: 9.3.22; rexxref: Functions &gt; Built-in Functions &gt; SUBWORD</p>
+<p class="deviations">Deviations: D4</p>
+<p>SUBWORD selects a run of consecutive words from a string, keeping the
+whitespace between them as it is. Words are those of
+<a href="builtins/index.html#r-bif.index.words.split">the word rule</a>.</p>
+<h2 id="arguments-1"><a class="header" href="#arguments-1">Arguments</a></h2>
+<div class="rule" id="r-bif.subword.method"><a href="builtins/subword.html#r-bif.subword.method">[bif.subword.method]</a></div>
+<p>SUBWORD is a builtin that runs as a String method, and <code>string</code>, its first
+argument, is the receiver. <code>string</code> is a <a href="builtins/../conventions.html#r-conv.string.null">string</a>, <code>n</code>
+is a <a href="builtins/index.html#r-bif.index.words.number">word number</a>, and <code>length</code> is a
+<a href="builtins/../conventions.html#r-conv.length.check">length</a> that counts words. The arguments are checked
+in the <a href="builtins/../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument
+count by the <a href="builtins/index.html#r-bif.index.call.count">builtin call rules</a>: two are required and
+three is the most.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say subword('a b', 0)
+a: say condition('o')~code
+signal on syntax name b
+say subword('a b', 1, -1)
+b: say condition('o')~code
+signal on syntax name c
+say subword('a b', 0, 'x')
+c: say condition('o')~code
+signal on syntax name d
+say subword('a b', 1, 1, 1)
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">93.924
+93.923
+40.12
+40.4
+</code></pre>
+<div class="rule" id="r-bif.subword.length.default"><a href="builtins/subword.html#r-bif.subword.length.default">[bif.subword.length.default]</a></div>
+<p>When <code>length</code> is omitted, it selects every word from word <code>n</code> to the last
+word of <code>string</code>.</p>
+<pre><code class="language-rexx">say '['subword('one two  three', 2)']' '['subword('one two  three', 3)']'
+</code></pre>
+<pre><code class="language-output">[two  three] [three]
+</code></pre>
+<h2 id="the-result-1"><a class="header" href="#the-result-1">The result</a></h2>
+<div class="rule" id="r-bif.subword.result"><a href="builtins/subword.html#r-bif.subword.result">[bif.subword.result]</a></div>
+<p>When <code>string</code> has a word <code>n</code> and <code>length</code> is not 0, SUBWORD returns the
+part of <code>string</code> that begins with the first character of word <code>n</code> and ends
+with the last character of word <code>n + length - 1</code>, or of the last word of
+<code>string</code> when it has fewer words than that. It is a slice of <code>string</code> and
+nothing is rewritten in it, so a run of blanks or tabs separating two
+selected words keeps its length and its characters. Since the slice starts
+and ends on word characters, whitespace before word <code>n</code>, and after the last
+selected word, falls outside it. The other cases have rules of their own:
+<a href="builtins/subword.html#r-bif.subword.past-end"><code>n</code> past the last word</a>,
+<a href="builtins/subword.html#r-bif.subword.length.zero"><code>length</code> 0</a> and
+<a href="builtins/subword.html#r-bif.subword.empty">a <code>string</code> with no words</a>.</p>
+<pre><code class="language-rexx">say '['subword('one two  three   four', 2, 2)']'
+say '['subword('  one  two  ', 1)']' '['subword('a b c', 2, 100)']'
+say c2x(subword('09'x||'a'||'0909'x||'b'||'09'x, 1))
+</code></pre>
+<pre><code class="language-output">[two  three]
+[one  two] [b c]
+61090962
+</code></pre>
+<div class="rule" id="r-bif.subword.past-end"><a href="builtins/subword.html#r-bif.subword.past-end">[bif.subword.past-end]</a></div>
+<p>When <code>n</code> is greater than the number of words in <code>string</code>, the result is the
+null string. This holds for every <code>n</code> past the last word that passes its
+check.</p>
+<pre><code class="language-rexx">say '['subword('a b c', 4)']' '['subword('a b c', 999999999999999999, 2)']'
+</code></pre>
+<pre><code class="language-output">[] []
+</code></pre>
+<div class="rule" id="r-bif.subword.length.zero"><a href="builtins/subword.html#r-bif.subword.length.zero">[bif.subword.length.zero]</a></div>
+<p>When <code>length</code> is 0, the result is the null string, for every <code>n</code> that passes
+its check.</p>
+<pre><code class="language-rexx">say '['subword('a b c', 2, 0)']' '['subword('a b c', 9, 0)']'
+</code></pre>
+<pre><code class="language-output">[] []
+</code></pre>
+<div class="rule" id="r-bif.subword.empty"><a href="builtins/subword.html#r-bif.subword.empty">[bif.subword.empty]</a></div>
+<p>When <code>string</code> has no words, the null string or a string of only whitespace
+among them, the result is the null string for every <code>n</code> and <code>length</code> that
+pass their checks.</p>
+<pre><code class="language-rexx">say '['subword('', 1)']' '['subword(' '||'09'x||' ', 1, 2)']'
+</code></pre>
+<pre><code class="language-output">[] []
+</code></pre>
+<div class="rule" id="r-bif.subword.nonblank"><a href="builtins/subword.html#r-bif.subword.nonblank">[bif.subword.nonblank]</a></div>
+<p>A character that <a href="builtins/index.html#r-bif.index.words.split">the word rule</a> places inside a word,
+such as a line feed or a carriage return, is copied into the result as it
+stands, and SUBWORD ends the result after it when it is the last character
+of the last selected word.</p>
+<pre><code class="language-rexx">say c2x(subword('a'||'0a'x||'b c', 1, 1)) c2x(subword('a'||'0d'x||' b', 1, 1))
+</code></pre>
+<pre><code class="language-output">610A62 610D
+</code></pre>
+<h2 id="deviations-2"><a class="header" href="#deviations-2">Deviations</a></h2>
+<div class="rule" id="r-bif.subword.deviation.4"><a href="builtins/subword.html#r-bif.subword.deviation.4">[bif.subword.deviation.4]</a></div>
+<p>interrexx does not specify whether the result of SUBWORD is the same object
+as another string of equal value: as <code>string</code> itself, when the call returns
+all of it unchanged as <code>subword(w, 1)</code> does for a <code>w</code> with no whitespace
+around its words, or as an equal string produced some other way, such as
+the literal <code>'a b'</code> beside <code>subword('a b c', 1, 2)</code>. Through
+<code>identityHash</code>, or as a key of an <code>IdentityTable</code> or <code>IdentitySet</code>, the
+answer may be either, and a program can rely only on the value, which is
+equal under <code>==</code>. ooRexx differs: it often answers a new object where
+interrexx answers the existing one.</p>
+<pre><code class="language-rexx">w = 'a' || ' b'
+say (subword(w, 1) == w) (subword('a b c', 1, 2) == 'a b')
+</code></pre>
+<pre><code class="language-output">1 1
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="translate"><a class="header" href="#translate">TRANSLATE</a></h1>
+<pre><code>TRANSLATE(string [, tableo] [, tablei] [, pad] [, pos] [, length])
+</code></pre>
+<p class="references">ANSI: 9.3.23; rexxref: Functions &gt; Built-in Functions &gt; TRANSLATE</p>
+<p class="deviations">Deviations: D4, D94</p>
+<p>TRANSLATE replaces characters of a string, or of a run of its characters,
+through a pair of tables: a character found in the input table <code>tablei</code> is
+replaced by the character at the same position in the output table
+<code>tableo</code>. Called with no table and no pad, it uppercases instead.</p>
+<h2 id="arguments-2"><a class="header" href="#arguments-2">Arguments</a></h2>
+<div class="rule" id="r-bif.translate.method"><a href="builtins/translate.html#r-bif.translate.method">[bif.translate.method]</a></div>
+<p>TRANSLATE is a builtin that runs as a String method, and <code>string</code>, its
+first argument, is the receiver; the other five become the message's
+arguments, in their order. <code>string</code>, <code>tableo</code> and <code>tablei</code> are
+<a href="builtins/../conventions.html#r-conv.string.null">strings</a>, <code>pad</code> is a <a href="builtins/../conventions.html#r-conv.pad">pad</a>, <code>pos</code> is a
+<a href="builtins/../conventions.html#r-conv.position.check">position</a>, and <code>length</code> is a
+<a href="builtins/../conventions.html#r-conv.length.check">length</a>. The arguments are checked in the
+<a href="builtins/../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count by
+the <a href="builtins/index.html#r-bif.index.call.count">builtin call rules</a>: one is required and six is the
+most.</p>
+<pre><code class="language-rexx">say translate('tab', 'TB', 'tb') 'tab'~translate('TB', 'tb', , 2)
+signal on syntax name a
+say translate('abc', , , , 0)
+a: say condition('o')~code
+signal on syntax name b
+say translate('abc', , , , 1, -3)
+b: say condition('o')~code
+signal on syntax name c
+say translate('abc', 'x', 'a', '--')
+c: say condition('o')~code
+signal on syntax name d
+say translate('abc', , , , 'one')
+d: say condition('o')~code
+signal on syntax name f
+say translate('abc', , , , 1, 1, 1)
+f: say condition('o')~code
+signal on syntax name g
+say translate(, 'x')
+g: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">TaB taB
+93.924
+93.923
+40.23
+40.12
+40.4
+40.5
+</code></pre>
+<div class="rule" id="r-bif.translate.tablei.default"><a href="builtins/translate.html#r-bif.translate.tablei.default">[bif.translate.tablei.default]</a></div>
+<p>When <code>tablei</code> is omitted, it is the string of all 256 characters in order,
+from <code>'00'x</code> to <code>'FF'x</code>. Each character is then found in it at the
+position one more than its byte value, <code>C2D(c) + 1</code>, so <code>tableo</code> is indexed
+by byte value.</p>
+<pre><code class="language-rexx">say translate('0a0102'x, 'abc' || copies('-', 7) || 'k')
+</code></pre>
+<pre><code class="language-output">kbc
+</code></pre>
+<div class="rule" id="r-bif.translate.tableo.default"><a href="builtins/translate.html#r-bif.translate.tableo.default">[bif.translate.tableo.default]</a></div>
+<p>When <code>tableo</code> is omitted, it is the null string, so every character found
+in <code>tablei</code> is replaced by <code>pad</code>, unless the
+<a href="builtins/translate.html#r-bif.translate.upper">uppercasing rule</a> applies.</p>
+<pre><code class="language-rexx">say '['translate('abcabc', , 'ca')']' translate('abcabc', , 'ca', '#')
+</code></pre>
+<pre><code class="language-output">[ b  b ] #b##b#
+</code></pre>
+<div class="rule" id="r-bif.translate.pad.default"><a href="builtins/translate.html#r-bif.translate.pad.default">[bif.translate.pad.default]</a></div>
+<p>When <code>pad</code> is omitted, it is the blank, <code>'20'x</code>.</p>
+<pre><code class="language-rexx">say '['translate('pq', 'x', 'pq')']'
+</code></pre>
+<pre><code class="language-output">[x ]
+</code></pre>
+<div class="rule" id="r-bif.translate.pos.default"><a href="builtins/translate.html#r-bif.translate.pos.default">[bif.translate.pos.default]</a></div>
+<p>When <code>pos</code> is omitted, it is 1: the run of characters translated starts at
+the first character of <code>string</code>.</p>
+<pre><code class="language-rexx">say translate('aaa', 'b', 'a', , , 2) translate('aaa', 'b', 'a', , 1, 2)
+</code></pre>
+<pre><code class="language-output">bba bba
+</code></pre>
+<div class="rule" id="r-bif.translate.length.default"><a href="builtins/translate.html#r-bif.translate.length.default">[bif.translate.length.default]</a></div>
+<p>When <code>length</code> is omitted, the run is every character of <code>string</code> at
+position <code>pos</code> and after it, and no character when <code>pos</code> is greater than
+<code>LENGTH(string)</code>.</p>
+<pre><code class="language-rexx">say translate('aaaa', 'b', 'a', , 3) translate('aaaa', 'b', 'a', , 5)
+</code></pre>
+<pre><code class="language-output">aabb aaaa
+</code></pre>
+<h2 id="the-result-2"><a class="header" href="#the-result-2">The result</a></h2>
+<div class="rule" id="r-bif.translate.upper"><a href="builtins/translate.html#r-bif.translate.upper">[bif.translate.upper]</a></div>
+<p>When <code>tableo</code>, <code>tablei</code> and <code>pad</code> are all omitted, TRANSLATE returns
+<code>string</code> with each character of the run from <code>pos</code> for <code>length</code> characters
+<a href="builtins/upper.html#r-bif.upper.case">uppercased as UPPER does</a>, and every other character
+unchanged. The result is then <code>UPPER(string, pos, length)</code>, with the same
+defaults for <code>pos</code> and <code>length</code>.</p>
+<pre><code class="language-rexx">say translate('hello, world') translate('hello, world', , , , 8, 3)
+</code></pre>
+<pre><code class="language-output">HELLO, WORLD hello, WORld
+</code></pre>
+<div class="rule" id="r-bif.translate.result"><a href="builtins/translate.html#r-bif.translate.result">[bif.translate.result]</a></div>
+<p>When at least one of <code>tableo</code>, <code>tablei</code> and <code>pad</code> is given, TRANSLATE
+returns a string of <code>LENGTH(string)</code> characters. Each character <code>c</code> of
+<code>string</code> at a position from <code>pos</code> to <code>pos + length - 1</code> is looked up in
+<code>tablei</code>. When <code>c</code> occurs in it, let <code>k</code> be the position of its first
+occurrence: the result has, in place of <code>c</code>, the character of <code>tableo</code> at
+position <code>k</code> when <code>LENGTH(tableo)</code> is at least <code>k</code>, and <code>pad</code> otherwise.
+When <code>c</code> does not occur in <code>tablei</code>, it is copied unchanged, and so is
+every character of <code>string</code> outside the run.</p>
+<pre><code class="language-rexx">say translate('a1b2c3', 'xyz', 'abc') translate('a1b2c3', 'xyz', '123', , 3)
+</code></pre>
+<pre><code class="language-output">x1y2z3 a1bycz
+</code></pre>
+<div class="rule" id="r-bif.translate.first"><a href="builtins/translate.html#r-bif.translate.first">[bif.translate.first]</a></div>
+<p>When a character occurs more than once in <code>tablei</code>, its first occurrence
+alone decides what it becomes; the characters of <code>tableo</code> at the positions
+of the later occurrences are never used.</p>
+<pre><code class="language-rexx">say translate('mom', 'abc', 'mmo') translate('mom', '123', 'omo')
+</code></pre>
+<pre><code class="language-output">aca 212
+</code></pre>
+<div class="rule" id="r-bif.translate.tableo.length"><a href="builtins/translate.html#r-bif.translate.tableo.length">[bif.translate.tableo.length]</a></div>
+<p><code>tableo</code> need not be as long as <code>tablei</code>. When it is shorter, a
+character found in <code>tablei</code> at a position past the end of <code>tableo</code> is
+replaced by <code>pad</code>; when it is longer, its characters past the length of
+<code>tablei</code> are never used.</p>
+<pre><code class="language-rexx">say translate('wxyz', 'WX', 'wxyz', '+') translate('wxyz', 'WXYZ123', 'wx')
+</code></pre>
+<pre><code class="language-output">WX++ WXyz
+</code></pre>
+<div class="rule" id="r-bif.translate.pad-only"><a href="builtins/translate.html#r-bif.translate.pad-only">[bif.translate.pad-only]</a></div>
+<p>When both tables are omitted and <code>pad</code> is given, every character of the run
+is replaced by <code>pad</code>, since every character is found in the
+<a href="builtins/translate.html#r-bif.translate.tablei.default">default <code>tablei</code></a> and the
+<a href="builtins/translate.html#r-bif.translate.tableo.default">default <code>tableo</code></a> has no characters.</p>
+<pre><code class="language-rexx">say translate('secret', , , '*') translate('secret', , , '*', 3, 2)
+</code></pre>
+<pre><code class="language-output">****** se**et
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The ANSI draft (9.3.23) uppercases whenever both tables are omitted and
+ignores <code>pad</code> then. This page follows ooRexx, where the reference manual
+says a given pad replaces the whole string.</p>
+</blockquote>
+<div class="rule" id="r-bif.translate.tablei.empty"><a href="builtins/translate.html#r-bif.translate.tablei.empty">[bif.translate.tablei.empty]</a></div>
+<p>When <code>tablei</code> is given as the null string, no character is found in it, and
+the result is <code>string</code> unchanged, for every <code>tableo</code>, <code>pad</code>, <code>pos</code> and
+<code>length</code> that pass their checks.</p>
+<pre><code class="language-rexx">say translate('abc', 'xyz', '') translate('abc', , '', '*') translate('abc', '', '')
+</code></pre>
+<pre><code class="language-output">abc abc abc
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> This holds however the null string was produced, which ooRexx does not
+do: see <a href="builtins/translate.html#r-bif.translate.deviation.94">Deviation 94</a>.</p>
+</blockquote>
+<div class="rule" id="r-bif.translate.past-end"><a href="builtins/translate.html#r-bif.translate.past-end">[bif.translate.past-end]</a></div>
+<p>When <code>pos</code> is greater than <code>LENGTH(string)</code>, no character is translated and
+the result is <code>string</code>, for every <code>pos</code> past the end that passes its check.
+When the run reaches past the end of <code>string</code>, it stops there, and nothing
+is added.</p>
+<pre><code class="language-rexx">say translate('abc', , , '*', 4) translate('abc', , , , 999999999999999999),
+    translate('abc', , , '*', 2, 50)
+</code></pre>
+<pre><code class="language-output">abc abc a**
+</code></pre>
+<div class="rule" id="r-bif.translate.length.zero"><a href="builtins/translate.html#r-bif.translate.length.zero">[bif.translate.length.zero]</a></div>
+<p>When <code>length</code> is 0, no character is translated and the result is <code>string</code>,
+for every <code>pos</code> that passes its check. <code>pad</code> is still checked, as a
+<a href="builtins/../conventions.html#r-conv.pad">pad</a> always is.</p>
+<pre><code class="language-rexx">say translate('abc', , , '*', 2, 0) translate('abc', , , , 1, 0)
+signal on syntax name e
+say translate('abc', , , '', 1, 0)
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">abc abc
+40.23
+</code></pre>
+<div class="rule" id="r-bif.translate.empty"><a href="builtins/translate.html#r-bif.translate.empty">[bif.translate.empty]</a></div>
+<p>When <code>string</code> is the null string, the result is the null string, for every
+table, pad, <code>pos</code> and <code>length</code> that pass their checks.</p>
+<pre><code class="language-rexx">say '['translate('')']' '['translate('', 'a', 'b', '*', 3, 4)']'
+</code></pre>
+<pre><code class="language-output">[] []
+</code></pre>
+<div class="rule" id="r-bif.translate.bytes"><a href="builtins/translate.html#r-bif.translate.bytes">[bif.translate.bytes]</a></div>
+<p>TRANSLATE looks characters up and replaces them by
+<a href="builtins/../conventions.html#r-conv.string.chars">character</a>, one byte each: whitespace, control
+characters and <code>'00'x</code> are found, replaced and used as replacements like
+any other character, in <code>string</code>, in both tables and as <code>pad</code>.</p>
+<pre><code class="language-rexx">say c2x(translate('610009'x, '0920'x, '0009'x)) c2x(translate('ab', , 'b', '00'x))
+</code></pre>
+<pre><code class="language-output">610920 6100
+</code></pre>
+<h2 id="deviations-3"><a class="header" href="#deviations-3">Deviations</a></h2>
+<div class="rule" id="r-bif.translate.deviation.4"><a href="builtins/translate.html#r-bif.translate.deviation.4">[bif.translate.deviation.4]</a></div>
+<p>interrexx does not specify whether the result of TRANSLATE is the same
+object as another string of equal value: as <code>string</code> itself, when no
+character of it changes, as in <code>translate(s, '', '')</code>, or as an equal
+string produced some other way, such as the literal <code>'MNOP'</code> beside
+<code>translate('mn' || 'op')</code>. Through <code>identityHash</code>, or as a key of an
+<code>IdentityTable</code> or <code>IdentitySet</code>, the answer may be either, and a program
+can rely only on the value, which is equal under <code>==</code>. ooRexx differs:
+it often answers a new object where interrexx answers the existing one.</p>
+<pre><code class="language-rexx">s = 'mn' || 'op'
+say (translate(s, '', '') == s) (translate('mn' || 'op') == 'MNOP')
+</code></pre>
+<pre><code class="language-output">1 1
+</code></pre>
+<div class="rule" id="r-bif.translate.deviation.94"><a href="builtins/translate.html#r-bif.translate.deviation.94">[bif.translate.deviation.94]</a></div>
+<p>A <code>tablei</code> given as the null string is an <a href="builtins/translate.html#r-bif.translate.tablei.empty">empty table</a>
+whether it was written as <code>''</code> or answered by an expression, such as
+<code>LEFT(s, 0)</code>, <code>COPIES(s, 0)</code> or <code>STRIP</code> of a string of blanks. ooRexx
+differs: a null string that some of its builtins answer counts as given, so
+it does not uppercase, but it is searched as if it were the
+<a href="builtins/translate.html#r-bif.translate.tablei.default">default <code>tablei</code></a>, so every character of
+the run is translated. There <code>translate('abc', , LEFT('abc', 0))</code> answers
+three blanks. The same holds for the String method's <code>tablei</code>. A null
+<code>tableo</code> produced the same way agrees on both.</p>
+<pre><code class="language-rexx">z = left('abc', 0)
+say '['translate('abc', , z)']' translate('abc', , z, '*') 'ab'~translate(z, z)
+</code></pre>
+<pre><code class="language-output">[abc] abc ab
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="upper"><a class="header" href="#upper">UPPER</a></h1>
+<pre><code>UPPER(string [, n] [, length])
+</code></pre>
+<p class="references">rexxref: Functions &gt; Built-in Functions &gt; UPPER</p>
+<p class="deviations">Deviations: D4</p>
+<p>UPPER changes the lowercase letters of a string, or of a run of its
+characters, to uppercase, and leaves every other character as it is.</p>
+<h2 id="arguments-3"><a class="header" href="#arguments-3">Arguments</a></h2>
+<div class="rule" id="r-bif.upper.method"><a href="builtins/upper.html#r-bif.upper.method">[bif.upper.method]</a></div>
+<p>UPPER is a builtin that runs as a String method, and <code>string</code>, its first
+argument, is the receiver; <code>n</code> and <code>length</code> become the message's
+arguments, in that order. <code>string</code> is a <a href="builtins/../conventions.html#r-conv.string.null">string</a>, <code>n</code>
+is a <a href="builtins/../conventions.html#r-conv.position.check">position</a>, and <code>length</code> is a
+<a href="builtins/../conventions.html#r-conv.length.check">length</a>. The arguments are checked in the
+<a href="builtins/../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count by
+the <a href="builtins/index.html#r-bif.index.call.count">builtin call rules</a>: one is required and three is
+the most.</p>
+<pre><code class="language-rexx">say upper('mixed Case') 'mixed Case'~upper(7)
+signal on syntax name a
+say upper('abc', 0)
+a: say condition('o')~code
+signal on syntax name b
+say upper('abc', 1, -2)
+b: say condition('o')~code
+signal on syntax name c
+say upper('abc', 0, 'two')
+c: say condition('o')~code
+signal on syntax name d
+say upper('abc', 1, 1, 1)
+d: say condition('o')~code
+signal on syntax name f
+say upper(, 2)
+f: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">MIXED CASE mixed CASE
+93.924
+93.923
+40.12
+40.4
+40.5
+</code></pre>
+<div class="rule" id="r-bif.upper.n.default"><a href="builtins/upper.html#r-bif.upper.n.default">[bif.upper.n.default]</a></div>
+<p>When <code>n</code> is omitted, it is 1: the run starts at the first character of
+<code>string</code>.</p>
+<pre><code class="language-rexx">say upper('xyz', , 2) upper('xyz', 1, 2)
+</code></pre>
+<pre><code class="language-output">XYz XYz
+</code></pre>
+<div class="rule" id="r-bif.upper.length.default"><a href="builtins/upper.html#r-bif.upper.length.default">[bif.upper.length.default]</a></div>
+<p>When <code>length</code> is omitted, the run is every character of <code>string</code> at
+position <code>n</code> and after it, and no character when <code>n</code> is greater than
+<code>LENGTH(string)</code>.</p>
+<pre><code class="language-rexx">say upper('lower', 3) upper('lower', 5) upper('lower', 6)
+</code></pre>
+<pre><code class="language-output">loWER loweR lower
+</code></pre>
+<h2 id="the-result-3"><a class="header" href="#the-result-3">The result</a></h2>
+<div class="rule" id="r-bif.upper.case"><a href="builtins/upper.html#r-bif.upper.case">[bif.upper.case]</a></div>
+<p>Uppercasing changes exactly the 26 characters <code>'a'</code> to <code>'z'</code>, <code>'61'x</code> to
+<code>'7A'x</code>, each to the letter <code>'A'</code> to <code>'Z'</code> with the same place in the
+alphabet, <code>'41'x</code> to <code>'5A'x</code>. Every other character is left as it is: the
+uppercase letters, the digits, whitespace, <code>'00'x</code>, and every character from
+<code>'80'x</code> to <code>'FF'x</code>, including the bytes that an encoding such as Latin-1 or
+UTF-8 uses for a lowercase letter.</p>
+<pre><code class="language-rexx">say upper('q-z 0?_') c2x(upper('e9c3a9ff'x)) c2x(upper('60617a7b'x))
+all = xrange('00'x, 'ff'x)
+say (upper(all) == translate(all, xrange('A', 'Z'), xrange('a', 'z')))
+</code></pre>
+<pre><code class="language-output">Q-Z 0?_ E9C3A9FF 60415A7B
+1
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The reference manual's UPPER section does not name the characters it
+changes; its TRANSLATE section, which uppercases the same way, names the
+letters <code>a</code> to <code>z</code>, and this rule follows that. The ANSI draft has no UPPER
+builtin, and leaves the uppercase form of each character to the
+configuration (5.4.3).</p>
+</blockquote>
+<div class="rule" id="r-bif.upper.result"><a href="builtins/upper.html#r-bif.upper.result">[bif.upper.result]</a></div>
+<p>UPPER returns a string of <code>LENGTH(string)</code> characters. The character at
+each position from <code>n</code> to <code>n + length - 1</code> that <code>string</code> has is
+<a href="builtins/upper.html#r-bif.upper.case">uppercased</a>, and every other character of <code>string</code> is
+copied unchanged. A run that reaches past the end of <code>string</code> stops at the
+end, and nothing is added.</p>
+<pre><code class="language-rexx">say '['upper('string', 2, 3)']' '['upper('string', 4, 100)']' '['upper('ab cd')']'
+</code></pre>
+<pre><code class="language-output">[sTRIng] [strING] [AB CD]
+</code></pre>
+<div class="rule" id="r-bif.upper.past-end"><a href="builtins/upper.html#r-bif.upper.past-end">[bif.upper.past-end]</a></div>
+<p>When <code>n</code> is greater than <code>LENGTH(string)</code>, no character is changed and the
+result is <code>string</code>, for every <code>n</code> past the end that passes its check.</p>
+<pre><code class="language-rexx">say upper('abc', 4) upper('abc', 999999999999999999, 2)
+</code></pre>
+<pre><code class="language-output">abc abc
+</code></pre>
+<div class="rule" id="r-bif.upper.length.zero"><a href="builtins/upper.html#r-bif.upper.length.zero">[bif.upper.length.zero]</a></div>
+<p>When <code>length</code> is 0, no character is changed and the result is <code>string</code>,
+for every <code>n</code> that passes its check.</p>
+<pre><code class="language-rexx">say upper('abc', 2, 0) upper('abc', 50, 0)
+</code></pre>
+<pre><code class="language-output">abc abc
+</code></pre>
+<div class="rule" id="r-bif.upper.empty"><a href="builtins/upper.html#r-bif.upper.empty">[bif.upper.empty]</a></div>
+<p>When <code>string</code> is the null string, the result is the null string, for every
+<code>n</code> and <code>length</code> that pass their checks.</p>
+<pre><code class="language-rexx">say '['upper('')']' '['upper('', 3, 2)']'
+</code></pre>
+<pre><code class="language-output">[] []
+</code></pre>
+<h2 id="deviations-4"><a class="header" href="#deviations-4">Deviations</a></h2>
+<blockquote>
+<p><strong>Note.</strong> An argument whose <code>STRING</code> method answers an object that is not a string
+falls under <a href="builtins/../conventions.html#r-conv.string.deviation.30">Deviation 30</a>, as it does for
+every builtin.</p>
+</blockquote>
+<div class="rule" id="r-bif.upper.deviation.4"><a href="builtins/upper.html#r-bif.upper.deviation.4">[bif.upper.deviation.4]</a></div>
+<p>interrexx does not specify whether the result of UPPER is the same object
+as another string of equal value: as <code>string</code> itself, when no character of
+it changes, as in <code>upper(s)</code> for an <code>s</code> with no lowercase letter, or as an
+equal string produced some other way, such as the literal <code>'GHIJ'</code> beside
+<code>upper('gh' || 'ij')</code>. Through <code>identityHash</code>, or as a key of an
+<code>IdentityTable</code> or <code>IdentitySet</code>, the answer may be either, and a program
+can rely only on the value, which is equal under <code>==</code>. ooRexx differs:
+it often answers a new object where interrexx answers the existing one.</p>
+<pre><code class="language-rexx">s = 'PQ' || 'RS'
+say (upper(s) == s) (upper('gh' || 'ij') == 'GHIJ')
+</code></pre>
+<pre><code class="language-output">1 1
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="verify"><a class="header" href="#verify">VERIFY</a></h1>
+<pre><code>VERIFY(string, reference [, option] [, start] [, length])
+</code></pre>
+<p class="references">ANSI: 9.3.24; rexxref: Functions &gt; Built-in Functions &gt; VERIFY</p>
+<p>VERIFY scans a string, or a run of its characters, for the first character
+that is not in a set of reference characters, or, with the Match option,
+for the first one that is, and answers its position.</p>
+<h2 id="arguments-4"><a class="header" href="#arguments-4">Arguments</a></h2>
+<div class="rule" id="r-bif.verify.method"><a href="builtins/verify.html#r-bif.verify.method">[bif.verify.method]</a></div>
+<p>VERIFY is a builtin that runs as a String method, and <code>string</code>, its first
+argument, is the receiver; the other four become the message's arguments,
+in their order. <code>string</code> and <code>reference</code> are
+<a href="builtins/../conventions.html#r-conv.string.null">strings</a>, <code>option</code> is an
+<a href="builtins/verify.html#r-bif.verify.option">option</a>, <code>start</code> is a
+<a href="builtins/../conventions.html#r-conv.position.check">position</a>, and <code>length</code> is a
+<a href="builtins/../conventions.html#r-conv.length.check">length</a>. The arguments are checked in the
+<a href="builtins/../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count by
+the <a href="builtins/index.html#r-bif.index.call.count">builtin call rules</a>: two are required and five is
+the most.</p>
+<pre><code class="language-rexx">say verify('a1', 'a') 'a1'~verify('1', 'M')
+signal on syntax name a
+say verify('abc', 'a', , 0)
+a: say condition('o')~code
+signal on syntax name b
+say verify('abc', 'a', , 1, -1)
+b: say condition('o')~code
+signal on syntax name c
+say verify('abc', 'a', , 'first')
+c: say condition('o')~code
+signal on syntax name d
+say verify('abc', 'a', , 1, 1, 1)
+d: say condition('o')~code
+signal on syntax name f
+say verify('abc', , 'M')
+f: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">2 2
+93.924
+93.923
+40.12
+40.4
+40.5
+</code></pre>
+<div class="rule" id="r-bif.verify.option"><a href="builtins/verify.html#r-bif.verify.option">[bif.verify.option]</a></div>
+<p><code>option</code> selects what VERIFY scans for, by its first character alone, in
+either case: <code>N</code> or <code>n</code> selects Nomatch, and <code>M</code> or <code>m</code> selects Match.
+Only that character decides; <code>option</code> may go on with any characters, and
+they change nothing. When <code>option</code> is omitted, it is Nomatch.</p>
+<pre><code class="language-rexx">say verify('xy', 'x') verify('xy', 'x', 'n') verify('xy', 'x', 'Nope'),
+    verify('xy', 'y', 'm') verify('xy', 'y', 'Many') verify('xy', 'y', 'M 1')
+</code></pre>
+<pre><code class="language-output">2 2 2 2 2 2
+</code></pre>
+<div class="rule" id="r-bif.verify.option.check"><a href="builtins/verify.html#r-bif.verify.option.check">[bif.verify.option.check]</a></div>
+<p>An <code>option</code> whose first character is not one of those four, and an <code>option</code>
+that is the null string, raise <code>SYNTAX 93.915</code>. This is a range check: it
+runs after every argument has passed its form check, and before the range
+checks of <code>start</code> and <code>length</code>. It is made whatever <code>string</code> and
+<code>reference</code> are.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say verify('abc', 'a', 'Y')
+a: say condition('o')~code
+signal on syntax name b
+say verify('abc', 'a', '')
+b: say condition('o')~code
+signal on syntax name c
+say verify('abc', 'a', ' M')
+c: say condition('o')~code
+signal on syntax name d
+say verify('', '', 'Z')
+d: say condition('o')~code
+signal on syntax name f
+say verify('abc', 'a', 'Y', 'z')
+f: say condition('o')~code
+signal on syntax name g
+say verify('abc', 'a', 'Y', 0)
+g: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">93.915
+93.915
+93.915
+93.915
+40.12
+93.915
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The reference manual names error 93.915 for a method option that is not
+one of those allowed. The ANSI draft (9.3.24) checks the option with its
+other arguments and raises 40.28.</p>
+</blockquote>
+<div class="rule" id="r-bif.verify.start.default"><a href="builtins/verify.html#r-bif.verify.start.default">[bif.verify.start.default]</a></div>
+<p>When <code>start</code> is omitted, it is 1: the scan starts at the first character of
+<code>string</code>.</p>
+<pre><code class="language-rexx">say verify('aab', 'a', , ) verify('aab', 'a', , 1)
+</code></pre>
+<pre><code class="language-output">3 3
+</code></pre>
+<div class="rule" id="r-bif.verify.length.default"><a href="builtins/verify.html#r-bif.verify.length.default">[bif.verify.length.default]</a></div>
+<p>When <code>length</code> is omitted, the scan runs from position <code>start</code> to the end of
+<code>string</code>.</p>
+<pre><code class="language-rexx">say verify('x--y', '-', , 2) verify('x--y', '-', , 2, 2)
+</code></pre>
+<pre><code class="language-output">4 0
+</code></pre>
+<h2 id="the-result-4"><a class="header" href="#the-result-4">The result</a></h2>
+<div class="rule" id="r-bif.verify.nomatch"><a href="builtins/verify.html#r-bif.verify.nomatch">[bif.verify.nomatch]</a></div>
+<p>With Nomatch, when <code>start</code> is at most <code>LENGTH(string)</code> and <code>reference</code> is
+not the null string, VERIFY returns the smallest position <code>i</code> from <code>start</code>
+to <code>start + length - 1</code>, and at most <code>LENGTH(string)</code>, such that the
+character of <code>string</code> at <code>i</code> does not occur in <code>reference</code>, and <code>0</code> when
+every character in that run occurs in it.</p>
+<pre><code class="language-rexx">say verify('cafe', 'efac') verify('ca-fe', 'efac'),
+    verify('ab-cd', 'abcd', 'N', 4) verify('ab-cd', 'abcd', 'N', 2, 1)
+</code></pre>
+<pre><code class="language-output">0 3 0 0
+</code></pre>
+<div class="rule" id="r-bif.verify.match"><a href="builtins/verify.html#r-bif.verify.match">[bif.verify.match]</a></div>
+<p>With Match, when <code>start</code> is at most <code>LENGTH(string)</code> and <code>reference</code> is not
+the null string, VERIFY returns the smallest position <code>i</code> in the same run
+such that the character of <code>string</code> at <code>i</code> occurs in <code>reference</code>, and <code>0</code>
+when no character in that run occurs in it.</p>
+<pre><code class="language-rexx">say verify('to be', ' ', 'M') verify('to be', 'xyz', 'M'),
+    verify('x.y.z', '.', 'M', 3) verify('x.y.z', '.', 'M', 3, 1)
+</code></pre>
+<pre><code class="language-output">3 0 4 0
+</code></pre>
+<div class="rule" id="r-bif.verify.exact"><a href="builtins/verify.html#r-bif.verify.exact">[bif.verify.exact]</a></div>
+<p>A character occurs in <code>reference</code> only when <code>reference</code> holds that same
+<a href="builtins/../conventions.html#r-conv.string.chars">character</a>, byte for byte: case matters, and
+whitespace, control characters and <code>'00'x</code> are characters like any other.
+The order of <code>reference</code> and characters repeated in it make no
+difference.</p>
+<pre><code class="language-rexx">say verify('ABC', 'abc') verify('a' || '00'x || 'b', 'ba') verify('a b', 'ba  ab'),
+    verify('tab' || '09'x, 'bat', 'M') verify('tab' || '09'x, 'bat')
+</code></pre>
+<pre><code class="language-output">1 2 0 1 4
+</code></pre>
+<div class="rule" id="r-bif.verify.past-end"><a href="builtins/verify.html#r-bif.verify.past-end">[bif.verify.past-end]</a></div>
+<p>When <code>start</code> is greater than <code>LENGTH(string)</code>, the result is <code>0</code>, for every
+<code>reference</code>, and every <code>option</code>, <code>start</code> and <code>length</code> that pass their
+checks.</p>
+<pre><code class="language-rexx">say verify('abc', 'x', 'N', 4) verify('abc', 'b', 'M', 999999999999999999),
+    verify('abc', '', 'N', 4)
+</code></pre>
+<pre><code class="language-output">0 0 0
+</code></pre>
+<div class="rule" id="r-bif.verify.empty-string"><a href="builtins/verify.html#r-bif.verify.empty-string">[bif.verify.empty-string]</a></div>
+<p>When <code>string</code> is the null string, every <code>start</code> is past its end, so the
+result is <code>0</code>, for every <code>reference</code>, and every <code>option</code>, <code>start</code> and
+<code>length</code> that pass their checks.</p>
+<pre><code class="language-rexx">say verify('', 'a') verify('', '') verify('', 'a', 'M') verify('', '', 'N', 3)
+</code></pre>
+<pre><code class="language-output">0 0 0 0
+</code></pre>
+<div class="rule" id="r-bif.verify.empty-reference"><a href="builtins/verify.html#r-bif.verify.empty-reference">[bif.verify.empty-reference]</a></div>
+<p>When <code>start</code> is at most <code>LENGTH(string)</code> and <code>reference</code> is the null
+string, the result is <code>start</code> with Nomatch and <code>0</code> with Match. This holds
+for every <code>length</code> that passes its check, 0 included: no character of
+<code>string</code> is examined.</p>
+<pre><code class="language-rexx">say verify('abc', '') verify('abc', '', 'N', 3) verify('abc', '', 'N', 2, 0),
+    verify('abc', '', 'M') verify('abc', '', 'M', 2)
+</code></pre>
+<pre><code class="language-output">1 3 2 0 0
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The Nomatch answer for a <code>length</code> of 0 follows the reference manual, which
+gives <code>start</code> for a null <code>reference</code> without a condition on <code>length</code>; the
+ANSI draft has no <code>length</code> argument.</p>
+</blockquote>
+<div class="rule" id="r-bif.verify.length.zero"><a href="builtins/verify.html#r-bif.verify.length.zero">[bif.verify.length.zero]</a></div>
+<p>When <code>length</code> is 0 and <code>reference</code> is not the null string, the run has no
+characters and the result is <code>0</code>, with either option.</p>
+<pre><code class="language-rexx">say verify('abc', 'x', 'N', 1, 0) verify('abc', 'a', 'M', 1, 0)
+</code></pre>
+<pre><code class="language-output">0 0
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> VERIFY's answer, a position or <code>0</code>, is a count: it is
+<a href="builtins/index.html#r-bif.index.count.answer">written as a count</a>, and whether it is a new object is
+<a href="builtins/index.html#r-bif.index.count.answer.deviation.4">not specified</a>.</p>
+</blockquote>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="word"><a class="header" href="#word">WORD</a></h1>
+<pre><code>WORD(string, n)
+</code></pre>
+<p class="references">ANSI: 9.3.25; rexxref: Functions &gt; Built-in Functions &gt; WORD</p>
+<p class="deviations">Deviations: D4</p>
+<p>WORD selects one word of a string by its number. Words are those of
+<a href="builtins/index.html#r-bif.index.words.split">the word rule</a>.</p>
+<h2 id="arguments-5"><a class="header" href="#arguments-5">Arguments</a></h2>
+<div class="rule" id="r-bif.word.method"><a href="builtins/word.html#r-bif.word.method">[bif.word.method]</a></div>
+<p>WORD is a builtin that runs as a String method, and <code>string</code>, its first
+argument, is the receiver. <code>string</code> is a <a href="builtins/../conventions.html#r-conv.string.null">string</a> and
+<code>n</code> is a <a href="builtins/index.html#r-bif.index.words.number">word number</a>. The arguments are checked in
+the <a href="builtins/../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument
+count by the <a href="builtins/index.html#r-bif.index.call.count">builtin call rules</a>: both are required and
+two is the most.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say word('a b', 0)
+a: say condition('o')~code
+signal on syntax name b
+say word('a b', 'two')
+b: say condition('o')~code
+signal on syntax name c
+say word('a b')
+c: say condition('o')~code
+signal on syntax name d
+say word('a b', 1, 1)
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">93.924
+40.12
+40.3
+40.4
+</code></pre>
+<h2 id="the-result-5"><a class="header" href="#the-result-5">The result</a></h2>
+<div class="rule" id="r-bif.word.result"><a href="builtins/word.html#r-bif.word.result">[bif.word.result]</a></div>
+<p>When <code>string</code> has a word <code>n</code>, WORD returns that word: its characters
+exactly as they stand in <code>string</code>, and none of the whitespace before or
+after it. So then <code>word(string, n) == subword(string, n, 1)</code> holds.</p>
+<pre><code class="language-rexx">s = ' red  green' || '09'x || 'blue '
+say '['word(s, 2)']' '['word(s, 3)']' (word(s, 2) == subword(s, 2, 1))
+</code></pre>
+<pre><code class="language-output">[green] [blue] 1
+</code></pre>
+<div class="rule" id="r-bif.word.past-end"><a href="builtins/word.html#r-bif.word.past-end">[bif.word.past-end]</a></div>
+<p>When <code>n</code> is greater than the number of words in <code>string</code>, the result is the
+null string. This holds for every <code>n</code> past the last word that passes its
+check.</p>
+<pre><code class="language-rexx">say '['word('red green', 3)']' '['word('red green', 999999999999999999)']'
+</code></pre>
+<pre><code class="language-output">[] []
+</code></pre>
+<div class="rule" id="r-bif.word.empty"><a href="builtins/word.html#r-bif.word.empty">[bif.word.empty]</a></div>
+<p>When <code>string</code> has no words, the null string or a string of only whitespace
+among them, the result is the null string for every <code>n</code> that passes its
+check.</p>
+<pre><code class="language-rexx">say '['word('', 1)']' '['word(' ' || '09'x, 2)']'
+</code></pre>
+<pre><code class="language-output">[] []
+</code></pre>
+<div class="rule" id="r-bif.word.nonblank"><a href="builtins/word.html#r-bif.word.nonblank">[bif.word.nonblank]</a></div>
+<p>A character that <a href="builtins/index.html#r-bif.index.words.split">the word rule</a> places inside a word,
+such as a carriage return or a line feed, is part of the result, at the
+end of the word as anywhere else in it.</p>
+<pre><code class="language-rexx">say c2x(word('x' || '0d'x || ' y', 1)) c2x(word('p q' || '0a'x || 'r', 2))
+</code></pre>
+<pre><code class="language-output">780D 710A72
+</code></pre>
+<h2 id="deviations-5"><a class="header" href="#deviations-5">Deviations</a></h2>
+<div class="rule" id="r-bif.word.deviation.4"><a href="builtins/word.html#r-bif.word.deviation.4">[bif.word.deviation.4]</a></div>
+<p>interrexx does not specify whether the result of WORD is the same object as
+another string of equal value: as <code>string</code> itself, when the call returns
+all of it unchanged as <code>word(s, 1)</code> does for an <code>s</code> that is one word with
+no whitespace around it, or as an equal string produced some other way,
+such as the literal <code>'abc'</code> beside <code>word('abc def', 1)</code>. Through
+<code>identityHash</code>, or as a key of an <code>IdentityTable</code> or <code>IdentitySet</code>, the
+answer may be either, and a program can rely only on the value, which is
+equal under <code>==</code>. ooRexx differs: it often answers a new object where
+interrexx answers the existing one.</p>
+<pre><code class="language-rexx">s = 'ab' || 'c'
+say (word(s, 1) == s) (word('abc def', 1) == 'abc')
+</code></pre>
+<pre><code class="language-output">1 1
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="wordindex"><a class="header" href="#wordindex">WORDINDEX</a></h1>
+<pre><code>WORDINDEX(string, n)
+</code></pre>
+<p class="references">ANSI: 9.3.26; rexxref: Functions &gt; Built-in Functions &gt; WORDINDEX</p>
+<p>WORDINDEX answers where in a string one of its words begins, as a
+character position. Words are those of <a href="builtins/index.html#r-bif.index.words.split">the word rule</a>.</p>
+<h2 id="arguments-6"><a class="header" href="#arguments-6">Arguments</a></h2>
+<div class="rule" id="r-bif.wordindex.method"><a href="builtins/wordindex.html#r-bif.wordindex.method">[bif.wordindex.method]</a></div>
+<p>WORDINDEX is a builtin that runs as a String method, and <code>string</code>, its
+first argument, is the receiver. <code>string</code> is a
+<a href="builtins/../conventions.html#r-conv.string.null">string</a> and <code>n</code> is a
+<a href="builtins/index.html#r-bif.index.words.number">word number</a>. The arguments are checked in the
+<a href="builtins/../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count
+by the <a href="builtins/index.html#r-bif.index.call.count">builtin call rules</a>: both are required and two is
+the most.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say wordindex('a b', -2)
+a: say condition('o')~code
+signal on syntax name b
+say wordindex('a b', '')
+b: say condition('o')~code
+signal on syntax name c
+say wordindex(, 1)
+c: say condition('o')~code
+signal on syntax name d
+say wordindex('a b', 1, 1)
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">93.924
+40.12
+40.5
+40.4
+</code></pre>
+<h2 id="the-result-6"><a class="header" href="#the-result-6">The result</a></h2>
+<div class="rule" id="r-bif.wordindex.result"><a href="builtins/wordindex.html#r-bif.wordindex.result">[bif.wordindex.result]</a></div>
+<p>When <code>string</code> has a word <code>n</code>, WORDINDEX returns the
+<a href="builtins/../conventions.html#r-conv.position.origin">position</a> in <code>string</code> of the first character of
+that word. The position counts characters of <code>string</code> from its first, so
+whitespace before the word, and the words and whitespace before that, all
+count toward it. The answer is
+<a href="builtins/index.html#r-bif.index.count.answer">written as a count</a>, and whether it is a new object is
+<a href="builtins/index.html#r-bif.index.count.answer.deviation.4">not specified</a>.</p>
+<pre><code class="language-rexx">say wordindex('red  green blue', 2) wordindex('  red', 1),
+    wordindex('09'x || 'red', 1) wordindex('a  bb  ccc', 3)
+</code></pre>
+<pre><code class="language-output">6 3 2 8
+</code></pre>
+<div class="rule" id="r-bif.wordindex.past-end"><a href="builtins/wordindex.html#r-bif.wordindex.past-end">[bif.wordindex.past-end]</a></div>
+<p>When <code>n</code> is greater than the number of words in <code>string</code>, the result is
+<code>0</code>. This holds for every <code>n</code> past the last word that passes its check.</p>
+<pre><code class="language-rexx">say wordindex('red green', 3) wordindex('red green', 999999999999999999)
+</code></pre>
+<pre><code class="language-output">0 0
+</code></pre>
+<div class="rule" id="r-bif.wordindex.empty"><a href="builtins/wordindex.html#r-bif.wordindex.empty">[bif.wordindex.empty]</a></div>
+<p>When <code>string</code> has no words, the null string or a string of only whitespace
+among them, the result is <code>0</code> for every <code>n</code> that passes its check.</p>
+<pre><code class="language-rexx">say wordindex('', 1) wordindex('  ' || '09'x, 1)
+</code></pre>
+<pre><code class="language-output">0 0
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="wordlength"><a class="header" href="#wordlength">WORDLENGTH</a></h1>
+<pre><code>WORDLENGTH(string, n)
+</code></pre>
+<p class="references">ANSI: 9.3.27; rexxref: Functions &gt; Built-in Functions &gt; WORDLENGTH</p>
+<p>WORDLENGTH answers how many characters one word of a string has. Words are
+those of <a href="builtins/index.html#r-bif.index.words.split">the word rule</a>.</p>
+<h2 id="arguments-7"><a class="header" href="#arguments-7">Arguments</a></h2>
+<div class="rule" id="r-bif.wordlength.method"><a href="builtins/wordlength.html#r-bif.wordlength.method">[bif.wordlength.method]</a></div>
+<p>WORDLENGTH is a builtin that runs as a String method, and <code>string</code>, its
+first argument, is the receiver. <code>string</code> is a
+<a href="builtins/../conventions.html#r-conv.string.null">string</a> and <code>n</code> is a
+<a href="builtins/index.html#r-bif.index.words.number">word number</a>. The arguments are checked in the
+<a href="builtins/../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count
+by the <a href="builtins/index.html#r-bif.index.call.count">builtin call rules</a>: both are required and two is
+the most.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say wordlength('a b', 0)
+a: say condition('o')~code
+signal on syntax name b
+say wordlength('a b', 1.5)
+b: say condition('o')~code
+signal on syntax name c
+say wordlength('a b', )
+c: say condition('o')~code
+signal on syntax name d
+say wordlength('a b', 1, 2)
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">93.924
+40.12
+40.3
+40.4
+</code></pre>
+<h2 id="the-result-7"><a class="header" href="#the-result-7">The result</a></h2>
+<div class="rule" id="r-bif.wordlength.result"><a href="builtins/wordlength.html#r-bif.wordlength.result">[bif.wordlength.result]</a></div>
+<p>When <code>string</code> has a word <code>n</code>, WORDLENGTH returns the number of
+<a href="builtins/../conventions.html#r-conv.string.chars">characters</a> in that word, which is
+<code>LENGTH(WORD(string, n))</code>. Whitespace around the word does not count, and a
+character that <a href="builtins/index.html#r-bif.index.words.split">the word rule</a> places inside a word,
+such as a line feed, counts as one. The answer is
+<a href="builtins/index.html#r-bif.index.count.answer">written as a count</a>, and whether it is a new object is
+<a href="builtins/index.html#r-bif.index.count.answer.deviation.4">not specified</a>.</p>
+<pre><code class="language-rexx">say wordlength('red  green blue', 2) wordlength('  abc  ', 1),
+    wordlength(' x' || '0a'x || 'y ', 1)
+</code></pre>
+<pre><code class="language-output">5 3 3
+</code></pre>
+<div class="rule" id="r-bif.wordlength.past-end"><a href="builtins/wordlength.html#r-bif.wordlength.past-end">[bif.wordlength.past-end]</a></div>
+<p>When <code>n</code> is greater than the number of words in <code>string</code>, the result is
+<code>0</code>. This holds for every <code>n</code> past the last word that passes its check.</p>
+<pre><code class="language-rexx">say wordlength('red green', 3) wordlength('red green', 999999999999999999)
+</code></pre>
+<pre><code class="language-output">0 0
+</code></pre>
+<div class="rule" id="r-bif.wordlength.empty"><a href="builtins/wordlength.html#r-bif.wordlength.empty">[bif.wordlength.empty]</a></div>
+<p>When <code>string</code> has no words, the null string or a string of only whitespace
+among them, the result is <code>0</code> for every <code>n</code> that passes its check.</p>
+<pre><code class="language-rexx">say wordlength('', 1) wordlength('09'x || ' ', 1)
+</code></pre>
+<pre><code class="language-output">0 0
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="wordpos"><a class="header" href="#wordpos">WORDPOS</a></h1>
+<pre><code>WORDPOS(phrase, string [, start])
+</code></pre>
+<p class="references">ANSI: 9.3.28; rexxref: Functions &gt; Built-in Functions &gt; WORDPOS (Word Position)</p>
+<p>WORDPOS searches a string for a sequence of words and answers the number
+of the word where the sequence begins. Words are those of
+<a href="builtins/index.html#r-bif.index.words.split">the word rule</a>, in the phrase and in the string alike.</p>
+<h2 id="arguments-8"><a class="header" href="#arguments-8">Arguments</a></h2>
+<div class="rule" id="r-bif.wordpos.method"><a href="builtins/wordpos.html#r-bif.wordpos.method">[bif.wordpos.method]</a></div>
+<p>WORDPOS is a builtin that runs as a String method, and <code>string</code>, its
+second argument, is the receiver; <code>phrase</code> and <code>start</code> become the
+message's arguments, in that order. <code>phrase</code> and <code>string</code> are
+<a href="builtins/../conventions.html#r-conv.string.null">strings</a>, and <code>start</code> is a
+<a href="builtins/index.html#r-bif.index.words.number">word number</a>. The arguments are checked in the
+<a href="builtins/../conventions.html#r-conv.check.order">order</a> the conventions give, and the argument count by
+the <a href="builtins/index.html#r-bif.index.call.count">builtin call rules</a>: two are required and three is
+the most.</p>
+<pre><code class="language-rexx">say wordpos('b c', 'a b c') 'a b c'~wordpos('b c')
+signal on syntax name a
+say wordpos('a', 'a', 0)
+a: say condition('o')~code
+signal on syntax name b
+say wordpos('a', 'a', 'one')
+b: say condition('o')~code
+signal on syntax name c
+say wordpos(, 'a')
+c: say condition('o')~code
+signal on syntax name d
+say wordpos('a', 'a', 1, 1)
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">2 2
+93.924
+40.12
+40.5
+40.4
+</code></pre>
+<div class="rule" id="r-bif.wordpos.start.default"><a href="builtins/wordpos.html#r-bif.wordpos.start.default">[bif.wordpos.start.default]</a></div>
+<p>When <code>start</code> is omitted, it is 1: the search begins at the first word of
+<code>string</code>.</p>
+<pre><code class="language-rexx">say wordpos('a', 'a b a') wordpos('a', 'a b a', ) wordpos('a', 'a b a', 2)
+</code></pre>
+<pre><code class="language-output">1 1 3
+</code></pre>
+<h2 id="the-result-8"><a class="header" href="#the-result-8">The result</a></h2>
+<div class="rule" id="r-bif.wordpos.result"><a href="builtins/wordpos.html#r-bif.wordpos.result">[bif.wordpos.result]</a></div>
+<p>When <code>phrase</code> has at least one word, let <code>m</code> be the number of its words.
+WORDPOS then returns the smallest word number <code>k</code>, with <code>k</code> at least
+<code>start</code>, such that <code>string</code> has a word <code>k + m - 1</code> and, for each <code>i</code> from 1
+to <code>m</code>, word <code>k + i - 1</code> of <code>string</code> is equal under <code>==</code> to word <code>i</code> of
+<code>phrase</code>. When there is no such <code>k</code>, the result is <code>0</code>. A phrase with no
+words is the case of <a href="builtins/wordpos.html#r-bif.wordpos.empty-phrase">its own rule</a>. The answer
+is <a href="builtins/index.html#r-bif.index.count.answer">written as a count</a>, and whether it is a new object
+is <a href="builtins/index.html#r-bif.index.count.answer.deviation.4">not specified</a>.</p>
+<pre><code class="language-rexx">s = 'one two three two three four'
+say wordpos('two', s) wordpos('two three', s) wordpos('two three', s, 3),
+    wordpos('two three', s, 5) wordpos(s, s)
+</code></pre>
+<pre><code class="language-output">2 2 4 0 1
+</code></pre>
+<div class="rule" id="r-bif.wordpos.whitespace"><a href="builtins/wordpos.html#r-bif.wordpos.whitespace">[bif.wordpos.whitespace]</a></div>
+<p>Only the words of <code>phrase</code> and of <code>string</code> take part in the search. The
+whitespace before the first word, between two words and after the last, in
+either argument, plays no part: neither how long a run of it is nor
+whether it is blanks or tabs changes the answer.</p>
+<pre><code class="language-rexx">s = 'one two three two three four'
+say wordpos('two' || '09'x || '  three', s) wordpos(' two three ', s),
+    wordpos('two three', 'one two' || '0909'x || 'three')
+</code></pre>
+<pre><code class="language-output">2 2 2
+</code></pre>
+<div class="rule" id="r-bif.wordpos.exact"><a href="builtins/wordpos.html#r-bif.wordpos.exact">[bif.wordpos.exact]</a></div>
+<p>Two words are equal only when they have the same characters in the same
+order. Case matters, no numeric comparison is made, and a word of <code>phrase</code>
+never matches only a part of a word of <code>string</code>. A character that
+<a href="builtins/index.html#r-bif.index.words.split">the word rule</a> places inside a word, such as a line
+feed, must match like any other.</p>
+<pre><code class="language-rexx">s = 'one two three two three four'
+say wordpos('Two', s) wordpos('tw', s) wordpos('wo', s) wordpos('two thr', s)
+say wordpos('1', '01 1.0 1') wordpos('a b', 'a' || '0a'x || 'b'),
+    wordpos('a' || '0a'x || 'b', 'a b a' || '0a'x || 'b')
+</code></pre>
+<pre><code class="language-output">0 0 0 0
+3 0 3
+</code></pre>
+<div class="rule" id="r-bif.wordpos.overlap"><a href="builtins/wordpos.html#r-bif.wordpos.overlap">[bif.wordpos.overlap]</a></div>
+<p>Every word number from <code>start</code> on is a candidate for <code>k</code>, including a word
+inside an earlier candidate that matched in part. A partial match does not
+make the search skip past the words it covered, so a sequence found can
+overlap one that was tried before it.</p>
+<pre><code class="language-rexx">say wordpos('a a', 'a a a', 2) wordpos('a b a', 'a b a b a', 2),
+    wordpos('a a b', 'a a a b')
+</code></pre>
+<pre><code class="language-output">2 3 2
+</code></pre>
+<div class="rule" id="r-bif.wordpos.partial"><a href="builtins/wordpos.html#r-bif.wordpos.partial">[bif.wordpos.partial]</a></div>
+<p>A sequence must lie wholly within <code>string</code>. When the words of <code>phrase</code>
+match the last words of <code>string</code> but <code>phrase</code> has more words after them,
+the phrase is not found there, and the result is <code>0</code> unless it is found
+earlier.</p>
+<pre><code class="language-rexx">s = 'one two three two three four'
+say wordpos('four five', s) wordpos('three four five', s) wordpos('x y', 'x')
+</code></pre>
+<pre><code class="language-output">0 0 0
+</code></pre>
+<div class="rule" id="r-bif.wordpos.past-end"><a href="builtins/wordpos.html#r-bif.wordpos.past-end">[bif.wordpos.past-end]</a></div>
+<p>When <code>start</code> is greater than the number of words in <code>string</code>, the result
+is <code>0</code>, for every <code>start</code> that passes its check. A <code>start</code> equal to the number of words
+searches the last word alone.</p>
+<pre><code class="language-rexx">s = 'one two three two three four'
+say wordpos('four', s, 6) wordpos('four', s, 7) wordpos('one', s, 999999999999999999)
+</code></pre>
+<pre><code class="language-output">6 0 0
+</code></pre>
+<div class="rule" id="r-bif.wordpos.empty-phrase"><a href="builtins/wordpos.html#r-bif.wordpos.empty-phrase">[bif.wordpos.empty-phrase]</a></div>
+<p>When <code>phrase</code> has no words, the null string or a string of only whitespace
+among them, the result is <code>0</code> for every <code>string</code>, the null string
+included. <code>start</code> is still checked, as a word number always is.</p>
+<pre><code class="language-rexx">say wordpos('', 'a b') wordpos(' ' || '09'x, 'a b') wordpos('', '')
+signal on syntax name e
+say wordpos('', '', 0)
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">0 0 0
+93.924
+</code></pre>
+<div class="rule" id="r-bif.wordpos.empty-string"><a href="builtins/wordpos.html#r-bif.wordpos.empty-string">[bif.wordpos.empty-string]</a></div>
+<p>When <code>string</code> has no words, the result is <code>0</code> for every <code>phrase</code> and every
+<code>start</code> that passes its check.</p>
+<pre><code class="language-rexx">say wordpos('a', '') wordpos('a', '  ' || '09'x, 1)
+</code></pre>
+<pre><code class="language-output">0 0
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The ANSI draft (9.3.28) defines WORDPOS by comparing the phrase, with its
+whitespace reduced to single blanks, against each run of the same number
+of words of the string, reduced the same way, from <code>start</code> on. That gives
+the answers above.</p>
+</blockquote>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="assets/version-picker.js"></script>
+
+        <script>
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+
+    </div>
+    </body>
+</html>
