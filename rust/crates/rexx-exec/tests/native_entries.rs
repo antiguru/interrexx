@@ -61,9 +61,8 @@ const IMPLEMENTED: &[&str] = &[
     // `HANDLE:0`, `HANDLE:1` and `HANDLE:2` through the standard streams
     // (Deviation 35).
     "handle_set",
-    // Phase 7's stream family: the queries a stream answers without opening
-    // anything, and the reading and writing entry points beside them. What
-    // this phase still defers is what the family's own probe binds.
+    // The stream family: the queries a stream answers without opening
+    // anything, and the reading and writing entry points beside them.
     "qualify",
     "query_exists",
     "query_handle",
@@ -273,8 +272,7 @@ fn invoking_an_unimplemented_entry_point_is_loud_and_names_its_phase() {
     }
 }
 
-/// The entry points this phase implements are exactly the ones the plan
-/// pulls forward from Phase 7.
+/// The entry points implemented are exactly the ones named here.
 #[test]
 fn the_implemented_entry_points_are_the_ones_the_plan_names() {
     let implemented: BTreeSet<&str> = rexx_exec::native_entry_points()

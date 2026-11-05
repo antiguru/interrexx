@@ -1,5 +1,4 @@
-//! Program end with an activity that never finishes (the Phase 6 S2-S5
-//! plan's Review Focus 2): the oracle waits for ever, and so does
+//! Program end with an activity that never finishes: the oracle waits for ever, and so does
 //! `rexx`, with main's output written and without spinning. Each test
 //! kills the process once it has seen that.
 

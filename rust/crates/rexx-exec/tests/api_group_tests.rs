@@ -36,7 +36,7 @@ use support::oracle;
 /// The directory of the groups below `ootest/ooRexx`.
 const DIR: &str = "API/oo";
 
-/// The groups `api_group_partition.rs` derives as Phase 8's.
+/// The groups `api_group_partition.rs` derives as stage 8.
 const GROUPS: &[&str] = &["CONVERSION", "FUNCTION", "METHOD"];
 
 /// The tests this crate does not pass, as `GROUP.TEST`; `false` for one that
@@ -301,7 +301,7 @@ const TICKER_LINES: &[&str] = &[
     "Executing automated test suite",
 ];
 
-/// Exit criterion 2 of the Phase 6 spec: the framework's ticker, a `REPLY`
+/// The framework's ticker, a `REPLY`
 /// thread and a `GUARD ON WHEN`, runs on this crate without `-U`. How many
 /// dots it prints depends on wall time, so they are checked for presence
 /// only; every other line equals the `-U` run's.

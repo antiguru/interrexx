@@ -29,8 +29,7 @@ use process::{wait_with_deadline, write_stdin};
 use rexx_exec::Outcome;
 
 /// Address-space ceiling imposed on every oracle invocation, in KiB. 1 GiB:
-/// the figure this project has used by hand throughout Phase 4, restated
-/// here as a named constant rather than a magic number in the format string.
+/// a named constant rather than a magic number in the format string.
 pub const ORACLE_MEMORY_LIMIT_KIB: u64 = 1_048_576;
 
 /// How long [`wait_with_deadline`] waits for the direct child before killing
@@ -39,8 +38,7 @@ pub const ORACLE_MEMORY_LIMIT_KIB: u64 = 1_048_576;
 /// this, not once: `wait_with_deadline`'s own doc has the reason the read
 /// needs a budget of its own rather than sharing the wait's. 10 seconds is
 /// the figure `timeout -s KILL 10` fixes by hand around every oracle
-/// invocation this project runs outside the suite (`rust/CLAUDE.md`'s "Wrap
-/// every oracle run" and the probe rules below it), which bounds only the
+/// invocation this project runs outside the suite, which bounds only the
 /// process, not a descriptor it hands to one of its own -- the harness's
 /// doubled bound is what closes that gap, not a mismatch with the by-hand
 /// figure.
@@ -541,8 +539,8 @@ mod tests {
     /// only difference is two columns of trace indent -- exactly the shape
     /// DEVIATION 0 exists to absorb (`tests/support/mod.rs`'s own
     /// `two_clause_lines_differing_only_in_indent_width_normalise_equal`
-    /// pins the same pair through `normalize_stderr` directly). Task 1's own
-    /// brief requires both directions or the new mode is unwitnessed: a mode
+    /// pins the same pair through `normalize_stderr` directly). Both directions are
+    /// needed or the mode is unwitnessed: a mode
     /// that only ever fails, or only ever passes, would not distinguish
     /// "wired in" from "inert".
     #[test]
@@ -664,8 +662,7 @@ mod tests {
     /// A run that exited normally is `Exited`, whatever `deadline_exceeded`
     /// says -- a completed process cannot also have been killed for running
     /// too long. Pairs with the two failing-arm tests below rather than
-    /// standing alone, per `rust/CLAUDE.md`'s "pair a refusal with its
-    /// adjacent success": without it, the two below could be pinning
+    /// standing alone: without it, the two below could be pinning
     /// `deadline_exceeded` to the classification's whole answer instead of
     /// to the tiebreak it only is when `code` is `None`.
     #[test]

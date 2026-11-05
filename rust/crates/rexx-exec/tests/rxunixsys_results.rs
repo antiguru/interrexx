@@ -1,6 +1,5 @@
 //! The `rxunixsys` library run in Rust, against the oracle's
-//! `librxunixsys.so` (`docs/superpowers/specs/extensions-behaviour.md`,
-//! "rxunixsys"). Every program runs as its own `rexx` process, because these
+//! `librxunixsys.so` (`docs/design/extensions.md`). Every program runs as its own `rexx` process, because these
 //! routines change process state (the umask, the root, the session), from a
 //! fresh directory, `{dir}` in a case's text.
 //!

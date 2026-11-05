@@ -1,6 +1,6 @@
-//! Task 15's consuming half: runs every `AssertionRow` `rexx-extract`'s
-//! `extract_assertions` lifts out of `ootest/ooRexx/base/expressions/` (Task
-//! 15a) through `rexx_exec`'s public entry point and checks it the way the
+//! Runs every `AssertionRow` `rexx-extract`'s
+//! `extract_assertions` lifts out of `ootest/ooRexx/base/expressions/`
+//! through `rexx_exec`'s public entry point and checks it the way the
 //! oracle's own test framework does.
 
 mod watchdog;
@@ -21,7 +21,7 @@ use std::process::{Command, Stdio};
 /// The path every row's synthetic program is reported under. There is no
 /// real file backing a row -- its program is assembled from the row's own
 /// fields -- so this is a label, not a location, in the same spirit as
-/// `spike.rs`'s `SPIKE_PATH`.
+/// `core_execution.rs`'s `PROGRAM_PATH`.
 const ROW_PATH: &str = "/nonexistent/assertion-row.rex";
 
 /// Env var that flips this test from a progress report into the phase gate.
@@ -142,7 +142,7 @@ enum RowOutcome {
         actual: Option<(u32, u32)>,
     },
     /// The program hit `NOT_IMPLEMENTED_EXIT`: some form in `expr` or
-    /// `expected` is outside 4a's scope. `construct` is whatever
+    /// `expected` is outside this crate's scope. `construct` is whatever
     /// `Loud`'s message named, taken verbatim off stderr.
     RuntimeBlocked { construct: String },
     /// None of the above: for a value-comparison row, a real Rexx condition
@@ -672,7 +672,7 @@ fn the_exempt_set_matches_the_current_blocked_rows() {
     }
 }
 
-/// The falsification proof Task 15's brief requires: perturbing one row's
+/// The falsification proof: perturbing one row's
 /// `expected` value must make exactly that row's comparison fail, and must
 /// not touch anything else.
 #[test]
@@ -715,10 +715,9 @@ fn the_falsification_proof() {
     }
 }
 
-/// Task 15's brief, item 3: a row evaluated under the wrong `NUMERIC
+/// A row evaluated under the wrong `NUMERIC
 /// DIGITS`/`FORM` can render an answer that still happens to match and pass
-/// while testing the wrong precision. This is the row `task-15a-report.md`
-/// names as the pre-flight finding that added `FORM` to the row schema:
+/// while testing the wrong precision. This is the row that needs `FORM` in the row schema:
 /// `ADDITION.testGroup`'s `test_198`, `Numeric Form ENGINEERING` + `Numeric
 /// Digits 5`, `self~assertSame(9999999999999 + 9999999999999, 20.000E+12)`
 /// -- `20.000E+12` is only the right answer in engineering notation at 5

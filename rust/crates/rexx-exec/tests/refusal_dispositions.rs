@@ -1,7 +1,6 @@
 //! **Every refusal has a committed disposition.**
 //!
-//! No refusal names a phase that owes its work: the last open phase that did,
-//! Phase 10, has closed. So this file reads every `Loud` constructor in `src/`
+//! No refusal names a phase that owes its work. So this file reads every `Loud` constructor in `src/`
 //! and requires each one to have a row in `corpus/refusal-dispositions.tsv`,
 //! saying why no phase owes it: GUARD (no program reaches it; the record names
 //! the probes that tried), DEVIATION (matching the oracle is wrong; the record

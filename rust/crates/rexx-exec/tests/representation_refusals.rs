@@ -1,6 +1,5 @@
 //! Refusal text that names a representation instead of a language rule
-//! (spec `docs/superpowers/specs/2026-10-14-phase-9b1-uniform-object-model.md`,
-//! section 6). Every string literal in `crates/*/src` containing one of
+//! Every string literal in `crates/*/src` containing one of
 //! [`PHRASES`] must be on [`ALLOWED`], and every row of [`ALLOWED`] must still
 //! match a literal. Test code (`tests.rs` and `tests/` under `src`) and
 //! comments are not refusal text.

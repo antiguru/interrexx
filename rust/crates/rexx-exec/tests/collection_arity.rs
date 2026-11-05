@@ -1,4 +1,4 @@
-//! `corpus/collection-arity.tsv` (Phase 5g Task 0b): what each documented
+//! `corpus/collection-arity.tsv`: what each documented
 //! collection method does when it is sent an argument list it could accept.
 
 mod support;

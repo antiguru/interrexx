@@ -704,7 +704,7 @@ fn the_differing_tests_are_read_from_every_key() {
     }
 }
 
-/// Spec 2026-10-10 section 2: every test a [`DIFFERING`] key names as
+/// Every test a [`DIFFERING`] key names as
 /// failing or last started passes in the per-test record of the suite
 /// gate's last run of every group, at the recorded ootest revision, or
 /// has a row in one of the three row files. Gate-only, under the suite
@@ -883,11 +883,11 @@ fn each_group_of_the_derived_list_in_one_run_in_both_modes() {
     assert!(failing.is_empty(), "{failing:#?}");
 }
 
-/// The seeded gate (spec 2026-10-07 section 4, "Gate"): each part of
+/// The seeded gate: each part of
 /// `corpus/sim-gate.tsv` in the simulation mode under the seeds its row
 /// derives, judged by the crate's own invariants and, but under `pct`
 /// and in the rows injecting failures, by the program's own checks
-/// (ruling R6). An outcome no committed oracle outcome of its part has
+/// An outcome no committed oracle outcome of its part has
 /// goes to the report, never red.
 mod sim_gate {
     use std::collections::{BTreeMap, BTreeSet};

@@ -111,15 +111,12 @@ fn every_directive_keyword_is_correctly_admitted_or_refused() {
     }
 }
 
-/// Phase 5a Task 1's own demonstration: `::CLASS K` is an inline literal
-/// here, not a corpus entry, because `::CLASS` is not
-/// implemented and committing it would redden the corpus differential (see
-/// `docs/superpowers/plans/2026-08-15-phase-5a-native-layer.md`'s Task 1
-/// brief).
+/// `::CLASS K` is an inline literal here, not a corpus entry, so that the
+/// parser admits it without a corpus program depending on it.
 #[test]
 fn a_class_directive_is_admitted_without_panicking() {
     let p = parse_program(b"::CLASS K\n".to_vec()).expect("::CLASS K parses");
-    assert_program_has_only_admitted_directives(Path::new("<phase-5a-task-1-demo>"), &p);
+    assert_program_has_only_admitted_directives(Path::new("<inline>"), &p);
 }
 
 /// **[`each_instruction`] descends into a `::METHOD` and a `::ATTRIBUTE`
@@ -153,7 +150,7 @@ fn the_walker_descends_into_a_method_body_and_an_attribute_body() {
 #[should_panic(expected = "has a `::` directive this walker does not admit")]
 fn an_unadmitted_directive_still_panics() {
     let p = parse_program(b"::RESOURCE d\nbody\n::END\n".to_vec()).expect("::RESOURCE parses");
-    assert_directives_admitted_by(Path::new("<phase-5a-task-1-demo>"), &p, |kind| {
+    assert_directives_admitted_by(Path::new("<inline>"), &p, |kind| {
         !matches!(kind, DirectiveKind::Resource(_))
     });
 }
@@ -400,7 +397,7 @@ fn each_instruction<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Instruction))
 fn each_expr<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Expr)) {
     // An explicit stack, not recursion through `children_of`: `deep_nested_expr.rex`'s
     // 3,000-term chain is in this subset specifically to exercise this walker, and
-    // Phase 3's `variants.rs` already measured that a naive recursive walk aborts on
+    // `variants.rs` measured that a naive recursive walk aborts on
     // it. See that file's own comment for the full argument.
     fn walk<'a>(root: &'a Expr, visit: &mut impl FnMut(&'a Expr)) {
         let mut stack = vec![root];
@@ -612,11 +609,10 @@ fn every_in_scope_variant_is_witnessed_by_the_corpus_list() {
     );
 }
 
-/// `phase-4-exclusions.txt`'s builtin exclusions, which Phase 10 emptied,
-/// written as a literal rather than parsed from the prose file -- the same
-/// choice `tests/assertions.rs`'s `EXEMPT` list makes against that file's
-/// builtin set. Changing a name there without changing the file (or vice
-/// versa) is exactly the drift this test exists to catch.
+/// The builtin exclusions (none), written as a literal rather than parsed
+/// from a file -- the same choice `tests/assertions.rs`'s `EXEMPT` list
+/// makes. Changing a name there without changing the table is exactly the
+/// drift this test exists to catch.
 use rexx_inventory::builtins::EXCLUDED as EXCLUDED_BUILTINS;
 
 #[test]
@@ -625,15 +621,15 @@ fn the_builtin_exclusion_set_matches_the_committed_file() {
     assert_eq!(
         names.len(),
         81,
-        "BuiltinFunctions.cpp's table moved off 81 entries -- phase-4-exclusions.txt's \
-         \"66 of the 81\" line and this test's own derivation below both need revisiting"
+        "BuiltinFunctions.cpp's table moved off 81 entries -- this test's own \
+         derivation below needs revisiting"
     );
 
     let mut seen = HashSet::new();
     for (excluded, _owner, _reason) in EXCLUDED_BUILTINS {
         assert!(
             names.contains(excluded),
-            "{excluded} is listed in phase-4-exclusions.txt but is not in \
+            "{excluded} is listed as excluded but is not in \
              BuiltinFunctions.cpp's builtin table at all"
         );
         assert!(
@@ -644,8 +640,7 @@ fn the_builtin_exclusion_set_matches_the_committed_file() {
     assert_eq!(
         EXCLUDED_BUILTINS.len(),
         0,
-        "the whole exclusions plus the partial rows -- Phase 10 delivered the \
-         RXAPI names and QUEUED's cross-process half, the last of them"
+        "the whole exclusions plus the partial rows are empty"
     );
 
     // Every partial row must also be an excluded row, or `wholly_excluded`
@@ -667,14 +662,10 @@ fn the_builtin_exclusion_set_matches_the_committed_file() {
         "no builtin is in scope in one form and out of it in another"
     );
 
-    // Derived, not asserted: this is the number phase-4-exclusions.txt's own
-    // header reads out, and this line is how that phrasing stays synced to
-    // the actual table rather than to a copy-pasted figure.
+    // Derived, not asserted: the number is read from the table rather than
+    // copied.
     let in_scope = names.len() - rexx_inventory::builtins::wholly_excluded().len();
-    assert_eq!(
-        in_scope, 81,
-        "all 81 builtins are in scope -- see phase-4-exclusions.txt"
-    );
+    assert_eq!(in_scope, 81, "all 81 builtins are in scope");
     assert_eq!(
         rexx_inventory::builtins::in_scope().len(),
         in_scope,

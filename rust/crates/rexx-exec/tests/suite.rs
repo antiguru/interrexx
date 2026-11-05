@@ -1,6 +1,6 @@
 //! The ooTest suite: every group `testOORexx.rex` finds under `ootest/ooRexx`,
 //! each run whole through its single-group form, once on the oracle and on this
-//! crate until a run ends normally (spec 2026-10-10 section 2). The suite run is
+//! crate until a run ends normally. The suite run is
 //! gate-only, under `REXX_SUITE_GATE`; `REXX_SUITE_GROUPS` restricts it to the
 //! comma-separated `dir/group` names it lists.
 //!

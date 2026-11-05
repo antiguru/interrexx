@@ -356,7 +356,7 @@ fn scrub(three: Three, dir: &Path) -> Three {
     )
 }
 
-/// The oracle wrapped as `rust/CLAUDE.md` requires: its own address-space cap,
+/// The oracle wrapped with its own address-space cap,
 /// its own library path, and the probe directory as the working directory.
 fn oracle_command(oracle: &Path, program: &Path, dir: &Path) -> Command {
     let mut command = Command::new("bash");

@@ -1,5 +1,4 @@
-# The case table of the 2026-10-18 ANSI spike
-# (.superpowers/sdd/2026-10-18-phase-9d/spike-ansi-model.md). Each case is
+# The case table of the ANSI numeric model. Each case is
 # one operation: `infix OP | a | b`, `prefix OP | a`, `bif NAME | args`,
 # `msg NAME | target | args` or `do count|for | n`. A field is a Rexx
 # literal; an empty field is an omitted argument. The answer is the model's,

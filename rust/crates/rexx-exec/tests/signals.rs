@@ -1,6 +1,6 @@
-//! A signal halts running Rexx (spec 2026-09-29 section 4): each witness runs
+//! A signal halts running Rexx: each witness runs
 //! `rexx` in a subprocess with SIGINT, SIGTERM and SIGHUP at their
-//! defaults whatever this process inherited (ruling P62), waits for its
+//! defaults whatever this process inherited, waits for its
 //! readiness line, signals that process by its PID, or its process group as
 //! a terminal's Ctrl-C does, and asserts all three descriptors. The expected
 //! bytes are the oracle's, measured under `timeout -s SIGNAL 1` or by the
@@ -401,7 +401,7 @@ fn sigint_halts_a_busy_loop() {
 /// The signal wakes the activity parked in `GUARD WHEN`, which takes the
 /// halt too. The oracle halts main and leaves that activity parked, so it
 /// never ends: killed after 3 s, 30 of 30 runs, with main's three lines on
-/// stderr. DEVIATIONS entry 10 in `phase-4-exclusions.txt`.
+/// stderr. Deviation 10.
 #[test]
 fn sigint_reaches_a_parked_guard_when() {
     halts(
@@ -429,7 +429,7 @@ fn sigint_reaches_a_parked_guard_when() {
 
 /// Under `nohup` SIGHUP is ignored, so the oracle installs no handler and
 /// SIGINT kills it (status 130, 30 of 30 runs); this crate checks each
-/// signal and halts. DEVIATIONS entry 10 in `phase-4-exclusions.txt`.
+/// signal and halts. Deviation 10.
 #[test]
 fn under_nohup_sigint_still_halts() {
     halts(

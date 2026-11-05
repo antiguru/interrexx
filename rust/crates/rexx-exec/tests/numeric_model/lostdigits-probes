@@ -1,7 +1,6 @@
-# Task 6.3's probes (docs/superpowers/records/2026-10-18-phase-9d/t6.3/probes,
-# maxdesc.rex and maxstr.rex) and the operations of its witnesses
+# Probes of MAX and MIN with wide operands and the operations of the witnesses
 # (corpus/lang/lostdigits_signal_trap.rex, lostdigits_max_min.rex and
-# datatype_whole_wide.rex). The case grammar is the one `spike` describes.
+# datatype_whole_wide.rex). The case grammar is the one `ansi-model` describes.
 
 case name=maxdesc-1
 bif MAX | 1.5 | ' 4444444444 '

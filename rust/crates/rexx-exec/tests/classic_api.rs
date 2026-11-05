@@ -804,9 +804,7 @@ fn run_binary(
 /// `librexx.so.4` alone, or against `librexxapi.so.4` alone (finding `RexxStart` in the
 /// `librexx.so.4` loaded as its dependency) registers a function with `RexxRegisterFunctionExe`
 /// and calls it from a program `RexxStart` runs: `librexx.so.4` owns the one API state and
-/// `librexxapi.so.4` forwards to it (Moritz, 2026-11-03, option A). Before, `librexxapi.so.4`
-/// held a state of its own, the registration went there and `RexxStart` raised Error 43.1 for
-/// `-lrexxapi -lrexx`. The oracle answers as here in both two-library orders; it links neither
+/// `librexxapi.so.4` forwards to it. The oracle answers as here in both two-library orders; it links neither
 /// single-library form (its `librexx.so.4` exports no registration, its `librexxapi.so.4` no
 /// `RexxStart`).
 #[test]
@@ -1258,7 +1256,7 @@ Error 3.901:  Failure during initialization: Program "nothere.rex" was not found
 
 /// The `rxmath` and `rxregexp` extension groups, on this crate's Rust libraries and its own
 /// `rxregexp.cls`, with nothing on the library path: the oracle's counts, recorded from the full
-/// checkout on 2026-11-03 (PR 4 plan, "Oracle targets").
+/// checkout.
 #[test]
 fn the_rust_extension_library_groups_match_the_oracles_counts() {
     for (dir, group, ran, assertions) in [
@@ -1276,7 +1274,7 @@ fn the_rust_extension_library_groups_match_the_oracles_counts() {
 }
 
 /// The `rxsock` group on this crate's Rust library and its own `socket.cls`: the oracle's
-/// counts, recorded from the full checkout on 2026-11-03 (PR 4 plan, "Oracle targets"). Its
+/// counts, recorded from the full checkout. Its
 /// client and server activities talk over loopback port 8083.
 #[test]
 fn the_rxsock_group_matches_the_oracles_counts() {
@@ -1307,8 +1305,7 @@ fn path_with(packages: &[&str]) -> PathBuf {
 
 /// The groups of the two C++ extensions `scripts/build-extensions.sh` compiles from their own
 /// sources against this workspace's libraries, and of the pure-Rexx `logicalwrapper.cls`: the
-/// oracle's counts, recorded from the full checkout on 2026-11-03 (PR 4 plan, "Oracle
-/// targets"). The packages they require (`ncurses.cls`, `logicalwrapper.cls`, `json.cls`,
+/// oracle's counts, recorded from the full checkout. The packages they require (`ncurses.cls`, `logicalwrapper.cls`, `json.cls`,
 /// `yaml.cls`) are read from their source directories, the files the oracle installs.
 /// `hostemu`'s `TEST_HI` halts the program from the `HostEmu` handler through `RexxSetHalt` on
 /// its own thread.
@@ -1397,8 +1394,8 @@ fn the_extension_check_refuses_the_oracles_librexx() {
 }
 
 /// The `rxunixsys` group on this crate's Rust library: the oracle's counts and failing tests,
-/// recorded from the full checkout on 2026-11-03 (PR 4 plan, "Oracle targets"). `TEST_SYSCRYPT`
-/// fails on both, which provide no `SysCrypt` (Rulings). The six `TEST_SYSSTAT_*` failures are
+/// recorded from the full checkout. `TEST_SYSCRYPT`
+/// fails on both, which provide no `SysCrypt`. The six `TEST_SYSSTAT_*` failures are
 /// the group's `socket` constant, `$XDG_RUNTIME_DIR/.ooRexx-...service`: the oracle's `rxapi`
 /// socket, which this crate's service, under `REXX_API_DIR`, does not create. The run is given
 /// an empty `XDG_RUNTIME_DIR` so that the path is absent whatever the host runs; measured, with

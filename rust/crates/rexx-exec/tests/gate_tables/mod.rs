@@ -1,4 +1,4 @@
-//! The machinery a Phase 5 gate table is built out of: the verdict function,
+//! The machinery a gate table is built out of: the verdict function,
 //! the two-engine crate run, the structural channel, the gate modes and the
 //! report.
 
@@ -177,10 +177,8 @@ pub const CORPUS_GATE_ENV: &str = "REXX_CORPUS_GATE";
 pub const PHASE_GATE_ENV: &str = "REXX_PHASE_GATE";
 
 /// The phases whose rows stay gated for the rest of the project, without
-/// anyone having to set [`PHASE_GATE_ENV`].
-/// `7` closed on 2026-09-13, so its rows are gated for the same reason every
-/// other closed phase's are: a verdict of its own moving is a regression.
-/// `8` closed on 2026-09-28 for the same reason.
+/// anyone having to set [`PHASE_GATE_ENV`]: a verdict of one of their rows
+/// moving is a regression.
 pub const CLOSED_PHASES: &[&str] = &[
     "5a", "5b", "5c", "5d", "5e", "5f", "5g", "5h", "5i", "5j", "6", "7", "8",
 ];

@@ -1,4 +1,4 @@
-//! `corpus/introspection-arity.tsv` (Phase 5i Task 0): what each documented
+//! `corpus/introspection-arity.tsv`: what each documented
 //! introspection method does when it is sent an argument list it could
 //! accept.
 

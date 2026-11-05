@@ -6,7 +6,7 @@
 //! the program's own native calls got, and a call through a context kept
 //! from before termination answers nothing.
 //!
-//! The extension is the Phase 8 surface forge (`termination_context/forge.cpp`, its routines
+//! The extension is the surface forge (`termination_context/forge.cpp`, its routines
 //! `Stash`, `UseStash` and `Same`), compiled with `g++` against this
 //! worktree's `api/` into a directory of this run's own, and the programs are
 //! run by this crate's `rexx` binary, because the forge's loader, unloader
@@ -14,8 +14,7 @@
 //! lines are the oracle's, measured three times each with identical output,
 //! rc 0 and empty stderr. The Rexx lines and the forge's lines are compared
 //! each in their own order, since `SAY` output and an extension's `printf`
-//! interleave differently by decision (`phase-4-exclusions.txt`, "SAY OUTPUT
-//! AND AN EXTENSION'S OWN printf INTERLEAVE DIFFERENTLY").
+//! interleave differently by decision.
 
 #![cfg(target_os = "linux")]
 

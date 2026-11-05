@@ -235,7 +235,7 @@ fn every_unbounded_shape_this_crate_can_take_is_bounded() {
         // **The row that says where the check has to be.** This recursion
         // iterates no loop, transfers by no `SIGNAL` and resumes no reply, so
         // a deadline honoured at those cycles instead of at the clause
-        // boundary never sees it. Measured 2026-09-02, both engines: with the
+        // boundary never sees it. Measured: with the
         // check at the clause boundary it is `DEADLINE_EXIT` in under 0.5 s;
         // with the check moved to `loop_advance`, `Flow::Signal` and the
         // reply drain it overflows the interpreter thread's stack and the

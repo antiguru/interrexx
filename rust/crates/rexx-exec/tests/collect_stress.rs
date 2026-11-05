@@ -93,7 +93,7 @@ const NO_ALLOCATION_PROGRAMS: &[&str] = &[
 ];
 
 /// The programs whose stdout depends on when a collection happens, which is
-/// not an observable the oracle defines (ruled 2026-09-01): each loads a
+/// not an observable the oracle defines: each loads a
 /// package nothing holds, which the requires cache holds weakly, and loads it
 /// again. Measured on the oracle with a loop of `copies('y', 100000)` between
 /// the two loads: `library_package_retried.rex` prints `its class The K3

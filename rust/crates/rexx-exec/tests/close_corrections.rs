@@ -1,4 +1,4 @@
-//! Focused regressions for the Phase 9d close corrections.
+//! Focused regressions: collection and invocation corner cases.
 
 use rexx_exec::{Invocation, run_program, run_program_collect_every_alloc};
 

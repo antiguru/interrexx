@@ -688,9 +688,7 @@ fn every_branch_shape_answers_as_recorded() {
 const CASE_DIR: &str = "tests/ir_recorded_cases";
 
 /// The cases in [`CASE_DIR`], which are the ones written as data rather than
-/// as a `const` table in this file (the plan's Tech Stack section: a data file
-/// from Task 6 onward, and the three existing tables not retrofitted because
-/// they hold witnesses nothing else catches).
+/// as a `const` table in this file.
 #[test]
 fn every_case_file_answers_as_recorded() {
     assert!(

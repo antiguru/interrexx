@@ -127,11 +127,8 @@ fn prefix_operators_covers_plus_and_backslash() {
     check_witness("prefix_operators", &path);
 }
 
-/// `>E>`, a bonus beyond the design spec's own nine-prefix "measured
-/// reachable from pure-4a code" list -- a correction worth keeping because it
-/// was got wrong once (`.nil` is one of `ExprKind::DotVariable`'s own three
-/// admissible names, D15, so it is reachable), not required by criterion 3's
-/// own table but kept because it is real and cheap to pin.
+/// `>E>`: `.nil` is one of `ExprKind::DotVariable`'s own three admissible
+/// names, so it is reachable.
 #[test]
 fn dotvariable_beyond_the_list_covers_the_spec_correction() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -150,10 +147,9 @@ fn call_arguments_covers_the_argument_prefix_at_every_position_shape() {
 
 /// `>F>`: two expression-form calls in one clause, which pins that the
 /// second one is emitted **at all** after the first callee's own lines --
-/// not the column it lands in. An earlier version of this comment said the
-/// second line "has to come back to the caller's indent"; nothing here makes
-/// it, because DEVIATION 0 normalises that difference away (review round 1,
-/// F1, and the module doc's own paragraph on what does pin an indent).
+/// not the column it lands in. Nothing here pins the column, because
+/// Deviation 0 normalises that difference away (see the module doc's own
+/// paragraph on what does pin an indent).
 #[test]
 fn function_call_covers_the_function_prefix_after_the_callees_own_lines() {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/trace_oracle/function_call.rex");
@@ -203,7 +199,7 @@ fn trace_labels_covers_the_labels_only_mode() {
 }
 
 /// The control variable is **re-read** on every re-tested pass, not taken
-/// from the loop's own saved value (review round 1, F2). The program's own
+/// from the loop's own saved value. The program's own
 /// header has the measured pair; the visible difference is a trip count and
 /// a `>V>` value, neither of which normalisation touches.
 #[test]
@@ -213,8 +209,7 @@ fn control_variable_reread_covers_a_body_that_writes_the_control_variable() {
     check_witness("control_variable_reread", &path);
 }
 
-/// `EXIT <expr>`'s own `>>>`, which this crate did not emit at all before
-/// Task 9 -- see the program's own header for why its adjacent passing case
+/// `EXIT <expr>`'s own `>>>` -- see the program's own header for why its adjacent passing case
 /// (a bare `EXIT`, which traces nothing) lives in three other witnesses
 /// rather than here.
 #[test]

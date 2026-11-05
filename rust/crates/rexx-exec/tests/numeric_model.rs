@@ -24,8 +24,7 @@ const CASES: &str = "tests/numeric_model";
 
 /// The cases whose native oracle answer differs from the model: the case,
 /// the numeric Deviation that licenses it, the rule it rests on, and the
-/// oracle's answer, untrapped and then trapped. The rules R1-R3 and R6 are
-/// Moritz's 2026-10-20 rulings ("follow rexxref") reported by Task 6.14:
+/// oracle's answer, untrapped and then trapped. The rules R1-R3 and R6 follow rexxref:
 /// * `R1`: under FUZZ a comparison checks LOSTDIGITS at DIGITS minus FUZZ
 ///   whatever the signs;
 /// * `R2`: MAX and MIN apply FUZZ to whole numbers;

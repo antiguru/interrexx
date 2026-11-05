@@ -9,9 +9,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// The partition this test asserts, per group file stem. Phase 8 is the
-/// groups whose libraries import nothing that names a phase; any other group
-/// is the latest phase one of its imports belongs to.
+/// The partition this test asserts, per group file stem: 8 is the groups
+/// whose libraries import nothing from the embedding API or the registries;
+/// any other group is the highest stage one of its imports belongs to.
 const PARTITION: &[(&str, u8)] = &[
     ("METHOD", 8),
     ("CONVERSION", 8),
@@ -28,11 +28,11 @@ const PARTITION: &[(&str, u8)] = &[
 /// what they import from each other is not the group's.
 const INTERPRETER_LIBRARIES: &[&str] = &["librexx.so", "librexxapi.so"];
 
-/// Imports that create or start an interpreter: the embedding API, Phase 9's.
+/// Imports that create or start an interpreter: the embedding API (stage 9).
 const EMBEDDING: &[&str] = &["RexxCreateInterpreter", "RexxStart"];
 
 /// The function, subcom, exit, queue and macro-space registries: RXAPI,
-/// Phase 10's.
+/// stage 10.
 const REGISTRIES: &[&str] = &[
     "RexxRegisterFunctionExe",
     "RexxRegisterFunctionDll",

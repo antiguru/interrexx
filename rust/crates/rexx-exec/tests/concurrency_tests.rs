@@ -1,7 +1,8 @@
-//! Phase 6 exit criterion 1's test list, derived per test method from the
+//! The concurrency test list, derived per test method from the
 //! ooTest sources and held equal to the one in
-//! `concurrency_tests/derived-list.txt` and `concurrency_tests/exclusions.txt`; with the `pinning` feature, the
-//! would-be park points each of those tests reaches.
+//! `concurrency_tests/derived-list.txt` and `concurrency_tests/exclusions.txt`;
+//! with the `pinning` feature, the would-be park points each of those tests
+//! reaches.
 
 #![expect(
     clippy::disallowed_methods,
@@ -707,7 +708,7 @@ mod derived_runs {
     }
 }
 
-/// Criterion 6's sharing fraction (spec 2026-09-29 section 9).
+/// The sharing fraction.
 #[cfg(feature = "sharing")]
 mod sharing {
     use std::fs;

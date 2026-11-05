@@ -150,7 +150,7 @@ fn excerpt(bytes: &[u8]) -> String {
 /// DEVIATION 0's normalisation. See the module doc's "Opting a program out
 /// of DEVIATION 0".
 const RAW_STDERR_COMPARISON: &[&str] = &[
-    // Phase 5a (2026-08-17 plan) Task 11: what a list expression and a
+    // What a list expression and a
     // `DO OVER` trace. Every value line here is indented, and the indents are
     // what the program is for -- the `>A>` per written list position against
     // the `>>>` for the list itself, and the `>K>` a `DO OVER` header emits
@@ -168,7 +168,7 @@ const RAW_STDERR_COMPARISON: &[&str] = &[
     // of which the normaliser would blur.
     "lang/raise_array_nested.rex",
     "lang/raise_additional_nested.rex",
-    // Phase 5a Task 7's two traced method activations. The indent a
+    // Two traced method activations. The indent a
     // `::METHOD` body's clauses echo at is the thing under test -- 0,
     // whatever the sending clause's own indent was -- and normalisation
     // erases exactly that difference, so these two are the first programs
@@ -180,7 +180,7 @@ const RAW_STDERR_COMPARISON: &[&str] = &[
     // name -- `"B"` against `"B="` -- which is the only place a program can
     // read that name itself rather than infer it from which body ran.
     "lang/method_attribute_set_body.rex",
-    // Phase 5a (2026-08-17 plan) Task 6: the operator-forwarded native-method
+    // The operator-forwarded native-method
     // frame. Raw mode is what asserts the frame line's own bytes -- its
     // leading whitespace and its absent line number included -- rather than
     // resting on whatever DEVIATION 0's normaliser happens to do to them.
@@ -218,14 +218,14 @@ const RAW_STDERR_COMPARISON: &[&str] = &[
     // whose need for a number -- not whether it is arithmetic -- is what
     // decides whether it reaches this frame at all.
     "lang/operator_frame_stem_compare_overflow.rex",
-    // Phase 5a (2026-08-17 plan) Task 14: the frame the required-string
+    // The frame the required-string
     // protocol's own `REQUEST` activation contributes when a `makeString`
     // reached through it raises. The pair is one frame from a language context
     // against two from a method argument, and the frame lines are indented and
     // carry no line number, which is what raw mode asserts.
     "lang/required_string_make_string_raises.rex",
     "lang/required_string_argument_make_string_raises.rex",
-    // Phase 5a (2026-08-17 plan) Task 16: what a `REPLY` leaves on stderr.
+    // What a `REPLY` leaves on stderr.
     // Both programs are traceback-only, and both carry the two-space-and-more
     // gap of a `*-*` clause line at the indent an owed body reports at -- the
     // run of spaces normalisation collapses. `method_reply`'s 98.936 is
@@ -946,8 +946,7 @@ fn demonstrate_the_report_reaches_a_plain_cargo_test() {
     );
 }
 
-/// Criterion 6's sharing fraction over the corpus (spec 2026-09-29 section
-/// 9): the crate's side of every program [`corpus_differential`] runs, the
+/// The sharing fraction over the corpus: the crate's side of every program [`corpus_differential`] runs, the
 /// counts summed, and each program with a shared object listed.
 #[cfg(feature = "sharing")]
 #[test]
@@ -1004,8 +1003,7 @@ fn sharing_fraction_over_the_corpus() {
     println!("{text}\nwritten to {}", out.display());
 }
 
-/// Criterion 9's pinning report over the corpus (spec 2026-09-29 section 9):
-/// the crate's side of every program [`corpus_differential`] runs, in the
+/// The pinning report over the corpus: the crate's side of every program [`corpus_differential`] runs, in the
 /// mode `REXX_CORPUS_SWITCH` names, the arrivals summed per park and the
 /// waits per kind, with each program that reached a wait listed. Panics when a
 /// program does not finish, reaches an inverted wait or ends with a frame pushed.

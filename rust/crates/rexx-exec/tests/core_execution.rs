@@ -1,16 +1,16 @@
-//! What the borrow-shape spike has to demonstrate, one test per claim.
+//! Core execution, one test per claim: output, variable slots, loud failure,
+//! evaluation depth and recursion limits.
 
 use rexx_exec::{NOT_IMPLEMENTED_EXIT, run_program};
 
 /// The path these tests report programs under.
-const SPIKE_PATH: &str = "/nonexistent/spike-program.rex";
+const PROGRAM_PATH: &str = "/nonexistent/program.rex";
 
-/// The whole of Step 1: an interpreter small enough to prove the shape and
-/// nothing else.
+/// The smallest program that prints.
 #[test]
 fn say_hello_prints_hello() {
     let outcome = run_program(
-        SPIKE_PATH,
+        PROGRAM_PATH,
         b"say 'hello'\n".to_vec(),
         rexx_exec::Invocation::none(),
     );
@@ -28,7 +28,7 @@ fn say_hello_prints_hello() {
 #[test]
 fn a_variable_round_trips_through_its_slot() {
     let outcome = run_program(
-        SPIKE_PATH,
+        PROGRAM_PATH,
         b"greeting = 'hello'\nsay greeting || ', world'\n".to_vec(),
         rexx_exec::Invocation::none(),
     );
@@ -40,7 +40,7 @@ fn a_variable_round_trips_through_its_slot() {
 #[test]
 fn an_unset_variable_reads_as_its_own_name() {
     let outcome = run_program(
-        SPIKE_PATH,
+        PROGRAM_PATH,
         b"say nosuchvariable\n".to_vec(),
         rexx_exec::Invocation::none(),
     );
@@ -57,7 +57,7 @@ fn the_loud_failure_code_cannot_be_confused_with_a_rexx_error() {
         "256 - major lives in 157..=253 for majors 3 to 99"
     );
     let outcome = run_program(
-        SPIKE_PATH,
+        PROGRAM_PATH,
         b"say .local~send('ZZZ=')\n".to_vec(),
         rexx_exec::Invocation::none(),
     );
@@ -76,7 +76,7 @@ fn a_loud_failure_message_does_not_grow_with_the_expression() {
     const BOUND: usize = 300;
 
     let small = run_program(
-        SPIKE_PATH,
+        PROGRAM_PATH,
         b"say .local~send('ZZZ=')\n".to_vec(),
         rexx_exec::Invocation::none(),
     );
@@ -89,7 +89,7 @@ fn a_loud_failure_message_does_not_grow_with_the_expression() {
         deep.extend_from_slice(b"'' || ");
     }
     deep.extend_from_slice(b"'ZZZ=')\n");
-    let deep = run_program(SPIKE_PATH, deep, rexx_exec::Invocation::none());
+    let deep = run_program(PROGRAM_PATH, deep, rexx_exec::Invocation::none());
     assert_eq!(deep.exit_code, NOT_IMPLEMENTED_EXIT);
 
     assert_eq!(
@@ -108,9 +108,9 @@ fn a_loud_failure_message_does_not_grow_with_the_expression() {
     );
 }
 
-/// Step 3's numbers, and the reason this test exists rather than a note in the
-/// report: **Task 11 sets D19's evaluation-depth limit from what this prints**,
-/// so it has to be re-runnable rather than a figure someone recorded once.
+/// The stack cost of one `eval` frame, which the evaluation-depth limit is
+/// set from, so it has to be re-runnable rather than a figure someone
+/// recorded once.
 #[test]
 fn records_the_stack_cost_of_one_eval_frame() {
     const TERMS: usize = 100_000;
@@ -127,7 +127,7 @@ fn records_the_stack_cost_of_one_eval_frame() {
     }
     program.push(b'\n');
 
-    let outcome = run_program(SPIKE_PATH, program, rexx_exec::Invocation::none());
+    let outcome = run_program(PROGRAM_PATH, program, rexx_exec::Invocation::none());
     assert_eq!(outcome.exit_code, 0, "stderr: {:?}", outcome.stderr);
     assert_eq!(
         outcome.stdout, b"a\n",
@@ -144,7 +144,7 @@ fn records_the_stack_cost_of_one_eval_frame() {
         .expect("the run recursed, so there is a per-frame cost");
 
     // Printed rather than only asserted: `cargo test -p rexx-exec -- --nocapture`
-    // is how Task 11 reads the two numbers it needs.
+    // is how the two numbers are read.
     println!(
         "interpreter stack: {} bytes, eval depth reached: {}, span: {} bytes, \
          per frame: {bytes_per_frame:.1} bytes",
@@ -186,7 +186,7 @@ fn records_the_stack_cost_of_one_eval_frame() {
 #[test]
 fn a_raised_condition_reports_the_failing_clause() {
     let outcome = run_program(
-        SPIKE_PATH,
+        PROGRAM_PATH,
         b"say 'a'\nsay 'b'\nsay 2 & 1\n".to_vec(),
         rexx_exec::Invocation::none(),
     );
@@ -197,7 +197,7 @@ fn a_raised_condition_reports_the_failing_clause() {
         String::from_utf8(outcome.stderr).expect("the report is ASCII"),
         format!(
             "     3 *-* say 2 & 1\n\
-             Error 34 running {SPIKE_PATH} line 3:  Logical value not 0 or 1.\n\
+             Error 34 running {PROGRAM_PATH} line 3:  Logical value not 0 or 1.\n\
              Error 34.901:  Logical value must be exactly \"0\" or \"1\"; found \"2\".\n"
         )
     );
@@ -208,7 +208,7 @@ fn a_raised_condition_reports_the_failing_clause() {
 #[test]
 fn unbounded_call_recursion_raises_11_1_rather_than_overflowing() {
     let outcome = run_program(
-        SPIKE_PATH,
+        PROGRAM_PATH,
         b"n = 0\ncall sub\nexit\nsub:\nn = n + 1\ncall sub\nreturn\n".to_vec(),
         rexx_exec::Invocation::none(),
     );
@@ -222,7 +222,7 @@ fn unbounded_call_recursion_raises_11_1_rather_than_overflowing() {
     assert!(
         stderr.ends_with(&format!(
             "     2 *-* call sub\n\
-             Error 11 running {SPIKE_PATH} line 6:  Control stack full.\n\
+             Error 11 running {PROGRAM_PATH} line 6:  Control stack full.\n\
              Error 11.1:  Insufficient control stack space; cannot continue execution.\n"
         )),
         "expected the 11.1 report, got the last 200 bytes {:?}",

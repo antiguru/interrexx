@@ -1,10 +1,9 @@
-//! The 4a exit gate's criterion 5: every `InstructionKind` and `ExprKind`
+//! Every `InstructionKind` and `ExprKind`
 //! variant either belongs to the set this crate implements (`owners.rs`), or a
 //! program constructing it
 //! exits [`NOT_IMPLEMENTED_EXIT`] rather than succeeding, crashing, or
 //! producing a plausible Rexx condition. "An implementation gap must never be
-//! able to produce a passing test" is the design spec's own statement of what
-//! this closes (`2026-07-30-phase-4a-executor-design.md`, "Failing loudly").
+//! able to produce a passing test" is what this closes.
 
 use std::path::Path;
 
@@ -266,7 +265,7 @@ fn every_out_of_scope_variant_fails_loudly() {
         // **This line is the equality between the refusal the executor
         // prints and `owners.rs`'s tables.** `owner` came out of
         // `owners.rs`; the suffix came out of the running executor, whose
-        // refusals name no phase since Phase 10 closed, so a witness here
+        // refusals name no phase, so a witness here
         // fails rather than passing on an owner nothing prints.
         let stderr = String::from_utf8_lossy(&outcome.stderr);
         let want_suffix = format!(" is not implemented ({owner})");

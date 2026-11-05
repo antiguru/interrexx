@@ -1,5 +1,5 @@
-//! The two files of tests the suite gate does not require to pass (spec
-//! 2026-10-10 section 2), and each owner's check. A row is
+//! The two files of tests the suite gate does not require to pass, and each
+//! owner's check. A row is
 //! `dir/group<TAB>TEST<TAB>owner<TAB>reason`; `#` starts a comment line, and
 //! each file holds one `# ootest revision N` line naming the revision its rows
 //! were derived at. Declared with `#[path]` beside `group_runner`.
@@ -230,8 +230,7 @@ pub fn by_test(rows: &[Row]) -> BTreeMap<(String, String), &Row> {
         .collect()
 }
 
-/// The `extensions/` directories of pure-Rexx packages, which Moritz ruled
-/// Phase 9's (2026-10-17).
+/// The `extensions/` directories of pure-Rexx packages.
 pub const PHASE_9_EXTENSION_DIRS: &[&str] = &[
     "extensions/dateparser/",
     "extensions/json/",
@@ -239,8 +238,7 @@ pub const PHASE_9_EXTENSION_DIRS: &[&str] = &[
 ];
 
 /// The directory of the groups that need a Windows API this host lacks, each
-/// test of which a `platform windows` NotRun row records (Moritz,
-/// 2026-11-03).
+/// test of which a `platform windows` NotRun row records.
 pub const WINDOWS_DIR: &str = "extensions/platform/windows/";
 
 /// What the owner checks need besides the rows.

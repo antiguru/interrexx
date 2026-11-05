@@ -1,4 +1,4 @@
-//! `loom` models of the baton, the inbox and the timer (spec 2026-09-29 R4),
+//! `loom` models of the baton, the inbox and the timer,
 //! compiled from the interpreter's own sources against `loom`'s primitives;
 //! the timer's wake source is `sync.rs`'s model of the self-pipe.
 //! Empty unless built with `RUSTFLAGS="--cfg loom"`.

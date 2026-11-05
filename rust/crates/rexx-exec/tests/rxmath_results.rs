@@ -1,5 +1,5 @@
 //! The `rxmath` library run in Rust, against the oracle's `librxmath.so`
-//! (`docs/superpowers/specs/extensions-behaviour.md`, "rxmath"). Every
+//! (`docs/design/extensions.md`). Every
 //! expected answer in `tests/rxmath_results/` was recorded by running the same
 //! program on the oracle.
 //!

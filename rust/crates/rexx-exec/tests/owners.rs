@@ -24,10 +24,8 @@ pub(crate) enum Owner {
 /// plus the list of every `(tag, owner)` pair it can produce. One invocation
 /// is the source of both, so the compiled tag list and the checked owner
 /// cannot drift apart the way two separate `match`es over the same enum
-/// could. Phase 3's `tags!` (`rexx-parse/tests/variants.rs`) produced only
-/// the tag; this is that macro widened to also carry ownership, because
-/// criterion 1 and criterion 5 both need ownership from one invocation for
-/// the same reason Phase 3's needed the tag alone from one.
+/// could. `rexx-parse/tests/variants.rs`'s `tags!` produces only the tag;
+/// this is that macro widened to also carry ownership.
 macro_rules! tags {
     ($fn_name:ident, $list:ident, $ty:ty,
      { $($pat:pat => ($name:literal, $owner:expr)),+ $(,)? }
@@ -291,27 +289,25 @@ impl Coverage {
 
 /// The out-of-scope variant set this file's `tags!` tables are allowed to
 /// produce, as a literal rather than "whatever the tables say" -- the same
-/// device `phase-4-exclusions.txt` uses for the builtin set. Any edit to an
+/// device the builtin set uses. Any edit to an
 /// owner arm above that is not also made here is a test failure, which is
 /// the point: relabelling a variant is a plan amendment, not a drive-by
 /// `match` edit.
 pub(crate) const EXPECTED_OUT_OF_SCOPE: &[(&str, &str, &str)] = &[];
 
 /// The phase names the split table names, spelled exactly as it spells them,
-/// less the phases that have closed, which `closed_phases.rs` polices.
-/// `docs/superpowers/specs/2026-07-30-phase-4a-executor-design.md`, "The
-/// split" table and its "assigned elsewhere" paragraph.
+/// less the phases that have closed.
 pub(crate) const SPLIT_TABLE_PHASES: &[&str] = &["4b", "4c"];
 
 /// The phases a *builtin* exclusion may name: none. A builtin owned by a
-/// Phase 4 sub-phase would not be excluded from Phase 4, and Phases 7 and 10,
-/// which held the rest, have closed and delivered them.
+/// sub-phase would not be excluded, and the later phases that held the rest
+/// have delivered them.
 pub(crate) const EXCLUSION_PHASES: &[&str] = &[];
 
 /// Every excluded builtin names the phase that owes it, and that phase is one
 /// the exclusions file uses. Without this the owner is whatever the refusal's
 /// constructor happens to hardcode -- which is how every one of them said
-/// `4c` until Phase 7.
+/// `4c`.
 #[test]
 fn every_excluded_builtin_names_a_phase_that_owes_it() {
     for (name, owner, reason) in rexx_inventory::builtins::EXCLUDED {
@@ -404,8 +400,7 @@ fn out_of_scope_set_matches_the_committed_expectation() {
         actual, expected,
         "the set of out-of-4a variants drifted from EXPECTED_OUT_OF_SCOPE -- \
          relabelling a variant's owner (or adding/removing one) is a plan \
-         amendment and must be made in both places, the same rule \
-         phase-4-exclusions.txt applies to the builtin set"
+         amendment and must be made in both places"
     );
 }
 

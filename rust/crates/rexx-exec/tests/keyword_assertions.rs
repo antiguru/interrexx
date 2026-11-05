@@ -1,4 +1,4 @@
-//! Phase 4b's L1 obligation: runs every method body `rexx-extract`'s
+//! Runs every method body `rexx-extract`'s
 //! `keyword` module lifts out of `ootest/ooRexx/base/keyword/` through
 //! `rexx_exec`'s public entry point, and checks each `self~assertSame` the
 //! way the ooTest framework's own `assertSame` does.
@@ -645,8 +645,7 @@ fn an_assertion_inside_a_loop_is_checked_on_every_pass() {
     );
 }
 
-/// The exempt file's `unblocked_by` column is in the vocabulary
-/// `phase-4-exclusions.txt` fixes for owner strings, is an explicit
+/// The exempt file's `unblocked_by` column is in the owner vocabulary, is an explicit
 /// `defect:` tag, or is one of the two categories [`RunOutcome::attribution`]
 /// emits for a body that neither passes nor names a construct. Nothing else,
 /// so a typo cannot quietly become a new category that the set-equality test

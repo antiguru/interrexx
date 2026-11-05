@@ -1,7 +1,7 @@
-# Task 6.14's own cases: rexxref's examples ("Numbers and Arithmetic" and the
+# rexxref's examples ("Numbers and Arithmetic" and the
 # numeric built-in functions), the errors, LOSTDIGITS under NUMERIC FUZZ,
-# and the rows of the rules Moritz ruled 2026-10-20. The case
-# grammar is the one `spike` describes.
+# and the rows of rules R1-R3 and R6. The case
+# grammar is the one `ansi-model` describes.
 
 case name=rexxref-operator-1 digits=5
 infix + | 12 | 7.00

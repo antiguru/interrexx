@@ -1,4 +1,4 @@
-//! `corpus/introspection-scopes.tsv` (Phase 5i Task 0): which scope defines
+//! `corpus/introspection-scopes.tsv`: which scope defines
 //! each documented introspection method, whether that scope's body is C++ or
 //! Rexx, and for a C++ body the `Setup.cpp` token and arity operand.
 

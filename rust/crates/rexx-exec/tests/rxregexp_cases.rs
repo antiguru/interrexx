@@ -1,5 +1,5 @@
 //! The `rxregexp` library and `rxregexp.cls` run in Rust
-//! (`docs/superpowers/specs/extensions-behaviour.md`, "rxregexp").
+//! (`docs/design/extensions.md`).
 //!
 //! * `probe`: each input line is a mode (`max` or `min`), a pattern and a
 //!   subject, tab-separated, with `%hh` standing for a byte. The output line

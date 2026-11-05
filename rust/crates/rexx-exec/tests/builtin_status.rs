@@ -413,9 +413,7 @@ fn the_status_file_matches_a_live_differential_run() {
         rexx_inventory::builtins::wholly_excluded().len(),
         "the excluded rows are exactly the names excluded outright"
     );
-    // Moved 4 -> 0 and 77 -> 81 when Phase 10 delivered the RXAPI builtins,
-    // the last whole exclusions.
-    assert_eq!(excluded, 0, "phase-4-exclusions.txt's whole exclusions");
+    assert_eq!(excluded, 0, "no builtin is wholly excluded");
     assert_eq!(
         run.derived.len() - excluded,
         81,
