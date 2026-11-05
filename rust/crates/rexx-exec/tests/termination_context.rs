@@ -6,7 +6,7 @@
 //! the program's own native calls got, and a call through a context kept
 //! from before termination answers nothing.
 //!
-//! The extension is the Phase 8 surface forge (`forge.cpp`, its routines
+//! The extension is the Phase 8 surface forge (`termination_context/forge.cpp`, its routines
 //! `Stash`, `UseStash` and `Same`), compiled with `g++` against this
 //! worktree's `api/` into a directory of this run's own, and the programs are
 //! run by this crate's `rexx` binary, because the forge's loader, unloader
@@ -33,8 +33,7 @@ fn worktree() -> PathBuf {
 /// Builds the forge as `libforgea.so` in `dir`.
 fn build_forge(dir: &Path) {
     let api = worktree().join("third_party/ooRexx/api");
-    let source = worktree()
-        .join("docs/superpowers/records/2026-09-14-phase-8-surface/task-4-forge/forge.cpp");
+    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/termination_context/forge.cpp");
     let built = Command::new("g++")
         .args(["-shared", "-fPIC", "-O1", "-static-libstdc++"])
         .arg(format!("-I{}", api.display()))

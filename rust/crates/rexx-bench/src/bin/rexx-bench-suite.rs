@@ -722,23 +722,6 @@ mod tests {
         );
     }
 
-    /// The caveat this suite emits at [`PAIRS`] is the one the committed
-    /// baseline carries.
-    #[test]
-    fn the_caveat_matches_the_committed_baseline() {
-        let baseline = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../docs/superpowers/plans/perf-baseline.md");
-        let text = fs::read_to_string(&baseline)
-            .unwrap_or_else(|e| panic!("cannot read {}: {e}", baseline.display()));
-        let emitted = ratio_interval_caveat(interval_for(PAIRS).coverage);
-        assert!(
-            text.contains(&emitted),
-            "the committed baseline does not contain the caveat this suite emits at {PAIRS} \
-             pairs. Either the wording changed and the block needs re-pasting, or the block is \
-             no longer this program's output and the document says it is.\n\nemitted:\n{emitted}"
-        );
-    }
-
     #[test]
     fn the_performance_line_parses() {
         let stdout = b"        Averaged: 200 x 100 iterations of 1000 clauses (over 1.2s)\n\n     Performance: 17137975 REXX clauses per second\n";

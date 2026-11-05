@@ -1,7 +1,6 @@
 //! The context-variable members reached through a call context kept from an
 //! enclosing native call, against the oracle. No extension the oracle builds
-//! keeps a context, so the forged `outer9b.cpp` in the surface plan's Task 9
-//! probes is compiled against this worktree's `api/` into the target
+//! keeps a context, so the forged `outer_context/outer9b.cpp` is compiled against this worktree's `api/` into the target
 //! directory; it NEEDs nothing, which is asserted before it is loaded.
 //! `o9b.rex` reads, sets and drops bound simple, stem and compound variables
 //! through the kept context and must match on all three descriptors, run
@@ -32,7 +31,7 @@ fn worktree() -> PathBuf {
 }
 
 fn probes() -> PathBuf {
-    worktree().join("docs/superpowers/records/2026-09-14-phase-8-surface/task-9-probes")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/outer_context")
 }
 
 /// Builds `libouter9b.so` into `dir` and checks it NEEDs no interpreter.
@@ -111,11 +110,10 @@ fn a_kept_outer_context_reaches_its_callers_variables() {
     let (base, run, library_path) = forged("outer-context");
     let oracle = support::oracle::locate();
 
-    let own = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/outer_context");
     for program in [
         probes().join("o9b.rex"),
         probes().join("o9c.rex"),
-        own.join("o9d.rex"),
+        probes().join("o9d.rex"),
     ] {
         let theirs = oracle.run_in(&program, &run, &[("LD_LIBRARY_PATH", &library_path)]);
         let status = theirs.expect_exit_code();
@@ -174,8 +172,7 @@ fn a_kept_call_context_used_by_another_activity_answers_or_raises() {
     let (forge, run) = (base.join("forge"), base.join("run"));
     fs::create_dir_all(&forge).expect("the forge directory");
     fs::create_dir_all(&run).expect("the run directory");
-    let own = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/outer_context");
-    build_library(&own.join("outer7.cpp"), &forge.join("libouter7.so"));
+    build_library(&probes().join("outer7.cpp"), &forge.join("libouter7.so"));
     let library_path = forge.display().to_string();
     let answered = [('d', "9"), ('f', "0"), ('o', "0"), ('r', "a Method")];
     for member in "abnrdfockvsitSg".chars() {
@@ -243,8 +240,7 @@ fn a_kept_thread_context_used_by_another_activity_does_nothing() {
     let (forge, run) = (base.join("forge"), base.join("run"));
     fs::create_dir_all(&forge).expect("the forge directory");
     fs::create_dir_all(&run).expect("the run directory");
-    let own = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/outer_context");
-    build_library(&own.join("kthr.cpp"), &forge.join("libkthr.so"));
+    build_library(&probes().join("kthr.cpp"), &forge.join("libkthr.so"));
     let library_path = forge.display().to_string();
     for member in "MDCRSH".chars() {
         let program = run.join(format!("t_{member}.rex"));

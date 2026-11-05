@@ -1,0 +1,205 @@
+base/bif/STREAM.testGroup TEST_QUERYDIR_EXISTS SysSleep
+base/bif/TIME.testGroup TEST_SIMPLE_ELAPSED SysSleep
+base/bif/TIME.testGroup TEST_SIMPLE_RESET SysSleep
+base/bif/TIME.testGroup TEST_2 SysSleep
+base/bif/TIME.testGroup TEST_3 SysSleep
+base/bif/TIME.testGroup TEST_4 SysSleep
+base/bif/TIME.testGroup TEST_5 SysSleep
+base/bif/TIME.testGroup TEST_8 SysSleep
+base/bif/TIME.testGroup TEST_9 SysSleep
+base/bif/TIME.testGroup TEST_10 SysSleep
+base/bif/TIME.testGroup TEST_11 SysSleep
+base/class/Alarm.testGroup TEST_BASE_ALARM Alarm,GUARD,REPLY,SysSleep
+base/class/Alarm.testGroup TEST_ALARM_NO_TIME Alarm
+base/class/Alarm.testGroup TEST_ALARM_NO_TARGET Alarm
+base/class/Alarm.testGroup TEST_ALARM_BAD_TIME Alarm
+base/class/Alarm.testGroup TEST_ALARM_NEGATIVE_TIME Alarm
+base/class/Alarm.testGroup TEST_ALARM_BAD_TARGET Alarm
+base/class/Class.testGroup TEST_SUBCLASSES Alarm
+base/class/DateTime.testGroup TEST_ELAPSED1 SysSleep
+base/class/EventSemaphore.testGroup TEST_NEW_ONE_ARG semaphore class
+base/class/EventSemaphore.testGroup TEST_ISPOSTED_ONE_ARG semaphore class
+base/class/EventSemaphore.testGroup TEST_POST_ONE_ARG semaphore class
+base/class/EventSemaphore.testGroup TEST_RESET_ONE_ARG semaphore class
+base/class/EventSemaphore.testGroup TEST_POST_RESET semaphore class
+base/class/EventSemaphore.testGroup TEST_WAIT_TWO_ARGS semaphore class
+base/class/EventSemaphore.testGroup TEST_WAIT_NUMBER semaphore class
+base/class/EventSemaphore.testGroup TEST_WAIT_SIMPLE semaphore class
+base/class/EventSemaphore.testGroup TEST_WAIT_CONCURRENT GUARD,SysSleep,semaphore class,~start
+base/class/Message.testGroup TEST_START ~start
+base/class/Message.testGroup TEST_REPLY Message~reply
+base/class/Message.testGroup TEST_NOTIFY Message~reply,~start
+base/class/Message.testGroup TEST_SUPER_OVERRIDE Message~reply,~start
+base/class/Message.testGroup TEST_STARTWITH_NO_ARRAY ~start
+base/class/Message.testGroup TEST_STARTWITH_NOT_ARRAY ~start
+base/class/Message.testGroup TEST_STARTWITH_TOO_MANY ~start
+base/class/Message.testGroup TEST_REPLYWITH_NO_ARRAY Message~reply
+base/class/Message.testGroup TEST_REPLYWITH_NOT_ARRAY Message~reply
+base/class/Message.testGroup TEST_REPLYWITH_TOO_MANY Message~reply
+base/class/Message.testGroup TEST_START_OVERRIDE_CONTEXT ~start
+base/class/Message.testGroup TEST_STARTWITH_OVERRIDE_CONTEXT ~start
+base/class/Message.testGroup TEST_REPLY_OVERRIDE_CONTEXT Message~reply
+base/class/Message.testGroup TEST_REPLYWITH_OVERRIDE_CONTEXT Message~reply
+base/class/Message.testGroup TEST_START_OVERRIDE_NOT_FOUND ~start
+base/class/Message.testGroup TEST_STARTWITH_OVERRIDE_NOT_FOUND ~start
+base/class/Message.testGroup TEST_REPLY_OVERRIDE_NOT_FOUND Message~reply
+base/class/Message.testGroup TEST_REPLYWITH_OVERRIDE_NOT_FOUND Message~reply
+base/class/Message.testGroup TEST_START_OVERRIDE_NO_METHOD ~start
+base/class/Message.testGroup TEST_STARTWITH_OVERRIDE_NO_METHOD ~start
+base/class/Message.testGroup TEST_REPLY_OVERRIDE_NO_METHOD Message~reply
+base/class/Message.testGroup TEST_REPLYWITH_OVERRIDE_NO_METHOD Message~reply
+base/class/Message.testGroup TEST_START_OVERRIDE_NOT_NON_SCOPE ~start
+base/class/Message.testGroup TEST_STARTWITH_OVERRIDE_NOT_NON_SCOPE ~start
+base/class/Message.testGroup TEST_REPLY_OVERRIDE_NOT_NON_SCOPE Message~reply
+base/class/Message.testGroup TEST_REPLYWITH_OVERRIDE_NOT_NON_SCOPE Message~reply
+base/class/Message.testGroup TEST_HALT_START SysSleep,~start
+base/class/Message.testGroup TEST_START_OVERRIDE_FROM_NONSELF ~start
+base/class/Message.testGroup TEST_START_OVERRIDE_FROM_NONSELF_METHOD_NOT_IN_SUPERCLASS ~start
+base/class/Message.testGroup TEST_START_OVERRIDE_AMONG_MIXINCLASSES ~start
+base/class/Message.testGroup TEST_STARTWITH_OVERRIDE_FROM_NONSELF ~start
+base/class/Message.testGroup TEST_STARTWITH_OVERRIDE_FROM_NONSELF_METHOD_NOT_IN_SUPERCLASS ~start
+base/class/Message.testGroup TEST_STARTWITH_OVERRIDE_AMONG_MIXINCLASSES ~start
+base/class/Method.testGroup TESTDIRECTIVES TraceObject field
+base/class/MethodArgs.testGroup TEST_REQUEST_STRING_CLASS Alarm,Ticker
+base/class/MethodArgs.testGroup TEST_REQUEST_STRING_OBJECT Alarm,Ticker
+base/class/MethodArgs.testGroup TEST_REQUEST_STRING_STRING Alarm,Ticker
+base/class/MethodArgs.testGroup TEST_REQUEST_STRING_METHOD Alarm,Ticker
+base/class/MethodArgs.testGroup TEST_REQUEST_STRING_ROUTINE Alarm,Ticker
+base/class/MethodArgs.testGroup TEST_REQUEST_STRING_PACKAGE Alarm,Ticker
+base/class/MethodArgs.testGroup TEST_REQUEST_STRING_MESSAGE Alarm,Ticker
+base/class/MethodArgs.testGroup TEST_REQUEST_STRING_STREAM Alarm,Ticker
+base/class/MethodArgs.testGroup TEST_REQUEST_STRING_MUTABLEBUFFER Alarm,Ticker
+base/class/MethodArgs.testGroup TEST_REQUEST_STRING_FILE Alarm,Ticker
+base/class/MutexSemaphore.testGroup TEST_NEW_ONE_ARG semaphore class
+base/class/MutexSemaphore.testGroup TEST_ACQUIRE_TWO_ARGS semaphore class
+base/class/MutexSemaphore.testGroup TEST_ACQUIRE_NUMBER semaphore class
+base/class/MutexSemaphore.testGroup TEST_RELEASE_ONE_ARG semaphore class
+base/class/MutexSemaphore.testGroup TEST_ACQUIRE_ACQUIRE_SIMPLE semaphore class
+base/class/MutexSemaphore.testGroup TEST_ACQUIRE_RELEASE_SIMPLE semaphore class
+base/class/MutexSemaphore.testGroup TEST_ACQUIRE_RELEASE_NESTED semaphore class
+base/class/MutexSemaphore.testGroup TEST_EXCLUSION GUARD,REPLY,semaphore class
+base/class/Object.testGroup TESTSTART01 ~start
+base/class/Object.testGroup TESTSTARTWITH01 ~start
+base/class/Object.testGroup TEST_START_NO_NAME ~start
+base/class/Object.testGroup TEST_START_NO_NAME2 ~start
+base/class/Object.testGroup TEST_START_NOT_STRING ~start
+base/class/Object.testGroup TEST_START_NO_METHOD SysSleep,~start
+base/class/Object.testGroup TEST_START_OVERRIDE ~start
+base/class/Object.testGroup TEST_START_OVERRIDE_CONTEXT ~start
+base/class/Object.testGroup TEST_START_OVERRIDE_EMPTY_ARRAY ~start
+base/class/Object.testGroup TEST_START_OVERRIDE_MISSING_NAME ~start
+base/class/Object.testGroup TEST_START_OVERRIDE_MISSING_SCOPE ~start
+base/class/Object.testGroup TEST_START_OVERRIDE_EXTRA_STUFF ~start
+base/class/Object.testGroup TEST_START_OVERRIDE_NON_STRING_NAME ~start
+base/class/Object.testGroup TEST_START_OVERRIDE_NON_CLASS_SCOPE ~start
+base/class/Object.testGroup TEST_START_OVERRIDE_NON_CLASS_SCOPE2 ~start
+base/class/Object.testGroup TEST_START_OVERRIDE_NOT_FOUND SysSleep,~start
+base/class/Object.testGroup TEST_START_OVERRIDE_NOT_NON_SCOPE ~start
+base/class/Object.testGroup TEST_START_OVERRIDE_NO_METHOD ~start
+base/class/Object.testGroup TEST_STARTWITH_NO_NAME ~start
+base/class/Object.testGroup TEST_STARTWITH_NO_NAME2 ~start
+base/class/Object.testGroup TEST_STARTWITH_NOT_STRING ~start
+base/class/Object.testGroup TEST_STARTWITH_NO_METHOD SysSleep,~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE ~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_CONTEXT ~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_EMPTY_ARRAY ~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_MISSING_NAME ~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_MISSING_SCOPE ~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_EXTRA_STUFF ~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_NON_STRING_NAME ~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_NON_CLASS_SCOPE ~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_NON_CLASS_SCOPE2 ~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_NOT_FOUND ~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_NOT_NON_SCOPE ~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_NO_METHOD ~start
+base/class/Object.testGroup TEST_START_OVERRIDE_FROM_NONSELF ~start
+base/class/Object.testGroup TEST_START_OVERRIDE_FROM_NONSELF_METHOD_NOT_IN_SUPERCLASS ~start
+base/class/Object.testGroup TEST_START_OVERRIDE_AMONG_MIXINCLASSES ~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_FROM_NONSELF ~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_FROM_NONSELF_METHOD_NOT_IN_SUPERCLASS ~start
+base/class/Object.testGroup TEST_STARTWITH_OVERRIDE_AMONG_MIXINCLASSES ~start
+base/class/RexxContext.testGroup TEST_INTERPRETER_THREAD_INVOCATION .context~thread,REPLY,SysSleep,TraceObject field,~start
+base/class/Stem.testGroup TEST_STRING_ARGUMENT_EXTERNAL SysSleep
+base/class/Ticker.testGroup TEST_TICKER_TWO_ARGS_STRING_CANCEL Ticker
+base/class/Ticker.testGroup TEST_TICKER_TWO_ARGS_STRING_TRIGGER SysSleep,Ticker
+base/class/Ticker.testGroup TEST_TICKER_TWO_ARGS_TIMESPAN_CANCEL Ticker
+base/class/Ticker.testGroup TEST_TICKER_TWO_ARGS_TIMESPAN_TRIGGER SysSleep,Ticker
+base/class/Ticker.testGroup TEST_TICKER_THREE_ARGS_STRING_CANCEL Ticker
+base/class/Ticker.testGroup TEST_TICKER_THREE_ARGS_STRING_TRIGGER SysSleep,Ticker
+base/class/Ticker.testGroup TEST_TICKER_THREE_ARGS_TIMESPAN_CANCEL Ticker
+base/class/Ticker.testGroup TEST_TICKER_THREE_ARGS_TIMESPAN_TRIGGER SysSleep,Ticker
+base/class/Ticker.testGroup TEST_TICKER_THREE_ARGS_TIMESPAN_TRIGGER_MULTIPLE SysSleep,Ticker
+base/class/Ticker.testGroup TEST_TICKER_THREE_ARGS_STRING_TRIGGER_MESSAGE SysSleep,Ticker
+base/class/Ticker.testGroup TEST_TICKER_NO_ARGS Ticker
+base/class/Ticker.testGroup TEST_TICKER_NO_TIME Ticker
+base/class/Ticker.testGroup TEST_TICKER_NO_TARGET Ticker
+base/class/Ticker.testGroup TEST_TICKER_BAD_TIME Ticker
+base/class/Ticker.testGroup TEST_TICKER_NEGATIVE_TIME Ticker
+base/class/Ticker.testGroup TEST_TICKER_ALARM_TIME Ticker
+base/class/Ticker.testGroup TEST_TICKER_DATETIME_TIME Ticker
+base/class/Ticker.testGroup TEST_TICKER_NEGATIVE_TIMESPAN_TIME Ticker
+base/class/Ticker.testGroup TEST_TICKER_BAD_TARGET Ticker
+base/class/Ticker.testGroup TEST_TICKER_MESSAGE_NOTIFICATION_TARGET Ticker
+base/class/Ticker.testGroup TEST_TICKER_FOUR_ARGS Ticker
+base/class/Ticker.testGroup TEST_ATTACHMENT_TOO_MANY_ARGS Ticker
+base/class/Ticker.testGroup TEST_CANCEL_TOO_MANY_ARGS Ticker
+base/class/Ticker.testGroup TEST_CANCELED_TOO_MANY_ARGS Ticker
+base/class/Ticker.testGroup TEST_CANCELLED_TOO_MANY_ARGS Ticker
+base/class/Ticker.testGroup TEST_CANCEL_IMMEDIATELY Ticker
+base/class/Ticker.testGroup TEST_CANCEL_TWICE SysSleep,Ticker
+base/class/Ticker.testGroup TEST_INTERVAL_TOO_MANY_ARGS Ticker
+base/class/Ticker.testGroup TEST_TICKER_INTERVAL_ZERO Ticker
+base/class/Ticker.testGroup TEST_TICKER_NEW_INTERVAL_TIMESPAN Ticker
+base/directives/ATTRIBUTE.testGroup TEST001 TraceObject field
+base/directives/ATTRIBUTE.testGroup TESTDELEGATE TraceObject field
+base/directives/CONSTANT.testGroup TEST_CONSTANT_METHOD_PROPERTIES TraceObject field
+base/directives/METHOD.testGroup TESTGUARDEDACCESS REPLY,SysSleep
+base/directives/METHOD.testGroup TESTDELEGATE TraceObject field
+base/keyword/CALL.testGroup TEST_4 SysSleep
+base/keyword/GUARD.testGroup TEST_WHEN_NOVALUE GUARD
+base/keyword/GUARD.testGroup TEST_WHEN_NOT_BOOLEAN GUARD
+base/keyword/GUARD.testGroup TEST_ON_OFF_CONSECUTIVE GUARD
+base/keyword/GUARD.testGroup TEST_ON_DEFAULT GUARD,REPLY,SysSleep
+base/keyword/GUARD.testGroup TEST_ON GUARD,REPLY,SysSleep
+base/keyword/GUARD.testGroup TEST_OFF GUARD,REPLY,SysSleep
+base/keyword/GUARD.testGroup TEST_UNGUARDED GUARD,REPLY,SysSleep
+base/keyword/GUARD.testGroup TEST_ON_OFF GUARD,REPLY,SysSleep
+base/keyword/GUARD.testGroup TEST_WHEN_SINGLE_NO_WAIT GUARD
+base/keyword/GUARD.testGroup TEST_WHEN_USE_LOCAL_NO_WAIT GUARD
+base/keyword/GUARD.testGroup TEST_WHEN_SINGLE_UNINITIALIZED_NO_WAIT GUARD
+base/keyword/GUARD.testGroup TEST_WHEN_MULTIPLE_NO_WAIT GUARD
+base/keyword/GUARD.testGroup TEST_WAIT_SIMPLE_TRIGGER GUARD,REPLY,SysSleep
+base/keyword/GUARD.testGroup TEST_WAIT_SIMPLE GUARD,REPLY,SysSleep
+base/keyword/GUARD.testGroup TEST_WAIT_MULTIPLE GUARD,REPLY,SysSleep
+base/keyword/RAISE.testGroup TEST_RAISE_INSERT_CRLF REPLY,SysSleep
+base/keyword/REPLY.testGroup TEST_REPLY_ROUTINE REPLY
+base/keyword/REPLY.testGroup TEST_REPLY_PROCEDURE REPLY
+base/keyword/REPLY.testGroup TEST_REPLY_CALL REPLY
+base/keyword/REPLY.testGroup TEST_REPLY_TWICE_REPLYASSERT REPLY
+base/keyword/REPLY.testGroup TEST_REPLY_RETURN_CODE_REPLYASSERT REPLY
+base/keyword/REPLY.testGroup TEST_REPLY_RETURN_CODE_SAME_REPLYASSERT REPLY
+base/keyword/REPLY.testGroup TEST_REPLY_EXIT_CODE_REPLYASSERT REPLY
+base/keyword/REPLY.testGroup TEST_REPLY_STACK_REPLYASSERT REPLY
+base/keyword/REPLY.testGroup TEST_REPLY_PLAIN REPLY
+base/keyword/REPLY.testGroup TEST_REPLY_STRING REPLY
+base/keyword/REPLY.testGroup TEST_REPLY_ARRAY REPLY
+base/keyword/REPLY.testGroup TEST_REPLY_NIL REPLY
+base/keyword/REPLY.testGroup TEST_REPLY_NOP REPLY
+base/keyword/REPLY.testGroup TEST_REPLY__CODE_RETURN REPLY
+base/keyword/REPLY.testGroup TEST_REPLY__CODE_EXIT REPLY
+base/keyword/REPLY.testGroup TEST_REPLY_SAME_REPLYASSERT REPLY,SysSleep
+base/keyword/REPLY.testGroup TEST_REPLY_CONCURRENT REPLY,SysSleep
+base/keyword/TRACE.testGroup TEST_TRACE_GUARD GUARD
+base/keyword/TRACE.testGroup TEST_TRACE_REPLY Message~reply,REPLY,SysSleep
+base/keyword/TRACE_TraceObject.testGroup TEST_TRACEOBJECT_COLLECTOR REPLY,SysSleep,TraceObject field
+base/keyword/TRACE_TraceObject.testGroup TEST_CALLER_STACK_FRAME_REPLY_START GUARD,REPLY,SysSleep,~start
+base/rexxutil/SysSleep.testGroup TEST_SLEEP_NO_ARG SysSleep
+base/rexxutil/SysSleep.testGroup TEST_SLEEP_TWO_ARGS SysSleep
+base/rexxutil/SysSleep.testGroup TEST_SLEEP_INVALID SysSleep
+base/rexxutil/SysSleep.testGroup TEST_SLEEP_INVALID_NEGATIVE SysSleep
+base/rexxutil/SysSleep.testGroup TEST_SLEEP_INVALID_TOO_LARGE SysSleep
+base/rexxutil/SysSleep.testGroup TEST_SLEEP_DURATION SysSleep
+base/rexxutil/SysSleep.testGroup TEST_SLEEP_CONCURRENT ~start
+base/special.variables/RESULT_RC_SIGL.testGroup TEST_RESULT_WITH_REPLY REPLY
+doc/rexxref/chapter5/Section1.testGroup TEST_OBJECT_START SysSleep,~start
+regressions/bug2003_guard_when.testGroup TEST_GUARD_WHEN_1 GUARD,Message~reply

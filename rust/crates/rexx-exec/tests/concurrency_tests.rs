@@ -1,6 +1,6 @@
 //! Phase 6 exit criterion 1's test list, derived per test method from the
 //! ooTest sources and held equal to the one in
-//! `docs/superpowers/plans/phase-6-pinning.md`; with the `pinning` feature, the
+//! `concurrency_tests/derived-list.txt` and `concurrency_tests/exclusions.txt`; with the `pinning` feature, the
 //! would-be park points each of those tests reaches.
 
 #![expect(
@@ -24,8 +24,10 @@ fn ootest_root() -> PathBuf {
     env::var_os(ROOT_ENV).map_or_else(|| worktree().join("ootest/ooRexx"), PathBuf::from)
 }
 
-fn pinning_doc() -> PathBuf {
-    worktree().join("docs/superpowers/plans/phase-6-pinning.md")
+fn fixture(name: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/concurrency_tests")
+        .join(name)
 }
 
 /// Directories whose groups are excluded whole, with the reason.
@@ -422,17 +424,8 @@ fn render_excluded(excluded: &[(Derived, &str)]) -> String {
         .collect()
 }
 
-/// The fenced block following `heading` in the pinning document.
-fn committed_block(heading: &str) -> String {
-    let text = fs::read_to_string(pinning_doc()).expect("the pinning document");
-    let after = text
-        .split_once(&format!("\n{heading}\n"))
-        .unwrap_or_else(|| panic!("no {heading:?} in the pinning document"))
-        .1;
-    let open = after.find("```").expect("a fenced block after the heading");
-    let body = &after[open..];
-    let body = &body[body.find('\n').expect("an opening fence line") + 1..];
-    body[..body.find("```").expect("a closing fence")].to_string()
+fn committed(name: &str) -> String {
+    fs::read_to_string(fixture(name)).unwrap_or_else(|error| panic!("fixture {name}: {error}"))
 }
 
 #[test]
@@ -445,12 +438,12 @@ fn the_derived_list_is_the_committed_one() {
         return;
     }
     assert_eq!(
-        committed_block("## Derived list"),
+        committed("derived-list.txt"),
         fresh,
         "the derived list; the fresh one is printed above"
     );
     assert_eq!(
-        committed_block("## Exclusions"),
+        committed("exclusions.txt"),
         fresh_excluded,
         "the exclusions"
     );

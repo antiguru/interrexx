@@ -1,6 +1,5 @@
-# ThreadSanitizer suppressions for the Phase 6 criterion 3 run
-# (docs/superpowers/plans/phase-6-gate.md, "S4 close", "Criterion 3, race
-# checking").
+# ThreadSanitizer suppressions for runs with two interpreters in one process.
+# Use: TSAN_OPTIONS=suppressions=rust/tsan.supp, with a TSan-instrumented build.
 #
 # glibc's dlclose: two interpreters in one test process each close a
 # library they loaded, and `_dl_close_worker` frees on one thread what it

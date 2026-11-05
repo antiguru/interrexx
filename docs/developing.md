@@ -57,6 +57,8 @@ From `rust/`, under the memory cap:
 * `cargo test --workspace --no-fail-fast`, and the same with `REXX_CORPUS_GATE=1` in a debug build:
   release compiles out `debug_assert`, which carries some of the interpreter's invariants.
 * `REXX_SPEC_ORACLE=1 cargo test -p rexx-exec --test spec` after changing `spec/`.
+* ThreadSanitizer runs take `TSAN_OPTIONS=suppressions=rust/tsan.supp`, which hides the dynamic
+  linker's `dl_close` race that two interpreters in one process show.
 * Mutation runs build with `--profile mutation`, so a mutant never overwrites the release binary.
 * `cargo test NAME` exits 0 when nothing matches; check the count of tests that ran.
 
