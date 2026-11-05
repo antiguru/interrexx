@@ -26,7 +26,7 @@ the [builtin call rules](r:bif.index.call.count): two are required and three
 is the most.
 
 ```rexx
-say delword('Now is the time', 2, 1) 'Now is the time'~delword(2, 1) 'Now is the time'~delword(2)
+say delword('Pack my box jugs', 2, 1) 'Pack my box jugs'~delword(2, 1) '[' || 'Pack my box jugs'~delword(2) || ']'
 signal on syntax name a
 say delword('a b', 0)
 a: say condition('o')~code
@@ -54,7 +54,7 @@ h: say condition('o')~code
 ```
 
 ```output
-Now the time Now the time Now 
+Pack box jugs Pack box jugs [Pack ]
 93.924
 93.923
 40.3
@@ -70,11 +70,11 @@ When `length` is omitted, it is as if it were large enough to reach the
 last word of `string`: the deletion takes word `n` and every word after it.
 
 ```rexx
-say '['delword('Now is the time', 3)']' '['delword('Now is the time', 1)']'
+say '['delword('Pack my box jugs', 3)']' '['delword('Pack my box jugs', 1)']'
 ```
 
 ```output
-[Now is ] []
+[Pack my ] []
 ```
 
 ## The result
@@ -82,36 +82,35 @@ say '['delword('Now is the time', 3)']' '['delword('Now is the time', 1)']'
 r[bif.delword.result]
 When `n` is at most the number of words of `string`, the deleted run begins
 at the first character of word `n` and extends over `length` words,
-or over the words that exist when `string` has fewer after word `n - 1`,
-and over the whitespace that follows the last of them; whitespace before
+or over every word from word `n` on when there are fewer than `length` of
+them, and over the whitespace that follows the last of them; whitespace before
 word `n` is kept. DELWORD returns the characters before the deleted run
 followed by the characters after it.
 
 ```rexx
-say '['delword('Now is the  time', 2, 2)']' '['delword('Now is   the time', 3, 1)']',
-    '['delword('Now is the time', 2, 1)']'
-say '['delword('  Now  is  the  time  ', 2, 1)']' '['delword('  Now  is  the  time  ', 1, 1)']'
+say '['delword('Pack my box  jugs', 2, 2)']' '['delword('Pack my   box jugs', 3, 1)']',
+    '['delword('Pack my box jugs', 2, 1)']'
+say '['delword('  Pack  my  box  jugs  ', 2, 1)']' '['delword('  Pack  my  box  jugs  ', 1, 1)']'
 ```
 
 ```output
-[Now time] [Now is   time] [Now the time]
-[  Now  the  time  ] [  is  the  time  ]
+[Pack jugs] [Pack my   jugs] [Pack box jugs]
+[  Pack  box  jugs  ] [  my  box  jugs  ]
 ```
 
 r[bif.delword.trailing]
-Whitespace that follows the last word of `string` belongs to the deleted run
-when that word is the last one deleted, and whitespace before the first
-deleted word never does. So deleting through the last word leaves the
-whitespace before word `n` and nothing after it, and deleting the first word
-leaves the whitespace before it.
+Deleting through the last word of `string` therefore removes the whitespace
+after it as well, and the result is the characters before word `n`, their
+trailing whitespace included; deleting the first word keeps the whitespace
+before it.
 
 ```rexx
-say '['delword('Now is the time ', 3)']' '['delword('Now is the time  ', 4, 1)']',
+say '['delword('Pack my box jugs ', 3)']' '['delword('Pack my box jugs  ', 4, 1)']',
     '['delword('  a  b  ', 1)']' '['delword('  a  b  ', 2)']'
 ```
 
 ```output
-[Now is ] [Now is the ] [  ] [  a  ]
+[Pack my ] [Pack my box ] [  ] [  a  ]
 ```
 
 r[bif.delword.whitespace]
@@ -139,13 +138,13 @@ passes its check and every `length` that passes its. So it is when `string`
 has no words.
 
 ```rexx
-say '['delword('Now is the time', 5)']' '['delword('  a  b  ', 3, 2)']',
+say '['delword('Pack my box jugs', 5)']' '['delword('  a  b  ', 3, 2)']',
     '['delword('', 1)']' '['delword('   ', 2)']' '['delword('   ', 1)']',
     '['delword('a b', 999999999999999999)']'
 ```
 
 ```output
-[Now is the time] [  a  b  ] [] [   ] [   ] [a b]
+[Pack my box jugs] [  a  b  ] [] [   ] [   ] [a b]
 ```
 
 r[bif.delword.length.zero]

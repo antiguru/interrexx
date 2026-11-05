@@ -27,7 +27,7 @@ the [builtin call rules](r:bif.index.call.count): two are required and three
 is the most.
 
 ```rexx
-say center('abc', 7) '|' 'abc'~center(7, '.')
+say center('pqr', 9) '|' 'pqr'~center(9, '.')
 signal on syntax name a
 say center('abc')
 a: say condition('o')~code
@@ -49,10 +49,13 @@ f: say condition('o')~code
 signal on syntax name g
 say center('abc', -1, '**')
 g: say condition('o')~code
+signal on syntax name h
+say center('abc', 1000000000000000000)
+h: say condition('o')~code
 ```
 
 ```output
-  abc   | ..abc..
+   pqr    | ...pqr...
 40.3
 40.4
 40.5
@@ -60,6 +63,7 @@ g: say condition('o')~code
 93.923
 40.23
 40.23
+40.12
 ```
 
 r[bif.center.centre]
@@ -103,14 +107,14 @@ characters and its last `-d` less that many characters removed, so the
 right-hand end loses the extra one when `-d` is odd.
 
 ```rexx
-say '['center('abc', 7)']' '['center('abc', 8, '-')']' '['center('a', 4, '*')']'
-say '['center('abc', 3)']' '['center('The blue sky', 8)']' '['center('The blue sky', 7)']'
+say '['center('xyz', 9)']' '['center('xyz', 10, '-')']' '['center('a', 4, '*')']'
+say '['center('xyz', 3)']' '['center('Red green blue', 10)']' '['center('Red green blue', 9)']'
 say '['center('abcde', 2)']' '['center('abcdef', 1)']' '['center('abcd', 3)']'
 ```
 
 ```output
-[  abc  ] [--abc---] [*a**]
-[abc] [e blue s] [e blue ]
+[   xyz   ] [---xyz----] [*a**]
+[xyz] [d green bl] [d green b]
 [bc] [c] [abc]
 ```
 
@@ -143,7 +147,7 @@ say '['center('', 4)']' '['center('', 3, '*')']'
 
 r[bif.center.bytes]
 CENTER pads and cuts by [character](r:conv.string.chars), one byte each,
-and copies every byte of `string` that stays unchanged: whitespace, control
+and copies unchanged every byte of `string` that it keeps: whitespace, control
 characters and `'00'x` are characters like any other, in `string` and as
 `pad`.
 
@@ -155,22 +159,8 @@ say c2x(center('610062'x, 6, '00'x)) c2x(center(' a ', 1))
 006100620000 61
 ```
 
-r[bif.center.large]
-A `length` too large for the result to be built raises an error from
-the interpreter running out of storage; which values those are is not
-specified. A `length` that is a whole number below `10**18` is otherwise
-valid, and a `length` of `10**18` or more raises `SYNTAX 40.12` like
-any [whole number](r:conv.whole.digits) that is too large.
-
-```rexx
-signal on syntax name a
-say center('abc', 1000000000000000000)
-a: say condition('o')~code
-```
-
-```output
-40.12
-```
+> **Note.** Whether, when and with which code CENTER fails for a `length`
+> whose result cannot be held in memory is not specified.
 
 ## Deviations
 

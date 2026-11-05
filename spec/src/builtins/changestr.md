@@ -112,13 +112,13 @@ every character of the strings, whitespace and `'00'x` included, is an
 ordinary character.
 
 ```rexx
-say changestr('1', '101100', '') changestr('1', '101100', 'X') changestr('1', '101100', 'X', 1)
+say changestr('o', 'foolish', '') changestr('o', 'foolish', '0') changestr('o', 'foolish', '0', 1)
 say changestr('A', 'banana', 'x') changestr(' ', 'a b  c', '_')
 say c2x(changestr('00'x, 'a' || '00'x || 'b', '0000'x))
 ```
 
 ```output
-000 X0XX00 X01100
+flish f00lish f0olish
 banana a_b__c
 61000062
 ```
@@ -172,14 +172,18 @@ say '['changestr('', '', 'x')']'
 
 r[bif.changestr.empty-haystack]
 When `haystack` is the null string, `needle` occurs in it nowhere, and the
-result is the null string.
+result is the null string, for every `count` that passes its check.
 
 ```rexx
 say '['changestr('a', '', 'x')']' '['changestr('a', '', 'x', 3)']'
+signal on syntax name a
+say changestr('a', '', 'x', -1)
+a: say condition('o')~code
 ```
 
 ```output
 [] []
+93.906
 ```
 
 r[bif.changestr.empty-newneedle]

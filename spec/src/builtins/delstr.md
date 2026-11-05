@@ -25,32 +25,32 @@ the [builtin call rules](r:bif.index.call.count): one is required and three
 is the most.
 
 ```rexx
-say delstr('abcde', 3, 2) 'abcde'~delstr(3, 2) 'abcde'~delstr(3) 'abcde'~delstr
+say delstr('fghij', 3, 2) 'fghij'~delstr(3, 2) 'fghij'~delstr(3) '[' || 'fghij'~delstr || ']'
 signal on syntax name a
-say delstr('abcde', 0)
+say delstr('fghij', 0)
 a: say condition('o')~code
 signal on syntax name b
-say delstr('abcde', 2, -1)
+say delstr('fghij', 2, -1)
 b: say condition('o')~code
 signal on syntax name c
 say delstr()
 c: say condition('o')~code
 signal on syntax name d
-say delstr('abcde', 2, 1, 1)
+say delstr('fghij', 2, 1, 1)
 d: say condition('o')~code
 signal on syntax name e
 say delstr(, 2)
 e: say condition('o')~code
 signal on syntax name f
-say delstr('abcde', 'x', -1)
+say delstr('fghij', 'x', -1)
 f: say condition('o')~code
 signal on syntax name g
-say delstr('abcde', 0, -1)
+say delstr('fghij', 0, -1)
 g: say condition('o')~code
 ```
 
 ```output
-abe abe ab 
+fgj fgj fg []
 93.924
 93.923
 40.3
@@ -65,11 +65,11 @@ When `n` is omitted, it is 1: the deletion begins at the first character,
 and with `length` omitted too the result is the null string.
 
 ```rexx
-say '['delstr('abcde')']' '['delstr('abcde', )']' delstr('abcde', , 2)
+say '['delstr('fghij')']' '['delstr('fghij', )']' delstr('fghij', , 2)
 ```
 
 ```output
-[] [] cde
+[] [] hij
 ```
 
 > **Note.** The ANSI draft (9.3.9) requires `n`. The reference manual and ooRexx make it
@@ -81,11 +81,11 @@ of `string`: the deletion takes the character at position `n` and every
 character after it.
 
 ```rexx
-say delstr('abcd', 3) delstr('abcd', 4) '['delstr('abcd', 1)']'
+say delstr('fghi', 3) delstr('fghi', 4) '['delstr('fghi', 1)']'
 ```
 
 ```output
-ab abc []
+fg fgh []
 ```
 
 ## The result
@@ -97,13 +97,13 @@ run; the deleted run is the characters at positions `n` through
 `n + length - 1`, or those that exist, when `string` ends sooner.
 
 ```rexx
-say delstr('abcde', 3, 2) delstr('abcde', 2, 1) delstr('abcde', 1, 2),
-    delstr('abcde', 5, 1) delstr('abcde', 3, 3) delstr('abcde', 3, 100),
-    delstr('abcde', 3, 999999999999999999)
+say delstr('fghij', 3, 2) delstr('fghij', 2, 1) delstr('fghij', 1, 2),
+    delstr('fghij', 5, 1) delstr('fghij', 3, 3) delstr('fghij', 3, 100),
+    delstr('fghij', 3, 999999999999999999)
 ```
 
 ```output
-abe acde cde abcd ab ab ab
+fgj fhij hij fghi fg fg fg
 ```
 
 r[bif.delstr.past-end]
@@ -112,12 +112,12 @@ is `string` unchanged, for every `n` that passes its check and every
 `length` that passes its.
 
 ```rexx
-say delstr('abcde', 6) delstr('abcde', 6, 2) delstr('abcde', 999999999999999999)
+say delstr('fghij', 6) delstr('fghij', 6, 2) delstr('fghij', 999999999999999999)
 say '['delstr('', 1)']' '['delstr('', 5, 2)']'
 ```
 
 ```output
-abcde abcde abcde
+fghij fghij fghij
 [] []
 ```
 
@@ -126,11 +126,11 @@ When `length` is 0, nothing is deleted and the result is `string`
 unchanged, for every `n` that passes its check.
 
 ```rexx
-say delstr('abcde', 3, 0) delstr('abcde', 1, 0) delstr('abcde', 9, 0)
+say delstr('fghij', 3, 0) delstr('fghij', 1, 0) delstr('fghij', 9, 0)
 ```
 
 ```output
-abcde abcde abcde
+fghij fghij fghij
 ```
 
 r[bif.delstr.bytes]
