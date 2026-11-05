@@ -5,3 +5,6 @@ src = "src"
 
 [preprocessor.rexx-spec]
 command = "mdbook-rexx-spec"
+
+[output.html]
+additional-js = ["assets/version-picker.js"]
