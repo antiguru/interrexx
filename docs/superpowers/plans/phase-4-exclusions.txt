@@ -3231,6 +3231,22 @@ DEVIATIONS -- permanent, chosen
      interpreter's own descriptors; here that closed the timer's wake socket
      and left a halt undelivered. Found by the PR 4 review (I3).
 
+ 93. RXQUEUE WITH NO SESSION REFUSES THE SESSION QUEUE (Phase 10).
+     OWNER: none.
+
+     Ruled by Moritz 2026-11-05: "Can we error when there's no session
+     around, and none is specified?"
+     Under rxapi-behaviour.md Resolution 4 a session queue goes when its
+     last connection closes, so rxqueue run with no RXQUEUESESSION (from a
+     plain shell, not under a Rexx program) would add to a queue that goes
+     when it exits. When its queue is SESSION (the default, the name
+     argument or the RXQUEUE variable, in any case) and no session was
+     handed down, it prints "There is no session queue: name a queue, or
+     run rxqueue from a Rexx program." and exits 9, before reading input or
+     reaching the service; /CLEAR likewise. The oracle exits 0 and keeps
+     the lines in a queue no later process reaches. No ooTest test runs
+     rxqueue outside a Rexx program.
+
 EXPRKIND OWNERSHIP -- the expression forms 4a/4b do not evaluate
 ---------------------------------------------------------------------
 
