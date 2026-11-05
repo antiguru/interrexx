@@ -18,7 +18,7 @@ whitespace between them as it is. Words are those of
 r[bif.subword.method]
 SUBWORD is a builtin that runs as a String method, and `string`, its first
 argument, is the receiver. `string` is a [string](r:conv.string.null), `n`
-is a [position](r:conv.position.check) that counts words, and `length` is a
+is a [word number](r:bif.words.number), and `length` is a
 [length](r:conv.length.check) that counts words. The arguments are checked
 in the [order](r:conv.check.order) the conventions give, and the argument
 count by the [builtin call rules](r:bif.call.count): two are required and
@@ -83,7 +83,8 @@ say c2x(subword('09'x||'a'||'0909'x||'b'||'09'x, 1))
 
 r[bif.subword.past-end]
 When `n` is greater than the number of words in `string`, the result is the
-null string. This holds for every `n` past the last word, however large.
+null string. This holds for every `n` past the last word that passes its
+check.
 
 ```rexx
 say '['subword('a b c', 4)']' '['subword('a b c', 999999999999999999, 2)']'

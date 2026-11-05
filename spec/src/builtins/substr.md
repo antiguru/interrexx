@@ -99,7 +99,8 @@ say '['substr('abcdef', 2, 3)']' '['substr('abcdef', 4, 5, '.')']',
 r[bif.substr.past-end]
 When `n` is greater than `LENGTH(string)`, no character of `string` is
 selected: the result is `length` copies of `pad`, and the null string when
-`length` is omitted. This holds for every `n` past the end, however large.
+`length` is omitted. This holds for every `n` past the end that passes its
+check.
 
 ```rexx
 say '['substr('abc', 4, 2, '*')']' '['substr('abc', 999999999999999999, 3, '*')']',

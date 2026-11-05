@@ -63,12 +63,15 @@ say wordpos('a', 'a b a') wordpos('a', 'a b a', ) wordpos('a', 'a b a', 2)
 ## The result
 
 r[bif.wordpos.result]
-Let `m` be the number of words in `phrase`. WORDPOS returns the smallest
-word number `k`, with `k` at least `start`, such that `string` has a word
-`k + m - 1` and, for each `i` from 1 to `m`, word `k + i - 1` of `string`
-is equal under `==` to word `i` of `phrase`. When there is no such `k`, the
-result is `0`. The answer is written as
-[the word builtins write a count](r:bif.words.answer).
+When `phrase` has at least one word, let `m` be the number of its words.
+WORDPOS then returns the smallest word number `k`, with `k` at least
+`start`, such that `string` has a word `k + m - 1` and, for each `i` from 1
+to `m`, word `k + i - 1` of `string` is equal under `==` to word `i` of
+`phrase`. When there is no such `k`, the result is `0`. A phrase with no
+words is the case of [its own rule](r:bif.wordpos.empty-phrase). The answer
+is written as [the word builtins write a count](r:bif.words.answer), and
+whether it is a new object is
+[not specified](r:bif.words.answer.deviation.4).
 
 ```rexx
 s = 'one two three two three four'
@@ -147,7 +150,7 @@ say wordpos('four five', s) wordpos('three four five', s) wordpos('x y', 'x')
 
 r[bif.wordpos.past-end]
 When `start` is greater than the number of words in `string`, the result
-is `0`, however large `start` is. A `start` equal to the number of words
+is `0`, for every `start` that passes its check. A `start` equal to the number of words
 searches the last word alone.
 
 ```rexx

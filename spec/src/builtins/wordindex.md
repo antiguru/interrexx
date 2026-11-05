@@ -51,7 +51,8 @@ WORDINDEX returns the [position](r:conv.position.origin) in `string` of the
 first character of word `n`. The position counts characters of `string`
 from its first, so whitespace before the word, and the words and
 whitespace before that, all count toward it. The answer is written as
-[the word builtins write a count](r:bif.words.answer).
+[the word builtins write a count](r:bif.words.answer), and whether it is
+a new object is [not specified](r:bif.words.answer.deviation.4).
 
 ```rexx
 say wordindex('red  green blue', 2) wordindex('  red', 1),
@@ -64,7 +65,7 @@ say wordindex('red  green blue', 2) wordindex('  red', 1),
 
 r[bif.wordindex.past-end]
 When `n` is greater than the number of words in `string`, the result is
-`0`. This holds for every `n` past the last word, however large.
+`0`. This holds for every `n` past the last word that passes its check.
 
 ```rexx
 say wordindex('red green', 3) wordindex('red green', 999999999999999999)

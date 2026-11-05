@@ -48,8 +48,9 @@ d: say condition('o')~code
 
 r[bif.word.result]
 WORD returns word `n` of `string`: its characters exactly as they stand in
-`string`, and none of the whitespace before or after it. The result is
-the same string as `SUBWORD(string, n, 1)`.
+`string`, and none of the whitespace before or after it. So for every
+`string` and every `n` that passes its check, `word(string, n) ==
+subword(string, n, 1)` holds.
 
 ```rexx
 s = ' red  green' || '09'x || 'blue '
@@ -62,7 +63,8 @@ say '['word(s, 2)']' '['word(s, 3)']' (word(s, 2) == subword(s, 2, 1))
 
 r[bif.word.past-end]
 When `n` is greater than the number of words in `string`, the result is the
-null string. This holds for every `n` past the last word, however large.
+null string. This holds for every `n` past the last word that passes its
+check.
 
 ```rexx
 say '['word('red green', 3)']' '['word('red green', 999999999999999999)']'

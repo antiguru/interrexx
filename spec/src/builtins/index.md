@@ -3,6 +3,7 @@ element: "Built-in functions"
 kind: chapter
 ansi: "9.2.1"
 rexxref: "Functions > Built-in Functions"
+deviations: [4]
 ---
 
 # Built-in functions
@@ -155,8 +156,8 @@ Where a word builtin's page calls an argument a word number, that argument
 is a [position](r:conv.position.check) that counts words: the word number
 `n` names word `n` of the string as [the word rule](r:bif.words.split)
 numbers them. A word number greater than the number of words in the string
-is not an error, however large it is; it names no word, and the builtin's
-page says what the builtin answers then.
+is not an error, for every value that passes its check; it names no word,
+and the builtin's page says what the builtin answers then.
 
 ```rexx
 say '['word('a b', 3)']' wordindex('a b', 3) wordlength('a b', 999999999999999999),
@@ -190,3 +191,24 @@ say wordindex(copies(' ', 1000) || 'a', 1) wordlength(copies('z', 1234), 1),
 
 The reference manual does not say how these answers are written or whether
 NUMERIC DIGITS applies to them; this follows the observed behaviour.
+
+r[bif.words.answer.deviation.4]
+interrexx does not specify whether the answer of WORDINDEX, WORDLENGTH or
+WORDPOS is the same object as another string of equal value: as an equal
+number the program already holds, such as the `start` argument of a
+WORDPOS call that answers it, or a literal such as `'1201'`, or the equal
+answer of another call. Through `identityHash`, or as a key of an
+`IdentityTable` or `IdentitySet`, the answer may be either, and a program
+can rely only on the value, which is equal under `==`. The oracle differs:
+it often answers a new object where interrexx answers the existing one.
+
+```rexx
+w = copies('x ', 1200) || 'y'
+n = 1200 + 1
+say (wordpos('y', w, n) == n) (wordindex(copies(' ', 1200) || 'a', 1) == '1201'),
+    (wordlength(copies('z', 1201), 1) == wordpos('y', w))
+```
+
+```output
+1 1 1
+```

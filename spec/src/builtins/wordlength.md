@@ -51,7 +51,8 @@ WORDLENGTH returns the number of [characters](r:conv.string.chars) in word
 `n` of `string`, which is `LENGTH(WORD(string, n))`. Whitespace around the
 word does not count, and a character that [the word rule](r:bif.words.split)
 places inside a word, such as a line feed, counts as one. The answer is
-written as [the word builtins write a count](r:bif.words.answer).
+written as [the word builtins write a count](r:bif.words.answer), and whether it is
+a new object is [not specified](r:bif.words.answer.deviation.4).
 
 ```rexx
 say wordlength('red  green blue', 2) wordlength('  abc  ', 1),
@@ -64,7 +65,7 @@ say wordlength('red  green blue', 2) wordlength('  abc  ', 1),
 
 r[bif.wordlength.past-end]
 When `n` is greater than the number of words in `string`, the result is
-`0`. This holds for every `n` past the last word, however large.
+`0`. This holds for every `n` past the last word that passes its check.
 
 ```rexx
 say wordlength('red green', 3) wordlength('red green', 999999999999999999)
