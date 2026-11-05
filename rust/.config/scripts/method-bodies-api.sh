@@ -7,6 +7,6 @@ set -eu
 root=${NEXTEST_WORKSPACE_ROOT:-$PWD}
 tmp=$root/target/tmp
 mkdir -p "$tmp"
-find "$tmp" -maxdepth 1 -name 'method-bodies-api-*' -mmin +120 -exec rm -rf {} +
+find "$tmp" -maxdepth 1 -name 'method-bodies-api-*' -mmin +120 -exec rm -rf {} + 2>/dev/null || true
 id=$(printf '%s' "${NEXTEST_RUN_ID:-$$}" | cut -c1-8)
 echo "REXX_API_DIR=$tmp/method-bodies-api-$id" >> "$NEXTEST_ENV"
