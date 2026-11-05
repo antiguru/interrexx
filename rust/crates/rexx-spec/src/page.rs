@@ -105,7 +105,8 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
                     finish_block(done, &mut pending_rexx, &mut examples, &rules, &mut err);
                 }
             } else {
-                f.body.push(text.to_string());
+                f.body
+                    .push(raw.strip_suffix('\r').unwrap_or(raw).to_string());
             }
             continue;
         }
@@ -140,6 +141,15 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
                 // Keep a placeholder out of `rules`; the paragraph is dropped.
                 collecting = false;
             }
+            continue;
+        }
+
+        if text.trim_start().starts_with("r[") {
+            collecting = false;
+            err(
+                line,
+                "line looks like a rule marker but is not a bare `r[ID]` line".into(),
+            );
             continue;
         }
 

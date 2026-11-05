@@ -243,3 +243,26 @@ fn draft_summary_entries_are_reported() {
     assert_eq!(problems.len(), 1, "{problems:?}");
     assert_eq!(problems[0].line, 1);
 }
+
+#[test]
+fn trailing_spaces_in_blocks_are_kept_and_crlf_does_not_change_them() {
+    let text = page_text()
+        .replace("say substr('abc', 2)\n", "say 'bc  '  \n")
+        .replace("\nbc\n", "\nbc  \n");
+    let lf = parse(&text).unwrap();
+    assert_eq!(lf.examples[0].output, "bc  \n");
+    assert_eq!(lf.examples[0].program, "say 'bc  '  \n");
+    let crlf = parse(&text.replace('\n', "\r\n")).unwrap();
+    assert_eq!(crlf.examples, lf.examples);
+}
+
+#[test]
+fn a_near_miss_rule_marker_is_reported() {
+    for bad in [" r[bif.a.b]", "r[bif.a.b] trailing", "\tr[bif.a.b]"] {
+        let p = problems(&format!("{FRONT}\n{bad}\nText.\n"));
+        assert_eq!(p.len(), 1, "{bad:?}: {p:?}");
+        assert_eq!(p[0].0, 8);
+    }
+    // Inside a fence it is just text.
+    assert!(problems(&format!("{FRONT}\n```text\n r[bif.a.b]\n```\n")).is_empty());
+}
