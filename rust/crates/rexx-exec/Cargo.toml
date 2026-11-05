@@ -138,5 +138,8 @@ loom = "0.7.2"
 # The pseudo-terminal `SysGetKey`'s unit tests read a key from. Test-only.
 rustix = { version = "1.1.4", features = ["pty"] }
 
+# The specification parser, which `tests/spec.rs` checks `spec/` with. Test-only.
+rexx-spec = { path = "../rexx-spec" }
+
 [lints]
 workspace = true

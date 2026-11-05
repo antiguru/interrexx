@@ -672,6 +672,7 @@ dependencies = [
  "rexx-num",
  "rexx-parse",
  "rexx-rxapi",
+ "rexx-spec",
  "rustc-hash",
  "rustix",
  "tz-rs",
@@ -721,6 +722,13 @@ dependencies = [
  "chrono",
  "rexx-api",
  "rustix",
+]
+
+[[package]]
+name = "rexx-spec"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
 ]
 
 [[package]]
