@@ -257,10 +257,22 @@ impl Layout {
 /// class and whether the file it names exists.
 const PATH_VALUED: &[(&str, &str)] = &[("RexxInfo", "executable"), ("RexxInfo", "libraryPath")];
 
+/// Rows whose answer carries the build date, which each side stamps itself: their `VALUE` line is
+/// the answer with the date left out.
+const BUILD_VALUED: &[(&str, &str, &str)] = &[
+    ("RexxInfo", "date", "vv~class vv~words"),
+    ("RexxInfo", "name", "vv~word(1) vv~word(2) vv~words"),
+];
+
 /// What a row's `VALUE` line prints of the answer `vv`.
 pub fn rendering(class: &str, method: &str) -> &'static str {
     if PATH_VALUED.contains(&(class, method)) {
         "vv~class vv~exists"
+    } else if let Some((_, _, shown)) = BUILD_VALUED
+        .iter()
+        .find(|(c, m, _)| (*c, *m) == (class, method))
+    {
+        shown
     } else {
         "vv~string"
     }

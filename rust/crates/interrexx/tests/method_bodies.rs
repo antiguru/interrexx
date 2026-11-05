@@ -327,6 +327,13 @@ const ORACLE_CRASHING_SENDS: &[(&str, &str)] = &[
 /// class and whether the file it names exists.
 const PATH_VALUED: &[(&str, &str)] = &[("RexxInfo", "executable"), ("RexxInfo", "libraryPath")];
 
+/// Rows whose answer carries the build date, which each side stamps itself: the probe prints the
+/// answer with the date left out.
+const BUILD_VALUED: &[(&str, &str, &str)] = &[
+    ("RexxInfo", "date", "v~class v~words"),
+    ("RexxInfo", "name", "v~word(1) v~word(2) v~words"),
+];
+
 const RECEIVER_OVERRIDES: &[(&str, &str)] = &[
     (
         "DateTime",
@@ -466,6 +473,11 @@ fn probe_text(class: &ClassRow, row: &MethodRow) -> String {
     let send = format!("o~'{}'()", method_name_literal(&row.method));
     if PATH_VALUED.contains(&(class.name.as_str(), row.method.as_str())) {
         text.push_str(&format!("v = {send}\nsay v~class v~exists\n"));
+    } else if let Some((_, _, shown)) = BUILD_VALUED
+        .iter()
+        .find(|(c, m, _)| (*c, *m) == (class.name.as_str(), row.method.as_str()))
+    {
+        text.push_str(&format!("v = {send}\nsay {shown}\n"));
     } else {
         text.push_str(&format!("say {send}\n"));
     }
