@@ -255,3 +255,160 @@ say (verify(v, '', 'N', n) == n) (verify(copies('a', 1200) || 'b', 'a') == '1201
 1 1 1
 1 1
 ```
+
+## Bit-by-bit functions
+
+r[bif.index.bit.args]
+BITAND, BITOR and BITXOR take the same arguments: `string1`, `string2` and
+`pad`. Each runs as a String method, and `string1`, its first argument, is
+the receiver; `string2` and `pad` become the message's arguments, in that
+order. `string1` and `string2` are [strings](r:conv.string.null) and `pad` is
+a [pad](r:conv.pad). Only `string1` is required, `string2` and `pad` are
+optional, and the argument count is checked by the
+[builtin call rules](r:bif.index.call.count): one is required and three is the
+most.
+
+```rexx
+say c2x(bitor('a0'x)) c2x('a0'x~bitxor('01'x)) c2x('a0'x~bitand('f0'x, '00'x))
+signal on syntax name a
+say bitand()
+a: say condition('o')~code
+signal on syntax name b
+say bitor('a', 'b', 'c', 'd')
+b: say condition('o')~code
+signal on syntax name c
+say bitxor(, 'b')
+c: say condition('o')~code
+```
+
+```output
+A0 A1 A0
+40.3
+40.4
+40.5
+```
+
+r[bif.index.bit.pad.check]
+A `pad` that is present is checked as [a pad](r:conv.pad) whether or not the
+call needs it: a `pad` that is not one character long raises `SYNTAX 40.23`
+when the operands are equally long, and when both are null, and the null
+string is not a pad, as [an empty argument](r:conv.arg.empty) is not
+omitted.
+
+```rexx
+signal on syntax name a
+say bitand('a', 'b', '')
+a: say condition('o')~code
+signal on syntax name b
+say bitor('', '', '')
+b: say condition('o')~code
+signal on syntax name c
+say bitxor('ab', 'cd', 'xy')
+c: say condition('o')~code
+say c2x(bitor('ab', 'cd', 'x')) '['bitxor('', '', 'x')']'
+```
+
+```output
+40.23
+40.23
+40.23
+6366 []
+```
+
+r[bif.index.bit.bytes]
+Each character of the result is made from the characters at the same
+position in the two operands: bit `k` of it is the function's operation on
+bit `k` of each, for each of the eight bits of a character, and nothing else
+about the operands matters. Every character code is an operand like any
+other. A string of digits is the characters of its digits, not a number, so
+NUMERIC DIGITS plays no part.
+
+```rexx
+numeric digits 1
+say c2x(bitxor(12, 5)) c2x(bitand('ff80'x, '80ff'x)) c2x(bitor('00ff'x, 'f00f'x))
+```
+
+```output
+0432 8080 F0FF
+```
+
+r[bif.index.bit.nopad]
+When `pad` is omitted, the answer is as long as the longer operand. The
+characters of the shorter one are combined with the characters at the same
+positions of the longer, and the characters of the longer beyond the end of
+the shorter are copied into the answer unchanged, whichever of the two is
+the longer.
+
+```rexx
+say c2x(bitand('ff00ff'x, '0f'x)) c2x(bitand('0f'x, 'ff00ff'x))
+say c2x(bitxor('ab', 'a')) c2x(bitor('a', 'ab'))
+```
+
+```output
+0F00FF 0F00FF
+0062 6162
+```
+
+r[bif.index.bit.pad]
+When `pad` is present, the shorter operand is first extended on the right
+with copies of `pad` until it is as long as the longer one, and the two are
+then combined character by character. The answer is as long as the longer
+operand, and each character of it beyond the end of the shorter operand is
+the operation applied to the longer's character and `pad`.
+
+```rexx
+say c2x(bitand('ff00ff'x, '0f'x, 'f0'x)) c2x(bitand('0f'x, 'ff00ff'x, 'f0'x))
+say c2x(bitxor('ab', 'a', ' ')) c2x(bitor('a', 'ab', ' '))
+```
+
+```output
+0F00F0 0F00F0
+0042 6162
+```
+
+r[bif.index.bit.string2-default]
+An omitted `string2` is the null string, and so is one that is the null
+string. The answer is then `string1` itself when `pad` is omitted, and with
+a `pad` it is each character of `string1` combined with `pad`.
+
+```rexx
+say c2x(bitand('abc')) c2x(bitor('abc', '')) c2x(bitxor('abc', , 'ff'x))
+say c2x(bitand('abc', , '0f'x)) c2x(bitor('abc', '', '0f'x))
+```
+
+```output
+616263 616263 9E9D9C
+010203 6F6F6F
+```
+
+r[bif.index.bit.commutative]
+Exchanging the first two arguments does not change the answer, with a `pad`
+or without one.
+
+```rexx
+say (bitand('abcd', 'ef') == bitand('ef', 'abcd')) (bitor('abcd', 'ef', 'x') == bitor('ef', 'abcd', 'x'))
+say (bitxor('abc', 'z', 'q') == bitxor('z', 'abc', 'q')) (bitxor('', 'z') == bitxor('z', ''))
+```
+
+```output
+1 1
+1 1
+```
+
+r[bif.index.bit.deviation.4]
+interrexx does not specify whether the answer of a bit-by-bit function is
+the same object as another string of equal value: as `string1` itself when
+the answer equals it, as in `bitor(s)`, or as an equal string produced some
+other way, such as a literal. Through `identityHash`, or as a key of an
+`IdentityTable` or `IdentitySet`, the answer may be either, and a program can
+rely only on the value, which is equal under `==`. ooRexx differs: it often
+answers a new object where interrexx answers the existing one.
+
+```rexx
+s = 'ab' || 'cd'
+say (bitor(s) == s) (bitand('', s) == 'abcd') (bitand('a', 'a') == 'a')
+```
+
+```output
+1 1 1
+```
