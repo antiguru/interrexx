@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::path::{Component, Path, PathBuf};
 
+use crate::page::{FenceLine, closes, fence_line};
 use crate::{FrontMatter, is_rule_id, parse_page};
 
 /// Render `text`, the page at `here`, as Markdown for mdBook.
@@ -23,29 +24,30 @@ pub fn render(text: &str, pages: &BTreeMap<String, PathBuf>, here: &Path) -> Str
     let mut seen_content = false;
     for raw in body.split_inclusive('\n') {
         let line = raw.trim_end_matches(['\n', '\r']);
-        let ticks = line.chars().take_while(|c| *c == '`').count();
+        let trimmed = line.trim_end();
         if let Some(open) = fence {
-            if ticks >= open && line.trim_start_matches('`').trim().is_empty() {
+            if closes(trimmed, open) {
                 fence = None;
             }
             out.push_str(raw);
             continue;
         }
-        if ticks >= 3 && !line.get(ticks..).unwrap_or("").contains('`') {
+        if let FenceLine::Fence { ticks, .. } = fence_line(trimmed) {
             fence = Some(ticks);
             seen_content = true;
             out.push_str(raw);
             continue;
         }
-        let trimmed = line.trim_end();
         if let Some(id) = trimmed
             .strip_prefix("r[")
             .and_then(|t| t.strip_suffix(']'))
             .filter(|id| is_rule_id(id))
         {
-            let _ = writeln!(
+            // The blank line ends the HTML block, so the rule's paragraph
+            // under it is read as Markdown.
+            let _ = write!(
                 out,
-                "<div class=\"rule\" id=\"r-{id}\"><a href=\"#r-{id}\">[{id}]</a></div>"
+                "<div class=\"rule\" id=\"r-{id}\"><a href=\"#r-{id}\">[{id}]</a></div>\n\n"
             );
             seen_content = true;
             continue;
@@ -94,10 +96,10 @@ fn header(front: &FrontMatter) -> String {
     }
     let mut refs = Vec::new();
     if let Some(a) = &front.ansi {
-        refs.push(format!("ANSI: {a}"));
+        refs.push(format!("ANSI: {}", escape(a)));
     }
     if let Some(r) = &front.rexxref {
-        refs.push(format!("rexxref: {r}"));
+        refs.push(format!("rexxref: {}", escape(r)));
     }
     if !refs.is_empty() {
         let _ = write!(h, "\n<p class=\"references\">{}</p>\n", refs.join("; "));
@@ -114,6 +116,21 @@ fn header(front: &FrontMatter) -> String {
         h.push('\n');
     }
     h
+}
+
+/// `text` with `&`, `<`, `>` and `"` written as HTML entities.
+fn escape(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for c in text.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            c => out.push(c),
+        }
+    }
+    out
 }
 
 /// Rewrite every `(r:ID)` link target on `line` whose ID is known.

@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use rexx_spec::{Kind, Problem, load, parse_page, prefix_for};
+use rexx_spec::{Kind, Problem, deviation_number, load, parse_page, prefix_for};
 
 const FRONT: &str = "---\nelement: SUBSTR\nkind: builtin\nsyntax: \"SUBSTR(string, n)\"\ndeviations: [90, 91]\n---\n";
 
@@ -265,4 +265,87 @@ fn a_near_miss_rule_marker_is_reported() {
     }
     // Inside a fence it is just text.
     assert!(problems(&format!("{FRONT}\n```text\n r[bif.a.b]\n```\n")).is_empty());
+}
+
+#[test]
+fn deviation_numbers_are_read_only_from_a_final_deviation_segment() {
+    assert_eq!(deviation_number("bif.substr.deviation.4"), Some(4));
+    assert_eq!(deviation_number("bif.count.answer.deviation.90"), Some(90));
+    assert_eq!(deviation_number("bif.x.deviation.0"), Some(0));
+    for none in [
+        "bif.x.deviation.pending",
+        "bif.x.deviation.04",
+        "bif.x.deviation",
+        "bif.deviation.x",
+        "bif.deviation.x.deviation.4",
+        "bif.x.deviations.4",
+        "bif.x.4",
+    ] {
+        assert_eq!(deviation_number(none), None, "{none}");
+    }
+}
+
+#[test]
+fn a_deviation_segment_not_ending_in_a_number_is_reported() {
+    for bad in [
+        "r[bif.x.deviation.pending]",
+        "r[bif.x.deviation.later.4]",
+        "r[bif.deviation.x]",
+    ] {
+        let p = problems(&format!("{FRONT}\n{bad}\nText.\n"));
+        assert_eq!(p.len(), 1, "{bad}: {p:?}");
+        assert_eq!(p[0].0, 8);
+        assert!(p[0].1.contains("deviation"), "{p:?}");
+    }
+    assert!(problems(&format!("{FRONT}\nr[bif.x.deviation.4]\nText.\n")).is_empty());
+}
+
+#[test]
+fn a_fence_markdown_accepts_but_the_format_does_not_is_reported() {
+    // Each would open a code block in Markdown that the parser does not see,
+    // hiding the rule under it or an example's program.
+    for bad in [" ```rexx", "   ```", "~~~", "  ~~~rexx", "```a`b"] {
+        let text = format!("{FRONT}\nr[bif.a.b]\nText.\n\n{bad}\nr[bif.c.d]\nMore.\n");
+        let p = problems(&text);
+        assert_eq!(p.len(), 1, "{bad:?}: {p:?}");
+        assert_eq!(p[0].0, 11, "{bad:?}");
+        assert!(p[0].1.contains("fence"), "{p:?}");
+    }
+    // An indented closing fence ends the block in Markdown, not in the parser.
+    let text = format!("{FRONT}\nr[bif.a.b]\nText.\n\n```rexx\nsay 1\n  ```\n```\n");
+    let p = problems(&text);
+    assert_eq!(p.len(), 1, "{p:?}");
+    assert_eq!(p[0].0, 13);
+    // Inside a block, an indented run with an info string is just text.
+    let text = format!("{FRONT}\nr[bif.a.b]\nText.\n\n````markdown\n  ```rexx\n````\n");
+    assert!(problems(&text).is_empty());
+}
+
+#[test]
+fn a_rule_with_no_text_is_reported() {
+    for after in ["\n\nText.\n", "\n```text\nx\n```\n", "\n"] {
+        let p = problems(&format!("{FRONT}\nr[bif.a.b]{after}"));
+        assert_eq!(p.len(), 1, "{after:?}: {p:?}");
+        assert_eq!(p[0].0, 8);
+        assert!(p[0].1.contains("no text"), "{p:?}");
+    }
+}
+
+#[test]
+fn a_direct_link_to_a_rule_anchor_is_reported() {
+    for link in [
+        "[x](substr.md#r-bif.substr.result)",
+        "[x](#r-bif.substr.result)",
+        "[x](../conventions.md#r-conv.x)",
+    ] {
+        let p = problems(&format!("{FRONT}\nr[bif.a.b]\nSee {link}.\n"));
+        assert_eq!(p.len(), 1, "{link}: {p:?}");
+        assert_eq!(p[0].0, 9);
+        assert!(p[0].1.contains("r:ID"), "{p:?}");
+    }
+    let page = parse(&format!(
+        "{FRONT}\nr[bif.a.b]\nSee [x](r:bif.a.b) and [y](other.md#heading).\n"
+    ))
+    .unwrap();
+    assert_eq!(page.links.len(), 1);
 }

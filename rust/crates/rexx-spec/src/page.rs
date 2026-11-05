@@ -95,31 +95,47 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
         let text = raw.trim_end();
 
         if let Some(f) = fence.as_mut() {
-            let ticks = text.chars().take_while(|c| *c == '`').count();
-            if text.trim_start().chars().all(|c| c == '`')
-                && ticks >= f.ticks
-                && !text.starts_with(' ')
-            {
+            if closes(text, f.ticks) {
                 let done = fence.take();
                 if let Some(done) = done {
                     finish_block(done, &mut pending_rexx, &mut examples, &rules, &mut err);
                 }
             } else {
+                if near_miss_close(text, f.ticks) {
+                    err(
+                        line,
+                        "an indented fence would close this code block in Markdown; \
+                         a closing fence starts in column 0"
+                            .into(),
+                    );
+                }
                 f.body
                     .push(raw.strip_suffix('\r').unwrap_or(raw).to_string());
             }
             continue;
         }
 
-        if let Some(opening) = fence_open(text) {
-            collecting = false;
-            fence = Some(Fence {
-                ticks: opening.0,
-                info: opening.1,
-                line,
-                body: Vec::new(),
-            });
-            continue;
+        match fence_line(text) {
+            FenceLine::Fence { ticks, info } => {
+                collecting = false;
+                fence = Some(Fence {
+                    ticks,
+                    info: info.to_string(),
+                    line,
+                    body: Vec::new(),
+                });
+                continue;
+            }
+            FenceLine::NearMiss => {
+                collecting = false;
+                pending_rexx = None;
+                err(
+                    line,
+                    "line looks like a code fence but is not a column-0 backtick fence".into(),
+                );
+                continue;
+            }
+            FenceLine::Text => {}
         }
 
         if text.is_empty() {
@@ -131,6 +147,15 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
         if let Some(inner) = text.strip_prefix("r[").and_then(|t| t.strip_suffix(']')) {
             collecting = true;
             if is_rule_id(inner) {
+                if has_deviation_segment(inner) && deviation_number(inner).is_none() {
+                    err(
+                        line,
+                        format!(
+                            "rule ID `{inner}` has a `deviation` segment but does not end \
+                             `.deviation.N`"
+                        ),
+                    );
+                }
                 rules.push(Rule {
                     id: inner.to_string(),
                     line,
@@ -159,11 +184,20 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
             }
             rule.text.push_str(text);
         }
-        scan_links(text, line, &mut links);
+        scan_links(text, line, &mut links, &mut err);
     }
 
     if let Some(f) = fence {
         err(f.line, "code block is never closed".into());
+    }
+    for rule in rules.iter().filter(|r| r.text.is_empty()) {
+        err(
+            rule.line,
+            format!(
+                "rule `{}` has no text: its paragraph must follow the `r[ID]` line",
+                rule.id
+            ),
+        );
     }
 
     match front {
@@ -178,17 +212,75 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
     }
 }
 
-/// `(backtick count, info string)` when `text` opens a fenced block.
-fn fence_open(text: &str) -> Option<(usize, String)> {
+/// What a line outside a code block is, as far as fences go.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum FenceLine<'a> {
+    /// A column-0 run of at least three backticks and an info string holding
+    /// no backtick: the only fence a page may use.
+    Fence {
+        ticks: usize,
+        info: &'a str,
+    },
+    /// A line Markdown may read as a fence that the page format does not
+    /// accept: indented, `~~~`, or a backtick run whose info string holds a
+    /// backtick.
+    NearMiss,
+    Text,
+}
+
+/// Classify `text` (a line with its line ending removed) outside a code
+/// block. The parser and the renderer both read fences through this, so a
+/// line one of them takes for a fence the other does too.
+pub(crate) fn fence_line(text: &str) -> FenceLine<'_> {
     let ticks = text.chars().take_while(|c| *c == '`').count();
-    if ticks < 3 {
+    if ticks >= 3 {
+        let info = text.get(ticks..).unwrap_or("").trim();
+        if !info.contains('`') {
+            return FenceLine::Fence { ticks, info };
+        }
+    }
+    let start = text.trim_start();
+    if start.starts_with("```") || start.starts_with("~~~") {
+        FenceLine::NearMiss
+    } else {
+        FenceLine::Text
+    }
+}
+
+/// Whether `text` closes a code block opened by `open` backticks: a column-0
+/// run of at least `open` backticks and nothing after it but blanks.
+pub(crate) fn closes(text: &str, open: usize) -> bool {
+    let ticks = text.chars().take_while(|c| *c == '`').count();
+    ticks >= open && text.get(ticks..).unwrap_or("").trim().is_empty()
+}
+
+/// Whether `text`, inside a block opened by `open` backticks, is a closing
+/// fence that is indented: Markdown closes the block there, the parser would
+/// not.
+fn near_miss_close(text: &str, open: usize) -> bool {
+    let start = text.trim_start();
+    start.len() != text.len() && closes(start, open)
+}
+
+/// Whether some segment of `id` is `deviation`.
+fn has_deviation_segment(id: &str) -> bool {
+    id.split('.').any(|s| s == "deviation")
+}
+
+/// The register number `N` when `id` ends `.deviation.N` and has no other
+/// `deviation` segment; `N` is decimal digits with no leading zero.
+pub fn deviation_number(id: &str) -> Option<u32> {
+    let mut segments = id.rsplit('.');
+    let n = segments.next()?;
+    if segments.next()? != "deviation"
+        || segments.any(|s| s == "deviation")
+        || n.is_empty()
+        || !n.bytes().all(|b| b.is_ascii_digit())
+        || (n.len() > 1 && n.starts_with('0'))
+    {
         return None;
     }
-    let info = text.get(ticks..).unwrap_or("").trim();
-    if info.contains('`') {
-        return None;
-    }
-    Some((ticks, info.to_string()))
+    n.parse().ok()
 }
 
 fn finish_block(
@@ -236,16 +328,31 @@ fn finish_block(
     }
 }
 
-/// Record every `[text](r:ID)` on `text`.
-fn scan_links(text: &str, line: usize, links: &mut Vec<RuleLink>) {
+/// Record every `[text](r:ID)` on `text`, and report every link that targets
+/// a rule anchor (`#r-ID`) directly: rule links use the `r:` form, which the
+/// checker resolves.
+fn scan_links(
+    text: &str,
+    line: usize,
+    links: &mut Vec<RuleLink>,
+    err: &mut impl FnMut(usize, String),
+) {
     let mut rest = text;
-    while let Some(at) = rest.find("](r:") {
-        let after = rest.get(at + 4..).unwrap_or("");
+    while let Some(at) = rest.find("](") {
+        let after = rest.get(at + 2..).unwrap_or("");
         let Some(end) = after.find(')') else { break };
-        links.push(RuleLink {
-            id: after.get(..end).unwrap_or("").trim().to_string(),
-            line,
-        });
+        let target = after.get(..end).unwrap_or("");
+        if let Some(id) = target.strip_prefix("r:") {
+            links.push(RuleLink {
+                id: id.trim().to_string(),
+                line,
+            });
+        } else if target.contains("#r-") {
+            err(
+                line,
+                format!("link `({target})` targets a rule anchor; write it `(r:ID)`"),
+            );
+        }
         rest = after.get(end..).unwrap_or("");
     }
 }

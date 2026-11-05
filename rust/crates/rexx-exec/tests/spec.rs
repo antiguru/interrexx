@@ -323,16 +323,15 @@ fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
     // 6: deviations.
     let register = fs::read_to_string(repo.join("docs/superpowers/plans/phase-4-exclusions.txt"))
         .unwrap_or_default();
-    let registered = |n: u32| {
-        let head = format!("{n}. ");
-        register
-            .lines()
-            .any(|l| l.trim_start_matches(' ').starts_with(&head))
-    };
+    let registered = |n: u32| registered(&register, n);
     for page in &pages {
         for n in &page.front.deviations {
             let id_suffix = format!(".deviation.{n}");
-            if !page.rules.iter().any(|r| r.id.ends_with(&id_suffix)) {
+            if !page
+                .rules
+                .iter()
+                .any(|r| rexx_spec::deviation_number(&r.id) == Some(*n))
+            {
                 problems.push(problem(
                     &page.path,
                     1,
@@ -348,11 +347,7 @@ fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
             }
         }
         for rule in &page.rules {
-            let number = rule
-                .id
-                .rsplit_once(".deviation.")
-                .and_then(|(_, n)| n.parse::<u32>().ok());
-            if let Some(n) = number
+            if let Some(n) = rexx_spec::deviation_number(&rule.id)
                 && !page.front.deviations.contains(&n)
             {
                 problems.push(problem(
@@ -381,6 +376,14 @@ fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
     }
 
     problems
+}
+
+/// Whether the deviation register `register` has an entry numbered `n`. An
+/// entry begins a line with its number right-aligned in three columns and a
+/// full stop and blank after it (`  4. `, ` 90. `).
+fn registered(register: &str, n: u32) -> bool {
+    let head = format!("{n:>3}. ");
+    register.lines().any(|l| l.starts_with(&head))
 }
 
 /// Runs one example in process with an empty standard input, bounded as the
@@ -480,6 +483,12 @@ fn write(path: &Path, text: &str) {
 /// A specification tree holding the introduction and one builtin page, `body`
 /// after front matter, with a `SUMMARY.md` listing both.
 fn tree_with_page(scratch: &Scratch, body: &str) -> PathBuf {
+    tree_with_front(scratch, "", body)
+}
+
+/// As `tree_with_page`, with `front` (whole `key: value` lines) added to the
+/// builtin page's front matter.
+fn tree_with_front(scratch: &Scratch, front: &str, body: &str) -> PathBuf {
     let root = scratch.0.join("spec");
     write(&root.join("withdrawn.txt"), "");
     write(
@@ -492,7 +501,7 @@ fn tree_with_page(scratch: &Scratch, body: &str) -> PathBuf {
     );
     write(
         &root.join("src/builtins/t.md"),
-        &format!("---\nelement: T\nkind: builtin\n---\n\n{body}"),
+        &format!("---\nelement: T\nkind: builtin\n{front}---\n\n{body}"),
     );
     root
 }
@@ -745,11 +754,17 @@ fn oracle_gate_on() -> bool {
     std::env::var_os("REXX_SPEC_ORACLE").is_some_and(|v| !v.is_empty() && v != "0")
 }
 
+/// Whether `example` is under a deviation rule its page lists: the rule's ID
+/// ends `.deviation.N` and `N` is in the page's `deviations`.
+fn exempt_from_the_oracle(page: &rexx_spec::Page, example: &rexx_spec::Example) -> bool {
+    rexx_spec::deviation_number(&example.rule).is_some_and(|n| page.front.deviations.contains(&n))
+}
+
 /// Runs every example under `spec_root` on the oracle, with empty standard
 /// input, and reports each whose stdout is not exactly the output block or
-/// whose exit code is not `rc`. An example under a rule whose ID contains
-/// `.deviation.` is the place the oracle is known to answer differently, and
-/// is exempt.
+/// whose exit code is not `rc`. An example under a rule `….deviation.N`
+/// whose page lists `N` in its `deviations` is the place the oracle is known
+/// to answer differently, and is exempt.
 fn oracle_disagreements(spec_root: &Path, oracle: &Oracle) -> Vec<Problem> {
     let (pages, mut problems) = rexx_spec::load(spec_root);
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!(
@@ -762,7 +777,7 @@ fn oracle_disagreements(spec_root: &Path, oracle: &Oracle) -> Vec<Problem> {
     let mut n = 0;
     for page in &pages {
         for example in &page.examples {
-            if example.rule.contains(".deviation.") {
+            if exempt_from_the_oracle(page, example) {
                 continue;
             }
             n += 1;
@@ -839,10 +854,11 @@ fn an_example_the_oracle_answers_differently_is_reported_unless_a_deviation() {
         "{m}"
     );
 
-    // The same disagreement under a deviation rule is exempt; an rc mismatch
-    // under a non-deviation rule is reported.
-    let root = tree_with_page(
+    // The same disagreement under a deviation rule the page lists is exempt;
+    // an rc mismatch under a non-deviation rule is reported.
+    let root = tree_with_front(
         &scratch,
+        "deviations: [1]\n",
         "r[bif.t.deviation.1]\nA rule.\n\n```rexx\nsay 1/3\n```\n\n```output\nx\n```\n\n\
          r[bif.t.two]\nA rule.\n\n```rexx\nexit 2\n```\n\n```output\n```\n",
     );
@@ -858,4 +874,50 @@ fn an_example_the_oracle_answers_differently_is_reported_unless_a_deviation() {
         "{}",
         problems[0].message
     );
+
+    // Under a deviation rule the page does not list, it is reported.
+    let root = tree_with_page(
+        &scratch,
+        "r[bif.t.deviation.1]\nA rule.\n\n```rexx\nsay 1/3\n```\n\n```output\nx\n```\n",
+    );
+    let problems = oracle_disagreements(&root, &oracle);
+    assert_eq!(problems.len(), 1, "{}", render(&problems));
+    assert!(
+        problems[0].message.contains("bif.t.deviation.1"),
+        "{}",
+        problems[0].message
+    );
+}
+
+#[test]
+fn only_a_listed_deviation_rule_is_exempt_from_the_oracle() {
+    let page = |deviations: &str, rule: &str| {
+        let text = format!(
+            "---\nelement: T\nkind: builtin\n{deviations}---\n\n\
+             r[{rule}]\nA rule.\n\n```rexx\nnop\n```\n\n```output\n```\n"
+        );
+        rexx_spec::parse_page(Path::new("builtins/t.md"), &text)
+    };
+    let exempt = |deviations: &str, rule: &str| {
+        let page = page(deviations, rule).expect("the page parses");
+        exempt_from_the_oracle(&page, &page.examples[0])
+    };
+    assert!(exempt("deviations: [1]\n", "bif.t.deviation.1"));
+    assert!(!exempt("", "bif.t.deviation.1"));
+    assert!(!exempt("deviations: [2]\n", "bif.t.deviation.1"));
+    assert!(!exempt("deviations: [1]\n", "bif.t.one"));
+    // An ID that only contains `.deviation.` is not a deviation rule at all:
+    // the page does not parse, so no example of it reaches the oracle.
+    assert!(page("deviations: [1]\n", "bif.t.deviation.pending").is_err());
+}
+
+#[test]
+fn a_register_entry_is_matched_in_its_own_format() {
+    let register =
+        "  4. AN ENTRY.\n 90. ANOTHER.\n     7750. A number in prose.\n12. Not an entry.\n";
+    assert!(registered(register, 4));
+    assert!(registered(register, 90));
+    assert!(!registered(register, 7750));
+    assert!(!registered(register, 12));
+    assert!(!registered(register, 5));
 }

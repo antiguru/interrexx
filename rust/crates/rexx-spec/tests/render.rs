@@ -134,6 +134,42 @@ fn titleless_page_with_a_link_on_its_first_line_gets_an_intact_header() {
     );
 }
 
+// A `<div>` opens an HTML block that only a blank line ends; without one the
+// rule's paragraph would be shown as raw text.
+#[test]
+fn a_rule_paragraph_is_separated_from_its_anchor_by_a_blank_line() {
+    let page = "---\nelement: X\nkind: concept\n---\n# X\n\nr[conv.y]\nTake `x`; see [pad](r:bif.substr.pad).\n";
+    let out = render(page, &pages(), Path::new("conventions.md"));
+    assert!(
+        out.contains("</a></div>\n\nTake `x`; see [pad](builtins/substr.md#r-bif.substr.pad).\n"),
+        "{out}"
+    );
+}
+
+#[test]
+fn an_html_header_is_separated_from_what_follows_by_a_blank_line() {
+    // Header under a title.
+    let out = render(SUBSTR, &pages(), Path::new("builtins/substr.md"));
+    assert!(out.contains("D90</p>\n\n"), "{out}");
+    // Header before a page with no title.
+    let page = "---\nelement: X\nkind: concept\nansi: \"1.2\"\n---\nr[conv.y]\nBody.\n";
+    let out = render(page, &pages(), Path::new("conventions.md"));
+    assert!(
+        out.contains("ANSI: 1.2</p>\n\n<div class=\"rule\""),
+        "{out}"
+    );
+}
+
+#[test]
+fn references_are_html_escaped() {
+    let page = "---\nelement: X\nkind: concept\nansi: \"a & b\"\nrexxref: \"A > B < \\\"C\\\"\"\n---\n# X\n\nr[conv.y]\nBody.\n";
+    let out = render(page, &pages(), Path::new("conventions.md"));
+    assert!(
+        out.contains("ANSI: a &amp; b; rexxref: A &gt; B &lt; &quot;C&quot;</p>"),
+        "{out}"
+    );
+}
+
 #[test]
 fn non_id_brackets_are_left_alone() {
     // The parser reports such a line, so the page is returned as written.
