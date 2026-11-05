@@ -7,12 +7,14 @@
 mod front_matter;
 mod load;
 mod page;
+mod render;
 
 use std::path::PathBuf;
 
 pub use front_matter::{FrontMatter, Kind};
 pub use load::{load, prefix_for};
 pub use page::{Example, Page, Rule, RuleLink, parse_page};
+pub use render::render;
 
 /// A defect in the specification, located at a file and 1-based line.
 #[derive(Debug, Clone, PartialEq, Eq)]
