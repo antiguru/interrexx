@@ -59,15 +59,22 @@ say '['substr('abcde', 2)']' '['substr('abcde', 5)']',
 [bcde] [e] [] []
 ```
 
+The ANSI draft (9.3.21) computes the omitted length as
+`LENGTH(string) + 1 - n` and repeats that many times, so for `n` two or
+more past the end its count is negative and its definition raises
+`SYNTAX 26.2` from inside the builtin. This page follows ooRexx, where the
+reference manual says the rest of the string is returned and positions past
+the end select nothing, so the result is the null string.
+
 r[bif.substr.pad.default]
 When `pad` is omitted, it is the blank, `'20'x`.
 
 ```rexx
-say '['substr('abc', 2, 4)']'
+say '['substr('xyz', 3, 3)']'
 ```
 
 ```output
-[bc  ]
+[z  ]
 ```
 
 ## The result
@@ -148,19 +155,20 @@ say c2x(substr('61000962'x, 2, 4, '00'x))
 ## Deviations
 
 r[bif.substr.deviation.4]
-When SUBSTR returns all of `string` unchanged, as `substr(s, 1)` does,
-interrexx does not specify whether the result is the same object as
-`string` or another object with the same value; a program can rely only on
-the value, which is equal under `==`. Through `identityHash`, or as a key of
-an `IdentityTable` or `IdentitySet`, the answer may be either. The oracle
-differs: it returns a new object each time, so there the two are always
-distinct objects.
+interrexx does not specify whether the result of SUBSTR is the same object
+as another string of equal value: as `string` itself, when the call returns
+all of it unchanged as `substr(s, 1)` does, or as an equal string produced
+some other way, such as the literal `'abc'` beside `substr('abcdef', 1, 3)`.
+Through `identityHash`, or as a key of an `IdentityTable` or `IdentitySet`,
+the answer may be either, and a program can rely only on the value, which
+is equal under `==`. The oracle differs: it often answers a new object
+where interrexx answers the existing one.
 
 ```rexx
 s = 'abc' || 'def'
-say substr(s, 1) == s
+say (substr(s, 1) == s) (substr('abcdef', 1, 3) == 'abc')
 ```
 
 ```output
-1
+1 1
 ```

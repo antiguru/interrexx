@@ -4,7 +4,7 @@ kind: builtin
 syntax: "SUBWORD(string, n [, length])"
 ansi: "9.3.22"
 rexxref: "Functions > Built-in Functions > SUBWORD"
-deviations: []
+deviations: [4]
 ---
 
 # SUBWORD
@@ -63,11 +63,11 @@ say '['subword('one two  three', 2)']' '['subword('one two  three', 3)']'
 r[bif.subword.result]
 SUBWORD returns the part of `string` that begins with the first character
 of word `n` and ends with the last character of word `n + length - 1`, or
-of the last word of `string` when it has fewer words than that. The
-characters in between, the whitespace between the selected words included,
-are copied unchanged: a run of blanks or tabs stays as long as it was, and
-a tab stays a tab. The result therefore never begins or ends with
-whitespace, whatever whitespace `string` has around the selected words.
+of the last word of `string` when it has fewer words than that. It is a
+slice of `string` and nothing is rewritten in it, so a run of blanks or
+tabs separating two selected words keeps its length and its characters.
+Since the slice starts and ends on word characters, whitespace before word
+`n`, and after the last selected word, falls outside it.
 
 ```rexx
 say '['subword('one two  three   four', 2, 2)']'
@@ -118,9 +118,10 @@ say '['subword('', 1)']' '['subword(' '||'09'x||' ', 1, 2)']'
 ```
 
 r[bif.subword.nonblank]
-Only blank and tab separate words. Any other character, a line feed, a
-carriage return or `'00'x` included, is part of the word it is in, and is
-copied into the result as part of that word.
+A character that [the word rule](r:bif.words.split) places inside a word,
+such as a line feed or a carriage return, is copied into the result as it
+stands, and SUBWORD ends the result after it when it is the last character
+of the last selected word.
 
 ```rexx
 say c2x(subword('a'||'0a'x||'b c', 1, 1)) c2x(subword('a'||'0d'x||' b', 1, 1))
@@ -128,4 +129,26 @@ say c2x(subword('a'||'0a'x||'b c', 1, 1)) c2x(subword('a'||'0d'x||' b', 1, 1))
 
 ```output
 610A62 610D
+```
+
+## Deviations
+
+r[bif.subword.deviation.4]
+interrexx does not specify whether the result of SUBWORD is the same object
+as another string of equal value: as `string` itself, when the call returns
+all of it unchanged as `subword(w, 1)` does for a `w` with no whitespace
+around its words, or as an equal string produced some other way, such as
+the literal `'a b'` beside `subword('a b c', 1, 2)`. Through
+`identityHash`, or as a key of an `IdentityTable` or `IdentitySet`, the
+answer may be either, and a program can rely only on the value, which is
+equal under `==`. The oracle differs: it often answers a new object where
+interrexx answers the existing one.
+
+```rexx
+w = 'a' || ' b'
+say (subword(w, 1) == w) (subword('a b c', 1, 2) == 'a b')
+```
+
+```output
+1 1
 ```

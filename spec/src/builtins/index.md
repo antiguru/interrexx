@@ -137,10 +137,15 @@ be part of a word.
 
 ```rexx
 say words(' a'||'09'x||'b  c ') words('') words('  '||'09'x)
-say word('one  two', 2) c2x(word('a'||'0a00'x||'b c', 1))
+say word('one  two', 2) c2x(word('a'||'0a000c'x||'b c', 1))
 ```
 
 ```output
 3 0 0
-two 610A0062
+two 610A000C62
 ```
+
+The ANSI draft (9.3.26 and the other word builtins) separates words by a
+set of blank characters that it leaves to the configuration: the blank and
+any others the configuration names. ooRexx fixes that set as the blank and
+the horizontal tab, and so does this book.
