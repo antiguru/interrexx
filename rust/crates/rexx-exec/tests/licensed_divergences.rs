@@ -1,4 +1,4 @@
-//! The executable half of the DEVIATION rows that license a difference from
+//! The executable half of the Deviations that license a difference from
 //! the oracle: each row's program run through the C++ interpreter and through
 //! both of this crate's engines, with all three descriptors asserted on every
 //! side.
@@ -20,11 +20,9 @@ use support::oracle::{CppOutcome, did_not_finish, locate, wrapped_exit_code};
 
 /// One licensed divergence: the program, and what each side answers.
 struct LicensedDivergence {
-    /// The name the licensing DEVIATION row carries after its [`MARKER`],
+    /// The name the licensing Deviation lists in `rust/corpus/deviations.tsv`,
     /// held equal to this set by
-    /// [`the_prose_rows_and_this_table_name_the_same_divergences`]. Short
-    /// enough to sit on one line there, because that file is hard-wrapped and
-    /// a name long enough to wrap could not be found by a line scan.
+    /// [`the_deviations_table_and_this_table_name_the_same_divergences`].
     name: &'static str,
     program: &'static str,
     /// The exit status both sides give.
@@ -39,7 +37,7 @@ struct LicensedDivergence {
     crate_stdout: &'static str,
 }
 
-/// The DEVIATION rows whose difference from the oracle is licensed, each
+/// The Deviations whose difference from the oracle is licensed, each
 /// with the transcript its row records.
 const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
     LicensedDivergence {
@@ -251,14 +249,6 @@ const LICENSED_DIVERGENCES: &[LicensedDivergence] = &[
     },
 ];
 
-/// Where the prose half lives. `builtin_status.rs`'s own `exclusions_path`,
-/// duplicated because the two are separate integration-test binaries and
-/// neither can `mod` the other.
-fn exclusions_path() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../docs/superpowers/plans/phase-4-exclusions.txt")
-}
-
 /// A directory of this run's own, because an unresolved Rexx name searches the
 /// current directory for an external routine -- `support::oracle::Oracle::run`'s
 /// own doc comment carries what running a synthesised program from a directory
@@ -382,33 +372,28 @@ fn the_licensed_divergences_still_diverge_exactly_as_recorded() {
     );
 }
 
-/// Marks a DEVIATION row as licensing the [`LICENSED_DIVERGENCES`] row whose
-/// `name` follows it to the end of the line.
-const MARKER: &str = "LICENSED DIVERGENCE WITNESS: ";
-
-/// The names the exclusions file claims a witness for, one per [`MARKER`].
-fn names_the_exclusions_file_claims(exclusions: &str) -> BTreeSet<&str> {
-    exclusions
-        .lines()
-        .filter_map(|line| line.split_once(MARKER))
-        .map(|(_, name)| name.trim())
-        .collect()
-}
-
-/// The prose rows and the executable table name exactly the same divergences.
+/// The Deviations table and this table name exactly the same divergences,
+/// each licensed by an active Deviation.
 #[test]
-fn the_prose_rows_and_this_table_name_the_same_divergences() {
-    let exclusions = fs::read_to_string(exclusions_path())
-        .unwrap_or_else(|e| panic!("cannot read {}: {e}", exclusions_path().display()));
-    let claimed = names_the_exclusions_file_claims(&exclusions);
+fn the_deviations_table_and_this_table_name_the_same_divergences() {
+    let deviations = support::deviations::load(&support::deviations::repository());
+    let mut claimed = BTreeSet::new();
+    for (number, deviation) in &deviations {
+        for name in &deviation.witnesses {
+            assert!(
+                deviation.active,
+                "withdrawn Deviation {number} still claims the witness {name}"
+            );
+            claimed.insert(name.as_str());
+        }
+    }
     let witnessed: BTreeSet<&str> = LICENSED_DIVERGENCES.iter().map(|case| case.name).collect();
     assert_eq!(
         claimed,
         witnessed,
-        "the licences in {} and the rows in LICENSED_DIVERGENCES have drifted \
-         apart. A name only on the left is a DEVIATION claiming a witness that \
-         does not run; a name only on the right is a witness for a divergence \
-         nothing licenses.",
-        exclusions_path().display()
+        "the witnesses column of {} and the rows in LICENSED_DIVERGENCES have drifted \
+         apart. A name only on the left is a Deviation claiming a witness that does not \
+         run; a name only on the right is a witness for a divergence nothing licenses.",
+        support::deviations::TABLE
     );
 }

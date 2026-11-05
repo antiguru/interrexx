@@ -12,3 +12,4 @@
   - [WORDINDEX](builtins/wordindex.md)
   - [WORDLENGTH](builtins/wordlength.md)
   - [WORDPOS](builtins/wordpos.md)
+- [Deviations](deviations.md)

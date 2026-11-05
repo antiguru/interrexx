@@ -10,9 +10,8 @@
 # kind:
 #   GUARD      no program reaches it; the record names the probes that tried, or the
 #              invariant that keeps it out of reach.
-#   DEVIATION  matching the oracle is wrong; the record cites an oracle-crashes.txt entry, a
-#              numbered Deviation in docs/superpowers/plans/phase-4-exclusions.txt, or quotes
-#              an exclusions row.
+#   DEVIATION  matching the oracle is wrong; the record cites an oracle-crashes.txt entry or
+#              an active Deviation of spec/src/deviations.md.
 #   LIMIT      a design limit; the record cites the Deviation or design document licensing it.
 # phase is `-` for every row: no refusal names a phase since Phase 10 closed.
 #
@@ -67,7 +66,7 @@ sim_endless_wait	LIMIT	-	docs/superpowers/specs/2026-10-07-phase-6-1-loose-ends.
 sim_foreign_post	LIMIT	-	docs/superpowers/specs/2026-10-07-phase-6-1-loose-ends.md section 4: any inbox post other than a signal's halt, and a callback from a thread running none of the interpreter's native calls, is a determinism breach, refused loudly
 sim_replay_diverged	LIMIT	-	docs/superpowers/specs/2026-10-07-phase-6-1-loose-ends.md section 4 (trace and replay): a replay takes the trace's decisions in order, and one the run takes otherwise (another program, a damaged or edited file) is refused rather than run on a schedule the trace does not hold
 sim_trace_unwritten	LIMIT	-	docs/superpowers/specs/2026-10-07-phase-6-1-loose-ends.md section 4 (trace and replay): a run asked for a decision trace that it cannot write fails, so a harness that checks the status learns it has none
-stale_handle	DEVIATION	-	exclusions row "A LOCAL HANDLE KEPT FROM AN EARLIER CALL IS STILL REFUSED": a local reference used after its call is outside the API
+stale_handle	LIMIT	-	a local reference protects its object only until the call that made it ends, so a handle kept past that call resolves to nothing: rust/crates/rexx-api/src/values/convert.rs. Using one is outside the API
 store_op_off_its_node	GUARD	-	compiler invariant: a Store op names its own assignment (census d-guard)
 string_answer_not_a_string	DEVIATION	-	Deviation 30: a user STRING method answering an object with no string value, which the oracle converts to .nil, read by a consumer of its bytes; Task 11a probes bytes_dir, bytes_nil, bytes_queue, bytes_obj
 unbound_method	GUARD	-	docs/superpowers/records/2026-10-18-phase-9d/refusals.tsv, the dispatch.rs row: sweep.py and sweep2.py sent every documented method with its required arguments and every scope override, and Interp::invocable found each resolved method in a table

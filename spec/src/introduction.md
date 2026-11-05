@@ -37,8 +37,8 @@ another definition of Rexx differs; it never adds to or changes a rule.
 written to run ooRexx programs, and the book's examples are also run on
 ooRexx to measure where the two agree.
 
-**Deviation.** A declared difference between interrexx and ooRexx, numbered in the
-project's register. A page lists in its front matter the deviations that
+**Deviation.** A declared difference between interrexx and ooRexx, numbered in
+[the Deviations chapter](deviations.md). A page lists in its front matter the deviations that
 touch its element, and states each as a rule whose identifier ends
 `deviation.N`. Every example on which interrexx and ooRexx answer
 differently belongs to such a rule; any other difference is a defect.

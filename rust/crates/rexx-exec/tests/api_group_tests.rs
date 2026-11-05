@@ -29,7 +29,7 @@ use std::path::PathBuf;
 use group_runner::{
     GATE_ENV, SwitchMode, VERBOSITY, directive_bodies, excerpt, first_difference, fresh_copy,
     gate_mode, group_file, masked, outcome, passes, run_crate, run_oracle, skip, test_names,
-    uses_rxapi, worktree,
+    uses_rxapi,
 };
 use support::oracle;
 
@@ -39,10 +39,8 @@ const DIR: &str = "API/oo";
 /// The groups `api_group_partition.rs` derives as Phase 8's.
 const GROUPS: &[&str] = &["CONVERSION", "FUNCTION", "METHOD"];
 
-/// The tests this crate does not pass, as `GROUP.TEST`, each recorded with its
-/// cause and the phase that owns it in
-/// `docs/superpowers/plans/phase-4-exclusions.txt`; `false` for one that runs
-/// on neither side.
+/// The tests this crate does not pass, as `GROUP.TEST`; `false` for one that
+/// runs on neither side.
 const RECORDED: &[(&str, bool)] = &[];
 
 /// The tests whose outcome, assertion count, stderr and exit status agree while
@@ -172,23 +170,6 @@ fn every_test_of_the_phase_8_groups_passes_and_matches_the_oracle_but_the_record
         return;
     }
     private_service();
-    let exclusions =
-        fs::read_to_string(worktree().join("docs/superpowers/plans/phase-4-exclusions.txt"))
-            .expect("the exclusions file");
-    // A record names each test on a line of its own.
-    let record_lines: BTreeSet<&str> = exclusions.lines().map(str::trim).collect();
-    for name in RECORDED
-        .iter()
-        .chain(DETAIL_DIFFERS.iter())
-        .map(|(name, _)| name)
-    {
-        let test = name.split_once('.').expect("GROUP.TEST").1;
-        assert!(
-            record_lines.contains(test),
-            "{name} has no record in phase-4-exclusions.txt"
-        );
-    }
-
     let oracle = oracle::locate();
     let run = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("api-group-tests-{}", std::process::id()))

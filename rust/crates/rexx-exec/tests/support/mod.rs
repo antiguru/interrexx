@@ -22,6 +22,10 @@ pub mod setup_cpp;
 /// to invoke the oracle identically or their results are not comparable.
 pub mod oracle;
 
+/// The Deviations table, `rust/corpus/deviations.tsv`, and the chapter
+/// headings it is held equal to.
+pub mod deviations;
+
 /// The oracle's private `XDG_RUNTIME_DIR`, whose daemon is stopped when the process ends.
 pub mod oracle_runtime;
 
