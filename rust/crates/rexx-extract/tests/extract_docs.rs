@@ -1,4 +1,4 @@
-//! The both-directions check over `corpus/docs/`, and the D56 revision stamp.
+//! The both-directions check over `corpus/docs/`, and its revision stamp.
 
 use rexx_extract::docs::{self, classes, hierarchy};
 use std::collections::{BTreeMap, BTreeSet};
@@ -84,7 +84,7 @@ fn every_row_set_is_exactly_what_its_extractor_derives_today() {
     }
 }
 
-/// D56's stamp. `oodocs/` is git-ignored, so nothing in the checkout records
+/// The revision stamp. `oodocs/` is git-ignored, so nothing in the checkout records
 /// what it held; the stamp and `svn info` are the only pair that can say
 /// whether a committed row set is stale.
 #[test]

@@ -1,11 +1,11 @@
-# Why no phase owes each loud refusal.
+# Why each loud refusal stays.
 #
 # crates/rexx-exec/tests/refusal_dispositions.rs reads every `Loud` constructor in
 # crates/rexx-exec/src and requires a row here for each one; it fails on a constructor
-# with no row, on a row whose constructor is gone, on a row naming a phase, and on a
-# citation that does not resolve.
+# with no row, on a row whose constructor is gone, and on a citation that does not
+# resolve.
 #
-# Columns, tab-separated: constructor, kind, phase, record.
+# Columns, tab-separated: constructor, kind, record.
 #
 # kind:
 #   GUARD      no program reaches it; the record names the probes that tried, or the
@@ -13,62 +13,61 @@
 #   DEVIATION  matching the oracle is wrong; the record cites an oracle-crashes.txt entry or
 #              an active Deviation of spec/src/deviations.md.
 #   LIMIT      a design limit; the record cites the Deviation or design document licensing it.
-# phase is `-` for every row: no refusal names a phase since Phase 10 closed.
 #
-binary_operator	GUARD	-	internal inconsistency: every Operator belongs to a family of Interp::apply_binary (census class d-guard)
-call_op_off_its_node	GUARD	-	compiler invariant (census d-guard). Reached once, by a concatenation in a non-first call argument (phase-6-gate.md, Task 13 notes); that repro answers `ok` at 6860d4f80 (Task 7 probe cop/s.rex)
-chunk_map_too_short	GUARD	-	compiler invariant: a chunk maps every instruction of its body (census d-guard)
-chunk_refused	LIMIT	-	the compiled stream's index widths, docs/design/architecture.md, "The IR and executor" (ChunkTooLarge: u16 registers, slots and arguments, u32 ops); no second engine since the tree-walker's removal
-classic_style_routine	GUARD	-	no routine table this crate loads on Linux has a ROUTINE_CLASSIC_STYLE row: git grep --no-index -n -I -e REXX_CLASSIC_ROUTINE -e ROUTINE_CLASSIC_STYLE -- ootest testbinaries extensions samples finds only extensions/platform/windows/rxwinsys/rxwinsys.cpp (Phase 9b Task 9 report); the oracle passes such a routine the .STDQUE queue name, which stays Phase 10 Rxapi
-constant_out_of_range	GUARD	-	compiler invariant: a Const op names a constant of its own chunk (census d-guard)
-conversion_raised	GUARD	-	scout A c7: c_native_raised raises the callee's condition on both engines (rc 163); both callers of Interp::refusal answer Refused::Raised before reaching it
-entry_method_without_a_value	DEVIATION	-	Deviation 29: the oracle stores its evaluation stack for a value-less NAME= send
-environment_entry	GUARD	-	scout A b18: envx_* (every .environment and .local index in its own program), env_new_activity, env_reply_activity: with no owner it is an entry the library bootstrap fills, and only STDQUE (Phase 10) refused
-environment_symbol	GUARD	-	scout A b16 and b18: c2_stream_first_clause, c2_address_with_stream_first (.STREAM before StreamClasses.orx), envx_*, env_new_activity, env_reply_activity; only STDQUE (Phase 10) refused. Phase 9a Task 5 probes nt1, nt2 (Message~notify after removing MESSAGENOTIFICATION from .environment and .local, and from a ::REQUIRES prolog) and info (.rexxinfo~executable and ~libraryPath, which build a .FILE) answer
-expose_receiver	GUARD	-	Task 4 report, "Kept with owner None": EXPOSE from methods of Directory, .local, .environment and a Directory subclass, a borrowed Object RUN row on an instance; all answer, oracle-identical
-expression	GUARD	-	every ExprKind evaluates (tests/owners.rs: EXPR_TAGS are all in scope, EXPECTED_OUT_OF_SCOPE is empty); each site is a match arm for a form its caller routes elsewhere (census d-guard)
-fork_child	DEVIATION	-	Deviation 42: SysFork, whose forked child cannot continue without the timer thread and the joining main thread; not supported (Moritz 2026-10-17)
-frame_without_executable	GUARD	-	the probes reached this site only on a library routine's frame, which answers its Routine object (rust/corpus/lang/stackframe_library_routine_executable.rex, rust/corpus/lang/stackframe_merged_library_executable.rex) and refused on no other frame
-handle_descriptor	DEVIATION	-	Deviation 35: a HANDLE: stream on a descriptor other than 0, 1 or 2 needs unsafe to adopt; the oracle's HANDLE: stream never reaches its descriptor (crates/rexx-exec/tests/stream_handle.rs)
-hash_collection_without_store	DEVIATION	-	oracle-crashes.txt entry 50: the oracle dies on a hash class instance Class~new builds with .Class as the scope; the other hash.rs refusals (the condition object, a subclass whose INIT does not forward, the package tables) answer before this site
-immovable_reply	LIMIT	-	Deviation 15 (spec 2026-09-29 section 5)
-instruction	GUARD	-	every InstructionKind executes (tests/owners.rs: INSTRUCTION_TAGS are all in scope, EXPECTED_OUT_OF_SCOPE is empty); each site is a match arm for a kind its caller routes elsewhere (census d-guard)
-internal_routine	GUARD	-	every row of the internal-package routine table has a body: rexx-exec tests/internal_routines.rs every_internal_routine_row_runs
-interpreter_table_copy	GUARD	-	a sweep found no such receiver, since every native_instance caller builds another class and .environment, .local, .methods and .routines are instance stores
-inverted_wait	LIMIT	-	Deviation 14 (spec 2026-09-29 section 2.6)
-jump_out_of_range	GUARD	-	compiler invariant: a jump stays inside its range (census d-guard)
-library_procedure_gone	GUARD	-	a held library is never released (refusal-sites.tsv: library_method_package_blame.rex, library_routine_package_blame.rex agree)
-library_source	GUARD	-	scout A b17: rexx-lib pins each embedded .orx by sha256, and every probe in scout A's Appendix C ran past the library bootstrap
-loop_op_off_its_node	GUARD	-	compiler invariant: a DO/LOOP op names its own loop (census d-guard)
-metaclass_new_reused_class	DEVIATION	-	Deviation 32: a metaclass NEW answering a class Class~new did not build or a subclass already took, which the oracle rewires into the new subclass in place; Phase 9a Task 8b review probes metaarr, metaold
-missing_body	GUARD	-	every body selector names a directive index the parser fills (refusal-sites.tsv: an instance reading a generated accessor agrees)
-missing_rexx_class	GUARD	-	invariant: CommandClasses.orx's CommandContext and NativeCommandHandler are the REXX package's public classes, installed at bootstrap, and no program removes a class from the REXX package (Package has no removing method, and its publicClasses answers a copy). rust/corpus/lang/command_classes_survive_environment_removal.rex removes both from .environment and from that copy, then reaches all three sites (.CommandHandler~handler('sh'), ADDRESS to a registered CommandHandler subclass, and a native command forwarded from its CommandContext, succeeding and failing): answers as the oracle does
-named_semaphore	DEVIATION	-	Deviation 43: a named RexxUtil event or mutex semaphore, which the oracle backs with a POSIX sem_open semaphore shared between processes; not supported (Moritz 2026-10-17)
-numeric_form_without_expression	GUARD	-	parser guarantee: NUMERIC FORM VALUE with no expression is 35.917 at parse time
-object_method	GUARD	-	Task 4 report, "Kept with owner None": .object~define, .string~inherit (98.985), SETMETHOD to an Array or String (97.2), setMethod, unsetMethod and setMethod OBJECT from methods of Directory, .local, .environment and a Directory subclass; all answer or raise, oracle-identical
-object_name_of_a_value	DEVIATION	-	Deviation 36: OBJECTNAME= on a value-based String, which carries no per-object state (spec 2026-10-14-phase-9b1 section 1)
-op_not_driven	GUARD	-	driver invariant: every op the compiler emits has a driver arm, and a pass boundary finds its own loop open (census d-guard). Reached by a WHILE or UNTIL test running a routine that loops (extensions/yaml/yaml.cls); corpus/lang/loop_test_callee_loop.rex and loop_test_callee_loop_chunk.rex, which reached it with "a pass boundary with no loop open" and "Store", answer oracle-identical since Phase 9d Task 4
-operator_operand	GUARD	-	scout A b12: spec-op.txt, every dyadic and prefix operator on nine left operands, refused none
-parse_trigger_operand	GUARD	-	parser guarantee: a PARSE trigger that needs an operand carries one (census d-guard)
-receiver_class	DEVIATION	-	oracle-crashes.txt entry 33 and Deviation 28: a primitive's native method run on an object of another class crashes the oracle or answers an accident of memory; Task 4 probes b2_run_*_on_inst, Task 7 probes rc2, rc3; oracle-crashes.txt entry 35: a SUPPLIER answer that is not a supplier, walked by ~defineMethods (Phase 9a Task 5 probe dm7); oracle-crashes.txt entry 8: a metaclass NEW answering something that is not a class, which ~subclass casts unchecked (Phase 9a Task 8b pin a_metaclass_new_answering_no_new_class_is_loud); a written .ROUTINES entry that is not a routine, which PackageClass::findLocalRoutine casts unchecked (classes/PackageClass.cpp:827, not run on the oracle)
-register_not_logical	GUARD	-	compiler invariant: a branch reads a register holding a logical (census d-guard)
-scheduler_inconsistency	GUARD	-	scheduler invariant (refusal-sites.tsv: guarded_getter_waits_for_reply.rex agrees)
-select_op_off_its_node	GUARD	-	compiler invariant: a SELECT op names its own SELECT (census d-guard)
-setup_method	GUARD	-	scout A b15: b_define_class_method_setup, b_inherit_instance_methods are 97.1 on both engines
-signal_op_off_its_node	GUARD	-	compiler invariant: a Signal op matches its SIGNAL's form (census d-guard)
-sim_blocked_command	LIMIT	-	docs/design/architecture.md, "Simulation mode" (a wait only a command's peer can end is refused in sim): a command runs on the baton under a real-time bound, block= (2 s by default), and any command slower than it is refused, whether it waits on another activity or is only slow; timing-dependent by nature, and block= is how a program with slow commands runs under sim
-sim_blocked_native	LIMIT	-	docs/design/architecture.md, "Simulation mode" (a wait only a native's own thread or a peer can end is refused in sim): a native call that leaves its driver runs on the baton under block=, past which the interpreter's thread is signalled once and the call refused once it returns; any such call slower than the bound is refused, timing-dependent by nature; a native that retries on EINTR or blocks outside a system call stays unbounded, and so does a native call under a pin, which does not leave its driver (it hangs on the oracle too)
-sim_endless_wait	LIMIT	-	docs/design/architecture.md, "Simulation mode": a deadlock in the simulation mode is a loud refusal; virtual time cannot end a wait only a real signal can
-sim_foreign_post	LIMIT	-	docs/design/architecture.md, "Simulation mode": any inbox post other than a signal's halt, and a callback from a thread running none of the interpreter's native calls, is a determinism breach, refused loudly
-sim_replay_diverged	LIMIT	-	docs/design/architecture.md, "Simulation mode" (trace and replay): a replay takes the trace's decisions in order, and one the run takes otherwise (another program, a damaged or edited file) is refused rather than run on a schedule the trace does not hold
-sim_trace_unwritten	LIMIT	-	docs/design/architecture.md, "Simulation mode" (trace and replay): a run asked for a decision trace that it cannot write fails, so a harness that checks the status learns it has none
-stale_handle	LIMIT	-	a local reference protects its object only until the call that made it ends, so a handle kept past that call resolves to nothing: rust/crates/rexx-api/src/values/convert.rs. Using one is outside the API
-store_op_off_its_node	GUARD	-	compiler invariant: a Store op names its own assignment (census d-guard)
-string_answer_not_a_string	DEVIATION	-	Deviation 30: a user STRING method answering an object with no string value, which the oracle converts to .nil, read by a consumer of its bytes; Task 11a probes bytes_dir, bytes_nil, bytes_queue, bytes_obj
-unbound_method	GUARD	-	a sweep sent every documented method with its required arguments and every scope override, and Interp::invocable found each resolved method in a table
-unfilled_slot	GUARD	-	no populated interface table keeps a refusing stub: rexx-api tests/layout.rs no_populated_table_member_refuses compares every member of every populated table with its stub
-unknown_receiver	GUARD	-	scout A b9 b11_ctx_exec_* and weak reference sends b_weakref_*, b2_run_hasmethod_on_weakref; Task 7 probe rc4 and Phase 9a Task 5 probe copy8 (a Method copy passed to define, setMethod and run answers); the rest are handles whose object is gone or kinds receiver_kind has no arm for
-unrecorded_executable	GUARD	-	invariant: every Method and Routine object is recorded where it is built and its record is dropped only with the object; Phase 9b1 Task 7 probes executable_a.rex and executable_b.rex (copies, Method and Routine subclass instances, setMethod, define and defineMethods with method objects) answer as the oracle does
-unreadable_collection	GUARD	-	scout A b18: env_supplier; with no owner it is a directory holding an entry the library bootstrap fills, and only STDQUE (Phase 10) refused
-unresolved_call	GUARD	-	built for an excluded builtin, and rexx-exec tests/coverage.rs the_builtin_exclusion_set_matches_the_committed_file holds the exclusions empty; and for BuiltinTarget::Gap, which src/builtin/tests.rs resolve_partitions_the_in_scope_set_into_rows_and_gaps asserts no name reaches
-unsatisfiable_wait	LIMIT	-	Deviation 20 (rulings P27, P65, P77)
+binary_operator	GUARD	internal inconsistency: every Operator belongs to a family of Interp::apply_binary (census class d-guard)
+call_op_off_its_node	GUARD	compiler invariant (census d-guard). Reached once, by a concatenation in a non-first call argument (phase-6-gate.md, Task 13 notes); that repro answers `ok` at 6860d4f80 (Task 7 probe cop/s.rex)
+chunk_map_too_short	GUARD	compiler invariant: a chunk maps every instruction of its body (census d-guard)
+chunk_refused	LIMIT	the compiled stream's index widths, docs/design/architecture.md, "The IR and executor" (ChunkTooLarge: u16 registers, slots and arguments, u32 ops); no second engine since the tree-walker's removal
+classic_style_routine	GUARD	no routine table this crate loads on Linux has a ROUTINE_CLASSIC_STYLE row: git grep --no-index -n -I -e REXX_CLASSIC_ROUTINE -e ROUTINE_CLASSIC_STYLE -- ootest testbinaries extensions samples finds only extensions/platform/windows/rxwinsys/rxwinsys.cpp (Phase 9b Task 9 report); the oracle passes such a routine the .STDQUE queue name, which stays Phase 10 Rxapi
+constant_out_of_range	GUARD	compiler invariant: a Const op names a constant of its own chunk (census d-guard)
+conversion_raised	GUARD	scout A c7: c_native_raised raises the callee's condition on both engines (rc 163); both callers of Interp::refusal answer Refused::Raised before reaching it
+entry_method_without_a_value	DEVIATION	Deviation 29: the oracle stores its evaluation stack for a value-less NAME= send
+environment_entry	GUARD	scout A b18: envx_* (every .environment and .local index in its own program), env_new_activity, env_reply_activity: with no owner it is an entry the library bootstrap fills, and only STDQUE (Phase 10) refused
+environment_symbol	GUARD	scout A b16 and b18: c2_stream_first_clause, c2_address_with_stream_first (.STREAM before StreamClasses.orx), envx_*, env_new_activity, env_reply_activity; only STDQUE (Phase 10) refused. Phase 9a Task 5 probes nt1, nt2 (Message~notify after removing MESSAGENOTIFICATION from .environment and .local, and from a ::REQUIRES prolog) and info (.rexxinfo~executable and ~libraryPath, which build a .FILE) answer
+expose_receiver	GUARD	Task 4 report, "Kept with owner None": EXPOSE from methods of Directory, .local, .environment and a Directory subclass, a borrowed Object RUN row on an instance; all answer, oracle-identical
+expression	GUARD	every ExprKind evaluates (tests/owners.rs: EXPR_TAGS are all in scope, EXPECTED_OUT_OF_SCOPE is empty); each site is a match arm for a form its caller routes elsewhere (census d-guard)
+fork_child	DEVIATION	Deviation 42: SysFork, whose forked child cannot continue without the timer thread and the joining main thread; not supported (Moritz 2026-10-17)
+frame_without_executable	GUARD	the probes reached this site only on a library routine's frame, which answers its Routine object (rust/corpus/lang/stackframe_library_routine_executable.rex, rust/corpus/lang/stackframe_merged_library_executable.rex) and refused on no other frame
+handle_descriptor	DEVIATION	Deviation 35: a HANDLE: stream on a descriptor other than 0, 1 or 2 needs unsafe to adopt; the oracle's HANDLE: stream never reaches its descriptor (crates/rexx-exec/tests/stream_handle.rs)
+hash_collection_without_store	DEVIATION	oracle-crashes.txt entry 50: the oracle dies on a hash class instance Class~new builds with .Class as the scope; the other hash.rs refusals (the condition object, a subclass whose INIT does not forward, the package tables) answer before this site
+immovable_reply	LIMIT	Deviation 15 (spec 2026-09-29 section 5)
+instruction	GUARD	every InstructionKind executes (tests/owners.rs: INSTRUCTION_TAGS are all in scope, EXPECTED_OUT_OF_SCOPE is empty); each site is a match arm for a kind its caller routes elsewhere (census d-guard)
+internal_routine	GUARD	every row of the internal-package routine table has a body: rexx-exec tests/internal_routines.rs every_internal_routine_row_runs
+interpreter_table_copy	GUARD	a sweep found no such receiver, since every native_instance caller builds another class and .environment, .local, .methods and .routines are instance stores
+inverted_wait	LIMIT	Deviation 14 (spec 2026-09-29 section 2.6)
+jump_out_of_range	GUARD	compiler invariant: a jump stays inside its range (census d-guard)
+library_procedure_gone	GUARD	a held library is never released (refusal-sites.tsv: library_method_package_blame.rex, library_routine_package_blame.rex agree)
+library_source	GUARD	scout A b17: rexx-lib pins each embedded .orx by sha256, and every probe in scout A's Appendix C ran past the library bootstrap
+loop_op_off_its_node	GUARD	compiler invariant: a DO/LOOP op names its own loop (census d-guard)
+metaclass_new_reused_class	DEVIATION	Deviation 32: a metaclass NEW answering a class Class~new did not build or a subclass already took, which the oracle rewires into the new subclass in place; Phase 9a Task 8b review probes metaarr, metaold
+missing_body	GUARD	every body selector names a directive index the parser fills (refusal-sites.tsv: an instance reading a generated accessor agrees)
+missing_rexx_class	GUARD	invariant: CommandClasses.orx's CommandContext and NativeCommandHandler are the REXX package's public classes, installed at bootstrap, and no program removes a class from the REXX package (Package has no removing method, and its publicClasses answers a copy). rust/corpus/lang/command_classes_survive_environment_removal.rex removes both from .environment and from that copy, then reaches all three sites (.CommandHandler~handler('sh'), ADDRESS to a registered CommandHandler subclass, and a native command forwarded from its CommandContext, succeeding and failing): answers as the oracle does
+named_semaphore	DEVIATION	Deviation 43: a named RexxUtil event or mutex semaphore, which the oracle backs with a POSIX sem_open semaphore shared between processes; not supported (Moritz 2026-10-17)
+numeric_form_without_expression	GUARD	parser guarantee: NUMERIC FORM VALUE with no expression is 35.917 at parse time
+object_method	GUARD	Task 4 report, "Kept with owner None": .object~define, .string~inherit (98.985), SETMETHOD to an Array or String (97.2), setMethod, unsetMethod and setMethod OBJECT from methods of Directory, .local, .environment and a Directory subclass; all answer or raise, oracle-identical
+object_name_of_a_value	DEVIATION	Deviation 36: OBJECTNAME= on a value-based String, which carries no per-object state (spec 2026-10-14-phase-9b1 section 1)
+op_not_driven	GUARD	driver invariant: every op the compiler emits has a driver arm, and a pass boundary finds its own loop open (census d-guard). Reached by a WHILE or UNTIL test running a routine that loops (extensions/yaml/yaml.cls); corpus/lang/loop_test_callee_loop.rex and loop_test_callee_loop_chunk.rex, which reached it with "a pass boundary with no loop open" and "Store", answer oracle-identical since Phase 9d Task 4
+operator_operand	GUARD	scout A b12: spec-op.txt, every dyadic and prefix operator on nine left operands, refused none
+parse_trigger_operand	GUARD	parser guarantee: a PARSE trigger that needs an operand carries one (census d-guard)
+receiver_class	DEVIATION	oracle-crashes.txt entry 33 and Deviation 28: a primitive's native method run on an object of another class crashes the oracle or answers an accident of memory; Task 4 probes b2_run_*_on_inst, Task 7 probes rc2, rc3; oracle-crashes.txt entry 35: a SUPPLIER answer that is not a supplier, walked by ~defineMethods (Phase 9a Task 5 probe dm7); oracle-crashes.txt entry 8: a metaclass NEW answering something that is not a class, which ~subclass casts unchecked (Phase 9a Task 8b pin a_metaclass_new_answering_no_new_class_is_loud); a written .ROUTINES entry that is not a routine, which PackageClass::findLocalRoutine casts unchecked (classes/PackageClass.cpp:827, not run on the oracle)
+register_not_logical	GUARD	compiler invariant: a branch reads a register holding a logical (census d-guard)
+scheduler_inconsistency	GUARD	scheduler invariant (refusal-sites.tsv: guarded_getter_waits_for_reply.rex agrees)
+select_op_off_its_node	GUARD	compiler invariant: a SELECT op names its own SELECT (census d-guard)
+setup_method	GUARD	scout A b15: b_define_class_method_setup, b_inherit_instance_methods are 97.1 on both engines
+signal_op_off_its_node	GUARD	compiler invariant: a Signal op matches its SIGNAL's form (census d-guard)
+sim_blocked_command	LIMIT	docs/design/architecture.md, "Simulation mode" (a wait only a command's peer can end is refused in sim): a command runs on the baton under a real-time bound, block= (2 s by default), and any command slower than it is refused, whether it waits on another activity or is only slow; timing-dependent by nature, and block= is how a program with slow commands runs under sim
+sim_blocked_native	LIMIT	docs/design/architecture.md, "Simulation mode" (a wait only a native's own thread or a peer can end is refused in sim): a native call that leaves its driver runs on the baton under block=, past which the interpreter's thread is signalled once and the call refused once it returns; any such call slower than the bound is refused, timing-dependent by nature; a native that retries on EINTR or blocks outside a system call stays unbounded, and so does a native call under a pin, which does not leave its driver (it hangs on the oracle too)
+sim_endless_wait	LIMIT	docs/design/architecture.md, "Simulation mode": a deadlock in the simulation mode is a loud refusal; virtual time cannot end a wait only a real signal can
+sim_foreign_post	LIMIT	docs/design/architecture.md, "Simulation mode": any inbox post other than a signal's halt, and a callback from a thread running none of the interpreter's native calls, is a determinism breach, refused loudly
+sim_replay_diverged	LIMIT	docs/design/architecture.md, "Simulation mode" (trace and replay): a replay takes the trace's decisions in order, and one the run takes otherwise (another program, a damaged or edited file) is refused rather than run on a schedule the trace does not hold
+sim_trace_unwritten	LIMIT	docs/design/architecture.md, "Simulation mode" (trace and replay): a run asked for a decision trace that it cannot write fails, so a harness that checks the status learns it has none
+stale_handle	LIMIT	a local reference protects its object only until the call that made it ends, so a handle kept past that call resolves to nothing: rust/crates/rexx-api/src/values/convert.rs. Using one is outside the API
+store_op_off_its_node	GUARD	compiler invariant: a Store op names its own assignment (census d-guard)
+string_answer_not_a_string	DEVIATION	Deviation 30: a user STRING method answering an object with no string value, which the oracle converts to .nil, read by a consumer of its bytes; Task 11a probes bytes_dir, bytes_nil, bytes_queue, bytes_obj
+unbound_method	GUARD	a sweep sent every documented method with its required arguments and every scope override, and Interp::invocable found each resolved method in a table
+unfilled_slot	GUARD	no populated interface table keeps a refusing stub: rexx-api tests/layout.rs no_populated_table_member_refuses compares every member of every populated table with its stub
+unknown_receiver	GUARD	scout A b9 b11_ctx_exec_* and weak reference sends b_weakref_*, b2_run_hasmethod_on_weakref; Task 7 probe rc4 and Phase 9a Task 5 probe copy8 (a Method copy passed to define, setMethod and run answers); the rest are handles whose object is gone or kinds receiver_kind has no arm for
+unrecorded_executable	GUARD	invariant: every Method and Routine object is recorded where it is built and its record is dropped only with the object; Phase 9b1 Task 7 probes executable_a.rex and executable_b.rex (copies, Method and Routine subclass instances, setMethod, define and defineMethods with method objects) answer as the oracle does
+unreadable_collection	GUARD	scout A b18: env_supplier; with no owner it is a directory holding an entry the library bootstrap fills, and only STDQUE (Phase 10) refused
+unresolved_call	GUARD	built for an excluded builtin, and rexx-exec tests/coverage.rs the_builtin_exclusion_set_matches_the_committed_file holds the exclusions empty; and for BuiltinTarget::Gap, which src/builtin/tests.rs resolve_partitions_the_in_scope_set_into_rows_and_gaps asserts no name reaches
+unsatisfiable_wait	LIMIT	Deviation 20 (rulings P27, P65, P77)

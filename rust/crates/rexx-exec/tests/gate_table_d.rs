@@ -9,9 +9,9 @@ use std::path::{Path, PathBuf};
 
 use gate_tables::orx::{self, CORE_CLASSES, STREAM_CLASSES};
 use gate_tables::{
-    CLOSED_PHASES, Descriptors, Report, Structural, Verdict, assert_no_structural_failures,
-    compare_raw, excerpt, is_loud, refused_construct, run_gate_probe, stdout_lines, verdict,
-    verdict_is_gated, verdict_label,
+    Descriptors, Report, Structural, Verdict, assert_no_structural_failures, compare_raw, excerpt,
+    is_loud, refused_construct, run_gate_probe, stdout_lines, verdict, verdict_is_gated,
+    verdict_label,
 };
 use support::oracle::{did_not_finish, wrapped_exit_code};
 
@@ -88,54 +88,13 @@ fn read_rows() -> Vec<Row> {
     rows
 }
 
-/// Which phase owes this row an `agree`.
-fn owning_phase(row: &Row) -> Option<&'static str> {
-    let directive = row.directive.as_str();
-    let keyword = row.keyword.as_str();
-    match (directive, keyword) {
-        ("::CLASS", "CLASS") | ("::RESOURCE", "LIBRARY") => Some(PARSE_ERROR_RENDERING),
-        ("::ROUTINE", "EXTERNAL") => Some("7"),
-        ("::REQUIRES", "LIBRARY") => Some("7"),
-        ("::REQUIRES", "NAMESPACE") => Some("5d"),
-        ("::METHOD" | "::ATTRIBUTE", "DELEGATE") => Some("5b"),
-        ("::OPTIONS" | "::RESOURCE" | "::REQUIRES" | "::ROUTINE", _) => Some("5c"),
-        ("::ANNOTATE" | "::ATTRIBUTE" | "::CLASS" | "::METHOD", _) => Some("5a"),
+/// What this row waits on, which keeps it out of the gate: the two
+/// `cross-reference` rows wait on the rendering of a parse error.
+fn waits_on(row: &Row) -> Option<&'static str> {
+    match (row.directive.as_str(), row.keyword.as_str()) {
+        ("::CLASS", "CLASS") | ("::RESOURCE", "LIBRARY") => Some("parse-error-rendering"),
         _ => None,
     }
-}
-
-/// The owner of the two `cross-reference` rows: not a phase, and deliberately
-/// not spelled like one, so it can never match [`gate_tables::PHASE_GATE_ENV`]
-/// or sit in [`gate_tables::CLOSED_PHASES`].
-const PARSE_ERROR_RENDERING: &str = "deferred-parse-error-rendering";
-
-/// Every owner of this table's rows that is spelled like a phase (a leading
-/// digit) is in [`gate_tables::CLOSED_PHASES`], so its verdicts are gated.
-#[test]
-fn every_closed_phase_this_table_owns_rows_for_is_gated() {
-    let rows = read_rows();
-    let owners: BTreeSet<String> = rows
-        .iter()
-        .filter_map(owning_phase)
-        .map(str::to_string)
-        .collect();
-    // The owners come from a match over a file's rows, so an enumeration that
-    // read none of them would leave the filter below iterating nothing and
-    // still pass.
-    assert!(
-        !owners.is_empty(),
-        "no row named an owner, so this check no longer covers the table it reads"
-    );
-    let ungated: Vec<&String> = owners
-        .iter()
-        .filter(|phase| phase.starts_with(|c: char| c.is_ascii_digit()))
-        .filter(|phase| !CLOSED_PHASES.contains(&phase.as_str()))
-        .collect();
-    assert!(
-        ungated.is_empty(),
-        "{ungated:?} own rows in gate table D and are spelled like a phase, but CLOSED_PHASES \
-         does not name them -- a verdict of theirs can move and every gate still exits 0"
-    );
 }
 
 /// The rows whose probe the oracle refuses before it reaches its `say`.
@@ -240,13 +199,11 @@ fn the_verdict_function_partitions_the_descriptor_cube() {
 struct Measured {
     row: Row,
     probe: String,
-    phase: &'static str,
+    waits_on: Option<&'static str>,
     /// `None` where the oracle did not answer the row's question at all, so
-    /// no comparison of the two sides means anything. **The row stays in the
-    /// table** rather than being dropped: one row fewer is a lower gated
-    /// count, and a close criterion phrased over that count would then be
-    /// satisfiable by removing evidence. It is reported as `unanswered`, is
-    /// never `agree`, and its own structural failure is what reddens the run.
+    /// no comparison of the two sides means anything. The row stays in the
+    /// table as `unanswered`, never `agree`, and its own structural failure
+    /// reddens the run.
     verdict: Option<Verdict>,
     loud: bool,
     refused: Option<String>,
@@ -323,24 +280,13 @@ fn directive_option_gate_table() {
     let mut measured = Vec::new();
     for row in rows {
         let probe = row.probe_path();
-        let Some(phase) = owning_phase(&row) else {
-            structural.push(Structural {
-                subject: format!("{} {} {}", row.directive, row.keyword, row.position),
-                detail: "no arm of `owning_phase` covers this row, so nothing owes it \
-                         an `agree` and no gate could ever read it"
-                    .to_string(),
-            });
-            continue;
-        };
         // A channel of its own rather than a fallthrough to the set check
         // above, because that check answers a different question. It reads
         // `read_dir`, which lists an entry by name whatever the name resolves
         // to -- so a probe that is a **dangling symlink** is present in the
         // listing, passes the set comparison, and would leave the table here.
-        // Measured: with this path silent, such a row simply vanishes -- one
-        // row fewer, no structural failure, exit 0, and the gated count one
-        // lower than it was. A close criterion phrased over the gated count is
-        // then satisfiable by removing evidence.
+        // With this path silent, such a row simply vanishes: one row fewer,
+        // no structural failure, exit 0.
         let abs = match fs::canonicalize(corpus.join(&probe)) {
             Ok(abs) => abs,
             Err(error) => {
@@ -420,7 +366,7 @@ fn directive_option_gate_table() {
         let differs = compare_raw(&crate_side, &cpp);
         measured.push(Measured {
             probe,
-            phase,
+            waits_on: waits_on(&row),
             verdict: (answered == expected && !refusal_missing).then(|| verdict(differs)),
             loud: is_loud(&crate_side),
             refused: refused_construct(&crate_side.stderr),
@@ -506,7 +452,7 @@ fn directive_option_gate_table() {
     }
     report.line("");
     report.line(
-        "rows (verdict / loud / owning phase / row / .orx usage / probe, whose \
+        "rows (verdict / loud / waits on / row / .orx usage / probe, whose \
          directory is named above):",
     );
     for row in &measured {
@@ -514,7 +460,7 @@ fn directive_option_gate_table() {
             "  {:<14} loud={:<3} {:<29} {:<12} {:<12} {:<16} {:<44} {}",
             verdict_label(row.verdict),
             if row.loud { "yes" } else { "no" },
-            row.phase,
+            row.waits_on.unwrap_or("-"),
             row.row.directive,
             row.row.keyword,
             row.row.position,
@@ -558,23 +504,6 @@ fn directive_option_gate_table() {
         measured.iter().filter(|row| row.loud).count()
     ));
 
-    let mut by_phase: BTreeMap<&str, (usize, usize)> = BTreeMap::new();
-    for row in &measured {
-        let entry = by_phase.entry(row.phase).or_insert((0, 0));
-        entry.0 += 1;
-        // `unanswered` is not `agree`, so it counts as open and, on a gated
-        // phase, as gated: a row nothing could answer must never make the
-        // gated count smaller.
-        if row.verdict != Some(Verdict::Agree) {
-            entry.1 += 1;
-        }
-    }
-    report.line("");
-    report.line("by owning phase -- rows, and rows not yet `agree`:");
-    for (phase, (total, open)) in &by_phase {
-        report.line(&format!("  {phase}: {total} rows, {open} not yet `agree`"));
-    }
-
     let mut by_construct: BTreeMap<&str, usize> = BTreeMap::new();
     for row in &measured {
         if let Some(construct) = &row.refused {
@@ -591,12 +520,11 @@ fn directive_option_gate_table() {
 
     let gated: Vec<&Measured> = measured
         .iter()
-        .filter(|row| row.verdict != Some(Verdict::Agree) && verdict_is_gated(row.phase))
+        .filter(|row| row.verdict != Some(Verdict::Agree) && verdict_is_gated(row.waits_on))
         .collect();
     report.line("");
     report.line(&format!(
-        "gated by this run: {} row(s) whose owning phase is closing or closed and \
-         whose verdict is not `agree`",
+        "gated by this run: {} row(s) waiting on nothing whose verdict is not `agree`",
         gated.len()
     ));
 
@@ -610,8 +538,7 @@ fn directive_option_gate_table() {
     let names: Vec<&str> = gated.iter().map(|row| row.probe.as_str()).collect();
     assert!(
         gated.is_empty(),
-        "{} row(s) of gate table D owned by a closing or closed phase do not \
-         `agree` with the oracle: {names:?}. See the report above for each row's \
+        "{} gated row(s) of gate table D do not `agree` with the oracle: {names:?}. See the report above for each row's \
          three descriptors on both sides.",
         gated.len()
     );

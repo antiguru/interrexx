@@ -33,12 +33,9 @@ fn fixture(name: &str) -> PathBuf {
 
 /// Directories whose groups are excluded whole, with the reason.
 const EXCLUDED_DIRS: &[(&str, &str)] = &[
-    ("extensions/", "extension Phase 10 recompiles"),
-    ("samples/", "sample Phase 10 recompiles"),
-    (
-        "base/class/CommandHandler.testGroup",
-        "CommandHandler, Phase 10",
-    ),
+    ("extensions/", "native extension"),
+    ("samples/", "native sample"),
+    ("base/class/CommandHandler.testGroup", "CommandHandler"),
 ];
 
 /// A `::METHOD`, `::ROUTINE` or `::RESOURCE` of a group file.
@@ -241,7 +238,7 @@ fn sends(code: &str, name: &str) -> bool {
     })
 }
 
-/// The criterion's features `unit` uses itself.
+/// The concurrency features `unit` uses itself.
 fn features(unit: &Unit) -> BTreeSet<&'static str> {
     let code = unit.code.as_str();
     let mut found = BTreeSet::new();
@@ -296,7 +293,7 @@ fn rxapi(unit: &Unit) -> Option<&'static str> {
     const CALLS: &[&str] = &["rxqueue", "rxfuncadd", "rxfuncdrop", "rxfuncquery"];
     let code = unit.code.as_str();
     if code.contains(".rexxqueue") {
-        return Some("RexxQueue, Phase 10");
+        return Some("RexxQueue");
     }
     let word_set: BTreeSet<&str> = words(code).collect();
     if word_set.iter().any(|word| word.contains("rexxmacro"))
@@ -386,7 +383,7 @@ fn derive(root: &Path) -> (Vec<Derived>, Vec<(Derived, &'static str)>) {
             .iter()
             .find(|(prefix, _)| {
                 group.starts_with(prefix)
-                    && !suite_rows::PHASE_9_EXTENSION_DIRS
+                    && !suite_rows::REXX_EXTENSION_DIRS
                         .iter()
                         .any(|dir| group.starts_with(dir))
             })
@@ -451,7 +448,7 @@ fn the_derived_list_is_the_committed_one() {
 }
 
 #[test]
-fn the_derived_list_holds_the_groups_the_spec_names() {
+fn the_derived_list_holds_the_core_concurrency_groups() {
     const NAMED: &[&str] = &[
         "base/keyword/GUARD.testGroup",
         "base/keyword/REPLY.testGroup",
@@ -634,7 +631,7 @@ mod byte_exact_copies {
     }
 }
 
-/// One test of criterion 1's derived list, run in process, for the
+/// One test of the derived list, run in process, for the
 /// instruments that read an `Outcome` field a feature adds.
 #[cfg(any(feature = "pinning", feature = "sharing"))]
 mod derived_runs {
@@ -1132,8 +1129,8 @@ mod measured {
     /// Two pinned busy-waiters that need each other: `a` spins until `b`
     /// sets `x`, then sets `y`; `b`, run inside `a`'s pinned yields, sets `x`
     /// and spins until `y`. `b`'s yields can never run `a`, buried below, so
-    /// each round of them is an inverted yield; the oracle completes (ruling
-    /// P31). Bounded by a deadline, so the count is asserted, not the end.
+    /// each round of them is an inverted yield, where the oracle completes.
+    /// Bounded by a deadline, so the count is asserted, not the end.
     #[test]
     fn pinned_busy_waiters_that_need_each_other_count_inverted_yields() {
         let source = "g = .gate~new\na = .t~new~start('a', g)\nb = .t~new~start('b', g)\n\

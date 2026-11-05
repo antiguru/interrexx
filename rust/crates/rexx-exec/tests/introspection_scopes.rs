@@ -253,7 +253,7 @@ fn committed() -> Vec<Scoped> {
 
 const HEADER: &str = "\
 # Which scope defines each documented introspection method, and whether that
-# scope's body is C++ or Rexx (Phase 5i Task 0). Derived by
+# scope's body is C++ or Rexx. Derived by
 # crates/rexx-exec/tests/introspection_scopes.rs, which re-derives it on every
 # run; edit that, never this.
 #

@@ -24,7 +24,7 @@ use std::process::{Command, Stdio};
 /// `core_execution.rs`'s `PROGRAM_PATH`.
 const ROW_PATH: &str = "/nonexistent/assertion-row.rex";
 
-/// Env var that flips this test from a progress report into the phase gate.
+/// Env var that flips this test from a progress report into the gate.
 /// Named separately from `corpus.rs`'s `REXX_CORPUS_GATE` because the two
 /// gate independent things -- the L0 corpus and this L1 assertion table --
 /// and a caller should be able to run one without the other.
@@ -185,7 +185,7 @@ struct ExemptRow {
     occurrence: usize,
     expr: &'static str,
     expected: &'static str,
-    /// The sub-phase whose delivery would actually make this row pass.
+    /// What would make this row pass.
     /// **Not** the same question as "which construct does this row's
     /// program happen to hit first today" (`RowOutcome::RuntimeBlocked`'s
     /// own `construct` field, reported separately).
@@ -193,7 +193,7 @@ struct ExemptRow {
 }
 
 /// The committed exempt set: every row this harness measures as not passing,
-/// with the sub-phase that would unblock it.
+/// with what would unblock it.
 const EXEMPT: &[ExemptRow] = &[];
 
 /// `row`'s 1-based position among every row seen so far (including `row`
@@ -407,7 +407,7 @@ fn describe(
         // committed fact ("what would actually make this row pass"). A
         // `RuntimeBlocked` row with no exempt
         // entry is not on the committed list at all, and says so plainly
-        // rather than guessing a phase for it.
+        // rather than guessing.
         RowOutcome::RuntimeBlocked { construct } => match exempt {
             Some(e) => format!(
                 "RUNTIME-BLOCKED: first hit {construct} (not implemented); unblocked only by {}",
@@ -466,7 +466,7 @@ fn build_report(
 
     writeln!(
         w,
-        "extraction-blocked (Task 15a, unsupported prelude shape): {} methods, {} assertSame \
+        "extraction-blocked (unsupported prelude shape): {} methods, {} assertSame \
          calls dropped before ever becoming a row",
         extraction_blocked.len(),
         extraction_blocked.iter().map(|b| b.dropped).sum::<usize>()
@@ -519,7 +519,7 @@ fn build_report(
         writeln!(
             w,
             "*** REPORT MODE -- NOT THE GATE. {passed} of {total} matching means {} rows are \
-             not passing yet; it is a progress signal, not a claim that criterion 2 is met. ***",
+             not passing yet; it is a progress signal, not a pass. ***",
             total - passed
         )
         .unwrap();
@@ -624,8 +624,7 @@ fn assertions_differential() {
 /// Polices [`EXEMPT`] itself, in every mode, independent of `{GATE_ENV}`:
 /// the current not-passing set must equal the committed list **exactly**,
 /// same identity check `exempt_entry` uses (`group`, `method`,
-/// `occurrence`, `expr`, `expected`). This is the "assert that set" half
-/// of criterion 5's own device -- `assertions_differential`'s STRICT mode
+/// `occurrence`, `expr`, `expected`). `assertions_differential`'s STRICT mode
 /// is the *use* of the committed list (deciding what to forgive); this is
 /// the check that the list still describes reality, and it runs whether or
 /// not anyone ever sets `{GATE_ENV}`.
@@ -666,7 +665,7 @@ fn the_exempt_set_matches_the_current_blocked_rows() {
         assert!(
             found,
             "{group}::{method} occurrence {occurrence} (expr={expr:?}, expected={expected:?}) \
-             is not passing but has no EXEMPT entry -- add one, naming the sub-phase that \
+             is not passing but has no EXEMPT entry -- add one, naming what \
              actually unblocks it"
         );
     }
@@ -696,8 +695,7 @@ fn the_falsification_proof() {
     assert!(
         matches!(falsified, RowOutcome::Mismatch { .. }),
         "perturbing this row's expected value did not make it fail -- the comparison is not \
-         sensitive to the expected text, which is exactly the vacuous-table shape criterion 2 \
-         already had once"
+         sensitive to the expected text, which is the vacuous-table shape"
     );
 
     // The other direction: an *unperturbed* second row (there are thousands;

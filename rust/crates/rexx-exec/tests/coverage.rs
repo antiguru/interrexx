@@ -1,6 +1,6 @@
 //! Every `InstructionKind`, `ExprKind`, `LoopKind`, `PrefixOp`, `EndStyle`,
 //! `Trace` and `Operator` variant is either constructed by a program in
-//! `rust/corpus/differential.txt`, or carries the owner that refuses it. The
+//! `rust/corpus/differential.txt`, or is unreachable. The
 //! differential half -- those programs agree with the oracle -- is
 //! `tests/corpus.rs`.
 
@@ -13,9 +13,9 @@ use rexx_parse::{
     Program, Trace, parse_program,
 };
 
-#[path = "owners.rs"]
-mod owners;
-use owners::{
+#[path = "variant_tags.rs"]
+mod variant_tags;
+use variant_tags::{
     Coverage, END_STYLE_TAGS, EXPR_TAGS, INSTRUCTION_TAGS, LOOP_TAGS, OPERATOR_TAGS,
     PREFIX_OP_TAGS, TRACE_TAGS, end_style_tag, expr_tag, instruction_tag, loop_tag, operator_tag,
     prefix_op_tag, trace_tag,
@@ -595,7 +595,7 @@ fn every_in_scope_variant_is_witnessed_by_the_corpus_list() {
             use std::fmt::Write as _;
             writeln!(
                 report,
-                "{}: {} in-scope variant(s) unwitnessed by the corpus list: {}",
+                "{}: {} variant(s) unwitnessed by the corpus list: {}",
                 cov.category,
                 missing.len(),
                 missing.join(", ")
@@ -603,10 +603,7 @@ fn every_in_scope_variant_is_witnessed_by_the_corpus_list() {
             .unwrap();
         }
     }
-    assert!(
-        report.is_empty(),
-        "criterion 1's coverage property fails:\n{report}"
-    );
+    assert!(report.is_empty(), "the coverage property fails:\n{report}");
 }
 
 /// The builtin exclusions (none), written as a literal rather than parsed

@@ -128,7 +128,7 @@ pub fn rows(edges: &[Edge]) -> Vec<String> {
         .collect()
 }
 
-/// The header the committed file carries, with its D56 stamp.
+/// The header the committed file carries, with its revision stamp.
 pub fn header(stamp: &str, excluded: &[&str]) -> Vec<String> {
     vec![
         "Table C's wiring edge set: the documented superclass-or-mixin edge per".into(),

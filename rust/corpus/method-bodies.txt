@@ -1,4 +1,4 @@
-# The method-body table (D76): one row per (class, method, arm) of
+# The method-body table: one row per (class, method, arm) of
 # corpus/docs/class-methods.txt, classified by sending the documented name
 # with NO ARGUMENTS to a real receiver -- the class object for the class arm,
 # and class-set.txt's construction expression for the instance arm.

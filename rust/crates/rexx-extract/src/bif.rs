@@ -87,7 +87,7 @@ pub enum DropReason {
     /// what its prelude says.
     SideEffectingAssertion,
     /// The call reads the clock or the random generator, so two evaluations of
-    /// it need not agree (decision D11).
+    /// it need not agree.
     ClockDependent,
 }
 
@@ -924,7 +924,7 @@ fn call_arguments(text: &str, open: usize) -> Option<Vec<&str>> {
 }
 
 /// Whether `text` calls a builtin whose answer is not a function of its
-/// arguments (decision D11).
+/// arguments.
 fn clock_dependent(text: &str) -> bool {
     for run in symbol_runs(text) {
         if !run.is_call {

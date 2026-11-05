@@ -1,12 +1,12 @@
-base/class/CommandHandler.testGroup TEST_CONTEXT_REFUSED_ON_ANOTHER_THREAD -- CommandHandler, Phase 10
-base/class/CommandHandler.testGroup TEST_COMMAND_FROM_ANOTHER_THREAD -- CommandHandler, Phase 10
-base/class/CommandHandler.testGroup TEST_CONCURRENT_NESTED_COMMANDS -- CommandHandler, Phase 10
-base/class/RexxQueue.testGroup TEST_DELETE_WHILE_LINEIN -- RexxQueue, Phase 10
-base/class/RexxQueue.testGroup TEST_LINEIN_WAITS_PULL_DOESNT -- RexxQueue, Phase 10
-extensions/rxsock/socketClass.testGroup TEST_005 -- extension Phase 10 recompiles
-extensions/rxsock/socketClass.testGroup TEST_006 -- extension Phase 10 recompiles
-extensions/rxsock/socketClass.testGroup TEST_007 -- extension Phase 10 recompiles
-samples/scclient.testGroup TEST_04_SCCLIENT.REX -- sample Phase 10 recompiles
-samples/scserver.testGroup TEST_04_SCSERVER.REX -- sample Phase 10 recompiles
-samples/sfclient.testGroup TEST_04_SFCLIENT.REX -- sample Phase 10 recompiles
-samples/sfserver.testGroup TEST_04_SFSERVER.REX -- sample Phase 10 recompiles
+base/class/CommandHandler.testGroup TEST_CONTEXT_REFUSED_ON_ANOTHER_THREAD -- CommandHandler
+base/class/CommandHandler.testGroup TEST_COMMAND_FROM_ANOTHER_THREAD -- CommandHandler
+base/class/CommandHandler.testGroup TEST_CONCURRENT_NESTED_COMMANDS -- CommandHandler
+base/class/RexxQueue.testGroup TEST_DELETE_WHILE_LINEIN -- RexxQueue
+base/class/RexxQueue.testGroup TEST_LINEIN_WAITS_PULL_DOESNT -- RexxQueue
+extensions/rxsock/socketClass.testGroup TEST_005 -- native extension
+extensions/rxsock/socketClass.testGroup TEST_006 -- native extension
+extensions/rxsock/socketClass.testGroup TEST_007 -- native extension
+samples/scclient.testGroup TEST_04_SCCLIENT.REX -- native sample
+samples/scserver.testGroup TEST_04_SCSERVER.REX -- native sample
+samples/sfclient.testGroup TEST_04_SFCLIENT.REX -- native sample
+samples/sfserver.testGroup TEST_04_SFSERVER.REX -- native sample

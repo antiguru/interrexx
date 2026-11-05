@@ -8,8 +8,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use gate_tables::{
-    CLOSED_PHASES, Descriptors, Report, Structural, Verdict, assert_no_structural_failures,
-    excerpt, stdout_lines, verdict, verdict_is_gated, verdict_label,
+    Descriptors, Report, Structural, Verdict, assert_no_structural_failures, excerpt, stdout_lines,
+    verdict, verdict_is_gated, verdict_label,
 };
 use table_c::checks::{
     OracleShape, argutil_assertion, check_concept_line_counts, check_documented_edge,
@@ -28,15 +28,10 @@ fn corpus_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus")
 }
 
-/// One concept row's committed assignment: which phase owes it an `agree`,
-/// and the negative control that would redden it.
+/// One concept row and the negative control that would redden it.
 struct Concept {
     /// The `provide.xml` section id, which is also the probe's file stem.
     id: &'static str,
-    /// The phase that owes this row an `agree`.
-    phase: &'static str,
-    /// The authority for that assignment.
-    authority: &'static str,
     /// The change that would redden the row.
     control: &'static str,
     /// How many lines of `stdout` this section's probe prints on the oracle.
@@ -47,32 +42,21 @@ struct Concept {
 const CONCEPTS: &[Concept] = &[
     Concept {
         id: "typcla",
-        phase: "5a",
-        authority: "spec enumeration: the four kinds themselves are 5a, with enforcement \
-                    split into its own rows",
         control: "make `::CLASS ... METACLASS` a no-op, so the declared class is an \
                   instance of `.Class` like a plain one. The section's abstract \
-                  kind has no control here and is not owed one: this probe asks each class \
-                  its `~class~id`, which an abstract class answers exactly as a plain one \
-                  does, and abstract enforcement is `abscla`'s row, at 5b because the check \
-                  lives inside `~new` -- a discriminator added here would duplicate that row \
-                  rather than cover a gap",
+                  kind has no control here: this probe asks each class its `~class~id`, \
+                  which an abstract class answers exactly as a plain one does, and abstract \
+                  enforcement is `abscla`'s row",
         oracle_lines: 4,
     },
     Concept {
         id: "objcla",
-        phase: "5b",
-        authority: "the section's distinguishing claim is that an object acquires its \
-                    class's methods at the time of its creation, which needs `~new`; the \
-                    plan's handover puts instance construction in 5b",
         control: "rebuild an existing instance's method lookup from its class on every \
-                  send, so a method defined after the instance was created answers -- 5b",
+                  send, so a method defined after the instance was created answers",
         oracle_lines: 3,
     },
     Concept {
         id: "xmixin",
-        phase: "5a",
-        authority: "spec enumeration: a mixin's base class, and who may inherit it, is 5a",
         control: "answer `~baseClass` with the class itself rather than with the mixin's \
                   first non-mixin superclass, or merge an INHERIT target's methods in front \
                   of the class's own",
@@ -80,63 +64,42 @@ const CONCEPTS: &[Concept] = &[
     },
     Concept {
         id: "abscla",
-        phase: "5b",
-        authority: "spec enumeration: abstract-*class* enforcement is 5b, because the check \
-                    lives inside `~new`; the abstract-*method* half is 5a and has no arm of \
-                    this section's probe",
         control: "drop `checkAbstract` from the `~new` path, so an abstract class \
-                  constructs -- 5b",
+                  constructs",
         oracle_lines: 1,
     },
     Concept {
         id: "xmetac",
-        phase: "5a",
-        authority: "spec enumeration: the metaclass graph and its circularity is 5a",
         control: "ignore `METACLASS`, so a class declared with one is still an instance of \
                   `.Class`",
         oracle_lines: 3,
     },
     Concept {
         id: "xcremet",
-        phase: "5a",
-        authority: "no row in the spec enumeration; the probe needs `::CLASS` install with a \
-                    quoted identifier and a `::METHOD ... CLASS` body",
         control: "install a quoted `::CLASS` identifier under a different name, or give the \
                   new class a superclass other than Object",
         oracle_lines: 3,
     },
     Concept {
         id: "usingcl",
-        phase: "5a",
-        authority: "spec enumeration: `mixinClass()` and `inherit()` are 5a, and `~subclass` \
-                    is the same factory protocol reached by message rather than by directive",
         control: "answer `~subclass` with a class whose superclass is Object rather than the \
                   receiver",
         oracle_lines: 4,
     },
     Concept {
         id: "xscope",
-        phase: "5a",
-        authority: "spec enumeration: the method dictionary's one entry per scope, and \
-                    `Method~scope`, are 5a",
         control: "answer `~method` from the flattened all-scopes dictionary, so an inherited \
                   name answers where the oracle raises",
         oracle_lines: 2,
     },
     Concept {
         id: "usesem",
-        phase: "5b",
-        authority: "spec enumeration: per-object methods -- SETMETHOD and ENHANCED, and the \
-                    scope they create -- are 5b",
         control: "put a `setMethod` definition in the class's dictionary rather than in the \
-                  object's own scope, so it reaches the class's other instances -- 5b",
+                  object's own scope, so it reaches the class's other instances",
         oracle_lines: 4,
     },
     Concept {
         id: "methna",
-        phase: "5a",
-        authority: "no row in the spec enumeration; the probe needs `~define` and `~method`, \
-                    which the enumeration files under 5a",
         control: "stop uppercasing a method name as it is added, so a name defined in lower \
                   case is not found by the message that names it. Both sites have to go \
                   together, measured: `dispatch/class_protocol.rs`'s own `method_name_pair`, and \
@@ -146,28 +109,17 @@ const CONCEPTS: &[Concept] = &[
     },
     Concept {
         id: "xmeths",
-        phase: "5a",
-        authority: "spec enumeration: the complete method search order is 5a with the \
-                    per-object arm 5b; this probe deliberately omits that arm, which is \
-                    `usesem`'s row",
         control: "search a superclass before the class's own dictionary, or drop the \
                   `UNKNOWN` step so a miss goes straight to NOMETHOD",
         oracle_lines: 3,
     },
     Concept {
         id: "unkno",
-        phase: "5a",
-        authority: "spec enumeration: the complete method search order, of which `UNKNOWN` \
-                    is a step, is 5a",
-        control: "**delete the `UNKNOWN` step** and record that this row reddens. One of \
-                  D50's two required controls; runnable only once the step exists",
+        control: "delete the `UNKNOWN` step",
         oracle_lines: 1,
     },
     Concept {
         id: "chsrod",
-        phase: "5a",
-        authority: "spec enumeration: changing the search order -- `~m:scope`, `~m:super` -- \
-                    is 5a",
         control: "start a scope-override send at the receiver's own class rather than at the \
                   named scope, which makes `self~type:super` recurse or answer the \
                   subclass's method",
@@ -175,76 +127,48 @@ const CONCEPTS: &[Concept] = &[
     },
     Concept {
         id: "pubpri",
-        phase: "5a",
-        authority: "spec enumeration: PUBLIC / PACKAGE / PRIVATE as three access scopes is 5a",
         control: "let a PRIVATE method answer a send from outside the object, so the \
                   outside-send line answers instead of raising 97.2",
         oracle_lines: 2,
     },
     Concept {
         id: "creo",
-        phase: "5b",
-        authority: "spec enumeration: initialization of an instance -- `~new`, `init`, \
-                    `self~init:super` -- is 5b",
         control: "stop calling `init` after `~new` builds the object, or pass `~new`'s \
-                  arguments to the wrong `init` -- 5b",
+                  arguments to the wrong `init`",
         oracle_lines: 3,
     },
     Concept {
         id: "obdes",
-        phase: "5b",
-        authority: "spec enumeration: object destruction and uninitialization -- `UNINIT` \
-                    and its propagation flags -- is 5b, with the flags carried by 5a's code",
-        control: "skip the termination sweep, since under D59 a class object's storage is \
-                  never reclaimed and no collection ever reaches one. Measured as run: the \
-                  row reddens **silently**, rc 0 with empty stderr on both sides, differing \
-                  on stdout alone -- 5b",
+        control: "skip the termination sweep, since a class object's storage is never \
+                  reclaimed and no collection ever reaches one. The row reddens on stdout \
+                  alone, rc 0 with empty stderr on both sides",
         oracle_lines: 2,
     },
     Concept {
         id: "reqstr",
-        phase: "5a",
-        authority: "spec enumeration: required string values -- request(\"STRING\") to \
-                    makeString to NOSTRING to defaultName -- is 5a",
-        control: "**delete the `makeString` limb** and record that this row reddens (the \
-                  second of D50's two required controls), and **answer `makeString` with \
-                  the wrong string**, which reddens the same row at rc 0 with empty stderr \
-                  on both sides -- that second one is table C's mutation 3",
+        control: "delete the `makeString` limb, or answer `makeString` with the wrong \
+                  string, which reddens the row at rc 0 with empty stderr on both sides",
         oracle_lines: 6,
     },
     Concept {
         id: "concurr",
-        phase: "5a",
-        authority: "spec enumeration: GUARDED/UNGUARDED, REPLY and GUARD legality is 5a, \
-                    with the semantics Phase 6's",
         control: "refuse `REPLY` inside a method body, or stop returning its expression to \
                   the sender",
         oracle_lines: 3,
     },
     Concept {
         id: "classmeth",
-        phase: "5a",
-        authority: "no row in the spec enumeration; the probe asks `~id` of every class \
-                    reachable as an environment symbol",
         control: "drop a class from the registry, so its `~id` line cannot answer",
         oracle_lines: 31,
     },
     Concept {
         id: "chi",
-        phase: "5a",
-        authority: "no row in the spec enumeration as a section; the hierarchy list is the \
-                    wiring rows' own authority and the probe asks `~superClass` \
-                    and `~superClasses`",
         control: "answer `~superClass` with the whole superclass list's last element rather \
                   than the class's direct superclass",
         oracle_lines: 8,
     },
     Concept {
         id: "methodsbyclass",
-        phase: "5b",
-        authority: "no row in the spec enumeration; the probe needs a multidimensional Array \
-                    instance for the section's own `matrix[2, 3] = 0` note, and the plan's \
-                    handover puts instance construction in 5b",
         control: "route `matrix[2, 3] = 0` to a single-index `[]=`, so the element read back \
                   is not the one written; or transpose the index mapping, which the `order` \
                   line reads and no write-then-read pair can. Transpose the **offset \
@@ -253,33 +177,28 @@ const CONCEPTS: &[Concept] = &[
                   not terminate, because a subscript past the dimension it was mispaired with \
                   re-enters `array_extend_multi` and the interpreter thread overflows its \
                   stack at rc 134, which reads as an infrastructure failure and not as a \
-                  reddened row -- 5b",
+                  reddened row",
         oracle_lines: 5,
     },
 ];
 
-/// The phase that owes every wiring row an `agree`.
-const WIRING_PHASE: &str = "5a";
-
-/// The owner of a method row that is never expected to agree, deliberately not
-/// spelled like a phase so it can never match [`gate_tables::PHASE_GATE_ENV`]
-/// or sit in [`gate_tables::CLOSED_PHASES`].
+/// What a method row that is never expected to agree waits on.
 const NEVER_AGREES: &str = "never-expected-to-agree";
 
-/// The `class-set.txt` status [`method_row_owner`] pairs with
+/// The `class-set.txt` status [`method_row_waits_on`] pairs with
 /// [`INSTANCE_ARM`] to read a row as one no run can ever move.
 const UNREACHABLE_STATUS: &str = "unreachable";
 
 /// The `class-methods.txt` arm in that pair.
 const INSTANCE_ARM: &str = "instance";
 
-/// The phase that owes one method row an `agree`: its class's `method-owner`
-/// column, except for a row that can never agree.
-fn method_row_owner<'a>(class: &'a ClassRow, arm: &str, status: &str) -> &'a str {
+/// What one method row waits on, which keeps it out of the gate: its class's
+/// `waits-on` column, or [`NEVER_AGREES`] for a row that can never agree.
+fn method_row_waits_on(class: &ClassRow, arm: &str, status: &str) -> Option<String> {
     if status == UNREACHABLE_STATUS && arm == INSTANCE_ARM {
-        NEVER_AGREES
+        Some(NEVER_AGREES.to_string())
     } else {
-        &class.owner
+        class.waits_on.clone()
     }
 }
 
@@ -303,16 +222,13 @@ struct Measured {
     kind: &'static str,
     /// The row's identity, as the report prints it.
     subject: String,
-    /// Everything the row's key does not carry: a citation, a phase, a title.
+    /// Everything the row's key does not carry: a citation, a title.
     detail: String,
     probe: String,
-    phase: String,
     /// `None` where the oracle did not answer the row's question at all, so
-    /// no comparison of the two sides means anything. **The row stays in the
-    /// table**: dropping it would leave one row fewer, a lower gated count,
-    /// and a close criterion phrased over that count satisfiable by removing
-    /// evidence. It is reported as `unanswered`, is never `agree`, and its
-    /// own structural failure is what makes the run red.
+    /// no comparison of the two sides means anything. The row stays in the
+    /// table as `unanswered`, never `agree`, and its own structural failure
+    /// makes the run red.
     verdict: Option<Verdict>,
     loud: bool,
     refused: Option<String>,
@@ -355,49 +271,6 @@ fn concept_rows<'a>(
         }
     }
     rows
-}
-
-/// Every owner the method rows carry.
-fn method_row_owners() -> BTreeSet<String> {
-    let classes = read_classes();
-    let by_name: BTreeMap<&str, &ClassRow> =
-        classes.iter().map(|row| (row.name.as_str(), row)).collect();
-    read_method_rows()
-        .iter()
-        .filter_map(|row| by_name.get(row.class.as_str()).map(|class| (class, row)))
-        .map(|(class, row)| method_row_owner(class, &row.arm, &row.status).to_string())
-        .collect()
-}
-
-/// Every owner of this table's rows that is spelled like a phase (a leading
-/// digit) is in [`CLOSED_PHASES`], so its verdicts are gated.
-#[test]
-fn every_closed_phase_this_table_owns_rows_for_is_gated() {
-    let method_owners = method_row_owners();
-    // The method family's owners come from a file, so an enumeration that read
-    // none of them would leave the filters below iterating the concept and
-    // wiring phases alone and still pass.
-    assert!(
-        !method_owners.is_empty(),
-        "no method row named an owner, so this check no longer covers the family it was \
-         widened for"
-    );
-    let owners: BTreeSet<String> = CONCEPTS
-        .iter()
-        .map(|concept| concept.phase.to_string())
-        .chain([WIRING_PHASE.to_string()])
-        .chain(method_owners)
-        .collect();
-    let ungated: Vec<&String> = owners
-        .iter()
-        .filter(|phase| phase.starts_with(|c: char| c.is_ascii_digit()))
-        .filter(|phase| !CLOSED_PHASES.contains(&phase.as_str()))
-        .collect();
-    assert!(
-        ungated.is_empty(),
-        "{ungated:?} own rows in gate table C and are spelled like a phase, but CLOSED_PHASES \
-         does not name them -- a verdict of theirs can move and every gate still exits 0"
-    );
 }
 
 #[test]
@@ -446,7 +319,7 @@ fn concept_and_class_gate_table() {
                     status: class.status.clone(),
                     reason: class.reason.clone(),
                     construction: class.construction.clone(),
-                    owner: method_row_owner(class, &row.arm, &row.status).to_string(),
+                    waits_on: method_row_waits_on(class, &row.arm, &row.status),
                     rows: vec![index],
                 });
             }
@@ -551,7 +424,6 @@ fn concept_and_class_gate_table() {
                 section.depth, section.parent, section.line
             ),
             probe,
-            phase: concept.phase.to_string(),
             verdict: answered.then(|| verdict(ran.differs)),
             loud: ran.crate_loud,
             refused: ran.crate_refused,
@@ -594,7 +466,6 @@ fn concept_and_class_gate_table() {
             subject: row.name.clone(),
             detail: format!("{} {} {}", row.entry, row.status, row.cite),
             probe,
-            phase: WIRING_PHASE.to_string(),
             verdict: answered.then(|| verdict(ran.differs)),
             loud: ran.crate_loud,
             refused: ran.crate_refused,
@@ -636,7 +507,6 @@ fn concept_and_class_gate_table() {
             subject,
             detail: format!("provide.xml:{}", edge.line),
             probe,
-            phase: WIRING_PHASE.to_string(),
             verdict: answered.then(|| verdict(ran.differs)),
             loud: ran.crate_loud,
             refused: ran.crate_refused,
@@ -650,7 +520,7 @@ fn concept_and_class_gate_table() {
     }
 
     // One measurement per method row, from one run per (class, arm).
-    let mut method_measured: Vec<(usize, Option<Verdict>, bool, Option<String>, String)> =
+    let mut method_measured: Vec<(usize, Option<Verdict>, bool, Option<String>, Option<String>)> =
         Vec::new();
     let mut method_programs: Vec<MethodProgram> = Vec::new();
     for group in &method_groups {
@@ -716,13 +586,13 @@ fn concept_and_class_gate_table() {
                 (shape_held && asked).then(|| verdict(differs)),
                 ran.crate_loud,
                 ran.crate_refused.clone(),
-                group.owner.clone(),
+                group.waits_on.clone(),
             ));
         }
         method_programs.push(MethodProgram {
             class: class.clone(),
             arm: arm.clone(),
-            owner: group.owner.clone(),
+            waits_on: group.waits_on.clone(),
             probe,
             rows: rows.clone(),
             loud: ran.crate_loud,
@@ -762,31 +632,24 @@ fn concept_and_class_gate_table() {
     report.line(&format!("the ArgUtil assertion: {argutil}"));
 
     report.line("");
-    report.line("concept rows (verdict / loud / owning phase / section / probe):");
+    report.line("concept rows (verdict / loud / section / probe):");
     for row in measured.iter().filter(|row| row.kind == "concept") {
         emit_row(&mut report, row, CONCEPT_SUBDIR);
     }
     report.line("");
     report.line("the negative control each concept row carries:");
     for (section, concept) in &concepts {
-        report.line(&format!(
-            "  {:<16} {:<4} {}",
-            section.id, concept.phase, concept.control
-        ));
-        report.line(&format!(
-            "      owning-phase authority: {}",
-            concept.authority
-        ));
+        report.line(&format!("  {:<16} {}", section.id, concept.control));
     }
 
     report.line("");
-    report.line("class wiring rows (verdict / loud / owning phase / class / probe):");
+    report.line("class wiring rows (verdict / loud / class / probe):");
     for row in measured.iter().filter(|row| row.kind == "class") {
         emit_row(&mut report, row, CLASS_SUBDIR);
     }
 
     report.line("");
-    report.line("hierarchy edge rows (verdict / loud / owning phase / edge / probe):");
+    report.line("hierarchy edge rows (verdict / loud / edge / probe):");
     for row in measured.iter().filter(|row| row.kind == "edge") {
         emit_row(&mut report, row, EDGE_SUBDIR);
     }
@@ -810,7 +673,7 @@ fn concept_and_class_gate_table() {
             program.class,
             program.arm,
             if program.loud { "yes" } else { "no" },
-            program.owner,
+            program.waits_on.as_deref().unwrap_or("-"),
             program.rows.len(),
             summary.join(" "),
             program
@@ -853,26 +716,18 @@ fn concept_and_class_gate_table() {
     }
 
     let mut by_verdict: BTreeMap<&str, usize> = BTreeMap::new();
-    let mut by_phase: BTreeMap<String, (usize, usize)> = BTreeMap::new();
     let mut by_construct: BTreeMap<String, usize> = BTreeMap::new();
     let mut loud_rows = 0usize;
     let mut gated: Vec<String> = Vec::new();
     let mut record = |verdict: Option<Verdict>,
-                      phase: &str,
+                      waits_on: Option<&str>,
                       loud: bool,
                       refused: &Option<String>,
                       probe: &str| {
         *by_verdict.entry(verdict_label(verdict)).or_insert(0) += 1;
-        let entry = by_phase.entry(phase.to_string()).or_insert((0, 0));
-        entry.0 += 1;
-        // `unanswered` is not `agree`, so it counts as open and, on a gated
-        // phase, as gated. That is the safe direction: a row nothing could
-        // answer must never make the gated count smaller.
-        if verdict != Some(Verdict::Agree) {
-            entry.1 += 1;
-            if verdict_is_gated(phase) {
-                gated.push(probe.to_string());
-            }
+        // `unanswered` is not `agree`, so a row nothing could answer is gated.
+        if verdict != Some(Verdict::Agree) && verdict_is_gated(waits_on) {
+            gated.push(probe.to_string());
         }
         if loud {
             loud_rows += 1;
@@ -882,12 +737,12 @@ fn concept_and_class_gate_table() {
         }
     };
     for row in &measured {
-        record(row.verdict, &row.phase, row.loud, &row.refused, &row.probe);
+        record(row.verdict, None, row.loud, &row.refused, &row.probe);
     }
-    for (index, verdict, loud, refused, owner) in &method_measured {
+    for (index, verdict, loud, refused, waits_on) in &method_measured {
         record(
             *verdict,
-            owner,
+            waits_on.as_deref(),
             *loud,
             refused,
             &method_probe(&method_rows[*index].class, &method_rows[*index].arm),
@@ -918,12 +773,6 @@ fn concept_and_class_gate_table() {
          group's probe raised first: {unasked}"
     ));
 
-    report.line("");
-    report.line("by owning phase -- rows, and rows not yet `agree`:");
-    for (phase, (total, open)) in &by_phase {
-        report.line(&format!("  {phase}: {total} rows, {open} not yet `agree`"));
-    }
-
     if !by_construct.is_empty() {
         report.line("");
         report.line("what the loud rows are waiting on:");
@@ -934,8 +783,7 @@ fn concept_and_class_gate_table() {
 
     report.line("");
     report.line(&format!(
-        "gated by this run: {} row(s) whose owning phase is closing or closed and whose \
-         verdict is not `agree`",
+        "gated by this run: {} row(s) waiting on nothing whose verdict is not `agree`",
         gated.len()
     ));
 
@@ -950,8 +798,7 @@ fn concept_and_class_gate_table() {
     let named: Vec<&String> = gated.iter().take(20).collect();
     assert!(
         gated.is_empty(),
-        "{} row(s) of gate table C owned by a closing or closed phase do not `agree` with \
-         the oracle; the first of them are {named:?}. See the report above for each row's \
+        "{} gated row(s) of gate table C do not `agree` with the oracle; the first of them are {named:?}. See the report above for each row's \
          three descriptors on both sides.",
         gated.len(),
     );
@@ -965,10 +812,10 @@ struct MethodGroup {
     status: String,
     reason: String,
     construction: Construction,
-    /// The phase that owes every row of this group an `agree`, from
-    /// [`method_row_owner`]. One value per group: the exception it derives is
-    /// keyed on the class's status and the arm, and a group is one (class, arm).
-    owner: String,
+    /// What every row of this group waits on, from [`method_row_waits_on`].
+    /// One value per group: it is keyed on the class's status and the arm, and
+    /// a group is one (class, arm).
+    waits_on: Option<String>,
     rows: Vec<usize>,
 }
 
@@ -976,7 +823,7 @@ struct MethodGroup {
 struct MethodProgram {
     class: String,
     arm: String,
-    owner: String,
+    waits_on: Option<String>,
     probe: String,
     rows: Vec<usize>,
     loud: bool,
@@ -993,10 +840,9 @@ struct MethodProgram {
 /// row is not `agree`.
 fn emit_row(report: &mut Report, row: &Measured, subdir: &str) {
     report.line(&format!(
-        "  {:<14} loud={:<3} {:<4} {:<40} {:<34} {}",
+        "  {:<14} loud={:<3} {:<40} {:<34} {}",
         verdict_label(row.verdict),
         if row.loud { "yes" } else { "no" },
-        row.phase,
         row.subject,
         row.detail,
         row.probe

@@ -231,7 +231,7 @@ pub fn by_test(rows: &[Row]) -> BTreeMap<(String, String), &Row> {
 }
 
 /// The `extensions/` directories of pure-Rexx packages.
-pub const PHASE_9_EXTENSION_DIRS: &[&str] = &[
+pub const REXX_EXTENSION_DIRS: &[&str] = &[
     "extensions/dateparser/",
     "extensions/json/",
     "extensions/yaml/",

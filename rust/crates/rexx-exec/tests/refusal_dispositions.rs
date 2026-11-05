@@ -1,8 +1,8 @@
 //! **Every refusal has a committed disposition.**
 //!
-//! No refusal names a phase that owes its work. So this file reads every `Loud` constructor in `src/`
-//! and requires each one to have a row in `corpus/refusal-dispositions.tsv`,
-//! saying why no phase owes it: GUARD (no program reaches it; the record names
+//! This file reads every `Loud` constructor in `src/` and requires each one
+//! to have a row in `corpus/refusal-dispositions.tsv`, saying why it stays:
+//! GUARD (no program reaches it; the record names
 //! the probes that tried), DEVIATION (matching the oracle is wrong; the record
 //! cites an `oracle-crashes.txt` entry or an active Deviation), or LIMIT (a
 //! design limit; the record cites the deviation or the design document that
@@ -24,7 +24,6 @@ const KINDS: &[&str] = &["GUARD", "DEVIATION", "LIMIT"];
 struct Row {
     constructor: String,
     kind: String,
-    phase: String,
     record: String,
 }
 
@@ -47,14 +46,13 @@ fn parse_table(text: &str) -> Vec<Row> {
             let fields: Vec<&str> = line.split('\t').collect();
             assert_eq!(
                 fields.len(),
-                4,
-                "four tab-separated fields (constructor, kind, phase, record) in {line:?}"
+                3,
+                "three tab-separated fields (constructor, kind, record) in {line:?}"
             );
             Row {
                 constructor: fields[0].to_string(),
                 kind: fields[1].to_string(),
-                phase: fields[2].to_string(),
-                record: fields[3].to_string(),
+                record: fields[2].to_string(),
             }
         })
         .collect()
@@ -352,12 +350,6 @@ fn problems(
         if row.record.trim().is_empty() || row.record == "-" {
             found.push(format!("{}: a row with no record", row.constructor));
         }
-        if row.phase != "-" {
-            found.push(format!(
-                "{}: phase {:?} on a {} row; no refusal names a phase",
-                row.constructor, row.phase, row.kind
-            ));
-        }
         let (crash, bad_crash) = crash_citations(&row.record, &documents.crashes);
         let (deviation, bad_deviation) = deviation_citations(&row.record, &documents.deviations);
         let (path, bad_path) = missing_paths(&row.record, &documents.repository);
@@ -493,7 +485,7 @@ impl Loud {
 }
 
 /// Each way a table can be wrong is found: a constructor with no row, a row
-/// with no constructor, a row naming a phase, a kind that is not a
+/// with no constructor, a kind that is not a
 /// disposition, a duplicate row, a struct literal outside a constructor, a
 /// citation that does not resolve, and a `-> Self` constructor.
 #[test]
@@ -561,11 +553,11 @@ fn hostemu() -> Loud {
         repository: rust_root().parent().expect("the repository").to_path_buf(),
     };
     let table = "\
-plain\tGUARD\t-\tprobe p1
-none\tDEVIATION\t-\toracle-crashes.txt entry 6
-mutant_self\tLIMIT\t-\tDeviation 20
-mixed\tGUARD\t-\tprobe p5
-hostemu\tGUARD\t-\tprobe p6
+plain\tGUARD\tprobe p1
+none\tDEVIATION\toracle-crashes.txt entry 6
+mutant_self\tLIMIT\tDeviation 20
+mixed\tGUARD\tprobe p5
+hostemu\tGUARD\tprobe p6
 ";
     assert!(
         problems(&sites, &[], &parse_table(table), &documents).is_empty(),
@@ -573,13 +565,13 @@ hostemu\tGUARD\t-\tprobe p6
         problems(&sites, &[], &parse_table(table), &documents)
     );
     let wrong = "\
-plain\tGUARD\t-\tprobe p1
-plain\tGUARD\t-\tprobe p1
-none\tDEVIATION\t-\toracle-crashes.txt entry 7
-gone\tGUARD\t-\tprobe p2
-hostemu\tREHOME\tPhase 11\t\"the row's text\"
-mixed\tGUARD\tPhase 11\tprobe p3
-mutant_self\tLIMIT\t-\tDeviation 21
+plain\tGUARD\tprobe p1
+plain\tGUARD\tprobe p1
+none\tDEVIATION\toracle-crashes.txt entry 7
+gone\tGUARD\tprobe p2
+hostemu\tREHOME\t\"the row's text\"
+mixed\tGUARD\tprobe p3
+mutant_self\tLIMIT\tDeviation 21
 ";
     let found = problems(&sites, &literals, &parse_table(wrong), &documents);
     let expect = [
@@ -590,7 +582,6 @@ mutant_self\tLIMIT\t-\tDeviation 21
         "none: cites oracle-crashes.txt entry 7",
         "gone: a row with no constructor",
         "hostemu: kind \"REHOME\" is not one of",
-        "mixed: phase \"Phase 11\" on a GUARD row",
         "mutant_self: cites Deviation 21, which does not exist",
     ];
     for needle in expect {

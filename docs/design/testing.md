@@ -88,7 +88,6 @@ Unset, the gate switches below report and exit 0; set to `1`, a mismatch fails t
 | `REXX_SUITE_GROUPS` | restricts the suite to these comma-separated `dir/group` names |
 | `REXX_SUITE_CRATE_FLOOR` | the least time bound, in seconds, for an interrexx group run |
 | `REXX_ASSERTIONS_GATE`, `REXX_BIF_GATE`, `REXX_KEYWORD_GATE` | the extracted-assertion tables fail on a mismatch |
-| `REXX_PHASE_GATE` | names a phase whose gate-table rows a verdict change fails, beside the closed phases' |
 | `REXX_SPEC_ORACLE` | runs the specification's examples on ooRexx too |
 | `REXX_SIM_SEEDS`, `REXX_SIM_POLICY`, `REXX_SIM_ONLY`, `REXX_SIM_JOBS`, `REXX_SIM_REPORT` | the simulation gate's seed count, policy, single replayed run, parallelism and report path |
 | `REXX_SIM_ORACLE_REFRESH`, `REXX_SIM_CALIBRATION` | grow the committed ooRexx outcome sets; write the calibration rows |

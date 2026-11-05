@@ -1,4 +1,4 @@
-//! The method-body table (D76): whether each documented method **works**,
+//! The method-body table: whether each documented method **works**,
 //! where gate table C only asks whether `hasMethod` answers for it.
 
 #![expect(
@@ -741,7 +741,7 @@ fn render(rows: &[MethodRow], measured: &BTreeMap<(String, String, String), Meas
 /// The committed table's header, which is where a reader of the data meets
 /// the four verdicts and the rule they are gated by.
 const TABLE_HEADER: &str = "\
-# The method-body table (D76): one row per (class, method, arm) of
+# The method-body table: one row per (class, method, arm) of
 # corpus/docs/class-methods.txt, classified by sending the documented name
 # with NO ARGUMENTS to a real receiver -- the class object for the class arm,
 # and class-set.txt's construction expression for the instance arm.
@@ -1040,7 +1040,7 @@ fn no_row_started_diverging_or_stopped_answering() {
     // ---------------------------------------------------------------- report
 
     let mut report = Report::new(
-        "rexx-exec method-body table (D76) -- whether each documented method works \
+        "rexx-exec method-body table -- whether each documented method works \
          (corpus/method-bodies.txt)",
     );
     report.line(&format!(

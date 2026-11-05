@@ -1,4 +1,5 @@
-//! The native-API ooTest groups this phase owns, run through `testOORexx.rex`'s
+//! The native-API ooTest groups whose libraries need no embedding API or
+//! registry, run through `testOORexx.rex`'s
 //! single-group form on both sides, one test per run, each run from a fresh
 //! copy of the framework and the group's directory at the same path, stdout
 //! compared with its timings and timestamps masked. A test whose outcome,
@@ -36,7 +37,8 @@ use support::oracle;
 /// The directory of the groups below `ootest/ooRexx`.
 const DIR: &str = "API/oo";
 
-/// The groups `api_group_partition.rs` derives as stage 8.
+/// The groups whose libraries import nothing from the embedding API or the
+/// registries.
 const GROUPS: &[&str] = &["CONVERSION", "FUNCTION", "METHOD"];
 
 /// The tests this crate does not pass, as `GROUP.TEST`; `false` for one that
@@ -164,7 +166,7 @@ fn a_constant_holding_a_queue_reaches_rxapi_from_the_tests_naming_it() {
 }
 
 #[test]
-fn every_test_of_the_phase_8_groups_passes_and_matches_the_oracle_but_the_recorded() {
+fn every_test_of_the_api_groups_passes_and_matches_the_oracle_but_the_recorded() {
     if !gate_mode() {
         eprintln!("api_group_tests: skipped without {GATE_ENV}");
         return;

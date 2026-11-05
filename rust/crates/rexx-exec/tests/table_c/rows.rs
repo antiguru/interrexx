@@ -78,9 +78,9 @@ pub(crate) struct ClassRow {
     pub(crate) status: String,
     pub(crate) reason: String,
     pub(crate) construction: Construction,
-    /// The row set's `method-owner` column: the phase that owes this class's
-    /// method rows an `agree`.
-    pub(crate) owner: String,
+    /// The row set's `waits-on` column: the unfinished work this class's
+    /// method rows wait on, which keeps them out of the gate.
+    pub(crate) waits_on: Option<String>,
 }
 
 pub(crate) fn read_classes() -> Vec<ClassRow> {
@@ -93,7 +93,7 @@ pub(crate) fn read_classes() -> Vec<ClassRow> {
             status: row[4].clone(),
             reason: row[5].clone(),
             construction: construction_of(&row[0], &row[4], &row[6], &row[7]),
-            owner: row[8].clone(),
+            waits_on: (row[8] != NO_PROGRAM).then(|| row[8].clone()),
         })
         .collect()
 }

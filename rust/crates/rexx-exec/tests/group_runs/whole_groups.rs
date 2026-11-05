@@ -24,7 +24,7 @@ const STARTED_ENV: &str = "REXX_WHOLE_GROUPS_STARTED";
 const ONLY_ENV: &str = "REXX_WHOLE_GROUPS_ONLY";
 
 /// Oracle runs per group, and per group whose oracle outcome varies or
-/// differs from ours (ruling P83).
+/// differs from ours.
 const ORACLE_RUNS: usize = 5;
 const ORACLE_RUNS_UNSETTLED: usize = 30;
 
@@ -41,7 +41,7 @@ const CRATE_FACTOR: u32 = 4;
 const CRATE_FLOOR: Duration = Duration::from_secs(60);
 
 /// Which tests of the group a run holds: all, those of the derived
-/// list, or all but the tests whose run here refuses (ruling P85).
+/// list, or all but the tests whose run here refuses.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Part {
     Whole,
@@ -66,7 +66,7 @@ const REST_LEFT_OUT: &[(&str, &str, &str)] = &[
     (
         "base/class/Class.testGroup",
         "TEST_SUBCLASSES_GC",
-        "loops until a dropped class is collected; classes are never collected (D59)",
+        "loops until a dropped class is collected; classes are never collected",
     ),
     (
         "base/class/Object.testGroup",
@@ -130,14 +130,14 @@ const DIFFERING: &[(&str, &str, &str, &str, &str)] = &[
         "whole",
         "every",
         "rexx-exec: the run exceeded its deadline, rc none, last started TEST_RELEASE_ONE_ARG, failing []",
-        "TEST_EXCLUSION's own race: the oracle hangs in it when that schedule is forced (SysSleep 0.01 after step = 6, P46)",
+        "TEST_EXCLUSION's own race: the oracle hangs in it when that schedule is forced (SysSleep 0.01 after step = 6)",
     ),
     (
         "base/class/MutexSemaphore.testGroup",
         "derived",
         "every",
         "rexx-exec: the run exceeded its deadline, rc none, last started TEST_RELEASE_ONE_ARG, failing []",
-        "TEST_EXCLUSION's own race: the oracle hangs in it when that schedule is forced (SysSleep 0.01 after step = 6, P46)",
+        "TEST_EXCLUSION's own race: the oracle hangs in it when that schedule is forced (SysSleep 0.01 after step = 6)",
     ),
     (
         "base/class/Object.testGroup",
@@ -214,70 +214,70 @@ const DIFFERING: &[(&str, &str, &str, &str, &str)] = &[
         "derived",
         "normal",
         "failure, assertions 0, rc 1, last started TEST_RAISE_INSERT_CRLF, failing [TEST_RAISE_INSERT_CRLF]",
-        "TEST_RAISE_INSERT_CRLF, as alone: message text conversion, outside Phase 6",
+        "TEST_RAISE_INSERT_CRLF, as alone: message text conversion",
     ),
     (
         "base/keyword/RAISE.testGroup",
         "derived",
         "every",
         "failure, assertions 0, rc 1, last started TEST_RAISE_INSERT_CRLF, failing [TEST_RAISE_INSERT_CRLF]",
-        "TEST_RAISE_INSERT_CRLF, as alone: message text conversion, outside Phase 6",
+        "TEST_RAISE_INSERT_CRLF, as alone: message text conversion",
     ),
     (
         "base/keyword/REPLY.testGroup",
         "whole",
         "every",
         "pass, assertions 19, rc 0, last started TEST_REPLY__CODE_RETURN, failing []",
-        "every continuation runs before the program ends; the oracle races them with its end (P41, phase-4-exclusions.txt row 22)",
+        "every continuation runs before the program ends; the oracle races them with its end",
     ),
     (
         "base/keyword/REPLY.testGroup",
         "derived",
         "every",
         "pass, assertions 18, rc 0, last started TEST_REPLY__CODE_RETURN, failing []",
-        "every continuation runs before the program ends; the oracle races them with its end (P41, phase-4-exclusions.txt row 22)",
+        "every continuation runs before the program ends; the oracle races them with its end",
     ),
     (
         "base/keyword/TRACE.testGroup",
         "whole",
         "normal",
         "error, assertions 129, rc 2, last started TEST_TRACE_VALUE_NUMERIC_INVALID, failing [TEST_TRACE_DROP TEST_TRACE_EXIT TEST_TRACE_EXPOSE TEST_TRACE_IGNORED TEST_TRACE_LABEL_WITH_FORWARD TEST_TRACE_OTHER_ENTRYPOINT TEST_TRACE_PROCEDURE]",
-        "tests outside the derived list that fail alone too (whole-groups/alone.txt); TEST_TRACE_LABEL_WITH_FORWARD's FORWARD/REPLY trace lines, measured alone 2026-10-07",
+        "tests outside the derived list that fail alone too (whole-groups/alone.txt); TEST_TRACE_LABEL_WITH_FORWARD's FORWARD/REPLY trace lines, measured alone",
     ),
     (
         "base/keyword/TRACE.testGroup",
         "whole",
         "every",
         "error, assertions 129, rc 2, last started TEST_TRACE_VALUE_NUMERIC_INVALID, failing [TEST_TRACE_DROP TEST_TRACE_EXIT TEST_TRACE_EXPOSE TEST_TRACE_IGNORED TEST_TRACE_LABEL_WITH_FORWARD TEST_TRACE_OTHER_ENTRYPOINT TEST_TRACE_PROCEDURE]",
-        "tests outside the derived list that fail alone too (whole-groups/alone.txt); TEST_TRACE_LABEL_WITH_FORWARD's FORWARD/REPLY trace lines, measured alone 2026-10-07",
+        "tests outside the derived list that fail alone too (whole-groups/alone.txt); TEST_TRACE_LABEL_WITH_FORWARD's FORWARD/REPLY trace lines, measured alone",
     ),
     (
         "base/keyword/TRACE_TraceObject.testGroup",
         "whole",
         "normal",
         "error, assertions 18, rc 2, last started TEST_VARIABLE, failing [TEST_CALLER_STACK_FRAME_REPLY_START TEST_OBJECT_AND_SCOPE TEST_VARIABLE TEST_CALLER_STACK_FRAME TEST_TRACEOBJECT_COLLECTOR]",
-        "tests that fail alone too, measured 2026-10-07: TraceObject VARIABLE, CALLERSTACKFRAME and collected trace lines; TEST_OBJECT_AND_SCOPE's collector receives no trace lines (0 against 19)",
+        "tests that fail alone too: TraceObject VARIABLE, CALLERSTACKFRAME and collected trace lines; TEST_OBJECT_AND_SCOPE's collector receives no trace lines (0 against 19)",
     ),
     (
         "base/keyword/TRACE_TraceObject.testGroup",
         "whole",
         "every",
         "error, assertions 18, rc 2, last started TEST_VARIABLE, failing [TEST_CALLER_STACK_FRAME_REPLY_START TEST_OBJECT_AND_SCOPE TEST_VARIABLE TEST_CALLER_STACK_FRAME TEST_TRACEOBJECT_COLLECTOR]",
-        "tests that fail alone too, measured 2026-10-07: TraceObject VARIABLE, CALLERSTACKFRAME and collected trace lines; TEST_OBJECT_AND_SCOPE's collector receives no trace lines (0 against 19)",
+        "tests that fail alone too: TraceObject VARIABLE, CALLERSTACKFRAME and collected trace lines; TEST_OBJECT_AND_SCOPE's collector receives no trace lines (0 against 19)",
     ),
     (
         "base/keyword/TRACE_TraceObject.testGroup",
         "derived",
         "normal",
         "error, assertions 2, rc 2, last started TEST_TRACEOBJECT_COLLECTOR, failing [TEST_CALLER_STACK_FRAME_REPLY_START TEST_TRACEOBJECT_COLLECTOR]",
-        "tests that fail alone too, measured 2026-10-07: TraceObject CALLERSTACKFRAME THREAD entries and collected trace lines",
+        "tests that fail alone too: TraceObject CALLERSTACKFRAME THREAD entries and collected trace lines",
     ),
     (
         "base/keyword/TRACE_TraceObject.testGroup",
         "derived",
         "every",
         "error, assertions 2, rc 2, last started TEST_TRACEOBJECT_COLLECTOR, failing [TEST_CALLER_STACK_FRAME_REPLY_START TEST_TRACEOBJECT_COLLECTOR]",
-        "tests that fail alone too, measured 2026-10-07: TraceObject CALLERSTACKFRAME THREAD entries and collected trace lines",
+        "tests that fail alone too: TraceObject CALLERSTACKFRAME THREAD entries and collected trace lines",
     ),
 ];
 
@@ -316,7 +316,7 @@ fn count_masked(run: &Run) -> Run {
 }
 
 /// Whether the oracle's distinct outcomes `seen` differ from each other
-/// only in their assertion count (ruling P86).
+/// only in their assertion count.
 fn counted_only(seen: &[&Run]) -> bool {
     seen.len() > 1
         && seen
@@ -538,8 +538,7 @@ fn verdict(file: &str, row: &Row, at: usize) -> Result<(), String> {
 }
 
 /// [`one_row`], run again once when a mode is not allowed and the
-/// group holds a row whose outcome depends on the wall clock (ruling
-/// P48).
+/// group holds a row whose outcome depends on the wall clock.
 fn checked(
     oracle: &oracle::Oracle,
     run: &Path,
@@ -555,9 +554,9 @@ fn checked(
     if !timed || (0..2).all(|at| verdict(file, &first.0, at).is_ok()) {
         return first;
     }
-    eprintln!("P48 rerun: {file} {}", part.label());
+    eprintln!("wall-clock rerun: {file} {}", part.label());
     let (mut row, normal) = one_row(oracle, run, file, part, left_out, refusing);
-    row.cells.push_str(" (P48 rerun)");
+    row.cells.push_str(" (wall-clock rerun)");
     (row, normal)
 }
 
@@ -612,7 +611,7 @@ fn one_row(
         cells.push_str(&format!("{}: {count} {}", at + 1, key(run)));
     }
     let mut started_cells = format!("{file}\t{}\tskipped [{}]", part.label(), refusing.join(" "));
-    // Ruling P86: where the oracle's runs differ from each other only
+    // Where the oracle's runs differ from each other only
     // in their assertion count, the count is not compared.
     let counted_only = counted_only(&seen.iter().map(|(run, _)| *run).collect::<Vec<_>>());
     let mut keys = [String::new(), String::new()];
@@ -628,7 +627,7 @@ fn one_row(
             }
             None if counted_only && agree(&count_masked(seen[0].0), &count_masked(run)) => {
                 agrees[at] = true;
-                format!("agrees but for the assertion count (P86): {}", keys[at])
+                format!("agrees but for the assertion count: {}", keys[at])
             }
             None => format!("differs: {}; {}", keys[at], difference(seen[0].0, run)),
         };
@@ -1828,7 +1827,7 @@ mod sim_gate {
         /// matches, by number.
         compared: Option<Option<usize>>,
         /// The rerun of a run whose reds were all checks in a test
-        /// whose outcome depends on the wall clock (ruling P48), and
+        /// whose outcome depends on the wall clock, and
         /// what it found.
         rerun: Option<String>,
     }
@@ -1975,8 +1974,7 @@ mod sim_gate {
         }
         let _ = write!(
             report,
-            "\n## Differences from the oracle sets\n{differences}\n## Wall-clock reruns \
-                     (ruling P48)\n{}\n\n## Reds\n{}\n\n## Exempted reds\n{}\n",
+            "\n## Differences from the oracle sets\n{differences}\n## Wall-clock reruns\n{}\n\n## Reds\n{}\n\n## Exempted reds\n{}\n",
             reruns.join("\n"),
             reds.join("\n"),
             exempted_reds.join("\n")
@@ -2281,9 +2279,9 @@ mod sim_gate {
             [(Kind::Abort, "no ooTest summary".to_string())]
         );
         let listed = "rexx-exec: method \"OBJECTNAME=\" of class \"Object\" is not \
-                              implemented (Phase 10 Extension)";
+                              implemented (owner)";
         let other = "rexx-exec: method \"COPY\" of class \"Object\" is not implemented \
-                             (Phase 10 Extension)";
+                             (owner)";
         let key = format!("{listed}, rc 120, last started T, failing []");
         let differing = [key.as_str()];
         let early = |line: &str, status: i32, policy: &str| {
@@ -2309,7 +2307,7 @@ mod sim_gate {
         );
         // A strict prefix of the listed refusal, and the listed refusal
         // at another status, are not the listed outcome.
-        let prefix = listed.trim_end_matches(" (Phase 10 Extension)");
+        let prefix = listed.trim_end_matches(" (owner)");
         for (line, status) in [(prefix, 120), (listed, 1)] {
             assert_eq!(early(line, status, "pre:1,k=1"), unlisted(line, status));
         }

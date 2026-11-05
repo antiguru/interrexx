@@ -299,7 +299,7 @@ fn the_alarm_and_ticker_groups_pass_in_both_modes() {
                 let mut label = row.outcome.label().to_string();
                 let key = format!("base/class/{group}.testGroup {}", row.test);
                 if !matches!(row.outcome, Outcome::Pass) && WALL_CLOCK.contains(&key.as_str()) {
-                    eprintln!("P48 rerun: {key} {name}: {label}");
+                    eprintln!("wall-clock rerun: {key} {name}: {label}");
                     let run = scratch(&format!("{name}-rerun"));
                     let one = std::slice::from_ref(&row.test);
                     let again = on_a_quiet_machine(|| {
@@ -307,8 +307,14 @@ fn the_alarm_and_ticker_groups_pass_in_both_modes() {
                     });
                     fs::remove_dir_all(run.parent().expect("a parent"))
                         .expect("cannot remove the run");
-                    label = format!("{label}, then {} (P48 rerun)", again[0].outcome.label());
-                    eprintln!("P48 rerun: {key} {name}: {}", again[0].outcome.label());
+                    label = format!(
+                        "{label}, then {} (wall-clock rerun)",
+                        again[0].outcome.label()
+                    );
+                    eprintln!(
+                        "wall-clock rerun: {key} {name}: {}",
+                        again[0].outcome.label()
+                    );
                     if !matches!(again[0].outcome, Outcome::Pass) {
                         not_passing.push(format!("{group} {name} {} {label}", row.test));
                     }
@@ -426,7 +432,7 @@ const TRACE_INTERLEAVES: &[&str] =
 
 /// The rows whose outcome on this crate depends on a wall-clock boundary or
 /// a sleep's duration, each with the lines that make it so: a failing check
-/// on one is run again once, and only a second failure counts (ruling P48).
+/// on one is run again once, and only a second failure counts.
 const WALL_CLOCK: &[&str] = &[
     // STREAM.testGroup:866-876
     "base/bif/STREAM.testGroup TEST_QUERYDIR_EXISTS",
@@ -717,7 +723,7 @@ fn row_in_both_modes(
         if raced {
             let modes = (
                 "every mode forces the test's own race; the oracle hangs in the \
-                     same interleaving (P46)"
+                     same interleaving"
                     .to_string(),
                 true,
             );
@@ -732,9 +738,9 @@ fn row_in_both_modes(
     };
     let (mut judged, mut hung) = judge();
     if (!judged.1 || !hung.is_empty()) && WALL_CLOCK.contains(&row.as_str()) {
-        eprintln!("P48 rerun: {row}: {} {hung:?}", judged.0);
+        eprintln!("wall-clock rerun: {row}: {} {hung:?}", judged.0);
         (judged, hung) = judge();
-        judged.0.push_str(" (P48 rerun)");
+        judged.0.push_str(" (wall-clock rerun)");
     }
     (normal, judged, hung)
 }

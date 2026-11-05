@@ -1,9 +1,8 @@
 # Gate-table probe programs
 
-**Not a differential corpus.** Almost every program here is the probe for one
-row of a Phase 5 gate table -- `native-entries/` is the exception and has a
-section of its own below -- and most of them diverge from the C++ oracle
-today, which is what the row records. A program here earns a line in
+**Not a differential corpus.** Every program here is the probe for one
+row of a gate table, and a row may diverge from the C++ oracle, which is what
+the row records. A program here earns a line in
 `../differential.txt`, whose entries mean "agrees with the oracle byte for
 byte", only once its row agrees, and stays here as well while some row still
 needs it.
@@ -77,20 +76,6 @@ read `agree` and count as satisfied. What the check is per directory:
 
 A row that fails its check keeps its place in the table and is reported as
 `unanswered`. It is never `agree`, and it still counts against the gate.
-
-## `native-entries/`
-
-Not a gate table's probes: one program per family of `LIBRARY REXX` entry
-point, run by `crates/rexx-exec/tests/native_entries.rs`. Each binds one entry
-point this phase does not implement and sends to it, so what it pins is that
-the bind succeeded and the *send* refused, naming the entry point and the
-phase that owes it a body.
-
-They live here rather than under `../lang/` for this directory's own reason:
-the oracle answers every one of them, because it has the body this crate has
-not built, so none of them can ever be a `differential.txt` row.
-`native_entries.rs` asserts that -- it fails on a line of that list naming
-this directory.
 
 **Those last three are derived, text and all.** `crates/rexx-exec/tests/table_c/probes.rs`'s
 `class_probe_text`, `edge_probe_text` and `method_probe_text` are the

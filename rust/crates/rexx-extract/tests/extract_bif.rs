@@ -399,7 +399,7 @@ fn a_value_setter_blocks_the_assertions_behind_it() {
 }
 
 /// A `DATE`/`TIME` call with an input value is deterministic and a bare one is
-/// not, and only the second is dropped (decision D11).
+/// not, and only the second is dropped.
 #[test]
 fn a_clock_read_is_dropped_and_a_reformat_is_not() {
     let bare = "::method 'test_clock'\n   self~assertSame(8, length(date('S')))\n";

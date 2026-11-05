@@ -171,18 +171,6 @@ pub fn assert_no_structural_failures(failures: &[Structural]) {
 /// switch `corpus.rs` reads.
 pub const CORPUS_GATE_ENV: &str = "REXX_CORPUS_GATE";
 
-/// Env var naming the phase being closed. Unset means no verdict gating at
-/// all; set, it names the one phase whose rows a verdict mismatch reddens,
-/// alongside every phase in [`CLOSED_PHASES`].
-pub const PHASE_GATE_ENV: &str = "REXX_PHASE_GATE";
-
-/// The phases whose rows stay gated for the rest of the project, without
-/// anyone having to set [`PHASE_GATE_ENV`]: a verdict of one of their rows
-/// moving is a regression.
-pub const CLOSED_PHASES: &[&str] = &[
-    "5a", "5b", "5c", "5d", "5e", "5f", "5g", "5h", "5i", "5j", "6", "7", "8",
-];
-
 /// Whether [`CORPUS_GATE_ENV`] is asking for the gate rather than the report.
 pub fn corpus_gate() -> bool {
     match env::var(CORPUS_GATE_ENV) {
@@ -191,17 +179,10 @@ pub fn corpus_gate() -> bool {
     }
 }
 
-/// The phase [`PHASE_GATE_ENV`] names, if any.
-pub fn closing_phase() -> Option<String> {
-    match env::var(PHASE_GATE_ENV) {
-        Ok(value) if !value.is_empty() => Some(value),
-        _ => None,
-    }
-}
-
-/// Whether a verdict mismatch on a row owned by `phase` is red.
-pub fn verdict_is_gated(phase: &str) -> bool {
-    corpus_gate() && (closing_phase().as_deref() == Some(phase) || CLOSED_PHASES.contains(&phase))
+/// Whether a verdict mismatch on a row is red: under the gate, unless the row
+/// names the unfinished work it waits on.
+pub fn verdict_is_gated(waits_on: Option<&str>) -> bool {
+    corpus_gate() && waits_on.is_none()
 }
 
 /// The name a row is reported and gated under when the oracle did not answer
@@ -265,16 +246,8 @@ impl Report {
         report.line(&"=".repeat(78));
         report.line(title);
         if gate {
-            let closing = closing_phase();
-            let mut gated: Vec<&str> = CLOSED_PHASES.to_vec();
-            if let Some(phase) = closing.as_deref()
-                && !gated.contains(&phase)
-            {
-                gated.push(phase);
-            }
             report.line(&format!(
-                "mode: STRICT (the gate) -- {CORPUS_GATE_ENV} is set, verdicts gated for {}",
-                gated.join(", ")
+                "mode: STRICT (the gate) -- {CORPUS_GATE_ENV} is set"
             ));
         } else {
             report.line(&format!(
@@ -298,10 +271,8 @@ impl Report {
     pub fn finish(mut self) -> String {
         if !self.gate {
             self.line(&format!(
-                "*** REPORT MODE -- NOT THE GATE. A non-`agree` row above is a row still \
-                 waiting on the task that owns it, not a failing test. Set \
-                 {CORPUS_GATE_ENV}=1 with {PHASE_GATE_ENV} to make a phase's rows an exit \
-                 status. ***"
+                "*** REPORT MODE -- NOT THE GATE. A non-`agree` row above is not a failing \
+                 test. Set {CORPUS_GATE_ENV}=1 to make the rows an exit status. ***"
             ));
         }
         self.line(&"=".repeat(78));

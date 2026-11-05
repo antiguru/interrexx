@@ -749,7 +749,7 @@ fn renamed_out_by_rows(group: &str, rows: &[&Row]) -> BTreeSet<String> {
         .collect()
 }
 
-/// D1 on this crate's run `ours` of a group whose rows are `rows`, its
+/// Judges this crate's run `ours` of a group whose rows are `rows`, its
 /// `expected` already the enumeration less the rows, and the oracle's run
 /// `oracle` against the rows: each reason the group is not green.
 pub fn judge(oracle: &GroupRun, ours: &GroupRun, rows: &[&Row]) -> Vec<String> {
@@ -871,7 +871,7 @@ pub fn per_test(
     report
 }
 
-/// D1 over the groups run, and spec section 2's denominator check: every
+/// Judges the groups run, with the denominator check: every
 /// group `testOORexx.rex` finds, or those [`GROUPS_ENV`] names, on both
 /// sides, each judged against the row files. Writes the table, the
 /// oracle-difference report, the per-test record and `verdicts.tsv` beside
@@ -964,7 +964,7 @@ fn l3_core_suite() {
     );
 }
 
-/// The row files' owner checks over every group (spec section 2), and each
+/// The row files' owner checks over every group, and each
 /// row [`suite_rows::derived_rows`] derives from the group files present.
 #[test]
 fn the_row_files_hold_only_checked_rows() {
@@ -1139,7 +1139,7 @@ mod rexxutil_groups {
     }
 }
 
-/// D1's judgement and the renaming rows ask for, on runs built by hand.
+/// The judgement and the renaming the rows ask for, on runs built by hand.
 mod judging {
     use std::collections::BTreeSet;
 
@@ -1225,16 +1225,8 @@ mod judging {
 
     #[test]
     fn only_an_environment_row_whose_test_hangs_is_renamed_out() {
-        let hangs = row(
-            "TEST_H",
-            Owner::Environment,
-            "hangs; record: r; ruled: Moritz 2000-01-01",
-        );
-        let fails = row(
-            "TEST_F",
-            Owner::Environment,
-            "fails; record: r; ruled: Moritz 2000-01-01",
-        );
+        let hangs = row("TEST_H", Owner::Environment, "hangs; record: r");
+        let fails = row("TEST_F", Owner::Environment, "fails; record: r");
         let flaky = row("TEST_L", Owner::Flaky, "hangs");
         assert_eq!(
             renamed_out_by_rows("G", &[&hangs, &fails, &flaky]),
@@ -1376,7 +1368,7 @@ mod row_checks {
         ),
         (
             LICENCES,
-            "samples/sfserver\tTEST_04_SFSERVER.REX\tEnvironment\trecord: rust/corpus/suite-oracle-runs/samples-sfserver.txt; ruled: Moritz 2000-01-01",
+            "samples/sfserver\tTEST_04_SFSERVER.REX\tEnvironment\trecord: rust/corpus/suite-oracle-runs/samples-sfserver.txt",
         ),
         (
             NOT_RUN,
@@ -1403,7 +1395,7 @@ mod row_checks {
         ),
         (
             NOT_RUN,
-            "extensions/platform/windows/rxwinsys/Clipboard\tTEST_01CREATE\tPhase 10 Extension\tgroup",
+            "extensions/platform/windows/rxwinsys/Clipboard\tTEST_01CREATE\tLater\tgroup",
         ),
         (
             LICENCES,
@@ -1423,23 +1415,15 @@ mod row_checks {
         ),
         (
             LICENCES,
-            "base/bif/CHAROUT\tTEST_STDOUT_START\tEnvironment\truled: Moritz 2026-10-11",
+            "base/bif/CHAROUT\tTEST_STDOUT_START\tEnvironment\trecord: rust/corpus/suite-oracle-runs/none.txt",
         ),
         (
             LICENCES,
-            "base/bif/CHAROUT\tTEST_STDOUT_START\tEnvironment\trecord: rust/corpus/suite-oracle-runs/none.txt; ruled: Moritz 2026-10-11",
+            "base/bif/CHAROUT\tTEST_STDOUT_START\tEnvironment\trecord: rust/corpus/suite-revision.txt",
         ),
         (
             LICENCES,
-            "base/bif/CHAROUT\tTEST_STDOUT_START\tEnvironment\trecord: rust/corpus/suite-revision.txt; ruled: Moritz 2026-10-11",
-        ),
-        (
-            LICENCES,
-            "samples/sfserver\tTEST_04_SFSERVER.REX\tEnvironment\trecord: rust/corpus/suite-oracle-runs/samples-scclient.txt; ruled: Moritz 2000-01-01",
-        ),
-        (
-            LICENCES,
-            "samples/sfserver\tTEST_04_SFSERVER.REX\tEnvironment\trecord: rust/corpus/suite-oracle-runs/samples-sfserver.txt; ruled: Moritz",
+            "samples/sfserver\tTEST_04_SFSERVER.REX\tEnvironment\trecord: rust/corpus/suite-oracle-runs/samples-scclient.txt",
         ),
         (
             LICENCES,

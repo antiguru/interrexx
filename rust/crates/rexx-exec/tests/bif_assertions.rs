@@ -163,8 +163,7 @@ enum RowOutcome {
     /// `40.9`.
     RaiseMismatch,
     /// Hit [`NOT_IMPLEMENTED_EXIT`]. `construct` is what the program ran into
-    /// first; `owner` is the phase `rexx-exec`'s own tables name for it, which
-    /// is the separate question of what would actually unblock it.
+    /// first; `owner` is the owner its refusal names, if any.
     Blocked {
         construct: String,
         owner: Option<String>,
@@ -175,8 +174,8 @@ enum RowOutcome {
 }
 
 impl RowOutcome {
-    /// The phase that would make this row pass, in the vocabulary the
-    /// committed exempt file uses. `None` for a passing row.
+    /// What this row is exempt under, in the vocabulary the committed exempt
+    /// file uses. `None` for a passing row.
     fn attribution(&self) -> Option<String> {
         match self {
             RowOutcome::Pass => None,
@@ -625,7 +624,7 @@ fn build_report(
     writeln!(
         w,
         "THIS HEADLINE IS A MEASUREMENT, NOT A THRESHOLD -- base/bif covers the whole builtin \
-         surface, including the names D4 excludes and the builtins later phases own."
+         surface."
     )
     .unwrap();
     writeln!(
@@ -787,14 +786,12 @@ fn a_raise_row_needs_the_sub_number_too() {
     );
 }
 
-/// The exempt file's `unblocked_by` column is in the owner vocabulary, or is one of the four
+/// The exempt file's `unblocked_by` column is a refusal's construct or one of the
 /// categories [`RowOutcome::attribution`] emits for a row that neither passes
 /// nor names a construct. Nothing else, so a typo cannot quietly become a new
 /// category that the set-equality test then happily matches against itself.
 #[test]
-fn every_exempt_attribution_is_a_known_phase_or_a_declared_outcome() {
-    const PHASES: &[&str] = &["4b", "4c"];
-
+fn every_exempt_attribution_is_a_declared_outcome() {
     // The count is the whole point of this table, not decoration on it.
     // `MISMATCH`'s two rows are `STREAM::test_relative_file_exists` and `...2`.
     // Both assert against `.ooTest.dir`, which does not resolve outside the
@@ -810,10 +807,8 @@ fn every_exempt_attribution_is_a_known_phase_or_a_declared_outcome() {
     let mut counts = vec![0usize; DERIVED.len()];
     for (key, attribution) in committed_exempt() {
         assert!(
-            PHASES.contains(&attribution.as_str())
-                || names.contains(&attribution.as_str())
-                || attribution.starts_with("UNATTRIBUTED:"),
-            "{key} is attributed to {attribution:?}, which is none of {PHASES:?} nor {names:?}"
+            names.contains(&attribution.as_str()) || attribution.starts_with("UNATTRIBUTED:"),
+            "{key} is attributed to {attribution:?}, which is none of {names:?}"
         );
         if let Some(i) = names.iter().position(|name| *name == attribution) {
             counts[i] += 1;
@@ -825,8 +820,7 @@ fn every_exempt_attribution_is_a_known_phase_or_a_declared_outcome() {
             expected,
             "{count} rows of {} carry the derived attribution {name}, against the {expected} \
              pinned here. A row with this attribution names no owner and no construct, so it is \
-             a divergence no phase is holding: give it a phase, or record it as a Deviation, \
-             and move this number deliberately rather than letting the set-equality test \
+             a divergence nothing accounts for: record it as a Deviation, and move this number deliberately rather than letting the set-equality test \
              absorb it",
             exempt_path().display()
         );

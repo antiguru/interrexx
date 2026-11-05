@@ -23,7 +23,7 @@ use support::sidecar::{
     self, Sidecar, empty_run_directory, prepare_run_directory, resolved_environment, sidecar_for,
 };
 
-/// Env var that flips this test from a progress report into the phase gate.
+/// Env var that flips this test from a progress report into the gate.
 /// See the module doc's "REPORT vs STRICT" section.
 const GATE_ENV: &str = "REXX_CORPUS_GATE";
 
@@ -506,8 +506,8 @@ fn build_report(matched: usize, total: usize, mismatches: &[Mismatch], gate: boo
         writeln!(
             w,
             "*** REPORT MODE -- NOT THE GATE. {matched} of {total} matching means {} \
-             programs still disagree with the oracle; it is a progress signal for the \
-             tasks still landing, not a claim that the phase is done. ***",
+             programs still disagree with the oracle; it is a progress signal, not a \
+             pass. ***",
             total - matched
         )
         .unwrap();

@@ -234,31 +234,17 @@ pub const CONSTRUCTION_DIRECTIVES: &[(&str, &str)] = &[("ROUTINE", "::routine r"
 /// that has none.
 pub const NO_PROGRAM: &str = "-";
 
-/// The owner `class-set.txt`'s `method-owner` column carries for a class whose
-/// method rows are not [`DEFAULT_METHOD_OWNER`]'s.
-pub const METHOD_OWNER: &[(&str, &str)] = &[
-    ("Alarm", "6"),
-    ("File", "7"),
-    ("StackFrame", STACK_FRAME_OWNER),
-    ("Stream", "7"),
-    ("StreamSupplier", "7"),
-    ("Ticker", "6"),
-];
+/// The unfinished work a class's method rows wait on, which
+/// `class-set.txt`'s `waits-on` column carries; every other class carries
+/// [`NO_PROGRAM`] and its method rows are gated.
+pub const METHOD_WAITS_ON: &[(&str, &str)] = &[("StackFrame", "rexxcontext-stackframes")];
 
-/// `StackFrame`'s owner: the `RexxContext` work its rows wait on, deliberately
-/// not spelled like a phase so it can never match `REXX_PHASE_GATE` or sit in
-/// `CLOSED_PHASES`.
-pub const STACK_FRAME_OWNER: &str = "deferred-rexxcontext-stackframes";
-
-/// The owner every class not named by [`METHOD_OWNER`] carries.
-pub const DEFAULT_METHOD_OWNER: &str = "5c";
-
-/// The phase that owes this class's method rows an `agree`.
-pub fn method_owner(name: &str) -> &'static str {
-    METHOD_OWNER
+/// What this class's method rows wait on, or [`NO_PROGRAM`].
+pub fn method_waits_on(name: &str) -> &'static str {
+    METHOD_WAITS_ON
         .iter()
         .find(|(class, _)| *class == name)
-        .map_or(DEFAULT_METHOD_OWNER, |(_, owner)| *owner)
+        .map_or(NO_PROGRAM, |(_, work)| *work)
 }
 
 /// A sentence of the reference saying the user cannot construct a class, with
@@ -357,9 +343,8 @@ pub struct ClassRow {
     pub entry: &'static str,
     pub coverage: Coverage,
     pub reason: String,
-    /// The phase that owes this class's method rows an `agree`, from
-    /// [`method_owner`].
-    pub owner: &'static str,
+    /// What this class's method rows wait on, from [`method_waits_on`].
+    pub waits_on: &'static str,
 }
 
 /// One row of `class-methods.txt`.
@@ -410,7 +395,7 @@ pub fn class_rows(books: &[Book], argutil_citation: &str) -> Vec<ClassRow> {
             "class"
         };
         let (coverage, reason) = coverage_of(&name, sentences.get(name.as_str()).copied());
-        let owner = method_owner(&name);
+        let waits_on = method_waits_on(&name);
         out.push(ClassRow {
             name,
             section: id,
@@ -419,7 +404,7 @@ pub fn class_rows(books: &[Book], argutil_citation: &str) -> Vec<ClassRow> {
             entry,
             coverage,
             reason,
-            owner,
+            waits_on,
         });
     }
     let (coverage, reason) = coverage_of(UNDOCUMENTED_CLASS, None);
@@ -435,7 +420,7 @@ pub fn class_rows(books: &[Book], argutil_citation: &str) -> Vec<ClassRow> {
         entry: "class",
         coverage,
         reason,
-        owner: method_owner(UNDOCUMENTED_CLASS),
+        waits_on: method_waits_on(UNDOCUMENTED_CLASS),
     });
     let derived: BTreeSet<String> = out
         .iter()
@@ -463,12 +448,11 @@ pub fn class_rows(books: &[Book], argutil_citation: &str) -> Vec<ClassRow> {
              not carry -- a directive for a name no row derives is never reached and never run"
         );
     }
-    for (class, owner) in METHOD_OWNER {
+    for (class, work) in METHOD_WAITS_ON {
         assert!(
             named.contains(&class.to_ascii_uppercase()),
-            "METHOD_OWNER files {class}'s method rows under {owner}, and the class set does \
-             not carry {class} -- a name no row derives falls silently to \
-             {DEFAULT_METHOD_OWNER}"
+            "METHOD_WAITS_ON holds {class}'s method rows for {work}, and the class set does \
+             not carry {class}"
         );
     }
     out
@@ -615,7 +599,7 @@ pub fn classes_without_method_rows(
 }
 
 /// `name<TAB>entry<TAB>section<TAB>book:line<TAB>status<TAB>reason
-/// <TAB>construction<TAB>directives<TAB>method-owner`.
+/// <TAB>construction<TAB>directives<TAB>waits-on`.
 pub fn class_set_rows(rows: &[ClassRow]) -> Vec<String> {
     rows.iter()
         .map(|r| {
@@ -630,7 +614,7 @@ pub fn class_set_rows(rows: &[ClassRow]) -> Vec<String> {
                 r.reason,
                 r.coverage.program().unwrap_or(NO_PROGRAM),
                 r.coverage.directive().unwrap_or(NO_PROGRAM),
-                r.owner
+                r.waits_on
             )
         })
         .collect()
@@ -679,7 +663,7 @@ pub fn parse_method(field: &str) -> String {
     }
 }
 
-/// The header `class-set.txt` carries, with its D56 stamp.
+/// The header `class-set.txt` carries, with its revision stamp.
 pub fn class_set_header(stamp: &str, argutil_citation: &str) -> Vec<String> {
     vec![
         "Table C's class row set: every <section id=\"cls...\"> across".into(),
@@ -687,7 +671,7 @@ pub fn class_set_header(stamp: &str, argutil_citation: &str) -> Vec<String> {
         "streamclasses.xml.".into(),
         String::new(),
         "One `name<TAB>entry<TAB>section<TAB>book:line<TAB>status<TAB>reason".into(),
-        "<TAB>construction<TAB>directives<TAB>method-owner`".into(),
+        "<TAB>construction<TAB>directives<TAB>waits-on`".into(),
         "per line, in book order then document order.".into(),
         String::new(),
         format!(
@@ -728,14 +712,10 @@ pub fn class_set_header(stamp: &str, argutil_citation: &str) -> Vec<String> {
         ),
         String::new(),
         format!(
-            "`method-owner` is the phase that owes this class's method rows an \
-             `agree`, which gate_table_c.rs reads instead of one constant over \
-             every method row. `{DEFAULT_METHOD_OWNER}` is the default; the \
-             classes waiting on the stream and timer entry points carry the \
-             phase the native registry files those under, and \
-             `{STACK_FRAME_OWNER}` is not a phase and names the work its rows \
-             wait on. A row that can never agree is derived from `status` and \
-             the arm rather than named here."
+            "`waits-on` names the unfinished work a class's method rows wait \
+             on, which keeps gate_table_c.rs from gating them; every other row \
+             carries `{NO_PROGRAM}`. A row that can never agree is derived \
+             from `status` and the arm rather than named here."
         ),
         String::new(),
         "Derived by `cargo run -p rexx-extract --bin rexx-extract-docs`, whose".into(),
@@ -746,7 +726,7 @@ pub fn class_set_header(stamp: &str, argutil_citation: &str) -> Vec<String> {
     ]
 }
 
-/// The header `class-methods.txt` carries, with its D56 stamp.
+/// The header `class-methods.txt` carries, with its revision stamp.
 pub fn class_methods_header(stamp: &str) -> Vec<String> {
     vec![
         "Table C's method row set: one row per (class, method, arm, status).".into(),
