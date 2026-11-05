@@ -16,10 +16,10 @@ the inserted string to a given length, and answers the combined string.
 
 r[bif.insert.method]
 INSERT is a builtin that runs as a String method, and `target`, its
-*second* argument, is the receiver; `new`, `n`, `length` and `pad` become
+second argument, is the receiver; `new`, `n`, `length` and `pad` become
 the message's arguments, in that order. `new` and `target` are
-[strings](r:conv.string.null), `n` is a [non-negative position](r:bif.insert.n.check),
-`length` is a [length](r:conv.length.check), and `pad` is a
+[strings](r:conv.string.null), `n` is a [whole number](r:conv.whole.form) of the kind
+[the next rule](r:bif.insert.n.check) describes, `length` is a [length](r:conv.length.check), and `pad` is a
 [pad](r:conv.pad). The arguments are checked in the
 [order](r:conv.check.order) the conventions give, and the argument count by
 the [builtin call rules](r:bif.index.call.count): two are required and five
@@ -58,11 +58,9 @@ a123bc a123bc | a12bc
 ```
 
 r[bif.insert.n.check]
-In INSERT, `n` is a whole-number argument whose value must not be negative.
-A negative value raises `SYNTAX 93.906`. An `n` of 0 is allowed, and so is
-`-0`, which is 0. (A [position](r:conv.position.check) elsewhere must be
-positive; `n` here counts the characters before the insertion, so 0 is its
-first value.) The check is a range check, and falls with those of
+In INSERT, `n` is a [whole-number argument](r:conv.whole.digits) whose value
+must not be negative. A negative value raises `SYNTAX 93.906`. An `n` of 0
+is allowed, and so is `-0`, which is 0. The check is a range check, and falls with those of
 [the conventions](r:conv.check.order), from left to right with the check of
 `length`.
 
@@ -94,16 +92,19 @@ Xabc Xabc
 40.23
 ```
 
+> **Note.** A [position](r:conv.position.check) elsewhere must be positive;
+> `n` here counts the characters before the insertion, so 0 is its first
+> value.
 r[bif.insert.n.default]
 When `n` is omitted, it is 0: `new` goes before the first character of
 `target`.
 
 ```rexx
-say insert('123', 'abc') insert('123', 'abc', ) insert('123', 'abc', , 2)
+say insert('45', 'xyz') insert('45', 'xyz', ) insert('45', 'xyz', , 1)
 ```
 
 ```output
-123abc 123abc 12abc
+45xyz 45xyz 4xyz
 ```
 
 r[bif.insert.length.default]
@@ -111,11 +112,11 @@ When `length` is omitted, it is the length of `new`, so `new` is inserted
 whole.
 
 ```rexx
-say insert('123', 'abc', 1) insert('', 'abc', 1) insert('123', 'abc', 1, )
+say insert('45', 'xyz', 1) insert('', 'xyz', 1) insert('45', 'xyz', 1, )
 ```
 
 ```output
-a123bc abc a123bc
+x45yz xyz x45yz
 ```
 
 r[bif.insert.pad.default]
@@ -142,30 +143,32 @@ characters of `target` after position `n`, which is the null string when
 plus the larger of `n` and the length of `target`.
 
 ```rexx
-say insert('123', 'abc', 3) insert('123', 'abc', 1, 2) insert('123', 'abc', 1, 5, '+')
-say insert('123', 'abc', 5, 6, '+') insert('123', 'abc', , 5, '-')
-say '['insert('123', 'abc', 1, 0)']' insert('1', 'abc', 4, 3)'.'
+say insert('45', 'xyz', 3) insert('45', 'xyz', 1, 1) insert('45', 'xyz', 1, 4, '+')
+say insert('45', 'xyz', 5, 6, '*') insert('45', 'xyz', , 5, '=')
+say '['insert('45', 'xyz', 1, 0)']' insert('1', 'xyz', 4, 3)'.'
 ```
 
 ```output
-abc123 a12bc a123++bc
-abc++123+++ 123--abc
-[abc] abc 1  .
+xyz45 x4yz x45++yz
+xyz**45**** 45===xyz
+[xyz] xyz 1  .
 ```
 
 r[bif.insert.past-end]
-When `n` is greater than the length of `target`, the padding goes to
-`target`, not to `new`: `target` is extended on the right with copies of
-`pad` to `n` characters before `new` is placed after them, and nothing
-follows `new`. This holds when `length` is 0, so the result is then `target`
-padded to `n` characters.
+When `n` is greater than the length of `target`, the gap is filled from
+`target`'s side: `target` is extended on the right with copies of `pad` to
+`n` characters, `new` adjusted to `length` follows, and nothing follows
+`new`. This holds when `length` is 0, so the result is then `target` padded
+to `n` characters.
 
 ```rexx
-say insert('X', 'ab', 4, 1, '.') insert('X', 'ab', 3, 0, '.') insert('X', 'ab', 2, 0, '.')
+say insert('X', 'ab', 4, 1, '.') insert('X', 'ab', 4, 3, '.') insert('xyz', 'ab', 4, 5, '.')
+say insert('X', 'ab', 3, 0, '.') insert('X', 'ab', 2, 0, '.')
 ```
 
 ```output
-ab..X ab. ab
+ab..X ab..X.. ab..xyz..
+ab. ab
 ```
 
 r[bif.insert.empty]
@@ -218,11 +221,10 @@ say c2x(insert('0061'x, '00'x, 1, 3, '00'x)) c2x(insert('c3a9'x, 'ff'x, 0, 1))
 ```
 
 r[bif.insert.large]
-An `n` or a `length` too large for the result to be built raises an error
-from the interpreter running out of storage; which values those are is not
-specified. A value that is a whole number below `10**18` is otherwise
-valid, and a value of `10**18` or more raises `SYNTAX 40.12` like any
-[whole number](r:conv.whole.digits) that is too large.
+An `n` or a `length` that is a whole number below `10**18` is valid, and a
+value of `10**18` or more raises `SYNTAX 40.12` like any
+[whole number](r:conv.whole.digits) that is too large. The caller's NUMERIC
+DIGITS setting plays no part.
 
 ```rexx
 signal on syntax name a
@@ -231,12 +233,26 @@ a: say condition('o')~code
 signal on syntax name b
 say insert('X', 'abc', 1, 1000000000000000000)
 b: say condition('o')~code
+numeric digits 3
+say length(insert('X', 'abc', 1234)) insert('X', 'abcdefghijkl', 1E1)
 ```
 
 ```output
 40.12
 40.12
+1235 abcdefghijXkl
 ```
+
+> **Note.** Whether, when and with which code INSERT fails for an `n` or a
+> `length` whose result cannot be held in memory is not specified.
+
+> **Note.** The reference manual says that when `n` is greater than the
+> length of `target`, `new` is padded at the beginning. This page follows
+> ooRexx's behaviour, which pads `target` as the rule says. The ANSI draft
+> (9.3.11) defines the third string with its SUBSTR, whose count is negative
+> when `n` is at least `LENGTH(target) + 1`; read literally it would raise
+> from inside the builtin where this page, like ooRexx, pads (see the note on
+> [SUBSTR](substr.md)).
 
 ## Deviations
 

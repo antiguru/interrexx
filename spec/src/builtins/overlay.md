@@ -11,13 +11,13 @@ deviations: [4]
 
 OVERLAY writes a string over a run of characters of another string, starting
 at a given position and adjusting the written string to a given length, and
-answers the changed string. The run may reach past the end of the target.
+answers the changed string.
 
 ## Arguments
 
 r[bif.overlay.method]
 OVERLAY is a builtin that runs as a String method, and `target`, its
-*second* argument, is the receiver; `new`, `n`, `length` and `pad` become
+second argument, is the receiver; `new`, `n`, `length` and `pad` become
 the message's arguments, in that order. `new` and `target` are
 [strings](r:conv.string.null), `n` is a [position](r:conv.position.check),
 `length` is a [length](r:conv.length.check), and `pad` is a
@@ -75,11 +75,11 @@ When `n` is omitted, it is 1: the overlay begins at the first character of
 `target`.
 
 ```rexx
-say overlay('qq', 'abcd') overlay('qq', 'abcd', ) overlay('qq', 'abcd', , 1)
+say overlay('zz', 'wxyz') overlay('zz', 'wxyz', ) overlay('zz', 'wxyz', , 1)
 ```
 
 ```output
-qqcd qqcd qbcd
+zzyz zzyz zxyz
 ```
 
 r[bif.overlay.length.default]
@@ -120,34 +120,36 @@ characters from position `n`, and the result is longer than `target` when
 the run reaches past its end.
 
 ```rexx
-say overlay(' ', 'abcdef', 3) overlay('.', 'abcdef', 3, 2) overlay('qq', 'abcd', 4)
-say overlay('123', 'abc', 5, 6, '+') overlay('xyz', 'abc', 1, 2)
+say '['overlay(' ', 'abcdef', 3)']' '['overlay('#', 'abcdef', 2, 3)']' '['overlay('zz', 'wxyz', 4)']'
+say overlay('45', 'ab', 4, 5, '*') overlay('xyz', 'abc', 1, 2)
 say '['overlay('xyz', 'abc', 2, 5)']'
 say overlay('xyz', 'abc', 3) overlay('x', 'abc', 4) overlay('abc', 'abc', 2, 0)
 ```
 
 ```output
-ab def ab. ef abcqq
-abc+123+++ xyc
+[ab def] [a#  ef] [wxyzz]
+ab*45*** xyc
 [axyz  ]
 abxyz abcx abc
 ```
 
 r[bif.overlay.past-end]
-When `n` is greater than one more than the length of `target`, the padding
-goes to `target`, not to `new`: `target` is extended on the right with
-copies of `pad` to `n - 1` characters before the adjusted `new` follows.
-When `n` is exactly one more than the length of `target`, `new` is appended
-with no padding between. This holds when `length` is 0, so the result is
-then `target` padded to `n - 1` characters.
+When `n` is greater than one more than the length of `target`, the gap is
+filled from `target`'s side: `target` is extended on the right with copies
+of `pad` to `n - 1` characters, the adjusted `new` follows, and nothing
+follows it. When `n` is exactly one more than the length of `target`, `new`
+is appended with no padding between. This holds when `length` is 0, so the
+result is then `target` padded to `n - 1` characters.
 
 ```rexx
 say overlay('xyz', 'abc', 5, 2, '-') overlay('xyz', 'abc', 4, 2, '-') overlay('xyz', 'abc', 5, , '-')
+say overlay('X', 'ab', 5, 3, '.') overlay('xyz', 'ab', 5, 5, '.')
 say overlay('xyz', 'abc', 6, 0, '-') overlay('xyz', 'abc', 4, 0, '-')'.'
 ```
 
 ```output
 abc-xy abcxy abc-xyz
+ab..X.. ab..xyz..
 abc-- abc.
 ```
 
@@ -202,11 +204,10 @@ say c2x(overlay('6100'x, '0000'x, 2, 3, '00'x)) c2x(overlay('c3'x, 'a9a9'x, 2))
 ```
 
 r[bif.overlay.large]
-An `n` or a `length` too large for the result to be built raises an error
-from the interpreter running out of storage; which values those are is not
-specified. A value that is a whole number below `10**18` is otherwise
-valid, and a value of `10**18` or more raises `SYNTAX 40.12` like any
-[whole number](r:conv.whole.digits) that is too large.
+An `n` or a `length` that is a whole number below `10**18` is valid, and a
+value of `10**18` or more raises `SYNTAX 40.12` like any
+[whole number](r:conv.whole.digits) that is too large. The caller's NUMERIC
+DIGITS setting plays no part.
 
 ```rexx
 signal on syntax name a
@@ -215,12 +216,26 @@ a: say condition('o')~code
 signal on syntax name b
 say overlay('x', 'abc', 2, 1000000000000000000)
 b: say condition('o')~code
+numeric digits 3
+say length(overlay('X', 'abc', 1, 1234))
 ```
 
 ```output
 40.12
 40.12
+1234
 ```
+
+> **Note.** Whether, when and with which code OVERLAY fails for an `n` or a
+> `length` whose result cannot be held in memory is not specified.
+
+> **Note.** The reference manual says that when `n` is greater than one more
+> than the length of `target`, `new` is padded at the beginning. This page
+> follows ooRexx's behaviour, which pads `target` as the rule says. The ANSI
+> draft (9.3.15) defines the third string with its SUBSTR, whose count is
+> negative when `n + length` is at least `LENGTH(target) + 2`; read literally
+> it would raise from inside the builtin where this page, like ooRexx, pads
+> (see the note on [SUBSTR](substr.md)).
 
 ## Deviations
 

@@ -9,9 +9,8 @@ deviations: [4]
 
 # RIGHT
 
-RIGHT returns a string of a given length made of the rightmost characters of
-a string: cut at the left when the string is longer than the length, and
-padded at the left when it is shorter.
+RIGHT answers the last `length` characters of a string, adding `pad` on the
+left when the string runs out.
 
 ## Arguments
 
@@ -24,10 +23,12 @@ arguments, in that order. `string` is a [string](r:conv.string.null),
 [order](r:conv.check.order) the conventions give, and the argument count by
 the [builtin call rules](r:bif.index.call.count): two are required and three
 is the most. Like [LEFT](left.md) and unlike [SUBSTR](substr.md), RIGHT does
-not default `length`: omitting it raises `SYNTAX 40.5`.
+not default `length`: it is a required argument, so a call without it fails
+by the [call rules](r:bif.index.call.too-few), with `SYNTAX 40.3` when
+nothing follows its place and `SYNTAX 40.5` when a pad does.
 
 ```rexx
-say right('abc  d', 8) '|' 'abc'~right(5, '.')
+say right('hi  yo', 8) '|' 'abc'~right(5, '.')
 signal on syntax name a
 say right('abc')
 a: say condition('o')~code
@@ -55,7 +56,7 @@ h: say condition('o')~code
 ```
 
 ```output
-  abc  d | ..abc
+  hi  yo | ..abc
 40.3
 40.4
 40.5
@@ -86,12 +87,12 @@ Otherwise the result is `string` preceded by `length` less `LENGTH(string)`
 copies of `pad`.
 
 ```rexx
-say '['right('abc  d', 8)']' '['right('abc def', 5)']' '['right('12', 5, '0')']'
+say '['right('ab   c', 7)']' '['right('xy zw', 4)']' '['right('7', 3, '0')']'
 say '['right('abc', 3)']' '['right('abc', 1)']' '['right('abc', 4, '.')']'
 ```
 
 ```output
-[  abc  d] [c def] [00012]
+[ ab   c] [y zw] [007]
 [abc] [c] [.abc]
 ```
 
@@ -137,10 +138,8 @@ say c2x(right('0061'x, 4, '00'x)) c2x(right('c3a9'x, 1))
 ```
 
 r[bif.right.large]
-A `length` too large for the result to be built raises an error from the
-interpreter running out of storage; which values those are is not
-specified. A `length` that is a whole number below `10**18` is otherwise
-valid, and a `length` of `10**18` or more raises `SYNTAX 40.12` like any
+A `length` that is a whole number below `10**18` is valid, and a `length`
+of `10**18` or more raises `SYNTAX 40.12` like any
 [whole number](r:conv.whole.digits) that is too large. The caller's NUMERIC
 DIGITS setting plays no part.
 
@@ -157,6 +156,8 @@ a: say condition('o')~code
 40.12
 ```
 
+> **Note.** Whether, when and with which code RIGHT fails for a `length`
+> whose result cannot be held in memory is not specified.
 ## Deviations
 
 r[bif.right.deviation.4]
