@@ -472,15 +472,14 @@ fn every_secondary_message_matches_the_oracle() {
 
 // ---- the recorded deviations, each pinned in both directions ----
 
-/// Whether `(ours, oracle)` is the label-colon deviation, Deviation 39 in
-/// `phase-4-exclusions.txt`.
+/// Whether `(ours, oracle)` is the label-colon deviation, Deviation 39.
 fn label_colon_deviation(ours: Option<(u16, u16)>, oracle: (u16, u16)) -> bool {
     matches!((ours, oracle), (Some((18, 1 | 2)), (35, 1)))
 }
 
 #[test]
 fn a_then_label_is_a_missing_then_here_and_a_bad_expression_there() {
-    // Structural, not a near miss: Task 3.4 splits `then:` into a label, so the
+    // Structural, not a near miss: `then:` is split into a label, so the
     // clause the oracle finds an invalid expression in does not exist by the time
     // the grammar runs. Both reject, which is the part that matters.
     let error = parse(b"if 1 = 1\nthen: nop").expect_err("both reject it");

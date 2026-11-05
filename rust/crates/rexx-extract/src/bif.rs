@@ -56,7 +56,7 @@ pub enum DropReason {
     /// a return value where the body requires a raise; see the module doc.
     ExpectedRaise,
     /// The body sends a real message -- a `self~` attribute, or any other `~`.
-    /// Needs dispatch, which is Phase 5's.
+    /// Needs message dispatch.
     MessageSend,
     /// The body reaches a statement that is neither an assignment nor an
     /// ooTest assertion: a loop, an `IF`, a `CALL`, a `PARSE`.

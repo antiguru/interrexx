@@ -21,14 +21,12 @@ rexx-parse = { path = "../rexx-parse" }
 # what turns one into text.
 rexx-num = { path = "../rexx-num" }
 
-# The message catalogue. Phase 0 already generates `errors.rs` from
-# `interpreter/messages/rexxmsg.xml`, 704 messages, and criterion 1 compares
-# stderr byte for byte -- so the text an error prints is looked up here rather
-# than hand-transcribed. Leaving this crate out of the dependency list is the
-# omission spec revision 4 was made to correct.
+# The message catalogue, generated into `errors.rs` from
+# `interpreter/messages/rexxmsg.xml`. Stderr is compared byte for byte, so the
+# text an error prints is looked up here rather than hand-transcribed.
 rexx-inventory = { path = "../rexx-inventory" }
 
-# The class/method-dictionary model (Phase 5a, R9): `ClassRegistry` and
+# The class/method-dictionary model: `ClassRegistry` and
 # `ClassGraph`, what `::CLASS`/`::METHOD`/`::ATTRIBUTE` install a class and
 # its dictionaries into. This crate does not build a second representation
 # of the same thing.
@@ -36,7 +34,7 @@ rexx-classes = { path = "../rexx-classes" }
 
 # The native API's local-reference table: the `ObjRef` behind a handle an
 # extension holds, which `Interp` owns one of per native activation and roots
-# for as long as that activation is on its stack (D5, Phase 8 Task 4).
+# for as long as that activation is on its stack.
 rexx-api = { path = "../rexx-api" }
 
 # The API service's client and vocabulary: external queues, registrations and the macrospace.
@@ -113,7 +111,7 @@ librexx = { path = "../librexx" }
 librexxapi = { path = "../librexxapi" }
 
 # Case tables as data files rather than `const` arrays in Rust sources, for
-# tables written from Task 6 onward (the plan's Tech Stack section). Test-only.
+# tables. Test-only.
 # `default-features = false` drops its `async` feature, which is the whole of
 # what pulls `futures` in: nothing here runs a case asynchronously.
 datadriven = { version = "0.9.0", default-features = false }
@@ -130,7 +128,7 @@ rexx-extract = { path = "../rexx-extract" }
 # fold that consumes it -- and so the emitted report -- untouched.
 rayon = "1.12.0"
 
-# Model checking of the baton, the inbox and the timer (spec 2026-09-29 R4):
+# Model checking of the baton, the inbox and the timer:
 # `tests/loom.rs` compiles their sources against `loom`'s primitives under
 # `--cfg loom`. Test-only.
 loom = "0.7.2"

@@ -130,7 +130,7 @@ pub enum Body {
     Cell(u32, Box<[u8]>),
 }
 
-// A heap value names no borrowed frame (spec 2026-09-29 section 5, D3).
+// A heap value names no borrowed frame.
 const _: () = {
     const fn require_static<T: 'static>() {}
     require_static::<Body>();
@@ -665,7 +665,7 @@ pub struct BufferState {
 }
 
 /// A `MutableBuffer`'s bytes, whose address native calls in flight may hold
-/// (spec 2026-09-29 2.5). While any does ([`BufferBytes::lend`]), growth
+/// While any does ([`BufferBytes::lend`]), growth
 /// moves the bytes to new storage and keeps the old until the last of those
 /// calls ends ([`BufferBytes::release`]); a shrink keeps the storage.
 ///

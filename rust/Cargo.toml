@@ -9,12 +9,10 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/antiguru/interrexx"
 
 [workspace.lints.rust]
-# `deny` and not `forbid`, decided by Moritz 2026-08-20 after the alternative
-# was built and found unbuildable.
+# `deny` and not `forbid`.
 #
-# `unsafe` is discouraged rather than banned (`CLAUDE.md` carries the bar a site
-# must clear). `2026-07-27-rust-rewrite.md:23` had the record of a granted
-# exception be `forbid` versus `deny` at a crate root, with the granted crate
+# `unsafe` is discouraged rather than banned. A granted exception could be
+# `forbid` versus `deny` at a crate root, with the granted crate
 # dropping `lints.workspace = true`. **Cargo does not allow that**: it refuses
 # `lints.workspace = true` beside any local override -- "cannot override
 # `workspace.lints` in `lints`, either remove the overrides or
@@ -23,20 +21,18 @@ repository = "https://github.com/antiguru/interrexx"
 # around a hundred lines that would then drift.
 #
 # `forbid` also cannot be overridden by an inner `#[allow]`, which is what an
-# approved *module* needs; `deny` can. So the level moves here and the record
-# moves with it: **the record of every granted site is now the set of
-# `#[allow(unsafe_code)]` attributes in the tree**, which names the module
-# rather than the crate and is asserted rather than described --
-# `crates/rexx-core/tests/unsafe_sites.rs` fails if that set changes, and is
-# the reportable item `:32` asks for.
+# approved *module* needs; `deny` can. **The record of every granted site is
+# the set of `#[allow(unsafe_code)]` attributes in the tree**, which names the
+# module rather than the crate and is asserted rather than described --
+# `crates/rexx-core/tests/unsafe_sites.rs` fails if that set changes.
 unsafe_code = "deny"
 
 # `tests/loom.rs` builds the baton, inbox and timer sources under
 # `--cfg loom` (`rexx-exec/src/sync.rs`).
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 
-# Adopted from `TimelyDataflow/timely-dataflow`'s `Cargo.toml`, fetched
-# 2026-08-15. Levels follow that file except where a line below says otherwise.
+# Adopted from `TimelyDataflow/timely-dataflow`'s `Cargo.toml`. Levels follow
+# that file except where a line below says otherwise.
 [workspace.lints.clippy]
 type_complexity = "allow"
 option_map_unit_fn = "allow"
@@ -47,7 +43,7 @@ module_inception = "allow"
 # Upstream carries this line commented out. Set explicitly here so the decision
 # is recorded rather than inherited by omission.
 #
-# Measured 2026-08-15 with this line set to `warn`, by `cargo clippy --workspace
+# Measured with this line set to `warn`, by `cargo clippy --workspace
 # --all-targets --message-format=json`, counted by `message.code.code`: 574
 # warnings over 299 distinct source spans. Set the line back to `warn` before
 # reproducing it; run against the tree as it stands, that command answers zero,
@@ -96,11 +92,10 @@ redundant_static_lifetimes = "warn"
 same_item_push = "warn"
 # Upstream sets this to `warn`.
 #
-# Measured 2026-08-15 the same way, with this line set to `warn`: 380 warnings
-# over 314 distinct source spans, in files then under active differential work.
-# As of that date, clearing them meant a rename pass over exactly the code whose
-# output was being compared byte for byte against the oracle: churn in the diffs
-# that mattered most, and nothing else.
+# Measured the same way, with this line set to `warn`: 380 warnings
+# over 314 distinct source spans. Clearing them means a rename pass over exactly
+# the code whose output is compared byte for byte against the oracle: churn in
+# the diffs that matter most, and nothing else.
 shadow_unrelated = "allow"
 single_component_path_imports = "warn"
 suspicious_assignment_formatting = "warn"
@@ -140,13 +135,13 @@ codegen-units = 1
 # The debug-assertion gate (`REXX_CORPUS_GATE=1 memcap 8G cargo test --workspace`)
 # exists for the `debug_assert`s the release profile compiles out; optimised, it
 # keeps `debug-assertions` and `overflow-checks` from `dev`. Measured: 957 s of
-# run time unoptimised against 246 s under release. Moritz, 2026-09-05.
+# run time unoptimised against 246 s under release.
 [profile.test]
 opt-level = 3
 
 # Mutation runs build here rather than in `release`: thin LTO relinks faster,
 # and a separate target directory means a mutant binary never overwrites the
-# one the witnesses run on. Moritz, 2026-09-05.
+# one the witnesses run on.
 [profile.mutation]
 inherits = "release"
 lto = "thin"

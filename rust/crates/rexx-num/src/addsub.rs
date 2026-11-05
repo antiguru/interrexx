@@ -38,8 +38,7 @@ impl Number {
         let right_negative = other.negative != negate_other;
 
         // Operands longer than DIGITS are truncated to DIGITS + 1 working
-        // digits first. (The interpreter also raises LOSTDIGITS here; that
-        // condition belongs to Task 2.8.)
+        // digits first. (The interpreter also raises LOSTDIGITS here.)
         let max_length = crate::working_length(digits);
         let left = self.truncated_to(max_length);
         let right = other.truncated_to(max_length);

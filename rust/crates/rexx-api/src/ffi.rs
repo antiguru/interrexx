@@ -1,4 +1,3 @@
-// D-U1, 2026-09-14
 #![allow(unsafe_code)]
 
 //! The inbound FFI boundary: caller-supplied pointers into validated handles.
@@ -102,7 +101,7 @@ unsafe impl Send for Value {}
 
 /// How a native call's conversions reach the host: its address, from which
 /// each access derives a fresh `&mut`, and for a call that runs with the
-/// baton released (spec 2026-09-29 2.4, ruling P50) the baton, which a
+/// baton released the baton, which a
 /// thread holds while it reaches the host.
 pub struct HostRef<'a> {
     host: NonNull<dyn Host + 'a>,
@@ -712,7 +711,7 @@ thread_local! {
     /// The native call entered last on this OS thread and not yet returned,
     /// on any context: what a callback from this thread is made by. Per OS
     /// thread, as `layout.rs`'s `REFUSED` is, since a thread's calls nest on
-    /// its own stack (spec 2026-09-29 2.4, 2.5).
+    /// its own stack.
     static CALLING: Cell<*const Entered<'static>> = const { Cell::new(std::ptr::null()) };
 
     /// The thread contexts this OS thread is attached to by `AttachThread`,

@@ -1,4 +1,4 @@
-//! Phase 3 gate: every `rust/corpus/lang/` program tiles.
+//! Every `rust/corpus/lang/` program tiles.
 
 mod gate_walk;
 

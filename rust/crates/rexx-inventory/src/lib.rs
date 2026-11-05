@@ -8,11 +8,10 @@ pub mod errors {
 pub mod builtins {
     include!(concat!(env!("OUT_DIR"), "/builtins.rs"));
 
-    /// The builtins `docs/superpowers/plans/phase-4-exclusions.txt` excludes
-    /// from Phase 4, whole or in part, each with the phase that file gives it
-    /// and the reason it gives: its whole exclusions followed by its partial
-    /// rows. The owner rides here, so a name and the phase blamed for it
-    /// cannot drift apart.
+    /// The builtins excluded, whole or in part, each with the phase that owes
+    /// it and the reason: the whole exclusions followed by the partial rows.
+    /// The owner rides here, so a name and the phase blamed for it cannot
+    /// drift apart.
     pub const EXCLUDED: &[(&str, &str, &str)] = &[];
 
     /// The phase owing `name`'s excluded form and its reason, or `None` for
@@ -46,7 +45,7 @@ pub mod builtins {
             .collect()
     }
 
-    /// The builtins Phase 4 must be able to run: every name in [`NAMES`] that
+    /// The builtins this crate must be able to run: every name in [`NAMES`] that
     /// is not excluded outright, in `NAMES` order. A partially excluded name
     /// is in here, because its in-scope form still has to work.
     pub fn in_scope() -> Vec<&'static str> {

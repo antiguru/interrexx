@@ -1,7 +1,7 @@
 //! The `librexxapi` C entry points: shims over `rexx_exec::capi`, exported by `librexx`, which
-//! owns the API state (Moritz, 2026-11-03, option A). `librexxapi.so.4` forwards each name here.
+//! owns the API state. `librexxapi.so.4` forwards each name here.
 //! The `rexx` executable compiles this file too, so an extension it loads reaches its own state.
-// D-U1 as extended 2026-11-02: the export modules of the C libraries.
+// The export modules of the C libraries.
 #![allow(unsafe_code)]
 #![allow(non_snake_case)]
 

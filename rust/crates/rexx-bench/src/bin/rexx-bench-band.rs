@@ -394,9 +394,8 @@ fn summarise(files: &[PathBuf], reduction: &Reduction) -> ExitCode {
     }
     println!();
     // Named as the worst axis rather than as "the band". A single number over
-    // every axis is exactly the global constant `phase-4d-gate.md`'s second
-    // amendment withdrew, and the per-axis rows above are what the escalation
-    // rule reads.
+    // every axis is a global constant, and the per-axis rows above are what
+    // the escalation rule reads.
     for (config, envelope) in worst {
         println!(
             "* `{config}`: widest per-axis envelope is **{:.2} %** ({} / {} / {}). \

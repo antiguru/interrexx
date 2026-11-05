@@ -13,8 +13,7 @@ rustc-hash = "2.1.2"
 # opaque `RexxObjectPtr` and back (D5).
 rexx-core = { path = "../rexx-core" }
 
-# `dlopen`/`dlsym` provider for `load.rs`; `rustix` does not wrap either (D-U1,
-# 2026-09-14).
+# `dlopen`/`dlsym` provider for `load.rs`; `rustix` does not wrap either.
 libloading = "0.9.0"
 
 # `free`, which releases a result block a classic handler allocated in place of the buffer it

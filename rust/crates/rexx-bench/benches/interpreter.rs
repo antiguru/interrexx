@@ -1,7 +1,7 @@
 //! Times each `bench-programs/*.rex` file under the interpreter named by
-//! `REXX_BENCH_BINARY`. This is Task 0.7: it asserts nothing and gates
-//! nothing -- it only establishes the numbers that every later phase's
-//! performance gate (D9, Global Constraints) compares against.
+//! `REXX_BENCH_BINARY`. It asserts nothing and gates
+//! nothing -- it only establishes the numbers a performance gate compares
+//! against.
 //! Run against the C++ oracle with:
 //! ```sh
 //! REXX_BENCH_BINARY=../build/bin/rexx cargo bench -p rexx-bench -- --save-baseline cpp-linux
@@ -17,7 +17,7 @@ fn bench_interpreter(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("interpreter");
     // Every sample here is a whole process launch costing 0.5-2s (the sizing
-    // target from Task 0.7 step 1), so criterion's default sample_size=100
+    // target), so criterion's default sample_size=100
     // would take minutes per benchmark. 10 is criterion's floor; it is still
     // enough for a point estimate and a confidence interval on a
     // launch-dominated measurement.

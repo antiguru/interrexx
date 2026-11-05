@@ -324,7 +324,7 @@ pub fn each_expr<'a>(p: &'a Program, visit: &mut impl FnMut(&'a Expr)) {
     // An explicit stack rather than recursion through `children_of`, because
     // a left-leaning expression tree the width of one clause overflows the
     // stack here otherwise: `deep_nested_expr.rex`'s 3000-term chain aborted
-    // this walk on a default 2 MiB thread before Task 3b (see its report).
+    // this walk on a default 2 MiB thread.
     // Pushing a node's children in reverse and popping is what keeps this a
     // parents-before-children, left-to-right walk exactly like the recursive
     // version: the leftmost child is pushed last, so it is popped, and so

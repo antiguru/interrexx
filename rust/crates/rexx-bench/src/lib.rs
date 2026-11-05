@@ -1,4 +1,4 @@
-//! Shared plumbing for the Task 0.7 benchmark harness (`benches/interpreter.rs`),
+//! Shared plumbing for the benchmark harness (`benches/interpreter.rs`),
 //! the cold-start timer (`src/bin/rexx-time.rs`), the interleaved
 //! two-interpreter suite (`src/bin/rexx-bench-suite.rs`) and the between-run
 //! band tool (`src/bin/rexx-bench-band.rs`): resolving `REXX_BENCH_BINARY`
@@ -32,7 +32,7 @@ pub static PROGRAMS: &[&str] = &[
     "alloc",
     "alloc4c",
     "emptyloop",
-    // Added 2026-09-10 with the coverage they close: `parse` and `textnum`
+    // `parse` and `textnum`
     // because `rexxcps` performs 5,580,002 text-to-number conversions and
     // 2.24M `PARSE` ops that no program here exercised, and `decloop`/
     // `decrender` because decimal loop control is a different axis from

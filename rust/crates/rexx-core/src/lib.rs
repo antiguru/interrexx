@@ -2,10 +2,8 @@
 
 mod behaviour;
 mod body;
-// **Granted an `unsafe` exception** (Moritz,
-// 2026-08-20). The workspace lint is `deny` rather than `forbid` so that this
-// line can exist at all -- the root `Cargo.toml` has why, and why this
-// attribute is now the record of the grant rather than a lint level somewhere.
+// **An `unsafe` exception.** The workspace lint is `deny` rather than `forbid` so that this
+// line can exist at all -- the root `Cargo.toml` has why.
 // `bytes.rs`'s own `Bytes` doc states the invariant, names the only writer and
 // the only reader, and gives the measurement that bought it;
 // `tests/unsafe_sites.rs` is what stops a second site appearing quietly.

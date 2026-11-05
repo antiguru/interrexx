@@ -1,4 +1,4 @@
-//! Task 3's own probes: the metaclass graph (D44, R6) and the native class
+//! Probes of the metaclass graph and the native class
 //! set [`native_classes`] builds.
 
 use rexx_classes::{
@@ -346,7 +346,7 @@ fn every_class_untouched_by_the_prologue_matches_the_live_oracle_exactly() {
 /// `CoreClasses.orx` runs, not a claim about what the live, fully-booted
 /// oracle answers (measured different: e.g. `.Array~superClasses` there is
 /// `Object OrderedCollection`). Full post-prologue verification for these
-/// classes is Task 13's.
+/// classes is `rexx-exec`'s.
 #[test]
 fn every_prologue_mutated_class_has_the_pre_prologue_superclasses_setup_cpp_builds() {
     let r = native_classes(&mut mint);
@@ -405,7 +405,6 @@ fn id_string_matches_the_recorded_id_for_a_representative_sample() {
 /// superclass -- the cascade's own bookkeeping (`ClassGraph::subclasses`,
 /// populated by `define_class`) must record that edge in both directions,
 /// not only the forward `superclass` one `superclasses()` already covers.
-/// Built since Task 3's first submission; this is its first assertion.
 #[test]
 fn objects_subclass_list_contains_every_other_native_class() {
     let r = native_classes(&mut mint);

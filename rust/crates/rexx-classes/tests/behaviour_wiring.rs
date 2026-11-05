@@ -674,7 +674,7 @@ fn a_refused_inherit_propagates_no_uninit_flag() {
 // Design-decision tests, not oracle probes: D29's scope-ordering data and
 // monotonic version. These read `MethodDictionary::resolveSuperScope`
 // (`MethodDictionary.cpp:569`) and `findSuperMethod` (`:434`) directly --
-// Task 2 builds no dispatch, so there is no scope-override *send* to
+// This crate builds no dispatch, so there is no scope-override *send* to
 // probe against the oracle; only the data these functions would read.
 // ---------------------------------------------------------------------
 

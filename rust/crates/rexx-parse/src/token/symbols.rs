@@ -19,7 +19,7 @@ impl SymbolId {
 }
 
 /// Interns upcased symbol spellings. Owned by `ProgramSource`'s parse, handed
-/// to `Program` so Phase 4 can resolve a `SymbolId` back to text for error
+/// to `Program` so the executor can resolve a `SymbolId` back to text for error
 /// messages and `SIGNAL`'s label lookup.
 #[derive(Default, Debug)]
 pub struct SymbolTable {

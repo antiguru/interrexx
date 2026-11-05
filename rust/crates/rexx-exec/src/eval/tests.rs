@@ -843,7 +843,7 @@ fn a_comma_list_short_circuits_on_the_first_false_element() {
 
 /// A left-deep chain of `terms` `SAY`-able terms, joined by `||''` --
 /// the concatenation analogue `records_the_stack_cost_of_one_eval_frame`
-/// (`tests/spike.rs`) recurses exactly once per
+/// (`tests/core_execution.rs`) recurses exactly once per
 /// term (`outcome.stack.max_depth == TERMS`, asserted there).
 fn chain(terms: usize) -> Vec<u8> {
     let mut program = b"say 'a'".to_vec();

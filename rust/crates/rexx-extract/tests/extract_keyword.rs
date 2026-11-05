@@ -1,4 +1,4 @@
-//! The four pins Task 11 requires on the `base/keyword` extractor:
+//! The four pins on the `base/keyword` extractor:
 //! conservation, absolute committed literals, a real floor, and the ooTest
 //! revision the literals were measured at.
 

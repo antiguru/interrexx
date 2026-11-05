@@ -66,8 +66,7 @@ fn only_the_granted_module_may_say_unsafe() {
     // **The needles are spelled with `concat!` so that this file is subject to
     // its own rule** rather than exempted from it. Written out, the source
     // would contain every string it searches for and would have to exclude
-    // itself -- which is the shape `rust/CLAUDE.md` calls a claim falsifiable
-    // by the act of committing it.
+    // itself -- a claim falsifiable by the act of committing it.
     let granted = files_where(|code| {
         code.contains(concat!("allow(", "unsafe_code)"))
             || code.contains(concat!("expect(", "unsafe_code)"))
@@ -88,8 +87,8 @@ fn only_the_granted_module_may_say_unsafe() {
             "crates/rexx-rxapi/src/descriptors.rs".to_string(),
         ],
         "the set of `unsafe_code` opt-ins in this workspace has changed. Each \
-         one is a decision of Moritz's, taken per site against the bar in \
-         rust/CLAUDE.md; adding one here without that is what this test is for."
+         one is a decision taken per site; adding one here without that is what \
+         this test is for."
     );
 
     let uses = files_where(|code| {

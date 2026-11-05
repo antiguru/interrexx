@@ -183,7 +183,7 @@ fn compare_never_errors_for_ordinary_operands() {
 }
 
 /// The nine discriminating transcripts, measured directly against
-/// `build/bin/rexx` (Task 8a's report has the wrapped run). The first row is
+/// `build/bin/rexx`. The first row is
 /// the one that matters: an earlier spec draft described the rule as
 /// "blank-pad the shorter operand on the right", which this contradicts --
 /// padding `"a"` on the right to match `" a"` gives `"a "`, whose first byte

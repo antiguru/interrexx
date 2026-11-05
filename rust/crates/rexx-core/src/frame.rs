@@ -23,8 +23,7 @@
 //! the arena. Staying inside a frame's own `len` is a logical property, not a
 //! safety one; the chunk validator in `rexx-exec` establishes it.
 
-// Granted by Moritz, 2026-09-23, re-granted per activity 2026-09-29 (D-U4): the
-// invariant above is the whole argument.
+// The invariant above is the whole argument for this `unsafe`.
 #![allow(unsafe_code)]
 
 use std::alloc::{Layout, alloc_zeroed, dealloc, handle_alloc_error};

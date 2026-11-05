@@ -591,7 +591,7 @@ impl ClassRegistry {
     /// [`MethodId`] -- a bootstrap convenience standing in for
     /// `Setup.cpp`'s `AddMethod`/`AddProtectedMethod`/`AddPrivateMethod`/
     /// `AddUnguardedMethod` macros, none of whose visibility distinctions
-    /// this crate models (Task 2: no probe needs them). Unlike
+    /// this crate models (no probe needs them). Unlike
     /// [`ClassGraph::define`] (`~define`, which allocates a fresh handle so
     /// a pre-existing instance is unaffected), this is bootstrap-time
     /// population before any instance can exist, so the handle churn

@@ -39,8 +39,7 @@ fn methods_touching_instance_state_are_flagged_as_fixture_dependent() {
 /// `::method 'test_15_bit'`). Trimming only `"` left the quotes in the
 /// name, which then failed the "starts with test" check and silently
 /// dropped the method (and, in that file, 864 `self~assertSame` calls
-/// across the eight of them combined -- found while extracting
-/// `base/expressions` for the `AssertionRow` mode, 2026-07-30).
+/// across the eight of them combined, in `base/expressions`).
 #[test]
 fn a_single_quoted_method_name_is_still_recognised_as_a_test() {
     let source = r#"

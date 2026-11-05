@@ -1,4 +1,4 @@
-//! Task 3b: a deep `1 + 1 + ... + 1` chain must parse and drop on a normal,
+//! A deep `1 + 1 + ... + 1` chain must parse and drop on a normal,
 //! default-stack test thread, not just on the wide thread `rexx` uses.
 
 use rexx_parse::{MAX_EXPR_DEPTH, parse_program};
@@ -38,8 +38,8 @@ fn parse_on_a_sized_thread(bytes: Vec<u8>) -> Result<(), rexx_parse::ParseError>
 
 /// 100,000 levels of parenthesis nesting is past both this parser's pre-fix
 /// native cliff (measured between 88,800 and 89,000, see this file's header)
-/// and `MAX_EXPR_DEPTH` (50,000), so before Task 3c this aborted with a
-/// native stack overflow and now raises `11.1` instead -- the same
+/// and `MAX_EXPR_DEPTH` (50,000), so it raises `11.1` instead of aborting
+/// with a native stack overflow -- the same
 /// condition, not a coincidence: `build/bin/rexx` raises it too, from
 /// somewhere between 39,900 and 39,950 parens onward, so this is parity with
 /// the oracle rather than an invented number.
@@ -104,7 +104,7 @@ fn the_depth_the_oracle_still_answers_also_parses_and_drops() {
 }
 
 /// Nested calls past the sized thread's native cliff raise `11.1` instead of
-/// aborting the process (Task 3d).
+/// aborting the process.
 #[test]
 fn a_call_nesting_past_the_native_cliff_raises_11_1_instead_of_aborting() {
     let err = parse_on_a_sized_thread(deep_call_program(100_000))

@@ -18,9 +18,9 @@ pub(crate) struct ParseCtx<'a> {
     pub(crate) source: &'a ProgramSource,
     pub(crate) tokens: &'a [Token],
     /// Read-only by the time parsing starts: `scan` has already interned every
-    /// symbol in the program. Tasks 3.6 and 3.7 need it to compare a clause's
-    /// first symbol against the pre-interned keyword ids, and Task 3.6 needs it
-    /// to recover a label's spelling when it builds `Program::labels`.
+    /// symbol in the program. It compares a clause's
+    /// first symbol against the pre-interned keyword ids and recovers a
+    /// label's spelling when `Program::labels` is built.
     pub(crate) symbols: &'a SymbolTable,
     /// The message names this parse has interned, which is what
     /// `ExprKind::Message` holds one of.

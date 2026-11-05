@@ -88,9 +88,9 @@ fn the_reciprocal_is_rounded_exactly_once() {
     assert_eq!(pow("129720.468", "-23", 7).unwrap(), "2.516546E-118");
 }
 
-/// Two of the six rows in the oracle's power-operator asymmetry table
-/// (Task 8a's report has the full six and the reasoning), pinned with the
-/// exact `(major, sub)` pair `sub_code()` now exposes rather than only the
+/// Two rows of the oracle's power-operator asymmetry table,
+/// pinned with the
+/// exact `(major, sub)` pair `sub_code()` exposes rather than only the
 /// major `pow()`'s own helper checks elsewhere in this file. Measured:
 /// `2**-1` -> `0.5`, `2**2.5` -> `Error 26.8`.
 #[test]
