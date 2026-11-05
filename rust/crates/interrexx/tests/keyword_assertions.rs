@@ -249,36 +249,69 @@ fn committed_exempt() -> BTreeMap<String, String> {
     out
 }
 
-/// The current failures, derived by running everything: `GROUP::METHOD ->
-/// unblocked_by`.
-fn measured_failures() -> (BTreeMap<String, String>, usize, usize) {
-    let bodies = collect_bodies();
-    let total_bodies = bodies.len();
-    let mut failures = BTreeMap::new();
-    let mut passing_assertions = 0usize;
-    for body in &bodies {
-        let outcome = evaluate(body);
-        match outcome.attribution() {
-            None => {
-                if let RunOutcome::Pass { verified } = outcome {
-                    passing_assertions += verified;
-                }
-            }
-            Some(attribution) => {
-                failures.insert(format!("{}::{}", body.group, body.method), attribution);
-            }
+/// How many tests each of the two body passes is spread over: the unit
+/// nextest runs in parallel is a test function. A body belongs to the shard
+/// its index in the sorted file order, modulo this count, names.
+const SHARDS: usize = 16;
+
+fn shard_bodies(bodies: Vec<KeywordBody>, shard: usize) -> Vec<KeywordBody> {
+    bodies
+        .into_iter()
+        .enumerate()
+        .filter(|(index, _)| index % SHARDS == shard)
+        .map(|(_, body)| body)
+        .collect()
+}
+
+fn body_key(body: &KeywordBody) -> String {
+    format!("{}::{}", body.group, body.method)
+}
+
+/// Every shard index below `SHARDS` has a test running it, for both passes.
+#[test]
+fn every_body_shard_has_a_test() {
+    let source = include_str!("keyword_assertions.rs");
+    for shard in 0..SHARDS {
+        for call in ["exempt_set_shard", "differential_shard"] {
+            let call = format!("\n    {call}({shard});\n");
+            assert_eq!(source.matches(&call).count(), 1, "{call:?}");
         }
     }
-    (failures, total_bodies, passing_assertions)
+}
+
+/// The part of the exempt-set check no one shard can make: every committed
+/// entry names a body the suite yields. (A shard checks the entries of its
+/// own bodies, both ways; an entry naming no body belongs to no shard.)
+#[test]
+fn every_exempt_entry_names_a_body() {
+    let keys: std::collections::BTreeSet<String> = collect_bodies().iter().map(body_key).collect();
+    let orphans: Vec<String> = committed_exempt()
+        .into_keys()
+        .filter(|key| !keys.contains(key))
+        .collect();
+    assert!(
+        orphans.is_empty(),
+        "committed exempt entries naming no body of the suite (now gone -- remove them): \
+         {orphans:?}"
+    );
 }
 
 /// Polices the committed exempt set itself, in every mode, independent of
-/// [`GATE_ENV`]: the current failure set must equal the committed one
-/// exactly, attribution included.
-#[test]
-fn the_exempt_set_matches_the_current_failures() {
-    let (measured, _, _) = measured_failures();
-    let committed = committed_exempt();
+/// [`GATE_ENV`]: the current failure set of one shard's bodies must equal the
+/// committed entries of those bodies exactly, attribution included.
+fn exempt_set_shard(shard: usize) {
+    let bodies = shard_bodies(collect_bodies(), shard);
+    let mut measured = BTreeMap::new();
+    for body in &bodies {
+        if let Some(attribution) = evaluate(body).attribution() {
+            measured.insert(body_key(body), attribution);
+        }
+    }
+    let keys: Vec<String> = bodies.iter().map(body_key).collect();
+    let committed: BTreeMap<String, String> = committed_exempt()
+        .into_iter()
+        .filter(|(key, _)| keys.contains(key))
+        .collect();
 
     let mut problems = Vec::new();
     for (key, attribution) in &measured {
@@ -303,7 +336,7 @@ fn the_exempt_set_matches_the_current_failures() {
 
     assert!(
         problems.is_empty(),
-        "the committed exempt set ({}) no longer describes reality ({} failing). Measured at \
+        "the committed exempt set of shard {shard} ({}) no longer describes reality ({} failing). Measured at \
          ooTest {OOTEST_REVISION}; check `svn info ootest` first if the corpus may have moved.\n{}",
         committed.len(),
         measured.len(),
@@ -311,10 +344,11 @@ fn the_exempt_set_matches_the_current_failures() {
     );
 }
 
-/// The runner. REPORT by default, STRICT under [`GATE_ENV`].
-#[test]
-fn keyword_assertions_differential() {
+/// The runner, for one shard of the bodies. REPORT by default, STRICT under
+/// [`GATE_ENV`].
+fn differential_shard(shard: usize) {
     let (bodies, dropped) = collect();
+    let bodies = shard_bodies(bodies, shard);
     let committed = committed_exempt();
 
     let mut passing_bodies = 0usize;
@@ -390,14 +424,175 @@ fn keyword_assertions_differential() {
         &partial,
         &unaccounted,
         gate,
+        shard,
     ));
 
     assert!(
         !gate || unaccounted.is_empty(),
-        "STRICT ({GATE_ENV}) mode: {} body/bodies are failing with no matching entry in the \
+        "STRICT ({GATE_ENV}) mode: {} body/bodies of shard {shard} are failing with no matching entry in the \
          committed exempt list; see the report above.",
         unaccounted.len()
     );
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_0() {
+    exempt_set_shard(0);
+}
+
+#[test]
+fn keyword_assertions_differential_0() {
+    differential_shard(0);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_1() {
+    exempt_set_shard(1);
+}
+
+#[test]
+fn keyword_assertions_differential_1() {
+    differential_shard(1);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_2() {
+    exempt_set_shard(2);
+}
+
+#[test]
+fn keyword_assertions_differential_2() {
+    differential_shard(2);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_3() {
+    exempt_set_shard(3);
+}
+
+#[test]
+fn keyword_assertions_differential_3() {
+    differential_shard(3);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_4() {
+    exempt_set_shard(4);
+}
+
+#[test]
+fn keyword_assertions_differential_4() {
+    differential_shard(4);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_5() {
+    exempt_set_shard(5);
+}
+
+#[test]
+fn keyword_assertions_differential_5() {
+    differential_shard(5);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_6() {
+    exempt_set_shard(6);
+}
+
+#[test]
+fn keyword_assertions_differential_6() {
+    differential_shard(6);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_7() {
+    exempt_set_shard(7);
+}
+
+#[test]
+fn keyword_assertions_differential_7() {
+    differential_shard(7);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_8() {
+    exempt_set_shard(8);
+}
+
+#[test]
+fn keyword_assertions_differential_8() {
+    differential_shard(8);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_9() {
+    exempt_set_shard(9);
+}
+
+#[test]
+fn keyword_assertions_differential_9() {
+    differential_shard(9);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_10() {
+    exempt_set_shard(10);
+}
+
+#[test]
+fn keyword_assertions_differential_10() {
+    differential_shard(10);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_11() {
+    exempt_set_shard(11);
+}
+
+#[test]
+fn keyword_assertions_differential_11() {
+    differential_shard(11);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_12() {
+    exempt_set_shard(12);
+}
+
+#[test]
+fn keyword_assertions_differential_12() {
+    differential_shard(12);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_13() {
+    exempt_set_shard(13);
+}
+
+#[test]
+fn keyword_assertions_differential_13() {
+    differential_shard(13);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_14() {
+    exempt_set_shard(14);
+}
+
+#[test]
+fn keyword_assertions_differential_14() {
+    differential_shard(14);
+}
+
+#[test]
+fn the_exempt_set_matches_the_current_failures_15() {
+    exempt_set_shard(15);
+}
+
+#[test]
+fn keyword_assertions_differential_15() {
+    differential_shard(15);
 }
 
 #[expect(
@@ -418,6 +613,7 @@ fn build_report(
     partial: &[String],
     unaccounted: &[String],
     gate: bool,
+    shard: usize,
 ) -> String {
     let banner = "=".repeat(78);
     let mut report = String::new();
@@ -425,7 +621,8 @@ fn build_report(
     writeln!(w, "{banner}").unwrap();
     writeln!(
         w,
-        "interrexx keyword body report -- ootest/ooRexx/base/keyword @ {OOTEST_REVISION}"
+        "interrexx keyword body report -- ootest/ooRexx/base/keyword @ {OOTEST_REVISION} -- \
+         shard {shard} of {SHARDS}"
     )
     .unwrap();
     if gate {
