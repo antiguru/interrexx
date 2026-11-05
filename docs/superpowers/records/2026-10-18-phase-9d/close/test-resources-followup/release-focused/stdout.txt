@@ -1,7 +1,0 @@
-
-running 2 tests
-test tests::resources::a_join_rendering_itself_through_defaultname_runs_out_of_stack ... ok
-test tests::resources::a_long_chain_of_stem_subclass_instances_is_walked_once ... ok
-
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 1238 filtered out; finished in 1.91s
-

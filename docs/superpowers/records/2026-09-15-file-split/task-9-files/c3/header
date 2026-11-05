@@ -1,3 +1,0 @@
-//! The pre-interned keyword tables.
-
-use super::{SymbolId, SymbolTable};

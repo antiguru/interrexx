@@ -1,3 +1,0 @@
-gate_table_c.rs
-table_c/mod.rs,table_c/rows.rs
---expect-gone=use rexx_extract::docs::classes::NO_PROGRAM;

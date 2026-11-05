@@ -1,4 +1,0 @@
---- stdout
-after -4
---- stderr
---- rc 0

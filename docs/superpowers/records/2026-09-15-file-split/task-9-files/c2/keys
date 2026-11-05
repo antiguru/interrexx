@@ -1,4 +1,0 @@
-struct SymbolId
-BLOCK:impl SymbolId
-struct SymbolTable
-BLOCK:impl SymbolTable

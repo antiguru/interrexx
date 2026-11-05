@@ -1,4 +1,0 @@
---- crate rc=0
-[stdout]
-mh hasResult 0 The NIL object
-[stderr]

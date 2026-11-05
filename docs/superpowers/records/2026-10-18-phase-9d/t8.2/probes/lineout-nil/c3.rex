@@ -1,1 +1,0 @@
-.stdout~lineout("x", "abc")

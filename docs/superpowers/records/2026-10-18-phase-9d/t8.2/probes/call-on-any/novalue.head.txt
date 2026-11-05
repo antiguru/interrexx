@@ -1,4 +1,0 @@
---- crate rc=0
-[stdout]
-back
-[stderr]

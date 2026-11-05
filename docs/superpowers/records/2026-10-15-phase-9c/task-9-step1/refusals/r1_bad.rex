@@ -1,1 +1,0 @@
-call 'bad.rxo'

@@ -1,4 +1,0 @@
---- stdout
-HALT rc 98 stem 1 first line 10
---- stderr
---- rc 0

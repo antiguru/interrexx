@@ -1,2 +1,0 @@
-say (
-say "abc

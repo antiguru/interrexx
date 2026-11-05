@@ -1,1 +1,0 @@
-.stdout~charout(.object~new)

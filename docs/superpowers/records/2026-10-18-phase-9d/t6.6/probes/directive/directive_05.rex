@@ -1,2 +1,0 @@
-::method m class
-if

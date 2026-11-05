@@ -1,3 +1,0 @@
-   200 *-* address "hostemu" "HI"     -- raises HALT
-       >>>   "HI"
-       +++   "RC(30)"

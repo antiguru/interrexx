@@ -1,3 +1,0 @@
-    14 *-* raise syntax 98.900 additional (a) return replace(a)
-Error 35 running /tmp/p9d-correction-oracle-gtcp9kz3/probe.rex line 14:  Invalid expression.
-Error 35.1:  Incorrect expression detected at "REPLACE".

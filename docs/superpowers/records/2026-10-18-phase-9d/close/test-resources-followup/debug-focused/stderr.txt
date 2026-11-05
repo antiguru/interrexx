@@ -1,2 +1,0 @@
-    Finished `test` profile [optimized + debuginfo] target(s) in 0.04s
-     Running unittests src/lib.rs (/home/moritz/dev/repos/ooRexx-rust-rewrite/.superpowers/sdd/2026-10-18-phase-9d/task10-targets/ee52ea5e62daeb6bc35ca4475de4d1e7a96a4bfe/workspace/debug/deps/rexx_exec-aaedc271dbf1a724)

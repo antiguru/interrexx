@@ -1,5 +1,0 @@
-{
-  "command": "awk -F'\\t' '$3==\"-\" && $4==\"passed\" && $5==\"failed\" {print $1\"\\t\"$2}' tests.tsv",
-  "cwd": "/home/moritz/dev/repos/ooRexx-rust-rewrite/docs/superpowers/records/2026-10-18-phase-9d/close/suite",
-  "status": 0
-}

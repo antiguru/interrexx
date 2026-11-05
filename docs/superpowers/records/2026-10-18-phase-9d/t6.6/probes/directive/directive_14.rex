@@ -1,1 +1,0 @@
-::constant k class

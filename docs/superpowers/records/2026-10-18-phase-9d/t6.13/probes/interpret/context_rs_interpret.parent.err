@@ -1,3 +1,0 @@
-     5 *-* address system 'exit 127';
-       >>>   "exit 127"
-       +++   "RC(127)"

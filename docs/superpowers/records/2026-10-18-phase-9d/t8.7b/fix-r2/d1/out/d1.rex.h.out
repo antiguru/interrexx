@@ -1,3 +1,0 @@
-hn 1 no_such_file_zz.txt DELAY
-hn 1 returns no_such_file_zz.txt
-after notready, n = 1

@@ -1,6 +1,0 @@
-sh = .stream~new('sh.txt')
-address system 'echo hi' with output using (sh)
-say rc lines('sh.txt')
-s2 = .stream~new('s2.txt')
-s2~lineout('direct')
-say lines('s2.txt')

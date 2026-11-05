@@ -1,6 +1,0 @@
-
-running 1 test
-test scheduler::tests::a_deadline_ends_the_programs_wait_on_a_started_sleeper ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1240 filtered out; finished in 0.32s
-

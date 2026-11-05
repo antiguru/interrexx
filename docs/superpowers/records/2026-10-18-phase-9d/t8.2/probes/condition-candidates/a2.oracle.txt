@@ -1,5 +1,0 @@
---- oracle rc=0
-[stdout]
-line4
-s  43 4
-[stderr]

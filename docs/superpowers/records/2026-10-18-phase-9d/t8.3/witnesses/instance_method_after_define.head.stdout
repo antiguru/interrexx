@@ -1,4 +1,0 @@
-old new
-  return "old" 1 0
-return "new" 1
-return "new" 1 0

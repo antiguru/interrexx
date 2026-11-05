@@ -770,8 +770,8 @@ shape the oracle answers and answers the crashing ones as if the context held no
     ::requires 'reach' LIBRARY
 
 The routines are from a purpose-built native test library named `reach` (global references,
-`RegisterLibrary`, a nested attach), loaded with its directory on `LD_LIBRARY_PATH`; its source
-is not kept.
+`RegisterLibrary`, a nested attach), loaded with its directory on `LD_LIBRARY_PATH`. Its source is
+`oracle-crashes/reach.cpp`: `g++ -shared -fPIC -I third_party/ooRexx/api -I third_party/ooRexx/api/platform/unix reach.cpp -o libreach.so`.
 
 SIGSEGV, rc 139, **at termination**: stdout is complete and byte-identical to this crate's, which
 ends at rc 0. Measured twice. Which call leaves the state the termination trips on **has not been isolated**,

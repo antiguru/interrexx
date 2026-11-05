@@ -1,9 +1,0 @@
-{
-  "base": "da3f1ab71",
-  "pure_move": "8ad0a33f8",
-  "move_identity": true,
-  "historical_helper_sha256": "504dd784ececf3d51dfeb80ea38f6f6090648b87a98ed2e7a8836effc6b56f46",
-  "helper_normalized_identity": true,
-  "only_added_skip": "eval::tests::a_parse_pattern_and_an_expression_share_the_eval_depth_limit",
-  "marker": "REXX_TEST_THREAD_SANITIZER=1"
-}

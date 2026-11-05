@@ -1,9 +1,0 @@
-{
-  "ruling": "Continue only the timed-out no-run compilation using its existing cache, preserving every original 600-second bound, 16G cap, command argument, source and environment. No test is executed or retried by this continuation.",
-  "reason": "The fresh compile exhausted its ten-minute bound while linking targets, with no compiler diagnostic failure. Task10 requires the complete no-run build before tests, and freshness is mandated for Clippy rather than each compile attempt.",
-  "cost_if_wrong": "Additional compilation time; no test failure or semantic result is replaced.",
-  "head": "9922e56f3bf6c72442d796f8a43f631a86621abd",
-  "rust_tree": "552e67b3c79f8b44f186bda6ce781b63a2e0cb75",
-  "original_status": 124,
-  "original_record_sha256": "7b0dbf5a35f75867af1c6c7ee782f7ee77e85d3a7da87e6cef07ab5a6e99238a"
-}

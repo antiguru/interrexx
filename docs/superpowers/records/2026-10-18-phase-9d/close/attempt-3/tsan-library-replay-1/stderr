@@ -1,3 +1,0 @@
-ThreadSanitizer:DEADLYSIGNAL
-ThreadSanitizer:DEADLYSIGNAL
-ThreadSanitizer: nested bug in the same thread, aborting.

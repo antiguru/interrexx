@@ -1,4 +1,0 @@
-program	rexx-run median	oracle median	oracle d%
-pingpong/pingmsg	1.354	0.676	-50.07
-pingpong/pingsem	0.121	0.446	+268.60
-pingpong/pingguard	0.122	0.567	+364.75

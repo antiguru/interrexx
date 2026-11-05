@@ -1,8 +1,0 @@
-after do
-after interp
-push A KMAKE
-queue an Array
-after interp
-push A KMAKE
-queue an Array
-rc 230
