@@ -1,4 +1,4 @@
-//! `rexx`, the command line `utilities/rexx/platform/unix/rexx.cpp` reads.
+//! `rexx`, the command-line interpreter.
 
 use std::io::{IsTerminal, Write};
 use std::os::unix::ffi::{OsStrExt, OsStringExt};

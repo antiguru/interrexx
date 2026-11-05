@@ -61,7 +61,7 @@ sim_endless_wait	LIMIT	docs/design/architecture.md, "Simulation mode": a deadloc
 sim_foreign_post	LIMIT	docs/design/architecture.md, "Simulation mode": any inbox post other than a signal's halt, and a callback from a thread running none of the interpreter's native calls, is a determinism breach, refused loudly
 sim_replay_diverged	LIMIT	docs/design/architecture.md, "Simulation mode" (trace and replay): a replay takes the trace's decisions in order, and one the run takes otherwise (another program, a damaged or edited file) is refused rather than run on a schedule the trace does not hold
 sim_trace_unwritten	LIMIT	docs/design/architecture.md, "Simulation mode" (trace and replay): a run asked for a decision trace that it cannot write fails, so a harness that checks the status learns it has none
-stale_handle	LIMIT	a local reference protects its object only until the call that made it ends, so a handle kept past that call resolves to nothing: rust/crates/rexx-api/src/values/convert.rs. Using one is outside the API
+stale_handle	DEVIATION	Deviation 95: a local reference protects its object only until the call that made it ends
 store_op_off_its_node	GUARD	compiler invariant: a Store op names its own assignment (census d-guard)
 string_answer_not_a_string	DEVIATION	Deviation 30: a user STRING method answering an object with no string value, which the oracle converts to .nil, read by a consumer of its bytes
 unbound_method	GUARD	a sweep sent every documented method with its required arguments and every scope override, and Interp::invocable found each resolved method in a table

@@ -787,8 +787,7 @@ impl Loud {
     }
 
     /// An extension's local handle used after the call that made it ended,
-    /// which the API does not define (the exclusions row "A LOCAL HANDLE KEPT
-    /// FROM AN EARLIER CALL IS STILL REFUSED").
+    /// which the API does not define (Deviation 95).
     fn stale_handle() -> Loud {
         Loud {
             message: owned_message("the handle is no longer held by this activation"),

@@ -33,11 +33,9 @@ An expression of more than 100,000 terms at one level raises `SYNTAX 11.1`.
 ooRexx evaluates such expressions until it crashes, a little above that
 size. Nested parentheses and nested calls raise 11.1 on both.
 
-## 3. POS past the end of the haystack
+## 3. Withdrawn
 
-POS never matches past the last character of the haystack. Older ooRexx
-releases could match a needle ending in `'00'x` one byte past the end;
-current ooRexx agrees with interrexx.
+POS past the end of the haystack: current ooRexx agrees with interrexx.
 
 ## 4. Identity of equal values
 
@@ -591,3 +589,10 @@ A `tablei` given as the null string is a table with no characters, however
 the null string was produced. ooRexx takes a null string from some builtins
 as an omitted `tablei`. The [TRANSLATE page](r:bif.translate.deviation.94)
 states it.
+
+## 95. A native handle used after its call
+
+An extension that keeps a local object reference past the native call that
+received it, and uses it in a later call, ends the program with exit code
+120 and a message that the handle is no longer held. The API does not
+define such a use; ooRexx may still reach the object or one that replaced it.

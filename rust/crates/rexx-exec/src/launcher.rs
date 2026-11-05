@@ -1,7 +1,5 @@
 //! The `rexx` and `rexxc` command lines' library half: option scanning, the
-//! program search, and the texts the launchers print themselves
-//! (`utilities/rexx/platform/unix/rexx.cpp`,
-//! `utilities/rexxc/platform/unix/RexxCompiler.cpp`).
+//! program search, and the texts the launchers print themselves.
 
 use std::ffi::{OsStr, OsString};
 use std::os::unix::ffi::{OsStrExt, OsStringExt};
