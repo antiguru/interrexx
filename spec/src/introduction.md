@@ -62,11 +62,11 @@ chapter: `bif` for built-in functions in `builtins/`, `instr` for
 `instructions/`, `expr` for `expressions/`, `parse` for `parsing/`, `cond`
 for `conditions/`, `class` for `classes/`, `lex` for `lexical/`, `num` for
 `numbers/`, `dir` for `directives/`, `util` for `rexxutil/` and `env` for
-`environment/`. The second word is the page's
-file name: `bif.substr.pad` is in `builtins/substr.md`, and the rules for a
-whole chapter, such as `bif.index.call.count`, are in its `index.md`. The
-conventions are one page, `conventions.md`, and every `conv.` rule is there.
-The checker rejects a rule on any other page.
+`environment/`. The second word is the page's file name: `bif.substr.pad` is
+in `builtins/substr.md`, and the rules for a whole chapter, such as
+`bif.index.call.count`, are in its `index.md`. The conventions are one page,
+`conventions.md`, and every `conv.` rule is there. The checker rejects a rule
+on any other page.
 
 Identifiers never change and are never reused. Other pages refer to a rule by
 that identifier, and so do comments in the test sources: a test that

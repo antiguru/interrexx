@@ -54,6 +54,9 @@ fn output_defect_is_read_and_combines_with_rc() {
     let text = page_text().replace("```output\n", "```output defect=#12 rc=1\n");
     let e = &parse(&text).unwrap().examples[0];
     assert_eq!((e.defect, e.rc), (Some(12), 1));
+    let text = page_text().replace("```output\n", "```output rc=1 defect=#12\n");
+    let e = &parse(&text).unwrap().examples[0];
+    assert_eq!((e.defect, e.rc), (Some(12), 1));
     assert_eq!(parse(&page_text()).unwrap().examples[0].defect, None);
 }
 
@@ -69,6 +72,19 @@ fn a_malformed_defect_is_a_problem() {
     ] {
         let text = page_text().replace("```output\n", &format!("```output {bad}\n"));
         assert!(parse(&text).is_err(), "{bad}");
+    }
+}
+
+#[test]
+fn a_duplicate_output_option_is_a_problem() {
+    for dup in [
+        "defect=#1 defect=#2",
+        "defect=#1 defect=#1",
+        "rc=1 rc=2",
+        "rc=0 rc=0",
+    ] {
+        let text = page_text().replace("```output\n", &format!("```output {dup}\n"));
+        assert!(parse(&text).is_err(), "{dup}");
     }
 }
 

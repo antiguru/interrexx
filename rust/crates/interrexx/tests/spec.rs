@@ -913,6 +913,11 @@ fn an_example_the_oracle_answers_differently_is_reported_unless_a_deviation() {
         problems[0].message
     );
 
+    // A defect marker is not an oracle exemption: the wrong body is reported.
+    let root = tree_with_page(&scratch, &page_with_example("say 1/3", " defect=#7\nx"));
+    let problems = oracle_disagreements(&root, &oracle);
+    assert_eq!(problems.len(), 1, "{}", render(&problems));
+
     // Under a deviation rule the page does not list, it is reported.
     let root = tree_with_page(
         &scratch,
@@ -944,6 +949,15 @@ fn only_a_listed_deviation_rule_is_exempt_from_the_oracle() {
     assert!(!exempt("", "bif.t.deviation.1"));
     assert!(!exempt("deviations: [2]\n", "bif.t.deviation.1"));
     assert!(!exempt("deviations: [1]\n", "bif.t.one"));
+    // A defect marker does not exempt an example from the oracle.
+    let marked = interrexx_spec::parse_page(
+        Path::new("builtins/t.md"),
+        "---\nelement: T\nkind: builtin\n---\n\n\
+         r[bif.t.one]\nA rule.\n\n```rexx\nnop\n```\n\n```output defect=#7\n```\n",
+    )
+    .expect("the page parses");
+    assert_eq!(marked.examples[0].defect, Some(7));
+    assert!(!exempt_from_the_oracle(&marked, &marked.examples[0]));
     // An ID that only contains `.deviation.` is not a deviation rule at all:
     // the page does not parse, so no example of it reaches the oracle.
     assert!(page("deviations: [1]\n", "bif.t.deviation.pending").is_err());

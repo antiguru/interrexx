@@ -317,6 +317,7 @@ fn finish_block(
         Some("rexx") => *pending_rexx = Some((f.line, content)),
         Some("output") => {
             let mut rc = 0;
+            let mut rc_seen = false;
             let mut defect = None;
             for w in words {
                 if let Some(d) = w.strip_prefix("defect=") {
@@ -325,6 +326,9 @@ fn finish_block(
                         .filter(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
                         .and_then(|n| n.parse::<u32>().ok());
                     match number {
+                        Some(_) if defect.is_some() => {
+                            err(f.line, "duplicate `defect=` option".into())
+                        }
                         Some(n) => defect = Some(n),
                         None => err(
                             f.line,
@@ -334,7 +338,11 @@ fn finish_block(
                     continue;
                 }
                 match w.strip_prefix("rc=").and_then(|n| n.parse::<i32>().ok()) {
-                    Some(n) => rc = n,
+                    Some(_) if rc_seen => err(f.line, "duplicate `rc=` option".into()),
+                    Some(n) => {
+                        rc = n;
+                        rc_seen = true;
+                    }
                     None => err(f.line, format!("unrecognised output block option `{w}`")),
                 }
             }
