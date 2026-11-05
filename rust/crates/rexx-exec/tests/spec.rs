@@ -1,6 +1,7 @@
 //! The specification checker: `spec/` is held to the checks the design lists,
 //! and each check is shown to catch what it is for.
 
+mod support;
 mod watchdog;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -10,6 +11,7 @@ use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use rexx_spec::Problem;
+use support::oracle::{Oracle, Termination};
 
 /// Where a rule ID is cited from: the file and 1-based line of each citation.
 type Citations = BTreeMap<String, Vec<(PathBuf, usize)>>;
@@ -434,9 +436,13 @@ fn run_example(
 struct Scratch(PathBuf);
 
 impl Scratch {
-    fn new(what: &str) -> Scratch {
+    fn next() -> usize {
         static COUNTER: AtomicUsize = AtomicUsize::new(0);
-        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+        COUNTER.fetch_add(1, Ordering::Relaxed)
+    }
+
+    fn new(what: &str) -> Scratch {
+        let n = Scratch::next();
         let dir =
             std::env::temp_dir().join(format!("interrexx-spec-{what}-{}-{n}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
@@ -732,4 +738,124 @@ fn copy_tree(from: &Path, to: &Path) {
             fs::copy(entry.path(), &target).expect("copying a file");
         }
     }
+}
+
+/// Whether the oracle gate is on: `REXX_SPEC_ORACLE` set, non-empty and not `0`.
+fn oracle_gate_on() -> bool {
+    std::env::var_os("REXX_SPEC_ORACLE").is_some_and(|v| !v.is_empty() && v != "0")
+}
+
+/// Runs every example under `spec_root` on the oracle, with empty standard
+/// input, and reports each whose stdout is not exactly the output block or
+/// whose exit code is not `rc`. An example under a rule whose ID contains
+/// `.deviation.` is the place the oracle is known to answer differently, and
+/// is exempt.
+fn oracle_disagreements(spec_root: &Path, oracle: &Oracle) -> Vec<Problem> {
+    let (pages, mut problems) = rexx_spec::load(spec_root);
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "spec-oracle-{}-{}",
+        std::process::id(),
+        Scratch::next()
+    ));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).expect("creating the oracle program directory");
+    let mut n = 0;
+    for page in &pages {
+        for example in &page.examples {
+            if example.rule.contains(".deviation.") {
+                continue;
+            }
+            n += 1;
+            let file = dir.join(format!("example-{n}.rex"));
+            fs::write(&file, &example.program).expect("writing an example program");
+            let outcome = oracle.run_with(&file, &[], None);
+            let message = match outcome.termination {
+                Termination::Exited(code) => {
+                    let mut message = String::new();
+                    if outcome.stdout != example.output.as_bytes() {
+                        message.push_str(&format!(
+                            "\n  expected output: {:?}\n  oracle output:   {:?}",
+                            example.output,
+                            String::from_utf8_lossy(&outcome.stdout)
+                        ));
+                    }
+                    if code != example.rc {
+                        message.push_str(&format!(
+                            "\n  expected rc: {}\n  oracle rc:   {code}",
+                            example.rc
+                        ));
+                    }
+                    message
+                }
+                other => format!("\n  the oracle did not finish: {other:?}"),
+            };
+            if !message.is_empty() {
+                problems.push(problem(
+                    &page.path,
+                    example.line,
+                    format!(
+                        "example under `{}` is answered differently by the oracle, and the rule is not a deviation{message}",
+                        example.rule
+                    ),
+                ));
+            }
+        }
+    }
+    let _ = fs::remove_dir_all(&dir);
+    problems
+}
+
+#[test]
+fn examples_agree_with_the_oracle_or_are_deviations() {
+    if !oracle_gate_on() {
+        eprintln!("note: REXX_SPEC_ORACLE is not set; the examples were not run on the oracle");
+        return;
+    }
+    let oracle = support::oracle::locate();
+    let repo = repo_root();
+    let problems = oracle_disagreements(&repo.join("spec"), &oracle);
+    assert!(
+        problems.is_empty(),
+        "{} example(s) differ on the oracle:\n{}",
+        problems.len(),
+        render(&problems)
+    );
+}
+
+#[test]
+fn an_example_the_oracle_answers_differently_is_reported_unless_a_deviation() {
+    if !oracle_gate_on() {
+        eprintln!("note: REXX_SPEC_ORACLE is not set; the oracle self-test was skipped");
+        return;
+    }
+    let oracle = support::oracle::locate();
+    let scratch = Scratch::new("oracle-seeded");
+    let root = tree_with_page(&scratch, &page_with_example("say 1/3", "\nx"));
+    let problems = oracle_disagreements(&root, &oracle);
+    assert_eq!(problems.len(), 1, "{}", render(&problems));
+    let m = &problems[0].message;
+    assert!(
+        m.contains("bif.t.one") && m.contains("\"x\\n\"") && m.contains("0.3333333"),
+        "{m}"
+    );
+
+    // The same disagreement under a deviation rule is exempt; an rc mismatch
+    // under a non-deviation rule is reported.
+    let root = tree_with_page(
+        &scratch,
+        "r[bif.t.deviation.1]\nA rule.\n\n```rexx\nsay 1/3\n```\n\n```output\nx\n```\n\n\
+         r[bif.t.two]\nA rule.\n\n```rexx\nexit 2\n```\n\n```output\n```\n",
+    );
+    let problems = oracle_disagreements(&root, &oracle);
+    assert_eq!(problems.len(), 1, "{}", render(&problems));
+    assert!(
+        problems[0].message.contains("bif.t.two"),
+        "{}",
+        problems[0].message
+    );
+    assert!(
+        problems[0].message.contains("oracle rc:   2"),
+        "{}",
+        problems[0].message
+    );
 }
