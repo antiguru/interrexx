@@ -83,41 +83,106 @@ fn citations(repo: &Path) -> Citations {
 }
 
 /// The text of every comment in `text`, with the line each segment is on.
-/// `rust` selects Rust's literals (a `'` may be a lifetime); otherwise a `'`
-/// opens a Rexx string. Block comments nest in both.
+///
+/// The lexer carries its state across lines, so a `//` inside a string that
+/// continues over several lines, or inside a raw string, is not a comment.
+/// `rust` selects Rust's literals (ordinary strings with escapes, raw strings,
+/// character literals against lifetimes); otherwise a `'` or `"` opens a Rexx
+/// string, which ends at its closing quote or at the end of the line (a doubled
+/// quote is a close and a reopen). Block comments nest in both.
 fn comments_of(text: &str, rust: bool) -> Vec<(usize, String)> {
+    enum State {
+        Code,
+        Block(usize),
+        Str(char),
+        Raw(usize),
+    }
+    let chars: Vec<char> = text.chars().collect();
+    let mut line_of = Vec::with_capacity(chars.len());
+    let mut line = 1;
+    for c in &chars {
+        line_of.push(line);
+        if *c == '\n' {
+            line += 1;
+        }
+    }
+    let at = |i: usize| chars.get(i).copied();
+    let ident = |c: Option<char>| c.is_some_and(|c| c.is_alphanumeric() || c == '_');
     let mut out = Vec::new();
-    let mut depth = 0usize;
-    for (index, line) in text.lines().enumerate() {
-        let chars: Vec<char> = line.chars().collect();
-        let at = |i: usize| chars.get(i).copied();
-        let mut segment = String::new();
-        let mut i = 0;
-        while let Some(c) = at(i) {
-            if depth > 0 {
+    let mut state = State::Code;
+    let mut segment = String::new();
+    let mut segment_line = 1;
+    let mut i = 0;
+    while let Some(c) = at(i) {
+        let here = line_of.get(i).copied().unwrap_or(1);
+        match state {
+            State::Block(depth) => {
                 if c == '*' && at(i + 1) == Some('/') {
-                    depth -= 1;
                     i += 2;
                     segment.push(' ');
+                    state = if depth == 1 {
+                        flush(&mut out, &mut segment, segment_line);
+                        State::Code
+                    } else {
+                        State::Block(depth - 1)
+                    };
                 } else if c == '/' && at(i + 1) == Some('*') {
-                    depth += 1;
                     i += 2;
+                    state = State::Block(depth + 1);
+                } else if c == '\n' {
+                    flush(&mut out, &mut segment, segment_line);
+                    i += 1;
+                    segment_line = here + 1;
                 } else {
                     segment.push(c);
                     i += 1;
                 }
-                continue;
             }
-            match c {
+            State::Str(quote) => {
+                if rust && c == '\\' {
+                    i += 2;
+                } else if c == quote {
+                    i += 1;
+                    state = State::Code;
+                } else if !rust && c == '\n' {
+                    state = State::Code;
+                } else {
+                    i += 1;
+                }
+            }
+            State::Raw(hashes) => {
+                if c == '"' && (1..=hashes).all(|k| at(i + k) == Some('#')) {
+                    i += 1 + hashes;
+                    state = State::Code;
+                } else {
+                    i += 1;
+                }
+            }
+            State::Code => match c {
                 '"' => {
                     i += 1;
-                    while let Some(s) = at(i) {
-                        if s == '"' {
-                            break;
-                        }
-                        i += if rust && s == '\\' { 2 } else { 1 };
+                    state = State::Str('"');
+                }
+                'r' if rust
+                    && {
+                        let prev = i.checked_sub(1).and_then(at);
+                        let before_b = prev == Some('b') && !ident(i.checked_sub(2).and_then(at));
+                        !ident(prev) || before_b
                     }
-                    i += 1;
+                    && {
+                        let mut k = i + 1;
+                        while at(k) == Some('#') {
+                            k += 1;
+                        }
+                        at(k) == Some('"')
+                    } =>
+                {
+                    let mut k = i + 1;
+                    while at(k) == Some('#') {
+                        k += 1;
+                    }
+                    state = State::Raw(k - i - 1);
+                    i = k + 1;
                 }
                 '\'' if rust => {
                     // A character literal is skipped; a lifetime is not one.
@@ -135,27 +200,36 @@ fn comments_of(text: &str, rust: bool) -> Vec<(usize, String)> {
                 }
                 '\'' => {
                     i += 1;
-                    while at(i).is_some_and(|s| s != '\'') {
-                        i += 1;
-                    }
-                    i += 1;
+                    state = State::Str('\'');
                 }
                 '/' if at(i + 1) == Some('/') => {
-                    segment.extend(chars.iter().skip(i + 2));
-                    break;
+                    let mut k = i + 2;
+                    let mut body = String::new();
+                    while let Some(s) = at(k).filter(|s| *s != '\n') {
+                        body.push(s);
+                        k += 1;
+                    }
+                    flush(&mut out, &mut body, here);
+                    i = k;
                 }
                 '/' if at(i + 1) == Some('*') => {
-                    depth += 1;
+                    segment_line = here;
+                    state = State::Block(1);
                     i += 2;
                 }
                 _ => i += 1,
-            }
-        }
-        if !segment.trim().is_empty() {
-            out.push((index + 1, segment));
+            },
         }
     }
+    flush(&mut out, &mut segment, segment_line);
     out
+}
+
+fn flush(out: &mut Vec<(usize, String)>, segment: &mut String, line: usize) {
+    if !segment.trim().is_empty() {
+        out.push((line, std::mem::take(segment)));
+    }
+    segment.clear();
 }
 
 /// The rule IDs a comment cites: those following each `spec:`, separated by
@@ -547,6 +621,33 @@ fn citations_are_comments_in_tracked_files() {
     );
     let at = found.get("bif.x.line-comment").expect("cited");
     assert_eq!(at, &[(repo.join("rust/crates/a/src/lib.rs"), 1)]);
+}
+
+#[test]
+fn comment_markers_inside_literals_are_not_comments() {
+    let multi = "let s = \"first \\\n    // spec: bif.x.continued\\\n    /* spec: bif.x.block */\";\n// spec: bif.x.real\n";
+    let found = comments_of(multi, true);
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0].0, 4);
+    let raw = "let s = r#\"\n// spec: bif.x.raw \"quoted\"\n\"#;\nfn f<'a>(x: &'a str) {} // spec: bif.x.after\n";
+    let found = comments_of(raw, true);
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].1.contains("bif.x.after"));
+    let rex = "say '/* spec: bif.x.str */' /* spec: bif.x.rex-real */\nsay \"it''s\" /* spec: bif.x.two\n   bif.x.three */\n";
+    let found = comments_of(rex, false);
+    assert_eq!(found.len(), 3, "{found:?}");
+    assert_eq!((found[0].0, found[1].0, found[2].0), (1, 2, 3));
+}
+
+#[test]
+fn the_checker_s_own_fixtures_cite_nothing() {
+    let found = citations(&repo_root());
+    let own = repo_root().join("rust/crates/rexx-exec/tests/spec.rs");
+    let from_here: Vec<_> = found
+        .iter()
+        .filter(|(_, places)| places.iter().any(|(p, _)| *p == own))
+        .collect();
+    assert!(from_here.is_empty(), "{from_here:?}");
 }
 
 #[test]
