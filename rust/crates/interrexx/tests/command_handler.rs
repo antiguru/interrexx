@@ -108,6 +108,12 @@ fn the_command_handler_group_passes_with_the_oracles_counts() {
         None,
     );
     let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    assert!(
+        stdout.contains("Tests ran:"),
+        "no summary; exit status {:?}:\n{stdout}\n{}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
     let counts = [
         count(&stdout, "Tests ran:"),
         count(&stdout, "Assertions:"),

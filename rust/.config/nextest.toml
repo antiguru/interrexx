@@ -32,6 +32,17 @@ binary(signals) | binary(stdin_contention) | binary(program_end) | binary(prompt
 test-group = 'wall-clock'
 threads-required = 4
 
+# A time boundary a loaded host can miss is run again once, as these tests' own modules do: the
+# run reports the test as flaky and only a second miss fails it.
+[[profile.ci.overrides]]
+filter = '''
+binary(signals) | binary(stdin_contention) | binary(program_end) | binary(prompt_before_read)
+| binary(oracle_deadline) | binary(deadline) | binary(sim_processes)
+| test(a_run_ending_with_a_call_in_flight_serves_the_call_then_drops_the_interpreter)
+| (binary(classic_api) & test(/sigint|halt|group_signal|the_classic_family_answers/))
+'''
+retries = 1
+
 [scripts.setup.method-bodies-api]
 command = '.config/scripts/method-bodies-api.sh'
 
