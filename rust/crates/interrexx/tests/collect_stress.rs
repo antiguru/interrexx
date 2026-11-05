@@ -109,32 +109,106 @@ const COLLECTION_TIMED_PROGRAMS: &[&str] = &[
     "lang/uninit_drain_trace_line.rex",
 ];
 
-#[test]
-fn the_l0_subset_passes_again_under_collect_on_every_allocation() {
+/// How many tests the subset is spread over. A program belongs to the shard
+/// its index in the list, modulo this count, names: the unit nextest runs in
+/// parallel is a test function, and one test over the whole subset was the
+/// longest in the workspace.
+const SHARDS: usize = 16;
+
+/// The subset, read from the corpus list.
+fn subset() -> Vec<String> {
     let corpus_dir = corpus_dir();
     let paths: Vec<PathBuf> = SUBSET_FILES
         .iter()
         .map(|name| corpus_dir.join(name))
         .collect();
-    let subset = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>());
+    read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>())
+}
+
+/// Every shard index below `SHARDS` has a test running it, so no program of
+/// the subset falls between the shards.
+#[test]
+fn every_l0_shard_has_a_test() {
+    let source = include_str!("collect_stress.rs");
+    for shard in 0..SHARDS {
+        let call = format!("\n    run_l0_shard({shard});\n");
+        assert_eq!(source.matches(&call).count(), 1, "shard {shard}");
+    }
+    for heavy in 0..HEAVY_PROGRAMS.len() {
+        let call = format!("\n    run_l0_heavy({heavy});\n");
+        assert_eq!(source.matches(&call).count(), 1, "heavy {heavy}");
+    }
+}
+
+/// The whole-set checks of the subset: it names programs, and every program
+/// the two committed lists name is in it, so a shard comparing its own
+/// programs against the lists leaves none of the list entries unchecked.
+#[test]
+fn the_l0_subset_names_every_listed_program() {
+    let subset = subset();
     assert!(
         !subset.is_empty(),
         "the corpus list named no programs -- that is a corpus defect, \
          not an empty pass"
     );
-
     for timed in COLLECTION_TIMED_PROGRAMS {
         assert!(
             subset.iter().any(|path| path == timed),
             "{timed} is not in the subset"
         );
     }
+    for heavy in HEAVY_PROGRAMS {
+        assert!(
+            subset.iter().any(|path| path == heavy),
+            "{heavy} is in the heavy list but not in the subset"
+        );
+    }
+    for none in NO_ALLOCATION_PROGRAMS {
+        assert!(
+            subset.iter().any(|path| path == none),
+            "{none} is in the no-allocation list but not in the subset"
+        );
+    }
+}
+
+/// The programs that take over 15 s alone under the stress mode (measured
+/// 18, 36 and 64 s: the call-depth cap is reached with a collection at every
+/// allocation). Each is a test of its own, so that none of them holds a
+/// shard's other programs back; they are not in any shard.
+const HEAVY_PROGRAMS: &[&str] = &[
+    "lang/call_depth_cap_call.rex",
+    "lang/call_depth_cap_function.rex",
+    "lang/call_site_routine_copy_lifetime.rex",
+];
+
+fn run_l0_shard(shard: usize) {
+    let subset: Vec<String> = subset()
+        .into_iter()
+        .filter(|path| !HEAVY_PROGRAMS.contains(&path.as_str()))
+        .enumerate()
+        .filter(|(index, _)| index % SHARDS == shard)
+        .map(|(_, path)| path)
+        .collect();
+    check_l0_programs(&format!("shard {shard}"), &subset);
+}
+
+fn run_l0_heavy(program: usize) {
+    let program = HEAVY_PROGRAMS[program].to_string();
+    assert!(
+        subset().contains(&program),
+        "{program} is not in the subset"
+    );
+    check_l0_programs(&program, &[program.clone()]);
+}
+
+fn check_l0_programs(what: &str, subset: &[String]) {
+    let corpus_dir = corpus_dir();
 
     let mut total_collections: u64 = 0;
     let mut mismatches = Vec::new();
     let mut zero_collection_programs = Vec::new();
 
-    for rel_path in &subset {
+    for rel_path in subset {
         let abs = corpus_dir.join(rel_path);
         let text = fs::read(&abs).unwrap_or_else(|e| panic!("cannot read {}: {e}", abs.display()));
         let path_str = abs
@@ -204,20 +278,120 @@ fn the_l0_subset_passes_again_under_collect_on_every_allocation() {
         .map(String::as_str)
         .collect();
     observed.sort_unstable();
-    let mut expected: Vec<&str> = NO_ALLOCATION_PROGRAMS.to_vec();
+    let mut expected: Vec<&str> = NO_ALLOCATION_PROGRAMS
+        .iter()
+        .copied()
+        .filter(|name| subset.iter().any(|path| path == name))
+        .collect();
     expected.sort_unstable();
     assert_eq!(
         observed, expected,
-        "the set of programs performing zero collections under the stress \
-         mode has drifted from the committed list; a program that gained an \
-         allocation and one that lost one are both worth deciding about"
+        "the set of programs of {what} performing zero collections \
+         under the stress mode has drifted from the committed list; a program \
+         that gained an allocation and one that lost one are both worth \
+         deciding about"
     );
     assert!(
         total_collections > 0,
-        "collect-on-every-allocation performed zero collections across the \
-         whole subset -- the mode is a no-op and this criterion cannot tell \
-         a real pass from a vacuous one"
+        "collect-on-every-allocation performed zero collections across \
+         {what} of the subset -- the mode is a no-op and this \
+         criterion cannot tell a real pass from a vacuous one"
     );
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_heavy_0() {
+    run_l0_heavy(0);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_heavy_1() {
+    run_l0_heavy(1);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_heavy_2() {
+    run_l0_heavy(2);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_00() {
+    run_l0_shard(0);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_01() {
+    run_l0_shard(1);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_02() {
+    run_l0_shard(2);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_03() {
+    run_l0_shard(3);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_04() {
+    run_l0_shard(4);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_05() {
+    run_l0_shard(5);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_06() {
+    run_l0_shard(6);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_07() {
+    run_l0_shard(7);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_08() {
+    run_l0_shard(8);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_09() {
+    run_l0_shard(9);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_10() {
+    run_l0_shard(10);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_11() {
+    run_l0_shard(11);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_12() {
+    run_l0_shard(12);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_13() {
+    run_l0_shard(13);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_14() {
+    run_l0_shard(14);
+}
+
+#[test]
+fn the_l0_subset_passes_again_under_collect_on_every_allocation_shard_15() {
+    run_l0_shard(15);
 }
 
 /// **Fix round 4's NEW-4.** The value a clause resolves to is rooted across

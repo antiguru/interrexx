@@ -115,7 +115,7 @@ struct Mismatch {
     /// `true` for a run of either side that did not finish, `false` for an
     /// ordinary byte divergence. Kept as its own field rather than inferred from
     /// `reason`'s text, because a structural failure is red in every mode
-    /// and a divergence is red only under the gate -- `corpus_differential`
+    /// and a divergence is red only under the gate -- the `corpus_differential_NN` tests
     /// asserts on this field unconditionally, before the gated assertion
     /// over the whole list, and a bit that says which kind a `Mismatch` is
     /// cannot be conflated with prose the way a substring match could be.
@@ -643,6 +643,29 @@ fn every_sidecar_names_a_program_the_subset_runs() {
     }
 }
 
+#[test]
+fn a_sidecar_exists_for_the_control_to_iterate_over() {
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    assert!(
+        !sidecar_stems(&corpus_dir).is_empty(),
+        "no sidecar on disk, so this control iterates over nothing"
+    );
+}
+
+/// How many tests the sidecar control is spread over; a sidecar belongs to
+/// the shard its index in the sorted stems, modulo this count, names.
+const SIDECAR_SHARDS: usize = 8;
+
+/// Every shard index below `SIDECAR_SHARDS` has a test running it.
+#[test]
+fn every_sidecar_shard_has_a_test() {
+    let source = include_str!("corpus.rs");
+    for shard in 0..SIDECAR_SHARDS {
+        let call = format!("\n    a_sidecar_changes_what_an_interpreter_answers({shard});\n");
+        assert_eq!(source.matches(&call).count(), 1, "shard {shard}");
+    }
+}
+
 /// Each sidecar's own control, taken one part at a time: removing any one of
 /// its fixtures, environment variables, working directory or standard input
 /// makes one of the two interpreters answer differently.
@@ -664,15 +687,17 @@ fn every_sidecar_names_a_program_the_subset_runs() {
 /// load-bearing, not that a program which needs one still has it. Measured --
 /// removing `trace_debug_skip.stdin`, the only sidecar of its program, leaves
 /// this green.
-#[test]
-fn a_sidecar_changes_what_one_of_the_interpreters_answers() {
+///
+/// Run in shards by `a_sidecar_changes_what_one_of_the_interpreters_answers_N`.
+fn a_sidecar_changes_what_an_interpreter_answers(shard: usize) {
     let oracle = support::oracle::locate();
     let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
-    let stems = sidecar_stems(&corpus_dir);
-    assert!(
-        !stems.is_empty(),
-        "no sidecar on disk, so this control iterates over nothing"
-    );
+    let stems: Vec<String> = sidecar_stems(&corpus_dir)
+        .into_iter()
+        .enumerate()
+        .filter(|(index, _)| index % SIDECAR_SHARDS == shard)
+        .map(|(_, stem)| stem)
+        .collect();
     for stem in &stems {
         let rel_path = format!("{LANG_SUBDIR}/{stem}.rex");
         let abs = fs::canonicalize(corpus_dir.join(&rel_path))
@@ -722,6 +747,46 @@ fn a_sidecar_changes_what_one_of_the_interpreters_answers() {
         }
         empty_run_directory(&dir);
     }
+}
+
+#[test]
+fn a_sidecar_changes_what_one_of_the_interpreters_answers_0() {
+    a_sidecar_changes_what_an_interpreter_answers(0);
+}
+
+#[test]
+fn a_sidecar_changes_what_one_of_the_interpreters_answers_1() {
+    a_sidecar_changes_what_an_interpreter_answers(1);
+}
+
+#[test]
+fn a_sidecar_changes_what_one_of_the_interpreters_answers_2() {
+    a_sidecar_changes_what_an_interpreter_answers(2);
+}
+
+#[test]
+fn a_sidecar_changes_what_one_of_the_interpreters_answers_3() {
+    a_sidecar_changes_what_an_interpreter_answers(3);
+}
+
+#[test]
+fn a_sidecar_changes_what_one_of_the_interpreters_answers_4() {
+    a_sidecar_changes_what_an_interpreter_answers(4);
+}
+
+#[test]
+fn a_sidecar_changes_what_one_of_the_interpreters_answers_5() {
+    a_sidecar_changes_what_an_interpreter_answers(5);
+}
+
+#[test]
+fn a_sidecar_changes_what_one_of_the_interpreters_answers_6() {
+    a_sidecar_changes_what_an_interpreter_answers(6);
+}
+
+#[test]
+fn a_sidecar_changes_what_one_of_the_interpreters_answers_7() {
+    a_sidecar_changes_what_an_interpreter_answers(7);
 }
 
 /// The stem of every `<name>.env` or `<name>.d/` beside a corpus program.
@@ -856,8 +921,7 @@ fn the_programs_outside_lang_are_the_pinned_ones() {
 }
 
 #[test]
-fn corpus_differential() {
-    let oracle = support::oracle::locate();
+fn the_differential_list_names_programs() {
     let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
     let paths: Vec<PathBuf> = SUBSET_FILES
         .iter()
@@ -869,6 +933,37 @@ fn corpus_differential() {
         "the corpus list named no programs -- that is a corpus defect, \
          not an empty pass"
     );
+}
+
+/// How many tests the differential is spread over: the unit nextest runs in
+/// parallel is a test function. A program belongs to the shard its index in
+/// the list, modulo this count, names.
+const DIFFERENTIAL_SHARDS: usize = 16;
+
+/// Every shard index below `DIFFERENTIAL_SHARDS` has a test running it, so no
+/// program of the list falls between the shards.
+#[test]
+fn every_differential_shard_has_a_test() {
+    let source = include_str!("corpus.rs");
+    for shard in 0..DIFFERENTIAL_SHARDS {
+        let call = format!("\n    corpus_differential_shard({shard});\n");
+        assert_eq!(source.matches(&call).count(), 1, "shard {shard}");
+    }
+}
+
+fn corpus_differential_shard(shard: usize) {
+    let oracle = support::oracle::locate();
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let paths: Vec<PathBuf> = SUBSET_FILES
+        .iter()
+        .map(|name| corpus_dir.join(name))
+        .collect();
+    let subset: Vec<String> = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>())
+        .into_iter()
+        .enumerate()
+        .filter(|(index, _)| index % DIFFERENTIAL_SHARDS == shard)
+        .map(|(_, path)| path)
+        .collect();
 
     let mut mismatches = Vec::new();
     let mut matched = 0usize;
@@ -910,6 +1005,86 @@ fn corpus_differential() {
          the oracle; see the report above for which and why.",
         mismatches.len()
     );
+}
+
+#[test]
+fn corpus_differential_00() {
+    corpus_differential_shard(0);
+}
+
+#[test]
+fn corpus_differential_01() {
+    corpus_differential_shard(1);
+}
+
+#[test]
+fn corpus_differential_02() {
+    corpus_differential_shard(2);
+}
+
+#[test]
+fn corpus_differential_03() {
+    corpus_differential_shard(3);
+}
+
+#[test]
+fn corpus_differential_04() {
+    corpus_differential_shard(4);
+}
+
+#[test]
+fn corpus_differential_05() {
+    corpus_differential_shard(5);
+}
+
+#[test]
+fn corpus_differential_06() {
+    corpus_differential_shard(6);
+}
+
+#[test]
+fn corpus_differential_07() {
+    corpus_differential_shard(7);
+}
+
+#[test]
+fn corpus_differential_08() {
+    corpus_differential_shard(8);
+}
+
+#[test]
+fn corpus_differential_09() {
+    corpus_differential_shard(9);
+}
+
+#[test]
+fn corpus_differential_10() {
+    corpus_differential_shard(10);
+}
+
+#[test]
+fn corpus_differential_11() {
+    corpus_differential_shard(11);
+}
+
+#[test]
+fn corpus_differential_12() {
+    corpus_differential_shard(12);
+}
+
+#[test]
+fn corpus_differential_13() {
+    corpus_differential_shard(13);
+}
+
+#[test]
+fn corpus_differential_14() {
+    corpus_differential_shard(14);
+}
+
+#[test]
+fn corpus_differential_15() {
+    corpus_differential_shard(15);
 }
 
 /// Not a corpus case. Exists only to be re-executed, alone, by
@@ -954,7 +1129,7 @@ fn demonstrate_the_report_reaches_a_plain_cargo_test() {
     );
 }
 
-/// The sharing fraction over the corpus: the crate's side of every program [`corpus_differential`] runs, the
+/// The sharing fraction over the corpus: the crate's side of every program the `corpus_differential_NN` tests runs, the
 /// counts summed, and each program with a shared object listed.
 #[cfg(feature = "sharing")]
 #[test]
@@ -1011,7 +1186,7 @@ fn sharing_fraction_over_the_corpus() {
     println!("{text}\nwritten to {}", out.display());
 }
 
-/// The pinning report over the corpus: the crate's side of every program [`corpus_differential`] runs, in the
+/// The pinning report over the corpus: the crate's side of every program the `corpus_differential_NN` tests runs, in the
 /// mode `REXX_CORPUS_SWITCH` names, the arrivals summed per park and the
 /// waits per kind, with each program that reached a wait listed. Panics when a
 /// program does not finish, reaches an inverted wait or ends with a frame pushed.
