@@ -4,7 +4,7 @@ kind: builtin
 syntax: "TRANSLATE(string [, tableo] [, tablei] [, pad] [, pos] [, length])"
 ansi: "9.3.23"
 rexxref: "Functions > Built-in Functions > TRANSLATE"
-deviations: [4]
+deviations: [4, 94]
 ---
 
 # TRANSLATE
@@ -215,14 +215,8 @@ say translate('abc', 'xyz', '') translate('abc', , '', '*') translate('abc', '',
 abc abc abc
 ```
 
-The project register records a known gap at this rule. A null `tablei`
-that some builtins produce, such as `LEFT(s, 0)`, still counts as given on
-the oracle, so it never uppercases; but the oracle searches the
-[default table](r:bif.translate.tablei.default) in its place, so every
-character of the run is translated. With `z = LEFT('abc', 0)`, the oracle
-answers three blanks for `translate('abc', , z)` and `***` for
-`translate('abc', , z, '*')`, where interrexx answers `abc`, as for any
-other null `tablei`.
+This holds however the null string was produced, which the oracle does not
+do: see [Deviation 94](r:bif.translate.deviation.94).
 
 r[bif.translate.past-end]
 When `pos` is greater than `LENGTH(string)`, no character is translated and
@@ -301,4 +295,24 @@ say (translate(s, '', '') == s) (translate('mn' || 'op') == 'MNOP')
 
 ```output
 1 1
+```
+
+r[bif.translate.deviation.94]
+A `tablei` given as the null string is an [empty table](r:bif.translate.tablei.empty)
+whether it was written as `''` or answered by an expression, such as
+`LEFT(s, 0)`, `COPIES(s, 0)` or `STRIP` of a string of blanks. The oracle
+differs: a null string that some of its builtins answer counts as given, so
+it does not uppercase, but it is searched as if it were the
+[default `tablei`](r:bif.translate.tablei.default), so every character of
+the run is translated. There `translate('abc', , LEFT('abc', 0))` answers
+three blanks. The same holds for the String method's `tablei`. A null
+`tableo` produced the same way agrees on both.
+
+```rexx
+z = left('abc', 0)
+say '['translate('abc', , z)']' translate('abc', , z, '*') 'ab'~translate(z, z)
+```
+
+```output
+[abc] abc ab
 ```

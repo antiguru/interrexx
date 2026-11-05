@@ -3247,6 +3247,25 @@ DEVIATIONS -- permanent, chosen
      the lines in a queue no later process reaches. No ooTest test runs
      rxqueue outside a Rexx program.
 
+ 94. A NULL TABLEIN IS A SUPPLIED EMPTY TABLE, HOWEVER IT WAS PRODUCED
+     (language spec pilot). OWNER: none.
+
+     Ruled by Moritz 2026-11-05 ("lgtm on both", on numbering the TRANSLATE
+     known gap). TRANSLATE, as a builtin and as the String method, treats a
+     `tablei` given as the null string as a table with no characters, so no
+     character is found and the run is copied unchanged, whether the null
+     string is a literal or the answer of LEFT(s, 0) and the other producers
+     the KNOWN GAPS row lists. The oracle takes a null string some builtins
+     produce as an omitted `tablei` and translates through the default
+     table: `translate('abc', , left('abc', 0))` answers three blanks there
+     and `abc` here. ANSI and the reference manual tell an omitted argument
+     from a null one by whether the argument is present; matching the
+     oracle would need a string's identity to be observable, which the
+     value model (D15) does not allow. A null `tableo` computed the same way
+     agrees on both. spec/src/builtins/translate.md states it as
+     bif.translate.deviation.94. The measurements and the producer list
+     stay in the KNOWN GAPS row, which now points here.
+
 EXPRKIND OWNERSHIP -- the expression forms 4a/4b do not evaluate
 ---------------------------------------------------------------------
 
@@ -3352,7 +3371,9 @@ point. ADDING a row needs no amendment: recording a divergence you have just
 measured should never require permission, or the incentive runs the wrong way
 and gaps go unrecorded. REMOVING one does, and only two things justify it --
 assigning an owner, which moves the row up into EXCLUSIONS, or a measurement
-showing the divergence is gone. Deleting a row because it is inconvenient is
+showing the divergence is gone. A ruling that makes a row a numbered
+Deviation also moves it, into DEVIATIONS; the row stays here as a pointer
+when it holds evidence the Deviation cites (TRANSLATE's, Deviation 94). Deleting a row because it is inconvenient is
 the failure the set assertion exists to prevent, and it applies here as much as
 above.
 
@@ -4004,8 +4025,11 @@ above.
   this section for the one reason this section's own rules allow: an owner
   was assigned.
 
-  KNOWN GAP: TRANSLATE -- A NULL STRING'S IDENTITY DECIDES WHETHER TABLEIN WAS
-  SUPPLIED. TRANSLATE's third argument has two meanings and the oracle tells
+  TRANSLATE -- A NULL STRING'S IDENTITY DECIDES WHETHER TABLEIN WAS
+  SUPPLIED.
+  *** NUMBERED AS DEVIATION 94 (Moritz 2026-11-05). Kept here as the
+  *** evidence that entry cites; it is no longer an open gap. ***
+  TRANSLATE's third argument has two meanings and the oracle tells
   them apart by the argument's ADDRESS, not its contents:
   RexxString::translate tests `tablei != GlobalNames::NULLSTRING`, and
   optionalStringArgument substitutes that same singleton for an omitted one.

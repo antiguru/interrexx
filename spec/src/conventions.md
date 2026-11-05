@@ -3,6 +3,7 @@ element: "Conventions"
 kind: concept
 ansi: "9.2.1"
 rexxref: "Functions > Built-in Functions"
+deviations: [30]
 ---
 
 # Conventions
@@ -32,7 +33,7 @@ A9
 
 r[conv.string.null]
 The null string is the string of length 0, written `''`. A builtin makes no
-check of an argument its page calls a string: no value there raises an
+check of an argument its page calls a string: no string there raises an
 error, so the null string and a string of any bytes are as valid as any
 other.
 
@@ -44,6 +45,20 @@ say c2x(upper('61007a'x))
 ```output
 0
 41005A
+```
+
+r[conv.string.object]
+An argument that a page calls a string and that is an object other than a
+string is replaced by the answer of its `STRING` method, and the builtin
+works on that answer. When the answer is not a string either, see
+[Deviation 30](r:conv.string.deviation.30).
+
+```rexx
+say upper(.object~new) length(.array~of(1, 2))
+```
+
+```output
+AN OBJECT 3
 ```
 
 r[conv.string.whitespace]
@@ -357,4 +372,30 @@ say '['substr('abc', 2)']' '['substr(' a ', 1)']'
 
 ```output
 [bc] [ a ]
+```
+
+## Deviations
+
+r[conv.string.deviation.30]
+interrexx does not convert an argument whose `STRING` method answers an
+object that is not a string, such as a `Directory`. When a builtin receives
+such an argument where its page calls for a string, interrexx ends the
+program with exit code 120 and a message that this is not implemented,
+after raising `NOSTRING` when a trap for it is set. The oracle reads the
+answer as a string, and what it does then depends on the builtin: `UPPER`
+ends the program with Error 5, `LENGTH` answers an unrelated number, and `STRIP`
+crashes the interpreter. A program can rely on none of these answers.
+
+```rexx
+o = .weird~new
+say 'before'
+say upper(o)
+say 'after'
+::class weird
+::method string
+  return .directory~new
+```
+
+```output rc=120
+before
 ```
