@@ -27,7 +27,7 @@ by the [builtin call rules](r:bif.index.call.count): two are required and
 four is the most.
 
 ```rexx
-say pos('day', 'Saturday') 'Saturday'~pos('day')
+say pos('ter', 'winter') 'winter'~pos('ter')
 signal on syntax name a
 say pos('a')
 a: say condition('o')~code
@@ -55,7 +55,7 @@ h: say condition('o')~code
 ```
 
 ```output
-6 6
+4 4
 40.3
 40.4
 40.5
@@ -94,7 +94,8 @@ say pos('a', 'banana', 3) pos('a', 'banana', 3, ) pos('a', 'banana', 3, 100)
 r[bif.pos.result]
 Let `n` be the length of `haystack` and `m` the length of `needle`. The
 characters that the search covers are those at the positions from `start`
-through `start + length - 1`, and at no position beyond `n`; this is the
+through `start + length - 1` (through `n` when `length` is omitted), and at no
+position beyond `n`; this is the
 window, and it holds no characters when `start` is greater than `n` or
 `length` is 0. When `m` is at least 1, POS returns the smallest position `k`
 such that the `m` characters of `haystack` from position `k` on all lie in
@@ -105,15 +106,15 @@ the result is `0`. A `needle` with no characters is the case of
 is [not specified](r:bif.pos.deviation.4).
 
 ```rexx
-say pos('day', 'Saturday') pos('x', 'abc def ghi') pos('c', 'abc def ghi'),
-    pos('abc', 'abc')
+say pos('ter', 'winter') pos('q', 'winter') pos('i', 'winter'),
+    pos('winter', 'winter')
 say pos('aa', 'aaa') pos('aa', 'aaa', 2) pos('ana', 'banana') pos('ana', 'banana', 3)
 numeric digits 3
 say pos('y', copies('x', 1234) || 'y')
 ```
 
 ```output
-6 0 3 1
+4 0 2 1
 1 2 2 4
 1235
 ```
@@ -155,8 +156,7 @@ r[bif.pos.past-end]
 When `start` is greater than the length of `haystack`, the result is `0`, for
 every `start` that passes its check. A `start` equal to the length of
 `haystack` searches the last character alone. A `length` that reaches past the
-end of `haystack` is the same as one that reaches exactly to it; every
-value below `10**18` passes its check.
+end of `haystack` is the same as one that reaches exactly to it.
 
 ```rexx
 say pos('a', 'banana', 6) pos('a', 'banana', 7) pos('a', 'banana', 100),

@@ -28,7 +28,7 @@ by the [builtin call rules](r:bif.index.call.count): two are required and
 four is the most.
 
 ```rexx
-say lastpos(' ', 'abc def ghi') 'abc def ghi'~lastpos(' ')
+say lastpos('/', 'a/b/c') 'a/b/c'~lastpos('/')
 signal on syntax name a
 say lastpos('a')
 a: say condition('o')~code
@@ -56,7 +56,7 @@ h: say condition('o')~code
 ```
 
 ```output
-8 8
+4 4
 40.3
 40.4
 40.5
@@ -68,8 +68,8 @@ h: say condition('o')~code
 ```
 
 r[bif.lastpos.start.default]
-When `start` is omitted, or is greater than the length of `haystack`, it is
-the length of `haystack`: the search begins at the last character.
+`start` is the length of `haystack` both when it is omitted and when it is
+greater than that length: the search begins at the last character either way.
 
 ```rexx
 say lastpos('a', 'banana') lastpos('a', 'banana', ) lastpos('a', 'banana', 6),
@@ -98,7 +98,7 @@ r[bif.lastpos.result]
 Let `n` be the length of `haystack` and `m` the length of `needle`. Let `e`
 be `start`, or `n` when `start` is omitted or greater than `n`. The characters
 that the search covers are those at the positions from `e - length + 1`
-(or from 1, when that is less) through `e`; this is the window, and it holds
+(or from 1, when that is less, or when `length` is omitted) through `e`; this is the window, and it holds
 no characters when `length` is 0. When `m` is at least 1, LASTPOS returns the
 greatest position `k` such that the `m` characters of `haystack` from
 position `k` on all lie in the window and are equal under `==` to `needle`.
@@ -108,14 +108,14 @@ is the case of [its own rule](r:bif.lastpos.empty-needle). The answer is
 is [not specified](r:bif.lastpos.deviation.4).
 
 ```rexx
-say lastpos(' ', 'abc def ghi') lastpos(' ', 'abcdefghi') lastpos('ana', 'banana'),
+say lastpos('/', 'a/b/c') lastpos('/', 'abc') lastpos('ana', 'banana'),
     lastpos('aa', 'aaa') lastpos('an', 'banana')
 numeric digits 3
 say lastpos('x', copies('x', 1234) || 'y')
 ```
 
 ```output
-8 0 4 2 4
+4 0 4 2 4
 1234
 ```
 
@@ -123,7 +123,7 @@ r[bif.lastpos.window]
 An occurrence is found only when all of it lies in the window: a `start`
 before the end of an occurrence hides it, even when the occurrence begins at
 or before `start`, and one that begins before the window is not found.
-Whatever `length` asks for beyond the first character is cut off, and `start`
+A `length` that would reach before the first character is cut off there, and `start`
 is limited to `n` before `length` is applied.
 
 ```rexx

@@ -16,7 +16,7 @@ LENGTH answers the number of characters in a string.
 r[bif.length.method]
 LENGTH is a builtin that runs as a String method, and `string`, its only
 argument, is the receiver; the message takes no other argument. `string` is
-a [string](r:conv.string.null), so no value of it raises an error. The
+a [string](r:conv.string.null), so no string raises an error. The
 argument count is checked by the [builtin call rules](r:bif.index.call.count):
 one is required and one is the most.
 
@@ -53,13 +53,13 @@ answer is [written as a count](r:bif.index.count.answer), and whether it is a ne
 object is [not specified](r:bif.length.deviation.4).
 
 ```rexx
-say length('abcdefgh') length('abc defg') length('')
+say length('hello') length('hi there') length('')
 numeric digits 3
 say length(copies('x', 1234))
 ```
 
 ```output
-8 8 0
+5 8 0
 1234
 ```
 
@@ -79,9 +79,10 @@ say length(' ') length(' a  ') length('00'x) length('0a'x || 'b' || '09'x),
 
 r[bif.length.string-form]
 When `string` is a number, LENGTH counts the characters of the string the
-number is, as it is written: a literal keeps its spelling, and the result of
-arithmetic is the string that [NUMERIC DIGITS](r:conv.whole.digits) and the
-arithmetic rules make of it. When `string` is an object other than a string,
+number is, as it is written: a quoted literal keeps its spelling, an unquoted
+one is a symbol whose exponent letter is `E` whatever the source wrote, and the
+result of arithmetic is the string that NUMERIC DIGITS and the arithmetic
+rules make of it. When `string` is an object other than a string,
 it is [replaced by its string](r:conv.string.object).
 
 ```rexx

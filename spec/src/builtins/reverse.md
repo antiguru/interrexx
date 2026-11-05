@@ -17,12 +17,12 @@ order.
 r[bif.reverse.method]
 REVERSE is a builtin that runs as a String method, and `string`, its only
 argument, is the receiver; the message takes no other argument. `string` is
-a [string](r:conv.string.null), so no value of it raises an error. The
+a [string](r:conv.string.null), so no string raises an error. The
 argument count is checked by the [builtin call rules](r:bif.index.call.count):
 one is required and one is the most.
 
 ```rexx
-say reverse('ABc.') 'ABc.'~reverse
+say reverse('Xyz!') 'Xyz!'~reverse
 signal on syntax name a
 say reverse()
 a: say condition('o')~code
@@ -35,7 +35,7 @@ c: say condition('o')~code
 ```
 
 ```output
-.cBA .cBA
+!zyX !zyX
 40.3
 40.4
 40.3
@@ -51,12 +51,12 @@ of one character, are their own reverse. Reversing a string twice returns the
 original characters.
 
 ```rexx
-say reverse('ABc.') reverse('XYZ ')'|' '['reverse('')']' reverse('a')
+say reverse('Xyz!') reverse('QRS ')'|' '['reverse('')']' reverse('a')
 say reverse(reverse('stressed')) reverse('stressed')
 ```
 
 ```output
-.cBA  ZYX| [] a
+!zyX  SRQ| [] a
 stressed desserts
 ```
 
@@ -81,17 +81,18 @@ r[bif.reverse.string-form]
 When `string` is a number, REVERSE reverses the characters of the string the
 number is, as it is written, and the result is a string of those characters
 and nothing more: a sign, a period or an exponent moves like any other
-character. When `string` is an object other than a string, it is
+character. A quoted literal keeps its spelling; an unquoted one is a symbol,
+so its exponent letter is `E` whatever the source wrote. When `string` is an object other than a string, it is
 [replaced by its string](r:conv.string.object).
 
 ```rexx
-say reverse(123) reverse(-1.50) reverse(.object~new)
+say reverse(123) reverse(-1.50) reverse(.object~new) reverse(1e3) reverse('1e3')
 numeric digits 5
 say reverse(1/3)
 ```
 
 ```output
-321 05.1- tcejbO na
+321 05.1- tcejbO na 3E1 3e1
 33333.0
 ```
 
