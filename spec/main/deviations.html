@@ -573,6 +573,12 @@ states it.</p>
 received it, and uses it in a later call, ends the program with exit code
 120 and a message that the handle is no longer held. The API does not
 define such a use; ooRexx may still reach the object or one that replaced it.</p>
+<h2 id="96-version-and-library-banners"><a class="header" href="#96-version-and-library-banners">96. Version and library banners</a></h2>
+<p>The version banner (<code>rexx -v</code>, <code>rexxc</code>, and what <code>RexxGetVersionInformation</code>
+returns) names interrexx, its version, the ooRexx version it follows and its
+licence. The <code>MathLoadFuncs</code> banner names the library and interrexx's version.
+Neither prints ooRexx's product line, copyright or licence lines.
+<code>PARSE VERSION</code> and <code>RexxInfo</code> are unchanged.</p>
 
                     </main>
 
