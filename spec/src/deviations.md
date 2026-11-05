@@ -599,7 +599,8 @@ define such a use; ooRexx may still reach the object or one that replaced it.
 
 ## 96. Version and library banners
 
-The text `rexx -v`, `rexxc` and `MathLoadFuncs` print names interrexx, its
-version and its licence, and the language level it implements, in place of
-ooRexx's product line, copyright and licence lines. `PARSE VERSION` and
-`RexxInfo` are unchanged.
+The version banner (`rexx -v`, `rexxc`, and what `RexxGetVersionInformation`
+returns) names interrexx, its version, the ooRexx version it follows and its
+licence. The `MathLoadFuncs` banner names the library and interrexx's version.
+Neither prints ooRexx's product line, copyright or licence lines.
+`PARSE VERSION` and `RexxInfo` are unchanged.

@@ -12,7 +12,7 @@ run
 -v
 ----
 rc> 0
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
@@ -21,7 +21,7 @@ run
 -V
 ----
 rc> 0
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
@@ -32,7 +32,7 @@ run
 -?
 ----
 rc> 0
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
@@ -42,7 +42,7 @@ run
 -v
 ----
 rc> 0
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
@@ -53,7 +53,7 @@ digits 12
 -v
 ----
 rc> 0
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
@@ -62,7 +62,7 @@ run
 -vx
 ----
 rc> 0
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.

@@ -9,8 +9,12 @@ pub fn recorded(line: &str, oracle: bool) -> Option<String> {
         return Some("Build date: <date>".to_string());
     }
     if oracle {
-        if line.starts_with("Open Object Rexx Version ") {
-            return Some("interrexx <version> (Open Object Rexx 5.3.0 language level)".to_string());
+        if let Some(rest) = line.strip_prefix("Open Object Rexx Version ")
+            && let Some(version) = rest.split(' ').next()
+        {
+            return Some(format!(
+                "interrexx <version> (Open Object Rexx {version} compatible)"
+            ));
         }
         if line.starts_with("Copyright (c) 1995, 2004 IBM Corporation.") {
             return Some("Licensed under MIT OR Apache-2.0.".to_string());

@@ -10,7 +10,7 @@ run
 -x
 ----
 rc> 253
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
@@ -75,7 +75,7 @@ ok.rex
 ok.rex
 ----
 rc> 254
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
@@ -94,7 +94,7 @@ run
 nope
 ----
 rc> 253
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
@@ -123,7 +123,7 @@ run
 bad.rex
 ----
 rc> 221
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
@@ -156,7 +156,7 @@ run
 ok.rex
 ----
 rc> 0
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
@@ -172,7 +172,7 @@ ok.rex
 -e
 ----
 rc> 0
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
@@ -197,7 +197,7 @@ ok.rex
 o.rxo
 ----
 rc> 0
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
@@ -217,7 +217,7 @@ o.rxo
 -e
 ----
 rc> 0
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
@@ -284,7 +284,7 @@ ok.rex
 nodir/o.rxo
 ----
 rc> 253
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
@@ -333,7 +333,7 @@ run
 e f.rex
 ----
 rc> 221
-out> interrexx <version> (Open Object Rexx 5.3.0 language level)
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
 out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.

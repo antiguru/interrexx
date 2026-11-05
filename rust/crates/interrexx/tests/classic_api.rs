@@ -1023,7 +1023,10 @@ fn the_classic_family_answers_as_the_oracle_does() {
         &[],
     );
     assert!(output.status.success(), "{output:?}");
-    assert_eq!(String::from_utf8_lossy(&output.stdout), FAMILY_STDOUT);
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        FAMILY_STDOUT.replace("<version>", env!("CARGO_PKG_VERSION"))
+    );
     let dir = scratch().join("driver-family");
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
@@ -1174,8 +1177,8 @@ fn a_sigint_during_rexx_start_halts_the_program_not_the_process() {
     );
 }
 
-/// The family driver's standard output. The version line is interrexx's own (Deviation 96).
-const FAMILY_STDOUT: &str = r#"version interrexx
+/// The family driver's standard output. The version line is the first line of interrexx's own banner (Deviation 96).
+const FAMILY_STDOUT: &str = r#"version interrexx <version> (Open Object Rexx 5.3.0 compatible)
 code 3001: Failure during initialization: File "&1" is unreadable.
 code 35929: Missing expression in logical expression list.
 code 40001: External routine "&1" failed.

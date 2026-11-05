@@ -1,6 +1,7 @@
 //! The `rexx` executable exports the C API it compiles in, so an extension it loads binds to its
 //! interpreter rather than to a second copy in `librexx.so.4`. The build date `PARSE VERSION`
-//! carries is stamped here, from `SOURCE_DATE_EPOCH` when set.
+//! carries is stamped here, from `SOURCE_DATE_EPOCH` when set; it is the date the build script
+//! last ran.
 
 #![expect(
     clippy::disallowed_methods,
@@ -20,7 +21,8 @@ fn main() {
             .trim()
             .parse::<i64>()
             .expect("SOURCE_DATE_EPOCH is a count of seconds"),
-        Err(_) => {
+        Err(std::env::VarError::NotUnicode(_)) => panic!("SOURCE_DATE_EPOCH is not UTF-8"),
+        Err(std::env::VarError::NotPresent) => {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .expect("the clock is after the epoch");

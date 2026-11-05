@@ -65,7 +65,8 @@ int main()
 {
     setvbuf(stdout, NULL, _IONBF, 0);
     char *version = RexxGetVersionInformation();
-    printf("version %.9s\n", version);
+    const char *eol = strchr(version, '\n');
+    printf("version %.*s\n", (int)(eol ? eol - version : strlen(version)), version);
     RexxFreeMemory(version);
     int codes[] = {3001, 35929, 40001, 0, 3, 99999, 999013};
     for (int code : codes)

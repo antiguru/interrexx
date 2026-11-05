@@ -262,7 +262,7 @@ pub fn output_unwritable(name: &[u8]) -> (Vec<u8>, i32) {
 }
 
 /// The text `rexx -v` writes, without the line end: the product, its version and
-/// language level, the build date, the addressing mode and the licence.
+/// the ooRexx version it follows, the build date, the addressing mode and the licence.
 pub fn version_banner() -> Vec<u8> {
     let date = std::str::from_utf8(version::BUILD_DATE).expect("an ASCII build date");
     let mut fields = date.split(' ');
@@ -276,7 +276,7 @@ pub fn version_banner() -> Vec<u8> {
         .and_then(|(_, rest)| rest.split_once("-bit"))
         .map_or("64", |(bits, _)| bits);
     format!(
-        "interrexx {} (Open Object Rexx {} language level)\n\
+        "interrexx {} (Open Object Rexx {} compatible)\n\
          Build date: {month} {day:>2} {year}\n\
          Addressing mode: {bits}\n\
          Licensed under MIT OR Apache-2.0.",
@@ -434,7 +434,7 @@ mod tests {
         assert_eq!(
             banner,
             format!(
-                "interrexx {} (Open Object Rexx 5.3.0 language level)\n\
+                "interrexx {} (Open Object Rexx 5.3.0 compatible)\n\
                  Build date: {month} {day:>2} {year}\n\
                  Addressing mode: 64\n\
                  Licensed under MIT OR Apache-2.0.",
