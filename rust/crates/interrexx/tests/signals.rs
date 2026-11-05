@@ -1305,7 +1305,7 @@ fn only_the_interpreter_and_its_waits_take_the_halting_signals() {
     let waiting = thread("rexx-pool", false);
     let idle = thread("rexx-pool", true);
     // The API connection the command opened, which reads its replies.
-    let api = thread("interrexx-api", true);
+    let api = thread("rexx-api", true);
     assert_eq!(
         seen,
         [

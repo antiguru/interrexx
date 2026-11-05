@@ -332,7 +332,7 @@ impl Unix {
         let reader = {
             let calls = Arc::clone(&calls);
             std::thread::Builder::new()
-                .name("interrexx-api".to_owned())
+                .name("rexx-api".to_owned())
                 .spawn(move || read_replies(reader_stream, calls))
                 .map_err(ConnectFailure::Absent)?
         };
