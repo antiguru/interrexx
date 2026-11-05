@@ -81,7 +81,37 @@ fn run_directory(rel_path: &str) -> PathBuf {
 
 /// Runs the executor in process, on `path`, from `directory`, with
 /// `overrides` laid over the process's own environment.
+/// The runs of this crate that share this process. A library one run has loaded is still loaded
+/// for a run on another thread that did not name its path, so the sidecar control, which asks
+/// what a run does without a sidecar's `LD_LIBRARY_PATH`, runs alone ([`run_rust_alone`]) and
+/// every other run shares. Under nextest each test is a process and nothing waits.
+static IN_PROCESS_RUNS: std::sync::RwLock<()> = std::sync::RwLock::new(());
+
 fn run_rust(
+    path: &Path,
+    directory: &Path,
+    overrides: &[(String, String)],
+    stdin: Option<&[u8]>,
+) -> Outcome {
+    let _shared = IN_PROCESS_RUNS
+        .read()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    run_rust_locked(path, directory, overrides, stdin)
+}
+
+fn run_rust_alone(
+    path: &Path,
+    directory: &Path,
+    overrides: &[(String, String)],
+    stdin: Option<&[u8]>,
+) -> Outcome {
+    let _alone = IN_PROCESS_RUNS
+        .write()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    run_rust_locked(path, directory, overrides, stdin)
+}
+
+fn run_rust_locked(
     path: &Path,
     directory: &Path,
     overrides: &[(String, String)],
@@ -718,7 +748,7 @@ fn a_sidecar_changes_what_an_interpreter_answers(shard: usize) {
         let run_crate = |sidecar: &Sidecar| {
             let overrides = resolved_environment(sidecar, &dir);
             let cwd = prepare_run_directory(&dir, sidecar);
-            run_rust(&abs, &cwd, &overrides, sidecar.stdin.as_deref())
+            run_rust_alone(&abs, &cwd, &overrides, sidecar.stdin.as_deref())
         };
         let oracle_with = run_oracle(&sidecar);
         let mut crate_with = None;

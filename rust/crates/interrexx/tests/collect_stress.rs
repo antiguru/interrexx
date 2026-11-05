@@ -198,7 +198,7 @@ fn run_l0_heavy(program: usize) {
         subset().contains(&program),
         "{program} is not in the subset"
     );
-    check_l0_programs(&program, &[program.clone()]);
+    check_l0_programs(&program, std::slice::from_ref(&program));
 }
 
 fn check_l0_programs(what: &str, subset: &[String]) {

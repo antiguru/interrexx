@@ -1,5 +1,5 @@
 #!/bin/sh
-# Setup script: gives the method-body test an API service directory of its own for this run.
+# Setup script: gives the method-body tests (one process each) one API service directory of their own for this run.
 # Its `RexxQueue create` row is stable only against a service no other test holds open, and
 # the target directory's shared service is held open by whichever test last left a queue.
 # Under `cargo test`, where binaries run one after another, the shared service is used.

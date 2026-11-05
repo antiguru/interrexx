@@ -811,21 +811,64 @@ const TABLE_HEADER: &str = "\
 # crate does not.
 ";
 
+/// How many tests the rows are spread over: the unit nextest runs in parallel
+/// is a test function.
+const SHARDS: usize = 16;
+
+fn refresh_requested() -> bool {
+    matches!(std::env::var(REFRESH_ENV), Ok(value) if !value.is_empty() && value != "0")
+}
+
+/// The shard each class's rows belong to. The rows of a class stay together, in their own
+/// order, because they share what their receivers touch: the `File` rows make, delete and ask
+/// about one path, so a `canWrite` row decides differently before and after the `makeDir` row,
+/// and the `RexxQueue` rows count the queues the service has made. Classes go, the largest
+/// first and ties by name, to the shard with the fewest rows so far, lowest index first.
+fn shard_of_classes(rows: &[MethodRow]) -> BTreeMap<String, usize> {
+    let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
+    for row in rows {
+        *counts.entry(row.class.as_str()).or_insert(0) += 1;
+    }
+    let mut classes: Vec<(&str, usize)> = counts.into_iter().collect();
+    classes.sort_by(|left, right| right.1.cmp(&left.1).then(left.0.cmp(right.0)));
+    let mut load = [0usize; SHARDS];
+    let mut assignment = BTreeMap::new();
+    for (class, count) in classes {
+        let shard = (0..SHARDS)
+            .min_by_key(|shard| (load[*shard], *shard))
+            .expect("there is at least one shard");
+        load[shard] += count;
+        assignment.insert(class.to_string(), shard);
+    }
+    assignment
+}
+
+/// Every shard index below `SHARDS` has a test running it.
 #[test]
-fn no_row_started_diverging_or_stopped_answering() {
-    let oracle = support::oracle::locate();
+fn every_row_shard_has_a_test() {
+    let source = include_str!("method_bodies.rs");
+    for shard in 0..SHARDS {
+        let call = format!("\n    run_table(Some({shard}));\n");
+        assert_eq!(source.matches(&call).count(), 1, "shard {shard}");
+    }
+}
+
+/// What no one shard can check: the table's structure, over the whole row set.
+/// The overrides, the crashing sends and the receivers are sound, and the
+/// committed file is its header and one line per documented row, in the
+/// documented order, so a shard that finds each of its own rows as committed
+/// has found the whole table.
+#[test]
+fn the_committed_table_describes_the_whole_row_set() {
+    if refresh_requested() {
+        return;
+    }
     let corpus = corpus_dir();
     let mut structural = Vec::new();
-
-    let refreshing =
-        matches!(std::env::var(REFRESH_ENV), Ok(value) if !value.is_empty() && value != "0");
     let classes = read_classes(&corpus);
     let rows = read_method_rows(&corpus);
-    let committed = read_committed(&corpus, refreshing);
+    let committed = read_committed(&corpus, false);
     let committed_text = fs::read_to_string(corpus.join(TABLE_FILE)).unwrap_or_default();
-
-    let by_name: BTreeMap<&str, &ClassRow> =
-        classes.iter().map(|row| (row.name.as_str(), row)).collect();
     let arms: BTreeSet<(String, String)> = rows
         .iter()
         .map(|row| (row.class.clone(), row.arm.clone()))
@@ -833,17 +876,152 @@ fn no_row_started_diverging_or_stopped_answering() {
     check_overrides(&classes, &mut structural);
     check_crashing_sends(&rows, &mut structural);
     check_receivers_match_table_c(&corpus, &classes, &arms, &mut structural);
-    // Not while refreshing: a row set that has moved is exactly what the
-    // refresh is for, and reporting it as structural would leave the table
-    // unwritable by the one command that fixes it.
-    if !refreshing {
-        check_row_set(&rows, &committed, &mut structural);
+    check_row_set(&rows, &committed, &mut structural);
+    assert_no_structural_failures(&structural);
+
+    let as_committed: BTreeMap<(String, String, String), Measured> = committed
+        .iter()
+        .map(|(key, cell)| {
+            (
+                key.clone(),
+                Measured {
+                    verdict: cell.verdict,
+                    evidence: cell.evidence.clone(),
+                    detail: None,
+                },
+            )
+        })
+        .collect();
+    assert!(
+        committed_text == render(&rows, &as_committed),
+        "{TABLE_FILE} is not its header and one line per row of class-methods.txt, in that \
+         order, so its text no longer describes the tree. Refresh it with `{REFRESH_ENV}=1 \
+         cargo test --release -p interrexx --test method_bodies` and read the diff"
+    );
+}
+
+/// Under [`REFRESH_ENV`], the whole table measured in one run and written;
+/// otherwise nothing. The shards stand aside while it is set.
+#[test]
+fn refresh_the_method_body_table_when_asked() {
+    run_table(None);
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_00() {
+    run_table(Some(0));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_01() {
+    run_table(Some(1));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_02() {
+    run_table(Some(2));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_03() {
+    run_table(Some(3));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_04() {
+    run_table(Some(4));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_05() {
+    run_table(Some(5));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_06() {
+    run_table(Some(6));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_07() {
+    run_table(Some(7));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_08() {
+    run_table(Some(8));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_09() {
+    run_table(Some(9));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_10() {
+    run_table(Some(10));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_11() {
+    run_table(Some(11));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_12() {
+    run_table(Some(12));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_13() {
+    run_table(Some(13));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_14() {
+    run_table(Some(14));
+}
+
+#[test]
+fn no_row_started_diverging_or_stopped_answering_15() {
+    run_table(Some(15));
+}
+
+/// One run over the rows of one shard, or, with `None`, over all of them to
+/// refresh the table.
+fn run_table(shard: Option<usize>) {
+    let refreshing = refresh_requested();
+    if refreshing != shard.is_none() {
+        return;
+    }
+    let oracle = support::oracle::locate();
+    let corpus = corpus_dir();
+    let mut structural = Vec::new();
+
+    let classes = read_classes(&corpus);
+    let rows = read_method_rows(&corpus);
+    let committed = read_committed(&corpus, refreshing);
+
+    let by_name: BTreeMap<&str, &ClassRow> =
+        classes.iter().map(|row| (row.name.as_str(), row)).collect();
+    let arms: BTreeSet<(String, String)> = rows
+        .iter()
+        .map(|row| (row.class.clone(), row.arm.clone()))
+        .collect();
+    if refreshing {
+        check_overrides(&classes, &mut structural);
+        check_crashing_sends(&rows, &mut structural);
+        check_receivers_match_table_c(&corpus, &classes, &arms, &mut structural);
     }
 
     let staging = staging_root();
     let mut measured: BTreeMap<(String, String, String), Measured> = BTreeMap::new();
     let mut pending: Vec<Pending> = Vec::new();
+    let shard_of = shard_of_classes(&rows);
     for (index, row) in rows.iter().enumerate() {
+        if shard.is_some_and(|shard| shard_of[&row.class] != shard) {
+            continue;
+        }
         let Some(class) = by_name.get(row.class.as_str()) else {
             structural.push(Structural {
                 subject: format!("{} {} ({})", row.class, row.method, row.arm),
@@ -1186,27 +1364,21 @@ fn no_row_started_diverging_or_stopped_answering() {
 
     assert_no_structural_failures(&structural);
 
-    let derived_text = render(&rows, &measured);
     if refreshing {
+        let derived_text = render(&rows, &measured);
         let path = corpus.join(TABLE_FILE);
         fs::write(&path, &derived_text)
             .unwrap_or_else(|e| panic!("cannot write {}: {e}", path.display()));
     }
 
-    // The whole file rather than its rows alone, so the header -- this
-    // table's only definition of what its four verdicts mean -- cannot move
-    // without a run saying so.
+    // A shard's rows as committed, line by line; the table's header, order and
+    // row set are `the_committed_table_describes_the_whole_row_set`'s.
     assert!(
-        refreshing || (drifted.is_empty() && committed_text == derived_text),
-        "{TABLE_FILE} is not what this run derives, so the committed table no longer describes \
-         the tree: {} row(s) drifted{}. Refresh it with `{REFRESH_ENV}=1 cargo test --release \
-         -p interrexx --test method_bodies` and read the diff:\n  {}",
+        refreshing || drifted.is_empty(),
+        "{TABLE_FILE} is not what this run derives for these rows, so the committed table no \
+         longer describes the tree: {} row(s) drifted. Refresh it with `{REFRESH_ENV}=1 cargo \
+         test --release -p interrexx --test method_bodies` and read the diff:\n  {}",
         drifted.len(),
-        if drifted.is_empty() {
-            ", and its text still differs, so what moved is the header"
-        } else {
-            ""
-        },
         drifted.join("\n  "),
     );
 
