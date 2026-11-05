@@ -1,5 +1,5 @@
 /* `DO name OVER` a `StringTable`, which is `requestArray` answering
- * `allIndexes()`. Phase 5a Task 23.
+ * `allIndexes()`.
  *
  * **Nothing here depends on the order the indexes arrive in**, and that is
  * deliberate rather than incidental: this crate iterates in sorted key order

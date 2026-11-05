@@ -2,7 +2,7 @@
    its own: the report is the sending clause and the two catalogue lines, with
    no `Compiled method` line above them, because `AttributeGetterCode::run`
    raises directly where a primitive method raises from inside a
-   `NativeActivation`. Phase 5a Task 15. */
+   `NativeActivation`. */
 
 say .K~a(1)
 

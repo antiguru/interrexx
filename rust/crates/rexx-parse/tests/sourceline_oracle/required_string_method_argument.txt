@@ -8,7 +8,7 @@ count 85
  * asked which value *shapes* have a string value, where the section says the
  * question is a message send.
  *
- * Every argument position a primitive method in this phase declares as text is
+ * Every argument position a primitive method declares as text is
  * here, because each raises its own message: a numbered argument, an argument
  * the message names, and an option letter.
  *
@@ -17,12 +17,12 @@ count 85
  * raising -- has no row anywhere: this crate implements none of those methods,
  * so `'abc'~pos(.k)` is a refusal rather than an answer.
  *
- * Phase 5a Task 14.
+ *
  */
 
 say 'hasMethod' 'abc'~hasMethod(.length)
-/* A message instruction, because a Method object answers no message this
-   phase implements and there is nothing printable to do with the result. */
+/* A message instruction, because a Method object answers no message with
+   anything printable to do with the result. */
 .k~method(.m)
 say 'method answered'
 say 'directory at' .environment~at(.arrayname)

@@ -20,7 +20,7 @@
  * not, so it belongs with the trap rows rather than with the makeString ones in
  * required_string_builtin_raw_argument.rex.
  *
- * Phase 5a Task 14, fix round 2.
+ *.
  */
 
 say 'untrapped' .array

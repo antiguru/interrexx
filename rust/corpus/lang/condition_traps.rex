@@ -1,4 +1,4 @@
-/* Condition traps, RAISE and NOVALUE (4b Task 7), under trace r throughout.
+/* Condition traps, RAISE and NOVALUE, under trace r throughout.
  *
  * Every block asserts a value a handler SET, never that the program reached
  * the end: a trap test that checks only the exit code is satisfied by a
@@ -41,7 +41,7 @@
  * refusal -- the clause's own `>>>` value line was missing from this crate
  * (a gap in the EXIT arm, unrelated to conditions) and a program containing
  * one would have diverged for a reason that had nothing to do with what it
- * is witnessing. **That gap is closed as of 4b Task 9**, and this program
+ * is witnessing. **That gap is closed**, and this program
  * simply has no use for one: it ends on an untrapped raise, which is what
  * its last block is for. The witness for the EXIT value line is
  * tests/trace_oracle/exit_value.rex.

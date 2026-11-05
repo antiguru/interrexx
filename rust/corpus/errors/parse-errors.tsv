@@ -23,18 +23,14 @@
 #                and never on the source. A clean-room parser cannot reproduce
 #                it and must not try.
 #
-#                BOTH CODES FIRE DURING TRANSLATION, NOT AFTER IT. An earlier
-#                revision of this header claimed they came from
-#                LibraryDirective::install by way of PackageClass::processInstall,
-#                running from a called stub and therefore after translation was
-#                complete. That is wrong three times over: none of the install rows
-#                is a ::REQUIRES, which is the only path through
-#                LibraryDirective::install; the real sites are inside the parser,
-#                90.999 from syntaxError in routineDirective
+#                BOTH CODES FIRE DURING TRANSLATION, NOT AFTER IT. None of
+#                the install rows is a ::REQUIRES, which is the only path
+#                through LibraryDirective::install. The sites are inside the
+#                parser: 90.999 from syntaxError in routineDirective
 #                (parser/DirectiveParser.cpp:2688 and :2732) and 98.903 from
 #                reportException in PackageManager::getLibrary
 #                (package/PackageManager.cpp:214), reached at parse time via
-#                resolveRoutine and via LanguageParser::createNativeMethod; and
+#                resolveRoutine and via LanguageParser::createNativeMethod.
 #                rexxc has no install step at all, yet reports both. Measured:
 #                `nop` then `::routine r external "LIBRARY x"` gives 98.903 on
 #                line 2 with rc 158, and `::routine r external "registered x"`
@@ -55,33 +51,15 @@
 # only escapes. It is last because it is the only field that can contain
 # anything.
 #
-# How it was generated, in steps. The `ok`/`err` helpers of
-# src/instruction/tests.rs, src/directive/tests.rs and src/block/tests.rs were
-# temporarily instrumented to dump every program they parse. `cargo test
-# -p rexx-parse --lib` collected them. The case tables in tests/scanner.rs and
-# src/expr/tests.rs were transcribed by hand, the latter as the program
-# `r = <expr>` it was measured as, and so were the error programs of
-# tests/program.rs. Then build/bin/rexxc was run on each and its answer recorded.
-# The instrumentation was reverted and the tree verified clean.
+# The rows cover the programs parsed by the `ok`/`err` helpers of
+# src/instruction/tests.rs, src/directive/tests.rs and src/block/tests.rs, the
+# case tables of tests/scanner.rs and src/expr/tests.rs (the latter as the
+# program `r = <expr>`), the error programs of tests/program.rs, and the
+# `error(...)` and `logical_error(...)` assertions of src/expr/tests.rs (the
+# latter as the `if <condition>` programs). Each row is what build/bin/rexxc
+# answered for that program.
 #
-# The `error(...)` assertions of src/expr/tests.rs that sit outside its own
-# case table, and the `logical_error(...)` ones as the `if <condition>`
-# programs they were measured as, were transcribed in a later pass: a diff of
-# every error pair any test file asserts against every pair the gate covers found
-# 20.917 and 20.930 asserted and ungated. That diff is the check that "every test
-# file" is really every test file, rather than a claim about which files were
-# read.
-#
-# Rows were added separately, `r = a:` and `r = (a:)`, because mutation
-# testing found that error 20.923 had no coverage anywhere in the crate -- not
-# one row and not one assertion. More, the `::class c` / `nop` family, were
-# added in the same round on the mistaken belief that 99.916's second raise site
-# was equally uncovered. It was not: tests/program.rs had pinned every kind
-# since Task 3.7b, and the mutation was scored against a single test target, so a
-# miss there read as a survivor. They are kept because they are valid measured
-# rows with a different spelling from tests/program.rs's, not because they closed
-# anything.
-#
+
 # Nothing here is our parser's own answer. A row records only what the oracle
 # said, so a divergence shows up as a test failure rather than as an expected
 # value.

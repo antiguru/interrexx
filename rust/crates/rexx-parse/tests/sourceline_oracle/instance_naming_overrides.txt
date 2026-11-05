@@ -1,5 +1,5 @@
 count 28
-/* Phase 5b Task 1: an instance's name is a send, not stored text.
+/* An instance's name is a send, not stored text.
    RexxObject::objectName reads a name something set and otherwise sends
    DEFAULTNAME; RexxObject::stringValue is an OBJECTNAME send; and the
    required-string protocol's own fallback sends STRING. So a class

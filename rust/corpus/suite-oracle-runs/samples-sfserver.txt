@@ -2,7 +2,7 @@
 # The group's TEST_04 drives the sample's socket server or client on fixed
 # ports; runs 1, 2 and 4 ran it beside the other socket sample groups.
 
-## Run 1: scout A, 2026-10-10, eight groups at once (.superpowers/sdd/2026-10-10-phase-9-scoping/scout-a-report.md)
+## Run 1: eight groups at once
 rc 1, 0.04 s; started TEST_01_SAMPLEEXISTS TEST_04_SFSERVER.REX; failing TEST_04_SFSERVER.REX
 ### stdout
 Searching for test containers
@@ -36,10 +36,10 @@ Total time:         00:00:00.013187
 started TEST_01_SAMPLEEXISTS
 started TEST_04_SFSERVER.REX
 
-## Run 2: tests/suite.rs l3_core_suite at 717ab354b, 2026-10-11, eight groups at once
+## Run 2: tests/suite.rs l3_core_suite, eight groups at once
 verdicts from its per-test record: TEST_01_SAMPLEEXISTS passed; TEST_04_SFSERVER.REX failed
 
-## Run 3: alone, 2026-10-11, the four groups one after another
+## Run 3: alone, the four groups one after another
 command: cd <copy> && ulimit -v 1048576 && LD_LIBRARY_PATH=<oracle>/lib PATH=<oracle>/bin:$PATH timeout -k 10 300 <oracle>/bin/rexx testOORexx.rex -f <copy>/ooRexx/samples/sfserver.testGroup -U -V 2 < /dev/null
 rc 0, 8.049878947 s
 ### stdout
@@ -64,5 +64,5 @@ Total time:         00:00:08.028972
 ### stderr
 
 
-## Run 4: tests/suite.rs l3_core_suite at 2415e1733, 2026-10-11, eight groups at once
+## Run 4: tests/suite.rs l3_core_suite, eight groups at once
 verdicts from its per-test record: TEST_01_SAMPLEEXISTS started; TEST_04_SFSERVER.REX blocked: timeout: killed after 300.004546906s

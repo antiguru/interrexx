@@ -58,7 +58,7 @@ n.j = 1
 nobj = n.
 say 'no dflt ' nobj['ZZ'] nobj~hasIndex('ZZ')
 
-/* Stem's argument rules are the loosest of any class in this phase: a missing
+/* Stem's argument rules are the loosest of any class: a missing
  * subscript names the stem itself rather than being an error.
  *
  * `hasItem()` and `index()` with no argument are deliberately absent.  Each

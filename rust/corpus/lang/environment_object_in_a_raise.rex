@@ -1,5 +1,5 @@
-/* RAISE with one of these objects in a substitution position. Phase 5a
- * Task 6, fix round 4.
+/* RAISE with one of these objects in a substitution position.
+ *
  *
  * RaiseInstruction::execute calls requestArray on the additional information
  * exactly once, and only inside if (errorCode->strCompare(SYNTAX)). So

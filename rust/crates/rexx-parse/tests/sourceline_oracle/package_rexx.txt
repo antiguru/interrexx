@@ -18,9 +18,9 @@ rexx = .Class~package
 /* The class names are read back from a list this program carries, not
    enumerated: the REXX package's own names are longer than seven bytes and a
    DO OVER over one of the interpreter's own StringTables binds a dead handle
-   for such a name under collect-on-every-allocation -- a defect this program
-   found and does not own, reproduced with `.methods` alone in
-   docs/superpowers/records/2026-09-07-phase-5i-introspection/found-defect-do-over-native-table-rooting.md.
+   for such a name under collect-on-every-allocation (seen with `.methods`
+   alone).
+
    Reading back by name is the stronger witness anyway: it says WHICH names
    must be there, where an enumeration only says how many. The count below is
    what says there are no others. */

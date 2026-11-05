@@ -1,14 +1,14 @@
 /* A ::CONSTANT directive's parenthesised expression fails at install time,
- * and the program's own main body never runs. Phase 5a Task 4, the
- * discriminating witness `phase-4-exclusions.txt`'s KNOWN GAP row asked for:
- * "the witness must make the expression fail".
+ * and the program's own main body never runs.
+ * This is the witness that makes the expression fail:
+ * a well-formed one would leave the program running.
  *
- * `1/0` is deliberately not a message send -- `.NoSuchClass~m`, the
- * expression the oracle probe that found this gap actually used, needs
- * message dispatch (Task 5), which does not exist yet and would make this
- * program fail for the wrong reason (a loud "not implemented" rather than
- * the oracle's own condition). Division by zero is fully implemented today
- * on both engines, so it exercises exactly this task's own new code: eager
+ * `1/0` is deliberately not a message send: `.NoSuchClass~m`, the
+ * expression the oracle probe used, would make this
+ * program fail through message dispatch rather than the install-time
+ * evaluation. Division by zero raises the condition directly,
+ * so it exercises exactly the install-time code on both engines:
+ * eager
  * evaluation of the expression, and propagating the raised condition with
  * the class's own clause blamed alongside the constant's.
  *

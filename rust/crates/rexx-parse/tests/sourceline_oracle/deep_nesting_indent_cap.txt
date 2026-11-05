@@ -7,12 +7,12 @@ count 77
    INTERPRET anywhere -- depth 18 echoes at 36, depth 19 at 38, depth 20 at
    40, and depths 21, 25 and 30 all echo at 40 as well.
 
-   This is a 4a rule and this file is a 4a witness: nothing below is outside
-   phase-4a.txt's own header. It is committed by 4b's Task 2 because that is
-   when the cap was measured, not because it needs anything 4b added -- the
-   interpreter printed 50 here before that task and the oracle printed 40,
-   which is a divergence 4a shipped with and no program in the subset could
-   see.
+   The interpreter once printed 50 here where the oracle prints 40, a
+   divergence that needs nothing beyond plain DO blocks to show.
+
+
+
+
 
    The depth is 25 rather than 21 on purpose. At 21 an implementation that
    subtracted a level, or that clamped one bump too late, would still land on

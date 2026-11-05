@@ -17,7 +17,7 @@ count 90
  * the untrapped clause: it reports the *object*, because `StringClass::arith`
  * is handed `otherObj` and never the string it converted to.
  *
- * Phase 5a Task 14.
+ *.
  */
 
 /* The counter is set before the trap is armed, so a build where one of the

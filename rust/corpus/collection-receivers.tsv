@@ -1,5 +1,5 @@
 # The receiver each class's rows are sent to in corpus/collection-arity.tsv's
-# probe, and the second collection its set operations take (Phase 5g Task 0b).
+# probe, and the second collection its set operations take.
 #
 # class<TAB>setup, statements separated by ` | `, which must leave `r` holding
 # the receiver, `other` a second collection of the same class, and `ka`/`va`

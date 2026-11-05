@@ -9,7 +9,7 @@
  * its own `*-*` marker, a blank line-number field and the run of spaces in
  * front of it, and that is what this program witnesses.
  *
- * Phase 5a Task 14.
+ *.
  */
 
 say 'before'

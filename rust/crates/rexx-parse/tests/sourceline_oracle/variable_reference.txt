@@ -1,5 +1,5 @@
 count 81
-/* The object `>name` answers (5c Task 4).                                   */
+/* The object `>name` answers.                                               */
 /*                                                                           */
 /* What each block would print if the term still evaluated to the referenced */
 /* variable's VALUE, which is what this crate did before this program:       */

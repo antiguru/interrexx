@@ -1,5 +1,5 @@
 /* ::ATTRIBUTE ... EXTERNAL 'LIBRARY REXX name' binds one accessor per
-   directive to the REXX package's own method table (D37). A GET or SET style
+   directive to the REXX package's own method table. A GET or SET style
    resolves its third word unchanged, which is why these directives name entry
    points that package really exports; the procedure that takes a GET or SET
    prefix is the default one, and directive_attribute_external_missing.rex

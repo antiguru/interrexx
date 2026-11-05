@@ -3,10 +3,10 @@ count 40
 
    `ArrayClass::append` counts from `lastItem` -- the last OCCUPIED index --
    and `ArrayClass::empty` sets that field to zero.  Every case below has a
-   trailing hole, and every one of them was wrong in this crate until the
-   phase's own review found it, because every witness written during the phase
-   appended to a DENSE array and a dense array is the one case where the two
-   rules agree. */
+   trailing hole. A dense array is the one case where the two rules agree,
+   so a witness that appends to a DENSE array cannot tell them apart. */
+
+
 
 say 'dense agrees' .Array~of('p','q','r')~append('s')
 

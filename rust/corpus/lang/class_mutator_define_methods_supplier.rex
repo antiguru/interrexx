@@ -1,4 +1,4 @@
-/* Task 21: `~defineMethods` reaches its argument by sending it `SUPPLIER`,
+/* `~defineMethods` reaches its argument by sending it `SUPPLIER`,
    so a value with no such method is refused by the send and not by
    `~defineMethods` -- the message names `SUPPLIER` and the value, and the
    frame line names `DEFINEMETHODS`. */

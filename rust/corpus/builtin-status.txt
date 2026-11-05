@@ -17,10 +17,9 @@
 #
 # THE FOUR STATUSES.
 #
-#   excluded     Excluded outright from Phase 4 by
-#                spec/src/deviations.md. No probe, and nothing is run. A name
-#                excluded only partially is NOT here: it is in scope in its
-#                other form and is probed on it.
+#   excluded     Excluded outright by `rexx_inventory::builtins`. No probe,
+#                and nothing is run. A name excluded only partially is not
+#                here: it is in scope in its other form and is probed on it.
 #
 #   loud         The executor exited NOT_IMPLEMENTED_EXIT. The gap is
 #                declared, with a message naming the construct -- the

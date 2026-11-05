@@ -1,7 +1,7 @@
 /* target~name:scope refuses a class object that is not one of the receiver's
  * own scopes, before the arguments are evaluated -- RexxObject::
  * validateScopeOverride (classes/ObjectClass.cpp:1950), whose test is
- * behaviour->hasScope(scope). Phase 5a Task 23.
+ * behaviour->hasScope(scope).
  *
  * The two lines that run first are the pair that makes the refusal specific:
  * a scope the receiver does have answers, and a scope it has on the other

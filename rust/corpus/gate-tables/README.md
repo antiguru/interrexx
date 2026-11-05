@@ -98,8 +98,7 @@ list names.
 output on every run of the same interpreter, exactly as `../README.md`
 requires -- `rexx-diff`'s self-test (`--cpp X --rs X`) walks `corpus/`
 recursively and reads every `.rex` under it, including these, so a
-non-deterministic probe would break it. Measured with this subtree in place,
-2026-08-25: 577 programs, 0 divergences, exit 0.
+non-deterministic probe would break it.
 
 **Agreement between the two interpreters does not apply**, which is the whole
 difference. `rexx-diff --cpp <c++> --rs <rust>` over `corpus/` reports these

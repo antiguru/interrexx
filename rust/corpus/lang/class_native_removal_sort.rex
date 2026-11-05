@@ -1,4 +1,4 @@
-/* Task 21: the removal read back, which raises where the hiding answers.
+/* The removal read back, which raises where the hiding answers.
    Its own file because a program can only fail once, and the `.Array` row
    above it is the decoy: the same name on the class the set was donated from
    answers `a Method`. */

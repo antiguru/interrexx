@@ -1,4 +1,4 @@
-/* Task 21: the REXX_DEFINED lock under DEFINEMETHODS. */
+/* The REXX_DEFINED lock under DEFINEMETHODS. */
 .Array~defineMethods(.methods)
 
 ::method z

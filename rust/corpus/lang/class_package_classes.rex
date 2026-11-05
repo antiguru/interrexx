@@ -1,4 +1,4 @@
-/* Task 21: the package object's own class tables. `::CLASS ... PUBLIC` files
+/* The package object's own class tables. `::CLASS ... PUBLIC` files
    a class in both, a plain `::CLASS` in one, and `~addClass`/`~addPublicClass`
    are the same split made by hand. Each answers the package itself, and
    `~publicClasses` answers a fresh table every time -- the identity row below

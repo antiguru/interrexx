@@ -1,5 +1,5 @@
 # The argument list each documented introspection method is sent in
-# corpus/introspection-arity.tsv's probe (Phase 5i Task 0).
+# corpus/introspection-arity.tsv's probe.
 #
 # class<TAB>method<TAB>arm<TAB>arguments, where `--` is a send with none.
 #

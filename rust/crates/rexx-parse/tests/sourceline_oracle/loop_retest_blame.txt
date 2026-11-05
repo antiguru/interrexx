@@ -1,6 +1,6 @@
 count 34
 /* A Controlled loop's re-test is blamed on the clause that transferred
- * control back to it, not on the DO clause (4b Task 9, review round 1 F2).
+ * control back to it, not on the DO clause.
  *
  * Reachable because the control variable is genuinely re-read: the body
  * leaves it non-numeric, so the BY addition on the next re-test raises

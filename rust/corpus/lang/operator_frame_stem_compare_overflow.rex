@@ -1,4 +1,4 @@
-/* Fix round 3, finding 1: the goal's corrected premise (be81ce689) -- the
+/* The
  * operator families split by whether the operator needs a number, not by
  * whether it is arithmetic. A non-strict comparison converts both operands
  * to a Number exactly like an arithmetic operator once both are numeric, so

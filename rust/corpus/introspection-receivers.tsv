@@ -1,5 +1,5 @@
-# The receiver each of Phase 5i's introspection rows is sent to in
-# corpus/introspection-arity.tsv's probe (Phase 5i Task 0).
+# The receiver each introspection row is sent to in
+# corpus/introspection-arity.tsv's probe.
 #
 # class<TAB>arm<TAB>setup<TAB>wrapper<TAB>directives
 #
@@ -12,7 +12,7 @@
 # leaves both at the top level. THE TWO MECHANISMS EXIST BECAUSE THE PROBE
 # WRITES ONE FILE AND RUNS IT: a receiver that needs a ::routine, ::method or
 # ::class to exist needs it in the same file, and a receiver that describes a
-# caller needs a caller. Measured on the oracle 2026-09-07, both halves:
+# caller needs a caller. Measured on the oracle, both halves:
 # `.context~stackFrames` has one entry at the top level and two inside a call,
 # and a RexxContext built inside a call is DEAD in the caller -- reading one
 # there is `98.981 Target RexxContext is no longer active`. A StackFrame, by
@@ -21,8 +21,7 @@
 #
 # THE SETUP IS THE RICHEST RECEIVER THE ORACLE CAN BUILD, not the richest both
 # sides can. A class whose state this crate does not have fails here rather
-# than at the send, and the probe reports that as `setup-differs` -- which is
-# the phase's headline measurement and not a harness fault.
+# than at the send, and the probe reports that as `setup-differs`, which is a measurement and not a harness fault.
 #
 # Pointer's and Buffer's INSTANCE arm is absent BY NAME rather than by
 # silence, the way collection_scopes.rs excludes RexxQueue.
@@ -32,18 +31,17 @@
 # would be setup-differs on the oracle's own side. Naming them keeps "a row
 # with no receiver is a failure" available as a signal for a class that is
 # supposed to have one. Their CLASS arm is here: `.Pointer` needs no
-# construction, and `new` is the row Phase 5i owns.
+# construction, and `new` is an introspection row.
 #
 # THE Method RECEIVER IS A REXX METHOD ON PURPOSE. class-set.txt's own is
-# `.Object~method('objectName')`, which is native; measured 2026-09-07 its
+# `.Object~method('objectName')`, which is native; measured, its
 # ~source is an EMPTY Array where `.K~method('MM')`'s has one line, and the
 # seven is* flags are identical on both (only isGuarded is 1), so the native
 # receiver cannot discriminate a body that reads the source from one that
 # answers an empty Array.
 #
 # THE Package RECEIVER IS A PROGRAM'S PACKAGE ON PURPOSE, for the same reason.
-# class-set.txt's own is `.Class~package`, the REXX package; measured
-# 2026-09-07 that answers name REXX, sourceSize 0, source Array(0), and EMPTY
+# class-set.txt's own is `.Class~package`, the REXX package; measured, that answers name REXX, sourceSize 0, source Array(0), and EMPTY
 # tables for routines, publicRoutines, resources, definedMethods and
 # namespaces -- only classes (67) and publicClasses (62) have content. Every
 # Package row in method-bodies.txt is measured against that.
@@ -52,7 +50,7 @@
 # by the harness, because the probe writes one file and a row taking a file
 # name needs a second one -- naming the running program would re-execute it.
 #
-# Measured 2026-09-07, the Package receiver's tables: classes 4,
+# The Package receiver's tables, measured: classes 4,
 # publicClasses 2, routines 2, publicRoutines 2, definedMethods 2,
 # resources 2. importedPackages is 0 and cannot be made otherwise here: a
 # ::requires needs a file on this build's search path and nothing is on it --

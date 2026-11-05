@@ -8,7 +8,7 @@
  * with a makeString use its answer, and a build that skipped the conversion
  * entirely would pass this program and fail that one.
  *
- * Phase 5a Task 14.
+ *.
  */
 
 say .p

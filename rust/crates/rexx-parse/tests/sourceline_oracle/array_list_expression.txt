@@ -1,6 +1,6 @@
 count 56
-/* The parenthesised list expression, and the Array methods 5a's own
-   mechanisms send to it. A list is one slot per written position, so a
+/* The parenthesised list expression, and the Array methods
+   sent to it. A list is one slot per written position, so a
    trailing omission is a slot; an omitted position is an empty slot, which
    ~size counts and ~items does not, and which ~at answers .nil for
    indistinguishably from a slot holding .nil. */

@@ -1,5 +1,5 @@
 /* A DO header's numeric positions, with one of these objects in them.
- * Phase 5a Task 6, fix round 2.
+ *
  *
  * The initial, TO and BY positions are rounded through a real unary + on the
  * oracle, so it sends + to the object and answers 97.1 for each of the three.

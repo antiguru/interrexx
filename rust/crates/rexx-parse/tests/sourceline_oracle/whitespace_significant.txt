@@ -8,7 +8,7 @@ count 43
 
    Same tokens, one space, entirely different program. A combinator parser
    that treats whitespace as insignificant produces a working parser that is
-   silently wrong here. See decision D10 in the rewrite plan. */
+   silently wrong here. See D10 in docs/design/architecture.md. */
 
 f = "VAR"
 say f(1)

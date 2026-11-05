@@ -1,5 +1,5 @@
 /* The package's own class table is consulted BEFORE .environment, which is
- * the order this task exists to get right. Phase 5a Task 6.
+ * the order this program pins.
  *
  * ::class array declares a class whose id is ARRAY -- upcased, because the
  * directive names it with a symbol -- and the environment already holds a

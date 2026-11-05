@@ -12,7 +12,7 @@ count 24
 
    Every result below is wrapped in `say (...)` rather than left as a bare
    expression: an expression statement with no assignable left side is a
-   command clause, which Phase 4a does not implement. */
+   command clause. */
 say (' a' = 'a')          /* simple: leading blank stripped -> 1 */
 say ('a b' = 'a  b')      /* simple: internal blanks are NOT collapsed -> 0 */
 say ('10' >> '9')         /* strict: byte-wise, "1" < "9" -> 0 */

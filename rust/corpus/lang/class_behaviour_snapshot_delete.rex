@@ -5,7 +5,7 @@
    asked of the object's own behaviour and not of its class -- an instance
    registered at construction still runs the finalizer its class has dropped.
    Only one UNINIT can fire and it is forced with drop then a driven
-   collection, so nothing depends on a termination order (D61). */
+   collection, so nothing depends on a termination order. */
 o = .K~new
 .K~delete('GONE')
 .K~delete('UNINIT')

@@ -1,11 +1,11 @@
 count 38
 /* target~name:scope starts the lookup at scope and searches only the scopes
  * folded in ahead of scope, which is MethodDictionary::findSuperMethod.
- * Phase 5a Task 23.
+ *
  *
  * SUPER inside a method body is the scope RexxObject::superScope answers for
  * the scope the running method was found at, so self~tag:super in Mid's own
- * TAG reaches Base's. Every line here is class-side because ~new is 5b.
+ * TAG reaches Base's. Every line here is class-side because ~new is not used.
  */
 
 say .Mid~tag                      /* the chain, one hop                  */

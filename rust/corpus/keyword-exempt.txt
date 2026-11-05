@@ -1,67 +1,35 @@
-# Every extracted `base/keyword` body that does not pass today, and what
-# would actually make it pass. One `GROUP::METHOD<TAB>unblocked_by` per line;
-# lines starting with # are comments.
+# Every extracted `base/keyword` body that does not pass today. One
+# `GROUP::METHOD<TAB>unblocked_by` per line; lines starting with # are
+# comments.
 #
-# Measured at ooTest r13347. This is the committed set
-# `keyword_assertions.rs` polices in both directions: a body here that starts
-# passing is as red as a body not here that starts failing, so an improvement
-# shows up in a diff rather than being quietly absorbed.
+# Measured at ooTest r13347. This is the committed set `keyword_assertions.rs`
+# polices in both directions: a body here that starts passing is as red as a
+# body not here that starts failing, so an improvement shows up in a diff rather
+# than being quietly absorbed.
 #
-# The `unblocked_by` column is NOT hand-written FOR A BODY THAT FAILS LOUDLY:
-# there it is the owning phase `rexx-exec`'s own message names, re-derived on
-# every run, so this file cannot drift from `rexx-exec`'s refusals and a
-# blocker moving between phases goes red here.
+# For a body that fails loudly the `unblocked_by` column is not hand-written: it
+# is the owner the refusal's own message names, re-derived on every run, so this
+# file cannot drift from `rexx-exec`'s refusals. A derived owner says what a
+# body hits first, not what would make it pass.
 #
-# Two limits on that, both real:
+#   RAISED  Not an attribution: the harness's own word for "exited non-zero and
+#       named no construct". Each row carrying it needs its cause written here:
 #
-#   * A derived owner says what a body hits FIRST, not what would make it
-#     pass. Three bodies are known to have a second blocker behind the first
-#     -- worse, they are not equivalent to the method they came from at all:
-#     CALL::test_expression and CALL::test_literal fail under the C++ oracle
-#     itself (Error 43, Routine not found) because they call ::routines the
-#     standalone program does not carry -- measured, routine "label" and
-#     routine "". Both now read RAISED rather than 4c, and that is agreement
-#     with the oracle rather than a regression: an unresolved routine name
-#     raises 43.1 here too, so there is no loud message left to derive a
-#     phase from. Neither body can be made to pass by implementing anything,
-#     because the extraction dropped the ::routines they call.
-#     NUMERIC::test_42 is the third and is the one whose first
-#     blocker has since been removed, so it now reads what was always behind
-#     it, RAISED: `::method "test_42"` is the only method in its
-#     neighbourhood with no `return` before its trailing
-#     `dig: Return digits()`, so the extracted program falls into that
-#     subroutine and its RETURN value becomes the program's exit code.
-#     Measured, the C++ oracle exits 3 on the same program, so this is the
-#     extraction and not a divergence.
+#       CALL::test_expression and CALL::test_literal fail under the C++ oracle
+#       itself (Error 43, Routine not found) because they call ::routines the
+#       standalone program does not carry (routine "label" and routine ""). An
+#       unresolved routine name raises 43.1 here too, so this is agreement
+#       with the oracle. Neither body can pass by implementing anything,
+#       because the extraction dropped the ::routines they call.
 #
-#     CALL::test_on_name WAS LISTED IN THAT SENTENCE AND DOES NOT BELONG.
-#     Its first blocker is a BUILTIN, not a missing ::routine -- the run's
-#     own breakdown reads routine "CHARIN", from `call charin "/"`, which is
-#     the third clause of the body. A correction that over-reaches is still
-#     a false statement, and this one over-reached by one name.
+#       CALL::test_on_name: the third clause of the body is `call charin "/"`.
 #
-#   * A derived owner is 4c for every builtin name rexx-exec runs nothing
-#     for, whichever phase actually owns it. `Loud::unresolved_call` carries
-#     a fixed "4c". So among the `4c` rows below, CALL::test_on_name and
-#     CALL::test_9 are really waiting on a builtin -- CHARIN and LINEIN,
-#     which are WHOLE exclusions and so Phase 7's, not a builtin this phase
-#     could still land. Measured from the run's own "first construct hit"
-#     breakdown, not read off this file, and not counted against the rest
-#     of the `4c` rows here, which move as this crate's own builtin table
-#     does.
-#
-#   4c  Bodies blocked on a construct rexx-exec names as 4c's -- a builtin
-#       routine it does not run yet, or instruction work 4c still owes. No
-#       body here is blocked by Phase 5, so 4b owes this table nothing
-#       further. Which names are still blockers is the derived half of this
-#       file and moves as they land; the run's own breakdown is the current
-#       answer, never this sentence, and no count of either group is written
-#       down here for the same reason.
-#
-#   RAISED  Not an attribution at all: the harness's own word for "exited
-#       non-zero and named no construct", so there is nothing to derive a
-#       phase from. A row carrying it needs its cause written into this
-#       header; the first bullet above carries all three.
+#       NUMERIC::test_42: `::method "test_42"` is the only method in its
+#       neighbourhood with no `return` before its trailing
+#       `dig: Return digits()`, so the extracted program falls into that
+#       subroutine and its RETURN value becomes the program's exit code. The
+#       C++ oracle exits 3 on the same program, so this is the extraction and
+#       not a divergence.
 #
 CALL::test_literal	RAISED
 CALL::test_expression	RAISED

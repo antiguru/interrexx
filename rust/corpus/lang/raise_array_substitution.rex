@@ -1,5 +1,5 @@
 /* RAISE SYNTAX ... ARRAY, the substitution list and its own trace lines
- * (4b Task 9), under trace i so the >A> lines are visible.
+ * Under trace i so the >A> lines are visible.
  *
  * THE OMITTED POSITION IS THE POINT. 40.4's message is "Too many arguments
  * in invocation of &1; maximum expected is &2.", and array ('R',,'X')
@@ -8,7 +8,7 @@
  * "maximum expected is X." -- readable, plausible, and wrong. That is a
  * stdout/stderr content difference, not a trace one, and it is why this
  * program's raise is left untrapped: the substituted message is only
- * observable in the report, condition('o') being 4c's.
+ * observable in the report.
  *
  * The trace lines it also pins, all measured: >A> fires TWICE per supplied
  * element (RaiseInstruction.cpp calls traceArgument on both sides of the

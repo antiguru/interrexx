@@ -1,5 +1,5 @@
 count 71
-/* DO OVER an Array, and the two shapes 5a's own mechanisms write.
+/* DO OVER an Array.
  *
  * The target is handed to requestArray, so an array iterates its own
  * non-empty slots -- an omitted position is skipped where an explicit .nil is

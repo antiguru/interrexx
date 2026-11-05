@@ -3,7 +3,7 @@ count 57
  * the value for makeString() and raises 88.909 when it answers .nil. So the
  * objects a program can now write -- a class object and one of the
  * interpreter's own -- are refused there, while a string, a number and a stem
- * standing for one are not. Phase 5a Task 7.
+ * standing for one are not.
  *
  * A stem answers as its default value (StemClass::makeString forwards to it),
  * so which side of the line a stem falls on is decided by what it holds:

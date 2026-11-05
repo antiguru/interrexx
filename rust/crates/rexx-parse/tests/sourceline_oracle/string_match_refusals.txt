@@ -1,5 +1,5 @@
 count 58
-/* The region tests' refusals, and the one place this phase's argument layer
+/* The region tests' refusals, and the one place the argument layer
  * changes shape.
  *
  * startsWith and endsWith take a **named** argument, so a missing one is

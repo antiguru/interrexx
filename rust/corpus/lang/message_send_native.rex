@@ -1,5 +1,5 @@
 /* A message send resolves against the receiver's own native class and runs
- * a primitive method. Phase 5a Task 5.
+ * a primitive method.
  *
  * One send per value kind this crate can build: a short literal (the bytes
  * live in the handle), a long one (a heap string), a whole number, and a

@@ -1,5 +1,5 @@
-/* .METHODS is the package's table of methods attached to no class. Phase 5a
- * Task 6.
+/* .METHODS is the package's table of methods attached to no class.
+ *
  *
  * LanguageParser::addMethod files a method under the package rather than
  * under a class exactly while activeClass is still unset, so a ::METHOD

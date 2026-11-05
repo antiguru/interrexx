@@ -1,5 +1,5 @@
 count 29
-/* A condition raised inside the interpreter's own library. Phase 5a Task 23.
+/* A condition raised inside the interpreter's own library.
  *
  * The oracle runs these methods out of a saved image, which carries no
  * source, so `PackageClass::traceBack` cannot echo a clause and calls
@@ -23,7 +23,7 @@ count 29
  * `.Validate~number` raises its 88.902 outright, which is why it is the
  * subject: every library method that reaches its condition through `USE
  * STRICT ARG` instead is 40.3/40.4 here against the oracle's 93.901/93.902,
- * a defect that predates this task and reproduces on a purely user-declared
+ * a defect that reproduces on a purely user-declared
  * class method. rc 168.
  */
 

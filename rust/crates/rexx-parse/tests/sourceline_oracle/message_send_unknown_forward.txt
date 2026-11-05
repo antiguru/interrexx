@@ -30,7 +30,7 @@ count 66
  * array's rooting: with collect_stress.rs's collect-on-every-allocation and
  * the array's root removed, this row's a~items sends to a collected array and
  * is refused at rc 120, where a message name of seven bytes or fewer leaves
- * the whole subset green.
+ * the whole run green.
  *
  * Measured, rc 0.
  */

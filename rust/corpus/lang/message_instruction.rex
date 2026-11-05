@@ -1,5 +1,5 @@
 /* A message send that is a whole clause, and what it does that the
- * expression form does not: it settles RESULT. Phase 5a Task 5.
+ * expression form does not: it settles RESULT.
  *
  * The ~~ form replaces the send's result with the target BEFORE RESULT is
  * set, so the second RESULT read is the receiver and not the length --

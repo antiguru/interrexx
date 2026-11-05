@@ -8,7 +8,7 @@
 # TEST_SYSSTAT_PERMISSIONS and TEST_SYSSTAT_SIZE; the crate fails them in run 2, its service not
 # creating that socket file.
 
-## Run 1: alone, 2026-11-04, a private XDG_RUNTIME_DIR under rust/target/tmp
+## Run 1: alone, a private XDG_RUNTIME_DIR under rust/target/tmp
 command: cd <copy> && ulimit -v 1048576 && LD_LIBRARY_PATH=<oracle>/lib PATH=<oracle>/bin:$PATH XDG_RUNTIME_DIR=<runtime> TMPDIR=<tmp> timeout -k 10 300 <oracle>/bin/rexx testOORexx.rex -f <copy>/ooRexx/extensions/platform/unix/rxunixsys/SysUnix.testGroup -U -V 2 < /dev/null
 rc 2, 0.07 s
 ### stdout
@@ -50,5 +50,5 @@ Total time:         00:00:00.005936
 ### stderr
 (empty)
 
-## Run 2: tests/suite.rs l3_core_suite at 9876f4fe1, 2026-11-04, REXX_SUITE_GROUPS=extensions/platform/unix/rxunixsys/SysUnix
+## Run 2: tests/suite.rs l3_core_suite, REXX_SUITE_GROUPS=extensions/platform/unix/rxunixsys/SysUnix
 verdicts from its per-test record: TEST_SYSCRYPT failed on the oracle and on the crate; every other test passed on the oracle; the six TEST_SYSSTAT_* tests failed on the crate

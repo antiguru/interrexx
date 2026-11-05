@@ -1,7 +1,7 @@
 count 20
-/* Task 16's mutation-testing witness: a number's rendering is fixed by the
+/* A mutation-testing witness: a number's rendering is fixed by the
    DIGITS in force when it is CREATED, never by the DIGITS in force when it
-   is first DISPLAYED. Every other write site in 4a (a plain assignment, a
+   is first DISPLAYED. Every other write site (a plain assignment, a
    stem or compound tail) renders its value eagerly, for the traced `>>>`
    line, before anything else can run -- so by the time a later NUMERIC
    DIGITS changes the setting, the number's text cache is already warm and

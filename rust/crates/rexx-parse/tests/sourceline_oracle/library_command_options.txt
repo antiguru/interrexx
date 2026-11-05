@@ -2,7 +2,7 @@ count 28
 /* orxfunction's handlers under every ::OPTIONS ... SYNTAX a handler's
    condition can meet. They raise nothing, so nothing escalates: a direct
    handler's -1 and a redirecting one's answer are RC, and .RS is 0. The
-   escalations of a raised condition are in the Task 6 forge's opts_*.rex. */
+   escalations of a raised condition are not covered here. */
 call TestAddCommandEnvironment "rc-direct", "direct"
 address "rc-direct" ""
 say 'direct' rc .rs

@@ -1,4 +1,4 @@
-/* Task 21: `Setup.cpp`'s native hiding and removal, read back through
+/* `Setup.cpp`'s native hiding and removal, read back through
    `~method`, which is the class's own instance dictionary and so sees both.
 
    `.Stem` and `.VariableReference` hide the comparison operators: the entry

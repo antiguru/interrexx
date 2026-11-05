@@ -22,7 +22,7 @@
    "Line versus Character Positioning", "Implementation") and funct.xml
    (CHARIN, CHAROUT, CHARS, LINEIN, LINEOUT, LINES, STREAM), with the
    programming guide's record passages (rexxpg rexio.xml:562-565, 613-616)
-   and Deviations 46, 48 and 49 of docs/superpowers/plans/phase-4-exclusions.txt.
+   and Deviations 46, 48 and 49 of spec/src/deviations.md.
    ANSI X3.274 section 9.7's properties hold of it: a stream read from
    position 1 returns what was written there, and a repositioned write loses
    only what it overwrites. Where the documentation leaves a point open, the

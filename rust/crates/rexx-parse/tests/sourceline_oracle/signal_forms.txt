@@ -1,28 +1,28 @@
 count 66
-/* SIGNAL to a label and SIGNAL VALUE (4b Task 6), under trace r throughout,
+/* SIGNAL to a label and SIGNAL VALUE, under trace r throughout,
    like call_return.rex.
 
-   `signal past_loop` fires on the loop's *first* pass. That was originally
-   a refusal: a second pass through this `DO i = 1 TO 3` retraces two
-   further `>>>` lines that this crate did not reproduce until 4b Task 9
-   (the "KNOWN GAP" then documented at run.rs's own `loop_advance`,
-   `LoopState::Controlled` arm -- unrelated to SIGNAL), so a witness
-   reaching a second pass would have pinned that gap's own wrong output
-   rather than SIGNAL's. **The gap is closed and the reason no longer
-   holds.** Re-measured at Task 9 rather than assumed closed: the
-   second-pass shape (this program with `if i = 2`) now agrees with the
-   oracle on stdout, stderr and rc 240, byte for byte and with no
-   normalisation. The first-pass form is kept because it is what every
-   `.expected`-free differential run in this file's history has compared,
-   not because a second pass would still diverge; the control variable's
-   own re-tested-pass lines are witnessed by
+   `signal past_loop` fires on the loop's *first* pass. A second pass through
+   this `DO i = 1 TO 3` (this program with `if i = 2`) agrees with the oracle
+   on stdout, stderr and rc 240, byte for byte and with no normalisation. The
+   first-pass form is kept because it is what the differential run has always
+   compared. The control variable's own re-tested-pass lines are witnessed by
    tests/trace_oracle/controlled_loop.rex.
 
-   `signal past_select` (review round 1, I3) is the identical unwind through
+
+
+
+
+
+
+
+
+
+   `signal past_select` is the identical unwind through
    a SELECT instead of a DO -- `leave_select` is one of the forwarding sites
    SIGNAL's own design depends on, and this is its witness.
 
-   SIGL (review round 1, C1): every successful transfer below also prints
+   SIGL: every successful transfer below also prints
    it, pinning that a control transfer sets SIGL to its own line as a plain
    decimal value, not a NUMERIC-DIGITS-bound one.
 

@@ -1,6 +1,6 @@
 count 9
 /* A primitive method's argument with no string value is error 88.909, still
- * with the method's own traceback line. Phase 5a Task 5.
+ * with the method's own traceback line.
  *
  * A number has a string value, measured -- 'abc'~hasMethod(5) answers 0
  * rather than raising. The objects that have none alongside .nil are in

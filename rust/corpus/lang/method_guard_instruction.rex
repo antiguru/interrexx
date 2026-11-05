@@ -3,7 +3,7 @@
    no-op and the method answers -- including the WHEN form, whose expression
    is evaluated and, when it holds, waits for nothing. WHEN also carries the
    99.913 rule the parser enforces: it must name an exposed variable, which is
-   why `v` is exposed here. Phase 5a Task 16. */
+   why `v` is exposed here. */
 
 say .K~m
 

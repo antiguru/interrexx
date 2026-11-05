@@ -26,8 +26,8 @@ count 53
    THE RULE ABOVE HAS ONE EXCEPTION, and this file DOES contain it: a
    repetitive DO/LOOP whose control test fails leaves the oracle's trace
    counter one notch low, because that exit path decrements where a normal
-   exit restores a saved value. phase-4-exclusions.txt's KNOWN GAP row on the
-   re-tested pass has the C++ citations; do not re-derive it here. What
+   exit restores a saved value. the known gap on the
+   re-tested pass is not re-derived here. What
    protects THIS file is that the COMPLETED do kk = 1 to 1 on lines 47-49 sits
    at TOP LEVEL, where the counter floors at 0 and its decrement is absorbed:
    deleting those three lines leaves every INDENT unchanged. Wrapping lines

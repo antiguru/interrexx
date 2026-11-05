@@ -1,6 +1,6 @@
-/* EXIT <expr>'s own >>> value line -- absent from this crate until 4b Task
- * 9, and the one shape no corpus program could contain while it was
- * (lang/condition_traps.rex's own header said so).
+/* EXIT <expr>'s own >>> value line.
+ * No corpus program contains such a clause, so it is pinned here.
+ *
  *
  * The adjacent passing case is deliberately NOT here: a *bare* EXIT traces
  * no value line at all, and call_arguments.rex, function_call.rex and
@@ -9,7 +9,7 @@
  * unconditionally.
  *
  * The DO is there so the traced EXIT is not a top-level clause. It does not
- * pin the indent: DEVIATION 0 normalises the space run this file's own
+ * pin the indent: Deviation 0 normalises the space run this file's own
  * comparison sees. */
 trace r
 say 'a'

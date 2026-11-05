@@ -1,5 +1,5 @@
 /* .METHODS is the string form of its own name when every method in the file
- * is attached to a class. Phase 5a Task 6.
+ * is attached to a class.
  *
  * The negative half of the witness beside this one. A ::METHOD under a
  * ::CLASS goes into that class's dictionary and never into the package's

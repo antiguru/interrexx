@@ -1,5 +1,5 @@
 /* The Stem object: its string value, its class, and the aliasing a bare stem
-   read hands out (5c Task 7).
+   read hands out.
 
    What each block would print if a constructed stem were an ordinary
    instance of .Stem, which is what this crate built and backed out once:

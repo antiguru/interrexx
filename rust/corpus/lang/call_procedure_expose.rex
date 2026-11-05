@@ -1,28 +1,28 @@
-/* PROCEDURE and PROCEDURE EXPOSE (4b Task 5, D9r).                          */
+/* PROCEDURE and PROCEDURE EXPOSE.                                           */
 /*                                                                           */
-/* Every value here is chosen so that the wrong answer prints something       */
-/* different, which is not automatic: a callee setting a variable to the      */
-/* value its caller already holds cannot distinguish isolation from sharing,  */
-/* and an exposed variable whose value equals its own derived name cannot     */
-/* distinguish exposure from non-exposure, because an unexposed unset read    */
-/* yields the name. Nothing below holds a value equal to its own name.        */
+/* Every value here is chosen so that the wrong answer prints something      */
+/* different, which is not automatic: a callee setting a variable to the     */
+/* value its caller already holds cannot distinguish isolation from sharing, */
+/* and an exposed variable whose value equals its own derived name cannot    */
+/* distinguish exposure from non-exposure, because an unexposed unset read   */
+/* yields the name. Nothing below holds a value equal to its own name.       */
 /*                                                                           */
-/* What each block would print if the implementation were wrong:              */
+/* What each block would print if the implementation were wrong:             */
 /*                                                                           */
-/*   isolation   -- a callee sharing its caller's pool prints "callee-v",     */
+/*   isolation   -- a callee sharing its caller's pool prints "callee-v",    */
 /*                  not "caller-v".                                          */
-/*   transitive  -- binding CEE's N to BEE's frame instead of chasing BEE's   */
-/*                  own alias prints "from-a" two levels up. Binding every    */
-/*                  exposed name of one PROCEDURE to a single target frame    */
-/*                  gets M wrong instead: M is BEE's own local, so A must     */
-/*                  still see "from-a-m" while BEE sees "set-by-cee-m".       */
-/*   plural      -- EXPOSE (LIST) exposes both words of LIST's value; an      */
-/*                  implementation treating the value as one name leaves      */
-/*                  ALPHA and BETA in the caller untouched. GAMMA is the      */
-/*                  control: it is never exposed and must not change.         */
-/*   stem        -- EXPOSE aliases the caller's variable entry, so a tail     */
-/*                  written in the callee is visible through the caller's     */
-/*                  own stem.                                                 */
+/*   transitive  -- binding CEE's N to BEE's frame instead of chasing BEE's  */
+/*                  own alias prints "from-a" two levels up. Binding every   */
+/*                  exposed name of one PROCEDURE to a single target frame   */
+/*                  gets M wrong instead: M is BEE's own local, so A must    */
+/*                  still see "from-a-m" while BEE sees "set-by-cee-m".      */
+/*   plural      -- EXPOSE (LIST) exposes both words of LIST's value; an     */
+/*                  implementation treating the value as one name leaves     */
+/*                  ALPHA and BETA in the caller untouched. GAMMA is the     */
+/*                  control: it is never exposed and must not change.        */
+/*   stem        -- EXPOSE aliases the caller's variable entry, so a tail    */
+/*                  written in the callee is visible through the caller's    */
+/*                  own stem.                                                */
 
 v = 'caller-v'
 w = 'caller-w'

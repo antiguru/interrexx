@@ -1,5 +1,5 @@
 count 89
-/* Array's shared collection surface: the enumeration half of Phase 5g Task 1.
+/* Array's shared collection surface: the enumeration half.
    Every line here was measured against the C++ interpreter first.  The array
    is deliberately sparse AND carries an explicit .nil, because the two are
    different: a hole is not an item and an explicit .nil is one.  */

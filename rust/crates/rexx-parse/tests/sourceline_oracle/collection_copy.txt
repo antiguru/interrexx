@@ -6,7 +6,7 @@ count 57
  * An `Array` and a `Stem` are copyable and each keeps its own class -- this
  * crate answered only for a plain instance and refused both.  A `Queue` and a
  * `List` were the other half of the same rule and were fixed with the store
- * aliasing in Phase 5h Task 2; they are here so that all four families are
+ * aliasing; they are here so that all four families are
  * asserted together rather than one at a time.
  *
  * The pairs are the point.  Every line changes the COPY and then reads the

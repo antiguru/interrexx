@@ -1,4 +1,4 @@
-/* Fix round 1, finding 3: a controlled DO's initial value is rounded
+/* A controlled DO's initial value is rounded
  * through a real unary `+` on the oracle, so a stem receiver here carries
  * the same forwarded native-method frame an operator's own left operand
  * does. Measured, rc 215, stderr opening
