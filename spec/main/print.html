@@ -89,7 +89,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="builtins/index.html"><strong aria-hidden="true">3.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="builtins/substr.html"><strong aria-hidden="true">3.1.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="builtins/subword.html"><strong aria-hidden="true">3.2.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="builtins/translate.html"><strong aria-hidden="true">3.3.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="builtins/upper.html"><strong aria-hidden="true">3.4.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="builtins/verify.html"><strong aria-hidden="true">3.5.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="builtins/word.html"><strong aria-hidden="true">3.6.</strong> WORD</a></li><li class="chapter-item expanded "><a href="builtins/wordindex.html"><strong aria-hidden="true">3.7.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="builtins/wordlength.html"><strong aria-hidden="true">3.8.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="builtins/wordpos.html"><strong aria-hidden="true">3.9.</strong> WORDPOS</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="builtins/index.html"><strong aria-hidden="true">3.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="builtins/substr.html"><strong aria-hidden="true">3.1.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="builtins/subword.html"><strong aria-hidden="true">3.2.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="builtins/translate.html"><strong aria-hidden="true">3.3.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="builtins/upper.html"><strong aria-hidden="true">3.4.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="builtins/verify.html"><strong aria-hidden="true">3.5.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="builtins/word.html"><strong aria-hidden="true">3.6.</strong> WORD</a></li><li class="chapter-item expanded "><a href="builtins/wordindex.html"><strong aria-hidden="true">3.7.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="builtins/wordlength.html"><strong aria-hidden="true">3.8.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="builtins/wordpos.html"><strong aria-hidden="true">3.9.</strong> WORDPOS</a></li></ol></li><li class="chapter-item expanded "><a href="deviations.html"><strong aria-hidden="true">4.</strong> Deviations</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -199,8 +199,8 @@ another definition of Rexx differs; it never adds to or changes a rule.</p>
 <p><strong>ooRexx.</strong> The open-source C++ implementation of Object Rexx, version 5. interrexx is
 written to run ooRexx programs, and the book's examples are also run on
 ooRexx to measure where the two agree.</p>
-<p><strong>Deviation.</strong> A declared difference between interrexx and ooRexx, numbered in the
-project's register. A page lists in its front matter the deviations that
+<p><strong>Deviation.</strong> A declared difference between interrexx and ooRexx, numbered in
+<a href="deviations.html">the Deviations chapter</a>. A page lists in its front matter the deviations that
 touch its element, and states each as a rule whose identifier ends
 <code>deviation.N</code>. Every example on which interrexx and ooRexx answer
 differently belongs to such a rule; any other difference is a defect.</p>
@@ -1859,6 +1859,406 @@ whitespace reduced to single blanks, against each run of the same number
 of words of the string, reduced the same way, from <code>start</code> on. That gives
 the answers above.</p>
 </blockquote>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="deviations-6"><a class="header" href="#deviations-6">Deviations</a></h1>
+<p>A Deviation is a declared difference between interrexx and ooRexx. Every
+example on which the two answer differently belongs to one; any other
+difference is a defect. Each entry says what interrexx does and how ooRexx
+differs. A number is never reused: a withdrawn Deviation keeps its number
+and says what replaced it. This chapter is informative; where a Deviation
+touches a page of this book, that page states it as a rule whose identifier
+ends <code>deviation.N</code>.</p>
+<h2 id="0-trace-indentation"><a class="header" href="#0-trace-indentation">0. Trace indentation</a></h2>
+<p>interrexx indents trace lines, and the indentation a program reads back
+through <code>~traceLine</code> or a condition's traceback, by block structure alone.
+ooRexx keeps the indent in a counter that drops a level too far when a loop
+ends on a failing control test, so its later lines sit one level short until
+an enclosing construct restores it.</p>
+<h2 id="1-do-over-order-on-a-stem"><a class="header" href="#1-do-over-order-on-a-stem">1. DO OVER order on a stem</a></h2>
+<p>DO OVER on a stem visits its tails in an order this book does not specify.
+ooRexx visits them in an order fixed by its internal storage, which is
+neither insertion nor sorted order.</p>
+<h2 id="2-expression-size-limit"><a class="header" href="#2-expression-size-limit">2. Expression size limit</a></h2>
+<p>An expression of more than 100,000 terms at one level raises <code>SYNTAX 11.1</code>.
+ooRexx evaluates such expressions until it crashes, a little above that
+size. Nested parentheses and nested calls raise 11.1 on both.</p>
+<h2 id="3-withdrawn"><a class="header" href="#3-withdrawn">3. Withdrawn</a></h2>
+<p>POS past the end of the haystack: current ooRexx agrees with interrexx.</p>
+<h2 id="4-identity-of-equal-values"><a class="header" href="#4-identity-of-equal-values">4. Identity of equal values</a></h2>
+<p>Whether two equal strings or numbers produced separately are one object, and
+whether an operation that leaves a value unchanged answers the same object,
+is not specified; it shows only through <code>identityHash</code> and the identity
+collections. ooRexx's answers follow how each value was built. An empty
+stem's name in <code>USE ARG</code> is compared by its characters, where ooRexx
+compares identity.</p>
+<h2 id="5-withdrawn"><a class="header" href="#5-withdrawn">5. Withdrawn</a></h2>
+<p>interrexx now runs a class object's UNINIT at the collection that reclaims
+it, as ooRexx does.</p>
+<h2 id="6-finalizer-timing-after-a-forced-collection"><a class="header" href="#6-finalizer-timing-after-a-forced-collection">6. Finalizer timing after a forced collection</a></h2>
+<p>A forced collection can reclaim an object dropped just after it was made, so
+its UNINIT may run earlier relative to the program's other output. ooRexx
+keeps its most recent allocations alive through a forced collection.
+Only the position of the finalizer's output differs, and the same holds for
+a <code>~subclasses</code> count and a <code>WeakReference</code>.</p>
+<h2 id="7-order-of-concurrent-trace-lines"><a class="header" href="#7-order-of-concurrent-trace-lines">7. Order of concurrent trace lines</a></h2>
+<p>When two activities trace at once, the order in which their lines reach
+standard error is not specified. ooRexx's order varies from run to run;
+interrexx gives one of the orders ooRexx can give.</p>
+<h2 id="8-withdrawn"><a class="header" href="#8-withdrawn">8. Withdrawn</a></h2>
+<p>Output that lists a hash collection now matches ooRexx; hash iteration order
+is <a href="deviations.html#33-hash-iteration-order">Deviation 33</a>.</p>
+<h2 id="9-mutablebuffer-storage-held-by-a-native-call"><a class="header" href="#9-mutablebuffer-storage-held-by-a-native-call">9. MutableBuffer storage held by a native call</a></h2>
+<p>A native routine that holds the address of a MutableBuffer's data keeps
+reading valid storage after the buffer grows, even across a collection. In
+ooRexx a collection reclaims the old storage and the routine reads garbage.</p>
+<h2 id="10-signals-halt-and-wake"><a class="header" href="#10-signals-halt-and-wake">10. Signals halt and wake</a></h2>
+<p>SIGINT and SIGTERM halt the program with <code>4.1</code> even when SIGHUP is ignored,
+as under <code>nohup</code>; ooRexx installs no handler then and the signal kills it.
+A halt wakes every waiting activity, including one in SysSleep, GUARD WHEN or
+a semaphore wait, which ooRexx can leave waiting for ever. A halted wait for
+a command sets RC to -4, where ooRexx's RC is unpredictable.</p>
+<h2 id="11-sigpipe-in-a-commands-child"><a class="header" href="#11-sigpipe-in-a-commands-child">11. SIGPIPE in a command's child</a></h2>
+<p>A command started by ADDRESS starts with SIGPIPE at its default action. Under
+ooRexx the child inherits SIGPIPE ignored, so a pipeline such as
+<code>yes | head -1</code> reports a broken pipe there and nothing here.</p>
+<h2 id="12-reads-a-halt-does-not-end"><a class="header" href="#12-reads-a-halt-does-not-end">12. Reads a halt does not end</a></h2>
+<p>A halt ends the wait for a command and for a read of the default input
+stream, but not a read of another stream; the halt is taken when that read
+returns. For a redirected command interrupted by a signal, ooRexx raises
+<code>98.923</code>, while interrexx keeps the output so far and raises <code>4.1</code>.</p>
+<h2 id="13-reading-the-default-input-stream"><a class="header" href="#13-reading-the-default-input-stream">13. Reading the default input stream</a></h2>
+<p>While one activity reads the default input stream, every other activity
+waits; in ooRexx they keep running. A halt during the read therefore misses an
+activity that has not yet started to run.</p>
+<h2 id="14-a-nested-wait-only-a-buried-activity-can-end"><a class="header" href="#14-a-nested-wait-only-a-buried-activity-can-end">14. A nested wait only a buried activity can end</a></h2>
+<p>An activity waiting inside a nested construct, such as INTERPRET, for
+something only an activity suspended beneath it can provide is refused, exit
+code 120. ooRexx runs each activity on its own thread and completes.</p>
+<h2 id="15-reply-inside-a-nested-construct"><a class="header" href="#15-reply-inside-a-nested-construct">15. REPLY inside a nested construct</a></h2>
+<p>A REPLY executed inside a loop that is not flattened, an INTERPRET or a
+CALL ON handler is refused, exit code 120. ooRexx continues the method on a
+new thread.</p>
+<h2 id="16-blocking-operations-hold-every-activity"><a class="header" href="#16-blocking-operations-hold-every-activity">16. Blocking operations hold every activity</a></h2>
+<p>While a stream builtin, SAY to a redirected <code>.OUTPUT</code>, trace output, ADDRESS
+WITH redirection, condition handling, package loading or a library routine
+call is blocked, every other activity waits. In ooRexx the others run.</p>
+<h2 id="17-halt-of-an-activity-with-a-nested-region"><a class="header" href="#17-halt-of-an-activity-with-a-nested-region">17. HALT of an activity with a nested region</a></h2>
+<p>A HALT sent to an activity that has a nested region running beneath it is
+taken only when that region ends. ooRexx takes it at the activity's next
+clause.</p>
+<h2 id="18-nested-busy-waiters"><a class="header" href="#18-nested-busy-waiters">18. Nested busy-waiters</a></h2>
+<p>Two activities that busy-wait on each other inside nested constructs never
+end. ooRexx preempts both and they complete.</p>
+<h2 id="19-callback-from-a-foreign-thread"><a class="header" href="#19-callback-from-a-foreign-thread">19. Callback from a foreign thread</a></h2>
+<p>A callback into the interpreter from a thread that runs no native call waits
+for a native call that holds the interpreter; if that call joins the thread,
+the program hangs. ooRexx aborts. Both fail.</p>
+<h2 id="20-a-wait-nothing-can-end"><a class="header" href="#20-a-wait-nothing-can-end">20. A wait nothing can end</a></h2>
+<p>A wait that no other activity, timer or call can end, such as the result of
+a message never sent or a GUARD WHEN nothing can make true, is refused, exit
+code 120. ooRexx blocks for ever.</p>
+<h2 id="21-activities-at-program-end"><a class="header" href="#21-activities-at-program-end">21. Activities at program end</a></h2>
+<p>Program end does not wait for activities that termination-time UNINIT
+methods start, REPLY continuations included, nor for any activity once the
+main program ends with a refusal. ooRexx's such activities race its exit and
+often print.</p>
+<h2 id="22-one-schedule-for-racing-activities"><a class="header" href="#22-one-schedule-for-racing-activities">22. One schedule for racing activities</a></h2>
+<p>Activities switch only at slice ends, waits and ends, chosen by one
+scheduler, so a program whose ooRexx output depends on thread timing gets
+one order here, which ooRexx may give rarely or not at all. This covers how
+a REPLY's sender and continuation interleave and the clause at which a HALT
+from another activity lands.</p>
+<h2 id="23-threads-of-native-calls"><a class="header" href="#23-threads-of-native-calls">23. Threads of native calls</a></h2>
+<p>Successive native calls of one activity may run on different threads, so a
+thread-affine extension sees more than one thread. ooRexx keeps each
+activity on one thread. The depth at which recursion through native callbacks
+raises <code>11.1</code> differs too.</p>
+<h2 id="24-a-call-context-used-by-another-activity"><a class="header" href="#24-a-call-context-used-by-another-activity">24. A call context used by another activity</a></h2>
+<p>A native call context kept and used from another activity's call answers its
+digits, fuzz, form and routine, and raises <code>98.983</code> for every other query.
+In ooRexx some of those queries crash and others hang.</p>
+<h2 id="25-do-loop-tests-on-a-user-comparison"><a class="header" href="#25-do-loop-tests-on-a-user-comparison">25. DO loop tests on a user comparison</a></h2>
+<p>When a DO loop's TO test or BY direction test calls a comparison method of an
+object, the answer is read as a logical value, as WHILE reads one: <code>1</code> ends
+the loop, <code>0</code> goes on, and anything else raises <code>34.901</code>. ooRexx ends the
+loop only when the answer is the <code>.true</code> object itself, and goes on for any
+other answer, a computed <code>1</code> included.</p>
+<h2 id="26--at-the-debug-pause-after-an-empty-do"><a class="header" href="#26--at-the-debug-pause-after-an-empty-do">26. <code>=</code> at the debug pause after an empty DO</a></h2>
+<p>Entering <code>=</code> at the debug pause after a DO with no passes runs the DO again
+and continues. ooRexx damages its record of open blocks and later raises
+<code>10.1</code> at a valid END.</p>
+<h2 id="27-a-debuginput-answer-that-is-not-a-string"><a class="header" href="#27-a-debuginput-answer-that-is-not-a-string">27. A <code>.DebugInput</code> answer that is not a string</a></h2>
+<p>An answer that is not a string is read as its text: an Array as its lines,
+any other object as its default string. ooRexx reads the object as if it
+were a string, running garbage or crashing.</p>
+<h2 id="28-a-built-in-method-run-on-the-wrong-object"><a class="header" href="#28-a-built-in-method-run-on-the-wrong-object">28. A built-in method run on the wrong object</a></h2>
+<p>A built-in class's method run on an object of an unrelated class, through
+<code>run</code>, <code>setMethod</code> or <code>enhanced</code>, is refused, exit code 120. ooRexx reads the
+object with the wrong layout and answers garbage or crashes.</p>
+<h2 id="29-an-entry-assignment-with-no-value"><a class="header" href="#29-an-entry-assignment-with-no-value">29. An entry assignment with no value</a></h2>
+<p><code>d~"A="()</code> on a Directory, with no argument, is refused, exit code 120.
+ooRexx stores an unrelated leftover value.</p>
+<h2 id="30-a-string-method-answering-a-non-string"><a class="header" href="#30-a-string-method-answering-a-non-string">30. A STRING method answering a non-string</a></h2>
+<p>When an object's <code>STRING</code> method answers an object with no string value,
+interrexx gives ooRexx's answer wherever that is defined, and elsewhere ends
+the program with exit code 120 after raising NOSTRING if it is trapped.
+ooRexx reads <code>.nil</code> as a string there, with garbage results or a crash. The
+<a href="conventions.html#r-conv.string.deviation.30">conventions</a> state it for builtin arguments.</p>
+<h2 id="31-withdrawn"><a class="header" href="#31-withdrawn">31. Withdrawn</a></h2>
+<p>Replaced by <a href="deviations.html#36-strings-and-numbers-are-value-based">Deviation 36</a>.</p>
+<h2 id="32-a-new-that-answers-another-object"><a class="header" href="#32-a-new-that-answers-another-object">32. A NEW that answers another object</a></h2>
+<p>When a class-side NEW reached through <code>enhanced</code> answers an object it did
+not build, that object comes back unchanged; ooRexx marks it enhanced, which
+changes every object of its class, every String for example. A metaclass NEW
+that answers an existing class during <code>subclass</code> is refused, exit code 120,
+where ooRexx rewires that class in place.</p>
+<h2 id="33-hash-iteration-order"><a class="header" href="#33-hash-iteration-order">33. Hash iteration order</a></h2>
+<p>The order in which a hash collection yields its entries, and the order of
+anything that lists one, is not specified, and may differ from ooRexx's.
+Which entries are yielded, and how often, is specified.</p>
+<h2 id="34--in-a-file-name"><a class="header" href="#34--in-a-file-name">34. <code>..</code> in a file name</a></h2>
+<p>In every name interrexx qualifies (QUALIFY, streams, <code>.File</code> and the
+RexxUtil path arguments), each <code>..</code> removes exactly the one component before
+it. ooRexx removes none after a doubled slash and two after a component that
+starts with a period, so its answer can name a different file.</p>
+<h2 id="35-handle-streams"><a class="header" href="#35-handle-streams">35. HANDLE: streams</a></h2>
+<p><code>HANDLE:0</code>, <code>HANDLE:1</code> and <code>HANDLE:2</code> read and write standard input, output
+and error; any other descriptor is refused when the stream is created. In
+ooRexx a <code>HANDLE:</code> stream never reaches its descriptor: reads see end of
+file, and writes crash.</p>
+<h2 id="36-strings-and-numbers-are-value-based"><a class="header" href="#36-strings-and-numbers-are-value-based">36. Strings and numbers are value-based</a></h2>
+<p>A String with no subclass and no enhancement, every number included, is
+value-based: whether equal values are one object, whether <code>~copy</code> answers a
+new object, and when a WeakReference to one clears are not specified, and
+<code>objectName=</code> on one is refused, exit code 120. ooRexx keeps per-object state
+on strings, so a name set on one value can appear on another.</p>
+<h2 id="37-sysstemsort-writes-back-by-tail"><a class="header" href="#37-sysstemsort-writes-back-by-tail">37. SysStemSort writes back by tail</a></h2>
+<p>SysStemSort assigns the sorted values to the stem by tail. If a STRING
+method run during the sort empties the stem, ooRexx writes into variables the
+stem no longer holds and leaves it empty.</p>
+<h2 id="38-to-or-by-after-the-for-of-do-over-or-do-with"><a class="header" href="#38-to-or-by-after-the-for-of-do-over-or-do-with">38. TO or BY after the FOR of DO OVER or DO WITH</a></h2>
+<p><code>TO</code> or <code>BY</code> after the FOR count of a DO OVER or DO WITH raises <code>25.927</code>,
+naming FOR and the keyword found. ooRexx raises the internal error <code>49.2</code>
+with an internal code in its message.</p>
+<h2 id="39-a-label-spelled-then"><a class="header" href="#39-a-label-spelled-then">39. A label spelled THEN</a></h2>
+<p>A label spelled <code>THEN</code> where IF or WHEN expects THEN raises <code>18.1</code> or <code>18.2</code>.
+ooRexx raises <code>35.1</code> at the colon.</p>
+<h2 id="40-buffered-standard-output"><a class="header" href="#40-buffered-standard-output">40. Buffered standard output</a></h2>
+<p>A standard output that is a pipe or a file is buffered and handed over
+before a read, before the program idles, before an ADDRESS command, at 64
+KiB and at exit. ooRexx writes each line at once, so here output still
+buffered at a kill or crash is lost, and standard output and standard error
+sharing one pipe interleave differently. A write error on a buffered
+standard output is reported by the writes after the hand-over that met it.</p>
+<h2 id="41-a-damaged-compiled-image"><a class="header" href="#41-a-damaged-compiled-image">41. A damaged compiled image</a></h2>
+<p>An encoded program image whose decoded bytes lack the image tag raises
+<code>3.903</code>. ooRexx runs the partly decoded buffer as source, with unpredictable
+results.</p>
+<h2 id="42-sysfork-is-refused"><a class="header" href="#42-sysfork-is-refused">42. SysFork is refused</a></h2>
+<p>A call to SysFork is refused and forks nothing. In ooRexx both processes
+continue the program.</p>
+<h2 id="43-named-rexxutil-semaphores-are-refused"><a class="header" href="#43-named-rexxutil-semaphores-are-refused">43. Named RexxUtil semaphores are refused</a></h2>
+<p>SysCreateEventSem and SysCreateMutexSem with a name, SysOpenEventSem and
+SysOpenMutexSem are refused; unnamed semaphores work. ooRexx shares named
+semaphores between processes.</p>
+<h2 id="44-max-and-min-round-whole-numbers"><a class="header" href="#44-max-and-min-round-whole-numbers">44. MAX and MIN round whole numbers</a></h2>
+<p><code>n~min</code> and <code>n~max</code> with no arguments, and MAX and MIN with a whole-number
+argument wider than NUMERIC DIGITS, round to the digits in force in both the
+function and the method form, and decide LOSTDIGITS by the value. ooRexx
+answers some integers unrounded, depending on how the number is held.</p>
+<h2 id="45-bag-hasitem-with-an-unequal-index"><a class="header" href="#45-bag-hasitem-with-an-unequal-index">45. Bag hasItem with an unequal index</a></h2>
+<p><code>Bag~hasItem</code> with an index unequal to the item answers 0. ooRexx answers
+<code>.nil</code>.</p>
+<h2 id="46-lineout-on-a-binary-record-stream"><a class="header" href="#46-lineout-on-a-binary-record-stream">46. LINEOUT on a binary record stream</a></h2>
+<p>On a stream opened <code>BINARY RECLENGTH n</code>, positioning with LINEOUT and closing
+clear no record, and only a LINEOUT with a string pads its record. ooRexx
+clears or pads a record when LINEOUT positions or closes.</p>
+<h2 id="47-a-do-count-wider-than-numeric-digits"><a class="header" href="#47-a-do-count-wider-than-numeric-digits">47. A DO count wider than NUMERIC DIGITS</a></h2>
+<p>A DO repetitor or FOR count wider than NUMERIC DIGITS raises <code>26.2</code> or
+<code>26.3</code>, or LOSTDIGITS first when that is trapped. ooRexx runs the loop when
+the count is written as a number.</p>
+<h2 id="48-writing-to-a-transient-stream"><a class="header" href="#48-writing-to-a-transient-stream">48. Writing to a transient stream</a></h2>
+<p>A write to a transient stream never seeks. On a FIFO, ooRexx fails a write
+that follows a still-buffered write, and a close after one, with NOTREADY
+<code>ERROR:29</code>.</p>
+<h2 id="49-read-and-write-positions"><a class="header" href="#49-read-and-write-positions">49. Read and write positions</a></h2>
+<p>A persistent stream keeps separate read and write positions as the reference
+manual describes, buffered or not: a write starts at the write position, and
+a relative SEEK moves from the position it names. ooRexx tracks a stale
+position on a buffered stream, so a write can land on bytes the program never
+named, and on an unbuffered stream its relative and from-the-end seeks land
+elsewhere.</p>
+<h2 id="50-a-trace-line-that-cannot-be-delivered"><a class="header" href="#50-a-trace-line-that-cannot-be-delivered">50. A trace line that cannot be delivered</a></h2>
+<p>When the trace destination refuses a line, the same condition as ooRexx's is
+raised, but some clauses may do their own work first. ooRexx raises it
+before the clause does anything.</p>
+<h2 id="51-contextrs-inside-interpret"><a class="header" href="#51-contextrs-inside-interpret">51. <code>.context~rs</code> inside INTERPRET</a></h2>
+<p>Inside an INTERPRET, <code>.context~rs</code> answers the same value as <code>.rs</code>. In ooRexx
+it answers the caller's earlier value until the INTERPRET ends.</p>
+<h2 id="52-an-address-target-that-fails"><a class="header" href="#52-an-address-target-that-fails">52. An ADDRESS target that fails</a></h2>
+<p>An output target whose write raises a condition raises <code>42.3</code> whatever the
+command's return code. ooRexx raises it only when the command answers 0.</p>
+<h2 id="53-numeric-rules-from-the-reference-manual"><a class="header" href="#53-numeric-rules-from-the-reference-manual">53. Numeric rules from the reference manual</a></h2>
+<p>A comparison under NUMERIC FUZZ checks LOSTDIGITS whatever the signs, MAX and
+MIN apply FUZZ to whole numbers, an omitted MAX or MIN argument is <code>40.5</code> for
+the function and <code>93.903</code> for the method, and a divisor is checked for
+LOSTDIGITS when the dividend is zero. A LOSTDIGITS description renders its
+operand the same way however it was produced. ooRexx departs from each of
+these.</p>
+<h2 id="54-chars-and-lines-on-a-transient-stream"><a class="header" href="#54-chars-and-lines-on-a-transient-stream">54. CHARS and LINES on a transient stream</a></h2>
+<p>CHARS and LINES on a transient stream ask how much input waits and consume
+none. ooRexx reads a byte to test and loses it, and with <code>/dev/null</code> as
+standard input its LINES answers 1 where interrexx answers 0.</p>
+<h2 id="55-a-stream-opened-write"><a class="header" href="#55-a-stream-opened-write">55. A stream opened WRITE</a></h2>
+<p>A stream opened WRITE reads nothing: reads fail with ERROR, CHARS and LINES
+answer 0, and line positioning on a text stream is NOTREADY. ooRexx opens it
+for reading and writing.</p>
+<h2 id="56-line-positions"><a class="header" href="#56-line-positions">56. Line positions</a></h2>
+<p>A line position is counted in line ends from the current position, whatever
+an earlier operation left. ooRexx counts from a line number it tracks, which
+a character operation resets.</p>
+<h2 id="57-query-position-by-line"><a class="header" href="#57-query-position-by-line">57. QUERY POSITION by line</a></h2>
+<p><code>QUERY POSITION ... LINE</code> answers the line the position is in, and 0 for a
+READ stream's write position. ooRexx answers its tracked line number.</p>
+<h2 id="58-lines-count"><a class="header" href="#58-lines-count">58. LINES Count</a></h2>
+<p><code>lines(name, 'C')</code> answers the lines that remain after the read position.
+ooRexx's count can be wrong after a character read or a line positioning,
+negative included.</p>
+<h2 id="59-an-invalid-seek"><a class="header" href="#59-an-invalid-seek">59. An invalid SEEK</a></h2>
+<p>A SEEK below position 1, or of a READ stream's write position, answers 0,
+raises NOTREADY and moves nothing. ooRexx answers a position it did not
+check.</p>
+<h2 id="60-ctrl-z-is-data"><a class="header" href="#60-ctrl-z-is-data">60. Ctrl-Z is data</a></h2>
+<p>A <code>'1a'x</code> in a stream is data, at its end too. ooRexx treats a trailing one
+as end of file when it places writes, and overwrites it.</p>
+<h2 id="61-lineout-on-an-append-record-stream"><a class="header" href="#61-lineout-on-an-append-record-stream">61. LINEOUT on an APPEND record stream</a></h2>
+<p>On a record stream opened APPEND, LINEOUT completes the record at the end of
+the stream. ooRexx can raise a bare <code>93</code> there.</p>
+<h2 id="62-a-read-past-the-end"><a class="header" href="#62-a-read-past-the-end">62. A read past the end</a></h2>
+<p>A CHARIN that reads nothing at the end, and a record-stream LINEIN that reads
+nothing, leave the stream NOTREADY with description <code>NOTREADY:EOF</code>. ooRexx
+leaves <code>ERROR:0</code>.</p>
+<h2 id="63-copy-of-a-class-a-rexxcontext-or-rexxinfo"><a class="header" href="#63-copy-of-a-class-a-rexxcontext-or-rexxinfo">63. COPY of a class, a RexxContext or <code>.RexxInfo</code></a></h2>
+<p>Copying a class object, a RexxContext or <code>.RexxInfo</code> raises <code>93.970</code> on every
+route. ooRexx copies them when the copy is reached through a scope override.</p>
+<h2 id="64-a-failed-trap-handler-call-under-signal-on-syntax"><a class="header" href="#64-a-failed-trap-handler-call-under-signal-on-syntax">64. A failed trap handler call under SIGNAL ON SYNTAX</a></h2>
+<p>When the CALL a CALL ON trap makes fails under SIGNAL ON SYNTAX, the signal
+happens at once and SIGL names the raising clause. ooRexx runs the next
+clause first.</p>
+<h2 id="65-raise-return-and-exit-values"><a class="header" href="#65-raise-return-and-exit-values">65. RAISE RETURN and EXIT values</a></h2>
+<p>A value on RAISE's RETURN or EXIT option is the condition object's RESULT
+for every condition, and a RAISE PROPAGATE keeps it. ooRexx sets RESULT only
+for SYNTAX.</p>
+<h2 id="66-frame-name-for-a-161-inside-interpret"><a class="header" href="#66-frame-name-for-a-161-inside-interpret">66. Frame name for a 16.1 inside INTERPRET</a></h2>
+<p>For a SIGNAL to a missing label inside INTERPRET, the PROGRAM stack frame
+keeps the program's name. ooRexx reports it empty.</p>
+<h2 id="67-the-line-a-started-messages-error-names"><a class="header" href="#67-the-line-a-started-messages-error-names">67. The line a started message's error names</a></h2>
+<p>The error report of a started message names the line that raised the
+condition. ooRexx's report races with the waiter's re-raise and often names
+the waiter's line.</p>
+<h2 id="68-unknown-of-a-stem-subclass"><a class="header" href="#68-unknown-of-a-stem-subclass">68. UNKNOWN of a Stem subclass</a></h2>
+<p>A Stem subclass's own UNKNOWN method runs. ooRexx forwards the message to the
+stem's value and raises <code>97.1</code>.</p>
+<h2 id="69-the-method-of-a-constant-expression"><a class="header" href="#69-the-method-of-a-constant-expression">69. The method of a ::CONSTANT expression</a></h2>
+<p>The method that evaluates a ::CONSTANT expression is that directive's own,
+with its own source. ooRexx joins every expression constant of a class into
+one method, so its source and a run of it differ.</p>
+<h2 id="70-variable-lists-run-left-to-right"><a class="header" href="#70-variable-lists-run-left-to-right">70. Variable lists run left to right</a></h2>
+<p>DROP, EXPOSE and PROCEDURE EXPOSE process their names and parenthesised
+lists from left to right. ooRexx processes the parenthesised lists first, in
+reverse order, then the plain names.</p>
+<h2 id="71-a-use-arg-alias-in-contextvariables"><a class="header" href="#71-a-use-arg-alias-in-contextvariables">71. A USE ARG alias in <code>.context~variables</code></a></h2>
+<p><code>.context~variables</code> lists a USE ARG alias under the name it is reachable by.
+ooRexx lists it under the name of the variable it aliases.</p>
+<h2 id="72-the-string-value-of-a-variable-reference"><a class="header" href="#72-the-string-value-of-a-variable-reference">72. The string value of a variable reference</a></h2>
+<p>In every position that requires a string, a variable reference's string
+value is the referenced value's, and NOSTRING is raised only when that value
+has none. ooRexx uses the reference's default name and raises NOSTRING for
+it in most positions.</p>
+<h2 id="73-a-standard-descriptor-closed-at-start"><a class="header" href="#73-a-standard-descriptor-closed-at-start">73. A standard descriptor closed at start</a></h2>
+<p>A standard descriptor closed when the interpreter starts is open on
+<code>/dev/null</code>, so writes to it succeed. In ooRexx they fail with <code>ERROR:9</code>.</p>
+<h2 id="74-append-on-a-write-only-file"><a class="header" href="#74-append-on-a-write-only-file">74. APPEND on a write-only file</a></h2>
+<p>A stream opened APPEND on a file it can only write writes every line at the
+file's current end. ooRexx writes at the end as it was when opened,
+overwriting what another writer appended meanwhile.</p>
+<h2 id="75-a-condition-raised-while-its-call-trap-is-delayed"><a class="header" href="#75-a-condition-raised-while-its-call-trap-is-delayed">75. A condition raised while its CALL trap is delayed</a></h2>
+<p>While a CALL ON trap is delayed, a condition raised for it again is held as
+the reference manual describes, and ERROR, FAILURE and NOTREADY raised again
+are ignored. ooRexx loses a held condition raised from a routine the handler
+calls, and crashes in some such programs.</p>
+<h2 id="76-package-of-an-interpret-translation-failure"><a class="header" href="#76-package-of-an-interpret-translation-failure">76. Package of an INTERPRET translation failure</a></h2>
+<p>The condition object of an INTERPRET that fails to translate names the
+running package. ooRexx names another package object.</p>
+<h2 id="77-the-string-value-of-a-stem"><a class="header" href="#77-the-string-value-of-a-stem">77. The string value of a stem</a></h2>
+<p>In every position that requires a string, a stem's string value is its
+default value's, and NOSTRING, naming the stem, is raised only when that has
+none. ooRexx raises NOSTRING for every stem there.</p>
+<h2 id="78-hash-lookup-of-the-identical-index"><a class="header" href="#78-hash-lookup-of-the-identical-index">78. Hash lookup of the identical index</a></h2>
+<p>A lookup or PUT with the very index object already stored sends that
+object's <code>==</code>. ooRexx compares identity first and sends nothing.</p>
+<h2 id="79-append-write-positions"><a class="header" href="#79-append-write-positions">79. APPEND write positions</a></h2>
+<p>On a stream opened APPEND, the write position cannot be moved into the file
+as it was when opened: such a SEEK answers 0, and a CHAROUT or LINEOUT
+naming a position there writes nothing, all NOTREADY. ooRexx moves the
+position, and a LINEOUT naming a line writes there.</p>
+<h2 id="80-first-seek-of-an-unopened-transient-stream"><a class="header" href="#80-first-seek-of-an-unopened-transient-stream">80. First SEEK of an unopened transient stream</a></h2>
+<p>The first SEEK of a transient stream that nothing has opened raises
+<code>93.958</code>, as any positioning of a transient stream does. ooRexx answers 1.</p>
+<h2 id="81-a-stems-string-method"><a class="header" href="#81-a-stems-string-method">81. A stem's STRING method</a></h2>
+<p>A stem's <code>STRING</code> sends <code>STRING</code> to its default value. ooRexx answers the
+default's default name. A trace value line still shows the default's name.</p>
+<h2 id="82-closing-lineout-on-a-fifo"><a class="header" href="#82-closing-lineout-on-a-fifo">82. Closing LINEOUT on a FIFO</a></h2>
+<p>A LINEOUT that closes a FIFO consumes no input. ooRexx consumes a byte.</p>
+<h2 id="83-when-raise-description-is-converted"><a class="header" href="#83-when-raise-description-is-converted">83. When RAISE DESCRIPTION is converted</a></h2>
+<p>RAISE converts its DESCRIPTION to a string when it runs, so a conversion
+that fails fails at RAISE. ooRexx converts at every <code>CONDITION('D')</code>.</p>
+<h2 id="84-emptying-a-table-during-remove"><a class="header" href="#84-emptying-a-table-during-remove">84. Emptying a Table during REMOVE</a></h2>
+<p>When an index's equality method empties its Table during REMOVE, ITEMS stays
+0. ooRexx answers -1.</p>
+<h2 id="85-environment-per-interpreter"><a class="header" href="#85-environment-per-interpreter">85. <code>.environment</code> per interpreter</a></h2>
+<p>Each interpreter instance has its own <code>.environment</code>, and an object passed
+between instances through the native API is refused. ooRexx shares one
+<code>.environment</code> between every instance in a process.</p>
+<h2 id="86-the-api-daemon"><a class="header" href="#86-the-api-daemon">86. The API daemon</a></h2>
+<p>The rxapi daemon starts only when a program first needs it, and prints its
+own messages. ooRexx starts it with every interpreter.</p>
+<h2 id="87-rxregexp-follows-its-documented-grammar"><a class="header" href="#87-rxregexp-follows-its-documented-grammar">87. rxregexp follows its documented grammar</a></h2>
+<p>rxregexp matches the documented pattern language and always terminates; a
+pattern too large to compile is compile error 5. ooRexx answers some patterns
+wrongly and never terminates on others.</p>
+<h2 id="88-extension-calls-that-crash-oorexx"><a class="header" href="#88-extension-calls-that-crash-oorexx">88. Extension calls that crash ooRexx</a></h2>
+<p>RegularExpression <code>match</code> or <code>pos</code> with no pattern, any RegularExpression
+call after <code>uninit</code>, SysGetgrnam or SysGetgrgid of a missing group, SockSelect
+with a non-numeric entry and SysWordexp of a word list it rejects raise a
+condition. ooRexx crashes.</p>
+<h2 id="89-line-numbers-of-rewritten-extension-packages"><a class="header" href="#89-line-numbers-of-rewritten-extension-packages">89. Line numbers of rewritten extension packages</a></h2>
+<p><code>rxregexp.cls</code>, <code>socket.cls</code>, <code>streamsocket.cls</code>, <code>mime.cls</code> and <code>smtp.cls</code>
+are written for interrexx, so a traceback through them names interrexx's
+line numbers. Messages, codes and results match ooRexx.</p>
+<h2 id="90-syswordexp-is-refused"><a class="header" href="#90-syswordexp-is-refused">90. SysWordexp is refused</a></h2>
+<p>SysWordexp stays registered, but every call raises <code>40.1</code> and expands
+nothing. ooRexx expands the words with a shell, command substitution
+included.</p>
+<h2 id="91-a-command-whose-child-was-already-reaped"><a class="header" href="#91-a-command-whose-child-was-already-reaped">91. A command whose child was already reaped</a></h2>
+<p>A command whose process was reaped before the wait answers RC -10 as an
+ERROR. ooRexx answers an unpredictable negative value.</p>
+<h2 id="92-the-interpreters-own-descriptors"><a class="header" href="#92-the-interpreters-own-descriptors">92. The interpreter's own descriptors</a></h2>
+<p>The interpreter's own descriptors are numbered 1000 or above, and rxsock and
+SysClose calls answer EBADF for them. In ooRexx a program can close them.</p>
+<h2 id="93-rxqueue-with-no-session"><a class="header" href="#93-rxqueue-with-no-session">93. rxqueue with no session</a></h2>
+<p>rxqueue run outside a Rexx program, with the session queue as its queue,
+prints an error and exits 9. ooRexx exits 0 and the lines go to a queue no
+later process reaches.</p>
+<h2 id="94-a-null-translate-input-table"><a class="header" href="#94-a-null-translate-input-table">94. A null TRANSLATE input table</a></h2>
+<p>A <code>tablei</code> given as the null string is a table with no characters, however
+the null string was produced. ooRexx takes a null string from some builtins
+as an omitted <code>tablei</code>. The <a href="builtins/translate.html#r-bif.translate.deviation.94">TRANSLATE page</a>
+states it.</p>
+<h2 id="95-a-native-handle-used-after-its-call"><a class="header" href="#95-a-native-handle-used-after-its-call">95. A native handle used after its call</a></h2>
+<p>An extension that keeps a local object reference past the native call that
+received it, and uses it in a later call, ends the program with exit code
+120 and a message that the handle is no longer held. The API does not
+define such a use; ooRexx may still reach the object or one that replaced it.</p>
 
                     </main>
 
