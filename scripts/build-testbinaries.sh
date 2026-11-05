@@ -43,7 +43,9 @@ stamp=
 if [ -n "$libs" ]; then
     exec 9>"$out.lock"
     flock 9
-    stamp=$(stat -c '%n %s %.9Y' "$libs/librexx.so" "$libs/librexxapi.so" "$0")
+    stamp=$(stat -c '%n %s %.9Y' "$libs/librexx.so" "$libs/librexxapi.so" "$0"
+        git -C "$root/third_party/ooRexx" rev-parse HEAD
+        c++ --version | head -n 1)
     if [ -f "$out/.stamp" ] && [ "$(cat "$out/.stamp")" = "$stamp" ]; then
         echo "build-testbinaries.sh: $out is up to date"
         exit 0

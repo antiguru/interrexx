@@ -84,6 +84,8 @@ binary, or that it is alone.
 * Tests started by nextest share one oracle `XDG_RUNTIME_DIR` per run, keyed by
   `NEXTEST_RUN_ID`, so a run starts one oracle `rxapi` and not one per test; a watcher stops it
   after nextest has ended. Under `cargo test` each test process has a directory of its own.
+* Gate mode (`REXX_CORPUS_GATE=1`) runs under `cargo test`: the group runner's quiet-machine and
+  row bounds hold within one process, which nextest does not provide.
 * The method-body table runs against an API service directory of its own, set by a setup script:
   its `RexxQueue create` row is stable only against a service no other test holds open.
 * `scripts/build-testbinaries.sh` and `scripts/build-extensions.sh` take a lock and skip a build

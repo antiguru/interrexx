@@ -4,34 +4,45 @@
 //! `cargo nextest`, where every test is a process of its own, it is shared by the whole run
 //! (keyed by `NEXTEST_RUN_ID`), so a run starts one daemon and not one per test. A watcher
 //! started with the first use stops the daemon and removes the directory once the process, or
-//! nextest, has ended.
+//! nextest, has ended. A run whose test process is not a direct child of `cargo-nextest` (a
+//! runner or wrapper in between) uses the process's own directory.
 
 #![allow(dead_code)]
 
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::os::unix::fs::DirBuilderExt;
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::OnceLock;
+
+/// Whether the parent process is `cargo-nextest`.
+fn parent_is_nextest() -> bool {
+    let parent = std::os::unix::process::parent_id();
+    std::fs::read_to_string(format!("/proc/{parent}/comm"))
+        .is_ok_and(|comm| comm.trim_end() == "cargo-nextest")
+}
 
 /// The name of the directory under the target's temporary directory, and the process whose end
 /// stops its daemon: this process, or the nextest that runs it.
 ///
 /// A run's id is a UUID and a socket path is short, so the shared name is a short hash of it.
-fn name_and_owner() -> (String, u32) {
+fn name_and_owner() -> (String, u32, bool) {
     match std::env::var("NEXTEST_RUN_ID") {
-        Ok(id) if !id.is_empty() => {
+        Ok(id) if !id.is_empty() && parent_is_nextest() => {
             let mut hasher = DefaultHasher::new();
             id.hash(&mut hasher);
             (
                 format!("oracle-runtime-n{:010x}", hasher.finish() & 0xff_ffff_ffff),
                 std::os::unix::process::parent_id(),
+                true,
             )
         }
         _ => (
             format!("oracle-runtime-{}", std::process::id()),
             std::process::id(),
+            false,
         ),
     }
 }
@@ -40,13 +51,15 @@ fn name_and_owner() -> (String, u32) {
 pub fn dir() -> &'static Path {
     static DIR: OnceLock<PathBuf> = OnceLock::new();
     DIR.get_or_init(|| {
-        let (name, owner) = name_and_owner();
+        let (name, owner, shared) = name_and_owner();
         let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
         std::fs::create_dir_all(dir.parent().expect("a parent")).expect("the temporary directory");
         match std::fs::DirBuilder::new().mode(0o700).create(&dir) {
             Ok(()) => {}
             // Another test process of this nextest run created it, and its watcher is running.
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => return dir,
+            Err(error) if shared && error.kind() == std::io::ErrorKind::AlreadyExists => {
+                return dir;
+            }
             Err(error) => panic!("a runtime directory for the oracle: {error}"),
         }
         let _ = Command::new("sh")
@@ -64,6 +77,8 @@ pub fn dir() -> &'static Path {
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
+            // Outside the test's process group: a signal sent to the test does not reach it.
+            .process_group(0)
             .spawn();
         dir
     })
