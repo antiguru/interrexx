@@ -8,7 +8,7 @@ repository.workspace = true
 description = "Builtin function and error message tables for interrexx"
 
 [build-dependencies]
-quick-xml = "0.37"
+quick-xml = "0.42"
 
 [lints]
 workspace = true
