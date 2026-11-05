@@ -54,8 +54,18 @@ specified.
 ## Reading a rule
 
 Every statement the book makes about behavior is a rule. A rule has an
-identifier made of a chapter prefix and dotted lowercase words, such as the
-`bif.` prefix for built-in functions, and it is a single short paragraph.
+identifier of dotted lowercase words, and it is a single short paragraph.
+
+An identifier names the page that holds its rule, so a reader of the raw
+Markdown finds any rule from its identifier alone. The first word names the
+chapter: `bif` for built-in functions in `builtins/`, `instr` for
+`instructions/`, `expr` for `expressions/`, `parse` for `parsing/`, `cond`
+for `conditions/` and `class` for `classes/`. The second word is the page's
+file name: `bif.substr.pad` is in `builtins/substr.md`, and the rules for a
+whole chapter, such as `bif.index.call.count`, are in its `index.md`. The
+conventions are one page, `conventions.md`, and every `conv.` rule is there.
+The checker rejects a rule on any other page.
+
 Identifiers never change and are never reused. Other pages refer to a rule by
 that identifier, and so do comments in the test sources: a test that
 exercises a rule cites it, and the checker reports any rule that has neither

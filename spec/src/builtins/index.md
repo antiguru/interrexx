@@ -18,7 +18,7 @@ brackets is an optional argument; every other argument is required. The
 number of names on the line is the most arguments the builtin takes, and
 the number of required ones is the fewest.
 
-r[bif.call.count]
+r[bif.index.call.count]
 The argument count of a call is the position of the last argument in it
 that is not [omitted](r:conv.arg.omitted). Omitted places at the end of the
 list therefore add nothing to the count, and a call with only omitted
@@ -32,7 +32,7 @@ say substr('abc', 2, , ) word('a b', 2, , , )
 bc b
 ```
 
-r[bif.call.too-few]
+r[bif.index.call.too-few]
 A call whose argument count is less than the number of required arguments
 raises `SYNTAX 40.3`.
 
@@ -54,7 +54,7 @@ c: say condition('o')~code
 40.3
 ```
 
-r[bif.call.too-many]
+r[bif.index.call.too-many]
 A call whose argument count is greater than the number of arguments on the
 syntax line raises `SYNTAX 40.4`, whatever the values of the arguments,
 and even when the arguments before the last are omitted.
@@ -73,7 +73,7 @@ b: say condition('o')~code
 40.4
 ```
 
-r[bif.call.missing]
+r[bif.index.call.missing]
 A required argument that is omitted, in a call whose argument count reaches
 past it, raises `SYNTAX 40.5`.
 
@@ -91,10 +91,10 @@ b: say condition('o')~code
 40.5
 ```
 
-r[bif.call.order.count-before-missing]
-A call whose argument count is wrong raises the [too-few](r:bif.call.too-few)
-or [too-many](r:bif.call.too-many) error even when it also omits a
-[required argument](r:bif.call.missing).
+r[bif.index.call.order.count-before-missing]
+A call whose argument count is wrong raises the [too-few](r:bif.index.call.too-few)
+or [too-many](r:bif.index.call.too-many) error even when it also omits a
+[required argument](r:bif.index.call.missing).
 
 ```rexx
 signal on syntax name a
@@ -106,7 +106,7 @@ a: say condition('o')~code
 40.4
 ```
 
-r[bif.call.order.count-before-values]
+r[bif.index.call.order.count-before-values]
 A call whose argument count is wrong raises the too-few or too-many error
 even when an argument it does pass would fail its own check.
 
@@ -124,9 +124,9 @@ b: say condition('o')~code
 40.4
 ```
 
-r[bif.call.order.missing-before-values]
+r[bif.index.call.order.missing-before-values]
 A call whose argument count is right but that omits a
-[required argument](r:bif.call.missing) raises `SYNTAX 40.5` even when an
+[required argument](r:bif.index.call.missing) raises `SYNTAX 40.5` even when an
 argument it passes after the omitted one would fail its own check, a
 [form check](r:conv.check.order) or a range check.
 
@@ -158,7 +158,7 @@ d: say condition('o')~code
 
 ## Words
 
-r[bif.words.split]
+r[bif.index.words.split]
 The builtins that count words split a string into words the same way. A
 word is a run of one or more characters, none of them
 [whitespace](r:conv.string.whitespace), that has whitespace or an end of
@@ -183,10 +183,10 @@ two 610A000C62
 > any others the configuration names. ooRexx fixes that set as the blank and
 > the horizontal tab, and so does this book.
 
-r[bif.words.number]
+r[bif.index.words.number]
 Where a word builtin's page calls an argument a word number, that argument
 is a [position](r:conv.position.check) that counts words: the word number
-`n` names word `n` of the string as [the word rule](r:bif.words.split)
+`n` names word `n` of the string as [the word rule](r:bif.index.words.split)
 numbers them. A word number greater than the number of words in the string
 is not an error, for every value that passes its check; it names no word,
 and the builtin's page says what the builtin answers then.
@@ -206,7 +206,7 @@ e: say condition('o')~code
 
 ## Answers that are counts
 
-r[bif.count.answer]
+r[bif.index.count.answer]
 WORDINDEX, WORDLENGTH, WORDPOS and VERIFY each answer a count: of
 characters or of words, or a position, which counts characters or words up
 to the one it names. A builtin that answers a count writes it as a whole
@@ -230,7 +230,7 @@ say verify(copies('a', 1200) || 'b', 'a') verify(copies('a', 1300), '', 'N', 123
 > **Note.** The reference manual does not say how these answers are written or whether
 > NUMERIC DIGITS applies to them; this rule matches ooRexx.
 
-r[bif.count.answer.deviation.4]
+r[bif.index.count.answer.deviation.4]
 interrexx does not specify whether the answer of a builtin that answers a
 count is the same object as another string of equal value: as an equal
 number the program already holds, such as the `start` argument of a call

@@ -10,7 +10,7 @@ rexxref: "Functions > Built-in Functions > WORDPOS (Word Position)"
 
 WORDPOS searches a string for a sequence of words and answers the number
 of the word where the sequence begins. Words are those of
-[the word rule](r:bif.words.split), in the phrase and in the string alike.
+[the word rule](r:bif.index.words.split), in the phrase and in the string alike.
 
 ## Arguments
 
@@ -19,9 +19,9 @@ WORDPOS is a builtin that runs as a String method, and `string`, its
 second argument, is the receiver; `phrase` and `start` become the
 message's arguments, in that order. `phrase` and `string` are
 [strings](r:conv.string.null), and `start` is a
-[word number](r:bif.words.number). The arguments are checked in the
+[word number](r:bif.index.words.number). The arguments are checked in the
 [order](r:conv.check.order) the conventions give, and the argument count by
-the [builtin call rules](r:bif.call.count): two are required and three is
+the [builtin call rules](r:bif.index.call.count): two are required and three is
 the most.
 
 ```rexx
@@ -69,8 +69,8 @@ WORDPOS then returns the smallest word number `k`, with `k` at least
 to `m`, word `k + i - 1` of `string` is equal under `==` to word `i` of
 `phrase`. When there is no such `k`, the result is `0`. A phrase with no
 words is the case of [its own rule](r:bif.wordpos.empty-phrase). The answer
-is [written as a count](r:bif.count.answer), and whether it is a new object
-is [not specified](r:bif.count.answer.deviation.4).
+is [written as a count](r:bif.index.count.answer), and whether it is a new object
+is [not specified](r:bif.index.count.answer.deviation.4).
 
 ```rexx
 s = 'one two three two three four'
@@ -102,7 +102,7 @@ r[bif.wordpos.exact]
 Two words are equal only when they have the same characters in the same
 order. Case matters, no numeric comparison is made, and a word of `phrase`
 never matches only a part of a word of `string`. A character that
-[the word rule](r:bif.words.split) places inside a word, such as a line
+[the word rule](r:bif.index.words.split) places inside a word, such as a line
 feed, must match like any other.
 
 ```rexx

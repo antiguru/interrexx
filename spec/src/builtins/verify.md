@@ -23,7 +23,7 @@ in their order. `string` and `reference` are
 [position](r:conv.position.check), and `length` is a
 [length](r:conv.length.check). The arguments are checked in the
 [order](r:conv.check.order) the conventions give, and the argument count by
-the [builtin call rules](r:bif.call.count): two are required and five is
+the [builtin call rules](r:bif.index.call.count): two are required and five is
 the most.
 
 ```rexx
@@ -242,5 +242,5 @@ say verify('abc', 'x', 'N', 1, 0) verify('abc', 'a', 'M', 1, 0)
 ```
 
 > **Note.** VERIFY's answer, a position or `0`, is a count: it is
-> [written as a count](r:bif.count.answer), and whether it is a new object is
-> [not specified](r:bif.count.answer.deviation.4).
+> [written as a count](r:bif.index.count.answer), and whether it is a new object is
+> [not specified](r:bif.index.count.answer.deviation.4).

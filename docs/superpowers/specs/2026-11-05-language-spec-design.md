@@ -90,7 +90,10 @@ A `pad` argument that is not exactly one character raises `SYNTAX 40.23`.
 ```
 
 IDs are lowercase, dot-separated, and begin with the chapter's prefix (`bif.`, `instr.`, `expr.`,
-`parse.`, `cond.`, `class.`, `conv.` for the conventions chapter). An ID never changes meaning once
+`parse.`, `cond.`, `class.`, `conv.` for the conventions chapter). In a chapter directory the second
+segment is the page's file stem (`bif.substr.…` in `builtins/substr.md`, chapter-wide rules
+`bif.index.…` in `builtins/index.md`), so an ID names its page; the checker enforces it (Moritz,
+2026-11-05, for readers of the raw Markdown). An ID never changes meaning once
 merged. A rule that is withdrawn is deleted, and its ID is not reused; the checker keeps the list of
 withdrawn IDs in `spec/withdrawn.txt` and rejects them.
 

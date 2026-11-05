@@ -24,7 +24,7 @@ arguments, in their order. `string`, `tableo` and `tablei` are
 [position](r:conv.position.check), and `length` is a
 [length](r:conv.length.check). The arguments are checked in the
 [order](r:conv.check.order) the conventions give, and the argument count by
-the [builtin call rules](r:bif.call.count): one is required and six is the
+the [builtin call rules](r:bif.index.call.count): one is required and six is the
 most.
 
 ```rexx

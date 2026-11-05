@@ -6,19 +6,29 @@ use std::path::{Path, PathBuf};
 
 use crate::{Page, Problem, parse_page};
 
-/// The rule-ID prefix for a page at `relative` (relative to `spec/src`).
-pub fn prefix_for(relative: &Path) -> Option<&'static str> {
+/// The rule-ID prefix for a page at `relative` (relative to `spec/src`), which
+/// names the page: a chapter that is one file has its chapter prefix
+/// (`conventions.md` is `conv.`), and a page in a chapter directory adds its
+/// file stem (`builtins/substr.md` is `bif.substr.`, `builtins/index.md` is
+/// `bif.index.`). A reader finds a rule's page from its ID alone.
+pub fn prefix_for(relative: &Path) -> Option<String> {
     let comps: Vec<&str> = relative.iter().filter_map(|c| c.to_str()).collect();
-    match comps.as_slice() {
-        ["conventions.md"] => Some("conv."),
-        ["builtins", ..] => Some("bif."),
-        ["instructions", ..] => Some("instr."),
-        ["expressions", ..] => Some("expr."),
-        ["parsing", ..] => Some("parse."),
-        ["conditions", ..] => Some("cond."),
-        ["classes", ..] => Some("class."),
-        _ => None,
-    }
+    let (chapter, file) = match comps.as_slice() {
+        ["conventions.md"] => return Some("conv.".into()),
+        [dir, file] => (*dir, *file),
+        _ => return None,
+    };
+    let chapter = match chapter {
+        "builtins" => "bif",
+        "instructions" => "instr",
+        "expressions" => "expr",
+        "parsing" => "parse",
+        "conditions" => "cond",
+        "classes" => "class",
+        _ => return None,
+    };
+    let stem = file.strip_suffix(".md")?;
+    Some(format!("{chapter}.{stem}."))
 }
 
 fn markdown_files(dir: &Path, out: &mut Vec<PathBuf>, problems: &mut Vec<Problem>) {
@@ -92,11 +102,11 @@ pub fn load(root: &Path) -> (Vec<Page>, Vec<Problem>) {
     for (rel, page) in &pages {
         let prefix = prefix_for(rel);
         for rule in &page.rules {
-            match prefix {
-                Some(p) if !rule.id.starts_with(p) => problems.push(Problem {
+            match &prefix {
+                Some(p) if !rule.id.starts_with(p.as_str()) => problems.push(Problem {
                     path: page.path.clone(),
                     line: rule.line,
-                    message: format!("rule `{}` must begin with `{p}` in this chapter", rule.id),
+                    message: format!("rule `{}` must begin with `{p}` on this page", rule.id),
                 }),
                 None => problems.push(Problem {
                     path: page.path.clone(),

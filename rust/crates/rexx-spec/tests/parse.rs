@@ -140,16 +140,19 @@ fn malformed_id_is_reported() {
 }
 
 #[test]
-fn prefixes_follow_the_directory() {
-    assert_eq!(prefix_for(Path::new("builtins/substr.md")), Some("bif."));
-    assert_eq!(prefix_for(Path::new("instructions/do.md")), Some("instr."));
-    assert_eq!(prefix_for(Path::new("expressions/x.md")), Some("expr."));
-    assert_eq!(prefix_for(Path::new("parsing/x.md")), Some("parse."));
-    assert_eq!(prefix_for(Path::new("conditions/x.md")), Some("cond."));
-    assert_eq!(prefix_for(Path::new("classes/x.md")), Some("class."));
-    assert_eq!(prefix_for(Path::new("conventions.md")), Some("conv."));
-    assert_eq!(prefix_for(Path::new("intro.md")), None);
-    assert_eq!(prefix_for(Path::new("other/x.md")), None);
+fn prefixes_name_the_page() {
+    let p = |s: &str| prefix_for(Path::new(s));
+    assert_eq!(p("builtins/substr.md").as_deref(), Some("bif.substr."));
+    assert_eq!(p("builtins/index.md").as_deref(), Some("bif.index."));
+    assert_eq!(p("instructions/do.md").as_deref(), Some("instr.do."));
+    assert_eq!(p("expressions/x.md").as_deref(), Some("expr.x."));
+    assert_eq!(p("parsing/x.md").as_deref(), Some("parse.x."));
+    assert_eq!(p("conditions/x.md").as_deref(), Some("cond.x."));
+    assert_eq!(p("classes/x.md").as_deref(), Some("class.x."));
+    assert_eq!(p("conventions.md").as_deref(), Some("conv."));
+    assert_eq!(p("intro.md"), None);
+    assert_eq!(p("other/x.md"), None);
+    assert_eq!(p("builtins/deeper/x.md"), None);
 }
 
 struct Tree(PathBuf);
@@ -199,18 +202,19 @@ fn load_accepts_a_clean_tree_without_withdrawn_list() {
 #[test]
 fn load_reports_duplicates_withdrawn_prefix_and_summary() {
     let t = Tree::new("defects");
-    t.write("withdrawn.txt", "# gone\n\nbif.old.rule\n");
+    t.write("withdrawn.txt", "# gone\n\nbif.a.old\n");
     t.write("src/SUMMARY.md", "# Summary\n\n- [Conv](conventions.md)\n- [A](builtins/a.md)\n- [B](builtins/b.md)\n- [Gone](builtins/missing.md)\n");
     t.write("src/conventions.md", &simple(&["bif.wrong.prefix"]));
-    t.write("src/builtins/a.md", &simple(&["bif.a.b", "bif.old.rule"]));
+    t.write("src/builtins/a.md", &simple(&["bif.a.b", "bif.a.old"]));
     t.write("src/builtins/b.md", &simple(&["bif.a.b"]));
-    t.write("src/builtins/unlisted.md", &simple(&["bif.u.v"]));
+    t.write("src/builtins/unlisted.md", &simple(&["bif.unlisted.v"]));
     let (_, problems) = load(&t.0);
     let msgs: Vec<String> = problems
         .iter()
         .map(|p| format!("{}:{}: {}", p.path.display(), p.line, p.message))
         .collect();
-    assert_eq!(problems.len(), 5, "{msgs:#?}");
+    // b.md's duplicate is also on the wrong page for its ID.
+    assert_eq!(problems.len(), 6, "{msgs:#?}");
     let dup = msgs.iter().find(|m| m.contains("already defined")).unwrap();
     assert!(
         dup.contains("builtins/b.md") && dup.contains("builtins/a.md"),
@@ -220,6 +224,10 @@ fn load_reports_duplicates_withdrawn_prefix_and_summary() {
     assert!(
         msgs.iter()
             .any(|m| m.contains("conventions.md") && m.contains("conv."))
+    );
+    assert!(
+        msgs.iter()
+            .any(|m| m.contains("builtins/b.md") && m.contains("`bif.b.`"))
     );
     assert!(msgs.iter().any(|m| m.contains("missing.md")));
     assert!(msgs.iter().any(|m| m.contains("unlisted.md")));
