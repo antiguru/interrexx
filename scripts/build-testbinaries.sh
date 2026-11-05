@@ -25,7 +25,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ -z "$libs" ]; then
-    (cd "$root/rust" && cargo build --locked -p librexx -p librexxapi)
+    (cd "$root/rust" && cargo build --locked -p interrexx-capi -p interrexx-capi-rxapi)
     libs=${CARGO_TARGET_DIR:-$root/rust/target}/debug
 fi
 

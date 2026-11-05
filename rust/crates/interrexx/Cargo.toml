@@ -1,0 +1,148 @@
+[package]
+name = "interrexx"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation = "https://antiguru.github.io/interrexx/spec/main/"
+description = "Interpreter for the Rexx and Open Object Rexx languages, with the rexx, rexxc and rexx-ir commands"
+
+[dependencies]
+# A hasher with no per-process seed.
+rustc-hash = "2.1.2"
+
+# The heap, the root set and the value bodies every evaluated value lives in.
+interrexx-core.workspace = true
+
+# The AST this crate executes, and `parse_interpret` for a fragment built at
+# run time.
+interrexx-parse.workspace = true
+
+# `Number`, `Form` and the decimal arithmetic a value's own rendering rule
+# (D15) runs through: `Body::Text` holds a `Number`, and `format_form` is
+# what turns one into text.
+interrexx-num.workspace = true
+
+# The message catalogue, generated into `errors.rs` from
+# `interpreter/messages/rexxmsg.xml`. Stderr is compared byte for byte, so the
+# text an error prints is looked up here rather than hand-transcribed.
+interrexx-inventory.workspace = true
+
+# The class/method-dictionary model: `ClassRegistry` and
+# `ClassGraph`, what `::CLASS`/`::METHOD`/`::ATTRIBUTE` install a class and
+# its dictionaries into. This crate does not build a second representation
+# of the same thing.
+interrexx-classes.workspace = true
+
+# The native API's local-reference table: the `ObjRef` behind a handle an
+# extension holds, which `Interp` owns one of per native activation and roots
+# for as long as that activation is on its stack.
+interrexx-api.workspace = true
+
+# The API service's client and vocabulary: external queues, registrations and the macrospace.
+interrexx-rxapi.workspace = true
+
+# The interpreter's own `.orx` library sources, embedded with a sha256 pin.
+# `Interp::bootstrap_library` runs them at interpreter start;
+# `tests/bootstrap_install_oracle.rs` reads the same bytes to compose its own
+# differential.
+interrexx-lib.workspace = true
+
+# The host's local time-zone offset, which `DATE`/`TIME`'s no-argument
+# readings need and `std` has no API for. The oracle's own
+# `SystemInterpreter::getCurrentTime` calls `localtime`; this crate cannot,
+# because that is `unsafe` and the workspace lint is `deny`.
+#
+# `default-features = false` drops `oldtime` (a no-op feature since 0.4.30,
+# and what used to pull the `time` 0.1 whose `localtime_r` is
+# RUSTSEC-2020-0071) and `wasmbind`. What is left compiles four crates on
+# this target -- chrono, num-traits, iana-time-zone and the autocfg build
+# helper -- and chrono's own unix path carries no `unsafe` and no libc call:
+# it parses TZif out of `/etc/localtime` itself.
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
+# The system calls `std` does not expose: `access(2)`, which answers for the
+# caller's own credentials where a mode bit does not; `utimensat` with
+# `UTIME_OMIT`, which sets one file stamp and leaves the other, and which
+# `std`'s own `File::set_times` cannot stand in for because it needs a
+# writable open handle where a read-only file's stamp is still the owner's to
+# set; `uname`, for `SysVersion`; and `tcsetattr`, for `SysGetKey`'s
+# terminal mode. `event` and `time` are the timer thread's `poll` and Linux
+# `timerfd`. `net` is `rxsock`'s sockets, each borrowed by number for one
+# call (`src/builtin/rxsock_sys.rs`). Each
+# feature is a leaf here: they gate their modules and pull no further crate.
+rustix = { version = "1.1.4", features = ["event", "fs", "net", "param", "process", "system", "termios", "time"] }
+# `sigaction` and the async-signal-safe `write` the signal module needs
+# (D-U3, `src/signal.rs`), and `fcntl`, `getsockopt` and `setsockopt` for
+# `src/builtin/rxsock_sys.rs`. Already in the graph through `std`'s users.
+libc = "0.2.186"
+# The zone `SysGetFileDateTime` and `SysSetFileDateTime` convert through: the
+# program's own `TZ` resolved as glibc resolves it, and each local time
+# type's `is_dst`, which glibc's `mktime` uses to place a skipped reading and
+# chrono does not expose. `#![forbid(unsafe_code)]`, no dependencies.
+tz-rs = "0.7.3"
+# The `rxunixsys` calls `rustix` does not make safely: the process-wide
+# `setuid`, `seteuid`, `setgid`, `setegid` and `setgroups` glibc broadcasts to
+# every thread (rustix's are per thread), the password and group databases
+# through NSS, `getsid`/`getpgid`/`setpgid` with any raw pid (rustix's `Pid`
+# is positive), and `close` of a descriptor number. `SysSignal` and `SysKill`
+# go through `src/signal.rs`. 0.29 is the last release whose `close` takes a
+# raw descriptor; later ones take an owned one, which no safe code can make
+# from a number.
+#
+# `rxsock` takes the socket options whose values `rustix` reshapes (`SO_LINGER`
+# with its seconds when off, the timeouts and buffer sizes as the kernel's
+# numbers) from `socket`, and the interface list `SockGetHostId` reads from
+# `net` (`getifaddrs`).
+nix = { version = "0.29.0", default-features = false, features = ["net", "process", "socket", "user"] }
+# The resolver half of `rxsock`'s host lookups: `getaddrinfo` with the
+# canonical name and `getnameinfo`, which glibc's `gethostbyname` and
+# `gethostbyaddr` reach the DNS through and which no safe crate offers
+# directly (`src/builtin/rxsock/hosts.rs`).
+dns-lookup = "2"
+
+[features]
+# The pinned-park counter, `src/pinning.rs`.
+pinning = []
+# The sharing-fraction instrument, `Outcome::sharing`.
+sharing = ["interrexx-core/sharing"]
+
+[dev-dependencies]
+# Path-only dev-dependencies on workspace crates carry no version: cargo drops them
+# when packaging, which keeps the interrexx-capi cycle and unpublished crates out.
+# `librexx.so` and `librexxapi.so`, which `tests/classic_api.rs` compiles the ooTest native
+# libraries against. Test-only: the `rexx` executable compiles their export modules itself.
+interrexx-capi = { path = "../interrexx-capi" }
+interrexx-capi-rxapi = { path = "../interrexx-capi-rxapi" }
+
+# Case tables as data files rather than `const` arrays in Rust sources, for
+# tables. Test-only.
+# `default-features = false` drops its `async` feature, which is the whole of
+# what pulls `futures` in: nothing here runs a case asynchronously.
+datadriven = { version = "0.9.0", default-features = false }
+
+# `extract_assertions`, the row extractor `tests/assertions.rs` runs against
+# `ootest/ooRexx/base/expressions/`. Test-only: nothing in `src/` produces or
+# consumes an `AssertionRow`.
+interrexx-extract = { path = "../interrexx-extract" }
+
+# Work-stealing for the three sweeps below, whose per-case costs are very
+# uneven. Test-only: nothing in `src/` is parallel, and the interpreter's own
+# dependency set is unchanged. Each use is a `par_iter().map().collect()` that
+# precomputes one pure function into an index-ordered `Vec`, leaving the serial
+# fold that consumes it -- and so the emitted report -- untouched.
+rayon = "1.12.0"
+
+# Model checking of the baton, the inbox and the timer:
+# `tests/loom.rs` compiles their sources against `loom`'s primitives under
+# `--cfg loom`. Test-only.
+loom = "0.7.2"
+
+# The pseudo-terminal `SysGetKey`'s unit tests read a key from. Test-only.
+rustix = { version = "1.1.4", features = ["pty"] }
+
+# The specification parser, which `tests/spec.rs` checks `spec/` with. Test-only.
+interrexx-spec = { path = "../interrexx-spec" }
+
+[lints]
+workspace = true

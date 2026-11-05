@@ -1,0 +1,262 @@
+//! Core execution, one test per claim: output, variable slots, loud failure,
+//! evaluation depth and recursion limits.
+
+use interrexx::{NOT_IMPLEMENTED_EXIT, run_program};
+
+/// The path these tests report programs under.
+const PROGRAM_PATH: &str = "/nonexistent/program.rex";
+
+/// The smallest program that prints.
+#[test]
+fn say_hello_prints_hello() {
+    let outcome = run_program(
+        PROGRAM_PATH,
+        b"say 'hello'\n".to_vec(),
+        interrexx::Invocation::none(),
+    );
+    assert_eq!(outcome.stdout, b"hello\n");
+    assert_eq!(outcome.stderr, b"");
+    assert_eq!(outcome.exit_code, 0);
+}
+
+/// The variable pool, without a fragment anywhere near it: a value assigned to
+/// a slot, read back out of it, and concatenated.
+/// ```text
+/// greeting = 'hello'
+/// say greeting || ', world'
+/// ```
+#[test]
+fn a_variable_round_trips_through_its_slot() {
+    let outcome = run_program(
+        PROGRAM_PATH,
+        b"greeting = 'hello'\nsay greeting || ', world'\n".to_vec(),
+        interrexx::Invocation::none(),
+    );
+    assert_eq!(outcome.stdout, b"hello, world\n");
+    assert_eq!(outcome.exit_code, 0);
+}
+
+/// An uninitialised read yields the derived name, upcased.
+#[test]
+fn an_unset_variable_reads_as_its_own_name() {
+    let outcome = run_program(
+        PROGRAM_PATH,
+        b"say nosuchvariable\n".to_vec(),
+        interrexx::Invocation::none(),
+    );
+    assert_eq!(outcome.stdout, b"NOSUCHVARIABLE\n");
+    assert_eq!(outcome.exit_code, 0);
+}
+
+/// The loud-failure code is outside the band a Rexx error can produce, so a
+/// differential run can never mistake an implementation gap for a condition.
+#[test]
+fn the_loud_failure_code_cannot_be_confused_with_a_rexx_error() {
+    assert!(
+        !(157..=253).contains(&NOT_IMPLEMENTED_EXIT),
+        "256 - major lives in 157..=253 for majors 3 to 99"
+    );
+    let outcome = run_program(
+        PROGRAM_PATH,
+        b"say .local~send('ZZZ=')\n".to_vec(),
+        interrexx::Invocation::none(),
+    );
+    assert_eq!(outcome.exit_code, NOT_IMPLEMENTED_EXIT);
+    assert_eq!(
+        String::from_utf8(outcome.stderr).expect("the loud message is ASCII"),
+        "interrexx: an entry-method assignment to \"ZZZ\" with no value is not \
+         implemented\n"
+    );
+}
+
+/// A loud failure names the **form** and never formats the node, so the
+/// message stays a constant size however big the expression behind it is.
+#[test]
+fn a_loud_failure_message_does_not_grow_with_the_expression() {
+    const BOUND: usize = 300;
+
+    let small = run_program(
+        PROGRAM_PATH,
+        b"say .local~send('ZZZ=')\n".to_vec(),
+        interrexx::Invocation::none(),
+    );
+    assert_eq!(small.exit_code, NOT_IMPLEMENTED_EXIT);
+
+    // The same refusal with its message name built by a three-thousand-term
+    // concatenation, which is what a message formatting the node would print.
+    let mut deep = b"say .local~send(".to_vec();
+    for _ in 0..3_000 {
+        deep.extend_from_slice(b"'' || ");
+    }
+    deep.extend_from_slice(b"'ZZZ=')\n");
+    let deep = run_program(PROGRAM_PATH, deep, interrexx::Invocation::none());
+    assert_eq!(deep.exit_code, NOT_IMPLEMENTED_EXIT);
+
+    assert_eq!(
+        small.stderr, deep.stderr,
+        "the same unimplemented form should give the same message whatever is under it"
+    );
+    assert!(
+        deep.stderr.len() < BOUND,
+        "a loud message for a 3000-term expression was {} bytes, over the {BOUND}-byte bound",
+        deep.stderr.len()
+    );
+    let stderr = String::from_utf8(deep.stderr).expect("the loud message is ASCII");
+    assert!(
+        stderr.contains("\"ZZZ\""),
+        "the message should name the form it could not evaluate, and was {stderr:?}"
+    );
+}
+
+/// The stack cost of one `eval` frame, which the evaluation-depth limit is
+/// set from, so it has to be re-runnable rather than a figure someone
+/// recorded once.
+#[test]
+fn records_the_stack_cost_of_one_eval_frame() {
+    const TERMS: usize = 100_000;
+
+    let mut program = b"say 'a'".to_vec();
+    for term in 1..TERMS {
+        // The empty string either way: only the expression's *shape* differs,
+        // and one call is what puts the whole chain through `eval`.
+        if term == 5 {
+            program.extend_from_slice(b"||substr('x',1,0)");
+        } else {
+            program.extend_from_slice(b"||''");
+        }
+    }
+    program.push(b'\n');
+
+    let outcome = run_program(PROGRAM_PATH, program, interrexx::Invocation::none());
+    assert_eq!(outcome.exit_code, 0, "stderr: {:?}", outcome.stderr);
+    assert_eq!(
+        outcome.stdout, b"a\n",
+        "the oracle prints a for this program"
+    );
+
+    assert_eq!(
+        outcome.stack.max_depth, TERMS,
+        "a left-deep chain of {TERMS} terms should recurse once per term"
+    );
+    let bytes_per_frame = outcome
+        .stack
+        .bytes_per_frame()
+        .expect("the run recursed, so there is a per-frame cost");
+
+    // Printed rather than only asserted: `cargo test -p interrexx -- --nocapture`
+    // is how the two numbers are read.
+    println!(
+        "interpreter stack: {} bytes, eval depth reached: {}, span: {} bytes, \
+         per frame: {bytes_per_frame:.1} bytes",
+        interrexx::INTERPRETER_STACK_BYTES,
+        outcome.stack.max_depth,
+        outcome.stack.bytes,
+    );
+
+    // A loose sanity bound rather than a tight one, because the exact frame
+    // size is a property of the compiler and the profile and will move. What
+    // must not move is that the number is real: a zero would mean the probe
+    // measured nothing.
+    assert!(
+        (16.0..=4096.0).contains(&bytes_per_frame),
+        "measured {bytes_per_frame} bytes per eval frame, which is outside the range \
+         INTERPRETER_STACK_BYTES was sized against"
+    );
+
+    // The two-sided bound on the evaluation depth, checked against the size
+    // actually configured: the limit has to fit between 100,000 and this.
+    let survivable = interrexx::INTERPRETER_STACK_BYTES as f64 / bytes_per_frame;
+    assert!(
+        survivable > 100_000.0,
+        "the stack survives only {survivable:.0} eval frames, and the depth \
+         limit must be at least 100,000"
+    );
+}
+
+/// The wiring between the instruction loop and `Raised::report`: which clause
+/// the echo names, which line it resolves to, and the `256 - major` exit code.
+/// ```text
+/// a
+/// b
+///      3 *-* say 2 & 1
+/// Error 34 running /abs/pin.rex line 3:  Logical value not 0 or 1.
+/// Error 34.901:  Logical value must be exactly "0" or "1"; found "2".
+/// ```
+#[test]
+fn a_raised_condition_reports_the_failing_clause() {
+    let outcome = run_program(
+        PROGRAM_PATH,
+        b"say 'a'\nsay 'b'\nsay 2 & 1\n".to_vec(),
+        interrexx::Invocation::none(),
+    );
+
+    assert_eq!(outcome.stdout, b"a\nb\n");
+    assert_eq!(outcome.exit_code, 256 - 34);
+    assert_eq!(
+        String::from_utf8(outcome.stderr).expect("the report is ASCII"),
+        format!(
+            "     3 *-* say 2 & 1\n\
+             Error 34 running {PROGRAM_PATH} line 3:  Logical value not 0 or 1.\n\
+             Error 34.901:  Logical value must be exactly \"0\" or \"1\"; found \"2\".\n"
+        )
+    );
+}
+
+/// Unbounded `CALL` recursion is a reportable 11.1 condition, not a
+/// native abort.
+#[test]
+fn unbounded_call_recursion_raises_11_1_rather_than_overflowing() {
+    let outcome = run_program(
+        PROGRAM_PATH,
+        b"n = 0\ncall sub\nexit\nsub:\nn = n + 1\ncall sub\nreturn\n".to_vec(),
+        interrexx::Invocation::none(),
+    );
+
+    assert_eq!(outcome.exit_code, 256 - 11);
+    let stderr = String::from_utf8(outcome.stderr).expect("the report is ASCII");
+    // The report's own two lines, verbatim from the oracle. Everything above
+    // them is the echo stack, one `call sub` per activation the recursion
+    // reached -- the same shape the oracle prints, at a different depth: it
+    // echoes 27,318 lines where this echoes `MAX_ACTIVATION_DEPTH` of them.
+    assert!(
+        stderr.ends_with(&format!(
+            "     2 *-* call sub\n\
+             Error 11 running {PROGRAM_PATH} line 6:  Control stack full.\n\
+             Error 11.1:  Insufficient control stack space; cannot continue execution.\n"
+        )),
+        "expected the 11.1 report, got the last 200 bytes {:?}",
+        &stderr[stderr.len().saturating_sub(200)..]
+    );
+    assert_eq!(
+        stderr.lines().filter(|l| l.ends_with("call sub")).count(),
+        10_000,
+        "one echo per activation, and every one of them popped again on the \
+         way out rather than the stack unwinding through a native abort"
+    );
+}
+
+/// The same bound for an external routine recursing on itself, whose levels
+/// each run a nested driver.
+#[test]
+fn unbounded_external_recursion_raises_11_1_rather_than_overflowing() {
+    let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("external-recursion");
+    std::fs::create_dir_all(&dir).expect("the run directory");
+    std::fs::write(
+        dir.join("extf.rex"),
+        "use arg n\n.environment~depth = n\nreturn extf(n + 1)\n",
+    )
+    .expect("the external routine");
+    let outcome = run_program(
+        &dir.join("main.rex").to_string_lossy(),
+        b"signal on syntax\nsay extf(0)\nexit\nsyntax: say condition('o')~code .depth\n".to_vec(),
+        interrexx::Invocation::none().with_directory(dir),
+    );
+
+    assert_eq!(
+        String::from_utf8_lossy(&outcome.stdout),
+        "11.1 9998\n",
+        "{}",
+        String::from_utf8_lossy(&outcome.stderr)
+    );
+    assert_eq!(outcome.exit_code, 0);
+}

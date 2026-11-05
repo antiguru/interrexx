@@ -1,0 +1,35 @@
+[package]
+name = "interrexx-parse"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Source scanner, clause splitter and grammar for interrexx; produces the syntax tree"
+
+[dependencies]
+# A hasher with no per-process seed.
+rustc-hash = "2.1.2"
+
+# `convert.rs` consults `Number::parse` for number ACCEPTANCE, so that "is this
+# text a Rexx number" has exactly one implementation in the workspace. The C++
+# layers it the same way: `LanguageParser` calls `RexxString::numberString()`
+# rather than implementing number syntax itself. The throwaway evaluator in
+# `src/expr/differential.rs` uses the arithmetic as well; the grammars do no
+# arithmetic of their own.
+interrexx-num.workspace = true
+
+# `error.rs` renders a `ParseError`'s message from the message table the build
+# script derives from `interpreter/messages/rexxmsg.xml`, so no message text is
+# hand-copied into this crate.
+interrexx-inventory.workspace = true
+
+[dev-dependencies]
+criterion = "0.8.2"
+
+[[bench]]
+name = "parse"
+harness = false
+
+[lints]
+workspace = true

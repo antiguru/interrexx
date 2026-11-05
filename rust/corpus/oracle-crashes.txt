@@ -159,7 +159,7 @@ shortening this program to the `WHEN` clause alone measures the translation
 check instead of the block.
 
 Consequence for this crate: **there is no oracle behaviour to match**, so
-`rexx-exec` refuses the shape rather than hanging: main parks in the wait,
+`interrexx` refuses the shape rather than hanging: main parks in the wait,
 nothing is left to run, and the run ends at `Loud::unsatisfiable_wait` ; `run/tests/message.rs`'s
 `the_guard_instructions_answers_and_their_refusals` is the instrument. A
 started activity blocked the same way keeps the program's end waiting, as the
@@ -200,7 +200,7 @@ The neighbour that bounds it: the same metaclass whose `NEW` forwards
 the cast inside `subclass`, not the overridden `NEW` itself, and a reader
 shortening this program to the direct send measures the wrong thing.
 
-Consequence for this crate: none to match. `rexx-exec` sends the `NEW` and
+Consequence for this crate: none to match. `interrexx` sends the `NEW` and
 refuses an answer that is not a class, at rc 120 (`Loud::receiver_class`,
 `dispatch/class_protocol.rs`'s `new_subclass`), so the crashing shape is one
 this crate reports rather than reaches. A class answer is not this entry: the
@@ -310,7 +310,7 @@ send was made by `~start`, answers `an Object`. So it is the *unsent* state and
 not `~result` itself.
 
 Consequence for this crate: **there is no oracle behaviour to match**, so
-`rexx-exec` refuses the shape rather than answering it --
+`interrexx` refuses the shape rather than answering it --
 `Loud::unsatisfiable_wait`, raised once nothing left to run can end the wait. No
 differential row can cover it, and the rc 137 above is the deadline killing
 the process rather than an answer.
@@ -1317,7 +1317,7 @@ empty directory:
 A program of the same shape answered 40.922, 3 runs of 3, where this program crashes. This crate holds the stem it resolved for the whole call, and answers as
 the oracle does when it does not collect, collecting or not: pinned by
 `builtin::rexxutil::stems::tests::a_stem_named_by_its_variable_outlives_the_variable`, which reads
-`crates/rexx-exec/tests/stem_dropped_by_name_cases/crate` and runs each case normally and
+`crates/interrexx/tests/stem_dropped_by_name_cases/crate` and runs each case normally and
 collecting at every allocation. No corpus witness can run it. No upstream ticket.
 
 ## 48. `~` with `HOME` unset, as a file name
@@ -1605,7 +1605,7 @@ Dropped at r13346: prints `3` rc 0, 5 of 5, with the crate's stderr. No upstream
 Effect: SIGSEGV, rc 139, stdout `h 1 first` and `after first, n = 1`, stderr empty. Measured once under the standard
 wrapper from a fresh directory; not narrowed to one half.
 This crate holds the conditions (rexxref, `condtra.xml`, CALL ON):
-`crates/rexx-exec/tests/delayed_trap_cases/crate`. No upstream ticket.
+`crates/interrexx/tests/delayed_trap_cases/crate`. No upstream ticket.
 
 ## 65. ERROR and FAILURE raised again from their own CALL ON handlers
 
@@ -1637,7 +1637,7 @@ This crate holds the conditions (rexxref, `condtra.xml`, CALL ON):
 Effect: SIGSEGV, rc 139, after the whole of stdout (`hf FAILURE` to `after error, k = 1`) and the
 command trace lines on stderr. Measured once under the standard
 wrapper from a fresh directory. This crate prints the same
-stdout and stderr at rc 0: `crates/rexx-exec/tests/delayed_trap_cases/crate`. No upstream ticket.
+stdout and stderr at rc 0: `crates/interrexx/tests/delayed_trap_cases/crate`. No upstream ticket.
 
 ## 66. A NOTREADY under a delayed CALL ON ANY trap, then two NOTREADY conditions raised in one clause under CALL ON NOTREADY
 
@@ -1666,7 +1666,7 @@ no_such_file_zz4.txt`, stderr empty. Measured once under the
 standard wrapper from a fresh directory; not narrowed to one half. The
 second half is the shape of the probes rule against queueing one `CALL ON` condition twice at one
 boundary. This crate ignores both NOTREADY conditions raised again while the trap is delayed (rexxref,
-`condtra.xml`, NOTREADY; `iostrms.xml`, the DELAY state): `crates/rexx-exec/tests/delayed_trap_cases/crate`.
+`condtra.xml`, NOTREADY; `iostrms.xml`, the DELAY state): `crates/interrexx/tests/delayed_trap_cases/crate`.
 No upstream ticket.
 
 ## 67. Two differently named conditions raised in one clause, both trapped by one CALL ON ANY
@@ -1688,7 +1688,7 @@ Effect: SIGSEGV, rc 139, stdout `ha 1 NOTREADY no_such_file_zz.txt` only, stderr
 once under the standard wrapper from a fresh directory; not narrowed.
 The first clause raises USER (a `RAISE ... RETURN` in a function call) and NOTREADY. This crate runs
 the handler for the USER condition and ignores the NOTREADY raised while the `ANY` trap is delayed:
-`crates/rexx-exec/tests/delayed_trap_cases/crate`. No upstream ticket.
+`crates/interrexx/tests/delayed_trap_cases/crate`. No upstream ticket.
 
 ## 68. A mutex semaphore main takes between the worker's last two steps
 
@@ -1767,5 +1767,5 @@ all-notified after them (`classes/MessageClass.cpp:666-685`), and `~notify`
 sends at once only where all-notified is set (`:217-229`), so `w` is never sent
 `messageComplete` and `w~wait` never ends. Here `slow`'s `messageComplete`
 sleeps 1 s, and main's `~notify` lands 0.3 s in. This crate prints `notified 1`
-and refuses with `rexx-exec: a wait that nothing left to run can end is not
+and refuses with `interrexx: a wait that nothing left to run can end is not
 implemented`, rc 120. No upstream ticket.

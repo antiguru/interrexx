@@ -1,0 +1,27 @@
+count 26
+signal on syntax name caught
+.Target~defineMethods(.BadCollection~new)
+say 'unexpected'
+exit
+caught:
+say 'atomic' .Target~new~hasMethod('fresh') .Target~new~old
+child = .object~subclass('Child', .class, .GoodCollection~new)
+say 'class method' child~m
+object = .object~enhanced(.GoodCollection~new)
+say 'enhanced' object~m
+plain = .stringTable~new
+plain['plain'] = 'return 4'
+.Target~defineMethods(plain)
+say 'plain' .Target~new~plain
+exit
+::class Target
+::method old
+return 8
+::class BadCollection subclass Directory
+::method supplier
+say 'bad supplier'
+return .supplier~new(.array~of('return 1', 'if'), .array~of('fresh', 'bad'))
+::class GoodCollection subclass Directory
+::method supplier
+say 'good supplier'
+return .supplier~new(.array~of('return 7'), .array~of('m'))

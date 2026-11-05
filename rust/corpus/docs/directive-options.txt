@@ -29,7 +29,7 @@
 # revision stamp of its own -- a change to it lands in the same history as
 # this file. The stamp below is dire.xml's.
 #
-# Derived by `cargo run -p rexx-extract --bin rexx-extract-docs`, whose
+# Derived by `cargo run -p interrexx-extract --bin rexx-extract-docs`, whose
 # module is `src/docs/directives.rs`. Re-derived and compared in both
 # directions by `tests/extract_docs.rs`.
 #

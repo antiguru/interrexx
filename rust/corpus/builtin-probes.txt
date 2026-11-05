@@ -1,14 +1,14 @@
 # One differential probe per builtin function. Read by
-# `crates/rexx-exec/tests/builtin_status.rs`, which runs each program through
+# `crates/interrexx/tests/builtin_status.rs`, which runs each program through
 # both interpreters and writes the result into `builtin-status.txt`.
 #
 # FORMAT. `NAME<TAB>program`, one row per line; the name is a builtin from
-# `rexx_inventory::builtins::NAMES` and the program is a complete Rexx program
+# `interrexx_inventory::builtins::NAMES` and the program is a complete Rexx program
 # on a single physical line (clauses separated by `;` where more than one is
 # needed). Lines starting with # are comments; blank lines are ignored. A tab
 # is the separator, so no program may contain one.
 #
-# WHICH NAMES GET A ROW. Every name `rexx_inventory::builtins::in_scope()`
+# WHICH NAMES GET A ROW. Every name `interrexx_inventory::builtins::in_scope()`
 # yields. The harness asserts this file matches it in both directions, so a
 # missing row and a spurious one are both red.
 #

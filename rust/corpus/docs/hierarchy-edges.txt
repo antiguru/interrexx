@@ -11,7 +11,7 @@
 # Three rules. Comments are blanked before the members are read; the root
 # emits no self-edge; and these names emit no edge: RexxInfo.
 #
-# Derived by `cargo run -p rexx-extract --bin rexx-extract-docs`, whose
+# Derived by `cargo run -p interrexx-extract --bin rexx-extract-docs`, whose
 # module is `src/docs/hierarchy.rs`. Re-derived and compared in both
 # directions by `tests/extract_docs.rs`.
 #

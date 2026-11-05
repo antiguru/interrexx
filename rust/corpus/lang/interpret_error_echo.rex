@@ -38,7 +38,7 @@
    fragment, which is the case that stacks three levels rather than two. It
    cannot be the failing one as well -- a raise ends the program -- so it is
    witnessed here for its output and the stacking depth is covered by
-   rexx-exec's own unit tests. */
+   interrexx's own unit tests. */
 
 say 'start'
 interpret "say 'one level'"

@@ -42,7 +42,7 @@ jobs:
       - name: Build the preprocessor
         working-directory: rust
         run: |
-          cargo build --locked --release -p rexx-spec --bin mdbook-rexx-spec
+          cargo build --locked --release -p interrexx-spec --bin mdbook-rexx-spec
           echo "$PWD/target/release" >> "$GITHUB_PATH"
       - name: Name the version
         id: version

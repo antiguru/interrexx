@@ -5,5 +5,5 @@ REXX_ORACLE_ROOT = { value = "../third_party/oracle", relative = true }
 # Every process cargo runs, tests and the programs they start, reaches an API service of its own
 # instead of the user's: this crate's through `REXX_API_DIR`, the oracle's, whose daemon follows
 # `XDG_RUNTIME_DIR`, through that. `tests/rxapi.rs` checks both.
-REXX_API_DIR = { value = "target/rexx-api", relative = true, force = true }
+REXX_API_DIR = { value = "target/interrexx-api", relative = true, force = true }
 XDG_RUNTIME_DIR = { value = "target/oracle-runtime", relative = true, force = true }

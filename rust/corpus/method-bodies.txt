@@ -42,8 +42,8 @@
 # THE GATE IS ONE RULE, and it is red in every mode: a row that was not
 # diverging may not start, and a row that was answering may not stop. A count
 # of implemented bodies is not a criterion.
-# crates/rexx-exec/tests/method_bodies.rs is the derivation; refresh with
-#   REXX_METHOD_BODIES_REFRESH=1 cargo test --release -p rexx-exec \
+# crates/interrexx/tests/method_bodies.rs is the derivation; refresh with
+#   REXX_METHOD_BODIES_REFRESH=1 cargo test --release -p interrexx \
 #       --test method_bodies
 # which refuses to write a regression rather than laundering one.
 #

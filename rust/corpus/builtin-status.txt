@@ -1,23 +1,23 @@
 # Where the builtin implemented/not-implemented boundary sits, measured.
-# One `NAME<TAB>STATUS` row per name in `rexx_inventory::builtins::NAMES`, in
+# One `NAME<TAB>STATUS` row per name in `interrexx_inventory::builtins::NAMES`, in
 # that table's own order (which is `BuiltinFunctions.cpp`'s order, not
 # alphabetical). Lines starting with # are comments; blank lines are ignored.
 #
-# NOT HAND-MAINTAINED. `crates/rexx-exec/tests/builtin_status.rs` derives every
+# NOT HAND-MAINTAINED. `crates/interrexx/tests/builtin_status.rs` derives every
 # row by running `builtin-probes.txt`'s program for that name through both
 # interpreters, and asserts the derivation equals this file in both
 # directions. A row that disagrees is red whichever way it disagrees, so this
 # file cannot drift ahead of the executor or lag behind it. To change a row:
 # make the executor behave differently, re-run
 #
-#     cargo test --offline -p rexx-exec --test builtin_status
+#     cargo test --offline -p interrexx --test builtin_status
 #
 # and copy the measured table the failure names. Editing a row on its own only
 # moves the failure.
 #
 # THE FOUR STATUSES.
 #
-#   excluded     Excluded outright by `rexx_inventory::builtins`. No probe,
+#   excluded     Excluded outright by `interrexx_inventory::builtins`. No probe,
 #                and nothing is run. A name excluded only partially is not
 #                here: it is in scope in its other form and is probed on it.
 #

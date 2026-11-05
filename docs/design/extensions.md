@@ -8,8 +8,8 @@ packages that ship with them (`rxregexp.cls`, `socket.cls`, `streamsocket.cls`, 
 `scripts/build-extensions.sh` and loaded through the native API.
 
 OS calls go through `rustix` or safe crates (`nix`, `dns-lookup`, `if-addrs`). The granted
-`unsafe` is `rexx-exec/src/builtin/rxsock_sys.rs` (raw socket options on a borrowed descriptor) and
-`set_disposition` and `send` in `rexx-exec/src/signal.rs` for `SysSignal` and `SysKill`.
+`unsafe` is `interrexx/src/builtin/rxsock_sys.rs` (raw socket options on a borrowed descriptor) and
+`set_disposition` and `send` in `interrexx/src/signal.rs` for `SysSignal` and `SysKill`.
 
 ## Shared conventions
 
@@ -121,7 +121,7 @@ IPv4 only; a socket is its descriptor number.
   ends a blocked send and raises HALT.
 * `SockSelect` rewrites each participating stem to its ready sockets in order.
 * `SockGetHostId` skips the last interface in the list, as ooRexx does.
-* The interpreter's own descriptors sit at 1000 and above (`rexx_rxapi::reserved`); rxsock and
+* The interpreter's own descriptors sit at 1000 and above (`interrexx_rxapi::reserved`); rxsock and
   rxunixsys answer errno 9 for them, as for a closed descriptor.
 
 ## Rexx packages

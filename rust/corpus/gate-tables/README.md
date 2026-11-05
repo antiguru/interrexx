@@ -12,7 +12,7 @@ needs it.
 
 Gate table D's probes: one per row of `../docs/directive-options.txt`, which
 is the union of `dire.xml`'s and `interpreter/parser/DirectiveParser.cpp`'s
-directive keywords. `crates/rexx-exec/tests/gate_table_d.rs` runs each one
+directive keywords. `crates/interrexx/tests/gate_table_d.rs` runs each one
 under both crate engines and against the oracle, and derives the file name
 from the row rather than looking it up, so a row and its probe cannot drift.
 A row whose file is missing is a structural failure, and so is a file no row
@@ -24,7 +24,7 @@ nothing.
 
 ## `concepts/`, `classes/`, `hierarchy/` and `methods/`
 
-Gate table C's probes, run by `crates/rexx-exec/tests/gate_table_c.rs`:
+Gate table C's probes, run by `crates/interrexx/tests/gate_table_c.rs`:
 
 * `concepts/` -- one per `<section id>` of `provide.xml`'s `provide` chapter,
   from `../docs/provide-sections.txt`. **Hand-written**, because nothing
@@ -67,7 +67,7 @@ read `agree` and count as satisfied. What the check is per directory:
   hand-written and nothing derives them.
 * `directives/` -- **one line for most rows and none for the rows the oracle
   refuses**, which are named in `ORACLE_REFUSES` in
-  `crates/rexx-exec/tests/gate_table_d.rs` and policed in both directions.
+  `crates/interrexx/tests/gate_table_d.rs` and policed in both directions.
   Each of those probes asks for output before its directive -- asserted, not
   assumed -- and the oracle prints none of it, so what those rows are required
   to answer is the report it writes on `stderr` instead. `gate_table_d.rs`'s
@@ -77,7 +77,7 @@ read `agree` and count as satisfied. What the check is per directory:
 A row that fails its check keeps its place in the table and is reported as
 `unanswered`. It is never `agree`, and it still counts against the gate.
 
-**Those last three are derived, text and all.** `crates/rexx-exec/tests/table_c/probes.rs`'s
+**Those last three are derived, text and all.** `crates/interrexx/tests/table_c/probes.rs`'s
 `class_probe_text`, `edge_probe_text` and `method_probe_text` are the
 definition of what the programs contain, and every run compares the committed
 file against the re-derivation in both directions. Editing one of them by hand
@@ -88,7 +88,7 @@ oracle for the wrong reason.
 
 `concepts/classmeth.rex` was `../lang/primitive_classes.rex` until it became
 this table's probe for the `classmeth` section. It is still a parse fixture of
-`crates/rexx-parse/src/instruction/tests.rs`, which is what it was reached as
+`crates/interrexx-parse/src/instruction/tests.rs`, which is what it was reached as
 before; what it is no longer is a file under `corpus/lang/` that no corpus
 list names.
 

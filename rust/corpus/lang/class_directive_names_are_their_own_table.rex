@@ -5,7 +5,7 @@
    every directive kind refuses it. B is here against a check that refuses a
    second ::CLASS whatever it is called.
 
-   ::RESOURCE belongs in this row and cannot be: rexx-parse's
+   ::RESOURCE belongs in this row and cannot be: interrexx-parse's
    every_corpus_program_tiles requires every byte of a corpus program to be
    covered by a clause node, and a ::RESOURCE body is source lines that no
    clause span covers -- measured, it fails byte by byte. Its rows are

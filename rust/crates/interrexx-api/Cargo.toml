@@ -1,0 +1,26 @@
+[package]
+name = "interrexx-api"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The native extension API boundary of interrexx: context tables, value conversion and library loading"
+
+[dependencies]
+# A hasher with no per-process seed.
+rustc-hash = "2.1.2"
+
+# `ObjRef` and its generation field, which is what `handles.rs` turns into an
+# opaque `RexxObjectPtr` and back (D5).
+interrexx-core.workspace = true
+
+# `dlopen`/`dlsym` provider for `load.rs`; `rustix` does not wrap either.
+libloading = "0.9.0"
+
+# `free`, which releases a result block a classic handler allocated in place of the buffer it
+# was handed (`load.rs`).
+libc = "0.2.186"
+
+[lints]
+workspace = true

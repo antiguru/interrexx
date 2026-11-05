@@ -10,21 +10,21 @@ All under `rust/crates/`.
 
 | crate | role |
 |---|---|
-| `rexx-num` | decimal arithmetic under `NUMERIC DIGITS`, `FUZZ` and `FORM` |
-| `rexx-core` | object handles, the arena heap and collector, behaviours, register frame arenas |
-| `rexx-parse` | source retention, scanner, clause splitter, grammar; produces the AST |
-| `rexx-classes` | the class and method-dictionary model, and the native class table |
-| `rexx-lib` | the `.orx` class library sources from `third_party/ooRexx`, embedded at build time |
-| `rexx-inventory` | tables derived mechanically from the ooRexx tree (builtins, error messages) |
-| `rexx-exec` | the interpreter: IR compiler and driver, dispatch, builtins, streams, commands, scheduler; the `rexx`, `rexxc` and `rexx-ir` binaries |
-| `rexx-api` | the C ABI boundary: context interface tables, value conversion, library loading |
-| `rexx-rxapi` | the API service: queues, registries, macrospace; the `rxapi`, `rxqueue` and `rxsubcom` binaries |
-| `librexx` | `librexx.so.4`: the C entry points, and owner of the API's client state |
-| `librexxapi` | `librexxapi.so.4`: the classic API names, forwarding to `librexx.so.4` |
-| `rexx-oracle` | runs a program under an interpreter and captures stdout, stderr and exit status separately |
-| `rexx-extract` | lifts ooTest test methods into standalone programs |
-| `rexx-bench` | the benchmark harness and suite tools |
-| `rexx-spec` | parser and checker for the language specification under `spec/` |
+| `interrexx-num` | decimal arithmetic under `NUMERIC DIGITS`, `FUZZ` and `FORM` |
+| `interrexx-core` | object handles, the arena heap and collector, behaviours, register frame arenas |
+| `interrexx-parse` | source retention, scanner, clause splitter, grammar; produces the AST |
+| `interrexx-classes` | the class and method-dictionary model, and the native class table |
+| `interrexx-lib` | the `.orx` class library sources from `third_party/ooRexx`, embedded at build time |
+| `interrexx-inventory` | tables derived mechanically from the ooRexx tree (builtins, error messages) |
+| `interrexx` | the interpreter: IR compiler and driver, dispatch, builtins, streams, commands, scheduler; the `rexx`, `rexxc` and `rexx-ir` binaries |
+| `interrexx-api` | the C ABI boundary: context interface tables, value conversion, library loading |
+| `interrexx-rxapi` | the API service: queues, registries, macrospace; the `rxapi`, `rxqueue` and `rxsubcom` binaries |
+| `interrexx-capi` | `librexx.so.4`: the C entry points, and owner of the API's client state |
+| `interrexx-capi-rxapi` | `librexxapi.so.4`: the classic API names, forwarding to `librexx.so.4` |
+| `interrexx-oracle` | runs a program under an interpreter and captures stdout, stderr and exit status separately |
+| `interrexx-extract` | lifts ooTest test methods into standalone programs |
+| `interrexx-bench` | the benchmark harness and suite tools |
+| `interrexx-spec` | parser and checker for the language specification under `spec/` |
 
 ## Parsing
 
@@ -48,7 +48,7 @@ refused loudly.
 * **Variables.** A per-body plan maps each upcased name to a slot, built by one walk of the body
   and cached on the interpreter. Names a body acquires at run time (`INTERPRET`, `DROP (v)`,
   exposed names) are resolved after the plan.
-* **Registers** live in a frame carved from the activity's frame arena (`rexx-core/src/frame.rs`),
+* **Registers** live in a frame carved from the activity's frame arena (`interrexx-core/src/frame.rs`),
   read without bound checks under the invariants in that module's doc.
 * **Clauses.** The driver runs clause by clause; a clause op opens each clause, and the clause
   boundary is where line numbers are set, queued `CALL ON` traps are delivered, the slice countdown
@@ -191,7 +191,7 @@ gating.
 | D13 | the AST is plain owned Rust data | nothing exposes code below Method, Routine and Package |
 | D14 | strings are byte strings; character semantics, if added, arrive as operations | `'FFFE'x` is a legal value, so a UTF-8 type cannot hold Rexx strings |
 | D15 | a value's identity is its bytes or its number, and a number's rendering is fixed under the `NUMERIC DIGITS` and `FORM` in force when it is created | ooRexx makes the difference observable: `x = 1e10 + 0` renders `1E+10` under `DIGITS 9` and still does under `DIGITS 20` |
-| D-U1 | `unsafe` only in granted modules, listed in `rexx-core/tests/unsafe_sites.rs`; `libloading` for `dlopen` | the workspace denies `unsafe`; each grant is one module behind a safe interface |
+| D-U1 | `unsafe` only in granted modules, listed in `interrexx-core/tests/unsafe_sites.rs`; `libloading` for `dlopen` | the workspace denies `unsafe`; each grant is one module behind a safe interface |
 | D-U2 | the interpreter island is `Send` only inside `island.rs`'s baton wrapper | moving a driver between threads; `Rc` and `Cell` are touched by the baton holder only |
 | D-U3 | signal handlers in `signal.rs` only set an atomic and write to a self-pipe | async-signal safety |
 | D-U4 | one frame arena per activity | frames stay LIFO within an activity while activities interleave |

@@ -1,0 +1,12 @@
+count 11
+signal on syntax name caught
+a = .array~of('old')
+raise syntax 98.900 additional (a) return (mutate(a))
+exit
+caught:
+say condition('o')~message
+exit
+mutate:
+use arg a
+a[1] = 'new'
+return 1

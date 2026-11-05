@@ -1,0 +1,348 @@
+//! The stream builtins. Each resolves its first argument to a `Stream` through
+//! the running activation's table and sends the message named after itself
+//! with the arguments that followed, positionally, so an omitted middle
+//! argument arrives omitted (`BuiltinFunctions.cpp:2126-2570`).
+
+use interrexx_core::{Decoded, ObjRef};
+use interrexx_num::{DIGITS64, Number};
+
+use super::{Args, arg, optional_string, required_string};
+use crate::error::Raised;
+use crate::{Failure, Interp};
+
+/// Resolves `args`' first argument and sends `message` the rest of them.
+/// `added` is the oracle's own `&added`: whether a miss may leave the stream
+/// in the table.
+fn send_to_stream(
+    interp: &mut Interp,
+    args: Args<'_>,
+    message: &[u8],
+    input: bool,
+    added: bool,
+) -> Result<ObjRef, Failure> {
+    let name = match arg(args, 1) {
+        Some(value) => interp.to_text(value).into_owned(),
+        None => Vec::new(),
+    };
+    let stream = interp.resolve_stream(&name, input, added)?;
+    interp.roots.activity_mut().push_temp(stream);
+    // **Guarded**: `values_from` slices from its argument, so asking for the
+    // tail of a call that wrote no positions at all panics rather than
+    // answering an empty slice, and an omitted name is a call with none.
+    let rest: Vec<Option<ObjRef>> = if args.len() < 2 {
+        Vec::new()
+    } else {
+        args.values_from(2).to_vec()
+    };
+    let caller = interp.caller();
+    pinned!(
+        interp,
+        crate::pinning::PinKind::StreamWrapper,
+        interp.send_message(stream, message, None, &rest, caller)
+    )?
+    .ok_or_else(|| Failure::from(Raised::no_result(message)))
+}
+
+/// The arguments at `positions` that the builtin declares as
+/// `optional_big_integer`: each present one must be a whole number in the
+/// `int64_t` range, or it is 40.12 (`ExpressionStack::optionalBigIntegerArg`).
+fn whole_positions(
+    interp: &mut Interp,
+    name: &[u8],
+    args: Args<'_>,
+    positions: &[usize],
+) -> Result<(), Failure> {
+    for &position in positions {
+        let Some(value) = arg(args, position) else {
+            continue;
+        };
+        let whole = match value.decode() {
+            Decoded::SmallInt(_) => true,
+            _ => {
+                let text = interp.to_text(value);
+                Number::parse_bytes(&text)
+                    .and_then(|number| number.int64_value(DIGITS64))
+                    .is_some()
+            }
+        };
+        if !whole {
+            let named = args.object(position).unwrap_or(value);
+            let found = interp.string_value_text(named)?;
+            return Err(Raised::argument_not_whole(name, position, &found).into());
+        }
+    }
+    Ok(())
+}
+
+/// `LINEIN(name, [line], [count])`.
+pub(crate) fn linein(
+    interp: &mut Interp,
+    name: &'static [u8],
+    args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    whole_positions(interp, name, args, &[2, 3])?;
+    if names_queue(interp, args) {
+        // The queue exit's first pass (`BUILTIN(LINEIN)`).
+        if interp.exits.is_some()
+            && let Some(line) = interp.pull_exit()?
+        {
+            return Ok(match line {
+                Some(line) => interp.text(&line),
+                None => ObjRef::NIL,
+            });
+        }
+        return send_to_queue(interp, b"LINEIN", None);
+    }
+    send_to_stream(interp, args, b"LINEIN", true, true)
+}
+
+/// Whether the first argument is `QUEUE:`, in any case.
+fn names_queue(interp: &mut Interp, args: Args<'_>) -> bool {
+    arg(args, 1).is_some_and(|value| interp.to_text(value).eq_ignore_ascii_case(b"QUEUE:"))
+}
+
+/// `message` sent to `.local`'s `STDQUE`, with `argument`.
+fn send_to_queue(
+    interp: &mut Interp,
+    message: &[u8],
+    argument: Option<ObjRef>,
+) -> Result<ObjRef, Failure> {
+    let queue = interp.local_route(b"STDQUE")?.unwrap_or(ObjRef::NIL);
+    let caller = interp.caller();
+    let arguments: &[Option<ObjRef>] = match argument {
+        Some(_) => &[argument],
+        None => &[],
+    };
+    let answer = pinned!(
+        interp,
+        crate::pinning::PinKind::PullWrapper,
+        interp.send_message(queue, message, None, arguments, caller)
+    )?;
+    Ok(answer.unwrap_or(ObjRef::NIL))
+}
+
+/// `CHARIN(name, [start], [length])`.
+pub(crate) fn charin(
+    interp: &mut Interp,
+    name: &'static [u8],
+    args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    whole_positions(interp, name, args, &[2, 3])?;
+    if names_queue(interp, args) {
+        return Err(Raised::syntax(40, 915, vec![name.to_vec()]).into());
+    }
+    send_to_stream(interp, args, b"CHARIN", true, true)
+}
+
+/// `CHAROUT(name, [string], [start])`.
+pub(crate) fn charout(
+    interp: &mut Interp,
+    name: &'static [u8],
+    args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    whole_positions(interp, name, args, &[3])?;
+    if names_queue(interp, args) {
+        return Err(Raised::syntax(40, 915, vec![name.to_vec()]).into());
+    }
+    send_to_stream(interp, args, b"CHAROUT", false, true)
+}
+
+/// `CHARS(name)`.
+pub(crate) fn chars(
+    interp: &mut Interp,
+    name: &'static [u8],
+    args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    if names_queue(interp, args) {
+        return Err(Raised::syntax(40, 915, vec![name.to_vec()]).into());
+    }
+    send_to_stream(interp, args, b"CHARS", true, true)
+}
+
+/// `LINEOUT(name, [string], [line])`. **With neither a string nor a line the
+/// entry is dropped after the send**, which is what closes the stream and
+/// what makes the next `LINEOUT` to that name reopen it (`:2277`).
+pub(crate) fn lineout(
+    interp: &mut Interp,
+    name: &'static [u8],
+    args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    whole_positions(interp, name, args, &[3])?;
+    if names_queue(interp, args) {
+        return match arg(args, 2) {
+            Some(line) => {
+                // The queue exit's first pass (`BUILTIN(LINEOUT)`).
+                if interp.exits.is_some() {
+                    let text = interp.to_text(line).into_owned();
+                    if interp.push_exit(&text, false)? {
+                        return Ok(interp.counted(0));
+                    }
+                }
+                send_to_queue(interp, b"QUEUE", Some(line))
+            }
+            None => Ok(interp.counted(0)),
+        };
+    }
+    let answer = send_to_stream(interp, args, b"LINEOUT", false, true)?;
+    if args.len() < 2 {
+        let name = match arg(args, 1) {
+            Some(value) => interp.to_text(value).into_owned(),
+            None => Vec::new(),
+        };
+        interp.forget_stream(&name);
+    }
+    Ok(answer)
+}
+
+/// `LINES(name, [option])`. **The builtin's default is `NORMAL` where the
+/// method's is `COUNT`**, and the builtin squashes a count to 1 or 0 itself
+/// (`:2348-2391`), so `lines(f)` answers whether a line is there rather than
+/// how many are left.
+pub(crate) fn lines(
+    interp: &mut Interp,
+    name: &'static [u8],
+    args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    let option = match arg(args, 2) {
+        None => b'N',
+        Some(value) => match interp.to_text(value).first().copied() {
+            Some(byte) if byte.eq_ignore_ascii_case(&b'C') => b'C',
+            Some(byte) if byte.eq_ignore_ascii_case(&b'N') => b'N',
+            _ => {
+                let shown = required_string(interp, args, 2);
+                return Err(Raised::argument_not_in_list(name, 2, "CN", &shown).into());
+            }
+        },
+    };
+    if names_queue(interp, args) {
+        let answer = send_to_queue(interp, b"QUEUED", None)?;
+        if option == b'C' {
+            return Ok(answer);
+        }
+        let present = interp.to_text(answer).as_ref() != b"0";
+        return Ok(interp.text(if present { b"1" } else { b"0" }));
+    }
+    let stream_name = match arg(args, 1) {
+        Some(value) => interp.to_text(value).into_owned(),
+        None => Vec::new(),
+    };
+    let stream = interp.resolve_stream(&stream_name, true, true)?;
+    interp.roots.activity_mut().push_temp(stream);
+    // **The two spellings are not symmetric**, measured against a route whose
+    // destination answers `LINES` itself: the quick option goes out as
+    // `NORMAL` and the counting one as `C`.
+    let argument = interp.text(if option == b'C' { b"C" } else { b"NORMAL" });
+    interp.roots.activity_mut().push_temp(argument);
+    let caller = interp.caller();
+    let answer = pinned!(
+        interp,
+        crate::pinning::PinKind::StreamWrapper,
+        interp.send_message(stream, b"LINES", None, &[Some(argument)], caller)
+    )?
+    .ok_or_else(|| Failure::from(Raised::no_result(b"LINES")))?;
+    if option == b'C' {
+        return Ok(answer);
+    }
+    // The quick answer is the builtin's own, not the destination's: measured,
+    // a destination answering `7` gives `lines()` 1 and `lines(,'C')` 7.
+    let text = interp.to_text(answer).into_owned();
+    let present = text != b"0";
+    Ok(interp.text(if present { b"1" } else { b"0" }))
+}
+
+/// `STREAM(name, [operation], [command])`. The operation is read by its first
+/// letter only: `S` (the default) sends `STATE`, `D` sends `DESCRIPTION`, and
+/// `C` sends `COMMAND` with the third argument. **The arity depends on the
+/// operation** -- `S` and `D` refuse a third argument and `C` requires one --
+/// so those two checks live here rather than in the row's flat min and max.
+pub(crate) fn stream(
+    interp: &mut Interp,
+    name: &'static [u8],
+    args: Args<'_>,
+) -> Result<ObjRef, Failure> {
+    let stream_name = required_string(interp, args, 1);
+    // Measured: only the empty string is refused. A blank is a name and
+    // answers UNKNOWN, and every other reader takes an empty name as the
+    // default input or output rather than an error.
+    if stream_name.is_empty() {
+        return Err(Raised::invalid_stream_name(&stream_name).into());
+    }
+    let option = optional_string(interp, args, 2);
+    let letter = match option.as_deref() {
+        None => b'S',
+        Some(text) => match text.first().copied() {
+            Some(byte) if byte.eq_ignore_ascii_case(&b'S') => b'S',
+            Some(byte) if byte.eq_ignore_ascii_case(&b'D') => b'D',
+            Some(byte) if byte.eq_ignore_ascii_case(&b'C') => b'C',
+            _ => return Err(Raised::argument_not_in_list(name, 2, "SDC", text).into()),
+        },
+    };
+    if letter == b'C' {
+        if args.len() < 3 {
+            return Err(Raised::not_enough_arguments(name, 3).into());
+        }
+    } else if args.len() > 2 {
+        return Err(Raised::too_many_arguments(name, 2).into());
+    }
+    let command = if letter == b'C' {
+        Some(required_string(interp, args, 3))
+    } else {
+        None
+    };
+    // `&added`: STATE and DESCRIPTION never populate the table, and neither
+    // does a command that is not an OPEN, CLOSE or SEEK -- which is why
+    // `stream(n,'S')` on an unknown name leaves nothing behind.
+    let touches = command.as_deref().is_some_and(repositions);
+    // The direction is unreachable here and measured so: `stream('')` and
+    // `stream('','S')` are both 40.27 above, so the empty name never gets
+    // this far and no default stream is ever chosen for `STREAM`.
+    let stream = interp.resolve_stream(&stream_name, true, touches)?;
+    interp.roots.activity_mut().push_temp(stream);
+    let caller = interp.caller();
+    let answer = match letter {
+        b'S' => pinned!(
+            interp,
+            crate::pinning::PinKind::StreamWrapper,
+            interp.send_message(stream, b"STATE", None, &[], caller)
+        )?,
+        b'D' => pinned!(
+            interp,
+            crate::pinning::PinKind::StreamWrapper,
+            interp.send_message(stream, b"DESCRIPTION", None, &[], caller)
+        )?,
+        _ => {
+            let text = command.clone().unwrap_or_default();
+            let argument = interp.text_built(text);
+            interp.roots.activity_mut().push_temp(argument);
+            pinned!(
+                interp,
+                crate::pinning::PinKind::StreamWrapper,
+                interp.send_message(stream, b"COMMAND", None, &[Some(argument)], caller)
+            )?
+        }
+    };
+    let answer = answer.ok_or_else(|| Failure::from(Raised::no_result(b"COMMAND")))?;
+    // A CLOSE drops the entry, and an OPEN drops it when the answer is not
+    // `READY:`. The word scan is over the whole upper-cased command, so
+    // `query open` takes the OPEN branch -- the oracle's own quirk.
+    if let Some(command) = command.as_deref() {
+        let upper = command.to_ascii_uppercase();
+        let words: Vec<&[u8]> = upper.split(|byte| byte.is_ascii_whitespace()).collect();
+        let closed = words.contains(&&b"CLOSE"[..]);
+        let failed_open =
+            words.contains(&&b"OPEN"[..]) && interp.to_text(answer).as_ref() != b"READY:";
+        if closed || failed_open {
+            interp.forget_stream(&stream_name);
+        }
+    }
+    Ok(answer)
+}
+
+/// Whether a `STREAM` command is one the table follows: the oracle scans the
+/// whole upper-cased string for the words rather than reading the first one.
+fn repositions(command: &[u8]) -> bool {
+    let upper = command.to_ascii_uppercase();
+    upper
+        .split(|byte| byte.is_ascii_whitespace())
+        .any(|word| word == b"OPEN" || word == b"CLOSE" || word == b"SEEK")
+}

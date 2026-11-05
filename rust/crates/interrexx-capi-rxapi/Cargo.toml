@@ -1,0 +1,22 @@
+[package]
+name = "interrexx-capi-rxapi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The shared library librexxapi.so forwarding the classic API names to librexx.so"
+
+[lib]
+name = "rexxapi"
+# `rlib` beside the `cdylib` so `cargo test` builds the shared object its tests read.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# The `#[repr(C)]` structs of `api/rexx.h` the forwarded signatures name.
+interrexx-api.workspace = true
+# `dlopen` and `dlsym`, which find each forwarded name in `librexx.so.4`.
+libc = "0.2.186"
+
+[lints]
+workspace = true

@@ -7,14 +7,14 @@ tables handed in at call time, so an ooRexx-built extension `.so` also loads unc
 
 ## Where it lives
 
-* `rexx-api/src/ffi.rs`: the inbound boundary. The context interface tables and the conversion of
+* `interrexx-api/src/ffi.rs`: the inbound boundary. The context interface tables and the conversion of
   a caller's pointer into a validated handle.
-* `rexx-api/src/load.rs`: the outbound boundary. Opening a library (`libloading`), finding symbols,
+* `interrexx-api/src/load.rs`: the outbound boundary. Opening a library (`libloading`), finding symbols,
   calling through them.
-* `librexx/src/exports.rs`, `librexx/src/rexxapi_exports.rs`, `librexxapi/src/exports.rs`: the
-  exported `extern "C"` names, each a shim over safe code in `rexx-exec`.
+* `interrexx-capi/src/exports.rs`, `interrexx-capi/src/rexxapi_exports.rs`, `interrexx-capi-rxapi/src/exports.rs`: the
+  exported `extern "C"` names, each a shim over safe code in `interrexx`.
 
-These modules, with the others listed in `rexx-core/tests/unsafe_sites.rs`, are the only ones
+These modules, with the others listed in `interrexx-core/tests/unsafe_sites.rs`, are the only ones
 allowed `unsafe`. Everything past them operates on handles in safe Rust.
 
 ## Contexts

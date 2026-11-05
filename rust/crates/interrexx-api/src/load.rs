@@ -1,0 +1,3086 @@
+#![allow(unsafe_code)]
+#![expect(
+    clippy::disallowed_methods,
+    reason = "the test natives here sleep and bound their waits on real time"
+)]
+
+//! The outbound FFI boundary: loading a library and resolving symbols.
+
+use crate::ffi::{
+    CallContext, Contexts, ExitContext, MethodContext, RedirectorContext, ThreadContext,
+};
+use crate::invoke::MAX_NATIVE_ARGUMENTS;
+use crate::layout::{
+    CONSTRXSTRING, ExitFlags, PackageHook, RXCMDHST_PARM, RXFNCCAL_PARM, RXMSQPSH_PARM,
+    RXOFNCCAL_PARM, RXSIOSAY_PARM, RXSTRING, RXVALCALL_PARM, RXVARNOVALUE_PARM, RexxCallContext_,
+    RexxExitContext_, RexxIORedirectorContext_, RexxMethodContext_, RexxMethodEntry, RexxObjectPtr,
+    RexxPackageEntry, RexxRoutineEntry, RexxStringObject, RexxThreadContext_, ValueDescriptor,
+    ValueUnion,
+};
+use crate::values::{ARGUMENT_TERMINATOR, ResultRead, Written};
+use std::ffi::{CStr, c_char, c_int, c_void};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
+
+/// The C signature of the stub the `RexxMethodN` macros generate
+/// (`api/oorexxapi.h:4286`).
+///
+/// A null `arguments` is the signature request and answers the static type
+/// array; an array is the call, and answers null (`:4282`).
+pub(crate) type NativeMethod = Stub<RexxMethodContext_>;
+
+/// The C signature of the stub the `RexxRoutineN` macros generate
+/// (`api/oorexxapi.h:4562`), answering as [`NativeMethod`] does.
+pub type NativeRoutine = Stub<RexxCallContext_>;
+
+/// A generated stub over the context struct `C`. It may unwind: a `Throw`
+/// member leaves the extension that way, and [`call_stub`] catches it.
+pub type Stub<C> = unsafe extern "C-unwind" fn(*mut C, *mut ValueDescriptor) -> *mut u16;
+
+/// `ROUTINE_TYPED_STYLE` (`api/oorexxapi.h:200`).
+pub const ROUTINE_TYPED_STYLE: c_int = 1;
+
+/// `ROUTINE_CLASSIC_STYLE` (`api/oorexxapi.h:201`).
+pub const ROUTINE_CLASSIC_STYLE: c_int = 2;
+
+/// The interpreter version an extension's `requiredVersion` is measured
+/// against, `REXX_CURRENT_INTERPRETER_VERSION` (`api/oorexxapi.h:242`).
+///
+/// Two hex digits each for major, minor and revision (`:229`).
+/// `tests/load.rs` re-reads the header and asserts this value against it.
+pub const CURRENT_INTERPRETER_VERSION: c_int = 0x0005_0300;
+
+/// `REXX_CURRENT_LANGUAGE_LEVEL` (`api/oorexxapi.h:249`), which the instance
+/// table's `LanguageLevel` answers (`interpreter/api/InterpreterInstanceStubs.cpp:84`,
+/// through `Interpreter::getLanguageLevel`). `tests/load.rs` re-reads the
+/// header and asserts this value against it.
+pub const CURRENT_LANGUAGE_LEVEL: usize = 0x0606;
+
+/// The symbol `OOREXX_GET_PACKAGE` publishes (`api/oorexxapi.h:253-256`).
+const GET_PACKAGE_SYMBOL: &[u8] = b"RexxGetPackage\0";
+
+/// `SysLibrary::load` refuses a longer name before it reaches `dlopen`
+/// (`common/platform/unix/SysLibrary.cpp:56`, `:83-86`).
+const MAX_LIBRARY_NAME_LENGTH: usize = 250;
+
+/// Where the name search looks after the undecorated attempt
+/// (`common/platform/unix/SysLibrary.cpp:94`).
+const SECOND_ATTEMPT_DIRECTORY: &str = "/usr/lib";
+
+/// A condition the load path raises, for the caller to render.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Failure {
+    /// `Error_Execution_library_version`, raised where the package entry asks
+    /// for a newer interpreter than this one
+    /// (`interpreter/package/LibraryPackage.cpp:232-235`). The payload is the
+    /// library name the message interpolates.
+    LibraryVersion(String),
+}
+
+/// A library whose package entry [`check_version`] refused, with the library as
+/// `LibraryPackage::loadPackage` leaves it once the check has raised: loaded,
+/// its method table resolving, and its routine table never read, because
+/// `loadRoutines` follows the check (`interpreter/package/LibraryPackage.cpp:232-237`).
+#[derive(Debug)]
+pub struct Refused {
+    pub failure: Failure,
+    pub library: Box<Library>,
+}
+
+impl Failure {
+    /// The major and minor error numbers this failure reports.
+    #[must_use]
+    pub fn code(&self) -> (u16, u16) {
+        match self {
+            Failure::LibraryVersion(_) => (98, 982),
+        }
+    }
+}
+
+/// The mapping a library's addresses point into, shared by the library and
+/// every row copied out of it, so that closing it stops every one of them
+/// calling in.
+struct Mapping {
+    /// `None` for this image's own stubs, which nothing closes, and once
+    /// closed.
+    handle: Mutex<Option<libloading::Library>>,
+    open: AtomicBool,
+    /// Calls into the mapping in flight, which a close waits out by refusing.
+    calls: AtomicUsize,
+}
+
+impl Mapping {
+    fn new(handle: Option<libloading::Library>) -> Arc<Mapping> {
+        Arc::new(Mapping {
+            handle: Mutex::new(handle),
+            open: AtomicBool::new(true),
+            calls: AtomicUsize::new(0),
+        })
+    }
+
+    fn is_open(&self) -> bool {
+        self.open.load(Ordering::SeqCst)
+    }
+
+    /// Runs `call`, counted as in flight.
+    fn hold<R>(&self, call: impl FnOnce() -> R) -> R {
+        struct InFlight<'a>(&'a AtomicUsize);
+        impl Drop for InFlight<'_> {
+            fn drop(&mut self) {
+                self.0.fetch_sub(1, Ordering::SeqCst);
+            }
+        }
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        let _in_flight = InFlight(&self.calls);
+        call()
+    }
+
+    /// Closes the mapping, or answers `false` where a call into it is in
+    /// flight.
+    /// `open` is cleared before `calls` is read, and a call counts itself
+    /// before it reads `open` ([`Held::new`], [`Mapping::hold`]), so of a
+    /// close and a call racing, one sees the other.
+    fn close(&self) -> bool {
+        self.open.store(false, Ordering::SeqCst);
+        if self.calls.load(Ordering::SeqCst) > 0 {
+            self.open.store(true, Ordering::SeqCst);
+            return false;
+        }
+        drop(
+            self.handle
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .take(),
+        );
+        true
+    }
+}
+
+impl std::fmt::Debug for Mapping {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("Mapping")
+            .field("open", &self.is_open())
+            .finish_non_exhaustive()
+    }
+}
+
+/// One mapping is equal only to itself.
+impl PartialEq for Mapping {
+    fn eq(&self, other: &Mapping) -> bool {
+        std::ptr::eq(self, other)
+    }
+}
+
+impl Eq for Mapping {}
+
+/// One row of an extension's method table, copied out of the library.
+///
+/// Neither `Clone` nor holder of a public address: both would hand safe code
+/// something that outlives the mapping the address points into. A raw pointer
+/// is `Copy` and carries no lifetime, so a borrowed row is not on its own
+/// enough, and the field is private for that reason.
+///
+/// ```compile_fail
+/// # use interrexx_api::load;
+/// let row = load::open_path(std::path::Path::new("librxregexp.so"), "rxregexp")
+///     .unwrap()
+///     .unwrap();
+/// let address = row.method(b"RegExp_Parse").unwrap().entry_point;
+/// ```
+#[derive(Debug, PartialEq, Eq)]
+pub struct NativeMethodEntry {
+    /// `METHOD_TYPED_STYLE` (`api/oorexxapi.h:221`); never zero, which is the
+    /// terminator.
+    pub style: c_int,
+    pub name: Vec<u8>,
+    entry_point: *mut c_void,
+    mapping: Arc<Mapping>,
+}
+
+impl NativeMethodEntry {
+    /// Whether the row carries an address.
+    #[must_use]
+    pub fn has_entry_point(&self) -> bool {
+        !self.entry_point.is_null()
+    }
+
+    /// The row held for one call, which may run with the baton released.
+    #[must_use]
+    pub fn held(&self) -> HeldMethod {
+        HeldMethod {
+            held: Held::new(&self.mapping, || self.stub()),
+        }
+    }
+
+    /// The row's address as the callable it names, or `None` for a row that
+    /// carries none or whose library has been closed.
+    fn stub(&self) -> Option<NativeMethod> {
+        if self.entry_point.is_null() || !self.mapping.is_open() {
+            return None;
+        }
+        // SAFETY: `REXX_METHOD_ENTRY` fills `entryPoint` with the stub the
+        // `RexxMethodN` macro generated (`api/oorexxapi.h:223`), whose C
+        // signature is `NativeMethod`'s. D5 freezes that header and makes it
+        // the declaration both sides compile against, so the code at this
+        // address has this type. The two are the same width, which
+        // `transmute` checks.
+        Some(unsafe { std::mem::transmute::<*mut c_void, NativeMethod>(self.entry_point) })
+    }
+}
+
+/// `METHOD_TYPED_STYLE` (`api/oorexxapi.h:221`).
+#[cfg(test)]
+const METHOD_TYPED_STYLE: c_int = 1;
+
+/// A method row for a stub this image itself defines, for a caller that needs
+/// an entry point without a library.
+#[cfg(test)]
+pub(crate) fn stub_entry(name: &[u8], stub: NativeMethod) -> NativeMethodEntry {
+    NativeMethodEntry {
+        style: METHOD_TYPED_STYLE,
+        name: name.to_vec(),
+        entry_point: stub as *mut c_void,
+        mapping: Mapping::new(None),
+    }
+}
+
+/// A routine row for a stub this image itself defines, for a caller that
+/// needs an entry point without a library.
+#[cfg(test)]
+pub(crate) fn stub_routine_entry(
+    style: c_int,
+    name: &[u8],
+    stub: NativeRoutine,
+) -> NativeRoutineEntry {
+    NativeRoutineEntry {
+        style,
+        name: name.to_vec(),
+        entry_point: stub as *mut c_void,
+        mapping: Mapping::new(None),
+    }
+}
+
+/// A library read from an in-memory package entry that declares `loader` and
+/// `unloader` and nothing else, over the running image, for a test that
+/// drives the interpreter's own load and termination paths without a shared
+/// object.
+///
+/// The hooks are safe functions, so running one is sound whatever it is.
+#[doc(hidden)]
+#[cfg(unix)]
+#[must_use]
+pub fn hooks_only(
+    loader: Option<extern "C-unwind" fn(*mut RexxThreadContext_)>,
+    unloader: Option<extern "C-unwind" fn(*mut RexxThreadContext_)>,
+) -> Library {
+    let entry = RexxPackageEntry {
+        size: 0,
+        api_version: 0,
+        required_version: 0,
+        package_name: std::ptr::null(),
+        package_version: std::ptr::null(),
+        loader: loader.map(|hook| hook as PackageHook),
+        unloader: unloader.map(|hook| hook as PackageHook),
+        routines: std::ptr::null_mut(),
+        methods: std::ptr::null_mut(),
+    };
+    // SAFETY: the entry names no table and no string.
+    unsafe { library_of(&entry, libloading::os::unix::Library::this().into(), "") }
+        .expect("an entry asking for no version is accepted")
+        .expect("an entry is a package")
+}
+
+/// A typed routine stub this image defines.
+#[doc(hidden)]
+pub type TypedRoutine = NativeRoutine;
+
+/// A library whose routine table is `routines`, typed routines this image
+/// defines, for a test that drives native calls without a shared object.
+#[doc(hidden)]
+#[cfg(unix)]
+#[must_use]
+pub fn routines_only(routines: &[(&str, TypedRoutine)]) -> Library {
+    let mapping = Mapping::new(Some(libloading::os::unix::Library::this().into()));
+    Library {
+        name: None,
+        version: None,
+        methods: Vec::new(),
+        routines: routines
+            .iter()
+            .map(|&(name, stub)| NativeRoutineEntry {
+                style: ROUTINE_TYPED_STYLE,
+                name: name.as_bytes().to_vec(),
+                entry_point: stub as *mut c_void,
+                mapping: Arc::clone(&mapping),
+            })
+            .collect(),
+        loader: None,
+        unloader: None,
+        mapping,
+        thread: None,
+    }
+}
+
+/// A library named `package` whose tables name `routines` and `methods` and
+/// carry no address, for an extension library the interpreter runs in its own
+/// code: the interpreter loads, binds and reports it as any library, and runs
+/// its own body where a row of it is called. Answers `false` to
+/// [`NativeRoutineEntry::has_entry_point`] and
+/// [`NativeMethodEntry::has_entry_point`] for every row.
+#[must_use]
+pub fn names_only(package: &str, routines: &[&str], methods: &[&str]) -> Library {
+    let mapping = Mapping::new(None);
+    Library {
+        name: Some(package.as_bytes().to_vec()),
+        version: None,
+        methods: methods
+            .iter()
+            .map(|name| NativeMethodEntry {
+                style: 1,
+                name: name.as_bytes().to_vec(),
+                entry_point: std::ptr::null_mut(),
+                mapping: Arc::clone(&mapping),
+            })
+            .collect(),
+        routines: routines
+            .iter()
+            .map(|name| NativeRoutineEntry {
+                style: ROUTINE_TYPED_STYLE,
+                name: name.as_bytes().to_vec(),
+                entry_point: std::ptr::null_mut(),
+                mapping: Arc::clone(&mapping),
+            })
+            .collect(),
+        loader: None,
+        unloader: None,
+        mapping,
+        thread: None,
+    }
+}
+
+/// What an embedding instance's root activity waits in, set once per process.
+static EMBEDDING_WAIT: std::sync::OnceLock<fn(usize)> = std::sync::OnceLock::new();
+
+/// The library whose routine `WAIT` an embedding instance's root activity
+/// calls: the routine runs `wait` with the address of the call's thread
+/// context, and returns once it returns. While it runs, a thread attached to
+/// that context reaches its call ([`crate::ffi::attach_current_thread`]).
+#[cfg(unix)]
+#[must_use]
+pub fn embedding_library(wait: fn(usize)) -> Library {
+    let _ = EMBEDDING_WAIT.set(wait);
+    routines_only(&[("WAIT", embedding_wait)])
+}
+
+/// `WAIT()`: runs [`EMBEDDING_WAIT`] with the call's thread context.
+///
+/// # Safety
+/// As every typed routine stub's: `context` is a live call context, and a
+/// non-null `arguments` is the call's descriptor array.
+unsafe extern "C-unwind" fn embedding_wait(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 2] = [code::LOGICAL_T, ARGUMENT_TERMINATOR];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: `context` is the live call context, and `arguments` the
+    // descriptor array `SIGNATURE` declares the result element of.
+    unsafe {
+        let thread = (*context).threadContext as usize;
+        if let Some(wait) = EMBEDDING_WAIT.get() {
+            wait(thread);
+        }
+        (*arguments).value.value_logical_t = 1;
+    }
+    std::ptr::null_mut()
+}
+
+/// `SENDTHENAWAIT(object, message, path)`: sends `message` to `object`
+/// through the call's thread context, then waits up to half a second for a
+/// file at `path`, answering whether one appeared: a native that blocks
+/// after a callback, for a test.
+///
+/// # Safety
+/// As every typed routine stub's: `context` is a live call context, and a
+/// non-null `arguments` is the call's descriptor array.
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn send_then_await(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 5] = [
+        code::LOGICAL_T,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: a non-null `arguments` is the call's descriptor array, which
+    // `SIGNATURE` declares four elements of; `context` is the live call
+    // context, whose thread context links its table.
+    unsafe {
+        let object = (*arguments.add(1)).value.value_RexxObjectPtr;
+        let message = (*arguments.add(2)).value.value_CSTRING;
+        let path = CStr::from_ptr((*arguments.add(3)).value.value_CSTRING);
+        let path = std::path::PathBuf::from(path.to_string_lossy().into_owned());
+        let thread = (*context).threadContext;
+        ((*(*thread).functions).SendMessage0)(thread, object, message);
+        let appeared = (0..50).any(|_| {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            path.exists()
+        });
+        (*arguments).value.value_logical_t = usize::from(appeared);
+    }
+    std::ptr::null_mut()
+}
+
+/// `SENDTWICE(object, first, second)`: sends `first`, then `second`, to
+/// `object` through the call's thread context, answering what `second`
+/// answered: a native that calls back twice, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn send_twice(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 5] = [
+        code::REXX_OBJECT_PTR,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares three arguments.
+    unsafe {
+        let object = (*arguments.add(1)).value.value_RexxObjectPtr;
+        let thread = (*context).threadContext;
+        ((*(*thread).functions).SendMessage0)(
+            thread,
+            object,
+            (*arguments.add(2)).value.value_CSTRING,
+        );
+        (*arguments).value.value_RexxObjectPtr = ((*(*thread).functions).SendMessage0)(
+            thread,
+            object,
+            (*arguments.add(3)).value.value_CSTRING,
+        );
+    }
+    std::ptr::null_mut()
+}
+
+/// `SENDAWAITSEND(object, first, path, second)`: sends `first` to `object`
+/// through the call's thread context, waits up to five seconds for a file at
+/// `path`, then sends `second`, answering what `second` answered: a native
+/// that calls back on both sides of a wait, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn send_await_send(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 6] = [
+        code::REXX_OBJECT_PTR,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::CSTRING,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares four arguments.
+    unsafe {
+        let object = (*arguments.add(1)).value.value_RexxObjectPtr;
+        let path = CStr::from_ptr((*arguments.add(3)).value.value_CSTRING);
+        let path = std::path::PathBuf::from(path.to_string_lossy().into_owned());
+        let thread = (*context).threadContext;
+        ((*(*thread).functions).SendMessage0)(
+            thread,
+            object,
+            (*arguments.add(2)).value.value_CSTRING,
+        );
+        let _ = (0..500).any(|_| {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            path.exists()
+        });
+        (*arguments).value.value_RexxObjectPtr = ((*(*thread).functions).SendMessage0)(
+            thread,
+            object,
+            (*arguments.add(4)).value.value_CSTRING,
+        );
+    }
+    std::ptr::null_mut()
+}
+
+/// `NAPTHENSEND(object, message)`: sleeps a fifth of a second, then sends
+/// `message` to `object` through the call's thread context, answering what
+/// it answered: a callback made well after its call left its driver, for a
+/// test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn nap_then_send(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 4] = [
+        code::REXX_OBJECT_PTR,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    std::thread::sleep(std::time::Duration::from_millis(200));
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares two arguments.
+    unsafe {
+        let thread = (*context).threadContext;
+        (*arguments).value.value_RexxObjectPtr = ((*(*thread).functions).SendMessage0)(
+            thread,
+            (*arguments.add(1)).value.value_RexxObjectPtr,
+            (*arguments.add(2)).value.value_CSTRING,
+        );
+    }
+    std::ptr::null_mut()
+}
+
+/// `AWAITSENDTWICE(path, object, first, second)`: waits up to five seconds
+/// for a file at `path`, then sends `first`, then `second`, to `object`
+/// through the call's thread context, answering what `second` answered: a
+/// native whose callbacks start when a test says, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn await_send_twice(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 6] = [
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares four arguments.
+    unsafe {
+        let path = CStr::from_ptr((*arguments.add(1)).value.value_CSTRING);
+        let path = std::path::PathBuf::from(path.to_string_lossy().into_owned());
+        let _ = (0..500).any(|_| {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            path.exists()
+        });
+        let object = (*arguments.add(2)).value.value_RexxObjectPtr;
+        let thread = (*context).threadContext;
+        ((*(*thread).functions).SendMessage0)(
+            thread,
+            object,
+            (*arguments.add(3)).value.value_CSTRING,
+        );
+        (*arguments).value.value_RexxObjectPtr = ((*(*thread).functions).SendMessage0)(
+            thread,
+            object,
+            (*arguments.add(4)).value.value_CSTRING,
+        );
+    }
+    std::ptr::null_mut()
+}
+
+/// `SENDKEEPING(object, message)`: sends `message` to `object` through the
+/// call's thread context with that context as a `.Pointer`, then sleeps half
+/// a second outside any callback: a native whose context another call may
+/// keep, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn send_keeping(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 4] = [
+        code::REXX_OBJECT_PTR,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares two arguments.
+    unsafe {
+        let thread = (*context).threadContext;
+        let kept = ((*(*thread).functions).NewPointer)(thread, thread.cast());
+        ((*(*thread).functions).SendMessage1)(
+            thread,
+            (*arguments.add(1)).value.value_RexxObjectPtr,
+            (*arguments.add(2)).value.value_CSTRING,
+            kept.cast(),
+        );
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        (*arguments).value.value_RexxObjectPtr = std::ptr::null_mut();
+    }
+    std::ptr::null_mut()
+}
+
+/// `SENDTHROUGH(pointer, object, message)`: sends `message` to `object`
+/// through the thread context `pointer`, which [`send_keeping`] handed out,
+/// answering whether the send answered nothing: a callback through a context
+/// another call kept, for a test.
+///
+/// # Safety
+/// As [`send_then_await`], and `pointer` is a thread context whose call is
+/// in flight.
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn send_through(
+    _context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 5] = [
+        code::LOGICAL_T,
+        code::POINTER,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares three arguments,
+    // and the caller guarantees the kept context.
+    unsafe {
+        let thread = (*arguments.add(1))
+            .value
+            .value_POINTER
+            .cast::<crate::layout::RexxThreadContext_>();
+        let answered = ((*(*thread).functions).SendMessage0)(
+            thread,
+            (*arguments.add(2)).value.value_RexxObjectPtr,
+            (*arguments.add(3)).value.value_CSTRING,
+        );
+        (*arguments).value.value_logical_t = usize::from(answered.is_null());
+    }
+    std::ptr::null_mut()
+}
+
+/// `KEEPCALLCONTEXT(object, message)`: sends `message` to `object` through
+/// the call's thread context with the call context as a `.Pointer`, then
+/// sleeps half a second outside any callback: a native whose call context
+/// another call may keep, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn keep_call_context(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 4] = [
+        code::REXX_OBJECT_PTR,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares two arguments.
+    unsafe {
+        let thread = (*context).threadContext;
+        let kept = ((*(*thread).functions).NewPointer)(thread, context.cast());
+        ((*(*thread).functions).SendMessage1)(
+            thread,
+            (*arguments.add(1)).value.value_RexxObjectPtr,
+            (*arguments.add(2)).value.value_CSTRING,
+            kept.cast(),
+        );
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        (*arguments).value.value_RexxObjectPtr = std::ptr::null_mut();
+    }
+    std::ptr::null_mut()
+}
+
+/// `SETTHROUGH(pointer, name, value)`: sets the variable `name` to `value`
+/// through the call context `pointer`, which [`keep_call_context`] handed
+/// out: a callback through a call context another call kept, for a test.
+///
+/// # Safety
+/// As [`send_then_await`], and `pointer` is a call context whose call is in
+/// flight.
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn set_through(
+    _context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 5] = [
+        code::REXX_OBJECT_PTR,
+        code::POINTER,
+        code::CSTRING,
+        code::REXX_OBJECT_PTR,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares three arguments,
+    // and the caller guarantees the kept context.
+    unsafe {
+        let kept = (*arguments.add(1))
+            .value
+            .value_POINTER
+            .cast::<RexxCallContext_>();
+        ((*(*kept).functions).SetContextVariable)(
+            kept,
+            (*arguments.add(2)).value.value_CSTRING,
+            (*arguments.add(3)).value.value_RexxObjectPtr,
+        );
+        (*arguments).value.value_RexxObjectPtr = std::ptr::null_mut();
+    }
+    std::ptr::null_mut()
+}
+
+/// `NAPTHENSET(name, value)`: sleeps a fifth of a second, then sets the
+/// variable `name` to `value` through the call's own context: a native
+/// whose callback comes after its activity may have moved on, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn nap_then_set(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 4] = [
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::REXX_OBJECT_PTR,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    std::thread::sleep(std::time::Duration::from_millis(200));
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares two arguments.
+    unsafe {
+        ((*(*context).functions).SetContextVariable)(
+            context,
+            (*arguments.add(1)).value.value_CSTRING,
+            (*arguments.add(2)).value.value_RexxObjectPtr,
+        );
+        (*arguments).value.value_RexxObjectPtr = std::ptr::null_mut();
+    }
+    std::ptr::null_mut()
+}
+
+/// `FOREIGNINCALLBACK(object, message, other, message2)`: sends `message`
+/// to `object` through the call's thread context while a thread of its own
+/// sends `message2` to `other` through it a fifth of a second later, and
+/// waits for that thread: a callback from a thread running no native call
+/// while the call's own thread is inside a callback, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn foreign_in_callback(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 6] = [
+        code::REXX_OBJECT_PTR,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares four arguments.
+    // The other thread uses the context, the object and the message only
+    // while this one waits for it, inside the call.
+    unsafe {
+        let thread = (*context).threadContext;
+        let shared = thread as usize;
+        let other = (*arguments.add(3)).value.value_RexxObjectPtr as usize;
+        let message = (*arguments.add(4)).value.value_CSTRING as usize;
+        let foreign = std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            let thread = shared as *mut crate::layout::RexxThreadContext_;
+            ((*(*thread).functions).SendMessage0)(
+                thread,
+                other as crate::layout::RexxObjectPtr,
+                message as crate::layout::CSTRING,
+            );
+        });
+        ((*(*thread).functions).SendMessage0)(
+            thread,
+            (*arguments.add(1)).value.value_RexxObjectPtr,
+            (*arguments.add(2)).value.value_CSTRING,
+        );
+        foreign.join().expect("the sending thread");
+        (*arguments).value.value_RexxObjectPtr = std::ptr::null_mut();
+    }
+    std::ptr::null_mut()
+}
+
+/// `FOREIGNTHEN(object, message, other, message2, after)`: [`foreign_in_callback`], and then,
+/// through the call's thread context, `ClearCondition` where `after` is `CLEAR` or
+/// `RaiseException0` of 40.1 where it is `RAISE`: a later member that would drop the 98.983 the
+/// foreign callback left on the call, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn foreign_then(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 7] = [
+        code::REXX_OBJECT_PTR,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `foreign_in_callback`'s, whose four arguments lead this signature's five;
+    // `after` is a NUL-terminated string for the call.
+    unsafe {
+        foreign_in_callback(context, arguments);
+        let thread = (*context).threadContext;
+        match std::ffi::CStr::from_ptr((*arguments.add(5)).value.value_CSTRING).to_bytes() {
+            b"CLEAR" => ((*(*thread).functions).ClearCondition)(thread),
+            b"RAISE" => ((*(*thread).functions).RaiseException0)(thread, 40001),
+            _ => {}
+        }
+    }
+    std::ptr::null_mut()
+}
+
+/// `SENDFROMANOTHERTHREAD(object, message)`: sends `message` to `object`
+/// through the call's thread context from a thread of its own, which it
+/// waits for, answering whether the send answered nothing: a callback from
+/// a thread running no native call, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn send_from_another_thread(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 4] = [
+        code::LOGICAL_T,
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares two arguments.
+    // The other thread uses the context, the object and the message only
+    // while this one waits for it, inside the call.
+    unsafe {
+        let thread = (*context).threadContext as usize;
+        let object = (*arguments.add(1)).value.value_RexxObjectPtr as usize;
+        let message = (*arguments.add(2)).value.value_CSTRING as usize;
+        let answered = std::thread::spawn(move || {
+            let thread = thread as *mut crate::layout::RexxThreadContext_;
+            ((*(*thread).functions).SendMessage0)(
+                thread,
+                object as crate::layout::RexxObjectPtr,
+                message as crate::layout::CSTRING,
+            ) as usize
+        })
+        .join()
+        .expect("the sending thread");
+        (*arguments).value.value_logical_t = usize::from(answered == 0);
+    }
+    std::ptr::null_mut()
+}
+
+/// Waits up to five seconds for a file at `path`, answering whether one
+/// appeared.
+fn await_file(path: &Path) -> bool {
+    (0..500).any(|_| {
+        std::thread::sleep(std::time::Duration::from_millis(10));
+        path.exists()
+    })
+}
+
+/// `HOLDCSTRING(string, path)`: keeps the address of its `CSTRING`
+/// argument, waits up to five seconds for a file at `path`, and answers
+/// whether one appeared and the bytes there are still the argument's: a
+/// native holding a kept string across other activities' work, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn hold_c_string(
+    _context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 4] = [
+        code::LOGICAL_T,
+        code::CSTRING,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares two arguments.
+    // The interpreter keeps the string's bytes, and their terminator, for as
+    // long as the call is in flight.
+    unsafe {
+        let held = (*arguments.add(1)).value.value_CSTRING;
+        let path = CStr::from_ptr((*arguments.add(2)).value.value_CSTRING);
+        let path = PathBuf::from(path.to_string_lossy().into_owned());
+        let copy = CStr::from_ptr(held).to_bytes_with_nul().to_vec();
+        let appeared = await_file(&path);
+        let same = copy
+            .iter()
+            .enumerate()
+            .all(|(at, byte)| held.add(at).cast::<u8>().read_volatile() == *byte);
+        (*arguments).value.value_logical_t = usize::from(appeared && same);
+    }
+    std::ptr::null_mut()
+}
+
+/// The keys `HOLDBUFFER` holds a buffer's storage for, and the keys whose
+/// buffer `BUFFERCHANGED` says another activity has changed: a handshake
+/// through a lock, so that ThreadSanitizer sees the change ordered before
+/// the routine's access.
+struct BufferHandshake {
+    held: Vec<Vec<u8>>,
+    changed: Vec<Vec<u8>>,
+}
+
+static BUFFER_HANDSHAKE: Mutex<BufferHandshake> = Mutex::new(BufferHandshake {
+    held: Vec::new(),
+    changed: Vec::new(),
+});
+
+static BUFFER_CHANGED: std::sync::Condvar = std::sync::Condvar::new();
+
+fn buffer_handshake() -> std::sync::MutexGuard<'static, BufferHandshake> {
+    BUFFER_HANDSHAKE
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// Waits up to five seconds for `BUFFERCHANGED(key)`, answering whether it
+/// came, and ends `key`'s hold either way.
+fn await_buffer_changed(key: &[u8]) -> bool {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    let mut handshake = buffer_handshake();
+    let changed = loop {
+        if let Some(at) = handshake.changed.iter().position(|k| k == key) {
+            handshake.changed.swap_remove(at);
+            break true;
+        }
+        let left = deadline.saturating_duration_since(std::time::Instant::now());
+        if left.is_zero() {
+            break false;
+        }
+        handshake = BUFFER_CHANGED
+            .wait_timeout(handshake, left)
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .0;
+    };
+    handshake.held.retain(|k| k != key);
+    changed
+}
+
+/// `HOLDBUFFER(buffer, key, mark)`: keeps the address and length
+/// `MutableBufferData` and `MutableBufferLength` answer, says through
+/// `BUFFERHELD(key)` that it holds them, waits up to five seconds for
+/// `BUFFERCHANGED(key)`, then reads that many bytes from that address and
+/// writes `mark` over its start, answering what it read, or `unawaited`
+/// where `BUFFERCHANGED` did not come: a native holding a buffer's storage
+/// across other activities' work, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn hold_buffer(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 5] = [
+        code::REXX_OBJECT_PTR,
+        code::REXX_MUTABLE_BUFFER_OBJECT,
+        code::CSTRING,
+        code::CSTRING,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares three arguments.
+    // The interpreter keeps the storage at the address it answered for as
+    // long as the call is in flight. The test changes the buffer only after
+    // `BUFFERHELD` answers true, so the length answered is that storage's.
+    unsafe {
+        let buffer = (*arguments.add(1)).value.value_RexxMutableBufferObject;
+        let key = CStr::from_ptr((*arguments.add(2)).value.value_CSTRING).to_bytes();
+        let mark = CStr::from_ptr((*arguments.add(3)).value.value_CSTRING).to_bytes();
+        let thread = (*context).threadContext;
+        let functions = &*(*thread).functions;
+        let data = (functions.MutableBufferData)(thread, buffer).cast::<u8>();
+        let length = (functions.MutableBufferLength)(thread, buffer);
+        buffer_handshake().held.push(key.to_vec());
+        let read: Vec<u8> = if await_buffer_changed(key) {
+            let read = (0..length).map(|at| data.add(at).read_volatile()).collect();
+            for (at, byte) in mark.iter().take(length).enumerate() {
+                data.add(at).write_volatile(*byte);
+            }
+            read
+        } else {
+            b"unawaited".to_vec()
+        };
+        (*arguments).value.value_RexxObjectPtr =
+            (functions.NewString)(thread, read.as_ptr().cast(), read.len()).cast();
+    }
+    std::ptr::null_mut()
+}
+
+/// `BUFFERHELD(key)`: whether `HOLDBUFFER(, key)` holds its buffer's
+/// storage, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn buffer_held(
+    _context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 3] = [code::LOGICAL_T, code::CSTRING, ARGUMENT_TERMINATOR];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares one argument.
+    unsafe {
+        let key = CStr::from_ptr((*arguments.add(1)).value.value_CSTRING).to_bytes();
+        let held = buffer_handshake().held.iter().any(|k| k == key);
+        (*arguments).value.value_logical_t = usize::from(held);
+    }
+    std::ptr::null_mut()
+}
+
+/// `BUFFERCHANGED(key)`: says to `HOLDBUFFER(, key)` that its buffer has
+/// been changed, for a test.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn buffer_changed(
+    _context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 3] = [code::REXX_OBJECT_PTR, code::CSTRING, ARGUMENT_TERMINATOR];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares one argument.
+    let key = unsafe { CStr::from_ptr((*arguments.add(1)).value.value_CSTRING).to_bytes() };
+    buffer_handshake().changed.push(key.to_vec());
+    BUFFER_CHANGED.notify_all();
+    std::ptr::null_mut()
+}
+
+/// `FINISHEDINPLACE(text, made)`: makes a buffer string of `made` bytes,
+/// asks for its `StringData` before filling it with `x` through
+/// `BufferStringData`, writing `text` over its start and finishing it at
+/// `text`'s length, and answers what the first address then holds up to its
+/// first NUL.
+///
+/// # Safety
+/// As [`send_then_await`].
+#[doc(hidden)]
+pub unsafe extern "C-unwind" fn finished_in_place(
+    context: *mut RexxCallContext_,
+    arguments: *mut ValueDescriptor,
+) -> *mut u16 {
+    use crate::values::code;
+    static SIGNATURE: [u16; 4] = [
+        code::REXX_OBJECT_PTR,
+        code::CSTRING,
+        code::SIZE_T,
+        ARGUMENT_TERMINATOR,
+    ];
+    if arguments.is_null() {
+        return SIGNATURE.as_ptr().cast_mut();
+    }
+    // SAFETY: as `send_then_await`'s; `SIGNATURE` declares two arguments.
+    // The buffer string is written up to the length it was made at, and the
+    // early address is read no further than the NUL the interpreter keeps
+    // after it.
+    unsafe {
+        let text = CStr::from_ptr((*arguments.add(1)).value.value_CSTRING).to_bytes();
+        let made = (*arguments.add(2)).value.value_size_t.max(text.len());
+        let thread = (*context).threadContext;
+        let functions = &*(*thread).functions;
+        let string = (functions.NewBufferString)(thread, made);
+        let early = (functions.StringData)(thread, string.cast());
+        let data = (functions.BufferStringData)(thread, string).cast::<u8>();
+        data.write_bytes(b'x', made);
+        data.copy_from_nonoverlapping(text.as_ptr(), text.len());
+        (functions.FinishBufferString)(thread, string, text.len());
+        let read = CStr::from_ptr(early).to_bytes();
+        (*arguments).value.value_RexxObjectPtr =
+            (functions.NewString)(thread, read.as_ptr().cast(), read.len()).cast();
+    }
+    std::ptr::null_mut()
+}
+
+/// A library read from an in-memory package entry whose loader registers a
+/// direct command handler for the environment `TESTED` that answers its
+/// command, for a test that drives the interpreter's handler table without a
+/// shared object.
+#[doc(hidden)]
+#[cfg(unix)]
+#[must_use]
+pub fn registering_library() -> Library {
+    let entry = RexxPackageEntry {
+        size: 0,
+        api_version: 0,
+        required_version: 0,
+        package_name: std::ptr::null(),
+        package_version: std::ptr::null(),
+        loader: Some(register_tested_handler),
+        unloader: None,
+        routines: std::ptr::null_mut(),
+        methods: std::ptr::null_mut(),
+    };
+    // SAFETY: the entry names no table and no string, and its loader is a
+    // `RexxPackageLoader`.
+    unsafe { library_of(&entry, libloading::os::unix::Library::this().into(), "") }
+        .expect("an entry asking for no version is accepted")
+        .expect("an entry is a package")
+}
+
+/// [`registering_library`]'s loader.
+///
+/// # Safety
+/// `thread` is a thread context a live `ThreadContext` handed out, with a
+/// native call in flight.
+unsafe extern "C-unwind" fn register_tested_handler(thread: *mut RexxThreadContext_) {
+    /// Answers its command.
+    unsafe extern "C-unwind" fn answering(
+        _context: *mut RexxExitContext_,
+        _address: RexxStringObject,
+        command: RexxStringObject,
+    ) -> RexxObjectPtr {
+        command.cast()
+    }
+    // SAFETY: the caller guarantees the thread context, which links its
+    // instance and that instance's table; the name is a literal and the
+    // handler has the direct type.
+    unsafe {
+        let instance = (*thread).instance;
+        ((*(*instance).functions).AddCommandEnvironment)(
+            instance,
+            c"TESTED".as_ptr(),
+            answering as *mut c_void,
+            DIRECT_COMMAND_ENVIRONMENT,
+        );
+    }
+}
+
+/// A library with no tables whose package entry declares `loader` and
+/// `unloader`, for a caller that needs hooks without a shared object.
+#[cfg(test)]
+#[cfg(unix)]
+pub(crate) fn hooked_library(
+    loader: Option<PackageHook>,
+    unloader: Option<PackageHook>,
+) -> Library {
+    Library {
+        name: None,
+        version: None,
+        methods: Vec::new(),
+        routines: Vec::new(),
+        loader,
+        unloader,
+        mapping: Mapping::new(Some(libloading::os::unix::Library::this().into())),
+        thread: None,
+    }
+}
+
+/// One row of an extension's routine table, copied out of the library.
+///
+/// Shaped as [`NativeMethodEntry`] and for the same reason.
+#[derive(Debug, PartialEq, Eq)]
+pub struct NativeRoutineEntry {
+    /// `ROUTINE_TYPED_STYLE` or `ROUTINE_CLASSIC_STYLE`
+    /// (`api/oorexxapi.h:200-201`); never zero, which is the terminator.
+    pub style: c_int,
+    pub name: Vec<u8>,
+    entry_point: *mut c_void,
+    mapping: Arc<Mapping>,
+}
+
+impl NativeRoutineEntry {
+    /// Whether the row carries an address.
+    #[must_use]
+    pub fn has_entry_point(&self) -> bool {
+        !self.entry_point.is_null()
+    }
+
+    /// The row's address as the typed stub it names, or `None` for a row that
+    /// carries none, for a row of any style but `ROUTINE_TYPED_STYLE`, and for
+    /// a row whose library has been closed.
+    ///
+    /// A style that is neither classic nor typed is therefore refused as an
+    /// unreadable signature, where the oracle calls any non-classic row as a
+    /// typed routine (`interpreter/package/LibraryPackage.cpp:279-286`).
+    fn stub(&self) -> Option<NativeRoutine> {
+        if self.entry_point.is_null()
+            || self.style != ROUTINE_TYPED_STYLE
+            || !self.mapping.is_open()
+        {
+            return None;
+        }
+        // SAFETY: the row is `ROUTINE_TYPED_STYLE`, which `REXX_TYPED_ROUTINE`
+        // fills with the stub the `RexxRoutineN` macro generated
+        // (`api/oorexxapi.h:205`), whose C signature is `NativeRoutine`'s,
+        // under the same D5 argument as `NativeMethodEntry::stub`.
+        Some(unsafe { std::mem::transmute::<*mut c_void, NativeRoutine>(self.entry_point) })
+    }
+
+    /// The row held for one call, as [`NativeMethodEntry::held`] holds one.
+    #[must_use]
+    pub fn held(&self) -> HeldRoutine {
+        HeldRoutine {
+            style: self.style,
+            held: Held::new(&self.mapping, || self.stub()),
+        }
+    }
+}
+
+/// A row's stub held for one call, which may run with the baton released:
+/// counted as a call in flight until it drops, so a close leaves the mapping
+/// open until then, and holding no state of the interpreter's.
+struct Held<S> {
+    stub: Option<S>,
+    mapping: Arc<Mapping>,
+}
+
+impl<S> Held<S> {
+    /// Counts the call, then resolves its stub with `stub`, which answers
+    /// `None` for a closed mapping: counted first, a close that has not yet
+    /// cleared `open` sees the call and refuses.
+    fn new(mapping: &Arc<Mapping>, stub: impl FnOnce() -> Option<S>) -> Held<S> {
+        mapping.calls.fetch_add(1, Ordering::SeqCst);
+        Held {
+            stub: stub(),
+            mapping: Arc::clone(mapping),
+        }
+    }
+}
+
+impl<S> Drop for Held<S> {
+    fn drop(&mut self) {
+        self.mapping.calls.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+/// A method row held for one call ([`NativeMethodEntry::held`]).
+pub struct HeldMethod {
+    held: Held<NativeMethod>,
+}
+
+impl HeldMethod {
+    /// The type signature the stub publishes, terminator excluded, or `None`
+    /// where the row carries no address, the stub answers no array, or no
+    /// terminator appears in the first `limit` words.
+    ///
+    /// At most `limit - 1` words are answered, which is what bounds the
+    /// descriptor array the caller fills from them.
+    #[inline(always)]
+    pub(crate) fn signature(&self, context: &MethodContext<'_>, limit: usize) -> Option<Vec<u16>> {
+        let stub = self.held.stub?;
+        // SAFETY: `stub` is the address the extension's own method table gave
+        // for this row, resolved in an open mapping that this hold keeps
+        // open, and `context` is live for the borrow.
+        unsafe { signature_of(stub, context.as_ptr(), limit) }
+    }
+
+    /// Call the stub with `arguments`, which it reads and writes its result
+    /// into, and answer element zero read as `result` says, or `None` where
+    /// `result` is. A row with no address calls nothing.
+    ///
+    /// The array is published on `context` for the call and taken off again
+    /// afterwards, because it does not outlive this function.
+    pub(crate) fn call(
+        &self,
+        context: &MethodContext<'_>,
+        arguments: &mut [ValueDescriptor; MAX_NATIVE_ARGUMENTS],
+        result: Option<ResultRead>,
+    ) -> Option<Written> {
+        let pointer = context.as_ptr();
+        // SAFETY: `pointer` addresses the live struct `context` borrows, and
+        // naming a field's address reads and writes nothing.
+        let published = unsafe { &raw mut (*pointer).arguments };
+        // SAFETY: as `signature`, and `published` is `pointer`'s own field.
+        unsafe { call_stub(self.held.stub, pointer, published, arguments, result) }
+    }
+}
+
+/// A routine row held for one call ([`NativeRoutineEntry::held`]).
+pub struct HeldRoutine {
+    /// The row's `style`.
+    pub style: c_int,
+    held: Held<NativeRoutine>,
+}
+
+impl HeldRoutine {
+    /// [`HeldMethod::signature`] for a routine's stub. A row of any style but
+    /// [`ROUTINE_TYPED_STYLE`] publishes none, since its address is a
+    /// function of another signature.
+    #[inline(always)]
+    pub(crate) fn signature(&self, context: &CallContext<'_>, limit: usize) -> Option<Vec<u16>> {
+        let stub = self.held.stub?;
+        // SAFETY: as `HeldMethod::signature`; `stub` answers only for a typed
+        // row.
+        unsafe { signature_of(stub, context.as_ptr(), limit) }
+    }
+
+    /// [`HeldMethod::call`] for a routine's stub, which calls nothing for a
+    /// row [`HeldRoutine::signature`] publishes nothing for.
+    pub(crate) fn call(
+        &self,
+        context: &CallContext<'_>,
+        arguments: &mut [ValueDescriptor; MAX_NATIVE_ARGUMENTS],
+        result: Option<ResultRead>,
+    ) -> Option<Written> {
+        let pointer = context.as_ptr();
+        // SAFETY: as `HeldMethod::call`.
+        let published = unsafe { &raw mut (*pointer).arguments };
+        // SAFETY: as `HeldMethod::call`; `stub` answers only for a typed row.
+        unsafe { call_stub(self.held.stub, pointer, published, arguments, result) }
+    }
+}
+
+/// The entry point of a classic handler: a `RexxFunctionHandler`, `RexxSubcomHandler` or
+/// `RexxExitHandler` (`api/rexx.h`), as its registry declares it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ClassicEntry(std::ptr::NonNull<c_void>);
+
+// SAFETY: the address names code mapped for the process's life, which any thread may call.
+unsafe impl Send for ClassicEntry {}
+// SAFETY: as `Send`; the address is never written through.
+unsafe impl Sync for ClassicEntry {}
+
+impl ClassicEntry {
+    /// The entry at `address`, or `None` for null.
+    ///
+    /// # Safety
+    /// A non-null `address` is the entry point of a handler of the C signature the registry it
+    /// is registered in declares, mapped until the process ends.
+    #[must_use]
+    pub unsafe fn new(address: *mut c_void) -> Option<ClassicEntry> {
+        std::ptr::NonNull::new(address).map(ClassicEntry)
+    }
+
+    /// The address, as the C API hands an entry point back.
+    #[must_use]
+    pub fn address(self) -> *mut c_void {
+        self.0.as_ptr()
+    }
+
+    /// Calls a `RexxFunctionHandler` with `name`, `arguments` (`None` an omitted one) and the
+    /// current queue's name, as `NativeActivation::callRegisteredRoutine` does
+    /// (`interpreter/execution/NativeActivation.cpp:1466`): each string NUL-terminated beyond its
+    /// length, and the result in a `DEFRXSTRING` buffer the handler may replace with a block
+    /// `free` releases. `None` where a `RexxCallBack` the handler made ended it, unwinding
+    /// through it, with the condition or `EXIT` kept by the host.
+    #[must_use]
+    pub fn call_function(
+        self,
+        name: &[u8],
+        arguments: &[Option<&[u8]>],
+        queue: &[u8],
+    ) -> Option<ClassicResult<usize>> {
+        let name = terminated(name);
+        let queue = terminated(queue);
+        let held: Vec<Option<Vec<u8>>> = arguments
+            .iter()
+            .map(|argument| argument.map(terminated))
+            .collect();
+        let argv: Vec<CONSTRXSTRING> = held
+            .iter()
+            .map(|argument| match argument {
+                Some(bytes) => CONSTRXSTRING {
+                    strlength: bytes.len() - 1,
+                    strptr: bytes.as_ptr().cast(),
+                },
+                None => CONSTRXSTRING {
+                    strlength: 0,
+                    strptr: std::ptr::null(),
+                },
+            })
+            .collect();
+        let mut buffer = [0u8; DEFAULT_RESULT_BUFFER];
+        let mut result = RXSTRING {
+            strlength: buffer.len(),
+            strptr: buffer.as_mut_ptr().cast(),
+        };
+        // SAFETY: `new`'s caller guaranteed a `RexxFunctionHandler` (`api/rexx.h`), mapped for
+        // the process's life. Every string is NUL-terminated and outlives the call, `argv`
+        // holds `arguments.len()` elements, and `result` addresses a buffer of its length.
+        let called = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
+            let handler = std::mem::transmute::<*mut c_void, FunctionHandler>(self.address());
+            handler(
+                name.as_ptr().cast(),
+                argv.len(),
+                argv.as_ptr(),
+                queue.as_ptr().cast(),
+                &raw mut result,
+            )
+        }));
+        let rc = match called {
+            Ok(rc) => rc,
+            Err(payload) if payload.is::<crate::ffi::Thrown>() => return None,
+            Err(payload) => std::panic::resume_unwind(payload),
+        };
+        // SAFETY: the handler left `result` addressing `buffer` or a block of its own.
+        let value = unsafe { take_result(&result, buffer.as_mut_ptr()) };
+        Some(ClassicResult { rc, value })
+    }
+
+    /// Calls a `RexxSubcomHandler` with `command`, as `CommandHandlerDispatcher::run` does
+    /// (`interpreter/concurrency/CommandHandler.cpp`), answering its return code, its flags and
+    /// its result.
+    #[must_use]
+    pub fn call_subcom(self, command: &[u8]) -> (ClassicResult<c_int>, u16) {
+        let command = terminated(command);
+        let argument = CONSTRXSTRING {
+            strlength: command.len() - 1,
+            strptr: command.as_ptr().cast(),
+        };
+        let mut flags: u16 = 0;
+        let mut buffer = [0u8; DEFAULT_RESULT_BUFFER];
+        let mut result = RXSTRING {
+            strlength: buffer.len(),
+            strptr: buffer.as_mut_ptr().cast(),
+        };
+        // SAFETY: `new`'s caller guaranteed a `RexxSubcomHandler` (`api/rexx.h`), mapped for the
+        // process's life. The command is NUL-terminated and outlives the call, and `result`
+        // addresses a buffer of its length.
+        let rc = unsafe {
+            let handler = std::mem::transmute::<*mut c_void, SubcomHandler>(self.address());
+            handler(&raw const argument, &raw mut flags, &raw mut result)
+        };
+        // SAFETY: the handler left `result` addressing `buffer` or a block of its own.
+        let value = unsafe { take_result(&result, buffer.as_mut_ptr()) };
+        (ClassicResult { rc, value }, flags)
+    }
+}
+
+/// `DEFRXSTRING`, the result buffer a classic handler is handed.
+const DEFAULT_RESULT_BUFFER: usize = 256;
+
+/// `RexxFunctionHandler` (`api/rexx.h`). It may unwind as a [`Stub`] may.
+type FunctionHandler = unsafe extern "C-unwind" fn(
+    *const c_char,
+    usize,
+    *const CONSTRXSTRING,
+    *const c_char,
+    *mut RXSTRING,
+) -> usize;
+
+/// `RexxSubcomHandler` (`api/rexx.h`).
+type SubcomHandler =
+    unsafe extern "C-unwind" fn(*const CONSTRXSTRING, *mut u16, *mut RXSTRING) -> c_int;
+
+/// A classic handler's return code and result, `None` where it left a null `strptr`.
+#[derive(Debug, PartialEq, Eq)]
+pub struct ClassicResult<R> {
+    pub rc: R,
+    pub value: Option<Vec<u8>>,
+}
+
+fn terminated(bytes: &[u8]) -> Vec<u8> {
+    let mut held = Vec::with_capacity(bytes.len() + 1);
+    held.extend_from_slice(bytes);
+    held.push(0);
+    held
+}
+
+/// The bytes `result` holds, releasing a block the handler put in place of `buffer`.
+///
+/// # Safety
+/// A non-null `result.strptr` is `buffer` or a `malloc` block, holding `strlength` bytes.
+unsafe fn take_result(result: &RXSTRING, buffer: *mut u8) -> Option<Vec<u8>> {
+    if result.strptr.is_null() {
+        return None;
+    }
+    // SAFETY: the caller's guarantee.
+    let value = unsafe { std::slice::from_raw_parts(result.strptr.cast::<u8>(), result.strlength) }
+        .to_vec();
+    if result.strptr.cast::<u8>() != buffer {
+        // SAFETY: a block of the handler's own, which the API releases (`releaseResultMemory`).
+        unsafe { libc::free(result.strptr.cast()) };
+    }
+    Some(value)
+}
+
+/// `RexxContextExitHandler` (`api/oorexxapi.h:179`): an exit an embedding names in
+/// `RexxCreateInterpreter`'s `DIRECT_EXITS` option.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ContextExit(std::ptr::NonNull<c_void>);
+
+// SAFETY: as `ClassicEntry`'s: the address names code the embedding keeps mapped while an
+// interpreter may call it.
+unsafe impl Send for ContextExit {}
+// SAFETY: as `Send`; the address is never written through.
+unsafe impl Sync for ContextExit {}
+
+impl ContextExit {
+    /// The handler at `address`, or `None` for null.
+    ///
+    /// # Safety
+    /// A non-null `address` is a `RexxContextExitHandler`, mapped for as long as an interpreter
+    /// may call it.
+    #[must_use]
+    pub unsafe fn new(address: *mut c_void) -> Option<ContextExit> {
+        std::ptr::NonNull::new(address).map(ContextExit)
+    }
+}
+
+/// A system exit's handler (`ExitHandler`, `concurrency/ExitHandler.hpp`): a classic
+/// `RexxExitHandler` a registration resolved, or a context handler.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ExitHandler {
+    Registered(ClassicEntry),
+    Context(ContextExit),
+}
+
+/// The exit function codes (`api/rexxapidefs.h:171-207`).
+pub mod exit_code {
+    use std::ffi::c_int;
+
+    /// `RXENDLST`.
+    pub const END: c_int = 0;
+    /// `RXFNC`.
+    pub const FNC: c_int = 2;
+    /// `RXCMD`.
+    pub const CMD: c_int = 3;
+    /// `RXMSQ`.
+    pub const MSQ: c_int = 4;
+    /// `RXSIO`.
+    pub const SIO: c_int = 5;
+    /// `RXHLT`.
+    pub const HLT: c_int = 7;
+    /// `RXTRC`.
+    pub const TRC: c_int = 8;
+    /// `RXINI`.
+    pub const INI: c_int = 9;
+    /// `RXTER`.
+    pub const TER: c_int = 10;
+    /// `RXEXF`.
+    pub const EXF: c_int = 12;
+    /// `RXNOVAL`.
+    pub const NOVAL: c_int = 13;
+    /// `RXVALUE`.
+    pub const VALUE: c_int = 14;
+    /// `RXOFNC`.
+    pub const OFNC: c_int = 15;
+    /// `RXNOOFEXITS`: one more than the largest code.
+    pub const COUNT: usize = 16;
+
+    /// The name `Error_System_service_service` reports for `code`
+    /// (`Activity::callExit`'s `exitName`).
+    #[must_use]
+    pub fn name(code: c_int) -> &'static str {
+        match code {
+            FNC => "RXFNC",
+            CMD => "RXCMD",
+            MSQ => "RXMSQ",
+            SIO => "RXSIO",
+            HLT => "RXHLT",
+            TRC => "RXTRC",
+            INI => "RXINI",
+            TER => "RXTER",
+            EXF => "RXEXF",
+            NOVAL => "RXNOVAL",
+            VALUE => "RXVALUE",
+            OFNC => "RXOFNC",
+            _ => "",
+        }
+    }
+}
+
+/// One exit call's inputs, by the block it fills (`api/rexx.h:489-654`). `O` is an object as
+/// the caller holds it: an object-valued block carries it as a handle.
+#[derive(Debug)]
+pub enum ExitRequest<'a, O> {
+    /// `RXFNC`/`RXFNCCAL`: each argument a string, `None` an omitted one.
+    Function {
+        name: &'a [u8],
+        subroutine: bool,
+        queue: &'a [u8],
+        arguments: &'a [Option<&'a [u8]>],
+    },
+    /// `RXOFNC`/`RXOFNCCAL`, or with `scripting` `RXEXF`/`RXEXFCAL`.
+    ObjectFunction {
+        scripting: bool,
+        name: &'a [u8],
+        subroutine: bool,
+        arguments: Vec<O>,
+    },
+    /// `RXCMD`/`RXCMDHST`.
+    Command {
+        address: &'a [u8],
+        command: &'a [u8],
+    },
+    /// `RXMSQ`/`RXMSQPLL`.
+    Pull,
+    /// `RXMSQ`/`RXMSQPSH`.
+    Push { line: &'a [u8], lifo: bool },
+    /// `RXMSQ`/`RXMSQSIZ`.
+    QueueSize,
+    /// `RXMSQ`/`RXMSQNAM`.
+    QueueName { name: &'a [u8] },
+    /// `RXSIO`/`RXSIOSAY`.
+    Say { line: &'a [u8] },
+    /// `RXSIO`/`RXSIOTRC`.
+    Trace { line: &'a [u8] },
+    /// `RXSIO`/`RXSIOTRD`.
+    TerminalRead,
+    /// `RXSIO`/`RXSIODTR`.
+    DebugRead,
+    /// `RXHLT`/`RXHLTTST`.
+    HaltTest,
+    /// `RXHLT`/`RXHLTCLR`.
+    HaltClear,
+    /// `RXTRC`/`RXTRCTST`.
+    TraceTest,
+    /// `RXINI`/`RXINIEXT`.
+    Initialization,
+    /// `RXTER`/`RXTEREXT`.
+    Termination,
+    /// `RXNOVAL`/`RXNOVALCALL`.
+    Novalue { name: O },
+    /// `RXVALUE`/`RXVALUECALL`.
+    Value { selector: O, name: O, value: O },
+}
+
+impl<'a, O> ExitRequest<'a, O> {
+    /// The function and subfunction codes.
+    #[must_use]
+    pub fn codes(&self) -> (c_int, c_int) {
+        use exit_code::{CMD, EXF, FNC, HLT, INI, MSQ, NOVAL, OFNC, SIO, TER, TRC, VALUE};
+        match self {
+            ExitRequest::Function { .. } => (FNC, 1),
+            ExitRequest::ObjectFunction { scripting, .. } => {
+                (if *scripting { EXF } else { OFNC }, 1)
+            }
+            ExitRequest::Command { .. } => (CMD, 1),
+            ExitRequest::Pull => (MSQ, 1),
+            ExitRequest::Push { .. } => (MSQ, 2),
+            ExitRequest::QueueSize => (MSQ, 3),
+            ExitRequest::QueueName { .. } => (MSQ, 20),
+            ExitRequest::Say { .. } => (SIO, 1),
+            ExitRequest::Trace { .. } => (SIO, 2),
+            ExitRequest::TerminalRead => (SIO, 3),
+            ExitRequest::DebugRead => (SIO, 4),
+            ExitRequest::HaltClear => (HLT, 1),
+            ExitRequest::HaltTest => (HLT, 2),
+            ExitRequest::TraceTest => (TRC, 1),
+            ExitRequest::Initialization => (INI, 1),
+            ExitRequest::Termination => (TER, 1),
+            ExitRequest::Novalue { .. } => (NOVAL, 1),
+            ExitRequest::Value { .. } => (VALUE, 1),
+        }
+    }
+
+    /// The same request with each object converted by `convert`.
+    pub fn map<P>(self, mut convert: impl FnMut(O) -> P) -> ExitRequest<'a, P> {
+        match self {
+            ExitRequest::Function {
+                name,
+                subroutine,
+                queue,
+                arguments,
+            } => ExitRequest::Function {
+                name,
+                subroutine,
+                queue,
+                arguments,
+            },
+            ExitRequest::ObjectFunction {
+                scripting,
+                name,
+                subroutine,
+                arguments,
+            } => ExitRequest::ObjectFunction {
+                scripting,
+                name,
+                subroutine,
+                arguments: arguments.into_iter().map(convert).collect(),
+            },
+            ExitRequest::Command { address, command } => ExitRequest::Command { address, command },
+            ExitRequest::Pull => ExitRequest::Pull,
+            ExitRequest::Push { line, lifo } => ExitRequest::Push { line, lifo },
+            ExitRequest::QueueSize => ExitRequest::QueueSize,
+            ExitRequest::QueueName { name } => ExitRequest::QueueName { name },
+            ExitRequest::Say { line } => ExitRequest::Say { line },
+            ExitRequest::Trace { line } => ExitRequest::Trace { line },
+            ExitRequest::TerminalRead => ExitRequest::TerminalRead,
+            ExitRequest::DebugRead => ExitRequest::DebugRead,
+            ExitRequest::HaltTest => ExitRequest::HaltTest,
+            ExitRequest::HaltClear => ExitRequest::HaltClear,
+            ExitRequest::TraceTest => ExitRequest::TraceTest,
+            ExitRequest::Initialization => ExitRequest::Initialization,
+            ExitRequest::Termination => ExitRequest::Termination,
+            ExitRequest::Novalue { name } => ExitRequest::Novalue {
+                name: convert(name),
+            },
+            ExitRequest::Value {
+                selector,
+                name,
+                value,
+            } => {
+                let selector = convert(selector);
+                let name = convert(name);
+                ExitRequest::Value {
+                    selector,
+                    name,
+                    value: convert(value),
+                }
+            }
+        }
+    }
+}
+
+/// What a handler that answered `RXEXIT_HANDLED` left in its block.
+#[derive(Debug, Default)]
+pub struct ExitReply<O> {
+    /// The block's flag word, its first bit field in bit 0: `rxfferr`, `rxffnfnd`; `rxfcfail`,
+    /// `rxfcerr`; `rxfhhalt`; `rxftrace`.
+    pub flags: u32,
+    /// The string it returned, `None` where it left a null pointer.
+    pub text: Option<Vec<u8>>,
+    /// The object it returned.
+    pub object: O,
+    /// `rxmsq_size`.
+    pub size: usize,
+}
+
+/// How an exit call ended (`Activity::callExit`).
+#[derive(Debug)]
+pub enum ExitOutcome<O> {
+    /// `RXEXIT_HANDLED`.
+    Handled(ExitReply<O>),
+    /// `RXEXIT_NOT_HANDLED`, or any other positive return code.
+    NotHandled,
+    /// `RXEXIT_RAISE_ERROR`, or any other negative return code.
+    Failed,
+    /// A `Throw` member of its context unwound it, its condition recorded.
+    Unwound,
+}
+
+impl<O> ExitOutcome<O> {
+    /// The same outcome with its object converted by `convert`.
+    pub fn map<P>(self, convert: impl FnOnce(O) -> P) -> ExitOutcome<P> {
+        match self {
+            ExitOutcome::Handled(reply) => ExitOutcome::Handled(ExitReply {
+                flags: reply.flags,
+                text: reply.text,
+                object: convert(reply.object),
+                size: reply.size,
+            }),
+            ExitOutcome::NotHandled => ExitOutcome::NotHandled,
+            ExitOutcome::Failed => ExitOutcome::Failed,
+            ExitOutcome::Unwound => ExitOutcome::Unwound,
+        }
+    }
+}
+
+/// `RexxExitHandler` (`api/rexx.h:657`).
+type ExitFunction = unsafe extern "C-unwind" fn(c_int, c_int, *mut c_char) -> c_int;
+
+/// `RexxContextExitHandler` (`api/oorexxapi.h:179`).
+type ContextExitFunction =
+    unsafe extern "C-unwind" fn(*mut RexxExitContext_, c_int, c_int, *mut c_char) -> c_int;
+
+impl ExitHandler {
+    /// Calls the handler with `request`'s block, as `ExitHandler::call` does
+    /// (`concurrency/ExitHandler.cpp`), a context handler with `exit`; answers how it ended
+    /// and what it wrote back. Each string it is handed is NUL-terminated beyond its length,
+    /// and a result buffer is `DEFRXSTRING` bytes, which it may replace with a block `free`
+    /// releases.
+    pub(crate) fn call(
+        self,
+        exit: *mut RexxExitContext_,
+        request: ExitRequest<'_, RexxObjectPtr>,
+    ) -> ExitOutcome<RexxObjectPtr> {
+        let (code, subcode) = request.codes();
+        let mut buffer = vec![0u8; DEFAULT_RESULT_BUFFER];
+        let at = buffer.as_mut_ptr();
+        let returned = |length: usize| RXSTRING {
+            strlength: length,
+            strptr: at.cast(),
+        };
+        let string = |bytes: &[u8]| CONSTRXSTRING {
+            strlength: bytes.len() - 1,
+            strptr: bytes.as_ptr().cast(),
+        };
+        let mut reply = ExitReply {
+            flags: 0,
+            text: None,
+            object: std::ptr::null_mut(),
+            size: 0,
+        };
+        let rc = match request {
+            ExitRequest::Function {
+                name,
+                subroutine,
+                queue,
+                arguments,
+            } => {
+                let name = terminated(name);
+                let queue = terminated(queue);
+                let held: Vec<Option<Vec<u8>>> = arguments
+                    .iter()
+                    .map(|argument| argument.map(terminated))
+                    .collect();
+                let mut argv: Vec<CONSTRXSTRING> = held
+                    .iter()
+                    .map(|argument| match argument {
+                        Some(bytes) => string(bytes),
+                        None => CONSTRXSTRING {
+                            strlength: 0,
+                            strptr: std::ptr::null(),
+                        },
+                    })
+                    .collect();
+                argv.reserve(1);
+                let mut block = RXFNCCAL_PARM {
+                    rxfnc_flags: if subroutine { 4 } else { 0 },
+                    rxfnc_name: name.as_ptr().cast(),
+                    rxfnc_namel: short_length(&name),
+                    rxfnc_que: queue.as_ptr().cast(),
+                    rxfnc_quel: short_length(&queue),
+                    rxfnc_argc: u16::try_from(argv.len()).unwrap_or(u16::MAX),
+                    rxfnc_argv: argv.as_ptr(),
+                    rxfnc_retc: returned(DEFAULT_RESULT_BUFFER),
+                };
+                let rc = self.invoke(exit, code, subcode, (&raw mut block).cast());
+                reply.flags = block.rxfnc_flags;
+                // SAFETY: the handler left `rxfnc_retc` addressing `buffer` or a block of its own.
+                reply.text = unsafe { take_result(&block.rxfnc_retc, at) };
+                rc
+            }
+            ExitRequest::ObjectFunction {
+                name,
+                subroutine,
+                mut arguments,
+                ..
+            } => {
+                let name = terminated(name);
+                let mut block = RXOFNCCAL_PARM {
+                    rxfnc_flags: if subroutine { 4 } else { 0 },
+                    rxfnc_name: string(&name),
+                    rxfnc_argc: arguments.len(),
+                    rxfnc_argv: arguments.as_mut_ptr(),
+                    rxfnc_retc: std::ptr::null_mut(),
+                };
+                let rc = self.invoke(exit, code, subcode, (&raw mut block).cast());
+                reply.flags = block.rxfnc_flags;
+                reply.object = block.rxfnc_retc;
+                rc
+            }
+            ExitRequest::Command { address, command } => {
+                let address = terminated(address);
+                let command = terminated(command);
+                let mut block = RXCMDHST_PARM {
+                    rxcmd_flags: 0,
+                    rxcmd_address: address.as_ptr().cast(),
+                    rxcmd_addressl: short_length(&address),
+                    rxcmd_dll: std::ptr::null(),
+                    rxcmd_dll_len: 0,
+                    rxcmd_command: string(&command),
+                    rxcmd_retc: returned(DEFAULT_RESULT_BUFFER),
+                };
+                let rc = self.invoke(exit, code, subcode, (&raw mut block).cast());
+                reply.flags = block.rxcmd_flags;
+                // SAFETY: as for a function's result.
+                reply.text = unsafe { take_result(&block.rxcmd_retc, at) };
+                rc
+            }
+            ExitRequest::Pull
+            | ExitRequest::TerminalRead
+            | ExitRequest::DebugRead
+            | ExitRequest::QueueName { .. } => {
+                let mut block = match request {
+                    ExitRequest::QueueName { name } => {
+                        if name.len() >= buffer.len() {
+                            buffer.resize(name.len() + 1, 0);
+                        }
+                        buffer[..name.len()].copy_from_slice(name);
+                        RXSTRING {
+                            strlength: name.len(),
+                            strptr: buffer.as_mut_ptr().cast(),
+                        }
+                    }
+                    _ => returned(DEFAULT_RESULT_BUFFER),
+                };
+                let at = block.strptr.cast::<u8>();
+                let rc = self.invoke(exit, code, subcode, (&raw mut block).cast());
+                // SAFETY: as for a function's result.
+                reply.text = unsafe { take_result(&block, at) };
+                rc
+            }
+            ExitRequest::Push { line, lifo } => {
+                let line = terminated(line);
+                let mut block = RXMSQPSH_PARM {
+                    rxmsq_flags: u32::from(lifo),
+                    rxmsq_value: string(&line),
+                };
+                self.invoke(exit, code, subcode, (&raw mut block).cast())
+            }
+            ExitRequest::QueueSize => {
+                let mut size: usize = 0;
+                let rc = self.invoke(exit, code, subcode, (&raw mut size).cast());
+                reply.size = size;
+                rc
+            }
+            ExitRequest::Say { line } | ExitRequest::Trace { line } => {
+                let line = terminated(line);
+                let mut block = RXSIOSAY_PARM {
+                    rxsio_string: string(&line),
+                };
+                self.invoke(exit, code, subcode, (&raw mut block).cast())
+            }
+            ExitRequest::HaltTest | ExitRequest::HaltClear | ExitRequest::TraceTest => {
+                let mut flags: ExitFlags = 0;
+                let rc = self.invoke(exit, code, subcode, (&raw mut flags).cast());
+                reply.flags = flags;
+                rc
+            }
+            ExitRequest::Initialization | ExitRequest::Termination => {
+                self.invoke(exit, code, subcode, std::ptr::null_mut())
+            }
+            ExitRequest::Novalue { name } => {
+                let mut block = RXVARNOVALUE_PARM {
+                    variable_name: name.cast(),
+                    value: std::ptr::null_mut(),
+                };
+                let rc = self.invoke(exit, code, subcode, (&raw mut block).cast());
+                reply.object = block.value;
+                rc
+            }
+            ExitRequest::Value {
+                selector,
+                name,
+                value,
+            } => {
+                let mut block = RXVALCALL_PARM {
+                    selector: selector.cast(),
+                    variable_name: name.cast(),
+                    value,
+                };
+                let rc = self.invoke(exit, code, subcode, (&raw mut block).cast());
+                reply.object = block.value;
+                rc
+            }
+        };
+        match rc {
+            None => ExitOutcome::Unwound,
+            Some(0) => ExitOutcome::Handled(reply),
+            Some(rc) if rc < 0 => ExitOutcome::Failed,
+            Some(_) => ExitOutcome::NotHandled,
+        }
+    }
+
+    /// Calls the handler with the codes and `block`, answering its return code, or `None`
+    /// where a `Throw` member unwound it.
+    fn invoke(
+        self,
+        exit: *mut RexxExitContext_,
+        code: c_int,
+        subcode: c_int,
+        block: *mut c_void,
+    ) -> Option<c_int> {
+        // SAFETY: a `Registered` entry is a `RexxExitHandler` and a `Context` one a
+        // `RexxContextExitHandler`, as their constructors' callers guaranteed, mapped while an
+        // interpreter may call them. `block` addresses the parameter block of the kind `code`
+        // and `subcode` name, live for the call, or is null where that kind has none; `exit`
+        // is the call's live exit context.
+        let called = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
+            match self {
+                ExitHandler::Registered(entry) => {
+                    let handler = std::mem::transmute::<*mut c_void, ExitFunction>(entry.address());
+                    handler(code, subcode, block.cast())
+                }
+                ExitHandler::Context(handler) => {
+                    let handler =
+                        std::mem::transmute::<*mut c_void, ContextExitFunction>(handler.0.as_ptr());
+                    handler(exit, code, subcode, block.cast())
+                }
+            }
+        }));
+        match called {
+            Ok(rc) => Some(rc),
+            Err(payload) if payload.is::<crate::ffi::Thrown>() => None,
+            Err(payload) => std::panic::resume_unwind(payload),
+        }
+    }
+}
+
+/// A terminated string's length as a block's `unsigned short` length member.
+fn short_length(terminated: &[u8]) -> u16 {
+    u16::try_from(terminated.len() - 1).unwrap_or(u16::MAX)
+}
+
+/// Libraries a classic registration loaded, held open for the process's life: an entry point
+/// resolved from one is never invalidated.
+static CLASSIC_LIBRARIES: Mutex<Vec<libloading::Library>> = Mutex::new(Vec::new());
+
+/// The entry point `procedure` names in the library `library` names, searched as [`open`]
+/// searches, first as spelled and then uppercased, as `RexxResolve*` find a registration's
+/// handler.
+#[must_use]
+pub fn classic_procedure(
+    library: &[u8],
+    procedure: &[u8],
+    search: &[PathBuf],
+) -> Option<ClassicEntry> {
+    let name = std::str::from_utf8(library).ok()?;
+    if name.len() > MAX_LIBRARY_NAME_LENGTH {
+        return None;
+    }
+    let file = format!("lib{name}{}", std::env::consts::DLL_SUFFIX);
+    let handle = search
+        .iter()
+        .find_map(|directory| dlopen(&directory.join(&file)))
+        .or_else(|| dlopen(Path::new(&file)))
+        .or_else(|| dlopen(&Path::new(SECOND_ATTEMPT_DIRECTORY).join(&file)))?;
+    let lookup = |symbol: &[u8]| {
+        let symbol = terminated(symbol);
+        // SAFETY: the symbol is read as an address only. A classic registration names a handler
+        // of the registry's C signature, which the API contract makes the registrant's to
+        // guarantee, as `ClassicEntry::new` asks.
+        unsafe {
+            handle
+                .get::<*mut c_void>(symbol.as_slice())
+                .ok()
+                .and_then(|address| ClassicEntry::new(*address))
+        }
+    };
+    let entry = lookup(procedure).or_else(|| lookup(&procedure.to_ascii_uppercase()))?;
+    CLASSIC_LIBRARIES
+        .lock()
+        .expect("the libraries' critical section cannot panic")
+        .push(handle);
+    Some(entry)
+}
+
+/// `DIRECT_COMMAND_ENVIRONMENT` (`api/oorexxapi.h:479`).
+pub const DIRECT_COMMAND_ENVIRONMENT: c_int = 1;
+
+/// `REDIRECTING_COMMAND_ENVIRONMENT` (`api/oorexxapi.h:480`).
+pub const REDIRECTING_COMMAND_ENVIRONMENT: c_int = 2;
+
+/// `RexxContextCommandHandler` (`api/oorexxapi.h:425`). It may unwind as a
+/// [`Stub`] may.
+type DirectHandler = unsafe extern "C-unwind" fn(
+    *mut RexxExitContext_,
+    RexxStringObject,
+    RexxStringObject,
+) -> RexxObjectPtr;
+
+/// `RexxRedirectingCommandHandler` (`api/oorexxapi.h:428`).
+type RedirectingHandler = unsafe extern "C-unwind" fn(
+    *mut RexxExitContext_,
+    RexxStringObject,
+    RexxStringObject,
+    *mut RexxIORedirectorContext_,
+) -> RexxObjectPtr;
+
+/// A command handler an extension registered through `AddCommandEnvironment`
+/// (`interpreter/runtime/InterpreterInstance.cpp:913-917`).
+///
+/// Nothing ties the address to a mapping, so the interpreter that holds one
+/// must drop it before it closes any library; neither `Clone` nor holder of
+/// a public address, for that reason.
+#[derive(Debug)]
+pub struct CommandHandler {
+    entry_point: *mut c_void,
+    redirecting: bool,
+}
+
+/// A [`CommandHandler`] on its way to the thread of the interpreter it
+/// serves.
+#[derive(Debug)]
+pub struct SentCommandHandler(CommandHandler);
+
+// SAFETY: a handler is a C function's address and a flag, which owns and
+// borrows nothing; its caller calls it on whichever thread runs the command.
+unsafe impl Send for SentCommandHandler {}
+
+impl SentCommandHandler {
+    /// The handler.
+    #[must_use]
+    pub fn into_inner(self) -> CommandHandler {
+        self.0
+    }
+}
+
+/// An embedding's `REGISTER_LIBRARY` package table on its way to the thread of the interpreter
+/// that registers it.
+#[derive(Debug)]
+pub struct SentPackage(*const RexxPackageEntry);
+
+// SAFETY: the table is static data of the embedding's image, which the interpreter only reads,
+// on whichever thread it runs.
+unsafe impl Send for SentPackage {}
+
+impl SentPackage {
+    /// The package table at `entry`, null for none.
+    ///
+    /// # Safety
+    /// As [`registered`] asks of `entry`.
+    #[must_use]
+    pub unsafe fn new(entry: *const RexxPackageEntry) -> SentPackage {
+        SentPackage(entry)
+    }
+
+    /// The library the table describes, as [`registered`] answers for `name`.
+    ///
+    /// # Errors
+    /// As [`registered`].
+    pub fn into_library(self, name: &str) -> Result<Option<Library>, Refused> {
+        // SAFETY: `new`'s caller guaranteed the table.
+        unsafe { registered(self.0, name) }
+    }
+}
+
+impl CommandHandler {
+    /// The handler at `entry_point`, of the environment type `kind`, or
+    /// `None` for a null address or a type the header does not define, which
+    /// `AddCommandEnvironment` registers nothing for
+    /// (`interpreter/api/InterpreterInstanceStubs.cpp:93-100`).
+    pub(crate) fn new(entry_point: *mut c_void, kind: c_int) -> Option<CommandHandler> {
+        if entry_point.is_null() {
+            return None;
+        }
+        let redirecting = match kind {
+            DIRECT_COMMAND_ENVIRONMENT => false,
+            REDIRECTING_COMMAND_ENVIRONMENT => true,
+            _ => return None,
+        };
+        Some(CommandHandler {
+            entry_point,
+            redirecting,
+        })
+    }
+
+    /// [`CommandHandler::new`] for an embedding's `DIRECT_ENVIRONMENTS` and
+    /// `REDIRECTING_ENVIRONMENTS` options, sendable to the interpreter's
+    /// thread.
+    ///
+    /// # Safety
+    /// A non-null `entry_point` is a function of the type `kind` names, for
+    /// as long as an interpreter may call it.
+    #[must_use]
+    pub unsafe fn sendable(entry_point: *mut c_void, kind: c_int) -> Option<SentCommandHandler> {
+        CommandHandler::new(entry_point, kind).map(SentCommandHandler)
+    }
+
+    /// Whether the handler takes an I/O redirector context.
+    #[must_use]
+    pub fn redirects(&self) -> bool {
+        self.redirecting
+    }
+
+    /// Calls the handler with `address` and `command`, handing a redirecting
+    /// one `redirector`, and answers what it returned, null where a `Throw`
+    /// member left it.
+    pub(crate) fn call(
+        &self,
+        exit: &ExitContext<'_>,
+        address: RexxStringObject,
+        command: RexxStringObject,
+        redirector: &mut RedirectorContext<'_>,
+    ) -> RexxObjectPtr {
+        let exit = exit.as_ptr();
+        let io = redirector.as_ptr();
+        // SAFETY: the address is one an extension registered as this kind of
+        // handler, whose C signature the header declares (D5), as
+        // `NativeMethodEntry::stub` argues for a table row. It is still
+        // mapped: the only holder is the interpreter's handler table, which
+        // it clears before its first library close
+        // (`interrexx`'s `Interp::run_package_unloaders`), and a library
+        // closes nowhere else while the interpreter runs. Both contexts are
+        // live for the borrows above.
+        let called = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
+            if self.redirecting {
+                let handler =
+                    std::mem::transmute::<*mut c_void, RedirectingHandler>(self.entry_point);
+                handler(exit, address, command, io)
+            } else {
+                let handler = std::mem::transmute::<*mut c_void, DirectHandler>(self.entry_point);
+                handler(exit, address, command)
+            }
+        }));
+        match called {
+            Ok(answered) => answered,
+            // A `Throw` member recorded its condition, as in `call_stub`.
+            Err(payload) if payload.is::<crate::ffi::Thrown>() => std::ptr::null_mut(),
+            Err(payload) => std::panic::resume_unwind(payload),
+        }
+    }
+
+    /// A handler over `function`, for a test of the call.
+    #[cfg(test)]
+    pub(crate) fn direct(function: DirectHandler) -> CommandHandler {
+        CommandHandler {
+            entry_point: function as *mut c_void,
+            redirecting: false,
+        }
+    }
+
+    /// A redirecting handler over `function`, for a test of the call.
+    #[cfg(test)]
+    pub(crate) fn redirecting(function: RedirectingHandler) -> CommandHandler {
+        CommandHandler {
+            entry_point: function as *mut c_void,
+            redirecting: true,
+        }
+    }
+}
+
+/// What `stub` publishes for a signature request, read as
+/// [`HeldMethod::signature`] describes.
+///
+/// # Safety
+/// `stub` is a generated stub of this C signature in a library that stays
+/// mapped for the call, and `context` addresses a live struct of its context
+/// type.
+unsafe fn signature_of<C>(stub: Stub<C>, context: *mut C, limit: usize) -> Option<Vec<u16>> {
+    // SAFETY: the caller guarantees the stub and the context. A null
+    // `arguments` is the signature request, which returns the static array
+    // without running any of the extension's own code
+    // (`api/oorexxapi.h:4342-4350`).
+    let types = unsafe { stub(context, std::ptr::null_mut()) };
+    if types.is_null() {
+        return None;
+    }
+    let mut words = Vec::new();
+    for offset in 0..limit {
+        // SAFETY: the invariant is the macro's, not this loop's: the array
+        // it emits ends in `REXX_ARGUMENT_TERMINATOR` (`api/oorexxapi.h:4338`),
+        // so every offset up to the first terminator is inside it. `limit`
+        // bounds how far a malformed array is followed, which the oracle does
+        // not bound at all (`NativeActivation.cpp:235`).
+        let word = unsafe { *types.add(offset) };
+        if word == ARGUMENT_TERMINATOR {
+            return Some(words);
+        }
+        words.push(word);
+    }
+    None
+}
+
+/// Call `stub`, where there is one, with `arguments` published on `context`
+/// for the length of the call, and answer element zero read as `result` says.
+///
+/// # Safety
+/// As [`signature_of`], and `published` is `context`'s own `arguments` field.
+unsafe fn call_stub<C>(
+    stub: Option<Stub<C>>,
+    context: *mut C,
+    published: *mut *mut ValueDescriptor,
+    arguments: &mut [ValueDescriptor; MAX_NATIVE_ARGUMENTS],
+    result: Option<ResultRead>,
+) -> Option<Written> {
+    // The whole word, before the stub can write a narrower member into it.
+    arguments[0].value = ValueUnion { value_int64_t: 0 };
+    if let Some(stub) = stub {
+        let array = arguments.as_mut_ptr();
+        // `argumentExists` reads the array through the context rather than
+        // through the parameter (`api/oorexxapi.h:4276`), which is why the
+        // oracle publishes it (`NativeActivation.cpp:1291`).
+        //
+        // SAFETY: the caller's context wrapper holds the only borrow of the
+        // live struct for its lifetime and is neither `Clone` nor `Sync`, so
+        // nothing else writes the field during this call.
+        unsafe { *published = array };
+        // SAFETY: the caller guarantees the stub. `array` is the caller's
+        // live array, which nothing else touches for the duration of the
+        // call, and the stub reads and writes only the elements its own
+        // signature declares.
+        let returned = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
+            stub(context, array)
+        }));
+        // SAFETY: as the write above.
+        unsafe { *published = std::ptr::null_mut() };
+        // A `Throw` member recorded its condition and unwound the extension,
+        // which then answered nothing: element zero is still the zero written
+        // above. Anything else is a defect, resumed.
+        if let Err(payload) = returned
+            && !payload.is::<crate::ffi::Thrown>()
+        {
+            std::panic::resume_unwind(payload);
+        }
+    }
+    Some(match result? {
+        // SAFETY: element zero's word was written in full above, and a stub
+        // writing a member into it leaves every byte initialised.
+        ResultRead::Member(repr) => {
+            Written::Member(unsafe { crate::ffi::value_of(&arguments[0], repr) })
+        }
+        ResultRead::Text => {
+            // SAFETY: as the read above, for a pointer-sized member.
+            let pointer = unsafe { arguments[0].value.value_CSTRING };
+            if pointer.is_null() {
+                Written::Text(None)
+            } else {
+                // SAFETY: a `CSTRING` result is a NUL-terminated string that
+                // outlives the stub's return, which is the extension's side of
+                // the header's contract and what `valueToObject` relies on when
+                // it copies the string after the call
+                // (`interpreter/execution/NativeActivation.cpp:825-833`). The
+                // bytes are copied here, before anything else runs.
+                let bytes = unsafe { CStr::from_ptr(pointer) }.to_bytes().to_vec();
+                Written::Text(Some(bytes))
+            }
+        }
+    })
+}
+
+thread_local! {
+    /// Whether a package hook run since the flag was last cleared was left
+    /// by a `Throw`.
+    static HOOK_THREW: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Runs `load`, which may run package hooks, and answers what it answered
+/// with whether one of them was left by a `Throw`, restoring the flag in
+/// force before.
+pub(crate) fn noting_hook_throws<R>(load: impl FnOnce() -> R) -> (R, bool) {
+    let outer = HOOK_THREW.replace(false);
+    let answered = load();
+    let threw = HOOK_THREW.replace(outer);
+    (answered, threw)
+}
+
+/// Which of a package entry's hooks to run.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Hook {
+    /// `loader`, which `LibraryPackage::loadPackage` runs once the routines
+    /// have registered (`interpreter/package/LibraryPackage.cpp:237-245`).
+    Loader,
+    /// `unloader`, which `LibraryPackage::unload` runs at termination
+    /// (`interpreter/package/LibraryPackage.cpp:166-174`).
+    Unloader,
+}
+
+/// An opened shared library together with the package entry it published.
+pub struct Library {
+    name: Option<Vec<u8>>,
+    version: Option<Vec<u8>>,
+    methods: Vec<NativeMethodEntry>,
+    routines: Vec<NativeRoutineEntry>,
+    /// Private for the reason `entry_point` is. Never set on a library
+    /// refused for its version, whose loader the oracle never reaches.
+    loader: Option<PackageHook>,
+    unloader: Option<PackageHook>,
+    /// The mapping every address above points into. No safe code outside
+    /// this module can copy an address out of a row, which is what keeps one
+    /// from outliving it.
+    mapping: Arc<Mapping>,
+    /// Declared last, so that it is dropped after the close, whose
+    /// destructors may call through a thread context the extension kept.
+    thread: Option<ThreadContext>,
+}
+
+impl std::fmt::Debug for Library {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("Library")
+            .field("name", &self.name)
+            .field("version", &self.version)
+            .field("methods", &self.methods)
+            .field("routines", &self.routines)
+            .field("loader", &self.loader.is_some())
+            .field("unloader", &self.unloader.is_some())
+            .finish_non_exhaustive()
+    }
+}
+
+impl Library {
+    /// The entry's `packageName`, or `None` where that pointer is null.
+    #[must_use]
+    pub fn name(&self) -> Option<&[u8]> {
+        self.name.as_deref()
+    }
+
+    /// The entry's `packageVersion`; `NO_VERSION_YET` is a null pointer
+    /// (`api/oorexxapi.h:243`) and answers `None`.
+    #[must_use]
+    pub fn version(&self) -> Option<&[u8]> {
+        self.version.as_deref()
+    }
+
+    /// Whether the package entry declares `hook`.
+    #[must_use]
+    pub fn has_hook(&self, hook: Hook) -> bool {
+        self.hook(hook).is_some()
+    }
+
+    fn hook(&self, hook: Hook) -> Option<PackageHook> {
+        match hook {
+            Hook::Loader => self.loader,
+            Hook::Unloader => self.unloader,
+        }
+    }
+
+    /// Runs `hook`, where the package entry declares it, handing it the
+    /// thread context `contexts` links.
+    pub(crate) fn run_hook(&self, hook: Hook, contexts: &Contexts<'_, '_>) {
+        let Some(function) = self.hook(hook) else {
+            return;
+        };
+        // SAFETY: the address is the package entry's own `loader` or
+        // `unloader`, a `RexxPackageLoader`/`RexxPackageUnloader`
+        // (`api/oorexxapi.h:257-258`), in a mapping found open after this
+        // call was counted, which a close then leaves open; the thread
+        // context is the one `contexts` links, live for the call.
+        let ran = self.mapping.hold(|| {
+            if !self.mapping.is_open() {
+                return Ok(());
+            }
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| unsafe {
+                function(contexts.thread())
+            }))
+        });
+        // A `Throw` on a call context the hook reached leaves the hook as it
+        // leaves a stub, with its condition recorded; the member that ran
+        // the hook is told, because the oracle's unwind does not stop here.
+        if let Err(payload) = ran {
+            if !payload.is::<crate::ffi::Thrown>() {
+                std::panic::resume_unwind(payload);
+            }
+            HOOK_THREW.set(true);
+        }
+    }
+
+    /// `SysLibrary::unload`: closes the library, after which none of its rows
+    /// or hooks calls in, and answers whether it closed, which it does not
+    /// while a call into it is in flight.
+    pub fn close(&self) -> bool {
+        self.mapping.close()
+    }
+
+    /// Whether [`Library::close`] has not yet closed it.
+    #[must_use]
+    pub fn is_open(&self) -> bool {
+        self.mapping.is_open()
+    }
+
+    /// Keeps `thread` allocated until this library has been closed.
+    pub fn keep_thread_context(&mut self, thread: &ThreadContext) {
+        self.thread = Some(thread.clone());
+    }
+
+    /// The exported method table, in the order the extension declares it.
+    #[must_use]
+    pub fn methods(&self) -> &[NativeMethodEntry] {
+        &self.methods
+    }
+
+    /// The exported routine table, in the order the extension declares it.
+    #[must_use]
+    pub fn routines(&self) -> &[NativeRoutineEntry] {
+        &self.routines
+    }
+
+    /// The method row `name` names, matched without regard to case as
+    /// `LibraryPackage::locateMethodEntry` matches it
+    /// (`interpreter/package/LibraryPackage.cpp:320-325`).
+    ///
+    /// The row is borrowed from `self`, which is what stops it outliving the
+    /// mapping its address points into.
+    ///
+    /// ```no_run
+    /// # use interrexx_api::load;
+    /// let library = load::open_path(std::path::Path::new("librxregexp.so"), "rxregexp")
+    ///     .unwrap()
+    ///     .unwrap();
+    /// let row = library.method(b"RegExp_Parse").unwrap();
+    /// assert!(row.has_entry_point());
+    /// ```
+    ///
+    /// ```compile_fail
+    /// # use interrexx_api::load;
+    /// let row = load::open_path(std::path::Path::new("librxregexp.so"), "rxregexp")
+    ///     .unwrap()
+    ///     .unwrap()
+    ///     .method(b"RegExp_Parse")
+    ///     .unwrap();
+    /// assert!(row.has_entry_point());
+    /// ```
+    #[must_use]
+    pub fn method(&self, name: &[u8]) -> Option<&NativeMethodEntry> {
+        self.method_at(self.method_index(name)?)
+    }
+
+    /// The index of the row [`Library::method`] answers. A library's tables
+    /// do not change once it is read, so the index names that row for the
+    /// library's life.
+    #[must_use]
+    pub fn method_index(&self, name: &[u8]) -> Option<usize> {
+        self.methods
+            .iter()
+            .position(|row| row.name.eq_ignore_ascii_case(name))
+    }
+
+    /// The method row at `index`.
+    #[must_use]
+    #[inline]
+    pub fn method_at(&self, index: usize) -> Option<&NativeMethodEntry> {
+        self.methods.get(index)
+    }
+
+    /// The routine row `name` names, found as `LibraryPackage::resolveRoutine`
+    /// finds it (`interpreter/package/LibraryPackage.cpp:410-435`), and
+    /// borrowed from `self` for [`Library::method`]'s reason.
+    ///
+    /// The spelling is `name` byte for byte where a row has it, and otherwise
+    /// that of the first row matching `name` without regard to case (`:420`,
+    /// `:428`); of rows spelled alike, the answer is the last, which is the
+    /// one `loadRoutines` leaves in its table (`:291`).
+    #[must_use]
+    pub fn routine(&self, name: &[u8]) -> Option<&NativeRoutineEntry> {
+        self.routine_at(self.routine_index(name)?)
+    }
+
+    /// The index of the row [`Library::routine`] answers, valid for the
+    /// library's life as [`Library::method_index`]'s is.
+    #[must_use]
+    pub fn routine_index(&self, name: &[u8]) -> Option<usize> {
+        let spelling = match self.routines.iter().find(|row| row.name == name) {
+            Some(row) => &row.name,
+            None => {
+                &self
+                    .routines
+                    .iter()
+                    .find(|row| row.name.eq_ignore_ascii_case(name))?
+                    .name
+            }
+        };
+        self.routines.iter().rposition(|row| row.name == *spelling)
+    }
+
+    /// The routine row at `index`.
+    #[must_use]
+    #[inline]
+    pub fn routine_at(&self, index: usize) -> Option<&NativeRoutineEntry> {
+        self.routines.get(index)
+    }
+
+    /// Each upper-cased routine name with the spelling whose row answers it
+    /// through `PackageManager::packageRoutines`, in the order
+    /// `LibraryPackage::loadRoutines` puts them
+    /// (`interpreter/package/LibraryPackage.cpp:270-299`): a later row whose
+    /// name upper-cases alike replaces an earlier one.
+    #[must_use]
+    pub fn package_routines(&self) -> Vec<(Vec<u8>, &[u8])> {
+        let mut registered: Vec<(Vec<u8>, &[u8])> = Vec::new();
+        for row in &self.routines {
+            let upper = row.name.to_ascii_uppercase();
+            match registered.iter_mut().find(|(name, _)| *name == upper) {
+                Some(slot) => slot.1 = &row.name,
+                None => registered.push((upper, &row.name)),
+            }
+        }
+        registered
+    }
+}
+
+/// Open the library `name` names, searching as `SysLibrary::load` searches
+/// (`common/platform/unix/SysLibrary.cpp:75-102`).
+///
+/// `search` is tried, in order, before the undecorated name. The loader reads
+/// `LD_LIBRARY_PATH` once at process start, so a directory the interpreter
+/// learned of afterwards is unreachable through the undecorated attempt and
+/// has to be spelled out here; the caller supplies the directories that
+/// variable names.
+///
+/// `Ok(None)` is the answer where no library of that name loads, and where one
+/// loads but publishes no `RexxGetPackage`. Neither is an error here: the C++
+/// leaves that decision to the caller at both sites
+/// (`interpreter/package/LibraryPackage.cpp:199-204`, `:211-215`).
+///
+/// # Errors
+/// [`Refused`] where the package entry asks for a newer interpreter than this
+/// one.
+pub fn open(name: &str, search: &[PathBuf]) -> Result<Option<Library>, Refused> {
+    if name.len() > MAX_LIBRARY_NAME_LENGTH {
+        return Ok(None);
+    }
+    let file = format!("lib{name}{}", std::env::consts::DLL_SUFFIX);
+    let handle = search
+        .iter()
+        .find_map(|directory| dlopen(&directory.join(&file)))
+        .or_else(|| dlopen(Path::new(&file)))
+        .or_else(|| dlopen(&Path::new(SECOND_ATTEMPT_DIRECTORY).join(&file)));
+    let Some(handle) = handle else {
+        return Ok(None);
+    };
+    package_of(handle, name)
+}
+
+/// Open the library file at `path`, skipping the name search.
+///
+/// Answers as [`open`] does. `name` is what a raised [`Failure`] interpolates,
+/// which for a `::REQUIRES` is the spelling in the source rather than `path`.
+///
+/// # Errors
+/// [`Refused`] where the package entry asks for a newer interpreter than this
+/// one.
+pub fn open_path(path: &Path, name: &str) -> Result<Option<Library>, Refused> {
+    let Some(handle) = dlopen(path) else {
+        return Ok(None);
+    };
+    package_of(handle, name)
+}
+
+/// Whether the library at `path` loads at all, which is what separates
+/// [`open_path`]'s two `Ok(None)` answers from one another.
+#[must_use]
+pub fn loads(path: &Path) -> bool {
+    dlopen(path).is_some()
+}
+
+/// The version gate `LibraryPackage::loadPackage` applies before it registers
+/// anything (`interpreter/package/LibraryPackage.cpp:232-235`).
+///
+/// `name` is the library name the raised message interpolates.
+///
+/// # Errors
+/// [`Failure::LibraryVersion`] where `requiredVersion` is non-zero and above
+/// [`CURRENT_INTERPRETER_VERSION`].
+pub fn check_version(entry: &RexxPackageEntry, name: &str) -> Result<(), Failure> {
+    if entry.required_version != 0 && entry.required_version > CURRENT_INTERPRETER_VERSION {
+        return Err(Failure::LibraryVersion(name.to_owned()));
+    }
+    Ok(())
+}
+
+fn dlopen(path: &Path) -> Option<libloading::Library> {
+    // `Library::new` is `dlopen(path, RTLD_LAZY | RTLD_LOCAL)`, and glibc
+    // resolves the oracle's bare `RTLD_LAZY` (`SysLibrary.cpp:90`) to that
+    // same pair.
+    //
+    // SAFETY: `dlopen` runs the library's initialisers, which is code this
+    // process cannot vet, so no property of `path` makes the call sound. What
+    // establishes it is the interpreter's own contract: a Rexx program that
+    // names a library is authorised to load it, exactly the trust the oracle
+    // extends at `SysLibrary.cpp:90`. D-U1 puts the `unsafe` here so that
+    // `open`, `open_path` and `loads` stay safe for the rest of the tree.
+    unsafe { libloading::Library::new(path) }.ok()
+}
+
+fn package_of(handle: libloading::Library, name: &str) -> Result<Option<Library>, Refused> {
+    type GetPackage = unsafe extern "C" fn() -> *mut RexxPackageEntry;
+
+    let get_package = {
+        // SAFETY: the symbol is read at the signature `OOREXX_GET_PACKAGE`
+        // expands to, a nullary function answering a `RexxPackageEntry *`
+        // (`api/oorexxapi.h:255`). D5 freezes that header and makes it the
+        // declaration both sides compile against, so an extension exporting
+        // the name at another signature is outside the contract.
+        let symbol: libloading::Symbol<'_, GetPackage> =
+            match unsafe { handle.get(GET_PACKAGE_SYMBOL) } {
+                Ok(symbol) => symbol,
+                // A library without the exporter is a classic registration
+                // rather than a failure (`LibraryPackage.cpp:211-215`).
+                Err(_) => return Ok(None),
+            };
+        *symbol
+    };
+
+    // SAFETY: the address came from `dlsym` on a library `handle` still holds,
+    // so the code it names stays mapped across the call. The function answers
+    // the address of a static in that library and does nothing else
+    // (`api/oorexxapi.h:255`).
+    let entry = unsafe { get_package() };
+    if entry.is_null() {
+        // `LibraryPackage::load` treats a null table as "not a package"
+        // (`LibraryPackage.cpp:148-155`).
+        return Ok(None);
+    }
+
+    // SAFETY: `entry` is non-null and, by the contract above, is the address
+    // of the `RexxPackageEntry` static the library defines, which lives as
+    // long as the mapping `handle` holds. Its layout is the frozen header's.
+    // Being the library's own entry, each table pointer in it is null or the
+    // array the extension declared, and every string a literal in the same
+    // mapping.
+    unsafe { library_of(&*entry, handle, name) }
+}
+
+/// The library a package entry an extension registers describes
+/// (`PackageManager::registerPackage`), its code in whatever this process
+/// already has mapped, or `None` for a null entry.
+///
+/// # Errors
+/// [`Refused`] where the entry asks for a newer interpreter than this one.
+///
+/// # Safety
+/// A non-null `entry` is a `RexxPackageEntry` as [`library_of`] asks, in
+/// memory that stays mapped for as long as the process runs.
+pub unsafe fn registered(
+    entry: *const RexxPackageEntry,
+    name: &str,
+) -> Result<Option<Library>, Refused> {
+    if entry.is_null() {
+        return Ok(None);
+    }
+    // SAFETY: the caller guarantees the entry, its tables and its strings,
+    // and the running image's handle keeps them mapped.
+    unsafe { library_of(&*entry, libloading::os::unix::Library::this().into(), name) }
+}
+
+/// The library `entry` describes, refused where its version check refuses.
+///
+/// # Safety
+/// Each of `entry`'s table pointers is null or an array terminated by a
+/// zero-`style` row, and every string it or a row names is null or
+/// NUL-terminated; all of it outlives `handle`.
+unsafe fn library_of(
+    entry: &RexxPackageEntry,
+    handle: libloading::Library,
+    name: &str,
+) -> Result<Option<Library>, Refused> {
+    let refused = check_version(entry, name).err();
+    let mapping = Mapping::new(Some(handle));
+
+    // SAFETY: the caller guarantees the tables and strings.
+    let (package_name, version, methods) = unsafe {
+        (
+            c_bytes(entry.package_name),
+            c_bytes(entry.package_version),
+            method_table(entry.methods, &mapping),
+        )
+    };
+    let routines = match refused {
+        Some(_) => Vec::new(),
+        // SAFETY: as above.
+        None => unsafe { routine_table(entry.routines, &mapping) },
+    };
+    let library = Library {
+        name: package_name,
+        version,
+        methods,
+        routines,
+        loader: entry.loader.filter(|_| refused.is_none()),
+        unloader: entry.unloader,
+        mapping,
+        thread: None,
+    };
+    match refused {
+        Some(failure) => Err(Refused {
+            failure,
+            library: Box::new(library),
+        }),
+        None => Ok(Some(library)),
+    }
+}
+
+/// The bytes a C string holds, or `None` where `ptr` is null.
+///
+/// # Safety
+/// A non-null `ptr` addresses a NUL-terminated string that outlives the call.
+unsafe fn c_bytes(ptr: *const c_char) -> Option<Vec<u8>> {
+    if ptr.is_null() {
+        return None;
+    }
+    // SAFETY: the caller guarantees a non-null `ptr` is a live
+    // NUL-terminated string.
+    Some(unsafe { CStr::from_ptr(ptr) }.to_bytes().to_vec())
+}
+
+/// The rows of a `RexxMethodEntry[]`, read to its `REXX_LAST_METHOD`
+/// terminator.
+///
+/// # Safety
+/// A non-null `table` addresses an array holding a row whose `style` is zero,
+/// with every earlier row's `name` a live NUL-terminated string; all of it
+/// outlives the call.
+unsafe fn method_table(
+    table: *mut RexxMethodEntry,
+    mapping: &Arc<Mapping>,
+) -> Vec<NativeMethodEntry> {
+    let mut rows = Vec::new();
+    if table.is_null() {
+        return rows;
+    }
+    let mut at = table;
+    loop {
+        // SAFETY: `at` starts at the caller's array and advances only past a
+        // row that was not the terminator, so it stays inside it.
+        let row = unsafe { &*at };
+        // The oracle ends on `style == 0` and not on a null name
+        // (`LibraryPackage.cpp:320`).
+        if row.style == 0 {
+            return rows;
+        }
+        rows.push(NativeMethodEntry {
+            style: row.style,
+            // SAFETY: `REXX_METHOD_ENTRY` stringizes the name
+            // (`api/oorexxapi.h:223`), so a row the terminator check admits
+            // carries a non-null one, held in the library's own image.
+            name: unsafe { CStr::from_ptr(row.name) }.to_bytes().to_vec(),
+            entry_point: row.entry_point,
+            mapping: Arc::clone(mapping),
+        });
+        // SAFETY: `at` was not the terminator, so a further row follows it.
+        at = unsafe { at.add(1) };
+    }
+}
+
+/// The rows of a `RexxRoutineEntry[]`, read to its `REXX_LAST_ROUTINE`
+/// terminator.
+///
+/// # Safety
+/// As [`method_table`].
+unsafe fn routine_table(
+    table: *mut RexxRoutineEntry,
+    mapping: &Arc<Mapping>,
+) -> Vec<NativeRoutineEntry> {
+    let mut rows = Vec::new();
+    if table.is_null() {
+        return rows;
+    }
+    let mut at = table;
+    loop {
+        // SAFETY: `at` starts at the caller's array and advances only past a
+        // row that was not the terminator, so it stays inside it.
+        let row = unsafe { &*at };
+        // `loadRoutines` ends on `style == 0` (`LibraryPackage.cpp:270`).
+        if row.style == 0 {
+            return rows;
+        }
+        rows.push(NativeRoutineEntry {
+            style: row.style,
+            // SAFETY: `REXX_ROUTINE` stringizes the name
+            // (`api/oorexxapi.h:203`), so a row the terminator check admits
+            // carries a non-null one, held in the library's own image.
+            name: unsafe { CStr::from_ptr(row.name) }.to_bytes().to_vec(),
+            entry_point: row.entry_point,
+            mapping: Arc::clone(mapping),
+        });
+        // SAFETY: `at` was not the terminator, so a further row follows it.
+        at = unsafe { at.add(1) };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        CURRENT_INTERPRETER_VERSION, Held, Hook, Library, Mapping, NativeRoutineEntry, library_of,
+    };
+    use crate::layout::{RexxPackageEntry, RexxThreadContext_};
+
+    /// A close while a row is held for a call is refused and leaves the
+    /// mapping open; once the row drops it closes, and a row held after that
+    /// finds it closed.
+    #[test]
+    fn a_held_row_keeps_its_mapping_open() {
+        let mapping = Mapping::new(None);
+        let held = Held::new(&mapping, || mapping.is_open().then_some(()));
+        assert!(held.stub.is_some());
+        assert!(!mapping.close());
+        assert!(mapping.is_open());
+        drop(held);
+        assert!(mapping.close());
+        let after = Held::new(&mapping, || mapping.is_open().then_some(()));
+        assert!(after.stub.is_none());
+    }
+
+    extern "C-unwind" fn ignoring_hook(_thread: *mut RexxThreadContext_) {}
+
+    /// A package entry with no tables asking for `required`, declaring both
+    /// hooks.
+    fn entry_asking_for(required: std::ffi::c_int) -> RexxPackageEntry {
+        RexxPackageEntry {
+            size: 0,
+            api_version: 0,
+            required_version: required,
+            package_name: std::ptr::null(),
+            package_version: std::ptr::null(),
+            loader: Some(ignoring_hook),
+            unloader: Some(ignoring_hook),
+            routines: std::ptr::null_mut(),
+            methods: std::ptr::null_mut(),
+        }
+    }
+
+    /// A library refused for its version keeps its unloader and not its
+    /// loader: measured, oracle, such a library's unloader runs at
+    /// termination and its loader never does, since `loadPackage` raises
+    /// before it (`interpreter/package/LibraryPackage.cpp:232-245`).
+    #[test]
+    #[cfg(unix)]
+    #[cfg_attr(miri, ignore = "opens the running image")]
+    fn a_library_refused_for_its_version_keeps_only_its_unloader() {
+        let refused_entry = entry_asking_for(CURRENT_INTERPRETER_VERSION + 1);
+        // SAFETY: the entry has no tables and no strings.
+        let refused = unsafe {
+            library_of(
+                &refused_entry,
+                libloading::os::unix::Library::this().into(),
+                "forged",
+            )
+        }
+        .expect_err("a newer version is refused");
+        assert!(!refused.library.has_hook(Hook::Loader));
+        assert!(refused.library.has_hook(Hook::Unloader));
+
+        let accepted_entry = entry_asking_for(CURRENT_INTERPRETER_VERSION);
+        // SAFETY: as above.
+        let accepted = unsafe {
+            library_of(
+                &accepted_entry,
+                libloading::os::unix::Library::this().into(),
+                "forged",
+            )
+        }
+        .expect("the current version is accepted")
+        .expect("an entry is a package");
+        assert!(accepted.has_hook(Hook::Loader));
+        assert!(accepted.has_hook(Hook::Unloader));
+    }
+
+    /// `ROUTINE_TYPED_STYLE` (`api/oorexxapi.h:200`).
+    const ROUTINE_TYPED_STYLE: std::ffi::c_int = 1;
+
+    /// A routine row whose entry point is `tag`, which is never called.
+    fn row(name: &[u8], tag: usize) -> NativeRoutineEntry {
+        NativeRoutineEntry {
+            style: ROUTINE_TYPED_STYLE,
+            name: name.to_vec(),
+            entry_point: std::ptr::without_provenance_mut(tag),
+            mapping: super::Mapping::new(None),
+        }
+    }
+
+    /// Which row `name` finds, by its tag.
+    fn found(library: &Library, name: &[u8]) -> Option<usize> {
+        library.routine(name).map(|row| row.entry_point.addr())
+    }
+
+    /// No extension the C++ tree builds has two routines whose names differ
+    /// only in case, so the table is built here.
+    #[test]
+    #[cfg(unix)]
+    #[cfg_attr(miri, ignore = "opens the running image")]
+    fn a_routine_is_found_by_its_exact_spelling_before_its_case() {
+        let library = Library {
+            name: None,
+            version: None,
+            methods: Vec::new(),
+            routines: vec![
+                row(b"Foo", 1),
+                row(b"FOO", 2),
+                row(b"Foo", 3),
+                row(b"bar", 4),
+            ],
+            loader: None,
+            unloader: None,
+            mapping: super::Mapping::new(Some(libloading::os::unix::Library::this().into())),
+            thread: None,
+        };
+        assert_eq!(found(&library, b"FOO"), Some(2));
+        assert_eq!(found(&library, b"Foo"), Some(3));
+        assert_eq!(found(&library, b"foo"), Some(3));
+        assert_eq!(found(&library, b"BAR"), Some(4));
+        assert_eq!(found(&library, b"baz"), None);
+    }
+
+    /// The global table is keyed by the upper-cased name and the last row
+    /// wins, so `FOO` answers the row spelled `Foo` that follows it, which is
+    /// not the row [`Library::routine`] finds for the spelling `FOO`.
+    #[test]
+    #[cfg(unix)]
+    #[cfg_attr(miri, ignore = "opens the running image")]
+    fn the_global_table_keeps_the_last_row_of_each_upper_cased_name() {
+        let library = Library {
+            name: None,
+            version: None,
+            methods: Vec::new(),
+            routines: vec![
+                row(b"Foo", 1),
+                row(b"FOO", 2),
+                row(b"Foo", 3),
+                row(b"bar", 4),
+            ],
+            loader: None,
+            unloader: None,
+            mapping: super::Mapping::new(Some(libloading::os::unix::Library::this().into())),
+            thread: None,
+        };
+        assert_eq!(
+            library.package_routines(),
+            vec![
+                (b"FOO".to_vec(), &b"Foo"[..]),
+                (b"BAR".to_vec(), &b"bar"[..])
+            ]
+        );
+        assert_eq!(found(&library, b"Foo"), Some(3));
+    }
+}

@@ -4,7 +4,7 @@
 # One `id<TAB>depth<TAB>line<TAB>parent<TAB>title` per line, in document
 # order. `parent` is `-` for a section whose parent is the chapter.
 #
-# Derived by `cargo run -p rexx-extract --bin rexx-extract-docs`, whose
+# Derived by `cargo run -p interrexx-extract --bin rexx-extract-docs`, whose
 # module is `src/docs/provide.rs`. Re-derived and compared in both
 # directions by `tests/extract_docs.rs`: a row that stops being derived
 # is as red as one that appears.

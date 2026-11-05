@@ -1,0 +1,87 @@
+//! Differential harness for the scanner: scans each file named on the command
+//! line and prints one line per file, for diffing against `build/bin/rexxc`.
+use interrexx_parse::{ProgramSource, SourceKind, TokenKind, scan};
+
+fn main() {
+    let mut args = std::env::args().skip(1).peekable();
+    // With --tokens, also dump the token stream, which is what makes a
+    // disagreement diagnosable rather than merely visible.
+    let dump = args.peek().map(String::as_str) == Some("--tokens");
+    if dump {
+        args.next();
+    }
+    // With --interpret, treat each file's bytes the way INTERPRET treats its
+    // argument: one line from end to end, no Ctrl-Z truncation, no `#!` skip.
+    let kind = if args.peek().map(String::as_str) == Some("--interpret") {
+        args.next();
+        SourceKind::Interpret
+    } else {
+        SourceKind::Program
+    };
+    for path in args {
+        let bytes = std::fs::read(&path).expect("readable input file");
+        let source = ProgramSource::new(bytes, kind);
+        match scan(&source) {
+            Ok(scanned) => {
+                // Symbol occurrences against distinct symbols is the ratio
+                // interning trades allocations for, so the harness reports it.
+                let mut distinct = std::collections::BTreeSet::new();
+                let mut occurrences = 0usize;
+                for token in &scanned.tokens {
+                    if let TokenKind::Symbol { id, .. } = token.kind {
+                        occurrences += 1;
+                        distinct.insert(id);
+                    }
+                }
+                println!(
+                    "{path}: ok {} tokens, {occurrences} symbol occurrences over {} distinct, \
+                     {} interned, {} resources",
+                    scanned.tokens.len(),
+                    distinct.len(),
+                    scanned.symbols.len(),
+                    scanned.resources.len()
+                );
+                if dump {
+                    for token in &scanned.tokens {
+                        // A literal's value is printed in hex because it is
+                        // bytes, not text, and because `c2x` is what the
+                        // interpreter side of the comparison prints.
+                        let payload = match &token.kind {
+                            TokenKind::Symbol { id, class } => {
+                                format!("{} {class:?}", scanned.symbols.name(*id))
+                            }
+                            TokenKind::Literal { value } => {
+                                value.iter().map(|b| format!("{b:02X}")).collect()
+                            }
+                            TokenKind::Operator(op) | TokenKind::Assignment(op) => {
+                                format!("{op:?}")
+                            }
+                            _ => String::new(),
+                        };
+                        println!(
+                            "  line {} {:?} {:?} {payload}",
+                            source.line_of(token.span.start),
+                            token.span,
+                            token.kind.tag(),
+                        );
+                    }
+                    for body in &scanned.resources {
+                        // The line count is what `~items` reports on the
+                        // interpreter's side, so this is directly comparable.
+                        println!(
+                            "  resource at line {}: {} lines",
+                            source.line_of(scanned.tokens[body.directive].span.start),
+                            body.lines.len()
+                        );
+                    }
+                }
+            }
+            Err(error) => println!(
+                "{path}: E{}.{} line {}",
+                error.code(),
+                error.sub(),
+                source.line_of(error.byte)
+            ),
+        }
+    }
+}

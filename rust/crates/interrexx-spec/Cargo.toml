@@ -1,0 +1,19 @@
+[package]
+name = "interrexx-spec"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Parser and loader for the interrexx language specification under spec/"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+serde_json = "1"
+
+[[bin]]
+name = "mdbook-rexx-spec"
+path = "src/bin/mdbook-rexx-spec.rs"

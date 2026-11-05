@@ -1,0 +1,11 @@
+[package]
+name = "interrexx-lib"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The Rexx-written class library sources interrexx runs at start-up"
+
+[lints]
+workspace = true

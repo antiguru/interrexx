@@ -39,7 +39,7 @@
 # that can never agree is derived from `status` and the arm rather than
 # named here.
 #
-# Derived by `cargo run -p rexx-extract --bin rexx-extract-docs`, whose
+# Derived by `cargo run -p interrexx-extract --bin rexx-extract-docs`, whose
 # module is `src/docs/classes.rs`. Re-derived and compared in both
 # directions by `tests/extract_docs.rs`.
 #

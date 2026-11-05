@@ -340,6 +340,138 @@ dependencies = [
 ]
 
 [[package]]
+name = "interrexx"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "datadriven",
+ "dns-lookup",
+ "interrexx-api",
+ "interrexx-capi",
+ "interrexx-capi-rxapi",
+ "interrexx-classes",
+ "interrexx-core",
+ "interrexx-extract",
+ "interrexx-inventory",
+ "interrexx-lib",
+ "interrexx-num",
+ "interrexx-parse",
+ "interrexx-rxapi",
+ "interrexx-spec",
+ "libc",
+ "loom",
+ "nix",
+ "rayon",
+ "rustc-hash",
+ "rustix",
+ "tz-rs",
+]
+
+[[package]]
+name = "interrexx-api"
+version = "0.1.0"
+dependencies = [
+ "interrexx-core",
+ "libc",
+ "libloading",
+ "rustc-hash",
+]
+
+[[package]]
+name = "interrexx-bench"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "interrexx-oracle",
+]
+
+[[package]]
+name = "interrexx-capi"
+version = "0.1.0"
+dependencies = [
+ "interrexx",
+ "interrexx-api",
+ "libc",
+]
+
+[[package]]
+name = "interrexx-capi-rxapi"
+version = "0.1.0"
+dependencies = [
+ "interrexx-api",
+ "libc",
+]
+
+[[package]]
+name = "interrexx-classes"
+version = "0.1.0"
+dependencies = [
+ "interrexx-core",
+]
+
+[[package]]
+name = "interrexx-core"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "interrexx-num",
+ "rustc-hash",
+]
+
+[[package]]
+name = "interrexx-extract"
+version = "0.1.0"
+
+[[package]]
+name = "interrexx-inventory"
+version = "0.1.0"
+dependencies = [
+ "quick-xml",
+]
+
+[[package]]
+name = "interrexx-lib"
+version = "0.1.0"
+
+[[package]]
+name = "interrexx-num"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "interrexx-inventory",
+]
+
+[[package]]
+name = "interrexx-oracle"
+version = "0.1.0"
+
+[[package]]
+name = "interrexx-parse"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "interrexx-inventory",
+ "interrexx-num",
+ "rustc-hash",
+]
+
+[[package]]
+name = "interrexx-rxapi"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "interrexx-api",
+ "rustix",
+]
+
+[[package]]
+name = "interrexx-spec"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -385,23 +517,6 @@ checksum = "754ca22de805bb5744484a5b151a9e1a8e837d5dc232c2d7d8c2e3492edc8b60"
 dependencies = [
  "cfg-if",
  "windows-link",
-]
-
-[[package]]
-name = "librexx"
-version = "0.1.0"
-dependencies = [
- "libc",
- "rexx-api",
- "rexx-exec",
-]
-
-[[package]]
-name = "librexxapi"
-version = "0.1.0"
-dependencies = [
- "libc",
- "rexx-api",
 ]
 
 [[package]]
@@ -615,121 +730,6 @@ name = "regex-syntax"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
-
-[[package]]
-name = "rexx-api"
-version = "0.1.0"
-dependencies = [
- "libc",
- "libloading",
- "rexx-core",
- "rustc-hash",
-]
-
-[[package]]
-name = "rexx-bench"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "rexx-oracle",
-]
-
-[[package]]
-name = "rexx-classes"
-version = "0.1.0"
-dependencies = [
- "rexx-core",
-]
-
-[[package]]
-name = "rexx-core"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "rexx-num",
- "rustc-hash",
-]
-
-[[package]]
-name = "rexx-exec"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "datadriven",
- "dns-lookup",
- "libc",
- "librexx",
- "librexxapi",
- "loom",
- "nix",
- "rayon",
- "rexx-api",
- "rexx-classes",
- "rexx-core",
- "rexx-extract",
- "rexx-inventory",
- "rexx-lib",
- "rexx-num",
- "rexx-parse",
- "rexx-rxapi",
- "rexx-spec",
- "rustc-hash",
- "rustix",
- "tz-rs",
-]
-
-[[package]]
-name = "rexx-extract"
-version = "0.1.0"
-
-[[package]]
-name = "rexx-inventory"
-version = "0.1.0"
-dependencies = [
- "quick-xml",
-]
-
-[[package]]
-name = "rexx-lib"
-version = "0.1.0"
-
-[[package]]
-name = "rexx-num"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "rexx-inventory",
-]
-
-[[package]]
-name = "rexx-oracle"
-version = "0.1.0"
-
-[[package]]
-name = "rexx-parse"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "rexx-inventory",
- "rexx-num",
- "rustc-hash",
-]
-
-[[package]]
-name = "rexx-rxapi"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "rexx-api",
- "rustix",
-]
-
-[[package]]
-name = "rexx-spec"
-version = "0.1.0"
-dependencies = [
- "serde_json",
-]
 
 [[package]]
 name = "rustc-hash"

@@ -1,0 +1,664 @@
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+changestr(o, 'a', 'b')
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 2 must have a string value. (2 of 2 runs)
+refuses string=object
+changestr('a', 'a', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+countstr(o, 'zaz')
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+pos(o, 'zzz')
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+lastpos(o, 'zzz')
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+overlay(o, 'abc')
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+insert(o, 'abc')
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+translate('abc', o, 'abc')
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+verify('abc', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 2 must have a string value. (2 of 2 runs)
+refuses string=object
+verify('abc', 'a', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+strip('zz', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 2 must have a string value. (2 of 2 runs)
+refuses string=object
+strip('zabz', 'B', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+compare('zzz', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+abbrev('zzz', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+wordpos(o, 'a zzz b')
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+bitand('a', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+datatype('1', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  INSERT argument 3 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+insert('a', 'b', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  SPACE argument 2 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+space('a b', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  COPIES argument 2 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+copies('a', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  D2X argument 2 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+d2x(1, o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  C2D argument 2 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+c2d('a', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  FORMAT argument 2 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+format(1, o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  TRUNC argument 2 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+trunc(1, o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  RANDOM argument 1 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+random(o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  RANDOM argument 2 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+random(1, o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  RANDOM argument 3 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+random(1, 2, o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  SOURCELINE argument 1 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+sourceline(o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  ERRORTEXT argument 1 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+errortext(o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  ARG argument 1 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+arg(o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  CHANGESTR argument 4 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+changestr('a', 'a', 'b', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  POS argument 3 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+pos('z', 'zz', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  POS argument 4 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+pos('z', 'zz', 1, o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  SUBSTR argument 2 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+substr('abc', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  LEFT argument 2 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+left('abc', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  ABBREV argument 3 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+abbrev('zz', 'z', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  WORDINDEX argument 2 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+wordindex('a b', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  WORDLENGTH argument 2 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+wordlength('a b', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  OVERLAY argument 3 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=object
+overlay('a', 'b', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.23:  SPACE argument 3 must be a single character; found "The NIL object". (2 of 2 runs)
+refuses string=object
+space('a b', 1, o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.23:  SUBSTR argument 4 must be a single character; found "The NIL object". (2 of 2 runs)
+refuses string=object
+substr('abc', 1, 1, o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.23:  CENTER argument 3 must be a single character; found "The NIL object". (2 of 2 runs)
+refuses string=object
+center('a', 5, o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.23:  TRANSLATE argument 4 must be a single character; found "The NIL object". (2 of 2 runs)
+refuses string=object
+translate('abc', 'x', 'y', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.23:  COMPARE argument 3 must be a single character; found "The NIL object". (2 of 2 runs)
+refuses string=object
+compare('a', 'b', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.19:  DATE argument 2, "The NIL object", is not in the format described by argument 3, "N". (2 of 2 runs)
+refuses string=object
+date('N', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.19:  TIME argument 2, "The NIL object", is not in the format described by argument 3, "N". (2 of 2 runs)
+refuses string=object
+time('N', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.28:  XRANGE argument 1 must be a character class name or a single character; found "The NIL object". (2 of 2 runs)
+refuses string=object
+xrange(o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.904:  CONDITION argument 1 must be one of ACDEIORS; found "The NIL object". (2 of 2 runs)
+refuses string=object
+condition(o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 93.904:  Method argument 1 must be a number; found "a Q". (2 of 2 runs)
+refuses string=object
+max(1, o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 2 must have a string value. (2 of 2 runs)
+refuses string=directory
+changestr('a', 'a', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 2 must have a string value. (2 of 2 runs)
+refuses string=directory
+strip('zabz', 'B', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=directory
+datatype('1', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  COPIES argument 2 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=directory
+copies('a', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  RANDOM argument 3 must be a whole number; found "a Q". (2 of 2 runs)
+refuses string=directory
+random(1, 2, o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.23:  SUBSTR argument 4 must be a single character; found "The NIL object". (2 of 2 runs)
+refuses string=directory
+substr('abc', 1, 1, o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.23:  COMPARE argument 3 must be a single character; found "The NIL object". (2 of 2 runs)
+refuses string=directory
+compare('a', 'b', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.19:  DATE argument 2, "The NIL object", is not in the format described by argument 3, "N". (2 of 2 runs)
+refuses string=directory
+date('N', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.28:  XRANGE argument 1 must be a character class name or a single character; found "The NIL object". (2 of 2 runs)
+refuses string=directory
+xrange(o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.904:  CONDITION argument 1 must be one of ACDEIORS; found "The NIL object". (2 of 2 runs)
+refuses string=directory
+condition(o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 93.904:  Method argument 1 must be a number; found "a Q". (2 of 2 runs)
+refuses string=directory
+max(1, o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  CHANGESTR argument 4 must be a whole number; found "x". (2 of 2 runs)
+refuses string=object
+changestr('a', 'a', o, 'x')
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 40.12:  POS argument 3 must be a whole number; found "x". (2 of 2 runs)
+refuses string=object
+pos(o, 'zz', 'x')
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+verify('abc', o, 'Q')
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+insert(o, 'b', -1)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 88.909:  Argument 1 must have a string value. (2 of 2 runs)
+refuses string=object
+lastpos(o, 'zz', 0)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# refused; oracle Error 93.915:  Method option must be one of "BLT"; found "Q". (2 of 2 runs)
+refuses string=object
+strip('zz', 'Q', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# a .nil the program passes is its own string value, armed, oracle 2 of 2 runs
+call string=object
+changestr('a', 'a', .nil)
+----
+rc 0
+[stdout]
+The NIL object
+after
+[stderr]
+
+# a .nil the program passes is its own string value, armed, oracle 2 of 2 runs
+call string=object
+translate('abc', .nil, 'abc')
+----
+rc 0
+[stdout]
+The
+after
+[stderr]
+
+# a .nil the program passes is its own string value, armed, oracle 2 of 2 runs
+call string=object
+copies('a', .nil)
+----
+rc 216
+[stdout]
+[stderr]
+     2 *-* say copies('a', .nil)
+Error 40 running PROGRAM line 2:  Incorrect call to routine.
+Error 40.12:  COPIES argument 2 must be a whole number; found "The NIL object".
+
+# a .nil the program passes is its own string value, unarmed, oracle 2 of 2 runs
+program
+say changestr('a', 'a', .nil)
+say copies('a', .nil)
+----
+rc 216
+[stdout]
+The NIL object
+[stderr]
+     2 *-* say copies('a', .nil)
+Error 40 running PROGRAM line 2:  Incorrect call to routine.
+Error 40.12:  COPIES argument 2 must be a whole number; found "The NIL object".
+
+# a target position: oracle SIGSEGV rc 139
+refuses string=object
+changestr('a', o, 'b')
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# a target position: oracle 1190 rc 0, a layout read
+refuses string=object
+pos('z', o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented
+
+# a target position: oracle 93.943 found "The NIL object"
+refuses string=directory
+trunc(o)
+----
+rc 120
+[stdout]
+[stderr]
+interrexx: a STRING method answering an object with no string value is not implemented

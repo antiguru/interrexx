@@ -1,0 +1,1802 @@
+//! Expression evaluation, parts one and two: terms, arithmetic,
+//! concatenation, comparison and logic.
+
+use crate::activation::CallType;
+use crate::error::Raised;
+use crate::run::CallEntry;
+use crate::run::{CallResolution, Resolved, Started, function_started};
+use crate::value::{Referent, canonical_small_int, exact_small_int, within_digits};
+use crate::{Code, Failure, Interp, Loud, StackSpan};
+use interrexx_core::{Body, Decoded, INLINE_BYTES, NotNumeric, ObjRef};
+use interrexx_num::{CompareOp, DivOp, Number};
+use interrexx_parse::{CallTarget, Expr, ExprKind, Operator, PrefixOp, SymbolId};
+
+/// The evaluation-depth limit: `eval`'s own recursion, one level per
+/// left-deep term, refuses anything past this depth with 11.1 ("Insufficient
+/// control stack space") rather than letting the interpreter thread's guard
+/// page abort the process silently.
+const MAX_EVAL_DEPTH: usize = 100_000;
+
+/// Which of the three bare-symbol reads an expression is, carried where the
+/// `ExprKind` itself is not.
+pub(crate) const LOGICAL_TRUE: ObjRef = ObjRef::inline_byte(b'1');
+/// See [`LOGICAL_TRUE`].
+pub(crate) const LOGICAL_FALSE: ObjRef = ObjRef::inline_byte(b'0');
+
+/// The value a comparison or logical operator answers with.
+pub(crate) const fn logical(holds: bool) -> ObjRef {
+    if holds { LOGICAL_TRUE } else { LOGICAL_FALSE }
+}
+
+/// What an arithmetic operator's left operand turned out to be.
+enum ArithOperand {
+    Number(Number),
+    Send(ObjRef),
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum SymbolRead {
+    /// `ExprKind::Variable`: one slot, and the derived name when it is unset.
+    Simple,
+    /// `ExprKind::Stem`: one slot too, but a miss allocates a real
+    /// `Body::Stem` there rather than deriving a name (`Interp::read_stem`).
+    Stem,
+    /// `ExprKind::Compound`: a stem slot and a tail key resolved at the read
+    /// site, neither of which is the symbol's own slot -- which is why a
+    /// compound is the kind a compiled read has no slot for.
+    Compound,
+    /// `ExprKind::DotVariable`: an environment symbol, which traces `>E>`.
+    Environment,
+}
+
+impl Interp {
+    /// Evaluates one expression node, and keeps the depth bookkeeping the
+    /// evaluation-depth limit needs.
+    pub(crate) fn enter_eval_node<T>(&mut self, anchor: *const T) -> Result<(), Failure> {
+        let here = anchor as usize;
+
+        self.activity.depth += 1;
+        if self.activity.depth == 1 {
+            self.activity.stack_entry = here;
+        }
+        if self.activity.depth > self.activity.max_depth {
+            self.activity.max_depth = self.activity.depth;
+            self.activity.stack_first = self.activity.stack_entry;
+            self.activity.stack_deepest = here;
+        }
+
+        // The evaluation-depth limit, checked **after** the bookkeeping
+        // above so a run that trips it still gets an accurate `StackSpan`
+        // (the deepest level reached is this one, not the one before it).
+        // `> MAX_EVAL_DEPTH`, not `>=`: a 100,000-term left-deep expression
+        // reaches depth exactly 100,000 and the oracle is measured to
+        // survive and print an answer at that depth
+        // (Deviation 2), so the check must fire
+        // one level *above* the one the oracle is known to handle, or the
+        // one depth we are supposed to match becomes the first one we
+        // refuse.
+        if self.activity.depth > MAX_EVAL_DEPTH || self.stack_exhausted(anchor) {
+            self.activity.depth -= 1;
+            return Err(Raised::insufficient_stack().into());
+        }
+        Ok(())
+    }
+
+    pub(crate) fn eval(&mut self, code: &Code<'_>, expr: &Expr) -> Result<ObjRef, Failure> {
+        let probe = 0u8;
+        self.enter_eval_node(&raw const probe)?;
+        let value = self.eval_node(code, expr);
+        self.activity.depth -= 1;
+        // `TRACE I`'s own value events, inserted here and in
+        // [`Interp::eval_in_parse`], which repeats this depth bookkeeping, so
+        // a post-order event with the value already in hand needs no
+        // threading through `eval_node`'s own arms at all. Only `Ok` gets
+        // one: a raise has no value to show, and the oracle's own trace
+        // never shows one for a failing sub-expression either (the *clause*
+        // echo already happened, and the raise's own report is what
+        // follows).
+        if let Ok(v) = &value
+            && self.tracing_intermediates()
+            && self.trace_intermediate_held(code, expr, *v)
+        {
+            return Err(self.take_held_trace_failure());
+        }
+        value
+    }
+
+    /// [`Interp::eval`] for PARSE's source and patterns, taking its trace
+    /// hook's `Result` in place: measured by callgrind, `eval`'s own shape
+    /// there costs `parse` +0.32%, and this shape in `eval` costs
+    /// `pingguard` +0.07%.
+    pub(crate) fn eval_in_parse(
+        &mut self,
+        code: &Code<'_>,
+        expr: &Expr,
+    ) -> Result<ObjRef, Failure> {
+        let probe = 0u8;
+        self.enter_eval_node(&raw const probe)?;
+        let value = self.eval_node(code, expr);
+        self.activity.depth -= 1;
+        if let Ok(v) = &value {
+            self.trace_intermediate(code, expr, *v)?;
+        }
+        value
+    }
+
+    /// [`Interp::trace_intermediate_event`], its condition held for
+    /// [`Interp::take_held_trace_failure`], answering whether it failed.
+    #[cold]
+    #[inline(never)]
+    fn trace_intermediate_held(&mut self, code: &Code<'_>, expr: &Expr, v: ObjRef) -> bool {
+        let traced = self.trace_intermediate_event(code, expr, v);
+        self.hold_trace_failure(traced)
+    }
+
+    /// `>L>`/`>V>`/`>E>`/`>C>`/`>O>`/`>P>`/`>F>`, dispatched on `expr.kind`
+    /// (`>A>` is not here: an argument's line belongs to the *call site*
+    /// that evaluated it, not to the argument expression's own node --
+    /// `Interp::invoke_call`, `run/call.rs`, owns it) --
+    /// `eval`'s own hook, called once per node with `value` already
+    /// computed. A no-op immediately when `!self.tracing_intermediates()`
+    /// (`TRACE I` only; `TRACE R` never reaches any of these, measured),
+    /// so the match below only ever runs its own `to_text` cost under `I`.
+    #[inline]
+    pub(crate) fn trace_intermediate(
+        &mut self,
+        code: &Code<'_>,
+        expr: &Expr,
+        value: ObjRef,
+    ) -> Result<(), Failure> {
+        if !self.tracing_intermediates() {
+            return Ok(());
+        }
+        self.trace_intermediate_event(code, expr, value)
+    }
+
+    /// [`Interp::trace_intermediate`]'s body, entered only under `TRACE I`.
+    /// `value` is rooted while its line is written, because a delivery to
+    /// `.TraceOutput` runs Rexx clauses that can collect.
+    #[inline(never)]
+    fn trace_intermediate_event(
+        &mut self,
+        code: &Code<'_>,
+        expr: &Expr,
+        value: ObjRef,
+    ) -> Result<(), Failure> {
+        let frame = self.roots.activity_mut().push_frame();
+        self.roots.activity_mut().push_temp(value);
+        let traced = self.trace_intermediate_line(code, expr, value);
+        self.roots.activity_mut().pop_frame(frame);
+        traced
+    }
+
+    fn trace_intermediate_line(
+        &mut self,
+        code: &Code<'_>,
+        expr: &Expr,
+        value: ObjRef,
+    ) -> Result<(), Failure> {
+        let indent = self.activity.clause_state.current_value_indent;
+        match &expr.kind {
+            // `Constant`'s own shape is reasoned from `Literal`'s measured
+            // one, not independently probed (this crate's own report says
+            // so) -- both are `>L>` with no tag.
+            // `echo_literal` rather than an open-coded render plus
+            // `trace_literal`, because the compiled stream's own
+            // `Op::TraceLiteral` emits the identical line from a register and
+            // the two must not be able to disagree about it.
+            ExprKind::Literal(_) | ExprKind::Constant(_) => self.echo_literal(value),
+            // The three bare-symbol reads, all through the one function
+            // `crate::ir::Op::TraceRead` enters from a register -- for the
+            // reason `echo_literal` above is one function: a compiled read
+            // emits nothing of its own, so the line has to come from an op,
+            // and the two emissions must not be able to disagree.
+            // `echo_symbol_read`'s own doc comment has what a compound owes
+            // that this does not emit.
+            ExprKind::Variable(id) | ExprKind::Stem(id) | ExprKind::Compound(id) => {
+                self.echo_symbol_read(code, *id, value)?;
+            }
+            // `.NIL`/`.TRUE`/`.FALSE` -- `>E>`. The other `DotVariable` names all fail loudly
+            // before reaching here (`eval_node`'s own arm), so this is
+            // exhaustive over what can arrive.
+            ExprKind::DotVariable(id) => self.echo_environment_symbol(code, *id, value)?,
+            // `>P>`, not `>O>` -- a prefix operator's line is its own, which
+            // is why this is not the arm below with a different operator type.
+            // `echo_prefix_op` rather than an open-coded render plus
+            // `trace_prefix_op`, because the compiled stream's own
+            // `crate::ir::Op::TracePrefix` emits the identical line from a
+            // register and the two must not be able to disagree -- the reason
+            // `echo_literal` above is one function.
+            ExprKind::Prefix { op, .. } => self.echo_prefix_op(*op, value),
+            // Every binary operator, arithmetic, comparison, logical and
+            // concatenation alike, traces as `>O>` -- not independently
+            // probed for every family, reasoned from the arithmetic
+            // transcript this task's report has (`RexxBinaryOperator`'s own
+            // base `evaluate` is where the oracle's `traceOperator` call
+            // sits, shared by every operator subclass the same way this one
+            // `match` arm is shared here).
+            // `echo_operator` rather than an open-coded render plus
+            // `trace_operator`, because the compiled stream's own
+            // `crate::ir::Op::TraceOperator` emits the identical line from a
+            // register and the two must not be able to disagree -- the reason
+            // `echo_literal` above is one function.
+            ExprKind::Binary { op, .. } => self.echo_operator(*op, value),
+            // `>name`/`<name` traces as an **operator**, not as the read of
+            // the variable it names: `>O>   ">" => "PQ"`, the referenced
+            // variable's own *name* as the operator's value
+            // (`VariableReferenceOp::evaluate`, `VariableReferenceOp.cpp:110`
+            // -`118`, read directly -- `getVariableReference` never reads the
+            // variable's value at all, so there is no `>V>` line to go with
+            // it). Measured at both spellings and in both positions: `say
+            // >pq`, `say <pq`, `call sub >pq` and `call sub <pq` all trace
+            // `>O>   ">" => "PQ"`, the `<` form included -- the oracle's own
+            // call passes the literal `">"` regardless of which byte was
+            // written.
+            ExprKind::VariableReference(inner) => {
+                let (ExprKind::Variable(id) | ExprKind::Stem(id)) = &inner.kind else {
+                    // `interrexx-parse` admits nothing else inside a reference
+                    // (20.930 at parse time), and `eval_node`'s own arm
+                    // fails loudly on anything that arrives regardless, so
+                    // there is no value here to have traced.
+                    return Ok(());
+                };
+                // The reference's own name, `value->getName()`: an alias
+                // made by `USE ARG >x` names the variable it refers to.
+                let name = match self.as_variable_reference(value) {
+                    Some(reference) => reference.name.to_vec(),
+                    None => code.symbols.name(*id).as_bytes().to_vec(),
+                };
+                self.trace_operator(indent, b">", &name);
+            }
+            // `>F>`, the **function form only** -- `trace_function`'s own
+            // doc comment has the measured pair that separates it from
+            // `CALL`. The tag is the name as the call site spells it: a
+            // symbol target arrives already upcased and a literal one
+            // verbatim (`interrexx-parse`'s own `CallTarget`), which is the same
+            // pair of spellings `eval_call` resolves against.
+            ExprKind::Call { target, .. } => {
+                let name = match target {
+                    CallTarget::Symbol(id) => code.symbols.name(*id).as_bytes().to_vec(),
+                    CallTarget::Literal(bytes) => bytes.to_vec(),
+                };
+                let text = self.traced_string_value_text(value)?;
+                self.trace_function(indent, &name, &text);
+            }
+            // `>F>` too, tagged with the routine name **alone** -- measured,
+            // `trace i` over `say w:wroutine()` traces
+            // `>F>   WROUTINE => "wroutine ran"`, with no qualifier on the
+            // tag, which is why this shares the arm above's emitter rather
+            // than `>N>`'s.
+            ExprKind::QualifiedCall { name, .. } => {
+                let name = code.symbols.name(*name).as_bytes().to_vec();
+                let text = self.traced_string_value_text(value)?;
+                self.trace_function(indent, &name, &text);
+            }
+            // `>N>`, tagged `namespace:class` -- `traceClassResolution`
+            // (`RexxActivation.hpp:358`), whose tag is the two symbols joined
+            // by a colon.
+            ExprKind::ClassResolver { namespace, name } => {
+                let mut tag = code.symbols.name(*namespace).as_bytes().to_vec();
+                tag.push(b':');
+                tag.extend_from_slice(code.symbols.name(*name).as_bytes());
+                let text = self.traced_string_value_text(value)?;
+                self.trace_namespace(indent, &tag, &text);
+            }
+            // **`>M>` is not here**, and that is the one value prefix this
+            // hook does not own: the message-assignment form is an
+            // instruction that never evaluates its term as an expression, so
+            // a hook arm would print the line for one of the two forms only.
+            // `Interp::message_term` (`dispatch.rs`) emits it instead, at the
+            // same point in the sequence this hook would have.
+            ExprKind::Message { .. } => {}
+            // A comma list (`ExprKind::Logical`) has no value line of its
+            // own -- each element is a full `eval` call in its own right
+            // (`eval_logical_list`), and traces itself through this same
+            // function when it runs. Every other unimplemented `ExprKind`
+            // never reaches here at all (`eval_node`'s own loud fallback).
+            _ => {}
+        }
+        Ok(())
+    }
+
+    /// One bare symbol's read: the whole of what `eval_node`'s own
+    /// `Variable`/`Stem`/`Compound` arms do, entered from there and from
+    /// `crate::ir::Op::Load`.
+    pub(crate) fn read_symbol(
+        &mut self,
+        code: &Code<'_>,
+        read: SymbolRead,
+        id: SymbolId,
+        at: Option<usize>,
+    ) -> Result<ObjRef, Failure> {
+        match read {
+            SymbolRead::Simple => {
+                let (value, novalue) = self.read_at(code, id, at);
+                self.novalue_check(novalue, value)?;
+                Ok(value)
+            }
+            SymbolRead::Stem => Ok(self.read_stem_at(code.symbols.name(id).as_bytes(), at)),
+            // `id` names the *whole* compound (its interned spelling is the
+            // full dotted text); the split decomposes it into the stem's own
+            // name and the tail pieces `tail_key` (`stem.rs`) resolves into
+            // the one key `stem_get` looks up.
+            SymbolRead::Compound => {
+                debug_assert!(
+                    at.is_none(),
+                    "a compound read was handed a slot, and the slot it reads is the stem's"
+                );
+                let (stem_name, stem_at) = code.stem(id);
+                // Borrowed and handed back, rather than a fresh key per read
+                // -- see `Interp::key_buffer`. The `?` below is why the return
+                // is placed before it: an early exit there would lose the
+                // buffer, which is safe but forfeits the reuse.
+                let mut key = self.take_key_buffer();
+                if let Err(failure) = self.tail_key_into(code, id, &mut key) {
+                    self.give_key_buffer(key);
+                    return Err(failure);
+                }
+                // `>C>`, here rather than in `echo_symbol_read_line`, so that
+                // the tail is resolved once per reference -- that function's
+                // own doc comment has the reason.
+                if self.tracing_intermediates() {
+                    let tag = code.symbols.name(id).as_bytes().to_vec();
+                    let mut printed = stem_name.to_vec();
+                    printed.extend_from_slice(&key);
+                    let indent = self.activity.clause_state.current_value_indent;
+                    self.trace_compound_name(indent, &tag, &printed);
+                }
+                let (value, novalue) = self.stem_get_at(stem_name, stem_at, &key);
+                self.give_key_buffer(key);
+                self.novalue_check(novalue, value)?;
+                Ok(value)
+            }
+            SymbolRead::Environment => self.environment_symbol(code, id),
+        }
+    }
+
+    /// An environment symbol's value.
+    ///
+    /// **The parser's own names never reach resolution and every other one
+    /// does.** `LanguageParser`'s constructor installs a
+    /// `SpecialDotVariable` retriever for `.NIL`, `.TRUE` and `.FALSE`
+    /// (`parser/LanguageParser.cpp:781`-`783`), so those three are parse-time
+    /// constants in the oracle too. Measured: with `::class True` in the
+    /// file, `say .TRUE` still prints `1` where `say value('.TRUE')` prints
+    /// `The TRUE class`, because only the second goes through
+    /// `getVariableRetriever`.
+    fn environment_symbol(&mut self, code: &Code<'_>, id: SymbolId) -> Result<ObjRef, Failure> {
+        match code.symbols.name(id) {
+            ".NIL" => Ok(ObjRef::NIL),
+            // `.true`/`.false` need no representation of their own (D15):
+            // they are the one-byte strings "1" and "0", built fresh here the
+            // same way any other text value is.
+            ".TRUE" => Ok(LOGICAL_TRUE),
+            ".FALSE" => Ok(self.text(b"0")),
+            other => {
+                let name = other.as_bytes().to_vec();
+                self.dot_variable(&name)
+            }
+        }
+    }
+
+    /// The `>E>` line one environment symbol's read owes.
+    pub(crate) fn echo_environment_symbol(
+        &mut self,
+        code: &Code<'_>,
+        id: SymbolId,
+        value: ObjRef,
+    ) -> Result<(), Failure> {
+        let indent = self.activity.clause_state.current_value_indent;
+        let tag = code.symbols.name(id).as_bytes().to_vec();
+        let text = self.traced_string_value_text(value)?;
+        self.trace_dotvar(indent, &tag, &text);
+        Ok(())
+    }
+
+    /// The `>V>` line one bare-symbol read owes, or `>E>` for an environment
+    /// symbol.
+    #[inline(always)]
+    pub(crate) fn echo_symbol_read(
+        &mut self,
+        code: &Code<'_>,
+        id: SymbolId,
+        value: ObjRef,
+    ) -> Result<(), Failure> {
+        if !self.tracing_intermediates() {
+            return Ok(());
+        }
+        self.echo_symbol_read_line(code, id, value)
+    }
+
+    /// The name-building and the lines, out of line behind
+    /// [`Interp::echo_symbol_read`]'s gate. An environment symbol, whose
+    /// spelling starts with its period, echoes `>E>` instead.
+    #[inline(never)]
+    fn echo_symbol_read_line(
+        &mut self,
+        code: &Code<'_>,
+        id: SymbolId,
+        value: ObjRef,
+    ) -> Result<(), Failure> {
+        if code.symbols.name(id).starts_with('.') {
+            return self.echo_environment_symbol(code, id, value);
+        }
+        let indent = self.activity.clause_state.current_value_indent;
+        let tag = code.symbols.name(id).as_bytes().to_vec();
+        let text = self.traced_string_value_text(value)?;
+        self.trace_variable(indent, &tag, &text, value);
+        Ok(())
+    }
+
+    pub(crate) fn eval_node(&mut self, code: &Code<'_>, expr: &Expr) -> Result<ObjRef, Failure> {
+        match &expr.kind {
+            ExprKind::Literal(bytes) => Ok(self.literal(bytes)),
+            // A constant's value is its own upcased spelling, which is
+            // observable rather than incidental: `say 1e5` prints `1E5`.
+            ExprKind::Constant(id) => Ok(self.literal(code.symbols.name(*id).as_bytes())),
+            // The three bare-symbol reads, each through the one function
+            // `crate::ir::Op::Load` enters with the slot already resolved.
+            // They are three *different* operations sharing one entry point,
+            // not one operation under three spellings -- `read_symbol`'s own
+            // doc comment has what separates them -- so the dispatch is on a
+            // kind rather than absent.
+            ExprKind::Variable(id) => self.read_symbol(code, SymbolRead::Simple, *id, None),
+            ExprKind::Stem(id) => self.read_symbol(code, SymbolRead::Stem, *id, None),
+            ExprKind::Compound(id) => self.read_symbol(code, SymbolRead::Compound, *id, None),
+
+            ExprKind::DotVariable(id) => self.environment_symbol(code, *id),
+
+            ExprKind::Prefix { op, operand } => self.eval_prefix(code, *op, operand),
+
+            // Arithmetic (`+ - * / % // **`), through `interrexx-num` under the
+            // settings in force *now* -- the rendering of the result is fixed
+            // at creation (D15),
+            // but the DIGITS/FORM an operation computes *under* is always
+            // the activation's current ones, read fresh on every call. Ahead
+            // of the arm below, which is every *other* binary operator, so
+            // that arithmetic reaches `eval_arithmetic`: `**`'s exponent is
+            // not converted the way its base is, and that asymmetry has
+            // nowhere to live in a shared operand path.
+            ExprKind::Binary { op, left, right } if is_arithmetic(*op) => {
+                self.eval_arithmetic(code, *op, left, right)
+            }
+
+            // Concatenation, comparison and `&`/`|`/`&&`, which share this operand
+            // prologue exactly: **both operands are always evaluated, left
+            // then right, and never short-circuited** -- measured, `say (0 &
+            // 'x')` raises 34.901 on `"x"` though the result is already
+            // decided. What each operator then does with two values is
+            // `apply_binary`, entered from here and from
+            // `crate::ir::Op::Binary`.
+            ExprKind::Binary { op, left, right }
+                if is_native_binary(*op) && !is_arithmetic(*op) =>
+            {
+                let frame = self.roots.activity_mut().push_frame();
+                let left_value = self.eval(code, left)?;
+                self.roots.activity_mut().push_temp(left_value);
+                let right_value = self.eval(code, right)?;
+                self.roots.activity_mut().push_temp(right_value);
+                // Bound rather than propagated with `?`, so the frame is
+                // popped on the failure path too -- an operator's own raise
+                // discards its operands here, where the `?` on an operand's
+                // evaluation above leaves them for `Op::Clause`'s region to
+                // truncate. The module doc has why both are safe.
+                let result = self.apply_binary(*op, left_value, right_value);
+                self.roots.activity_mut().pop_frame(frame);
+                result
+            }
+
+            // The comma-separated conditional list (`IF a, b THEN`, and
+            // `WHEN`/`GUARD`/`WHILE`/`UNTIL`'s own versions of the same
+            // syntax) -- see `eval_logical_list`'s own doc comment for the
+            // short-circuit and sub-number this arm alone can give it.
+            ExprKind::Logical(items) => self.eval_logical_list(code, items),
+
+            // `>name`/`<name` answers a `VariableReference`, the variable
+            // itself rather than its value -- measured, oracle rc 0:
+            // `vr = 5; o = >vr; say o~class~id` is `VariableReference`, and
+            // `o~value = 7` writes `vr`.
+            ExprKind::VariableReference(inner) => self.variable_reference(code, inner),
+
+            // `f(...)`/`"f"(...)` -- see `eval_call`'s own doc.
+            ExprKind::Call { target, args } => self.eval_call(code, target, args),
+
+            // `target~name(...)`, `target~~name(...)` and `target[...]`
+            // -- see `Interp::message_term` (`dispatch.rs`) for
+            // the evaluation order and `Interp::resolve_in`/`Interp::invoke`
+            // for the send itself. The **expression** form only: the
+            // message-assignment form is an instruction and never an
+            // expression, so `assigned` is `None` here.
+            ExprKind::Message {
+                target,
+                name,
+                super_class,
+                args,
+                cascade,
+            } => pinned!(
+                self,
+                crate::pinning::PinKind::TreeSend,
+                self.message_term(
+                    code,
+                    &crate::dispatch::MessageTerm {
+                        target,
+                        name,
+                        super_class: super_class.as_deref(),
+                        args,
+                        cascade: *cascade,
+                        assigned: None,
+                    },
+                )
+            )?
+            .ok_or_else(|| Raised::no_result(name).into()),
+
+            _ => self.eval_cold(code, expr),
+        }
+    }
+
+    /// Every expression form the match above does not name: `(a, b, ...)`, and
+    /// the ones that fail loudly.
+    #[inline(never)]
+    fn eval_cold(&mut self, code: &Code<'_>, expr: &Expr) -> Result<ObjRef, Failure> {
+        match &expr.kind {
+            // `RexxExpressionList::evaluate` (`expression/ExpressionList.cpp:83`),
+            // which builds an array of the list's own length and fills the
+            // positions that were written.
+            ExprKind::List(items) => self.eval_list(code, items),
+            // `ns:Name`, the qualified class lookup
+            // (`ClassResolver::evaluate`,
+            // `expression/ExpressionClassResolver.cpp:123`). The `>N>` line
+            // it owes is this hook's sibling below, in `trace_intermediate`.
+            ExprKind::ClassResolver { namespace, name } => {
+                let namespace = code.symbols.name(*namespace).as_bytes().to_vec();
+                let name = code.symbols.name(*name).as_bytes().to_vec();
+                let package = self.running_program().ok_or_else(Loud::missing_body)?;
+                self.namespace_class(package, &namespace, &name)
+            }
+            // `ns:name(...)`, resolved against that namespace's public
+            // routines alone -- so none of `resolve_call`'s four steps runs,
+            // and a builtin of the same name is never reached. Measured,
+            // `rexx:length('abc')` is 43.902 rather than `3`.
+            ExprKind::QualifiedCall {
+                namespace,
+                name,
+                args,
+            } => {
+                let namespace = code.symbols.name(*namespace).as_bytes().to_vec();
+                let name = code.symbols.name(*name).as_bytes().to_vec();
+                let package = self.running_program().ok_or_else(Loud::missing_body)?;
+                let resolution = self.namespace_routine(package, &namespace, &name);
+                let resolved = self.resolved_after_arguments(code, resolution, args)?;
+                self.eval_call_resolved(code, CallResolution::Settled(resolved), &name, args)
+            }
+            other => Err(Loud::expression(other).into()),
+        }
+    }
+
+    /// `ExprKind::List`: a fresh `.Array` whose slots are the list's
+    /// positions.
+    #[inline(never)]
+    fn eval_list(&mut self, code: &Code<'_>, items: &[Option<Expr>]) -> Result<ObjRef, Failure> {
+        let frame = self.roots.activity_mut().push_frame();
+        let indent = self.activity.clause_state.current_value_indent;
+        let mut slots = Vec::with_capacity(items.len());
+        for item in items {
+            let Some(expr) = item else {
+                slots.push(None);
+                continue;
+            };
+            let value = self.eval(code, expr)?;
+            self.roots.activity_mut().push_temp(value);
+            if let Some(rendered) = self.intermediate_text(value)? {
+                self.trace_argument(indent, &rendered);
+            }
+            slots.push(Some(value));
+        }
+        let array = self.alloc_charged(interrexx_core::BehaviourId::ARRAY, Body::array(slots));
+        self.roots.activity_mut().push_temp(array);
+        if let Some(rendered) = self.result_text(array)? {
+            self.trace_result(indent, &rendered);
+        }
+        self.roots.activity_mut().pop_frame(frame);
+        Ok(array)
+    }
+
+    /// `ExprKind::Call`: the internal-function form, evaluated for its
+    /// value rather than run as a clause of its own.
+    fn eval_call(
+        &mut self,
+        code: &Code<'_>,
+        target: &CallTarget,
+        args: &[Option<Expr>],
+    ) -> Result<ObjRef, Failure> {
+        let (name, search_labels) = call_target_name(code, target);
+        // Held until the arguments have run -- `Interp::resolved_after_
+        // arguments` has the C++ citation and the two measurements.
+        let fixed = self.resolve_fixed_call(name, search_labels);
+        let fixed = self.resolved_after_arguments(code, fixed, args)?;
+        self.eval_call_resolved(code, Self::unkept_resolution(fixed), name, args)
+    }
+
+    /// [`eval_call`]'s second half: everything after the resolution, on
+    /// this Rust stack, so a pinned frame.
+    pub(crate) fn eval_call_resolved(
+        &mut self,
+        code: &Code<'_>,
+        resolution: CallResolution<'_>,
+        name: &[u8],
+        args: &[Option<Expr>],
+    ) -> Result<ObjRef, Failure> {
+        pinned!(self, crate::pinning::PinKind::TreeEval, {
+            let started = self.begin_eval_call(code, resolution, name, args);
+            started.and_then(|started| self.complete_function(started))
+        })
+    }
+
+    /// [`Interp::eval_call_resolved`] up to the point its callee's body would
+    /// run.
+    pub(crate) fn begin_eval_call(
+        &mut self,
+        code: &Code<'_>,
+        resolution: CallResolution<'_>,
+        name: &[u8],
+        args: &[Option<Expr>],
+    ) -> Result<Started<ObjRef>, Failure> {
+        // **A builtin goes straight to its own entry point**, which is the
+        // same call `invoke_call` would make and answers the value this
+        // function wants: none of `function_value`'s arms can apply to it, since
+        // it runs no activation and so can neither exit nor return nothing.
+        // What the detour cost is the `Ended` -- wider than a register pair,
+        // so built in memory here and read back out one line later, on the
+        // path every `length(...)`/`substr(...)` in a program takes.
+        if let CallResolution::Settled(Resolved::Builtin(target)) = resolution {
+            return self
+                .invoke_builtin_call(code, target, name, args)
+                .map(Started::Ran);
+        }
+        // `CallType::Function`: this is the function-invocation route, and a
+        // `::ROUTINE` reached this way answers `FUNCTION` as `PARSE SOURCE`'s
+        // second word where the same body reached by `CALL` answers
+        // `SUBROUTINE`. Measured in one program, the same routine both ways.
+        let begun = self.begin_invoke_call(
+            code,
+            resolution,
+            name,
+            args,
+            CallType::Function,
+            CallEntry::Written,
+        )?;
+        function_started(begun, name)
+    }
+
+    /// `+`/`-`/`\`, over an operand this
+    /// evaluates out of the tree.
+    fn eval_prefix(
+        &mut self,
+        code: &Code<'_>,
+        op: PrefixOp,
+        operand: &Expr,
+    ) -> Result<ObjRef, Failure> {
+        let frame = self.roots.activity_mut().push_frame();
+        let value = self.eval(code, operand)?;
+        self.roots.activity_mut().push_temp(value);
+        // Bound rather than propagated with `?`, so the frame is popped on the
+        // failure path too -- the shape `eval_node`'s own binary arm has, and
+        // the module doc has why both it and the `?` above are safe.
+        let result = self.apply_prefix(op, value);
+        self.roots.activity_mut().pop_frame(frame);
+        result
+    }
+
+    /// `op value` for the prefix operators `+`, `-` and `\`.
+    pub(crate) fn apply_prefix(&mut self, op: PrefixOp, value: ObjRef) -> Result<ObjRef, Failure> {
+        let result = self.apply_prefix_body(op, value);
+        // Blamed on any failure, the same reason `Interp::arith_general`
+        // gives: measured, `s. = 'abc'; say \s.` is 34.901 with the frame,
+        // even though `\` never converts its operand to a number at all --
+        // the frame belongs to the forwarded activation, not to which of
+        // its checks raised.
+        if result.is_err() {
+            self.blame_forwarded_operator(op.spelling().as_bytes(), value);
+        }
+        result
+    }
+
+    /// [`Interp::apply_prefix`]'s own computation, wrapped by it for the
+    /// reason [`Interp::arith_general_body`] is.
+    fn apply_prefix_body(&mut self, op: PrefixOp, value: ObjRef) -> Result<ObjRef, Failure> {
+        let result = match op {
+            PrefixOp::Plus | PrefixOp::Minus => {
+                let number = match self.arith_left_operand(op.spelling(), value)? {
+                    ArithOperand::Number(number) => number,
+                    ArithOperand::Send(target) => {
+                        return self.send_operator(op.spelling(), target, &[]);
+                    }
+                };
+                self.lostdigits_check(&number, value)?;
+                let digits = self.activation().settings.digits();
+                let form = self.activation().settings.form();
+                let result = if op == PrefixOp::Plus {
+                    Number::zero().add(&number, digits)
+                } else {
+                    Number::zero().sub(&number, digits)
+                }
+                .map_err(Raised::from)?;
+                self.number(result, saturate_digits(digits), form)
+            }
+            PrefixOp::Not => {
+                // `\.array` is 97.1 on the oracle, the same message send the
+                // dyadic operators make, and it is asked ahead of the truth
+                // test for the reason [`Interp::logical_values_body`] states.
+                if let Some(target) = self.operator_message_receiver(value) {
+                    return self.send_operator(op.spelling(), target, &[]);
+                }
+                if let Some(kind) = self.operator_operand_gap(value) {
+                    return Err(Loud::operator_operand(op.spelling(), kind).into());
+                }
+                let holds = self.truth(value, Raised::not_logical)?;
+                logical(!holds)
+            }
+        };
+        Ok(result)
+    }
+
+    /// The seven arithmetic operators, sharing one operand-evaluation and
+    /// error-conversion path.
+    fn eval_arithmetic(
+        &mut self,
+        code: &Code<'_>,
+        op: Operator,
+        left: &Expr,
+        right: &Expr,
+    ) -> Result<ObjRef, Failure> {
+        let frame = self.roots.activity_mut().push_frame();
+        let left_value = self.eval(code, left)?;
+        self.roots.activity_mut().push_temp(left_value);
+        let right_value = self.eval(code, right)?;
+        self.roots.activity_mut().push_temp(right_value);
+
+        // The two halves in the order they are tried, which is the whole of
+        // what this function decides once its operands are values. Both are
+        // entered from `crate::ir::Op::Arith` as well, which is why they are
+        // functions rather than the two blocks they used to be: the compiled
+        // op has its operands in registers rather than in nodes, and
+        // everything past that point is the same arithmetic.
+        let value = match self.arith_small_int(op, left_value, right_value) {
+            Some(value) => value,
+            None => self.arith_general(op, left_value, right_value)?,
+        };
+
+        self.roots.activity_mut().pop_frame(frame);
+        Ok(value)
+    }
+
+    /// `left op right` on the small-integer path, or `None` when the general
+    /// path must run instead.
+    pub(crate) fn arith_small_int(
+        &self,
+        op: Operator,
+        left_value: ObjRef,
+        right_value: ObjRef,
+    ) -> Option<ObjRef> {
+        let digits = self.activation().settings.digits();
+        // **The tagged pair is tested first and on its own**, exactly as it
+        // was before the spelled operand was admitted. Reading a spelled one
+        // costs a scan of its bytes, and a clause whose operands are both
+        // already tagged must not pay for a widening it cannot use.
+        match (left_value.decode(), right_value.decode()) {
+            (Decoded::SmallInt(left_int), Decoded::SmallInt(right_int)) => {
+                small_int_arith(op, left_int, right_int, digits)
+            }
+            _ => spelled_int_arith(op, left_value, right_value, digits),
+        }
+    }
+
+    /// `left op right` through `interrexx-num`, the path every operand shape
+    /// reaches and the one [`Interp::arith_small_int`] falls through to.
+    pub(crate) fn arith_general(
+        &mut self,
+        op: Operator,
+        left_value: ObjRef,
+        right_value: ObjRef,
+    ) -> Result<ObjRef, Failure> {
+        let result = self.arith_general_body(op, left_value, right_value);
+        // **Blamed on any failure past this point, not only the left
+        // operand's own conversion.** The oracle's forwarded native method
+        // runs to completion or fails; whichever of its own steps raises --
+        // the base's conversion, the argument's, or the arithmetic itself --
+        // is still inside that one activation, each of them past
+        // `arith_left_operand`'s own return. Measured: `s. = 1; say s. /
+        // 0` is 42.3 with the frame, `s. = 1; say s. ** 999999999999` is
+        // 26.8 with the frame (the base converts fine; the *exponent*
+        // fails), and `s. = 1; say s. + .array` is 41.1 with the frame even
+        // though it is the *right* operand's own conversion that fails.
+        // The receiver test is `blame_forwarded_operator`'s own, so
+        // this site gates on failure alone and hands it every failing path
+        // here, leaving a non-stem receiver for that predicate to discard.
+        if result.is_err() {
+            self.blame_forwarded_operator(op.spelling().as_bytes(), left_value);
+        }
+        result
+    }
+
+    /// [`Interp::arith_general`]'s own computation, wrapped by it so every
+    /// failing path -- not only [`Interp::arith_left_operand`]'s -- is
+    /// blamed once, in the one place that already knows the receiver.
+    fn arith_general_body(
+        &mut self,
+        op: Operator,
+        left_value: ObjRef,
+        right_value: ObjRef,
+    ) -> Result<ObjRef, Failure> {
+        let digits = self.activation().settings.digits();
+        let form = self.activation().settings.form();
+
+        let left_number = match self.arith_left_operand(op.spelling(), left_value)? {
+            ArithOperand::Number(number) => number,
+            ArithOperand::Send(target) => {
+                return self.send_operator(op.spelling(), target, &[Some(right_value)]);
+            }
+        };
+
+        // The argument of the operator method the receiver answers, converted
+        // after the receiver itself is accepted -- `apply_binary`'s own doc
+        // has the citations, and `StringClass::arith` reports **`otherObj`**
+        // rather than the conversion when the converted string is not
+        // numeric. Measured, rc 215: `'2' + .K` with a class-side
+        // `makeString` returning `'xx'` is 41.1 `Nonnumeric value ("The K
+        // class")`.
+        let converted = self.required_string_or_nil(right_value)?;
+
+        let result = if op == Operator::Power {
+            let exponent = match self.to_number(converted) {
+                Ok(number) => number,
+                Err(NotNumeric) => {
+                    return Err(
+                        self.rendered_failure(right_value, Raised::power_exponent_not_whole)
+                    );
+                }
+            };
+            // The base alone: measured, `1.23456789 ** 1` at DIGITS 3 is
+            // 98.972 on the base and `2 ** 1234` is 26.8 on the *exponent*'s
+            // own whole-number conversion, which runs first and never
+            // reaches LOSTDIGITS.
+            self.lostdigits_check(&left_number, left_value)?;
+            left_number.pow(&exponent, digits)
+        } else {
+            let right_number = match self.to_number(converted) {
+                Ok(number) => number,
+                Err(NotNumeric) => {
+                    return Err(self.rendered_failure(right_value, Raised::nonnumeric));
+                }
+            };
+            // Left first, which is the oracle's order: measured, `987654321 +
+            // 123456789` at DIGITS 3 names 987654321. The right operand is
+            // named by its string value.
+            self.lostdigits_check2(&left_number, left_value, &right_number, converted)?;
+            match op {
+                Operator::Plus => left_number.add(&right_number, digits),
+                Operator::Subtract => left_number.sub(&right_number, digits),
+                Operator::Multiply => left_number.mul(&right_number, digits),
+                Operator::Divide => left_number.div(&right_number, digits, DivOp::Divide),
+                Operator::IntDiv => left_number.div(&right_number, digits, DivOp::IntegerDivide),
+                Operator::Remainder => left_number.div(&right_number, digits, DivOp::Remainder),
+                _ => unreachable!("eval_node only dispatches the seven arithmetic operators here"),
+            }
+        }
+        .map_err(Raised::from)?;
+
+        Ok(self.number(result, saturate_digits(digits), form))
+    }
+
+    /// Converts an arithmetic operand to a `Number`, or 41.1 with the
+    /// operand's own rendered text as the substitution -- measured, `say
+    /// 'abc' + 1` reports `Nonnumeric value ("abc")`, the operand as it
+    /// renders, not upcased or otherwise transformed.
+    pub(crate) fn arith_operand(&mut self, value: ObjRef) -> Result<Number, Failure> {
+        match self.to_number(value) {
+            Ok(number) => Ok(number),
+            Err(NotNumeric) => Err(self.rendered_failure(value, Raised::nonnumeric)),
+        }
+    }
+
+    /// [`Interp::arith_operand`] for the operand the operator is *sent to*.
+    fn arith_left_operand(&mut self, op: &str, value: ObjRef) -> Result<ArithOperand, Failure> {
+        match self.operand_number(value) {
+            Ok(number) => Ok(ArithOperand::Number(number)),
+            Err(NotNumeric) => {
+                if let Some(target) = self.operator_message_receiver(value) {
+                    return Ok(ArithOperand::Send(target));
+                }
+                if let Some(kind) = self.operator_operand_gap(value) {
+                    return Err(Loud::operator_operand(op, kind).into());
+                }
+                Err(self.rendered_failure(value, Raised::nonnumeric))
+            }
+        }
+    }
+
+    /// Renders the operator-forwarded native-method frame for `op` when
+    /// `value` is a stem or a variable reference whose forward reaches a
+    /// method that actually runs -- a no-op otherwise.
+    pub(crate) fn blame_forwarded_operator(&mut self, op: &[u8], value: ObjRef) {
+        if !self.is_forwarding_receiver(value) {
+            return;
+        }
+        let scope = self.string_class();
+        let scope_id = self.classes().id_string(scope).to_string();
+        self.blame_native_method(op, &scope_id, value, &[]);
+    }
+
+    /// Whether `value` is a stem or a variable reference whose forwarded
+    /// operator would actually reach a native method to run: true for an
+    /// unset stem (its own name is a `String`), an unset referenced variable
+    /// (its name), and one whose value is itself `String`/`Number`-valued;
+    /// false for `.nil` and for anything [`Interp::operator_operand_gap`]
+    /// already named.
+    fn is_forwarding_receiver(&self, value: ObjRef) -> bool {
+        let Decoded::Heap { .. } = value.decode() else {
+            return false;
+        };
+        match self.heap.get(value).map(|object| &object.body) {
+            Some(Body::Stem { default: None, .. }) => true,
+            Some(Body::Stem {
+                default: Some(default),
+                ..
+            }) => self.stem_default_is_string_or_number(*default),
+            Some(Body::VarRef(_)) => self.is_forwarding_reference(value),
+            _ => false,
+        }
+    }
+
+    /// [`Interp::is_forwarding_receiver`] of the reference `value`: measured,
+    /// `t = >s; say t + 0` with `s = 'abc'` is 41.1 under `Compiled method
+    /// "+" with scope "String"`, as `s~'+'(0)` is.
+    #[cold]
+    #[inline(never)]
+    fn is_forwarding_reference(&self, value: ObjRef) -> bool {
+        match self.chain_end(value) {
+            Referent::Value(referenced) => self.stem_default_is_string_or_number(referenced),
+            Referent::Unset(_) => true,
+            Referent::Cycle => false,
+        }
+    }
+
+    /// Whether `value` is `String`/`Number`-valued, chasing a nested stem's
+    /// own default the way [`Interp::to_number`] and
+    /// [`Interp::operator_operand_gap`] both do. `.nil` and a class object
+    /// answer no arithmetic operator on the oracle, so a forward landing on
+    /// either never reaches a method to raise from.
+    fn stem_default_is_string_or_number(&self, value: ObjRef) -> bool {
+        match value.decode() {
+            Decoded::Nil => false,
+            Decoded::SmallInt(_) | Decoded::Text(_) => true,
+            Decoded::Heap { .. } => match self.heap.get(value).map(|object| &object.body) {
+                Some(Body::Class { .. }) => false,
+                Some(Body::Text { .. }) | Some(Body::Num { .. }) => true,
+                Some(Body::Stem { default: None, .. }) => true,
+                Some(Body::Stem {
+                    default: Some(default),
+                    ..
+                }) => self.stem_default_is_string_or_number(*default),
+                _ => false,
+            },
+        }
+    }
+
+    /// A concatenation whose left operand is a reference or a stem whose
+    /// value is an object: its own concatenation method joins its string
+    /// value, the referenced value's or the default's `request('STRING')`
+    /// (rexxref fundclasses.xml, the Object concatenation methods;
+    /// utilityclasses.xml, VariableReference `request`; collclasses.xml, Stem
+    /// `request`), rather than the operator being sent on to that value.
+    #[cold]
+    #[inline(never)]
+    fn concat_reference(
+        &mut self,
+        op: Operator,
+        left: ObjRef,
+        right: ObjRef,
+    ) -> Result<ObjRef, Failure> {
+        let left = self.required_string_value(left)?;
+        let right = self.required_string_operand(right, op)?;
+        let separator = (op == Operator::Blank).then_some(b' ');
+        self.concat_values(left, right, separator)
+    }
+
+    /// The shared body of `||`/`Abuttal` (no separator) and `Blank` (one
+    /// space).
+    fn concat_values(
+        &mut self,
+        left_value: ObjRef,
+        right_value: ObjRef,
+        separator: Option<u8>,
+    ) -> Result<ObjRef, Failure> {
+        // Both operands' bytes are read through shared borrows, which can be
+        // live at once -- and that is the whole change here. The left operand
+        // used to be copied into an owned buffer for no reason except that
+        // reading the right one needed its own `&mut`, so a two-operand join
+        // allocated three times: the copy, the buffer it grew into, and the
+        // result. It allocates once now, into a buffer sized before anything
+        // is written and handed straight to the value.
+        let left_rendered = self.render(left_value);
+        let right_rendered = self.render(right_value);
+        let left_bytes = left_rendered.text(self);
+        let right_bytes = right_rendered.text(self);
+        // **A join that fits the object's own inline bytes is built on the
+        // stack and never touches the lent buffer at all.** `text_built` ends
+        // such a join by copying it into the value and handing the buffer
+        // straight back, so everything the `Vec` did for it -- the take, the
+        // reservation, the length bookkeeping, the return -- was setup for a
+        // container the result does not end up in. The bound is the one
+        // `text_built` branches on, so this arm and its own are the same
+        // arm -- what differs is that the buffer is never taken.
+        let total = left_bytes.len() + usize::from(separator.is_some()) + right_bytes.len();
+        if total <= INLINE_BYTES {
+            let mut buffer = [0u8; INLINE_BYTES];
+            let (head, rest) = buffer.split_at_mut(left_bytes.len());
+            head.copy_from_slice(left_bytes);
+            let rest = match separator {
+                Some(byte) => {
+                    let (slot, rest) = rest.split_at_mut(1);
+                    slot[0] = byte;
+                    rest
+                }
+                None => rest,
+            };
+            rest[..right_bytes.len()].copy_from_slice(right_bytes);
+            return Ok(self.text(&buffer[..total]));
+        }
+        // **Built in the lent buffer and finished with `text_built`**, which
+        // is what makes the one remaining allocation conditional rather than
+        // certain. Only a result too long to live inline reaches here, and it
+        // keeps the buffer, which is the same trade `text_built` always makes.
+        // Measured with `heaptrack` on `bench-programs/strings.rex`, where
+        // this was one of the two allocations left per iteration and 99.6% of
+        // what that program allocated was freed with nothing allocated in
+        // between.
+        let mut bytes = self.take_result_buffer();
+        bytes.reserve(left_bytes.len() + usize::from(separator.is_some()) + right_bytes.len());
+        bytes.extend_from_slice(left_bytes);
+        if let Some(byte) = separator {
+            bytes.push(byte);
+        }
+        bytes.extend_from_slice(right_bytes);
+        let joined = self.text_built(bytes);
+
+        Ok(joined)
+    }
+
+    /// The comparison operators (numeric-or-string `= \= <> >< > < >= <= \> \<`, and strict
+    /// `== \== >> << >>= <<= \>> \<<`), all through `interrexx-num`'s
+    /// `compare_numbers` and `compare_strings` -- **no comparison rule is
+    /// written here**, per the plan's own instruction and this crate's
+    /// standing rule against a second copy of logic `interrexx-num` already owns
+    /// (the same rule `compare.rs`'s own module doc states for its entry
+    /// points). Those two are `compare_decoded`'s own arms, called directly
+    /// because this function has already decided which arm applies: each
+    /// arm's own doc comment says so, and says what a caller buys by
+    /// choosing.
+    fn compare_values(
+        &mut self,
+        op: Operator,
+        left_value: ObjRef,
+        right_value: ObjRef,
+    ) -> Result<ObjRef, Failure> {
+        let result = self.compare_values_body(op, left_value, right_value);
+        // Blamed on any failure, the same reason `Interp::arith_general`
+        // gives -- and comparison does have one, corrected from this task's
+        // own earlier premise: `compare_numbers` converts both operands to
+        // a `Number` and can overflow when both are numeric, exactly as an
+        // arithmetic operator's operands can. Measured: `numeric digits 1;
+        // s. = '9.9E999999999'; say s. > 1` is rc 214 with the frame; the
+        // same overflow with `1 > s.` (the receiver `1`, not a stem) is the
+        // identical rc 214 with no frame, because `is_forwarding_receiver`
+        // answers `false` for the plain-number receiver regardless of which
+        // operand overflowed. Strict `==`/`>>` and the non-numeric fallback
+        // (`compare_strings`) never reach `compare_numbers` at all, so they
+        // stay rc 0 and frameless, unaffected by this wrapping.
+        if result.is_err() {
+            self.blame_forwarded_operator(op.spelling().as_bytes(), left_value);
+        }
+        result
+    }
+
+    /// [`Interp::compare_values`]'s own computation, wrapped by it for the
+    /// reason [`Interp::arith_general_body`] is.
+    fn compare_values_body(
+        &mut self,
+        op: Operator,
+        left_value: ObjRef,
+        right_value: ObjRef,
+    ) -> Result<ObjRef, Failure> {
+        // Every `&mut` read this comparison needs happens first -- the two
+        // parses, and the two settings -- so that the byte reads below can be
+        // shared borrows taken together. `to_number` hands back an owned
+        // `Number`, so nothing here outlives its own statement, and the
+        // operand copies the old order forced are gone.
+        let digits = self.activation().settings.digits();
+        let fuzz = self.activation().settings.fuzz();
+        // **Two tagged small integers answer this comparison themselves**,
+        // where the general path renders both operands to text first --
+        // measured with `heaptrack` on `samples/rexxcps.rex`, that rendering
+        // was the largest single allocation width in the interpreter, at
+        // 4,220,217 allocations of nineteen bytes on a 400,000-clause run
+        // (`SMALL_INT_MAX` has nineteen digits, which is what pre-sizes them).
+        if fuzz == 0
+            && let Some(holds) = small_int_compare(op, left_value, right_value, digits)
+        {
+            return Ok(logical(holds));
+        }
+        let strict = is_strict_compare(op);
+        // **The `Result` is kept rather than turned into an `Option`.** A
+        // `Number` is forty bytes and `Result::ok` moves one, so the two calls
+        // here moved eighty bytes for nothing: every read below is `is_ok`,
+        // `is_err` or a borrow out of the `Ok` arm, and none of them needs an
+        // `Option`. Measured on `samples/rexxcps.rex`, -0.531% of its retired
+        // instructions and -0.60% of its cycles over six alternating runs --
+        // the first pair of runs read -5%, which was the cold start and not
+        // this.
+        let left_number = if strict {
+            Err(NotNumeric)
+        } else {
+            self.to_number(left_value)
+        };
+        // **Behind the fast path above, because a comparison of renderings
+        // never fails and so offers nothing to ride.** Measured, comparing an
+        // object against the very text it renders as answers `0` on the
+        // oracle and `1` here; see `Loud::operator_operand`.
+        debug_assert!(
+            left_number.is_err()
+                || unshared!(self, self.operator_operand_gap(left_value)).is_none(),
+            "a left operand that parsed as a number reported an operator gap"
+        );
+        if left_number.is_err()
+            && let Some(kind) = self.operator_operand_gap(left_value)
+        {
+            return Err(Loud::operator_operand(op.spelling(), kind).into());
+        }
+        let right_number = if strict {
+            Err(NotNumeric)
+        } else {
+            self.to_number(right_value)
+        };
+
+        // **Both operands parsed means the bytes have no reader**, so they are
+        // not produced. `compare_decoded`'s own `(Some, Some)` arm is
+        // `compare_numbers` and nothing else, and it is handed the same two
+        // values this would have passed it -- so this is where the rendering
+        // happens rather than what the comparison answers. What it skips is
+        // `render` plus `text` on both sides, whose result reaches only the
+        // string fallback below.
+        if let (Ok(left), Ok(right)) = (&left_number, &right_number) {
+            // The **numeric** arm only: measured, `1.23456789 = 'abc'` at
+            // DIGITS 3 is rc 0 on the oracle, because a comparison that falls
+            // through to the string rule converts no operand at all. A strict
+            // operator never reaches here either.
+            self.lostdigits_check_compare(left, left_value, right, right_value, fuzz)?;
+            let holds = interrexx_num::compare_numbers(left, right, digits, fuzz, compare_op(op))
+                .map_err(Raised::from)?;
+            return Ok(logical(holds));
+        }
+        // Either operand failed to parse, or the operator is strict and neither
+        // was parsed at all. Both routes compare the operands' own text, which
+        // is what these two renderings are for.
+        let left_rendered = self.render(left_value);
+        let right_rendered = self.render(right_value);
+        let left_bytes = left_rendered.text(self);
+        let right_bytes = right_rendered.text(self);
+        // The claim the line below rests on, checked rather than argued: an
+        // operand `to_number` refused is one whose own rendering does not
+        // parse either, so the arm `compare_decoded` would have reached after
+        // reparsing is the arm taken here. A strict operator is exempt because
+        // it consults no `Number` at all.
+        debug_assert!(
+            strict || left_number.is_ok() || Number::parse_bytes(left_bytes).is_none(),
+            "a left operand to_number refused parses from its own rendering"
+        );
+        debug_assert!(
+            strict || right_number.is_ok() || Number::parse_bytes(right_bytes).is_none(),
+            "a right operand to_number refused parses from its own rendering"
+        );
+        let holds = interrexx_num::compare_strings(left_bytes, right_bytes, compare_op(op));
+
+        let result = logical(holds);
+        Ok(result)
+    }
+
+    /// `&`/`|`/`&&`. **Both operands are always evaluated and checked,
+    /// never short-circuited**, and the left is checked before the right
+    /// when both are bad -- measured: `say (0 & 'x')` and `say (1 | 'x')`
+    /// both raise 34.901 on `"x"` even though the result is already
+    /// decided by the first operand alone, and `say ('y' & 'x')` (both
+    /// bad) reports `"y"`, the left operand's own text, not `"x"`. The
+    /// opposite rule from `ExprKind::Logical`'s comma list, below, which
+    /// does short-circuit -- both are implemented exactly as measured rather
+    /// than made to agree with each other. The evaluation half of that rule
+    /// belongs to whoever calls this: the check half is here, and it checks
+    /// the operand it was handed second even when the first already decided
+    /// the answer.
+    fn logical_values(
+        &mut self,
+        op: Operator,
+        left_value: ObjRef,
+        right_value: ObjRef,
+    ) -> Result<ObjRef, Failure> {
+        let result = self.logical_values_body(op, left_value, right_value);
+        // Blamed on any failure, the same reason `Interp::arith_general`
+        // gives: measured, `s. = 1; say s. & 'x'` is 34.901 with the frame
+        // even though it is the *right* operand's own text that fails the
+        // logical check.
+        if result.is_err() {
+            self.blame_forwarded_operator(op.spelling().as_bytes(), left_value);
+        }
+        result
+    }
+
+    /// [`Interp::logical_values`]'s own computation, wrapped by it for the
+    /// reason [`Interp::arith_general_body`] is.
+    fn logical_values_body(
+        &mut self,
+        op: Operator,
+        left_value: ObjRef,
+        right_value: ObjRef,
+    ) -> Result<ObjRef, Failure> {
+        // **Ahead of the truth test, not behind it.** The oracle sends
+        // `&`/`|`/`&&` to the left operand as a message -- `.array & 1` is
+        // 97.1 where this crate's own 34.901 quotes the object's rendering --
+        // so an operand this names refuses however it renders, and a
+        // rendering that is itself `0` or `1` is not an answer: measured,
+        // oracle rc 159, `o & 1` for an instance named `'1'` is
+        // `97.1 Object "1" does not understand message "&".`
+        if let Some(kind) = self.operator_operand_gap(left_value) {
+            return Err(Loud::operator_operand(op.spelling(), kind).into());
+        }
+        let left_bool = self.truth(left_value, Raised::not_logical)?;
+        let right_bool = self.truth(right_value, Raised::not_logical)?;
+
+        let holds = match op {
+            Operator::And => left_bool && right_bool,
+            Operator::Or => left_bool || right_bool,
+            Operator::Xor => left_bool != right_bool,
+            other => return Err(Loud::binary_operator(other).into()),
+        };
+
+        let result = logical(holds);
+        Ok(result)
+    }
+
+    /// The object an operator is **sent to as a message**, or `None` for an
+    /// operand the operator converts itself.
+    pub(crate) fn operator_message_receiver(&self, value: ObjRef) -> Option<ObjRef> {
+        // **`.nil` is an operator receiver.** It answers `==`, `\\==`, `=`,
+        // `<>` and `><` by identity and understands no other operator, so an
+        // ordering or arithmetic operator against it is 97.1 -- measured,
+        // `.nil < 'x'` and `.nil + 1` both report `Object "The NIL object"
+        // does not understand message`. Reaching that through the send is
+        // what `RexxObject`'s own operator methods do; converting `.nil` to
+        // its string value instead makes it equal to the text `The NIL
+        // object` and orderable against anything.
+        if value == ObjRef::NIL {
+            return Some(value);
+        }
+        // A small integer and an inline string leave on this line, which is
+        // what keeps this off the cost of a comparison between two numbers.
+        let Decoded::Heap { .. } = value.decode() else {
+            return None;
+        };
+        match &self.heap.get(value)?.body {
+            // **A class object is an operator receiver on the same terms
+            // `.nil` is.** `Setup.cpp`'s `Class` block declares `=`, `==`,
+            // `\\=`, `\\==`, `<>` and `><` and no other operator, so the six
+            // are `Object`'s identity test and every other operator is a name
+            // the behaviour does not hold -- measured, oracle rc 0,
+            // `.array = .array` is `1` and `.array = 'The Array class'` is
+            // `0`; oracle rc 159, `.array > .array` and `.array + 1` are both
+            // `97.1 Object "The Array class" does not understand message`.
+            Body::Class { .. } => Some(value),
+            Body::Instance { .. } => Some(value),
+            // Neither `Array` nor a class this crate builds as a native body
+            // declares an operator but `Object`'s and `Pointer`'s
+            // (`memory/Setup.cpp`), so the send answers by identity or 97.1.
+            Body::Array { .. } | Body::Native(_) => Some(value),
+            Body::Stem {
+                default: Some(default),
+                ..
+            } => self.operator_message_receiver(*default),
+            Body::VarRef(_) => self.reference_message_receiver(value),
+            _ => None,
+        }
+    }
+
+    /// [`Interp::operator_operand_gap`] of the reference `value`: the gap of
+    /// the value its chain ends at. An unset variable reads as its own name, a
+    /// string, and a cyclic reference is refused where it is converted.
+    #[cold]
+    #[inline(never)]
+    fn reference_operand_gap(&self, value: ObjRef) -> Option<&'static str> {
+        match self.chain_end(value) {
+            Referent::Value(referenced) => self.operator_operand_gap(referenced),
+            Referent::Unset(_) | Referent::Cycle => None,
+        }
+    }
+
+    /// [`Interp::operator_message_receiver`] of the reference `value`: the
+    /// receiver of the value its chain ends at, none for an unset variable,
+    /// and for a cyclic reference the reference, which `apply_binary`
+    /// refuses.
+    #[cold]
+    #[inline(never)]
+    fn reference_message_receiver(&self, value: ObjRef) -> Option<ObjRef> {
+        match self.chain_end(value) {
+            Referent::Value(referenced) => self.operator_message_receiver(referenced),
+            Referent::Unset(_) => None,
+            Referent::Cycle => Some(value),
+        }
+    }
+
+    /// Sends an operator to its left operand as a message, for a receiver
+    /// [`Interp::operator_message_receiver`] named.
+    fn send_operator(
+        &mut self,
+        spelling: &str,
+        receiver: ObjRef,
+        args: &[Option<ObjRef>],
+    ) -> Result<ObjRef, Failure> {
+        let caller = self.caller();
+        let name = spelling.as_bytes();
+        match pinned!(
+            self,
+            crate::pinning::PinKind::Operator,
+            self.send_message(receiver, name, None, args, caller)
+        )? {
+            Some(result) => Ok(result),
+            None => Err(Raised::no_result(name).into()),
+        }
+    }
+
+    /// The noun for an operand no operator here can take, or `None` for one
+    /// every operator can.
+    pub(crate) fn operator_operand_gap(&self, value: ObjRef) -> Option<&'static str> {
+        // A small integer, an inline string and `.nil` all leave on this
+        // line: only a heap-tagged handle can be either shape.
+        let Decoded::Heap { .. } = value.decode() else {
+            return None;
+        };
+        match &self.heap.get(value)?.body {
+            Body::Class { .. } => Some("a class object"),
+            Body::Native(_) => Some("one of the interpreter's own objects"),
+            // An array *does* have a string value -- `ArrayClass::makeString`
+            // joins its items -- so concatenation, which never asks here,
+            // agrees with the oracle. An operator that does ask never gets
+            // that string value: `.Array` defines no arithmetic or logical
+            // method, so measured, oracle rc 159, `a = (1,); say a + 1` is
+            // 97.1; and where a comparison finds one it is `Object`'s own
+            // identity test, so `say (a = 1)` is `0` at rc 0 rather than a
+            // comparison of `1` against `1`.
+            Body::Array { .. } => Some("an array"),
+            // The oracle sends the operator as a message here too, and it is
+            // the send that fails: measured, oracle rc 159, `o + 1` on an
+            // instance is `97.1 Object "a K" does not understand message
+            // "+".`, and the same after `o~objectName = '123'` -- the
+            // rendering being numeric does not make it a conversion.
+            Body::Instance { .. } => Some("an instance of a user class"),
+            // **The redirect every conversion here takes, taken here too.**
+            // A stem with a default answers *as* that default -- `to_text`
+            // and `to_number` both chase it -- so a check that stopped at the
+            // stem handle would let `a. = .array; say (a. == 'The Array
+            // class')` answer 1 where the oracle answers 0, which is this
+            // gap's original shape reached through one assignment. Measured.
+            // A compound read (`a.zz`) yields the class handle itself and
+            // needs no redirect, which is what says the hole was the
+            // indirection rather than the operator arm.
+            Body::Stem {
+                default: Some(default),
+                ..
+            } => self.operator_operand_gap(*default),
+            // The redirect one arm up, for the same reason: every operator
+            // reaches the referenced value through `UNKNOWN`, so it is that
+            // value the oracle sends to. Measured, oracle rc 159:
+            // `zz = .array~new(2); say (>zz) + 1` is
+            // `97.1 Object "an Array" does not understand message "+".` --
+            // the array's own answer, substituting the array rather than the
+            // reference.
+            Body::VarRef(_) => self.reference_operand_gap(value),
+            _ => None,
+        }
+    }
+
+    /// `left op right` for every binary operator whose two operands are just
+    /// values by the time it runs -- concatenation, comparison and logical.
+    pub(crate) fn apply_binary(
+        &mut self,
+        op: Operator,
+        left: ObjRef,
+        right: ObjRef,
+    ) -> Result<ObjRef, Failure> {
+        // **`reqstr`'s dyadic-operator context is the operand on the
+        // *right*.** The section names "Rexx dyadic operators when the
+        // receiving object (the object to the left of the operator) is a
+        // string", and the receiver's own method is what converts its
+        // argument -- `StringClass::concatRexx`, `stringComp` and `andOp` all
+        // open with `otherObj->requestString()` (`classes/StringClass.cpp:653`,
+        // `:774`, `:925`). The left operand is the receiver and is not
+        // converted at all: measured, `.array + 1` is 97.1 where `1 + .array`
+        // is 41.1, and `eval.rs`'s `object_operand_tests` is that half.
+        if let Some(target) = self.operator_message_receiver(left) {
+            if is_concatenation(op)
+                && (self.as_variable_reference(left).is_some() || self.is_stem_object(left))
+            {
+                return self.concat_reference(op, left, right);
+            }
+            return self.send_operator(op.spelling(), target, &[Some(right)]);
+        }
+        // **A string or number compared with `.nil` answers without reading
+        // it.** `RexxString::primitiveIsEqual` (`classes/StringClass.cpp:674`)
+        // returns false for `TheNilObject` before it looks at any bytes, and
+        // every other comparison operator of `String`, `Integer` and
+        // `NumberString` answers `.false` for it (`CompareOperator`,
+        // `StringClass.cpp:1248`), except `\=`, `<>`, `><` and `\==`, which
+        // answer `.true`. So `'The NIL object' == .nil` is `0`, `'a' < .nil`
+        // is `0` with no NOSTRING, and `'a' || .nil`, which is not a
+        // comparison, reads the string value.
+        if right == ObjRef::NIL && is_comparison(op) {
+            return Ok(logical(is_inequality(op)));
+        }
+        let right = self.required_string_operand(right, op)?;
+        // A `STRING` answer with no string value converts to `.nil`, which
+        // the same rule judges.
+        if right == ObjRef::NIL && is_equality(op) {
+            return Ok(logical(is_inequality(op)));
+        }
+        match op {
+            Operator::Concatenate | Operator::Abuttal => self.concat_values(left, right, None),
+            Operator::Blank => self.concat_values(left, right, Some(b' ')),
+            op if is_comparison(op) => self.compare_values(op, left, right),
+            Operator::And | Operator::Or | Operator::Xor => self.logical_values(op, left, right),
+            op => Err(Loud::binary_operator(op).into()),
+        }
+    }
+
+    /// `ExprKind::Logical`: the comma-separated conditional list `IF a, b,
+    /// c THEN` (and `WHEN`/`GUARD`/`WHILE`/`UNTIL`'s own versions)
+    /// desugars to, "a logical AND of its parts" (`ast.rs`'s own doc
+    /// comment).
+    fn eval_logical_list(&mut self, code: &Code<'_>, items: &[Expr]) -> Result<ObjRef, Failure> {
+        let frame = self.roots.activity_mut().push_frame();
+        let indent = self.activity.clause_state.current_value_indent;
+        let mut holds = true;
+        for item in items {
+            let value = self.eval(code, item)?;
+            self.roots.activity_mut().push_temp(value);
+            let text = self.to_text(value).to_vec();
+            self.trace_result(indent, &text);
+            let item_holds = self.truth(value, Raised::logical_list_element)?;
+            if !item_holds {
+                holds = false;
+                break;
+            }
+        }
+
+        let result = logical(holds);
+        self.roots.activity_mut().pop_frame(frame);
+        Ok(result)
+    }
+
+    pub(crate) fn stack_span(&self) -> StackSpan {
+        StackSpan {
+            max_depth: self.activity.max_depth,
+            bytes: self
+                .activity
+                .stack_first
+                .saturating_sub(self.activity.stack_deepest),
+        }
+    }
+}
+
+/// Narrows `Settings::digits()` (`u64`) to `Body::Num`'s `created_digits`
+/// (`u32`) by saturating rather than rejecting or panicking.
+#[inline(never)]
+fn spelled_int_arith(
+    op: Operator,
+    left_value: ObjRef,
+    right_value: ObjRef,
+    digits: u64,
+) -> Option<ObjRef> {
+    let left_int = small_int_operand(left_value)?;
+    let right_int = small_int_operand(right_value)?;
+    small_int_arith(op, left_int, right_int, digits)
+}
+
+/// The integer an operand already is, whether it carries the tag or spells
+/// one.
+fn small_int_operand(value: ObjRef) -> Option<i64> {
+    match value.decode() {
+        Decoded::SmallInt(int) => Some(int),
+        Decoded::Text(inline) => canonical_small_int(&inline),
+        _ => None,
+    }
+}
+
+fn small_int_arith(op: Operator, left: i64, right: i64, digits: u64) -> Option<ObjRef> {
+    if !within_digits(left, digits) || !within_digits(right, digits) {
+        return None;
+    }
+    let value = match op {
+        Operator::Plus => left.checked_add(right),
+        Operator::Subtract => left.checked_sub(right),
+        Operator::Multiply => left.checked_mul(right),
+        Operator::IntDiv => left.checked_div(right),
+        Operator::Remainder => left.checked_rem(right),
+        Operator::Divide if left.checked_rem(right) == Some(0) => left.checked_div(right),
+        Operator::Power => small_int_power(left, right),
+        _ => None,
+    }?;
+    exact_small_int(value, digits)
+}
+
+/// `base ** exponent` in `i64`, or `None` when [`small_int_arith`] must
+/// decline.
+fn small_int_power(base: i64, exponent: i64) -> Option<i64> {
+    base.checked_pow(u32::try_from(exponent).ok()?)
+}
+
+pub(crate) fn saturate_digits(digits: u64) -> u32 {
+    u32::try_from(digits).unwrap_or(u32::MAX)
+}
+
+/// A logical value is *exactly* the one-byte string `0` or `1` -- text, not
+/// numeric, no coercion (measured, `' 1 '`,
+/// `'01'`, `'1.0'` and `''` are each not logical, error 34).
+fn logical_value(text: &[u8]) -> Option<bool> {
+    match text {
+        b"0" => Some(false),
+        b"1" => Some(true),
+        _ => None,
+    }
+}
+
+/// [`Interp::truth`]'s answer for the handles a logical value arrives in
+/// without a conversion: the constants a comparison answers with, and the
+/// small integers `0` and `1`. `None` for every other value, which only the
+/// full judgment may decide.
+#[inline(always)]
+pub(crate) fn truth_without_conversion(value: ObjRef) -> Option<bool> {
+    if value == LOGICAL_TRUE {
+        return Some(true);
+    }
+    if value == LOGICAL_FALSE {
+        return Some(false);
+    }
+    match value.decode() {
+        Decoded::SmallInt(1) => Some(true),
+        Decoded::SmallInt(0) => Some(false),
+        _ => None,
+    }
+}
+
+impl Interp {
+    /// Whether `value` is logically true: `RexxInternalObject::truthValue`
+    /// (`classes/ObjectClass.cpp:523`), the one judgment every keyword,
+    /// operator and method that takes a logical value makes. The value's
+    /// string by the required-string protocol (a user object is sent
+    /// `STRING`, an array joins its items) must be exactly `0` or `1`;
+    /// anything else is `raise`'s Error 34, which is the one thing a caller
+    /// chooses.
+    #[inline]
+    pub(crate) fn truth(
+        &mut self,
+        value: ObjRef,
+        raise: fn(&[u8]) -> Raised,
+    ) -> Result<bool, Failure> {
+        match truth_without_conversion(value) {
+            Some(holds) => Ok(holds),
+            None => self.truth_of_string_value(value, raise),
+        }
+    }
+
+    #[inline(never)]
+    fn truth_of_string_value(
+        &mut self,
+        value: ObjRef,
+        raise: fn(&[u8]) -> Raised,
+    ) -> Result<bool, Failure> {
+        let frame = self.roots.activity_mut().push_frame();
+        self.roots.activity_mut().push_temp(value);
+        let string = self.required_string_or_nil(value)?;
+        let text = self.to_text(string);
+        let holds = match logical_value(&text) {
+            Some(holds) => holds,
+            None => {
+                let text = text.into_owned();
+                return Err(raise(&text).into());
+            }
+        };
+        self.roots.activity_mut().pop_frame(frame);
+        Ok(holds)
+    }
+}
+
+/// `Operator` -> `interrexx-num`'s `CompareOp`, for the `Operator` variants
+/// `apply_binary` dispatches to `compare_values`. **Several operators share
+/// one `CompareOp`**: `\=`/`<>`/`><` (`BackslashEqual`/`LessThanGreaterThan`/
+/// `GreaterThanLessThan`) all mean `NotEqual` (`compare.rs`'s own doc
+/// comment: the interpreter's operator table repeats one method pointer for
+/// them), and `\>`/`\<` with their strict siblings `\>>`/`\<<` invert their
+/// positive counterpart's sense rather than getting a `CompareOp` of their
+/// own: `\>` ("not greater than") is `LessEqual`, `\<` is `GreaterEqual`,
+/// `\>>` is `StrictLessEqual` and `\<<` is `StrictGreaterEqual`. `\==` is
+/// **not** among them -- it has `StrictNotEqual` to itself -- and `\=` is one
+/// of the operators sharing `NotEqual` above. Verified against the oracle
+/// (this task's report), not derived from the names alone -- `\>>`/`\<<` are
+/// strict-family byte comparisons, where "greater"/"less" do not carry the
+/// numeric intuition their spelling suggests.
+fn compare_op(op: Operator) -> CompareOp {
+    use Operator::*;
+    match op {
+        Equal => CompareOp::Equal,
+        BackslashEqual | LessThanGreaterThan | GreaterThanLessThan => CompareOp::NotEqual,
+        GreaterThan => CompareOp::Greater,
+        LessThan => CompareOp::Less,
+        GreaterThanEqual => CompareOp::GreaterEqual,
+        LessThanEqual => CompareOp::LessEqual,
+        BackslashGreaterThan => CompareOp::LessEqual,
+        BackslashLessThan => CompareOp::GreaterEqual,
+        StrictEqual => CompareOp::StrictEqual,
+        StrictBackslashEqual => CompareOp::StrictNotEqual,
+        StrictGreaterThan => CompareOp::StrictGreater,
+        StrictLessThan => CompareOp::StrictLess,
+        StrictGreaterThanEqual => CompareOp::StrictGreaterEqual,
+        StrictLessThanEqual => CompareOp::StrictLessEqual,
+        StrictBackslashGreaterThan => CompareOp::StrictLessEqual,
+        StrictBackslashLessThan => CompareOp::StrictGreaterEqual,
+        other => unreachable!(
+            "apply_binary only dispatches the comparison operators here, got {other:?}"
+        ),
+    }
+}
+
+/// Whether `op` is one of the operators [`Interp::eval_arithmetic`]
+/// computes.
+pub(crate) fn is_arithmetic(op: Operator) -> bool {
+    use Operator::*;
+    matches!(
+        op,
+        Plus | Subtract | Multiply | Divide | IntDiv | Remainder | Power
+    )
+}
+
+/// Whether `op` is one of the operators [`Interp::concat_values`] joins bytes
+/// for: `||`, the abuttal the parser synthesises between two adjacent terms,
+/// and the blank between two terms with whitespace in it.
+fn is_concatenation(op: Operator) -> bool {
+    use Operator::*;
+    matches!(op, Concatenate | Abuttal | Blank)
+}
+
+/// Whether `op` is one of the operators [`Interp::compare_values`] compares
+/// under, the numeric-or-string family and the strict one.
+fn is_comparison(op: Operator) -> bool {
+    use Operator::*;
+    matches!(
+        op,
+        Equal
+            | BackslashEqual
+            | GreaterThan
+            | BackslashGreaterThan
+            | LessThan
+            | BackslashLessThan
+            | GreaterThanEqual
+            | LessThanEqual
+            | StrictEqual
+            | StrictBackslashEqual
+            | StrictGreaterThan
+            | StrictBackslashGreaterThan
+            | StrictLessThan
+            | StrictBackslashLessThan
+            | StrictGreaterThanEqual
+            | StrictLessThanEqual
+            | LessThanGreaterThan
+            | GreaterThanLessThan
+    )
+}
+
+/// Whether `op` asks whether two values are the same, as against how they
+/// order.
+pub(crate) fn is_equality(op: Operator) -> bool {
+    use Operator::*;
+    matches!(
+        op,
+        Equal
+            | BackslashEqual
+            | StrictEqual
+            | StrictBackslashEqual
+            | LessThanGreaterThan
+            | GreaterThanLessThan
+    )
+}
+
+/// Which half of [`is_equality`] answers `1` for a value that is not `.nil`.
+fn is_inequality(op: Operator) -> bool {
+    use Operator::*;
+    matches!(
+        op,
+        BackslashEqual | StrictBackslashEqual | LessThanGreaterThan | GreaterThanLessThan
+    )
+}
+
+/// Whether `op` is one of the operators [`Interp::logical_values`] computes.
+fn is_logical(op: Operator) -> bool {
+    use Operator::*;
+    matches!(op, And | Or | Xor)
+}
+
+/// Whether `op` has a native op of its own, which is what licenses
+/// `crate::ir::compile` compiling it to registers rather than leaving its
+/// whole expression to `crate::ir::Op::EvalExpr`.
+pub(crate) fn is_native_binary(op: Operator) -> bool {
+    is_arithmetic(op) || is_concatenation(op) || is_comparison(op) || is_logical(op)
+}
+
+/// The bytes a call target names, and whether an internal label may answer it.
+pub(crate) fn call_target_name<'a>(code: &Code<'a>, target: &'a CallTarget) -> (&'a [u8], bool) {
+    match target {
+        CallTarget::Symbol(id) => (code.symbols.name(*id).as_bytes(), true),
+        CallTarget::Literal(bytes) => (bytes, false),
+    }
+}
+
+/// Whether `op` is one of the eight strict comparison operators -- decided
+/// directly off `Operator` rather than off `CompareOp`, because
+/// `CompareOp::is_strict` is private to `interrexx-num` (`compare.rs`) and this
+/// crate has no other need for a public one: strictness is only ever asked
+/// here, to decide whether calling `to_number` is worth it at all before
+/// `compare_decoded` is reached (a strict comparison never looks at a
+/// `Number`, so parsing one first would be pure waste).
+/// Whether two tagged small integers settle `op` between them, and how.
+fn small_int_compare(op: Operator, left: ObjRef, right: ObjRef, digits: u64) -> Option<bool> {
+    let (Decoded::SmallInt(left), Decoded::SmallInt(right)) = (left.decode(), right.decode())
+    else {
+        return None;
+    };
+    // `i128` so the bound itself cannot overflow at the `DIGITS` a program may
+    // set, and so `abs` has a value for `i64::MIN`.
+    let bound = 10i128.checked_pow(u32::try_from(digits).ok()?)?;
+    if i128::from(left).abs() >= bound || i128::from(right).abs() >= bound {
+        return None;
+    }
+    Some(match compare_op(op) {
+        CompareOp::Equal | CompareOp::StrictEqual => left == right,
+        CompareOp::NotEqual | CompareOp::StrictNotEqual => left != right,
+        CompareOp::Greater => left > right,
+        CompareOp::Less => left < right,
+        CompareOp::GreaterEqual => left >= right,
+        CompareOp::LessEqual => left <= right,
+        CompareOp::StrictGreater
+        | CompareOp::StrictLess
+        | CompareOp::StrictGreaterEqual
+        | CompareOp::StrictLessEqual => return None,
+    })
+}
+
+fn is_strict_compare(op: Operator) -> bool {
+    use Operator::*;
+    matches!(
+        op,
+        StrictEqual
+            | StrictBackslashEqual
+            | StrictGreaterThan
+            | StrictLessThan
+            | StrictGreaterThanEqual
+            | StrictLessThanEqual
+            | StrictBackslashGreaterThan
+            | StrictBackslashLessThan
+    )
+}
+
+#[cfg(test)]
+mod tests;
+
+/// **An operator whose left operand is an object this crate can build
+/// and send no message to.**
+#[cfg(test)]
+mod object_operand_tests;

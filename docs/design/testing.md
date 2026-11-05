@@ -29,7 +29,7 @@ emptied between runs. A `<name>.env` sidecar sets `PATH`, `REXX_PATH`, `CWD` or 
 for both sides, and a `<name>.d/` directory holds fixtures.
 
 Each `rust/corpus/lang/*.rex` has a recorded copy of its source lines under
-`rust/crates/rexx-parse/tests/sourceline_oracle/`, and `SOURCELINE` is checked against it; editing
+`rust/crates/interrexx-parse/tests/sourceline_oracle/`, and `SOURCELINE` is checked against it; editing
 a corpus program means regenerating that file as the test's module comment describes.
 
 Other tables in `rust/corpus/` are derived from ooRexx, ooTest or `oodocs` and committed with the
@@ -70,7 +70,7 @@ prints a replay line naming the group, part, seed and policy.
 
 ## The specification checker
 
-`tests/spec.rs` loads every page under `spec/src` through `rexx-spec` and checks that each rule
+`tests/spec.rs` loads every page under `spec/src` through `interrexx-spec` and checks that each rule
 (`r[id]`) has an example under it or a test citing it, that every citation names a rule, that
 every example's `rexx` block prints exactly its `output` block with the stated exit code on
 interrexx, and that the Deviations a page lists match its rules and the Deviation register. A test

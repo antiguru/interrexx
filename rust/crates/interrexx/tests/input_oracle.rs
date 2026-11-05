@@ -1,0 +1,897 @@
+//! Command-line arguments and a non-empty console, compared against the
+//! running oracle.
+
+#![expect(
+    clippy::disallowed_methods,
+    reason = "this harness times or bounds real runs"
+)]
+
+mod support;
+
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use support::oracle::{CppOutcome, classify_termination, did_not_finish, write_and_wait};
+
+/// Env var that flips this file from a skip into the check.
+const GATE_ENV: &str = "REXX_CORPUS_GATE";
+
+fn gate_mode() -> bool {
+    match std::env::var(GATE_ENV) {
+        Ok(value) => !value.is_empty() && value != "0",
+        Err(_) => false,
+    }
+}
+
+/// A directory of this run's own, because an unresolved Rexx name searches the
+/// current directory for an external routine -- `support::oracle::Oracle::run`'s
+/// own doc has the measured consequence of running a synthesised program from a
+/// directory of stale `.rex` files.
+fn fresh_run_dir() -> PathBuf {
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("the clock is after the epoch")
+        .as_nanos();
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("input-oracle-{}-{nanos}", std::process::id()));
+    fs::create_dir_all(&dir).unwrap_or_else(|e| panic!("cannot create {}: {e}", dir.display()));
+    dir
+}
+
+/// One program, one command line, one console, and the reason the row exists.
+struct Case {
+    /// Names the temporary file and appears in a failure message.
+    name: &'static str,
+    program: &'static str,
+    /// The words after the program path, exactly as `argv` entries.
+    args: &'static [&'static str],
+    /// The console's bytes. `None` is the harness default of `/dev/null` on
+    /// the oracle side and `Stdio::null()` on this crate's, which is a
+    /// different state from `Some(b"")`: the second is a pipe closed with
+    /// nothing in it.
+    stdin: Option<&'static [u8]>,
+    /// Why this row is here, and what wrong answer it excludes.
+    why: &'static str,
+}
+
+/// The program every argument row runs. Prints the argument three ways --
+/// through `PARSE ARG`, through the upcasing `ARG` short form, and through
+/// `USE ARG` -- so a row's divergence names which reader disagreed.
+const ARG_PROGRAM: &str = "\
+parse arg n1 n2 n3
+say \"parse arg [\" || n1 || \"][\" || n2 || \"][\" || n3 || \"]\"
+arg n4 n5 n6
+say \"arg       [\" || n4 || \"][\" || n5 || \"][\" || n6 || \"]\"
+use arg p
+say \"use arg   [\" || p || \"] length \" || length(p)
+";
+
+/// The program every console row runs. Interleaves `PARSE PULL` and `PARSE
+/// LINEIN` so a row proves they share one position, and reports each line's
+/// length and hex so a terminator or case difference cannot hide inside a
+/// visually identical string.
+const INPUT_PROGRAM: &str = "\
+parse pull n1
+parse linein n2
+pull n3
+parse linein n4
+say \"1 \" || length(n1) || \" \" || c2x(n1)
+say \"2 \" || length(n2) || \" \" || c2x(n2)
+say \"3 \" || length(n3) || \" \" || c2x(n3)
+say \"4 \" || length(n4) || \" \" || c2x(n4)
+";
+
+/// The program the `::CONSTANT` argument row runs. A directive expression
+/// runs as a method against the class object with an argument list of its
+/// own, so the command line the program was invoked with is not what `ARG`
+/// reads inside it.
+const CONSTANT_ARG_PROGRAM: &str = "\
+say \"constant [\" || .K~c || \"]\"
+say \"program  [\" || arg() || \"][\" || arg(1) || \"]\"
+exit
+
+::class K
+::constant c (arg() || \"][\" || arg(1))
+";
+
+/// The `USE STRICT ARG` program: the argument model's own error path.
+const STRICT_PROGRAM: &str = "\
+use strict arg p
+say \"strict [\" || p || \"]\"
+";
+
+/// Fills the queue, reads it back, and then keeps reading past the end of it
+/// into the console.
+const QUEUE_PROGRAM: &str = "\
+push \"c\"
+queue \"b\"
+push \"a\"
+pull n1
+parse pull n2
+parse pull n3
+parse pull n4
+parse linein n5
+say \"[\" || n1 || \"][\" || n2 || \"][\" || n3 || \"][\" || n4 || \"][\" || n5 || \"]\"
+";
+
+/// The program the console-count rows run: it reads while LINES, or while
+/// CHARS, says data waits (rexxref iostrms.xml:189-193), and stops after
+/// five reads so a count that never falls cannot loop.
+const COUNT_PROGRAM: &str = "\
+n = 0
+do while lines() > 0 & n < 5
+  n = n + 1
+  say n '[' || linein() || ']'
+end
+say 'lines end' n lines()
+";
+
+const CHARS_PROGRAM: &str = "\
+n = 0
+do while chars() > 0 & n < 40
+  n = n + 1
+  c = charin()
+end
+say 'chars end' n chars()
+";
+
+/// The program the piped-position row runs: CHARIN after LINEIN reads on
+/// from where the line ended, and a start on a transient stream is 93.958.
+const PIPE_POSITION_PROGRAM: &str = "\
+say '[' || linein() || ']'
+say '[' || charin(, , 3) || ']'
+say '[' || charin(, 3) || ']'
+say 'not reached'
+";
+
+const CASES: &[Case] = &[
+    Case {
+        name: "console-charin-after-linein",
+        program: PIPE_POSITION_PROGRAM,
+        args: &[],
+        stdin: Some(b"hello\nworld\nthird\n"),
+        why: "LINEIN and CHARIN share one read position on a piped console, \
+              so CHARIN answers `wor`; a start positions, and a pipe cannot \
+              be positioned (rexxref funct.xml:1314-1316)",
+    },
+    Case {
+        name: "console-lines-loop",
+        program: COUNT_PROGRAM,
+        args: &[],
+        stdin: Some(b"hello\nworld\nthird\n"),
+        why: "LINES on a piped console answers 1 while a line waits and 0 at \
+              the end, so the loop reads every waiting line; one that \
+              answers 0 after its first ask reads one",
+    },
+    Case {
+        name: "console-chars-loop",
+        program: CHARS_PROGRAM,
+        args: &[],
+        stdin: Some(b"abc\nde\n"),
+        why: "CHARS on a piped console answers 1 while a byte waits and 0 at \
+              the end, so the loop reads every waiting byte",
+    },
+    Case {
+        name: "arg-none",
+        program: ARG_PROGRAM,
+        args: &[],
+        stdin: None,
+        why: "no argument at all: `use arg p` must leave `p` unbound, so it \
+              reads as its own derived name `P`. An implementation that \
+              modelled absence as a present empty string prints nothing here \
+              and is otherwise indistinguishable",
+    },
+    Case {
+        name: "arg-empty",
+        program: ARG_PROGRAM,
+        args: &[""],
+        stdin: None,
+        why: "one EMPTY argument, which is a present argument: the pair with \
+              `arg-none` is the whole reason the argument is an `Option`, and \
+              nothing else in the tree compares the two against the oracle",
+    },
+    Case {
+        name: "arg-three-words",
+        program: ARG_PROGRAM,
+        args: &["a", "b", "c"],
+        stdin: None,
+        why: "three words become ONE argument string `a b c`, so `parse arg \
+              n1 n2 n3` splits it back into three and `use arg p` sees all of \
+              it. An implementation passing three separate arguments prints \
+              the same first line and a different third",
+    },
+    Case {
+        name: "arg-one-quoted-word",
+        program: ARG_PROGRAM,
+        args: &["a b c"],
+        stdin: None,
+        why: "the adjacent success for the row above: one quoted word is \
+              indistinguishable from three bare ones, which is what makes the \
+              single-string model right rather than merely sufficient",
+    },
+    Case {
+        name: "arg-internal-spacing",
+        program: ARG_PROGRAM,
+        args: &["a  b", "c"],
+        stdin: None,
+        why: "internal spacing survives the join and the separator is exactly \
+              one blank, so `use arg p` reports length 6 for `a  b c` -- a \
+              join that normalised whitespace reports 5",
+    },
+    Case {
+        name: "arg-leading-empty-word",
+        program: ARG_PROGRAM,
+        args: &["", "x"],
+        stdin: None,
+        why: "the join's own edge: a leading empty word contributes neither \
+              text nor separator, so the argument is `x` and not ` x`. This is \
+              the row that fails for an implementation that joins the words \
+              with a blank, which is what the rule looks like from the other \
+              rows",
+    },
+    Case {
+        name: "arg-trailing-empty-word",
+        program: ARG_PROGRAM,
+        args: &["x", ""],
+        stdin: None,
+        why: "and its asymmetric partner: a TRAILING empty word does \
+              contribute its separator, so the argument is `x ` with length 2. \
+              An implementation that skipped empty words entirely passes the \
+              row above and fails this one",
+    },
+    Case {
+        name: "arg-commas",
+        program: ARG_PROGRAM,
+        args: &["a,b,c"],
+        stdin: None,
+        why: "commas are not argument separators: the whole string lands in \
+              the first template field",
+    },
+    Case {
+        name: "arg-mixed-case",
+        program: ARG_PROGRAM,
+        args: &["mIxEd", "CaSe"],
+        stdin: None,
+        why: "`ARG template` is `PARSE UPPER ARG template` and `PARSE ARG` is \
+              not: the two lines of output differ in case on the same \
+              argument. No corpus program can reach this, because with no \
+              argument both spellings parse the null string",
+    },
+    Case {
+        name: "constant-expression-arguments",
+        program: CONSTANT_ARG_PROGRAM,
+        args: &["hello"],
+        stdin: None,
+        why: "a `::CONSTANT` expression runs as a method with its own \
+              argument list, which is empty, so `arg()` is `0` and `arg(1)` \
+              the null string inside it while the main body reads `1` and \
+              `hello`. No corpus program can reach this: the corpus harness \
+              passes no arguments, and with none the two readings are equal. \
+              `run_rust`'s own doc has which engine this compares",
+    },
+    Case {
+        name: "strict-none",
+        program: STRICT_PROGRAM,
+        args: &[],
+        stdin: None,
+        why: "`use strict arg p` with no argument is Error 40.3, whose \
+              substitution is the PROGRAM PATH at this level and not an \
+              upcased label -- so this compares the report line by line, not \
+              just the exit code",
+    },
+    Case {
+        name: "strict-empty",
+        program: STRICT_PROGRAM,
+        args: &[""],
+        stdin: None,
+        why: "the same clause with one empty argument succeeds, rc 0. Paired \
+              with `strict-none` this turns the absent/empty distinction into \
+              an exit-status difference, which is the strongest form it takes",
+    },
+    Case {
+        name: "input-four-lines",
+        program: INPUT_PROGRAM,
+        args: &[],
+        stdin: Some(b"line-A\nline-B\nline-C\nline-D\n"),
+        why: "one shared position: two `PARSE PULL`s and two `PARSE LINEIN`s \
+              interleaved consume four consecutive lines. An implementation \
+              giving each construct its own reader repeats lines instead",
+    },
+    Case {
+        name: "input-runs-out",
+        program: INPUT_PROGRAM,
+        args: &[],
+        stdin: Some(b"only-one\n"),
+        why: "past the last line every read is the null string, not the last \
+              line again and not a condition",
+    },
+    Case {
+        name: "input-uppercase-split",
+        program: INPUT_PROGRAM,
+        args: &[],
+        stdin: Some(b"lower one\nlower two\nlower three\nlower four\n"),
+        why: "`PULL` upcases and `PARSE PULL`/`PARSE LINEIN` do not, on lines \
+              from the console rather than from the queue -- the third line's \
+              hex differs from the other three's while the lengths match",
+    },
+    Case {
+        name: "input-crlf",
+        program: INPUT_PROGRAM,
+        args: &[],
+        stdin: Some(b"crlf\r\nplain\nx\r\r\ny\r"),
+        why: "the `\\r\\n` collapse, and the two near-misses beside it: one CR \
+              is removed from `x\\r\\r\\n` and not both, and a final `y\\r` \
+              with no newline after it keeps its CR. Nothing else in the tree \
+              can feed these bytes to either interpreter",
+    },
+    Case {
+        name: "input-blanks-and-empty-line",
+        program: INPUT_PROGRAM,
+        args: &[],
+        stdin: Some(b" pad \n\nlast-no-newline"),
+        why: "leading and trailing blanks are data, an empty line is the null \
+              string, and a final line with no terminator is still a line",
+    },
+    Case {
+        name: "input-nul-byte",
+        program: INPUT_PROGRAM,
+        args: &[],
+        stdin: Some(b"a\x00b\nnext\n"),
+        why: "the console is bytes, not text: a NUL is data and does not end \
+              the line",
+    },
+    Case {
+        name: "queue-round-trip",
+        program: QUEUE_PROGRAM,
+        args: &[],
+        stdin: Some(b"console-A\nconsole-B\n"),
+        why: "the queue's own storage order, read back, against a console \
+              holding different lines. `lang/push_queue.rex` states in its own \
+              header that it cannot pin which end a line landed on, because it \
+              was written before anything read one back; this is that reader. \
+              Removing from the tail prints `[B][c][a]`, collapsing PUSH into \
+              QUEUE prints `[C][b][a]`, and draining the console before the \
+              queue prints the console's lines in the first three fields",
+    },
+    Case {
+        name: "input-closed-pipe",
+        program: INPUT_PROGRAM,
+        args: &[],
+        stdin: Some(b""),
+        why: "a pipe closed with nothing in it, which is not the same \
+              descriptor as `/dev/null` and must answer the same way. The \
+              `None` rows above are the `/dev/null` half",
+    },
+];
+
+/// Runs `rexx` the way a shell would, with the same `argv` and the same
+/// console the oracle gets.
+fn run_rust(path: &Path, args: &[&str], stdin: Option<&[u8]>) -> CppOutcome {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_rexx"));
+    command
+        .arg(path)
+        .args(args)
+        .current_dir(path.parent().unwrap_or(Path::new(".")))
+        .stdin(match stdin {
+            None => Stdio::null(),
+            Some(_) => Stdio::piped(),
+        });
+    let output = match stdin {
+        None => command
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .unwrap_or_else(|e| panic!("failed to spawn rexx for {}: {e}", path.display())),
+        Some(bytes) => write_and_wait(&mut command, bytes, path),
+    };
+    // `rexx` has no deadline of its own -- `write_and_wait` and
+    // `Command::output` above both block without one -- so a `None` exit
+    // code here can only be a signal death, never the harness's own kill.
+    // See `support::oracle::write_and_wait`'s doc for why this stays the
+    // simpler, un-deadlined form rather than gaining one.
+    CppOutcome {
+        stdout: output.stdout,
+        stderr: output.stderr,
+        termination: classify_termination(output.status.code(), false),
+    }
+}
+
+/// Which of the three channels disagree. A local copy of
+/// `support::oracle::descriptor_diffs`'s comparison, because that one takes a
+/// `interrexx::Outcome` from an in-process run and both sides here are
+/// subprocesses.
+fn diffs(rust: &CppOutcome, cpp: &CppOutcome) -> Vec<&'static str> {
+    let mut out = Vec::new();
+    if rust.stdout != cpp.stdout {
+        out.push("stdout");
+    }
+    if support::normalize_stderr(&rust.stderr) != support::normalize_stderr(&cpp.stderr) {
+        out.push("stderr");
+    }
+    if rust.termination != cpp.termination {
+        out.push("exit code");
+    }
+    out
+}
+
+/// Every row of [`CASES`] agrees with the oracle on all three channels.
+#[test]
+fn command_line_arguments_and_the_console_agree_with_the_oracle() {
+    if !gate_mode() {
+        eprintln!(
+            "*** SKIPPED -- command-line arguments and a non-empty console are \
+             not compared against the oracle unless {GATE_ENV} is set. The \
+             corpus harness passes no arguments and an empty stdin, so nothing \
+             else in the tree compares either. ***"
+        );
+        return;
+    }
+
+    let dir = fresh_run_dir();
+    let oracle = support::oracle::locate();
+    let mut failures = Vec::new();
+
+    for case in CASES {
+        // One directory per case: the programs differ, and a leftover file
+        // from an earlier case is exactly the stale-`.rex` hazard
+        // `fresh_run_dir`'s comment is about.
+        let case_dir = dir.join(case.name);
+        fs::create_dir_all(&case_dir)
+            .unwrap_or_else(|e| panic!("cannot create {}: {e}", case_dir.display()));
+        let file = case_dir.join(format!("{}.rex", case.name));
+        fs::write(&file, case.program)
+            .unwrap_or_else(|e| panic!("cannot write {}: {e}", file.display()));
+        let abs = fs::canonicalize(&file)
+            .unwrap_or_else(|e| panic!("cannot resolve {}: {e}", file.display()));
+
+        let rust = run_rust(&abs, case.args, case.stdin);
+        let cpp = oracle.run_with(&abs, case.args, case.stdin);
+
+        // Structural, and checked before `diffs`: `termination` comparing
+        // equal is not agreement when neither side finished -- two
+        // `Signaled` runs compare equal the same way two `Exited(0)` runs
+        // do, and reading that as a pass is the one direction a structural
+        // failure must never go.
+        assert!(
+            !did_not_finish(&rust) && !did_not_finish(&cpp),
+            "{} [{}]: a run that does not finish is a structural failure, \
+             not a divergence to diff -- rust {:?}, oracle {:?}",
+            case.name,
+            case.why,
+            rust.termination,
+            cpp.termination
+        );
+
+        let channels = diffs(&rust, &cpp);
+        if !channels.is_empty() {
+            failures.push(format!(
+                "\n  {} [{}]\n    why: {}\n    argv: {:?}  stdin: {:?}\n    \
+                 rust:   stdout={:?} stderr={:?} rc={}\n    \
+                 oracle: stdout={:?} stderr={:?} rc={}",
+                case.name,
+                channels.join(", "),
+                case.why,
+                case.args,
+                case.stdin.map(String::from_utf8_lossy),
+                String::from_utf8_lossy(&rust.stdout),
+                String::from_utf8_lossy(&rust.stderr),
+                rust.expect_exit_code(),
+                String::from_utf8_lossy(&cpp.stdout),
+                String::from_utf8_lossy(&cpp.stderr),
+                cpp.expect_exit_code(),
+            ));
+        }
+    }
+
+    assert!(
+        failures.is_empty(),
+        "{} of {} command-line/console cases disagree with the oracle:{}",
+        failures.len(),
+        CASES.len(),
+        failures.join("")
+    );
+    // The floor is a literal, and it has to be: `oracle.invocations() ==
+    // CASES.len()` derives both sides from the same array, so an empty or
+    // gutted `CASES` satisfies it having compared nothing at all -- the same
+    // shape as a constant compared against itself, one level up. The equality
+    // below is still worth keeping beside it: it is what catches a row that
+    // silently failed to start the oracle. `>=` rather than `==` so that
+    // adding a row is not an edit here.
+    assert!(
+        oracle.invocations() >= 15,
+        "only {} oracle runs, which is fewer than this file has ever had -- \
+         rows were removed rather than the harness getting faster, and a \
+         shrunken CASES satisfies the equality below by comparing nothing",
+        oracle.invocations()
+    );
+    assert_eq!(
+        oracle.invocations(),
+        CASES.len(),
+        "every case must have actually started the oracle; a comparison \
+         against nothing is what the invocation counter exists to exclude"
+    );
+
+    // Only on success: a failing run's files are the evidence.
+    let _ = fs::remove_dir_all(&dir);
+}
+
+/// An unreadable console is end of input, not an error, and both interpreters
+/// agree on that.
+#[test]
+fn an_unreadable_console_is_end_of_input() {
+    if !gate_mode() {
+        eprintln!(
+            "*** SKIPPED -- the unreadable-console comparison needs the oracle \
+             and runs only with {GATE_ENV} set. ***"
+        );
+        return;
+    }
+
+    let dir = fresh_run_dir();
+    let file = dir.join("unreadable.rex");
+    fs::write(&file, INPUT_PROGRAM)
+        .unwrap_or_else(|e| panic!("cannot write {}: {e}", file.display()));
+    let abs = fs::canonicalize(&file)
+        .unwrap_or_else(|e| panic!("cannot resolve {}: {e}", file.display()));
+
+    // The directory itself is the descriptor. Opened read-only, which succeeds
+    // on Linux for a directory; it is the `read` that fails.
+    let as_stdin = || {
+        Stdio::from(
+            fs::File::open(&dir).unwrap_or_else(|e| panic!("cannot open {}: {e}", dir.display())),
+        )
+    };
+
+    let oracle = support::oracle::locate();
+    let rust = Command::new(env!("CARGO_BIN_EXE_rexx"))
+        .arg(&abs)
+        .current_dir(&dir)
+        .stdin(as_stdin())
+        .output()
+        .expect("rexx starts");
+    // Through the harness, not a hand-rolled `sh -c` wrapper: the memory limit
+    // and the invocation counter are exactly what `run_with_stdin` exists to
+    // keep in one place, and the counter is asserted below.
+    let cpp = oracle.run_with_stdin(&abs, &[], as_stdin());
+
+    // Structural, and checked before the byte comparison below, same as this
+    // file's other `oracle.run_with`/`run_with_stdin` call site (`:449`):
+    // an unread console must not turn a non-finish into a divergence.
+    assert!(
+        !did_not_finish(&cpp),
+        "an unreadable console: the oracle did not finish: {:?} -- a \
+         structural failure, not a byte comparison",
+        cpp.termination
+    );
+
+    assert_eq!(
+        (
+            String::from_utf8_lossy(&rust.stdout).into_owned(),
+            String::from_utf8_lossy(&rust.stderr).into_owned(),
+            rust.status.code()
+        ),
+        (
+            String::from_utf8_lossy(&cpp.stdout).into_owned(),
+            String::from_utf8_lossy(&cpp.stderr).into_owned(),
+            Some(cpp.expect_exit_code())
+        ),
+        "an unreadable console must answer the null string on both sides"
+    );
+    assert!(
+        !cpp.stdout.is_empty(),
+        "the oracle printed nothing, so this compared two empty outputs and \
+         proved nothing about how either side handles an unreadable console"
+    );
+    assert_eq!(
+        oracle.invocations(),
+        1,
+        "the comparison above must have actually started the oracle"
+    );
+
+    let _ = fs::remove_dir_all(&dir);
+}
+
+/// The program the file-console test runs: the counts before, between and
+/// after reads, and a loop on LINES.
+const FILE_COUNT_PROGRAM: &str = "\
+say 'C' chars() .stdin~chars lines() .stdin~lines
+say '[' || linein() || ']'
+say 'D' chars() .stdin~chars lines() .stdin~lines
+n = 0
+do while lines() > 0 & n < 9
+  n = n + 1
+  say n '[' || linein() || ']'
+end
+say 'end' n chars() lines() .stdin~lines
+";
+
+/// The program the file-position test runs: the read position CHARIN's start
+/// and LINEIN's line move, shared by both, with the counts around each move.
+/// No LINES Count follows a LINEIN line: the oracle's cached line count
+/// answers wrongly there (Deviation candidate 5), and CHARS and LINES still
+/// witness the position.
+const FILE_POSITION_PROGRAM: &str = "\
+say 'A' chars() lines() .stdin~lines
+say '[' || linein() || ']'
+say 'B' chars() lines() .stdin~lines
+say '[' || charin(, 3) || ']'
+say 'C' chars() lines() .stdin~lines
+say '[' || charin(, 1, 3) || ']'
+say '[' || linein() || ']'
+say 'D' chars() lines() .stdin~lines
+say '[' || charin(, , 3) || ']'
+say '[' || linein() || ']'
+say 'E' chars() lines() .stdin~lines
+say '[' || linein(, 1) || ']'
+say 'F' chars() lines()
+say '[' || linein(, 3) || ']'
+say 'G' chars() lines()
+say '[' || .stdin~charin(2, 2) || ']'
+say 'H' chars() lines() .stdin~lines
+say '[' || .stdin~linein(4) || ']'
+say 'I' chars() lines() .stdin~lines
+say '[' || charin(, 23) || ']' .stdin~description
+say 'J' chars() lines() .stdin~lines
+say '[' || charin(, 22) || ']' .stdin~description
+say 'K' chars() lines() .stdin~lines
+say '[' || linein() || ']' .stdin~description
+say 'L' chars() lines() .stdin~lines
+";
+
+/// The program the file-query row runs: `.STDIN` and a program-made STDIN
+/// stream, opened, asked their size, position and time and moved by SEEK.
+const FILE_QUERY_PROGRAM: &str = "\
+s = .stream~new('STDIN')
+say 'unopened' '[' || s~query('size') || ']' '[' || s~query('position') || ']'
+say 'open' s~open('read')
+say 'size' s~query('size') .stdin~query('size') stream('STDIN', 'c', 'query size')
+say 'pos' s~query('position') s~query('position read char') s~query('position read line')
+say 'time' (s~query('datetime') \\== '') (s~query('timestamp') \\== '')
+i = .stdin
+say '[' || i~linein || ']' i~query('position read char') i~query('position read line')
+say 'seek' i~seek('1') i~state '[' || i~linein || ']'
+say 'line' i~seek('=2 read line') '[' || i~linein || ']'
+say 'back' i~seek('-2 char') i~query('position read char') '[' || i~charin || ']'
+say 'end' i~seek('<1') '[' || c2x(i~charin) || ']' chars() lines()
+say 'past' i~seek('=99') i~state chars() lines()
+say 'lines' i~seek('=99 line') i~query('position read line') i~query('position sys')
+say 'again' i~seek('=1 line') '[' || linein() || ']' chars() lines()
+";
+
+/// The program the child row runs: what a command inherits after a LINEIN.
+const FILE_CHILD_PROGRAM: &str = "\
+say length(linein())
+address system 'wc -c'
+";
+
+/// The program the shared-position row runs: each command reads on from
+/// where the one before it stopped.
+const FILE_COMMANDS_PROGRAM: &str = "\
+'head -1'
+'head -1'
+address system 'wc -c'
+";
+
+/// Runs `program` on both interpreters with `input` as a regular file on
+/// standard input, and answers both standard outputs once the exit codes
+/// agree.
+fn file_console_outputs(name: &str, program: &str, input: &[u8]) -> (String, String) {
+    let dir = fresh_run_dir();
+    let file = dir.join(format!("{name}.rex"));
+    fs::write(&file, program).unwrap_or_else(|e| panic!("cannot write {}: {e}", file.display()));
+    let console = dir.join("console.txt");
+    fs::write(&console, input)
+        .unwrap_or_else(|e| panic!("cannot write {}: {e}", console.display()));
+    let abs = fs::canonicalize(&file)
+        .unwrap_or_else(|e| panic!("cannot resolve {}: {e}", file.display()));
+    let as_stdin = || {
+        Stdio::from(
+            fs::File::open(&console)
+                .unwrap_or_else(|e| panic!("cannot open {}: {e}", console.display())),
+        )
+    };
+    let oracle = support::oracle::locate();
+    let rust = Command::new(env!("CARGO_BIN_EXE_rexx"))
+        .arg(&abs)
+        .current_dir(&dir)
+        .stdin(as_stdin())
+        .output()
+        .expect("rexx starts");
+    let cpp = oracle.run_with_stdin(&abs, &[], as_stdin());
+    assert!(
+        !did_not_finish(&cpp),
+        "{name}: the oracle did not finish: {:?}",
+        cpp.termination
+    );
+    assert_eq!(
+        rust.status.code(),
+        Some(cpp.expect_exit_code()),
+        "{name}: exit codes, with stderr {:?} here and {:?} on the oracle",
+        String::from_utf8_lossy(&rust.stderr),
+        String::from_utf8_lossy(&cpp.stderr)
+    );
+    (
+        String::from_utf8_lossy(&rust.stdout).into_owned(),
+        String::from_utf8_lossy(&cpp.stdout).into_owned(),
+    )
+}
+
+/// A console redirected from a regular file is a persistent stream: CHARS
+/// answers the bytes left and LINES Count the lines left (rexxref
+/// iostrms.xml:155-170), a last line with no line end counted.
+#[test]
+fn a_file_console_counts_what_is_left() {
+    if !gate_mode() {
+        eprintln!(
+            "*** SKIPPED -- the file-console comparison needs the oracle and runs \
+             only with {GATE_ENV} set. ***"
+        );
+        return;
+    }
+    let (rust, cpp) = file_console_outputs(
+        "file-console",
+        FILE_COUNT_PROGRAM,
+        b"hello\nworld\nthird\nlast",
+    );
+    assert_eq!(rust, cpp, "a file console's counts");
+    assert!(
+        cpp.starts_with("C 22 22 1 4\n"),
+        "the oracle did not count the file: {cpp}"
+    );
+}
+
+/// A console redirected from a regular file has one read position, which
+/// CHARIN's start and LINEIN's line move and both reads advance (rexxref
+/// funct.xml:1310-1322 and :3080-3087). A start past the end moves nothing
+/// and leaves `NOTREADY:EOF`.
+#[test]
+fn a_file_console_has_one_read_position() {
+    if !gate_mode() {
+        eprintln!(
+            "*** SKIPPED -- the file-position comparison needs the oracle and runs \
+             only with {GATE_ENV} set. ***"
+        );
+        return;
+    }
+    let (rust, cpp) = file_console_outputs(
+        "file-position",
+        FILE_POSITION_PROGRAM,
+        b"hello\nworld\nthird\nlast",
+    );
+    assert_eq!(rust, cpp, "a file console's read position");
+    assert!(
+        cpp.contains("\n[l]\nC 19 1 4\n[hel]\n[lo]\n"),
+        "the oracle did not position the file: {cpp}"
+    );
+}
+
+/// A console redirected from a regular file is a persistent stream open for
+/// reading (rexxref funct.xml, STREAM QUERY and SEEK): `.STDIN` answers its
+/// size, position and time, and SEEK moves its read position.
+#[test]
+fn a_file_console_answers_queries_and_seeks() {
+    if !gate_mode() {
+        eprintln!(
+            "*** SKIPPED -- the file-query comparison needs the oracle and runs \
+             only with {GATE_ENV} set. ***"
+        );
+        return;
+    }
+    let (rust, cpp) =
+        file_console_outputs("file-query", FILE_QUERY_PROGRAM, b"line1\nline2\nline3\n");
+    assert_eq!(rust, cpp, "a file console's queries and seeks");
+    assert!(
+        cpp.contains("\nsize 18 18 18\n") && cpp.contains("\nline 2 [line2]\n"),
+        "the oracle did not answer from the file: {cpp}"
+    );
+}
+
+/// A command the program runs inherits standard input at the read position,
+/// so it reads what the program has not. The first line fills the oracle's
+/// own 4096-byte read exactly, which is where its descriptor stands after
+/// one LINEIN; here the descriptor stands at the read position whatever the
+/// line's length.
+#[test]
+fn a_file_console_hands_a_command_what_is_unread() {
+    if !gate_mode() {
+        eprintln!(
+            "*** SKIPPED -- the file-child comparison needs the oracle and runs \
+             only with {GATE_ENV} set. ***"
+        );
+        return;
+    }
+    let mut input = vec![b'a'; 4095];
+    input.extend_from_slice(b"\nrest\n");
+    let (rust, cpp) = file_console_outputs("file-child", FILE_CHILD_PROGRAM, &input);
+    assert_eq!(rust, cpp, "what a command reads after a LINEIN");
+    assert_eq!(cpp, "4095\n5\n", "the command read the rest");
+}
+
+/// Standard input's descriptor is the read position commands share: what one
+/// command consumed, the next does not see again, and a command's own seek
+/// (`head` leaves the descriptor after the line it printed) is kept.
+#[test]
+fn a_command_moves_the_shared_read_position() {
+    if !gate_mode() {
+        eprintln!(
+            "*** SKIPPED -- the shared-position comparison needs the oracle and runs \
+             only with {GATE_ENV} set. ***"
+        );
+        return;
+    }
+    let (rust, cpp) = file_console_outputs(
+        "file-commands",
+        FILE_COMMANDS_PROGRAM,
+        b"one\ntwo\nthree\nfour\nfive\n",
+    );
+    assert_eq!(rust, cpp, "what each command reads");
+    assert_eq!(
+        cpp, "one\ntwo\n16\n",
+        "the commands read on from each other"
+    );
+}
+
+/// Positioning a transient stream is 93.958 (rexxref iostrms.xml:194-197),
+/// the first SEEK of one nothing has opened included: with standard input
+/// `/dev/null`, `.stream~new('STDIN')~seek('1')` raises it. The oracle tests
+/// `transient` before its implicit open sets it and answers `1` and
+/// `READY` there (t8.7c/probes/stdinq/q4.rex).
+#[test]
+fn the_first_seek_of_an_unopened_transient_stream_is_refused() {
+    let dir = fresh_run_dir();
+    let file = dir.join("transient-seek.rex");
+    fs::write(
+        &file,
+        "s = .stream~new('STDIN')\nsay 'seek' s~seek('1') s~state\nsay 'not reached'\n",
+    )
+    .unwrap_or_else(|e| panic!("cannot write {}: {e}", file.display()));
+    let rust = run_rust(&file, &[], None);
+    assert!(
+        rust.stdout.is_empty(),
+        "{}",
+        String::from_utf8_lossy(&rust.stdout)
+    );
+    let stderr = String::from_utf8_lossy(&rust.stderr);
+    assert!(
+        stderr.ends_with("Error 93.958:  Positioning of transient streams is not valid.\n"),
+        "{stderr}"
+    );
+}
+
+/// The `corpus/unfiled.txt` programs whose oracle answer a ruling departs
+/// from, each run from a copy in a fresh directory with its `.stdin` sidecar,
+/// or `/dev/null`, as standard input: an APPEND stream's write position kept
+/// out of the file as it was opened (funct.xml, STREAM OPEN APPEND). The case
+/// file holds this crate's answers, the run directory written as `<dir>`.
+#[test]
+fn the_unfiled_ruled_programs_answer_as_this_crate_rules() {
+    let mut cases = 0;
+    datadriven::walk("tests/input_oracle", |file| {
+        file.run(|case| {
+            assert_eq!(case.directive, "run", "{}", case.directive);
+            cases += 1;
+            let program = case.input.trim();
+            let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../corpus")
+                .join(program);
+            let dir = fresh_run_dir();
+            let file = dir.join(source.file_name().expect("a program file"));
+            fs::copy(&source, &file)
+                .unwrap_or_else(|e| panic!("cannot copy {}: {e}", source.display()));
+            let stdin = fs::read(source.with_extension("stdin")).ok();
+            let rust = run_rust(&file, &[], stdin.as_deref());
+            let shown = dir.display().to_string();
+            let mut rendered = format!("rc> {}\n", rust.expect_exit_code());
+            for line in String::from_utf8_lossy(&rust.stdout).lines() {
+                rendered.push_str(&format!("out> {line}\n"));
+            }
+            for line in String::from_utf8_lossy(&rust.stderr).lines() {
+                rendered.push_str(&format!("err> {}\n", line.replace(&shown, "<dir>")));
+            }
+            rendered
+        });
+    });
+    assert!(cases > 0, "tests/input_oracle ran no case");
+}

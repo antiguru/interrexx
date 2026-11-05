@@ -1,0 +1,135 @@
+//! The local-reference table: the `ObjRef` behind an extension's handle.
+
+use rustc_hash::FxHashMap;
+
+use interrexx_core::ObjRef;
+
+use crate::layout::RexxObjectPtr;
+
+// A handle carries an `ObjRef`'s bits in the address of a pointer nothing
+// dereferences, so the whole width has to fit.
+const _: () = assert!(usize::BITS == u64::BITS);
+
+/// The objects one activation has handed a native call, held so the collector
+/// can see them (D5).
+///
+/// A handle is derived from the whole of the `ObjRef`, generation included, so
+/// two handles are equal exactly when they name the same object and a handle
+/// minted before a slot was recycled cannot name the slot's next occupant.
+#[derive(Default)]
+pub struct Table {
+    entries: FxHashMap<usize, ObjRef>,
+    /// `None` until the first [`Table::release`].
+    released: Option<Box<Released>>,
+}
+
+/// The handles [`Table::release`] dropped, which root nothing and resolve
+/// while their object lives.
+#[derive(Default)]
+struct Released {
+    handles: FxHashMap<usize, ObjRef>,
+    /// The size of `handles` at which [`Table::release`] next drops the
+    /// handles whose object is gone.
+    limit: usize,
+}
+
+/// The least [`Released::limit`].
+const RELEASED_FLOOR: usize = 4096;
+
+impl Table {
+    pub fn new() -> Table {
+        Table::default()
+    }
+
+    /// The handle for `object`, held until [`Table::release`] or
+    /// [`Table::clear`]. Registering an object this table already holds
+    /// answers the same handle and changes nothing.
+    pub fn register(&mut self, object: ObjRef) -> RexxObjectPtr {
+        let address = address_of(object);
+        self.entries.insert(address, object);
+        if let Some(released) = &mut self.released
+            && !released.handles.is_empty()
+        {
+            released.handles.remove(&address);
+        }
+        std::ptr::without_provenance_mut(address)
+    }
+
+    /// The object `handle` names, held or released, or `None` if this table
+    /// has neither.
+    pub fn resolve(&self, handle: RexxObjectPtr) -> Option<ObjRef> {
+        self.resolve_live(handle, |_| true)
+    }
+
+    /// [`Table::resolve`], a released handle answered only where `live`
+    /// says its object is.
+    pub fn resolve_live(
+        &self,
+        handle: RexxObjectPtr,
+        live: impl Fn(ObjRef) -> bool,
+    ) -> Option<ObjRef> {
+        let address = handle.addr();
+        self.entries.get(&address).copied().or_else(|| {
+            self.released
+                .as_ref()?
+                .handles
+                .get(&address)
+                .copied()
+                .filter(|object| live(*object))
+        })
+    }
+
+    /// Whether this table holds `object`.
+    pub fn holds(&self, object: ObjRef) -> bool {
+        self.entries.contains_key(&address_of(object))
+    }
+
+    /// Drops `handle`'s registration, so it no longer roots its object
+    /// (`NativeActivation::removeLocalReference`,
+    /// `interpreter/execution/NativeActivation.cpp:1219`). A handle this table
+    /// does not hold is ignored, as the oracle ignores one. Each time the
+    /// released handles pass their limit, those whose object `live` says is
+    /// gone are forgotten.
+    pub fn release(&mut self, handle: RexxObjectPtr, live: impl Fn(ObjRef) -> bool) {
+        let address = handle.addr();
+        let Some(object) = self.entries.remove(&address) else {
+            return;
+        };
+        let released = self.released.get_or_insert_with(Box::default);
+        released.handles.insert(address, object);
+        if released.handles.len() >= released.limit.max(RELEASED_FLOOR) {
+            released.handles.retain(|_, object| live(*object));
+            released.limit = released.handles.len() * 2;
+        }
+    }
+
+    /// Drops every registration and every released handle, which is what
+    /// the end of an activation does.
+    pub fn clear(&mut self) {
+        self.entries.clear();
+        if let Some(released) = &mut self.released {
+            released.handles.clear();
+            released.limit = 0;
+        }
+    }
+
+    /// Every object this table holds, for the collector.
+    pub fn roots(&self) -> impl Iterator<Item = ObjRef> + '_ {
+        self.entries.values().copied()
+    }
+}
+
+/// `object`'s handle, as an address.
+///
+/// # Panics
+/// If every bit of `object` is set, which no constructible `ObjRef` has: the
+/// tag reserves the low two bits, and the only tag that sets both leaves the
+/// three above the length clear.
+fn address_of(object: ObjRef) -> usize {
+    // `NULLOBJECT` is the null pointer (`api/rexx.h:155`), so the `ObjRef`
+    // whose bits are zero -- heap slot zero at generation zero, the first
+    // object a fresh heap allocates -- must not encode to it.
+    let biased = object.bits().wrapping_add(1);
+    assert!(biased != 0, "an ObjRef with every bit set has no handle");
+    biased as usize
+}

@@ -72,7 +72,7 @@ for which in oracle crate; do
     if [ "$which" = oracle ]; then
         cp "$oracle/bin/rxregexp.cls" "$work/rp/tests/framework/"
     else
-        cp rust/crates/rexx-exec/packages/rxregexp.cls "$work/rp/tests/framework/"
+        cp rust/crates/interrexx/packages/rxregexp.cls "$work/rp/tests/framework/"
     fi
     for suite in "$work"/rp/tests/suites/*.testGroup; do
         name=$(basename "$suite" .testGroup)

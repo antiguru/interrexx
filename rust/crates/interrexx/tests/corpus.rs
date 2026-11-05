@@ -1,0 +1,1129 @@
+//! The differential corpus runner: every program named in [`SUBSET_FILES`]
+//! run under both interpreters, compared byte for byte on stdout and exit
+//! code, and on stderr up to DEVIATION 0's own narrow indent normalisation
+//! (see the "DEVIATION 0" section below).
+
+mod support;
+mod watchdog;
+
+use std::collections::{BTreeMap, BTreeSet};
+use std::env;
+use std::fmt::Write as _;
+use std::fs;
+use std::io::Write as _;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
+
+use interrexx::Outcome;
+use support::oracle::{
+    Oracle, StderrComparison, StdoutComparison, descriptor_diffs_modes, did_not_finish,
+    wrapped_exit_code,
+};
+use support::sidecar::{
+    self, Sidecar, empty_run_directory, prepare_run_directory, resolved_environment, sidecar_for,
+};
+
+/// Env var that flips this test from a progress report into the gate.
+/// See the module doc's "REPORT vs STRICT" section.
+const GATE_ENV: &str = "REXX_CORPUS_GATE";
+
+fn gate_mode() -> bool {
+    match env::var(GATE_ENV) {
+        Ok(value) => !value.is_empty() && value != "0",
+        Err(_) => false,
+    }
+}
+
+/// Env var that runs the crate's side under `SwitchMode::EveryOpportunity`
+/// when set to `every`.
+const SWITCH_ENV: &str = "REXX_CORPUS_SWITCH";
+
+fn switch_mode() -> Option<interrexx::SwitchMode> {
+    match env::var(SWITCH_ENV).as_deref() {
+        Ok("every") => Some(interrexx::SwitchMode::EveryOpportunity),
+        Ok(other) => panic!("{SWITCH_ENV} is `every` or unset, not `{other}`"),
+        Err(_) => None,
+    }
+}
+
+/// The union of every non-comment, non-blank line across `list_paths`, in
+/// first-seen order, each entry appearing once even if two files name the
+/// same corpus program. Neither the list nor its count is assumed anywhere
+/// else in this file; both come from the files themselves, so the subset can
+/// grow or shrink with no change here.
+fn read_subset(list_paths: &[&Path]) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    let mut union = Vec::new();
+    for list_path in list_paths {
+        let text = fs::read_to_string(list_path)
+            .unwrap_or_else(|e| panic!("cannot read {}: {e}", list_path.display()));
+        for line in text.lines().map(str::trim) {
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            if seen.insert(line.to_string()) {
+                union.push(line.to_string());
+            }
+        }
+    }
+    union
+}
+
+/// The directory one corpus program runs in: its own, under the target
+/// directory, named by the program's corpus path with `/` spelled `__`. That
+/// spelling collapses the path to a single component, so no entry can name a
+/// directory outside this root.
+fn run_directory(rel_path: &str) -> PathBuf {
+    Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join("corpus-run")
+        .join(rel_path.replace('/', "__"))
+}
+
+/// Runs the executor in process, on `path`, from `directory`, with
+/// `overrides` laid over the process's own environment.
+fn run_rust(
+    path: &Path,
+    directory: &Path,
+    overrides: &[(String, String)],
+    stdin: Option<&[u8]>,
+) -> Outcome {
+    let text = fs::read(path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+    let path_str = path
+        .to_str()
+        .unwrap_or_else(|| panic!("corpus path {} is not valid UTF-8", path.display()));
+    // **The same working directory the oracle gets**, which is why the caller
+    // chooses it rather than this function taking the program's own: the
+    // process's directory is shared between the interpreters this harness runs
+    // on threads, and a program naming a relative path must see one state.
+    let invocation = sidecar::invocation(directory, overrides, stdin);
+    let invocation = match switch_mode() {
+        Some(mode) => invocation.with_switch_mode(mode),
+        None => invocation,
+    };
+    watchdog::run_bounded(path_str, text, invocation)
+}
+
+/// One corpus program that disagreed with the oracle, or one where either
+/// side's run did not finish.
+struct Mismatch {
+    rel_path: String,
+    /// The construct named in `interrexx: X is not implemented`, when the
+    /// stderr has that shape. `None` for a genuine divergence and for a
+    /// structural failure alike.
+    owner: Option<String>,
+    reason: String,
+    /// `true` for a run of either side that did not finish, `false` for an
+    /// ordinary byte divergence. Kept as its own field rather than inferred from
+    /// `reason`'s text, because a structural failure is red in every mode
+    /// and a divergence is red only under the gate -- `corpus_differential`
+    /// asserts on this field unconditionally, before the gated assertion
+    /// over the whole list, and a bit that says which kind a `Mismatch` is
+    /// cannot be conflated with prose the way a substring match could be.
+    structural: bool,
+}
+
+/// Pulls `X` out of a `interrexx: X is not implemented` line, the same
+/// pattern the hand-run shell loop grepped for to partition failures by task.
+fn owner_from_stderr(stderr: &[u8]) -> Option<String> {
+    let text = String::from_utf8_lossy(stderr);
+    const MARKER: &str = "interrexx: ";
+    const SUFFIX: &str = " is not implemented";
+    let after_marker = &text[text.find(MARKER)? + MARKER.len()..];
+    let end = after_marker.find(SUFFIX)?;
+    Some(after_marker[..end].to_string())
+}
+
+/// Bounds a byte string to a short, readable excerpt, so an UNCLASSIFIED
+/// divergence's report stays diagnosable without reprinting a program's
+/// entire output.
+fn excerpt(bytes: &[u8]) -> String {
+    const BOUND: usize = 200;
+    let text = String::from_utf8_lossy(bytes);
+    if text.len() > BOUND {
+        format!("{}...", &text[..BOUND])
+    } else {
+        text.into_owned()
+    }
+}
+
+/// Corpus programs compared byte-for-byte on `stderr` rather than through
+/// DEVIATION 0's normalisation. See the module doc's "Opting a program out
+/// of DEVIATION 0".
+const RAW_STDERR_COMPARISON: &[&str] = &[
+    // What a list expression and a
+    // `DO OVER` trace. Every value line here is indented, and the indents are
+    // what the program is for -- the `>A>` per written list position against
+    // the `>>>` for the list itself, and the `>K>` a `DO OVER` header emits
+    // against the `>=>` each pass emits two columns further in.
+    "lang/array_trace.rex",
+    // Fix round 1, finding B2: RAISE's own keyword value lines. Each renders an
+    // object through `stringValue()` and each is indented, which is what the
+    // three programs exist to pin; the two `ADDITIONAL`/`ARRAY` spellings also
+    // differ from each other only in their traced element lines.
+    "lang/raise_additional_array.rex",
+    "lang/raise_array_spelling.rex",
+    "lang/raise_keyword_object_traces.rex",
+    // Fix round 2: a nested array as a substitution item. Its traced element
+    // lines are indented and its report reads the item's own object name, both
+    // of which the normaliser would blur.
+    "lang/raise_array_nested.rex",
+    "lang/raise_additional_nested.rex",
+    // Two traced method activations. The indent a
+    // `::METHOD` body's clauses echo at is the thing under test -- 0,
+    // whatever the sending clause's own indent was -- and normalisation
+    // erases exactly that difference, so these two are the first programs
+    // that would pass the default comparison while being wrong.
+    "lang/method_trace_invocation.rex",
+    "lang/method_trace_nested.rex",
+    // The `::ATTRIBUTE` accessor pair. Its `>I>`/`<I<` lines sit at the indent
+    // the entries above are here for, and they carry the resolved message
+    // name -- `"B"` against `"B="` -- which is the only place a program can
+    // read that name itself rather than infer it from which body ran.
+    "lang/method_attribute_set_body.rex",
+    // The operator-forwarded native-method
+    // frame. Raw mode is what asserts the frame line's own bytes -- its
+    // leading whitespace and its absent line number included -- rather than
+    // resting on whatever DEVIATION 0's normaliser happens to do to them.
+    // Measured, od-verified: the gap after the frame line's own `*-*` marker
+    // is exactly one space on both sides today, so normalisation is
+    // currently a no-op on every entry below's stderr; raw mode is the
+    // comparison that still asserts those bytes rather than one that would
+    // pass by coincidence if the gap ever widened.
+    "lang/operator_frame_stem_plus.rex",
+    "lang/operator_frame_stem_power.rex",
+    "lang/operator_frame_stem_prefix_minus.rex",
+    // Fix round 1, finding 3: the same forwarded frame reached from a
+    // controlled `DO` header's numeric position rather than from an
+    // operator directly, one program per position. `Interp::header_number`
+    // rounds each position through a real unary `+`, so a stem position
+    // carries the identical frame -- and the same raw-mode reasoning above
+    // applies to it unchanged.
+    "lang/operator_frame_stem_do_initial.rex",
+    "lang/operator_frame_stem_do_to.rex",
+    "lang/operator_frame_stem_do_by.rex",
+    // Fix round 2, finding 1: the frame belongs to the receiver of a
+    // forwarded operator whatever step of evaluating it raises, not only its
+    // own conversion. Each program below reaches the frame from a different
+    // failing step past that conversion -- arithmetic overflow, the power
+    // exponent's own range check, a non-logical operand on `&` and on prefix
+    // `\`, and a DO header's own range check -- and the same raw-mode
+    // reasoning above applies to each unchanged.
+    "lang/operator_frame_stem_divide_by_zero.rex",
+    "lang/operator_frame_stem_power_exponent_range.rex",
+    "lang/operator_frame_stem_logical_and.rex",
+    "lang/operator_frame_stem_prefix_not.rex",
+    "lang/operator_frame_stem_do_exponent_range.rex",
+    // Fix round 3, finding 1: the same forwarded frame reached through a
+    // non-strict comparison's own numeric conversion, the operator family
+    // whose need for a number -- not whether it is arithmetic -- is what
+    // decides whether it reaches this frame at all.
+    "lang/operator_frame_stem_compare_overflow.rex",
+    // The frame the required-string
+    // protocol's own `REQUEST` activation contributes when a `makeString`
+    // reached through it raises. The pair is one frame from a language context
+    // against two from a method argument, and the frame lines are indented and
+    // carry no line number, which is what raw mode asserts.
+    "lang/required_string_make_string_raises.rex",
+    "lang/required_string_argument_make_string_raises.rex",
+    // What a `REPLY` leaves on stderr.
+    // Both programs are traceback-only, and both carry the two-space-and-more
+    // gap of a `*-*` clause line at the indent an owed body reports at -- the
+    // run of spaces normalisation collapses. `method_reply`'s 98.936 is
+    // reported from the resumed half of the body and `method_reply_twice`'s
+    // 98.935 from a clause the first half never reached, so the indent is the
+    // only thing separating either report from one raised in the sender.
+    "lang/method_reply.rex",
+    "lang/method_reply_twice.rex",
+];
+
+/// Corpus programs whose `stderr` is compared as a multiset of lines, per
+/// DEVIATION 7: `REPLY` under a package trace setting has two threads writing
+/// trace lines and their interleaving is not a specified observable.
+const CONCURRENTLY_TRACED: &[&str] = &["lang/directive_options_trace_reply.rex"];
+
+/// Corpus programs whose `stdout` is compared as a multiset of lines, per
+/// Deviation 33: what they print is a hash collection's iteration order,
+/// which is not a specified observable.
+const HASH_ORDERED_STDOUT: &[&str] = &["lang/package_writes.rex"];
+
+/// The `stdout` comparison one corpus entry gets.
+fn stdout_mode(rel_path: &str) -> StdoutComparison {
+    if HASH_ORDERED_STDOUT.contains(&rel_path) {
+        StdoutComparison::Multiset
+    } else {
+        StdoutComparison::Raw
+    }
+}
+
+/// The `stderr` comparison one corpus entry gets, and no entry may ask for two.
+fn stderr_mode(rel_path: &str) -> StderrComparison {
+    match (
+        RAW_STDERR_COMPARISON.contains(&rel_path),
+        CONCURRENTLY_TRACED.contains(&rel_path),
+    ) {
+        (true, true) => panic!(
+            "{rel_path} is on both RAW_STDERR_COMPARISON and CONCURRENTLY_TRACED, which ask \
+             for a stricter and a weaker comparison of the same channel"
+        ),
+        (true, false) => StderrComparison::Raw,
+        (false, true) => StderrComparison::Multiset,
+        (false, false) => StderrComparison::Normalized,
+    }
+}
+
+/// Every entry in [`RAW_STDERR_COMPARISON`], [`CONCURRENTLY_TRACED`] and
+/// [`HASH_ORDERED_STDOUT`] is a line the corpus list actually names.
+#[test]
+fn every_opted_in_comparison_names_a_program_the_subset_runs() {
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let paths: Vec<PathBuf> = SUBSET_FILES
+        .iter()
+        .map(|name| corpus_dir.join(name))
+        .collect();
+    let subset = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>());
+    for (list, opted_into) in [
+        (RAW_STDERR_COMPARISON, "raw"),
+        (CONCURRENTLY_TRACED, "multiset"),
+        (HASH_ORDERED_STDOUT, "multiset stdout"),
+    ] {
+        for listed in list {
+            assert!(
+                subset.iter().any(|entry| entry == listed),
+                "{listed} is listed for the {opted_into} stderr comparison but is not a \
+                 line in the corpus list -- stderr_mode would silently give it the \
+                 normalised comparison instead of the one it is supposed to opt into"
+            );
+        }
+    }
+}
+
+/// [`stdout_mode`] answers the multiset mode for exactly the listed programs.
+#[test]
+fn the_multiset_stdout_mode_is_selected_for_exactly_the_listed_programs() {
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let paths: Vec<PathBuf> = SUBSET_FILES
+        .iter()
+        .map(|name| corpus_dir.join(name))
+        .collect();
+    let subset = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>());
+    assert!(
+        !HASH_ORDERED_STDOUT.is_empty() && HASH_ORDERED_STDOUT.len() < subset.len(),
+        "the list is empty or is the whole subset, so this control separates nothing"
+    );
+    for entry in &subset {
+        let listed = HASH_ORDERED_STDOUT.contains(&entry.as_str());
+        let mode = stdout_mode(entry);
+        assert_eq!(
+            mode == StdoutComparison::Multiset,
+            listed,
+            "{entry} is compared as {mode:?} and is {} on HASH_ORDERED_STDOUT",
+            if listed { "" } else { "not" }
+        );
+    }
+}
+
+/// Deviation 33's control: every program on [`HASH_ORDERED_STDOUT`] prints
+/// something on the oracle, and the two sides' `stdout` agrees as a multiset
+/// of lines, so the relaxation hides an order and nothing else.
+#[test]
+fn the_multiset_stdout_licence_covers_order_and_nothing_else() {
+    let oracle = support::oracle::locate();
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    for listed in HASH_ORDERED_STDOUT {
+        let abs = fs::canonicalize(corpus_dir.join(listed))
+            .unwrap_or_else(|e| panic!("cannot resolve {listed}: {e}"));
+        let dir = run_directory(listed);
+        empty_run_directory(&dir);
+        let cpp = oracle.run_in(&abs, &dir, &[]);
+        empty_run_directory(&dir);
+        let rust = run_rust(&abs, &dir, &[], None);
+        assert!(
+            !cpp.stdout.is_empty(),
+            "{listed}: on HASH_ORDERED_STDOUT and the oracle wrote no stdout, so the \
+             multiset comparison would agree with anything"
+        );
+        assert!(
+            support::oracle::stdout_multiset(&rust.stdout)
+                == support::oracle::stdout_multiset(&cpp.stdout),
+            "{listed}: differs on stdout as a multiset of lines, which Deviation 33 \
+             does not license"
+        );
+    }
+}
+
+/// Runs one corpus entry under both interpreters and compares all three
+/// observable channels. `None` when they agree.
+fn check_case(oracle: &Oracle, corpus_dir: &Path, rel_path: &str) -> Option<Mismatch> {
+    let abs = fs::canonicalize(corpus_dir.join(rel_path))
+        .unwrap_or_else(|e| panic!("cannot resolve corpus entry {rel_path}: {e}"));
+
+    // One directory per program, the same absolute path for both interpreters
+    // and emptied between them: a program that writes files leaves nothing in
+    // `corpus/`, and neither side ever reads what the other left behind.
+    let dir = run_directory(rel_path);
+    let sidecar = sidecar_for(corpus_dir, rel_path);
+    let overrides = resolved_environment(&sidecar, &dir);
+    let borrowed: Vec<(&str, &str)> = overrides
+        .iter()
+        .map(|(name, value)| (name.as_str(), value.as_str()))
+        .collect();
+    let stdin = sidecar.stdin.as_deref();
+    let cwd = prepare_run_directory(&dir, &sidecar);
+    let cpp = oracle.run_in_with(&abs, &cwd, &borrowed, stdin);
+    let cwd = prepare_run_directory(&dir, &sidecar);
+    let rust = run_rust(&abs, &cwd, &overrides, stdin);
+
+    // Checked before `descriptor_diffs_modes` calls `cpp.expect_exit_code()`
+    // itself: that panic has no `rel_path` in it and fires from inside
+    // `support/oracle.rs`, while this file's own report is built from the
+    // `Mismatch`es this function returns and printed only after the whole
+    // sweep finishes -- so the panic form is not merely less informative
+    // here, it never reaches a reader at all. Naming the path is this
+    // caller's job because it is the one thing `expect_exit_code` cannot
+    // know.
+    if did_not_finish(&cpp) {
+        return Some(Mismatch {
+            rel_path: rel_path.to_string(),
+            owner: None,
+            reason: format!(
+                "the oracle did not finish: {:?} -- a structural failure, not a byte \
+                 comparison",
+                cpp.termination
+            ),
+            structural: true,
+        });
+    }
+
+    // The same reading of the crate side, which `watchdog::run_bounded` gives
+    // it. **Structural rather than a divergence**, because a run that did not
+    // finish produced no answer to compare: leaving it to the byte comparison
+    // would make it red only under the gate, where the oracle's own
+    // non-finish above is red in every mode.
+    if watchdog::did_not_finish(&rust) {
+        return Some(Mismatch {
+            rel_path: rel_path.to_string(),
+            owner: None,
+            reason: format!(
+                "the crate did not finish: {:?} -- a structural failure, not a byte comparison",
+                String::from_utf8_lossy(&rust.stderr).trim_end()
+            ),
+            structural: true,
+        });
+    }
+
+    let rust_exit = wrapped_exit_code(rust.exit_code);
+
+    let diffs = descriptor_diffs_modes(&rust, &cpp, stdout_mode(rel_path), stderr_mode(rel_path));
+    if diffs.is_empty() {
+        return None;
+    }
+
+    let owner = owner_from_stderr(&rust.stderr);
+    let reason = match &owner {
+        Some(construct) => format!(
+            "{} differ (loud failure: {construct} is not implemented; rust rc {rust_exit}, \
+             oracle rc {})",
+            diffs.join(", "),
+            cpp.expect_exit_code()
+        ),
+        // No loud-failure marker: a real divergence rather than a known gap,
+        // so give enough of all three channels to diagnose it from the
+        // report alone.
+        None => format!(
+            "{} differ\n      rust:   stdout={:?} stderr={:?} exit={rust_exit}\n      \
+             oracle: stdout={:?} stderr={:?} exit={}",
+            diffs.join(", "),
+            excerpt(&rust.stdout),
+            excerpt(&rust.stderr),
+            excerpt(&cpp.stdout),
+            excerpt(&cpp.stderr),
+            cpp.expect_exit_code()
+        ),
+    };
+
+    Some(Mismatch {
+        rel_path: rel_path.to_string(),
+        owner,
+        reason,
+        structural: false,
+    })
+}
+
+/// Builds the report text. A `String`, not a `println!` stream: the whole
+/// point is that this text crosses to [`emit_uncaptured`] as one payload
+/// rather than going through libtest's per-call capture at all.
+fn build_report(matched: usize, total: usize, mismatches: &[Mismatch], gate: bool) -> String {
+    let banner = "=".repeat(78);
+    let mut report = String::new();
+    let w = &mut report;
+    writeln!(w, "{banner}").unwrap();
+    writeln!(
+        w,
+        "interrexx differential corpus report -- rust/corpus/{}",
+        SUBSET_FILES.join(" + ")
+    )
+    .unwrap();
+    if gate {
+        writeln!(w, "mode: STRICT (the gate) -- {GATE_ENV} is set").unwrap();
+    } else {
+        writeln!(
+            w,
+            "*** REPORT MODE -- NOT THE GATE. Set {GATE_ENV}=1 to run this as the gate. ***"
+        )
+        .unwrap();
+    }
+    let not_the_gate = if gate {
+        ""
+    } else {
+        " -- REPORT MODE, NOT THE GATE"
+    };
+    writeln!(w, "{matched} of {total} matching{not_the_gate}").unwrap();
+
+    if !mismatches.is_empty() {
+        writeln!(w, "mismatches ({}):", mismatches.len()).unwrap();
+        for mismatch in mismatches {
+            let owner = mismatch.owner.as_deref().unwrap_or("UNCLASSIFIED");
+            writeln!(
+                w,
+                "  [{owner:<10}] {}: {}",
+                mismatch.rel_path, mismatch.reason
+            )
+            .unwrap();
+        }
+
+        let mut by_owner: BTreeMap<&str, usize> = BTreeMap::new();
+        for mismatch in mismatches {
+            let owner = mismatch.owner.as_deref().unwrap_or("UNCLASSIFIED");
+            *by_owner.entry(owner).or_insert(0) += 1;
+        }
+        writeln!(w, "by owner:").unwrap();
+        for (owner, count) in &by_owner {
+            writeln!(w, "  {owner}: {count}").unwrap();
+        }
+    }
+
+    if !gate {
+        writeln!(
+            w,
+            "*** REPORT MODE -- NOT THE GATE. {matched} of {total} matching means {} \
+             programs still disagree with the oracle; it is a progress signal, not a \
+             pass. ***",
+            total - matched
+        )
+        .unwrap();
+    }
+    writeln!(w, "{banner}").unwrap();
+    report
+}
+
+/// Writes `text` to the real, process-level stderr, so it reaches the
+/// terminal under a plain `cargo test` with no `--nocapture` -- see the
+/// module doc's "REPORT vs STRICT" section for why `println!`/`eprintln!`
+/// cannot do this from inside a `#[test]`.
+fn emit_uncaptured(text: &str) {
+    let mut child = Command::new("sh")
+        .arg("-c")
+        .arg("cat >&2")
+        .stdin(Stdio::piped())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .expect("spawning `sh -c 'cat >&2'` to bypass libtest's output capture");
+    child
+        .stdin
+        .take()
+        .expect("stdin was requested as piped")
+        .write_all(text.as_bytes())
+        .expect("writing the report to the uncaptured-output child's stdin");
+    let status = child
+        .wait()
+        .expect("waiting for the uncaptured-output child");
+    assert!(
+        status.success(),
+        "the uncaptured-output child (`sh -c 'cat >&2'`) exited abnormally: {status}"
+    );
+}
+
+/// The corpus list the differential runs. See the module doc for REPORT vs
+/// STRICT and how the oracle and the memory limit are handled.
+const SUBSET_FILES: &[&str] = &["differential.txt"];
+
+/// The list the scheduler-simulation gate replays, which the differential
+/// must run too.
+const CONCURRENCY_FILE: &str = "concurrency.txt";
+
+/// Every program [`CONCURRENCY_FILE`] names is one the differential runs.
+#[test]
+fn every_concurrency_program_is_run_by_the_differential() {
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let paths: Vec<PathBuf> = SUBSET_FILES
+        .iter()
+        .map(|name| corpus_dir.join(name))
+        .collect();
+    let run: BTreeSet<String> =
+        read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>())
+            .into_iter()
+            .collect();
+    let concurrency = read_subset(&[&corpus_dir.join(CONCURRENCY_FILE)]);
+    assert!(
+        !concurrency.is_empty(),
+        "{CONCURRENCY_FILE} names no programs"
+    );
+    let missing: Vec<&String> = concurrency
+        .iter()
+        .filter(|entry| !run.contains(*entry))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "{missing:?} are in {CONCURRENCY_FILE} and not in {SUBSET_FILES:?}, so the oracle \
+         never judges them"
+    );
+}
+
+/// The directory whose programs [`every_lang_program_is_run_or_named_unfiled`]
+/// accounts for.
+const LANG_SUBDIR: &str = "lang";
+
+/// The companion file naming the ones it does not run, and why.
+const UNFILED_FILE: &str = "unfiled.txt";
+
+/// Every `path<TAB>reason` in `corpus/unfiled.txt`.
+fn read_unfiled(corpus_dir: &Path) -> Vec<(String, String)> {
+    let path = corpus_dir.join(UNFILED_FILE);
+    let text =
+        fs::read_to_string(&path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+    text.lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(|line| {
+            let (entry, reason) = line.split_once('\t').unwrap_or_else(|| {
+                panic!("{}: {line:?} is not a `path<TAB>reason`", path.display())
+            });
+            assert!(
+                !reason.trim().is_empty(),
+                "{}: {entry} is named with no reason",
+                path.display()
+            );
+            (entry.to_string(), reason.to_string())
+        })
+        .collect()
+}
+
+/// Every `<name>.env` and `<name>.d/` beside a corpus program names a program
+/// the corpus list runs, so a sidecar cannot sit unread.
+#[test]
+fn every_sidecar_names_a_program_the_subset_runs() {
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let dir = corpus_dir.join(LANG_SUBDIR);
+    let stems = sidecar_stems(&corpus_dir);
+    assert!(
+        !stems.is_empty(),
+        "{} holds no sidecar, so this test checked nothing",
+        dir.display()
+    );
+
+    let paths: Vec<PathBuf> = SUBSET_FILES
+        .iter()
+        .map(|name| corpus_dir.join(name))
+        .collect();
+    let filed: BTreeSet<String> =
+        read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>())
+            .into_iter()
+            .collect();
+
+    for stem in &stems {
+        let program = format!("{LANG_SUBDIR}/{stem}.rex");
+        assert!(
+            filed.contains(&program),
+            "{stem} has a sidecar and the corpus list does not name {program}, so nothing reads it"
+        );
+        assert!(
+            sidecar_for(&corpus_dir, &program).present(),
+            "{program}'s sidecar parsed to nothing, so the run would not differ from one without it"
+        );
+    }
+}
+
+/// Each sidecar's own control, taken one part at a time: removing any one of
+/// its fixtures, environment variables, working directory or standard input
+/// makes one of the two interpreters answer differently.
+///
+/// The differential compares the two interpreters, so a sidecar that never
+/// arrives leaves them agreeing on the same failure and the witness stays
+/// green over nothing. Measured: deleting either half of one left the gate at
+/// 507 of 507, and this control red. Asking per part is what catches an inert
+/// part beside a live one, which the whole sidecar against none cannot see.
+///
+/// **Why the in-process side is asked too.** `Oracle::wrapped` puts the
+/// oracle's own library directory on the spawned process whatever the sidecar
+/// says, so a `LD_LIBRARY_PATH` override is inert there and load-bearing
+/// here. Such a sidecar is checked against this interpreter instead.
+///
+/// **What it does not cover.** The set it walks is the sidecars on disk, so
+/// deleting a program's only sidecar takes that program out of the set rather
+/// than reddening this: what is checked is that a sidecar which exists is
+/// load-bearing, not that a program which needs one still has it. Measured --
+/// removing `trace_debug_skip.stdin`, the only sidecar of its program, leaves
+/// this green.
+#[test]
+fn a_sidecar_changes_what_one_of_the_interpreters_answers() {
+    let oracle = support::oracle::locate();
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let stems = sidecar_stems(&corpus_dir);
+    assert!(
+        !stems.is_empty(),
+        "no sidecar on disk, so this control iterates over nothing"
+    );
+    for stem in &stems {
+        let rel_path = format!("{LANG_SUBDIR}/{stem}.rex");
+        let abs = fs::canonicalize(corpus_dir.join(&rel_path))
+            .unwrap_or_else(|e| panic!("cannot resolve {rel_path}: {e}"));
+        // Its own directory, so this never races the differential's.
+        let dir = run_directory(&format!("{rel_path}#sidecar-control"));
+
+        let sidecar = sidecar_for(&corpus_dir, &rel_path);
+        let run_oracle = |sidecar: &Sidecar| {
+            let overrides = resolved_environment(sidecar, &dir);
+            let borrowed: Vec<(&str, &str)> = overrides
+                .iter()
+                .map(|(name, value)| (name.as_str(), value.as_str()))
+                .collect();
+            let cwd = prepare_run_directory(&dir, sidecar);
+            oracle.run_in_with(&abs, &cwd, &borrowed, sidecar.stdin.as_deref())
+        };
+        let run_crate = |sidecar: &Sidecar| {
+            let overrides = resolved_environment(sidecar, &dir);
+            let cwd = prepare_run_directory(&dir, sidecar);
+            run_rust(&abs, &cwd, &overrides, sidecar.stdin.as_deref())
+        };
+        let oracle_with = run_oracle(&sidecar);
+        let mut crate_with = None;
+        for half in sidecar.halves() {
+            let partial = sidecar.without(&half);
+            // **All three descriptors.** A sidecar whose whole effect is on
+            // stderr -- an interactive-debug transcript, say -- reads as inert
+            // against stdout alone, which this control was measured doing.
+            let oracle_without = run_oracle(&partial);
+            if oracle_with.stdout != oracle_without.stdout
+                || oracle_with.stderr != oracle_without.stderr
+                || oracle_with.termination != oracle_without.termination
+            {
+                continue;
+            }
+            let with = crate_with.get_or_insert_with(|| run_crate(&sidecar));
+            let without = run_crate(&partial);
+            assert!(
+                with.stdout != without.stdout
+                    || with.stderr != without.stderr
+                    || with.exit_code != without.exit_code,
+                "{rel_path}: neither interpreter answers differently without its {half:?}, so \
+                 that part of the sidecar is not load-bearing and the witness would stay green \
+                 if it were deleted"
+            );
+        }
+        empty_run_directory(&dir);
+    }
+}
+
+/// The stem of every `<name>.env` or `<name>.d/` beside a corpus program.
+fn sidecar_stems(corpus_dir: &Path) -> BTreeSet<String> {
+    let dir = corpus_dir.join(LANG_SUBDIR);
+    fs::read_dir(&dir)
+        .unwrap_or_else(|e| panic!("cannot read {}: {e}", dir.display()))
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name().into_string().ok()?;
+            name.strip_suffix(".env")
+                .or_else(|| name.strip_suffix(".d"))
+                .or_else(|| name.strip_suffix(".stdin"))
+                .map(str::to_string)
+        })
+        .collect()
+}
+
+/// Every `corpus/lang/*.rex` on disk is either named by the corpus list or
+/// named by [`UNFILED_FILE`], and never both.
+#[test]
+fn every_lang_program_is_run_or_named_unfiled() {
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let dir = corpus_dir.join(LANG_SUBDIR);
+    let mut on_disk: BTreeSet<String> = fs::read_dir(&dir)
+        .unwrap_or_else(|e| panic!("cannot read {}: {e}", dir.display()))
+        .flatten()
+        .filter_map(|entry| entry.file_name().into_string().ok())
+        .filter(|name| name.ends_with(".rex"))
+        .map(|name| format!("{LANG_SUBDIR}/{name}"))
+        .collect();
+    assert!(
+        !on_disk.is_empty(),
+        "{} holds no programs, so this test compared two empty sets",
+        dir.display()
+    );
+
+    let paths: Vec<PathBuf> = SUBSET_FILES
+        .iter()
+        .map(|name| corpus_dir.join(name))
+        .collect();
+    let filed: BTreeSet<String> =
+        read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>())
+            .into_iter()
+            .filter(|entry| entry.starts_with(&format!("{LANG_SUBDIR}/")))
+            .collect();
+    let unfiled: Vec<(String, String)> = read_unfiled(&corpus_dir);
+
+    let both: Vec<&String> = unfiled
+        .iter()
+        .map(|(entry, _)| entry)
+        .filter(|entry| filed.contains(*entry))
+        .collect();
+    assert!(
+        both.is_empty(),
+        "{both:?} are named by the corpus list and by {UNFILED_FILE}. The second says \
+         nothing runs them against the oracle, and the first says something does"
+    );
+
+    for (entry, _) in &unfiled {
+        assert!(
+            on_disk.contains(entry),
+            "{UNFILED_FILE} names {entry}, which is not a program in {}. An exemption for a \
+             path that does not exist protects nothing and hides the one that does",
+            dir.display()
+        );
+    }
+    for entry in &filed {
+        assert!(
+            on_disk.contains(entry),
+            "the corpus list names {entry}, which is not a program in {}",
+            dir.display()
+        );
+    }
+
+    for entry in filed.iter().chain(unfiled.iter().map(|(entry, _)| entry)) {
+        on_disk.remove(entry);
+    }
+    assert!(
+        on_disk.is_empty(),
+        "{on_disk:?} are in {} and not named by the corpus list, so nothing compares them \
+         against the oracle and the differential's headline does not count them. File each \
+         one, or name it in {UNFILED_FILE} with the reason it is not run",
+        dir.display()
+    );
+}
+
+/// The programs outside [`LANG_SUBDIR`] the corpus list names, in file
+/// order. [`every_lang_program_is_run_or_named_unfiled`] accounts for
+/// `lang/` against the directory; these are pinned so that dropping one is a
+/// test failure rather than a quiet shrink of the run.
+const NON_LANG_PROGRAMS: &[&str] = &[
+    "num/comparison.rex",
+    "num/notation_thresholds.rex",
+    "num/canonical_form.rex",
+    "num/digits_rounding.rex",
+    "num/errors.rex",
+    "num/exponential.rex",
+    "num/form_notation.rex",
+    "num/fuzz.rex",
+    "num/operators.rex",
+    "num/settings.rex",
+    "gate-tables/directives/method__external__subkeyword.rex",
+    "gate-tables/directives/attribute__external__subkeyword.rex",
+    "gate-tables/concepts/creo.rex",
+    "gate-tables/concepts/abscla.rex",
+    "gate-tables/concepts/obdes.rex",
+    "gate-tables/concepts/objcla.rex",
+    "gate-tables/concepts/usesem.rex",
+    "gate-tables/directives/method__delegate__subkeyword.rex",
+    "gate-tables/directives/attribute__delegate__subkeyword.rex",
+    "gate-tables/concepts/methodsbyclass.rex",
+];
+
+/// The corpus list names exactly [`NON_LANG_PROGRAMS`] outside `lang/`.
+#[test]
+fn the_programs_outside_lang_are_the_pinned_ones() {
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let paths: Vec<PathBuf> = SUBSET_FILES
+        .iter()
+        .map(|name| corpus_dir.join(name))
+        .collect();
+    let outside: Vec<String> = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>())
+        .into_iter()
+        .filter(|entry| !entry.starts_with(&format!("{LANG_SUBDIR}/")))
+        .collect();
+    assert_eq!(
+        outside, NON_LANG_PROGRAMS,
+        "the corpus list's programs outside {LANG_SUBDIR}/ drifted from NON_LANG_PROGRAMS -- \
+         change both together"
+    );
+}
+
+#[test]
+fn corpus_differential() {
+    let oracle = support::oracle::locate();
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let paths: Vec<PathBuf> = SUBSET_FILES
+        .iter()
+        .map(|name| corpus_dir.join(name))
+        .collect();
+    let subset = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>());
+    assert!(
+        !subset.is_empty(),
+        "the corpus list named no programs -- that is a corpus defect, \
+         not an empty pass"
+    );
+
+    let mut mismatches = Vec::new();
+    let mut matched = 0usize;
+    for rel_path in &subset {
+        match check_case(&oracle, &corpus_dir, rel_path) {
+            None => matched += 1,
+            Some(mismatch) => mismatches.push(mismatch),
+        }
+    }
+
+    let total = subset.len();
+    let gate = gate_mode();
+    emit_uncaptured(&build_report(matched, total, &mismatches, gate));
+
+    // Unconditional, and checked before the gated assertion below: a
+    // structural failure is red in every mode, per the global constraints,
+    // and `gate_mode()` exists to relax a *verdict* comparison, not to
+    // decide whether a run that never produced bytes to compare gets
+    // noticed. Named separately from `mismatches.is_empty()` so that a
+    // report-mode run -- most runs -- cannot let a program that stopped
+    // finishing pass as a fully-matching corpus just because the corpus
+    // gate itself was not requested.
+    let structural: Vec<&str> = mismatches
+        .iter()
+        .filter(|m| m.structural)
+        .map(|m| m.rel_path.as_str())
+        .collect();
+    assert!(
+        structural.is_empty(),
+        "{} corpus program(s) did not finish, a structural failure in every \
+         mode rather than a verdict `{GATE_ENV}` could relax: {structural:?}. \
+         See the report above for which side each one stopped on.",
+        structural.len()
+    );
+
+    assert!(
+        !gate || mismatches.is_empty(),
+        "STRICT ({GATE_ENV}) mode: {} of {total} corpus programs disagree with \
+         the oracle; see the report above for which and why.",
+        mismatches.len()
+    );
+}
+
+/// Not a corpus case. Exists only to be re-executed, alone, by
+/// [`demonstrate_the_report_reaches_a_plain_cargo_test`], which is the reason
+/// it is `#[ignore]`d: a normal test run must not run it as a case of its
+/// own, only as the child process the demonstration spawns.
+#[test]
+#[ignore = "run only by demonstrate_the_report_reaches_a_plain_cargo_test, as a child process"]
+fn probe_emit_uncaptured_marker() {
+    emit_uncaptured("EMIT-UNCAPTURED-PROBE-MARKER\n");
+}
+
+/// Proves `emit_uncaptured` reaches the terminal under a plain `cargo test`,
+/// rather than asserting it should. See the module doc's "REPORT vs STRICT"
+/// section for why this cannot observe its own process's fd 2 and instead
+/// re-executes this test binary as a child running only
+/// [`probe_emit_uncaptured_marker`], with no `--nocapture` -- the same
+/// invocation `cargo test` (workspace or single-crate) uses on every test
+/// binary. `--include-ignored` is required for exactly one reason: the
+/// probe's own `#[ignore]`, which exists so *this* process's normal test run
+/// does not also execute it directly.
+#[test]
+fn demonstrate_the_report_reaches_a_plain_cargo_test() {
+    let exe = env::current_exe().expect("a running test binary knows its own path");
+    let output = Command::new(exe)
+        .args([
+            "--exact",
+            "probe_emit_uncaptured_marker",
+            "--include-ignored",
+        ])
+        .output()
+        .expect("re-executing this test binary against itself");
+
+    let mut combined = output.stdout;
+    combined.extend_from_slice(&output.stderr);
+    let text = String::from_utf8_lossy(&combined);
+    assert!(
+        text.contains("EMIT-UNCAPTURED-PROBE-MARKER"),
+        "the probe's marker did not reach the child test binary's own captured \
+         output under a plain (no --nocapture) run, so emit_uncaptured is not \
+         bypassing libtest's capture. Full child output:\n{text}"
+    );
+}
+
+/// The sharing fraction over the corpus: the crate's side of every program [`corpus_differential`] runs, the
+/// counts summed, and each program with a shared object listed.
+#[cfg(feature = "sharing")]
+#[test]
+fn sharing_fraction_over_the_corpus() {
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let paths: Vec<PathBuf> = SUBSET_FILES
+        .iter()
+        .map(|name| corpus_dir.join(name))
+        .collect();
+    let subset = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>());
+    let mut rows = String::from(
+        "| program | bootstrap objects | bootstrap shared | program objects | program shared |\n\
+         |---|---|---|---|---|\n",
+    );
+    let mut total = interrexx::SharingReport::default();
+    for rel_path in &subset {
+        let abs = fs::canonicalize(corpus_dir.join(rel_path))
+            .unwrap_or_else(|e| panic!("cannot resolve corpus entry {rel_path}: {e}"));
+        let dir = run_directory(rel_path);
+        let sidecar = sidecar_for(&corpus_dir, rel_path);
+        let overrides = resolved_environment(&sidecar, &dir);
+        let cwd = prepare_run_directory(&dir, &sidecar);
+        let sharing = run_rust(&abs, &cwd, &overrides, sidecar.stdin.as_deref()).sharing;
+        for (sum, count) in [
+            (&mut total.bootstrap, sharing.bootstrap),
+            (&mut total.program, sharing.program),
+        ] {
+            sum.objects += count.objects;
+            sum.shared += count.shared;
+        }
+        if sharing.bootstrap.shared + sharing.program.shared != 0 {
+            writeln!(
+                rows,
+                "| {rel_path} | {} | {} | {} | {} |",
+                sharing.bootstrap.objects,
+                sharing.bootstrap.shared,
+                sharing.program.objects,
+                sharing.program.shared
+            )
+            .expect("a String takes a write");
+        }
+    }
+    let text = format!(
+        "programs {}\n\n| | objects | shared |\n|---|---|---|\n\
+         | bootstrap | {} | {} |\n| program | {} | {} |\n\n{rows}",
+        subset.len(),
+        total.bootstrap.objects,
+        total.bootstrap.shared,
+        total.program.objects,
+        total.program.shared
+    );
+    let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join("sharing-corpus.md");
+    fs::write(&out, &text).expect("cannot write the table");
+    println!("{text}\nwritten to {}", out.display());
+}
+
+/// The pinning report over the corpus: the crate's side of every program [`corpus_differential`] runs, in the
+/// mode `REXX_CORPUS_SWITCH` names, the arrivals summed per park and the
+/// waits per kind, with each program that reached a wait listed. Panics when a
+/// program does not finish, reaches an inverted wait or ends with a frame pushed.
+#[cfg(feature = "pinning")]
+#[test]
+fn pinning_report_over_the_corpus() {
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let paths: Vec<PathBuf> = SUBSET_FILES
+        .iter()
+        .map(|name| corpus_dir.join(name))
+        .collect();
+    let subset = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>());
+    let frames = |frames: &[interrexx::PinKind]| {
+        if frames.is_empty() {
+            return "-".to_string();
+        }
+        frames
+            .iter()
+            .map(|frame| format!("{frame:?}"))
+            .collect::<Vec<_>>()
+            .join(" > ")
+    };
+    let mut arrivals: BTreeMap<String, (usize, u64)> = BTreeMap::new();
+    let mut waits: BTreeMap<(&str, String, String), u64> = BTreeMap::new();
+    let mut programs =
+        String::from("| program | wait | park | frames | count |\n|---|---|---|---|---|\n");
+    let mut unfinished = Vec::new();
+    let mut inverted = Vec::new();
+    let mut unbalanced = Vec::new();
+    for rel_path in &subset {
+        let abs = fs::canonicalize(corpus_dir.join(rel_path))
+            .unwrap_or_else(|e| panic!("cannot resolve corpus entry {rel_path}: {e}"));
+        let dir = run_directory(rel_path);
+        let sidecar = sidecar_for(&corpus_dir, rel_path);
+        let overrides = resolved_environment(&sidecar, &dir);
+        let cwd = prepare_run_directory(&dir, &sidecar);
+        let outcome = run_rust(&abs, &cwd, &overrides, sidecar.stdin.as_deref());
+        if watchdog::did_not_finish(&outcome) {
+            unfinished.push(rel_path.clone());
+        }
+        let report = outcome.pinning;
+        if !report.inverted.is_empty() {
+            inverted.push(rel_path.clone());
+        }
+        if report.unbalanced != 0 {
+            unbalanced.push(rel_path.clone());
+        }
+        for ((park, _), count) in &report.parks {
+            let total = arrivals.entry(format!("{park:?}")).or_default();
+            total.0 += 1;
+            total.1 += count;
+        }
+        let mut found: Vec<(&str, String, String, u64)> = Vec::new();
+        for (what, map) in [
+            ("pinned", &report.pinned_parks),
+            ("inverted", &report.inverted),
+            ("late wake", &report.late_wakes),
+        ] {
+            for ((park, at), count) in map {
+                found.push((what, format!("{park:?}"), frames(at), *count));
+            }
+        }
+        for (what, map) in [
+            ("immovable", &report.immovable_replies),
+            ("deferred slice", &report.deferred_slices),
+            ("pinned yield", &report.pinned_yields),
+            ("inverted yield", &report.inverted_yields),
+        ] {
+            for (at, count) in map {
+                let park = if what == "immovable" { "Reply" } else { "-" };
+                found.push((what, park.to_string(), frames(at), *count));
+            }
+        }
+        for (what, park, at, count) in found {
+            writeln!(
+                programs,
+                "| {rel_path} | {what} | {park} | {at} | {count} |"
+            )
+            .expect("a String takes a write");
+            *waits.entry((what, park, at)).or_default() += count;
+        }
+    }
+    let mut text = format!(
+        "programs {}, did not finish {unfinished:?}\n\n| park | programs | arrivals |\n|---|---|---|\n",
+        subset.len()
+    );
+    for (park, (count, total)) in &arrivals {
+        writeln!(text, "| {park} | {count} | {total} |").expect("a String takes a write");
+    }
+    text.push_str("\n| wait | park | frames | count |\n|---|---|---|---|\n");
+    for ((what, park, at), count) in &waits {
+        writeln!(text, "| {what} | {park} | {at} | {count} |").expect("a String takes a write");
+    }
+    text.push('\n');
+    text.push_str(&programs);
+    let file = match switch_mode() {
+        Some(_) => "pinning-corpus-every-opportunity.md",
+        None => "pinning-corpus.md",
+    };
+    let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join(file);
+    fs::write(&out, &text).expect("cannot write the table");
+    println!("{text}\nwritten to {}", out.display());
+    assert!(
+        unfinished.is_empty(),
+        "programs that did not finish: {unfinished:?}"
+    );
+    assert!(
+        inverted.is_empty(),
+        "programs with an inverted wait: {inverted:?}"
+    );
+    assert!(
+        unbalanced.is_empty(),
+        "runs ending with a frame pushed: {unbalanced:?}"
+    );
+}
