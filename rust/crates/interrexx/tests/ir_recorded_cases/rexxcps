@@ -15,7 +15,7 @@ tracevar='Off'
 signal on novalue
 parse source  source 1 system .
 parse version version
-say ' REXX version is:' version
+say ' REXX version is:' word(version, 1) word(version, 2)
 say '       System is:' system
 
 do i=1 to averaging
@@ -90,7 +90,7 @@ novalue:
   say 'NoValue raised'
 ----
 rc> 0
-out>  REXX version is: REXX-ooRexx_5.3.0(MT)_64-bit 6.06 30 Jul 2026
+out>  REXX version is: REXX-ooRexx_5.3.0(MT)_64-bit 6.06
 out>        System is: LINUX
 out>         Averaged: 3 x 2 iterations of 1000 clauses
 out>             flag: 1

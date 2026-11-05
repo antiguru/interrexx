@@ -43,8 +43,7 @@ pub struct Started {
 /// `RexxStart` answers it.
 const UNREADABLE: i32 = -3;
 
-/// `RexxGetVersionInformation`'s text (`api/InterpreterAPI.cpp:250`), the banner `rexx -v`
-/// writes.
+/// `RexxGetVersionInformation`'s text, the banner `rexx -v` writes.
 pub fn version_information() -> Vec<u8> {
     launcher::version_banner()
 }

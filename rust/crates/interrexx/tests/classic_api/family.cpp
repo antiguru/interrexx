@@ -65,7 +65,7 @@ int main()
 {
     setvbuf(stdout, NULL, _IONBF, 0);
     char *version = RexxGetVersionInformation();
-    printf("version %.33s\n", version);
+    printf("version %.9s\n", version);
     RexxFreeMemory(version);
     int codes[] = {3001, 35929, 40001, 0, 3, 99999, 999013};
     for (int code : codes)

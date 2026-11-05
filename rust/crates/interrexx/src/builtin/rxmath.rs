@@ -195,9 +195,12 @@ pub(crate) fn load_funcs(interp: &mut Interp, args: &[Option<ObjRef>]) -> Result
     check_arity(args, 1)?;
     if args.first().copied().flatten().is_some() {
         interp.write_out(
-            b"rxmath 1.2 - REXX mathematical function library\n\
-              Copyright (c) 2005-2021 Rexx Language Association.\n\
-              All rights reserved.\n\n",
+            concat!(
+                "rxmath (interrexx ",
+                env!("CARGO_PKG_VERSION"),
+                ") - REXX mathematical function library\n\n"
+            )
+            .as_bytes(),
         );
     }
     Ok(interp.text(b""))

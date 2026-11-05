@@ -2,11 +2,14 @@
 //!
 //! Each case of `tests/rexxc/cases` runs both binaries with the same words
 //! from a directory of the same programs, and the three descriptors must
-//! agree. The recorded block is the oracle's, normalised. A case's input is
+//! agree. The recorded block is the oracle's, normalised; the `-v` banner is
+//! interrexx's own (Deviation 96), so the oracle's is mapped to it first. A case's input is
 //! its words, one per line: `\xHH` is a byte. `out=NAME` reports the first
 //! bytes of the file [`output_name`] spells after the run, the part of an
 //! image both sides write alike, and removes it.
 
+#[path = "support/banner.rs"]
+mod banner;
 #[path = "support/oracle_runtime.rs"]
 mod oracle_runtime;
 
@@ -97,8 +100,8 @@ fn escaped(bytes: &[u8]) -> String {
 }
 
 /// The three descriptors as the case file records them, with the fixture's
-/// directory as `DIR` and the banner's compile-time stamps masked.
-fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>) -> String {
+/// directory as `DIR` and the banner as [`banner::recorded`] shows it.
+fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>, oracle: bool) -> String {
     let dir = escaped(dir.as_os_str().as_encoded_bytes());
     let mut rendered = match status {
         Some(code) => format!("rc> {code}\n"),
@@ -106,14 +109,8 @@ fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>) -> Stri
     };
     for (tag, bytes) in [("out", stdout), ("err", stderr)] {
         for line in escaped(bytes).replace(&dir, "DIR").lines() {
-            let line = match line.strip_prefix("Build date: ") {
-                Some(_) => "Build date: <date>".to_string(),
-                None => match line.strip_prefix("Copyright (c) 2005-") {
-                    Some(rest) => {
-                        format!("Copyright (c) 2005-<year>{}", &rest[4.min(rest.len())..])
-                    }
-                    None => line.to_string(),
-                },
+            let Some(line) = banner::recorded(line, oracle) else {
+                continue;
             };
             rendered.push_str(&format!("{tag}> {line}\n"));
         }
@@ -156,7 +153,13 @@ fn run(program: &Path, dir: &Path, case: &datadriven::TestCase, oracle: bool) ->
         .args(&args)
         .output()
         .expect("the binary starts");
-    let mut rendered = render(dir, &output.stdout, &output.stderr, output.status.code());
+    let mut rendered = render(
+        dir,
+        &output.stdout,
+        &output.stderr,
+        output.status.code(),
+        oracle,
+    );
     for (key, values) in &case.args {
         assert_eq!(key, "out", "unknown argument {key}");
         let name = values.first().expect("a file name");
@@ -503,7 +506,7 @@ fn the_oracle_refuses_this_crates_images_as_another_versions() {
             .output()
             .expect("the oracle starts");
         assert_eq!(
-            render(&dir, &ran.stdout, &ran.stderr, ran.status.code()),
+            render(&dir, &ran.stdout, &ran.stderr, ran.status.code(), true),
             format!(
                 "rc> 253\n\
                  err> Error 3:  Failure during initialization.\n\

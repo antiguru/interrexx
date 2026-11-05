@@ -1,7 +1,8 @@
 //! The `rxmath` library run in Rust, against the oracle's `librxmath.so`
 //! (`docs/design/extensions.md`). Every
 //! expected answer in `tests/rxmath_results/` was recorded by running the same
-//! program on the oracle.
+//! program on the oracle, except the `MathLoadFuncs` banner, which is
+//! interrexx's own (Deviation 96) with its version masked as `<version>`.
 //!
 //! * `eval digits=D [form=F]`: each input line is an expression, said under
 //!   `NUMERIC DIGITS D` (and `NUMERIC FORM F`), with `::requires 'rxmath'
@@ -86,7 +87,8 @@ fn rxmath_answers_as_the_oracle_does() {
                     format!(
                         "rc {}\n[stdout]\n{}[stderr]\n{}",
                         outcome.exit_code,
-                        String::from_utf8_lossy(&outcome.stdout),
+                        String::from_utf8_lossy(&outcome.stdout)
+                            .replace(env!("CARGO_PKG_VERSION"), "<version>"),
                         String::from_utf8_lossy(&outcome.stderr),
                     )
                 }

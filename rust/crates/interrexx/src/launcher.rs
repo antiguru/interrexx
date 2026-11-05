@@ -261,8 +261,8 @@ pub fn output_unwritable(name: &[u8]) -> (Vec<u8>, i32) {
     positionless(Raised::syntax(3, 902, vec![name.to_vec()]))
 }
 
-/// `RexxGetVersionInformation`'s text (`api/InterpreterAPI.cpp:250-278`),
-/// without the line end `rexx -v` writes after it.
+/// The text `rexx -v` writes, without the line end: the product, its version and
+/// language level, the build date, the addressing mode and the licence.
 pub fn version_banner() -> Vec<u8> {
     let date = std::str::from_utf8(version::BUILD_DATE).expect("an ASCII build date");
     let mut fields = date.split(' ');
@@ -276,14 +276,11 @@ pub fn version_banner() -> Vec<u8> {
         .and_then(|(_, rest)| rest.split_once("-bit"))
         .map_or("64", |(bits, _)| bits);
     format!(
-        "Open Object Rexx Version {} r0\n\
+        "interrexx {} (Open Object Rexx {} language level)\n\
          Build date: {month} {day:>2} {year}\n\
          Addressing mode: {bits}\n\
-         Copyright (c) 1995, 2004 IBM Corporation. All rights reserved.\n\
-         Copyright (c) 2005-{year} Rexx Language Association. All rights reserved.\n\
-         This program and the accompanying materials are made available under the terms\n\
-         of the Common Public License v1.0 which accompanies this distribution or at\n\
-         https://www.oorexx.org/license.html",
+         Licensed under MIT OR Apache-2.0.",
+        env!("CARGO_PKG_VERSION"),
         String::from_utf8_lossy(version::VERSION_NUMBER)
     )
     .into_bytes()
@@ -427,8 +424,23 @@ mod tests {
     #[test]
     fn the_banner_carries_the_parse_version_date() {
         let banner = String::from_utf8(version_banner()).expect("ASCII");
-        assert!(banner.starts_with("Open Object Rexx Version 5.3.0 r0\nBuild date: Jul 30 2026\n"));
-        assert!(!banner.ends_with('\n'));
+        let date = String::from_utf8_lossy(version::BUILD_DATE).into_owned();
+        let mut parts = date.split(' ');
+        let (day, month, year) = (
+            parts.next().expect("a day"),
+            parts.next().expect("a month"),
+            parts.next().expect("a year"),
+        );
+        assert_eq!(
+            banner,
+            format!(
+                "interrexx {} (Open Object Rexx 5.3.0 language level)\n\
+                 Build date: {month} {day:>2} {year}\n\
+                 Addressing mode: 64\n\
+                 Licensed under MIT OR Apache-2.0.",
+                env!("CARGO_PKG_VERSION")
+            )
+        );
     }
 
     #[test]

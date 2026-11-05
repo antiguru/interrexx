@@ -596,3 +596,10 @@ An extension that keeps a local object reference past the native call that
 received it, and uses it in a later call, ends the program with exit code
 120 and a message that the handle is no longer held. The API does not
 define such a use; ooRexx may still reach the object or one that replaced it.
+
+## 96. Version and library banners
+
+The text `rexx -v`, `rexxc` and `MathLoadFuncs` print names interrexx, its
+version and its licence, and the language level it implements, in place of
+ooRexx's product line, copyright and licence lines. `PARSE VERSION` and
+`RexxInfo` are unchanged.

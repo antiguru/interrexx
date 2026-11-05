@@ -40,6 +40,22 @@ fn fresh_run_dir() -> PathBuf {
     dir
 }
 
+/// `stdout` with the build date, the last three words of the line, replaced by `<date>`.
+fn mask_date(stdout: &mut Vec<u8>) {
+    let text = String::from_utf8_lossy(stdout).into_owned();
+    let masked: Vec<String> = text
+        .lines()
+        .map(|line| {
+            let words: Vec<&str> = line.split(' ').collect();
+            match words.len().checked_sub(3) {
+                Some(keep) => format!("{} <date>", words[..keep].join(" ")),
+                None => line.to_string(),
+            }
+        })
+        .collect();
+    *stdout = format!("{}\n", masked.join("\n")).into_bytes();
+}
+
 /// `PARSE VERSION` answers what the oracle answers, or this crate's recorded
 /// constant has gone stale against the built interpreter.
 #[test]
@@ -83,6 +99,10 @@ fn parse_version_still_answers_what_the_oracle_answers() {
         cpp.termination
     );
 
+    // The build date is each binary's own; the rest of the string must agree.
+    let (mut rust, mut cpp) = (rust, cpp);
+    mask_date(&mut rust.stdout);
+    mask_date(&mut cpp.stdout);
     let diffs = descriptor_diffs(&rust, &cpp);
     assert!(
         diffs.is_empty(),

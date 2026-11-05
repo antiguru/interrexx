@@ -12,27 +12,19 @@ run
 -v
 ----
 rc> 0
-out> Open Object Rexx Version 5.3.0 r0
+out> interrexx <version> (Open Object Rexx 5.3.0 language level)
 out> Build date: <date>
 out> Addressing mode: 64
-out> Copyright (c) 1995, 2004 IBM Corporation. All rights reserved.
-out> Copyright (c) 2005-<year> Rexx Language Association. All rights reserved.
-out> This program and the accompanying materials are made available under the terms
-out> of the Common Public License v1.0 which accompanies this distribution or at
-out> https://www.oorexx.org/license.html
+out> Licensed under MIT OR Apache-2.0.
 
 run
 -V
 ----
 rc> 0
-out> Open Object Rexx Version 5.3.0 r0
+out> interrexx <version> (Open Object Rexx 5.3.0 language level)
 out> Build date: <date>
 out> Addressing mode: 64
-out> Copyright (c) 1995, 2004 IBM Corporation. All rights reserved.
-out> Copyright (c) 2005-<year> Rexx Language Association. All rights reserved.
-out> This program and the accompanying materials are made available under the terms
-out> of the Common Public License v1.0 which accompanies this distribution or at
-out> https://www.oorexx.org/license.html
+out> Licensed under MIT OR Apache-2.0.
 
 # -v is honoured before and after other options, and after -o's string
 run
@@ -40,28 +32,20 @@ run
 -?
 ----
 rc> 0
-out> Open Object Rexx Version 5.3.0 r0
+out> interrexx <version> (Open Object Rexx 5.3.0 language level)
 out> Build date: <date>
 out> Addressing mode: 64
-out> Copyright (c) 1995, 2004 IBM Corporation. All rights reserved.
-out> Copyright (c) 2005-<year> Rexx Language Association. All rights reserved.
-out> This program and the accompanying materials are made available under the terms
-out> of the Common Public License v1.0 which accompanies this distribution or at
-out> https://www.oorexx.org/license.html
+out> Licensed under MIT OR Apache-2.0.
 
 run
 -?
 -v
 ----
 rc> 0
-out> Open Object Rexx Version 5.3.0 r0
+out> interrexx <version> (Open Object Rexx 5.3.0 language level)
 out> Build date: <date>
 out> Addressing mode: 64
-out> Copyright (c) 1995, 2004 IBM Corporation. All rights reserved.
-out> Copyright (c) 2005-<year> Rexx Language Association. All rights reserved.
-out> This program and the accompanying materials are made available under the terms
-out> of the Common Public License v1.0 which accompanies this distribution or at
-out> https://www.oorexx.org/license.html
+out> Licensed under MIT OR Apache-2.0.
 
 run
 -o
@@ -69,27 +53,19 @@ digits 12
 -v
 ----
 rc> 0
-out> Open Object Rexx Version 5.3.0 r0
+out> interrexx <version> (Open Object Rexx 5.3.0 language level)
 out> Build date: <date>
 out> Addressing mode: 64
-out> Copyright (c) 1995, 2004 IBM Corporation. All rights reserved.
-out> Copyright (c) 2005-<year> Rexx Language Association. All rights reserved.
-out> This program and the accompanying materials are made available under the terms
-out> of the Common Public License v1.0 which accompanies this distribution or at
-out> https://www.oorexx.org/license.html
+out> Licensed under MIT OR Apache-2.0.
 
 run
 -vx
 ----
 rc> 0
-out> Open Object Rexx Version 5.3.0 r0
+out> interrexx <version> (Open Object Rexx 5.3.0 language level)
 out> Build date: <date>
 out> Addressing mode: 64
-out> Copyright (c) 1995, 2004 IBM Corporation. All rights reserved.
-out> Copyright (c) 2005-<year> Rexx Language Association. All rights reserved.
-out> This program and the accompanying materials are made available under the terms
-out> of the Common Public License v1.0 which accompanies this distribution or at
-out> https://www.oorexx.org/license.html
+out> Licensed under MIT OR Apache-2.0.
 
 # -v after the program name is the program's argument
 run

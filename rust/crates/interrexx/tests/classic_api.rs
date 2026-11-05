@@ -1174,8 +1174,8 @@ fn a_sigint_during_rexx_start_halts_the_program_not_the_process() {
     );
 }
 
-/// The family driver's standard output on the oracle.
-const FAMILY_STDOUT: &str = r#"version Open Object Rexx Version 5.3.0 r0
+/// The family driver's standard output. The version line is interrexx's own (Deviation 96).
+const FAMILY_STDOUT: &str = r#"version interrexx
 code 3001: Failure during initialization: File "&1" is unreadable.
 code 35929: Missing expression in logical expression list.
 code 40001: External routine "&1" failed.

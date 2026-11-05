@@ -346,9 +346,7 @@ say RxCalcSqrt(16)
 ----
 rc 0
 [stdout]
-rxmath 1.2 - REXX mathematical function library
-Copyright (c) 2005-2021 Rexx Language Association.
-All rights reserved.
+rxmath (interrexx <version>) - REXX mathematical function library
 
 []
 []

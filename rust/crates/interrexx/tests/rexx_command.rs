@@ -1,13 +1,16 @@
 //! The `rexx` command line against the oracle's: each case of
 //! `tests/rexx_command/cases` runs both binaries with the same words from a
 //! directory of the same programs, and the three descriptors must agree. The
-//! recorded block is the oracle's, normalised.
+//! recorded block is the oracle's, normalised; the `-v` banner is
+//! interrexx's own (Deviation 96), so the oracle's is mapped to it first.
 //!
 //! A case's input is its words, one per line: `\xHH` is a byte, and a line
 //! `<empty>` is the empty word. `rexx_path=DIR` sets `REXX_PATH` to the
 //! fixture's `DIR`, `path=DIR` puts it in front of `PATH`, and `cwd=DIR` runs
 //! from it. `DIR` is a name [`directory`] spells.
 
+#[path = "support/banner.rs"]
+mod banner;
 #[path = "support/oracle_runtime.rs"]
 mod oracle_runtime;
 
@@ -182,8 +185,8 @@ fn escaped(bytes: &[u8]) -> String {
 }
 
 /// The three descriptors as the case file records them, with the fixture's
-/// directory as `DIR` and the banner's compile-time stamps masked.
-fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>) -> String {
+/// directory as `DIR` and the banner as [`banner::recorded`] shows it.
+fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>, oracle: bool) -> String {
     let dir = escaped(dir.as_os_str().as_encoded_bytes());
     let mut rendered = match status {
         Some(code) => format!("rc> {code}\n"),
@@ -191,14 +194,8 @@ fn render(dir: &Path, stdout: &[u8], stderr: &[u8], status: Option<i32>) -> Stri
     };
     for (tag, bytes) in [("out", stdout), ("err", stderr)] {
         for line in escaped(bytes).replace(&dir, "DIR").lines() {
-            let line = match line.strip_prefix("Build date: ") {
-                Some(_) => "Build date: <date>".to_string(),
-                None => match line.strip_prefix("Copyright (c) 2005-") {
-                    Some(rest) => {
-                        format!("Copyright (c) 2005-<year>{}", &rest[4.min(rest.len())..])
-                    }
-                    None => line.to_string(),
-                },
+            let Some(line) = banner::recorded(line, oracle) else {
+                continue;
             };
             rendered.push_str(&format!("{tag}> {line}\n"));
         }
@@ -247,7 +244,13 @@ fn run(
         };
     }
     let output = command.output().expect("the binary starts");
-    render(dir, &output.stdout, &output.stderr, output.status.code())
+    render(
+        dir,
+        &output.stdout,
+        &output.stderr,
+        output.status.code(),
+        oracle,
+    )
 }
 
 /// A fresh fixture directory for one side.
