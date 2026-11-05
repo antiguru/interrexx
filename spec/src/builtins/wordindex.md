@@ -47,12 +47,13 @@ d: say condition('o')~code
 ## The result
 
 r[bif.wordindex.result]
-WORDINDEX returns the [position](r:conv.position.origin) in `string` of the
-first character of word `n`. The position counts characters of `string`
-from its first, so whitespace before the word, and the words and
-whitespace before that, all count toward it. The answer is written as
-[the word builtins write a count](r:bif.words.answer), and whether it is
-a new object is [not specified](r:bif.words.answer.deviation.4).
+When `string` has a word `n`, WORDINDEX returns the
+[position](r:conv.position.origin) in `string` of the first character of
+that word. The position counts characters of `string` from its first, so
+whitespace before the word, and the words and whitespace before that, all
+count toward it. The answer is
+[written as a count](r:bif.count.answer), and whether it is a new object is
+[not specified](r:bif.count.answer.deviation.4).
 
 ```rexx
 say wordindex('red  green blue', 2) wordindex('  red', 1),

@@ -61,13 +61,17 @@ say '['subword('one two  three', 2)']' '['subword('one two  three', 3)']'
 ## The result
 
 r[bif.subword.result]
-SUBWORD returns the part of `string` that begins with the first character
-of word `n` and ends with the last character of word `n + length - 1`, or
-of the last word of `string` when it has fewer words than that. It is a
-slice of `string` and nothing is rewritten in it, so a run of blanks or
-tabs separating two selected words keeps its length and its characters.
-Since the slice starts and ends on word characters, whitespace before word
-`n`, and after the last selected word, falls outside it.
+When `string` has a word `n` and `length` is not 0, SUBWORD returns the
+part of `string` that begins with the first character of word `n` and ends
+with the last character of word `n + length - 1`, or of the last word of
+`string` when it has fewer words than that. It is a slice of `string` and
+nothing is rewritten in it, so a run of blanks or tabs separating two
+selected words keeps its length and its characters. Since the slice starts
+and ends on word characters, whitespace before word `n`, and after the last
+selected word, falls outside it. The other cases have rules of their own:
+[`n` past the last word](r:bif.subword.past-end),
+[`length` 0](r:bif.subword.length.zero) and
+[a `string` with no words](r:bif.subword.empty).
 
 ```rexx
 say '['subword('one two  three   four', 2, 2)']'
@@ -95,7 +99,8 @@ say '['subword('a b c', 4)']' '['subword('a b c', 999999999999999999, 2)']'
 ```
 
 r[bif.subword.length.zero]
-When `length` is 0, the result is the null string, whatever `n` is.
+When `length` is 0, the result is the null string, for every `n` that passes
+its check.
 
 ```rexx
 say '['subword('a b c', 2, 0)']' '['subword('a b c', 9, 0)']'

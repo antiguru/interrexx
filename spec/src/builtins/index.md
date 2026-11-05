@@ -124,6 +124,38 @@ b: say condition('o')~code
 40.4
 ```
 
+r[bif.call.order.missing-before-values]
+A call whose argument count is right but that omits a
+[required argument](r:bif.call.missing) raises `SYNTAX 40.5` even when an
+argument it passes after the omitted one would fail its own check, a
+[form check](r:conv.check.order) or a range check.
+
+```rexx
+signal on syntax name a
+say substr(, 'x')
+a: say condition('o')~code
+signal on syntax name b
+say subword(, 0)
+b: say condition('o')~code
+signal on syntax name c
+say wordpos(, 'a', 0)
+c: say condition('o')~code
+signal on syntax name d
+say verify('abc', , 'Y')
+d: say condition('o')~code
+```
+
+```output
+40.5
+40.5
+40.5
+40.5
+```
+
+The ANSI draft (9.2.1) checks the arguments from left to right, raising
+40.5 at an omitted required argument before it reaches the ones after it,
+and makes the range checks only once every argument is present.
+
 ## Words
 
 r[bif.words.split]
@@ -172,43 +204,54 @@ e: say condition('o')~code
 93.924
 ```
 
-r[bif.words.answer]
-WORDINDEX, WORDLENGTH and WORDPOS each answer a count, of characters or of
-words, and they write it as a whole number in decimal digits only: no sign,
-no leading zero, no period and no exponent, and `0` for zero. The caller's
-NUMERIC DIGITS setting plays no part, so the answer is exact however many
-digits it has.
+## Answers that are counts
+
+WORDINDEX, WORDLENGTH, WORDPOS and VERIFY each answer a count: of
+characters or of words, or a position, which counts characters or words up
+to the one it names. The rules in this section hold for each of them.
+
+r[bif.count.answer]
+A builtin that answers a count writes it as a whole number in decimal
+digits only: no sign, no leading zero, no period and no exponent, and `0`
+for zero. The caller's NUMERIC DIGITS setting plays no part, so the answer
+is exact however many digits it has.
 
 ```rexx
 numeric digits 3
 say wordindex(copies(' ', 1000) || 'a', 1) wordlength(copies('z', 1234), 1),
     wordpos('y', copies('x ', 1200) || 'y') wordpos('q', 'a b')
+say verify(copies('a', 1200) || 'b', 'a') verify(copies('a', 1300), '', 'N', 1234),
+    verify('ab', 'ab')
 ```
 
 ```output
 1001 1234 1201 0
+1201 1234 0
 ```
 
 The reference manual does not say how these answers are written or whether
 NUMERIC DIGITS applies to them; this follows the observed behaviour.
 
-r[bif.words.answer.deviation.4]
-interrexx does not specify whether the answer of WORDINDEX, WORDLENGTH or
-WORDPOS is the same object as another string of equal value: as an equal
-number the program already holds, such as the `start` argument of a
-WORDPOS call that answers it, or a literal such as `'1201'`, or the equal
-answer of another call. Through `identityHash`, or as a key of an
-`IdentityTable` or `IdentitySet`, the answer may be either, and a program
-can rely only on the value, which is equal under `==`. The oracle differs:
-it often answers a new object where interrexx answers the existing one.
+r[bif.count.answer.deviation.4]
+interrexx does not specify whether the answer of a builtin that answers a
+count is the same object as another string of equal value: as an equal
+number the program already holds, such as the `start` argument of a call
+that answers it, or a literal such as `'1201'`, or the equal answer of
+another call. Through `identityHash`, or as a key of an `IdentityTable` or
+`IdentitySet`, the answer may be either, and a program can rely only on the
+value, which is equal under `==`. The oracle differs: it often answers a
+new object where interrexx answers the existing one.
 
 ```rexx
 w = copies('x ', 1200) || 'y'
 n = 1200 + 1
 say (wordpos('y', w, n) == n) (wordindex(copies(' ', 1200) || 'a', 1) == '1201'),
     (wordlength(copies('z', 1201), 1) == wordpos('y', w))
+v = copies('a', 1300)
+say (verify(v, '', 'N', n) == n) (verify(copies('a', 1200) || 'b', 'a') == '1201')
 ```
 
 ```output
 1 1 1
+1 1
 ```

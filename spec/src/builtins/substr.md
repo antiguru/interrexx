@@ -112,8 +112,8 @@ say '['substr('abc', 4, 2, '*')']' '['substr('abc', 999999999999999999, 3, '*')'
 ```
 
 r[bif.substr.length.zero]
-When `length` is 0, the result is the null string, whatever `n` is. `pad`
-is still checked, as a [pad](r:conv.pad) always is.
+When `length` is 0, the result is the null string, for every `n` that
+passes its check. `pad` is still checked, as a [pad](r:conv.pad) always is.
 
 ```rexx
 say '['substr('abc', 2, 0)']' '['substr('abc', 10, 0, '*')']'

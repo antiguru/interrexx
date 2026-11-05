@@ -69,9 +69,8 @@ WORDPOS then returns the smallest word number `k`, with `k` at least
 to `m`, word `k + i - 1` of `string` is equal under `==` to word `i` of
 `phrase`. When there is no such `k`, the result is `0`. A phrase with no
 words is the case of [its own rule](r:bif.wordpos.empty-phrase). The answer
-is written as [the word builtins write a count](r:bif.words.answer), and
-whether it is a new object is
-[not specified](r:bif.words.answer.deviation.4).
+is [written as a count](r:bif.count.answer), and whether it is a new object
+is [not specified](r:bif.count.answer.deviation.4).
 
 ```rexx
 s = 'one two three two three four'

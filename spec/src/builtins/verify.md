@@ -4,7 +4,6 @@ kind: builtin
 syntax: "VERIFY(string, reference [, option] [, start] [, length])"
 ansi: "9.3.24"
 rexxref: "Functions > Built-in Functions > VERIFY"
-deviations: [4]
 ---
 
 # VERIFY
@@ -185,8 +184,9 @@ say verify('ABC', 'abc') verify('a' || '00'x || 'b', 'ba') verify('a b', 'ba  ab
 ```
 
 r[bif.verify.past-end]
-When `start` is greater than `LENGTH(string)`, the result is `0`, whatever
-`reference` and `option` are, for every `start` that passes its check.
+When `start` is greater than `LENGTH(string)`, the result is `0`, for every
+`reference`, and every `option`, `start` and `length` that pass their
+checks.
 
 ```rexx
 say verify('abc', 'x', 'N', 4) verify('abc', 'b', 'M', 999999999999999999),
@@ -199,7 +199,8 @@ say verify('abc', 'x', 'N', 4) verify('abc', 'b', 'M', 999999999999999999),
 
 r[bif.verify.empty-string]
 When `string` is the null string, every `start` is past its end, so the
-result is `0`, whatever `reference` is and whichever option is selected.
+result is `0`, for every `reference`, and every `option`, `start` and
+`length` that pass their checks.
 
 ```rexx
 say verify('', 'a') verify('', '') verify('', 'a', 'M') verify('', '', 'N', 3)
@@ -212,7 +213,8 @@ say verify('', 'a') verify('', '') verify('', 'a', 'M') verify('', '', 'N', 3)
 r[bif.verify.empty-reference]
 When `start` is at most `LENGTH(string)` and `reference` is the null
 string, the result is `start` with Nomatch and `0` with Match. This holds
-whatever `length` is, 0 included: no character of `string` is examined.
+for every `length` that passes its check, 0 included: no character of
+`string` is examined.
 
 ```rexx
 say verify('abc', '') verify('abc', '', 'N', 3) verify('abc', '', 'N', 2, 0),
@@ -239,43 +241,6 @@ say verify('abc', 'x', 'N', 1, 0) verify('abc', 'a', 'M', 1, 0)
 0 0
 ```
 
-r[bif.verify.answer]
-VERIFY writes its answer as a whole number in decimal digits only: no sign,
-no leading zero, no period and no exponent, and `0` for zero. The caller's
-NUMERIC DIGITS setting plays no part, so the answer is exact however many
-digits it has.
-
-```rexx
-numeric digits 3
-say verify(copies('a', 1200) || 'b', 'a') verify(copies('a', 1300), '', 'N', 1234),
-    verify('ab', 'ab')
-```
-
-```output
-1201 1234 0
-```
-
-The reference manual does not say how the answer is written or whether
-NUMERIC DIGITS applies to it; this follows the observed behaviour.
-
-## Deviations
-
-r[bif.verify.deviation.4]
-interrexx does not specify whether the answer of VERIFY is the same object
-as another string of equal value: as an equal number the program already
-holds, such as the `start` argument of a call that answers it, or a literal
-such as `'1201'`, or the equal answer of another call. Through
-`identityHash`, or as a key of an `IdentityTable` or `IdentitySet`, the
-answer may be either, and a program can rely only on the value, which is
-equal under `==`. The oracle differs: it often answers a new object where
-interrexx answers the existing one.
-
-```rexx
-n = 1200 + 1
-w = copies('a', 1300)
-say (verify(w, '', 'N', n) == n) (verify(copies('a', 1200) || 'b', 'a') == '1201')
-```
-
-```output
-1 1
-```
+VERIFY's answer, a position or `0`, is a count: it is
+[written as a count](r:bif.count.answer), and whether it is a new object is
+[not specified](r:bif.count.answer.deviation.4).

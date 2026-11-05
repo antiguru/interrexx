@@ -132,7 +132,7 @@ abc abc
 
 r[bif.upper.length.zero]
 When `length` is 0, no character is changed and the result is `string`,
-whatever `n` is.
+for every `n` that passes its check.
 
 ```rexx
 say upper('abc', 2, 0) upper('abc', 50, 0)

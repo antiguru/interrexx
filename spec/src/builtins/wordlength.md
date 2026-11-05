@@ -47,12 +47,13 @@ d: say condition('o')~code
 ## The result
 
 r[bif.wordlength.result]
-WORDLENGTH returns the number of [characters](r:conv.string.chars) in word
-`n` of `string`, which is `LENGTH(WORD(string, n))`. Whitespace around the
-word does not count, and a character that [the word rule](r:bif.words.split)
-places inside a word, such as a line feed, counts as one. The answer is
-written as [the word builtins write a count](r:bif.words.answer), and whether it is
-a new object is [not specified](r:bif.words.answer.deviation.4).
+When `string` has a word `n`, WORDLENGTH returns the number of
+[characters](r:conv.string.chars) in that word, which is
+`LENGTH(WORD(string, n))`. Whitespace around the word does not count, and a
+character that [the word rule](r:bif.words.split) places inside a word,
+such as a line feed, counts as one. The answer is
+[written as a count](r:bif.count.answer), and whether it is a new object is
+[not specified](r:bif.count.answer.deviation.4).
 
 ```rexx
 say wordlength('red  green blue', 2) wordlength('  abc  ', 1),

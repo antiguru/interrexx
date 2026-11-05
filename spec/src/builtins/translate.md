@@ -204,7 +204,8 @@ says a given pad replaces the whole string.
 
 r[bif.translate.tablei.empty]
 When `tablei` is given as the null string, no character is found in it, and
-the result is `string` unchanged, whatever `tableo` and `pad` are.
+the result is `string` unchanged, for every `tableo`, `pad`, `pos` and
+`length` that pass their checks.
 
 ```rexx
 say translate('abc', 'xyz', '') translate('abc', , '', '*') translate('abc', '', '')
@@ -240,8 +241,8 @@ abc abc a**
 
 r[bif.translate.length.zero]
 When `length` is 0, no character is translated and the result is `string`,
-whatever `pos` is. `pad` is still checked, as a [pad](r:conv.pad) always
-is.
+for every `pos` that passes its check. `pad` is still checked, as a
+[pad](r:conv.pad) always is.
 
 ```rexx
 say translate('abc', , , '*', 2, 0) translate('abc', , , , 1, 0)

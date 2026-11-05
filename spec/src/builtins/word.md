@@ -47,10 +47,9 @@ d: say condition('o')~code
 ## The result
 
 r[bif.word.result]
-WORD returns word `n` of `string`: its characters exactly as they stand in
-`string`, and none of the whitespace before or after it. So for every
-`string` and every `n` that passes its check, `word(string, n) ==
-subword(string, n, 1)` holds.
+When `string` has a word `n`, WORD returns that word: its characters
+exactly as they stand in `string`, and none of the whitespace before or
+after it. So then `word(string, n) == subword(string, n, 1)` holds.
 
 ```rexx
 s = ' red  green' || '09'x || 'blue '

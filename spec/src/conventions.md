@@ -193,8 +193,9 @@ c: say condition('o')~code
 
 r[conv.length.check]
 In a builtin that runs as a String method, a length argument is a
-whole-number argument whose value must not be negative. A negative value raises `SYNTAX 93.923`. A length of 0 is
-allowed, and so is `-0`, which is 0.
+whole-number argument whose value must not be negative. A negative value
+raises `SYNTAX 93.923`. A length of 0 is allowed, and so is `-0`, which is
+0.
 
 ```rexx
 say '['substr('abc', 2, 0)']' '['substr('abc', 2, '-0')']'

@@ -11,9 +11,11 @@ the interpreter must do when it runs one.
 
 ## Who it is for
 
-The book is written for two readers. An implementer needs to know what
-behavior is required, and a user who reads a program needs to know what it
-will do. It assumes you can read Rexx, and it does not teach the language.
+The book is written for three readers: an engineer changing the
+interpreter, who needs the exact behavior before touching code; an LLM
+agent doing the same work, which may read one page at a time with no
+history behind it; and a reviewer judging whether a change is correct. It
+assumes you can read Rexx, and it does not teach the language.
 
 ## Authority
 
@@ -52,4 +54,6 @@ manual and the ANSI Rexx standard. A page's front matter names the sections
 that describe its element. The wording of this book is its own, and the
 rules state what the language does, derived from those sources and from
 reasoning about the semantics, not from observing any particular
-implementation.
+implementation. Where the reference manual and the ANSI standard are both
+silent, a rule follows the observed behavior of the reference
+implementation, ooRexx, and its page says so.
