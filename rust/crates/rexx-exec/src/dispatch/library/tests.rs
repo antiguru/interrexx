@@ -172,8 +172,7 @@ fn a_version_refused_library_raises_once_and_is_held() {
 
 /// **The end-to-end witness answers the same under a collection at every
 /// allocation as it does under none.** The stress harness also reads
-/// `phase-8.txt` and `phase-9.txt` in its corpus union and compares plain and
-/// stressed outcomes. This focused test additionally pins the expected stdout.
+/// `differential.txt` and compares plain and stressed outcomes. This focused test additionally pins the expected stdout.
 ///
 /// **What it does not say**, measured: with `Activity::object_roots`
 /// dropping `native_handles` entirely this still passes, because the

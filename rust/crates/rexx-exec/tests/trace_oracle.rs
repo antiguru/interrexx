@@ -441,59 +441,8 @@ const PREFIX_COVERAGE: &[(&str, Coverage)] = &[
     ("<I<", Coverage::WitnessedLive(LIVE_INVOCATION_WITNESS)),
 ];
 
-/// The phase subset files this file reads, in union order.
-const SUBSET_FILES: &[&str] = &[
-    "phase-10.txt",
-    "phase-4a.txt",
-    "phase-4b.txt",
-    "phase-4c.txt",
-    "phase-5a.txt",
-    "phase-5b.txt",
-    "phase-5c.txt",
-    "phase-5d.txt",
-    "phase-5j.txt",
-    "phase-6-1.txt",
-    "phase-6.txt",
-    "phase-7.txt",
-    "phase-8.txt",
-    "phase-9.txt",
-];
-
-/// The phase subset files that exist in the corpus directory, sorted.
-fn phase_subset_files_on_disk() -> Vec<String> {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
-    let entries =
-        std::fs::read_dir(&dir).unwrap_or_else(|e| panic!("cannot read {}: {e}", dir.display()));
-    let mut names: Vec<String> = entries
-        .flatten()
-        .filter_map(|entry| entry.file_name().into_string().ok())
-        .filter(|name| name.starts_with("phase-") && name.ends_with(".txt"))
-        .collect();
-    names.sort();
-    names
-}
-
-/// This file reads **every** phase subset file the corpus has.
-#[test]
-fn the_prefix_table_reads_every_phase_subset_file() {
-    let on_disk = phase_subset_files_on_disk();
-    // The listing is the half that can come back empty, and a comparison of
-    // two empty lists is a pass with nothing behind it. Asserted here rather
-    // than left to the non-empty literal below to carry, which is the same
-    // reason `gate_table_d.rs`'s owner check asserts its own enumeration.
-    assert!(
-        !on_disk.is_empty(),
-        "no phase-*.txt in rust/corpus/, so the assertion below compared the list against \
-         nothing"
-    );
-    assert_eq!(
-        SUBSET_FILES, on_disk,
-        "this file does not read every phase subset file in rust/corpus/. A file missing \
-         from SUBSET_FILES leaves the union below as it stood before that file landed, and \
-         a WitnessedLive row whose program only the missing file names then rests on this \
-         file's own output rather than on the oracle"
-    );
-}
+/// The corpus list this file reads.
+const SUBSET_FILES: &[&str] = &["differential.txt"];
 
 /// Each [`Coverage::WitnessedLive`] row's own chain, the analogue of
 /// [`every_witness_still_emits_every_prefix_it_is_named_for`] for a witness
@@ -517,7 +466,7 @@ fn every_live_witness_emits_its_prefix_and_is_run_by_the_corpus() {
             listed
                 .lines()
                 .any(|line| line.trim() == *rel_path && !line.trim_start().starts_with('#')),
-            "{rel_path} witnesses {prefix:?} but is in no phase subset file, so \
+            "{rel_path} witnesses {prefix:?} but is not in the corpus list, so \
              tests/corpus.rs never runs it against the oracle"
         );
         let path = corpus_dir.join(rel_path);

@@ -1,8 +1,7 @@
-//! The differential corpus runner: every program named in [`SUBSET_FILES`] --
-//! every phase subset file `rust/corpus/` has, read as a union -- run under
-//! both interpreters, compared byte for byte on stdout and exit code, and on
-//! stderr up to DEVIATION 0's own narrow indent normalisation (see the
-//! "DEVIATION 0" section below).
+//! The differential corpus runner: every program named in [`SUBSET_FILES`]
+//! run under both interpreters, compared byte for byte on stdout and exit
+//! code, and on stderr up to DEVIATION 0's own narrow indent normalisation
+//! (see the "DEVIATION 0" section below).
 
 mod support;
 mod watchdog;
@@ -273,7 +272,7 @@ fn stderr_mode(rel_path: &str) -> StderrComparison {
 }
 
 /// Every entry in [`RAW_STDERR_COMPARISON`], [`CONCURRENTLY_TRACED`] and
-/// [`HASH_ORDERED_STDOUT`] is a line some phase subset file actually names.
+/// [`HASH_ORDERED_STDOUT`] is a line the corpus list actually names.
 #[test]
 fn every_opted_in_comparison_names_a_program_the_subset_runs() {
     let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
@@ -291,7 +290,7 @@ fn every_opted_in_comparison_names_a_program_the_subset_runs() {
             assert!(
                 subset.iter().any(|entry| entry == listed),
                 "{listed} is listed for the {opted_into} stderr comparison but is not a \
-                 line in any phase subset file -- stderr_mode would silently give it the \
+                 line in the corpus list -- stderr_mode would silently give it the \
                  normalised comparison instead of the one it is supposed to opt into"
             );
         }
@@ -544,50 +543,39 @@ fn emit_uncaptured(text: &str) {
     );
 }
 
-/// The runner itself. See the module doc for REPORT vs STRICT and how the
-/// oracle and the memory limit are handled.
-const SUBSET_FILES: &[&str] = &[
-    "phase-10.txt",
-    "phase-4a.txt",
-    "phase-4b.txt",
-    "phase-4c.txt",
-    "phase-5a.txt",
-    "phase-5b.txt",
-    "phase-5c.txt",
-    "phase-5d.txt",
-    "phase-5j.txt",
-    "phase-6-1.txt",
-    "phase-6.txt",
-    "phase-7.txt",
-    "phase-8.txt",
-    "phase-9.txt",
-];
+/// The corpus list the differential runs. See the module doc for REPORT vs
+/// STRICT and how the oracle and the memory limit are handled.
+const SUBSET_FILES: &[&str] = &["differential.txt"];
 
-/// The phase subset files that exist in the corpus directory, sorted.
-fn phase_subset_files_on_disk() -> Vec<String> {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
-    let entries =
-        fs::read_dir(&dir).unwrap_or_else(|e| panic!("cannot read {}: {e}", dir.display()));
-    let mut names: Vec<String> = entries
-        .flatten()
-        .filter_map(|entry| entry.file_name().into_string().ok())
-        .filter(|name| name.starts_with("phase-") && name.ends_with(".txt"))
-        .collect();
-    names.sort();
-    names
-}
+/// The list the scheduler-simulation gate replays, which the differential
+/// must run too.
+const CONCURRENCY_FILE: &str = "concurrency.txt";
 
-/// The differential reads **every** phase subset file the corpus has.
+/// Every program [`CONCURRENCY_FILE`] names is one the differential runs.
 #[test]
-fn the_differential_reads_every_phase_subset_file() {
-    assert_eq!(
-        SUBSET_FILES,
-        phase_subset_files_on_disk(),
-        "the corpus differential does not read every phase subset file in \
-         rust/corpus/. A file missing from SUBSET_FILES is a phase whose \
-         programs are never run against the oracle, and the run stays green \
-         over whatever is left -- the headline shrinks and nothing asserts on \
-         it"
+fn every_concurrency_program_is_run_by_the_differential() {
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let paths: Vec<PathBuf> = SUBSET_FILES
+        .iter()
+        .map(|name| corpus_dir.join(name))
+        .collect();
+    let run: BTreeSet<String> =
+        read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>())
+            .into_iter()
+            .collect();
+    let concurrency = read_subset(&[&corpus_dir.join(CONCURRENCY_FILE)]);
+    assert!(
+        !concurrency.is_empty(),
+        "{CONCURRENCY_FILE} names no programs"
+    );
+    let missing: Vec<&String> = concurrency
+        .iter()
+        .filter(|entry| !run.contains(*entry))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "{missing:?} are in {CONCURRENCY_FILE} and not in {SUBSET_FILES:?}, so the oracle \
+         never judges them"
     );
 }
 
@@ -621,7 +609,7 @@ fn read_unfiled(corpus_dir: &Path) -> Vec<(String, String)> {
 }
 
 /// Every `<name>.env` and `<name>.d/` beside a corpus program names a program
-/// a phase subset file runs, so a sidecar cannot sit unread.
+/// the corpus list runs, so a sidecar cannot sit unread.
 #[test]
 fn every_sidecar_names_a_program_the_subset_runs() {
     let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
@@ -646,7 +634,7 @@ fn every_sidecar_names_a_program_the_subset_runs() {
         let program = format!("{LANG_SUBDIR}/{stem}.rex");
         assert!(
             filed.contains(&program),
-            "{stem} has a sidecar and no phase subset file names {program}, so nothing reads it"
+            "{stem} has a sidecar and the corpus list does not name {program}, so nothing reads it"
         );
         assert!(
             sidecar_for(&corpus_dir, &program).present(),
@@ -752,7 +740,7 @@ fn sidecar_stems(corpus_dir: &Path) -> BTreeSet<String> {
         .collect()
 }
 
-/// Every `corpus/lang/*.rex` on disk is either named by a phase subset file or
+/// Every `corpus/lang/*.rex` on disk is either named by the corpus list or
 /// named by [`UNFILED_FILE`], and never both.
 #[test]
 fn every_lang_program_is_run_or_named_unfiled() {
@@ -789,7 +777,7 @@ fn every_lang_program_is_run_or_named_unfiled() {
         .collect();
     assert!(
         both.is_empty(),
-        "{both:?} are named by a phase subset file and by {UNFILED_FILE}. The second says \
+        "{both:?} are named by the corpus list and by {UNFILED_FILE}. The second says \
          nothing runs them against the oracle, and the first says something does"
     );
 
@@ -804,7 +792,7 @@ fn every_lang_program_is_run_or_named_unfiled() {
     for entry in &filed {
         assert!(
             on_disk.contains(entry),
-            "a phase subset file names {entry}, which is not a program in {}",
+            "the corpus list names {entry}, which is not a program in {}",
             dir.display()
         );
     }
@@ -814,10 +802,48 @@ fn every_lang_program_is_run_or_named_unfiled() {
     }
     assert!(
         on_disk.is_empty(),
-        "{on_disk:?} are in {} and named by no phase subset file, so nothing compares them \
+        "{on_disk:?} are in {} and not named by the corpus list, so nothing compares them \
          against the oracle and the differential's headline does not count them. File each \
          one, or name it in {UNFILED_FILE} with the reason it is not run",
         dir.display()
+    );
+}
+
+/// The programs outside [`LANG_SUBDIR`] the corpus list names, in file
+/// order. [`every_lang_program_is_run_or_named_unfiled`] accounts for
+/// `lang/` against the directory; these are pinned so that dropping one is a
+/// test failure rather than a quiet shrink of the run.
+const NON_LANG_PROGRAMS: &[&str] = &[
+    "num/comparison.rex",
+    "num/notation_thresholds.rex",
+    "gate-tables/directives/method__external__subkeyword.rex",
+    "gate-tables/directives/attribute__external__subkeyword.rex",
+    "gate-tables/concepts/creo.rex",
+    "gate-tables/concepts/abscla.rex",
+    "gate-tables/concepts/obdes.rex",
+    "gate-tables/concepts/objcla.rex",
+    "gate-tables/concepts/usesem.rex",
+    "gate-tables/directives/method__delegate__subkeyword.rex",
+    "gate-tables/directives/attribute__delegate__subkeyword.rex",
+    "gate-tables/concepts/methodsbyclass.rex",
+];
+
+/// The corpus list names exactly [`NON_LANG_PROGRAMS`] outside `lang/`.
+#[test]
+fn the_programs_outside_lang_are_the_pinned_ones() {
+    let corpus_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus");
+    let paths: Vec<PathBuf> = SUBSET_FILES
+        .iter()
+        .map(|name| corpus_dir.join(name))
+        .collect();
+    let outside: Vec<String> = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>())
+        .into_iter()
+        .filter(|entry| !entry.starts_with(&format!("{LANG_SUBDIR}/")))
+        .collect();
+    assert_eq!(
+        outside, NON_LANG_PROGRAMS,
+        "the corpus list's programs outside {LANG_SUBDIR}/ drifted from NON_LANG_PROGRAMS -- \
+         change both together"
     );
 }
 
@@ -830,13 +856,9 @@ fn corpus_differential() {
         .map(|name| corpus_dir.join(name))
         .collect();
     let subset = read_subset(&paths.iter().map(PathBuf::as_path).collect::<Vec<_>>());
-    // Covers the empty *union* -- every named file present and every one of
-    // them naming nothing -- and nothing beyond it. A union that lost a whole
-    // file is still non-empty while the others stand, which is why the pin
-    // above exists rather than this guard being widened.
     assert!(
         !subset.is_empty(),
-        "the phase subset files named no programs -- that is a corpus defect, \
+        "the corpus list named no programs -- that is a corpus defect, \
          not an empty pass"
     );
 

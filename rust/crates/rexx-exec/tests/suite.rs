@@ -991,9 +991,8 @@ fn the_row_files_hold_only_checked_rows() {
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 
-/// The 9b gate-group file (spec 2026-10-10 section 4), and the derivation it
-/// is committed from.
-mod gate_groups_9b {
+/// The RexxUtil gate-group file, and the derivation it is committed from.
+mod rexxutil_groups {
     use std::collections::BTreeSet;
     use std::fs;
     use std::path::Path;
@@ -1001,10 +1000,9 @@ mod gate_groups_9b {
     use super::{group_path, groups_root, worktree};
 
     /// The file, relative to the worktree.
-    const FILE: &str = "rust/corpus/suite-9b-groups.txt";
+    const FILE: &str = "rust/corpus/suite-rexxutil-groups.txt";
 
-    /// The RexxUtil routines spec section 4 lists, plus `SysFileTree` and
-    /// `SysFileXXX`.
+    /// The RexxUtil routines whose ooTest groups the file lists.
     const ROUTINES: &[&str] = &[
         "SysCls",
         "SysCreatePipe",
@@ -1121,7 +1119,7 @@ mod gate_groups_9b {
     }
 
     #[test]
-    fn the_9b_group_file_is_what_its_derivation_gives() {
+    fn the_rexxutil_group_file_is_what_its_derivation_gives() {
         let text = fs::read_to_string(worktree().join(FILE))
             .unwrap_or_else(|e| panic!("cannot read {FILE}: {e}"));
         let (listed, recorded) = parse(&text);

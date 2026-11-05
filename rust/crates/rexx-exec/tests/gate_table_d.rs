@@ -109,8 +109,8 @@ fn owning_phase(row: &Row) -> Option<&'static str> {
 /// or sit in [`gate_tables::CLOSED_PHASES`].
 const PARSE_ERROR_RENDERING: &str = "deferred-parse-error-rendering";
 
-/// Every phase this table owns rows for whose corpus subset file exists is in
-/// [`gate_tables::CLOSED_PHASES`].
+/// Every owner of this table's rows that is spelled like a phase (a leading
+/// digit) is in [`gate_tables::CLOSED_PHASES`], so its verdicts are gated.
 #[test]
 fn every_closed_phase_this_table_owns_rows_for_is_gated() {
     let rows = read_rows();
@@ -126,17 +126,15 @@ fn every_closed_phase_this_table_owns_rows_for_is_gated() {
         !owners.is_empty(),
         "no row named an owner, so this check no longer covers the table it reads"
     );
-    let corpus = corpus_dir();
     let ungated: Vec<&String> = owners
         .iter()
-        .filter(|phase| corpus.join(format!("phase-{phase}.txt")).is_file())
+        .filter(|phase| phase.starts_with(|c: char| c.is_ascii_digit()))
         .filter(|phase| !CLOSED_PHASES.contains(&phase.as_str()))
         .collect();
     assert!(
         ungated.is_empty(),
-        "{ungated:?} own rows in gate table D and have a committed corpus subset file, so \
-         their programs agree with the oracle, but CLOSED_PHASES does not name them -- a \
-         verdict of theirs can move and every gate still exits 0"
+        "{ungated:?} own rows in gate table D and are spelled like a phase, but CLOSED_PHASES \
+         does not name them -- a verdict of theirs can move and every gate still exits 0"
     );
 }
 

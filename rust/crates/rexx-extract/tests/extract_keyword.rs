@@ -27,8 +27,7 @@ fn suite_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../ootest/ooRexx/base/keyword")
 }
 
-/// The committed list of `.testGroup` files the extractor scans, pinned the
-/// way `rust/corpus/phase-4a.txt` is pinned.
+/// The committed list of `.testGroup` files the extractor scans.
 fn committed_group_list() -> Vec<String> {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus/keyword-groups.txt");
     let text = std::fs::read_to_string(&path)

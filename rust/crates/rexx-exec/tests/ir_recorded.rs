@@ -802,23 +802,8 @@ const OOTEST_SUITES: &[&str] = &["bif", "expressions", "keyword"];
 /// The name of the population that is not an `ootest` suite.
 const CORPUS_POPULATION: &str = "corpus";
 
-/// The subset files the corpus population reads, in union order.
-const SUBSET_FILES: &[&str] = &[
-    "phase-10.txt",
-    "phase-4a.txt",
-    "phase-4b.txt",
-    "phase-4c.txt",
-    "phase-5a.txt",
-    "phase-5b.txt",
-    "phase-5c.txt",
-    "phase-5d.txt",
-    "phase-5j.txt",
-    "phase-6-1.txt",
-    "phase-6.txt",
-    "phase-7.txt",
-    "phase-8.txt",
-    "phase-9.txt",
-];
+/// The corpus list the corpus population reads.
+const SUBSET_FILES: &[&str] = &["differential.txt"];
 
 fn corpus_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus")
@@ -830,21 +815,7 @@ fn ootest_dir(suite: &str) -> PathBuf {
         .join(suite)
 }
 
-/// The phase subset files that exist in the corpus directory, sorted.
-fn phase_subset_files_on_disk() -> Vec<String> {
-    let dir = corpus_dir();
-    let entries =
-        fs::read_dir(&dir).unwrap_or_else(|e| panic!("cannot read {}: {e}", dir.display()));
-    let mut names: Vec<String> = entries
-        .flatten()
-        .filter_map(|entry| entry.file_name().into_string().ok())
-        .filter(|name| name.starts_with("phase-") && name.ends_with(".txt"))
-        .collect();
-    names.sort();
-    names
-}
-
-/// Every corpus program named by a phase subset file, each once.
+/// Every corpus program the corpus list names, each once.
 fn corpus_cases() -> Vec<Case> {
     let dir = corpus_dir();
     let mut seen = std::collections::HashSet::new();
@@ -1080,17 +1051,6 @@ fn unloaded_library(stderr: &[u8]) -> Option<String> {
     Some(text[start..start + length].to_string())
 }
 
-/// This harness reads **every** phase subset file the corpus has.
-#[test]
-fn the_harness_reads_every_phase_subset_file() {
-    assert_eq!(
-        SUBSET_FILES,
-        phase_subset_files_on_disk(),
-        "the sweep does not read every phase subset file in \
-         rust/corpus/"
-    );
-}
-
 /// Every `ootest` suite a sibling harness in `tests/` runs programs from,
 /// read out of those files rather than listed here a second time.
 fn ootest_suites_sibling_harnesses_read() -> Vec<String> {
@@ -1143,11 +1103,6 @@ fn the_sweep_runs_every_ootest_suite_a_sibling_harness_runs() {
 #[test]
 fn every_population_the_tree_calls_for_is_present_and_non_empty() {
     let mut required = vec![CORPUS_POPULATION.to_string()];
-    assert!(
-        !phase_subset_files_on_disk().is_empty(),
-        "rust/corpus/ has no phase subset file, so nothing here requires the \
-         corpus population to exist"
-    );
     required.extend(ootest_suites_sibling_harnesses_read());
     required.sort();
 

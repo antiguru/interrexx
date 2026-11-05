@@ -2391,7 +2391,7 @@ mod sim_gate {
 
     /// Every row of the table is a part the gate names: each group
     /// file of the derived list whole and derived, each program of
-    /// `corpus/phase-6.txt`, and the gate's own programs; a rest or
+    /// `corpus/concurrency.txt`, and the gate's own programs; a rest or
     /// single row names a group with a whole row. Every other row has an
     /// oracle set, and every exempt row names a table row.
     #[test]
@@ -2409,8 +2409,11 @@ mod sim_gate {
             want.insert((group.clone(), "whole".to_string()));
             want.insert((group.clone(), "derived".to_string()));
         }
-        let list = rust_root().join("corpus/phase-6.txt");
-        for line in std::fs::read_to_string(&list).expect("phase-6.txt").lines() {
+        let list = rust_root().join("corpus/concurrency.txt");
+        for line in std::fs::read_to_string(&list)
+            .expect("concurrency.txt")
+            .lines()
+        {
             let line = line.trim();
             if !line.is_empty() && !line.starts_with('#') {
                 want.insert((format!("corpus/{line}"), "program".to_string()));

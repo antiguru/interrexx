@@ -9,7 +9,7 @@ A program here must produce byte-identical output on every run of the *same*
 interpreter. No `DATE()`, no `TIME()`, no process IDs, no file system state, no
 directory listings, no addresses, no iteration over an unordered collection.
 
-**Narrowed for the programs `phase-7.txt` lists, not dropped.** Each corpus
+**Narrowed for a program's own files, not dropped.** Each corpus
 program runs with its working directory set to one of its own, created empty
 before the oracle's run and emptied again before this crate's, so both sides
 see the same absolute path and the same state. A program there may create,
@@ -17,7 +17,7 @@ read and delete files inside that directory. It still prints no timestamp, no
 size of a file it did not write, no directory listing it did not create, and
 no host variable's value.
 
-**Narrowed again for the programs `phase-6.txt` and `phase-8.txt` list.** A program there may
+**Narrowed again for compiled extensions.** A program may
 load one of the oracle's own compiled extensions, which is a file outside its
 run directory and outside this repository's own build. It is named through an
 `LD_LIBRARY_PATH={oraclelib}` sidecar rather than found on the ambient
@@ -33,8 +33,7 @@ shared-library path. A program that is about that path names `rxmathc`,
 oracle's `librxmath.so`, `librxregexp.so`, `librxsock.so` and
 `librxunixsys.so` under those names
 (`INSTRUMENTS` in `crates/rexx-exec/tests/support/sidecar.rs`), so both sides
-load the same C binary. Each such program has a `_rust` copy naming the Rust library
-(`phase-10.txt`).
+load the same C binary. Each such program has a `_rust` copy naming the Rust library.
 
 **The case that joins those last two, because nothing about the program says
 so.** The order `DO OVER` yields a hash collection's indexes in is the order of
@@ -110,7 +109,7 @@ a program nothing runs, which is the gap
 takes the `.cls` shape because its helpers are class libraries and `.cls` is
 what ooRexx calls one. Naming them without an extension in the directive means
 the search's own `.cls` step is what finds them. A `.cls` helper needs no
-`sourceline_oracle` expectation and appears in no subset file, because no
+`sourceline_oracle` expectation and appears in no corpus list, because no
 scanner sees it. `lang/package_namespace.rex` follows the same convention.
 
 ## Running it
@@ -128,99 +127,34 @@ removed and nothing catches the drift. Substituting any other binary for
 `--rs` should report `N` divergences and exit 1; that negative control is what
 makes a zero meaningful.
 
-## Phase 4a subset
+## Corpus lists
 
-Phase 4a's executor implements a subset of the language -- no builtin
-functions, no `CALL`/`INTERPRET`/`PARSE`, no message sends, no `::`
-directives, no `DO WITH` or `DO OVER` on a stem. `phase-4a.txt` lists exactly
-the programs in this directory that stay inside that subset, so Task 14's
-harness has something narrower to run than "every `.rex` file here". It is a
-plain list, one path per line, relative to this directory; rebuild it by hand
-whenever a program's scope changes rather than trusting a stale copy.
+One path per line, relative to this directory; `#` starts a comment.
 
-## Phase 4b subset
+* `differential.txt` -- every program the differential harnesses run under
+  both interpreters (`crates/rexx-exec/tests/corpus.rs`, `coverage.rs`,
+  `collect_stress.rs`, `ir_recorded.rs`, `trace_oracle.rs`, and the IR shape
+  sweep). Every `lang/*.rex` is either listed here or named in `unfiled.txt`
+  with a reason; the entries outside `lang/` are pinned by `corpus.rs`'s
+  `NON_LANG_PROGRAMS`.
+* `concurrency.txt` -- the programs that start activities, which the
+  scheduler-simulation gate (`tests/group_runs/`) replays. Each is also in
+  `differential.txt`, and `corpus.rs` checks that.
+* `suite-rexxutil-groups.txt` -- the ooTest groups that name a RexxUtil
+  routine, for `REXX_SUITE_GROUPS`; `suite.rs` re-derives it from the command
+  its header records.
 
-`phase-4b.txt` is the same format and is **read alongside `phase-4a.txt`, not
-instead of it**: `read_subset` takes a list of files and unions them in
-first-seen order, so every 4a witness stays exercised as later phases add
-their own programs. A construct 4b implements cannot have its witness in
-`phase-4a.txt`, whose own header excludes those constructs by definition, so
-each phase gets a file rather than the one file growing. The file's own header
-says what that subset admits and what it still excludes, and moves one line at
-a time as 4b's tasks land.
+What a listed program may not print, beyond the determinism rule above:
 
-## Phase 4c subset
-
-`phase-4c.txt` is the same format again, and is read alongside both earlier
-files for the same reason: `phase-4b.txt`'s own header excludes `PARSE` by
-definition, so a witness for a construct 4c implements cannot go there without
-making that header false.
-The file's own header says what that subset admits and what it still excludes,
-and moves one line at a time as 4c's tasks land.
-
-What it admits that no earlier subset does comes with rules attached, and they
-are worth naming here rather than only in the file's own header.
-Builtin function calls are admissible only in the names
-`crates/rexx-exec/tests/builtin_status.rs` measures as implemented, and
-`builtin-status.txt` is that machine-derived table.
-`PARSE SOURCE` is admissible but its third word is not: that word is the
-program's own absolute path, so a program printing it would put the filesystem
-in its output and break the determinism rule above.
-`lang/parse_sources.rex` projects it away, and `lang/source_arg.rex` -- an
-earlier program that is *not* in this subset, because it calls builtins the
-status table does not yet call implemented -- already did the same.
-`PARSE VERSION` is implemented and no program here prints it either, for a
-related reason: all three of its fields are the interpreter's own build
-identity, the last a build date, so a committed differential over it would be a
-claim about which binary the oracle was built from.
-`crates/rexx-exec/tests/parse_version_oracle.rs` is where that string is
-checked instead.
-
-### What a `phase-4c.txt` program may not do
-
-Five rules, each of which would break the determinism rule above or would put
-a program's answer outside what any harness here can compare.
-
-* **No `RANDOM()`, no `DATE()`, no `TIME()`** (decision D11).
-  All three answer differently on two runs of the *same* interpreter, so a
-  differential over one compares two unrelated values and calls the difference
-  a divergence.
-  Their only gate is in-crate unit tests, in `crates/rexx-exec/src/builtin/`,
-  which pin the properties that do not move -- a rendering, an argument's
-  arity, that two `TIME('R')` reads in one clause answer identically.
-* **`QUEUED()` only over a queue the program filled itself.**
-  The data queue is not the program's own storage -- it is named by
-  `RXQUEUE`/`rxapi` and outlives the program -- so a count taken over lines
-  the program did not push is a statement about the session it ran in.
-* **No dependence on external routine resolution.**
-  The oracle searches the filesystem for a `.rex` file named for a call target
-  matching no label, no builtin and no `::ROUTINE`; this crate raises 43.1
-  instead, and that search is Phase 7's.
-  A program relying on it answers according to what happens to be sitting in
-  the directory the harness runs it from.
-* **No `DO OVER` on a stem** (decision D3), the same exclusion `phase-4a.txt`
-  and `phase-4b.txt` carry.
-  The traversal-order deviation it would expose is recorded in
-  `docs/superpowers/plans/phase-4-exclusions.txt` and is out of scope through
-  the end of Phase 4.
-* **No `::` directive but `::ROUTINE`.**
-  A `phase-4c.txt` program still admits none of the other eight, even though
-  `tests/coverage.rs`'s `assert_program_has_only_admitted_directives` (Phase
-  5a's widening) no longer panics on `::CLASS`/`::METHOD` -- this file's own
-  subset rule is narrower than what the walker merely tolerates.
-
-## Phase 5a subset
-
-`phase-5a.txt` is the same format again, read alongside the three earlier
-files. It is committed **empty** as of Task 1: Phase 5a's own scope --
-`::CLASS`/`::METHOD` installation, Rexx method-body invocation, `EXPOSE` and
-class-scope instance variables, up to `CoreClasses.orx`'s prologue completing
--- is not implemented by any task yet, so there is nothing a corpus program
-could run to agreement with the oracle. `tests/coverage.rs`'s directive
-walker admits `::CLASS` and `::METHOD` without panicking (Task 1), but does
-not descend into either body, so a construct used only inside one is not yet
-counted toward criterion 1's coverage. Each later 5a task appends its own
-witness to the file as its own construct starts agreeing with the oracle.
+* **`QUEUED()` only over a queue the program filled itself.** The data queue
+  is named by `RXQUEUE`/`rxapi` and outlives the program, so a count taken
+  over lines the program did not push is a statement about the session it ran
+  in.
+* **Not `PARSE SOURCE`'s third word**, the program's own absolute path.
+  `lang/parse_sources.rex` and `lang/source_arg.rex` project it away.
+* **Not `PARSE VERSION`**: all three fields are the interpreter's own build
+  identity. `crates/rexx-exec/tests/parse_version_oracle.rs` checks it
+  instead.
 
 ## Current programs
 
@@ -244,7 +178,7 @@ witness to the file as its own construct starts agreeing with the oracle.
 Written for Task 14a because, of the programs above, none exercises `LEAVE`
 or `ITERATE` and most exercise the arithmetic core rather than the
 executor's control flow. Every file below stays inside what Phase 4a's
-executor implements (see `phase-4a.txt`): no builtin function calls, no
+executor implemented: no builtin function calls, no
 `CALL`/`RETURN`/`PROCEDURE`/`USE`/`SIGNAL`/`RAISE`/`INTERPRET`, no
 `PARSE`/`ARG`/`PULL`/`PUSH`/`QUEUE`, no message sends, no `::` directives, no
 command clauses, no `DO WITH`, and no `DO OVER` on a stem.
@@ -286,7 +220,7 @@ by any program above; these three close every one of them.
 
 Between them they cover all eight `TriggerKind` variants, the comma fence, the
 `.` placeholder and every `ParseSource` variant but `Version`, which is
-implemented and deliberately unprinted (see the subset section above) because
+implemented and deliberately unprinted (see "Corpus lists" above) because
 every field it carries is the oracle's own build identity. Each file's own
 header states, per block, which wrong answer a defective engine prints.
 
@@ -308,13 +242,8 @@ the `rexx` binary with an `argv` and a fed stdin instead.
 
 ### `num/` — Phase 2, the numeric core
 
-`digits_rounding.rex`, `exponential.rex` and `operators.rex` are listed here
-as corpus programs but are **not** in the Phase 4a subset (`phase-4a.txt`):
-all three build `ExprKind::List` from a comma in a `SAY`, which is out of
-4a's scope. They stay in this directory for Phase 5, once `List` exists --
-the general form builds an Array, which is Phase 5's object model, not a 4b
-or 4c one (`docs/superpowers/plans/phase-4-exclusions.txt`, "EXPRKIND
-OWNERSHIP").
+Only `comparison.rex` and `notation_thresholds.rex` are in
+`differential.txt`; the others are not.
 
 | File | Covers |
 |---|---|

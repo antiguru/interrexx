@@ -293,22 +293,15 @@ fn the_implemented_entry_points_are_the_ones_the_plan_names() {
 /// None of these programs is a corpus row.
 #[test]
 fn no_family_program_is_a_corpus_row() {
-    let corpus = corpus_dir();
-    let subset_files = fs::read_dir(&corpus)
-        .unwrap_or_else(|e| panic!("cannot read {}: {e}", corpus.display()))
-        .flatten()
-        .filter_map(|entry| entry.file_name().into_string().ok())
-        .filter(|name| name.starts_with("phase-") && name.ends_with(".txt"));
-    for name in subset_files {
-        let text = fs::read_to_string(corpus.join(&name))
-            .unwrap_or_else(|e| panic!("cannot read {name}: {e}"));
-        for line in text.lines() {
-            let line = line.trim();
-            assert!(
-                line.starts_with('#') || !line.starts_with(PROBE_SUBDIR),
-                "{name} lists {line}, and the oracle answers that program \
-                 where this crate declines"
-            );
-        }
+    let name = "differential.txt";
+    let text = fs::read_to_string(corpus_dir().join(name))
+        .unwrap_or_else(|e| panic!("cannot read {name}: {e}"));
+    for line in text.lines() {
+        let line = line.trim();
+        assert!(
+            line.starts_with('#') || !line.starts_with(PROBE_SUBDIR),
+            "{name} lists {line}, and the oracle answers that program \
+             where this crate declines"
+        );
     }
 }

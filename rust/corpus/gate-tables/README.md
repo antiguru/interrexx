@@ -4,9 +4,9 @@
 row of a Phase 5 gate table -- `native-entries/` is the exception and has a
 section of its own below -- and most of them diverge from the C++ oracle
 today, which is what the row records. A program here earns a line in
-`phase-*.txt`, whose entries mean "agrees with the oracle byte for byte", only
-once its row agrees: it moves into a phase subset file in the task that makes
-it agree, and stays here as well while some row still needs it.
+`../differential.txt`, whose entries mean "agrees with the oracle byte for
+byte", only once its row agrees, and stays here as well while some row still
+needs it.
 `gate-tables/directives/method__external__subkeyword.rex` is one that has.
 
 ## `directives/`
@@ -88,9 +88,9 @@ phase that owes it a body.
 
 They live here rather than under `../lang/` for this directory's own reason:
 the oracle answers every one of them, because it has the body this crate has
-not built, so none of them can ever be a `phase-*.txt` row. `native_entries.rs`
-asserts that -- it reads every subset file and fails on a line naming this
-directory.
+not built, so none of them can ever be a `differential.txt` row.
+`native_entries.rs` asserts that -- it fails on a line of that list naming
+this directory.
 
 **Those last three are derived, text and all.** `crates/rexx-exec/tests/table_c/probes.rs`'s
 `class_probe_text`, `edge_probe_text` and `method_probe_text` are the
@@ -104,8 +104,8 @@ oracle for the wrong reason.
 `concepts/classmeth.rex` was `../lang/primitive_classes.rex` until it became
 this table's probe for the `classmeth` section. It is still a parse fixture of
 `crates/rexx-parse/src/instruction/tests.rs`, which is what it was reached as
-before; what it is no longer is a file under `corpus/lang/` that no
-`phase-*.txt` names.
+before; what it is no longer is a file under `corpus/lang/` that no corpus
+list names.
 
 ## What still applies here, and what does not
 
@@ -121,8 +121,5 @@ difference. `rexx-diff --cpp <c++> --rs <rust>` over `corpus/` reports these
 probes' divergences, and that is the table's subject rather than a defect in
 the corpus.
 
-The harnesses that read a phase subset file are unaffected: every copy of
-`phase_subset_files_on_disk` read `corpus/` with a non-recursive `read_dir`
-filtered to `phase-*.txt`, and `corpus.rs`'s
-`the_differential_reads_every_phase_subset_file` asserts that set in both
-directions.
+The harnesses that read `differential.txt` run only what it names, so a probe
+here reaches them only by being listed there.

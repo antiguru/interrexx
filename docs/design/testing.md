@@ -19,7 +19,7 @@ two-way comparison against ANSI would report deliberate choices as defects.
 ## The differential corpus
 
 `rust/corpus/` holds deterministic programs: `lang/` (language features), `errors/` (parse errors
-through `rexxc`), `expr/`, `num/`, `model/` and `gate-tables/`. The `phase-*.txt` subset files name
+through `rexxc`), `expr/`, `num/`, `model/` and `gate-tables/`. `differential.txt` names
 the programs `tests/corpus.rs` runs under both interpreters. stdout and exit status compare byte for
 byte; stderr does too, apart from a narrow trace-indent normalisation that a program can opt out of.
 A program here prints nothing that varies between runs of one interpreter.

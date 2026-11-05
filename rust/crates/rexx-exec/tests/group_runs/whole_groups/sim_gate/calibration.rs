@@ -28,8 +28,11 @@ fn calibration() {
         rows.push(blank(group, "whole", None));
         rows.push(blank(group, "derived", None));
     }
-    let list = rust_root().join("corpus/phase-6.txt");
-    for line in std::fs::read_to_string(&list).expect("phase-6.txt").lines() {
+    let list = rust_root().join("corpus/concurrency.txt");
+    for line in std::fs::read_to_string(&list)
+        .expect("concurrency.txt")
+        .lines()
+    {
         let line = line.trim();
         if !line.is_empty() && !line.starts_with('#') {
             rows.push(blank(&format!("corpus/{line}"), "program", None));

@@ -1,13 +1,7 @@
-# Phase 9b's gate groups (spec 2026-10-10 section 4): the ooTest groups that
-# name a RexxUtil routine 9b takes. Derived from the worktree root by
-# listing
-#
+# The ooTest groups that name a RexxUtil routine, for REXX_SUITE_GROUPS (comma-joined):
+# each *.testGroup hit of this command, run from the worktree root, as dir/group in
+# byte order; suite.rs re-runs it and asserts the list below equals it.
 #   grep -rlawiE 'SysCls|SysCreatePipe|SysDropFuncs|SysDumpVariables|SysFileCopy|SysFileMove|SysFileSearch|SysFork|SysFormatMessage|SysGetErrorText|SysGetFileDateTime|SysGetKey|SysGetMessage|SysGetMessageX|SysIsFileDirectory|SysIsFileLink|SysLoadFuncs|SysOpenEventSem|SysOpenMutexSem|SysQueryProcess|SysSearchPath|SysSetFileDateTime|SysSetPriority|SysStemCopy|SysStemDelete|SysStemInsert|SysStemSort|SysTempFileName|SysUtilVersion|SysWait|SysFileTree|SysFileXXX' ootest/ooRexx
-#
-# keeping each hit named *.testGroup as dir/group (a hit in another file is
-# dropped), in byte (LC_ALL=C) order of the group file's path. The test the_9b_group_file_is_what_its_derivation_gives
-# (crates/rexx-exec/tests/suite.rs) re-runs this and asserts the list below
-# equals it. Pass the list to the suite gate as REXX_SUITE_GROUPS, comma-joined.
 base/class/File
 base/keyword/ADDRESS
 base/rexxutil/Macrospace
