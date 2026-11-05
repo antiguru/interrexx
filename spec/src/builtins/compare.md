@@ -59,7 +59,7 @@ r[bif.compare.pad.default]
 When `pad` is omitted, it is the blank, `'20'x`.
 
 ```rexx
-say compare('ab ', 'ab') compare('ab ', 'ab', ) compare('ab  x', 'ab')
+say compare('xy ', 'xy') compare('xy ', 'xy', ) compare('xy  q', 'xy')
 ```
 
 ```output
@@ -97,7 +97,7 @@ The answer is [written as a count](r:bif.index.count.answer), and whether it
 is a new object is [not specified](r:bif.index.count.answer.deviation.4).
 
 ```rexx
-say compare('abc', 'abc') compare('abc', 'ak') compare('abc', 'xbc'),
+say compare('tuv', 'tuv') compare('tuv', 'tx') compare('abc', 'xbc'),
     compare('abc', 'abd') compare('abc', 'ab') compare('ab', 'abc')
 ```
 
@@ -113,8 +113,8 @@ character; a longer string whose extra characters are all `pad` does not
 differ from the shorter one.
 
 ```rexx
-say compare('ab ', 'ab') compare('ab ', 'ab', ' ') compare('ab ', 'ab', 'x'),
-    compare('ab-- ', 'ab', '-') compare('abxx', 'ab', 'x') compare('abxxy', 'ab', 'x')
+say compare('xy ', 'xy') compare('xy ', 'xy', ' ') compare('xy ', 'xy', 'z'),
+    compare('xy== ', 'xy', '=') compare('xyzz', 'xy', 'z') compare('xyzzq', 'xy', 'z')
 ```
 
 ```output
@@ -124,16 +124,17 @@ say compare('ab ', 'ab') compare('ab ', 'ab', ' ') compare('ab ', 'ab', 'x'),
 r[bif.compare.empty]
 The null string is a string of no characters, so it takes the padding
 alone: it is equal to the other string when that one is empty or all `pad`,
-and otherwise differs from it at position 1.
+and otherwise differs from it at the position of the first character of the
+other string that is not `pad`.
 
 ```rexx
-say compare('', '') compare('', 'a') compare('a', '') compare('', '  ')
+say compare('', '') compare('', 'a') compare('a', '') compare('', '  ') compare('', '  a')
 say compare('', '  ', 'x') compare('', 'xx', 'x') compare('xx', '', 'x'),
     compare('xxy', '', 'x')
 ```
 
 ```output
-0 1 1 0
+0 1 1 0 3
 1 0 0 3
 ```
 

@@ -207,9 +207,9 @@ e: say condition('o')~code
 ## Answers that are counts
 
 r[bif.index.count.answer]
-WORDINDEX, WORDLENGTH, WORDPOS and VERIFY each answer a count: of
-characters or of words, or a position, which counts characters or words up
-to the one it names. A builtin that answers a count writes it as a whole
+A builtin whose page links this rule answers a count: of characters, of
+words or of occurrences, or a position, which counts characters or words up
+to the one it names. Such a builtin writes it as a whole
 number in decimal digits only: no sign, no leading zero, no period and no exponent, and `0`
 for zero. The caller's NUMERIC DIGITS setting plays no part, so the answer
 is exact however many digits it has.
@@ -218,12 +218,14 @@ is exact however many digits it has.
 numeric digits 3
 say wordindex(copies(' ', 1000) || 'a', 1) wordlength(copies('z', 1234), 1),
     wordpos('y', copies('x ', 1200) || 'y') wordpos('q', 'a b')
+say compare(copies('a', 1500) || 'b', copies('a', 1500) || 'c') countstr('a', copies('a', 1500))
 say verify(copies('a', 1200) || 'b', 'a') verify(copies('a', 1300), '', 'N', 1234),
     verify('ab', 'ab')
 ```
 
 ```output
 1001 1234 1201 0
+1501 1500
 1201 1234 0
 ```
 

@@ -61,7 +61,7 @@ check comes before the range check, as in
 [the order of the checks](r:conv.check.order).
 
 ```rexx
-say '['copies('abc', 0)']' '['copies('abc', '-0')']' copies('ab', ' + 2. ')
+say '['copies('rst', 0)']' '['copies('abc', '-0')']' copies('ab', ' + 2. ')
 signal on syntax name a
 say copies('abc', -1)
 a: say condition('o')~code
@@ -105,12 +105,12 @@ string of `n * LENGTH(string)` characters whose characters at positions
 from 1 to `n`, are the characters of `string`.
 
 ```rexx
-say copies('abc', 3) copies('ab', 1) copies('a', 5) copies(12, 2)
+say copies('rst', 4) copies('ab', 1) copies('a', 5) copies(12, 2)
 say length(copies('ab', 100000)) '['copies(' ', 2)']'
 ```
 
 ```output
-abcabcabc ab aaaaa 1212
+rstrstrstrst ab aaaaa 1212
 200000 [  ]
 ```
 
@@ -118,7 +118,7 @@ r[bif.copies.zero]
 When `n` is 0, the result is the null string, for every `string`.
 
 ```rexx
-say '['copies('abc', 0)']' '['copies('', 0)']' '['copies(' ', 0)']'
+say '['copies('rst', 0)']' '['copies('', 0)']' '['copies(' ', 0)']'
 ```
 
 ```output
@@ -127,8 +127,7 @@ say '['copies('abc', 0)']' '['copies('', 0)']' '['copies(' ', 0)']'
 
 r[bif.copies.empty]
 When `string` is the null string, the result is the null string, for every
-`n` that passes its check, a very large one included: the answer needs no
-space and takes no time proportional to `n`.
+`n` that passes its check, a very large one included.
 
 ```rexx
 say '['copies('', 5)']' length(copies('', 999999999999999999))
@@ -150,9 +149,8 @@ say c2x(copies('a' || '00'x, 3)) c2x(copies('09'x || 'c3a9'x, 2))
 610061006100 09C3A909C3A9
 ```
 
-> **Note.** A result too large to be held in memory raises an error that this book
-> does not specify: whether, when and with which code COPIES fails for such a
-> count is left to the implementation.
+> **Note.** Whether, when and with which code COPIES fails for a count whose
+> result cannot be held in memory is not specified.
 
 ## Deviations
 

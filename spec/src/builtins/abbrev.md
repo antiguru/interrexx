@@ -25,7 +25,7 @@ the [builtin call rules](r:bif.index.call.count): two are required and three
 is the most.
 
 ```rexx
-say abbrev('Print', 'Pri') 'Print'~abbrev('Pri') 'Print'~abbrev('Pri', 4)
+say abbrev('Stamp', 'Sta') 'Stamp'~abbrev('Sta') 'Stamp'~abbrev('Sta', 4)
 signal on syntax name a
 say abbrev('abc', 'ab', -1)
 a: say condition('o')~code
@@ -67,8 +67,8 @@ When `length` is omitted, it is `LENGTH(info)`: the whole of `info` takes
 part, and no `info` is too short.
 
 ```rexx
-say abbrev('PRINT', 'PRI') abbrev('PRINT', 'PRI', ) abbrev('PRINT', 'PRI', 3),
-    abbrev('PRINT', 'PRI', 4)
+say abbrev('STAMP', 'STA') abbrev('STAMP', 'STA', ) abbrev('STAMP', 'STA', 3),
+    abbrev('STAMP', 'STA', 4)
 ```
 
 ```output
@@ -85,8 +85,8 @@ to the first `LENGTH(info)` characters of `information`, in order; and
 `0`, for every call.
 
 ```rexx
-say abbrev('PRINT', 'PRINT') abbrev('PRINT', 'PRINT', 5) abbrev('PRINT', 'PRI'),
-    abbrev('PRINT', 'RIN') abbrev('PRINT', 'PRINTS') abbrev('PRINT', 'PRY')
+say abbrev('STAMP', 'STAMP') abbrev('STAMP', 'STAMP', 5) abbrev('STAMP', 'STA'),
+    abbrev('STAMP', 'TAM') abbrev('STAMP', 'STAMPS') abbrev('STAMP', 'STX')
 ```
 
 ```output
@@ -116,7 +116,7 @@ is omitted or 0, and `0` when `length` is 1 or more. When `information` is
 the null string, only a null `info` can be a beginning of it.
 
 ```rexx
-say abbrev('PRINT', '') abbrev('PRINT', '', 0) abbrev('PRINT', '', 1),
+say abbrev('STAMP', '') abbrev('STAMP', '', 0) abbrev('STAMP', '', 1),
     abbrev('', '') abbrev('', '', 0) abbrev('', '', 1) abbrev('', 'a')
 ```
 
@@ -130,7 +130,7 @@ no numeric comparison is made, and whitespace and every other character,
 `'00'x` among them, count like any other.
 
 ```rexx
-say abbrev('Print', 'pri') abbrev('1.50', '1.5') abbrev('1.50', '1.500'),
+say abbrev('Stamp', 'sta') abbrev('1.50', '1.5') abbrev('1.50', '1.500'),
     abbrev('01', '1') abbrev('a b', 'a ') abbrev('a b', 'a') abbrev('a b', 'a  ')
 say abbrev('a' || '00'x || 'b', 'a' || '00'x) abbrev('a' || '00'x, 'a' || '01'x)
 ```

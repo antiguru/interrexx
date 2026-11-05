@@ -8,8 +8,8 @@ rexxref: "Functions > Built-in Functions > COUNTSTR"
 
 # COUNTSTR
 
-COUNTSTR counts how many times one string occurs in another, counting
-occurrences that do not overlap.
+COUNTSTR counts the occurrences of one string in another, never counting
+two that share a character.
 
 ## Arguments
 
@@ -57,7 +57,7 @@ and whether it is a new object is
 [not specified](r:bif.index.count.answer.deviation.4).
 
 ```rexx
-say countstr('1', '101101') countstr('KK', 'J0KKK0') countstr('ab', 'xabyabab'),
+say countstr('7', '707707') countstr('QQ', 'R0QQQ0') countstr('ab', 'xabyabab'),
     countstr('a', 'bcd')
 ```
 
