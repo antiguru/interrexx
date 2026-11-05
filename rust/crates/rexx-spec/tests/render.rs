@@ -5,7 +5,7 @@ use std::process::{Command, Stdio};
 
 use rexx_spec::render;
 
-const SUBSTR: &str = "---\nelement: SUBSTR\nkind: builtin\nsyntax: \"SUBSTR(string, n)\"\nansi: \"9.4.1\"\nrexxref: \"SUBSTR\"\ndeviations: [90]\n---\n# SUBSTR\n\nr[bif.substr.result]\nReturns the part.\n\n```rexx\nr[not.a.rule]\n```\n```output\nbc\n```\n\nr[bif.substr.pad]\nSee [the result](r:bif.substr.result) and [conv](r:conv.x) and [gone](r:bif.nope.x).\n";
+const SUBSTR: &str = "---\nelement: SUBSTR\nkind: builtin\nsyntax: \"SUBSTR(string, n)\"\nansi: \"9.4.1\"\nrexxref: \"SUBSTR\"\ndeviations: [90]\n---\n# SUBSTR\n\nr[bif.substr.result]\nReturns the part.\n\n```rexx\nr[not.a.rule]\nsee [x](r:conv.x)\n```\n```output\nbc\n```\n\nr[bif.substr.pad]\nSee [the result](r:bif.substr.result) and [conv](r:conv.x) and [gone](r:bif.nope.x).\n";
 
 const CONV: &str = "---\nelement: Conventions\nkind: concept\n---\n# Conventions\n\nr[conv.x]\nA rule; see [pad](r:bif.substr.pad).\n";
 
@@ -30,7 +30,10 @@ fn renders_anchor_links_and_drops_front_matter() {
     assert!(out.contains("(../conventions.md#r-conv.x)"), "{out}");
     assert!(out.contains("(r:bif.nope.x)"), "unknown ids stay: {out}");
     assert!(!out.contains("\n---\n") && !out.starts_with("---"), "{out}");
-    assert!(out.contains("r[not.a.rule]"), "fenced markers stay");
+    assert!(
+        out.contains("r[not.a.rule]\nsee [x](r:conv.x)\n"),
+        "fenced text stays: {out}"
+    );
     assert!(
         out.contains("SUBSTR(string, n)") && out.contains("D90"),
         "{out}"
@@ -114,4 +117,26 @@ fn supports_exits_zero() {
         .status()
         .unwrap();
     assert!(st.success());
+}
+
+#[test]
+fn titleless_page_with_a_link_on_its_first_line_gets_an_intact_header() {
+    let page = "---\nelement: X\nkind: concept\nsyntax: \"X()\"\n---\nSee [c](r:conv.x) first.\n\nr[conv.y]\nBody.\n";
+    let out = render(page, &pages(), Path::new("builtins/x.md"));
+    assert!(out.contains("X()"), "{out}");
+    assert!(
+        out.contains("\nSee [c](../conventions.md#r-conv.x) first.\n"),
+        "{out}"
+    );
+    assert!(
+        out.find("X()").unwrap() < out.find("See [c]").unwrap(),
+        "{out}"
+    );
+}
+
+#[test]
+fn non_id_brackets_are_left_alone() {
+    // The parser reports such a line, so the page is returned as written.
+    let page = "---\nelement: X\nkind: concept\n---\n# X\n\nr[1] + r[2]\n\nr[conv.y]\nBody.\n";
+    assert_eq!(render(page, &pages(), Path::new("builtins/x.md")), page);
 }

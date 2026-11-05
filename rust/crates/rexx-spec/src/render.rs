@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::path::{Component, Path, PathBuf};
 
-use crate::{FrontMatter, parse_page};
+use crate::{FrontMatter, is_rule_id, parse_page};
 
 /// Render `text`, the page at `here`, as Markdown for mdBook.
 ///
@@ -38,7 +38,11 @@ pub fn render(text: &str, pages: &BTreeMap<String, PathBuf>, here: &Path) -> Str
             continue;
         }
         let trimmed = line.trim_end();
-        if let Some(id) = trimmed.strip_prefix("r[").and_then(|t| t.strip_suffix(']')) {
+        if let Some(id) = trimmed
+            .strip_prefix("r[")
+            .and_then(|t| t.strip_suffix(']'))
+            .filter(|id| is_rule_id(id))
+        {
             let _ = writeln!(
                 out,
                 "<div class=\"rule\" id=\"r-{id}\"><a href=\"#r-{id}\">[{id}]</a></div>"
@@ -46,6 +50,7 @@ pub fn render(text: &str, pages: &BTreeMap<String, PathBuf>, here: &Path) -> Str
             seen_content = true;
             continue;
         }
+        let start = out.len();
         out.push_str(&rewrite_links(raw, pages, here));
         if !seen_content && !trimmed.is_empty() {
             seen_content = true;
@@ -57,8 +62,7 @@ pub fn render(text: &str, pages: &BTreeMap<String, PathBuf>, here: &Path) -> Str
                 }
             } else if let Some(h) = header.take() {
                 // No title first: put the header before the content.
-                let at = out.len() - raw.len();
-                out.insert_str(at, &h);
+                out.insert_str(start, &h);
             }
         }
     }
