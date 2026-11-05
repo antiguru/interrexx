@@ -19,8 +19,10 @@ be given, and the answer joins what each of them selects.
 r[bif.xrange.method]
 XRANGE takes any number of arguments, none included, and every argument may
 be omitted. It does not run as a String method: a string has no message
-named `XRANGE`, and sending it raises `SYNTAX 97.1`. The arguments are
-[strings](r:conv.string.null) that the rules below read in groups.
+named `XRANGE`, and sending it raises `SYNTAX 97.1`. Each argument is one
+character, an omitted place or the name of a class, as the rules below read
+them; an argument that is not a string is first converted
+[as any string argument is](r:bif.xrange.object).
 
 ```rexx
 say length(xrange()) length(xrange('a')) length(xrange('a', 'c', 'digit', 'x'))
@@ -43,16 +45,20 @@ that argument is the group's `start` and the argument after it is its
 [range](r:bif.xrange.range). A group starts at any other argument, the null
 string among them, and takes that argument alone: the argument names a
 [class](r:bif.xrange.class). The argument after a group starts the next
-group.
+group. The arguments read are the first `count` of them, where `count` is the
+[argument count](r:bif.index.call.count) of the call: the omitted places
+after the last argument that is not omitted are not read and start no group.
 
 ```rexx
 say xrange('a', 'c', 'x', 'z') xrange('a', 'b', 'digit', 'c', 'd')
 say xrange('digit', 'upper') length(xrange('digit', 'a')) xrange('digit', 'a', 'a')
+say length(xrange('a', , , )) length(xrange('a', , , 'b'))
 ```
 
 ```output
 abcxyz ab0123456789cd
 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ 169 0123456789a
+159 258
 ```
 
 r[bif.xrange.default]
@@ -73,34 +79,34 @@ say length(xrange('digit', , )) length(xrange('digit', , , ))
 ## Ranges
 
 r[bif.xrange.range]
-A range selects every character whose code is from the code of `start` to
-the code of `end`, both included, in ascending order of code, when `start`
-is not greater than `end`. A start equal to the end selects that one
+When the code of `start` is not above the code of `end`, a range selects
+the character with the code of `start`, the one with the code of `end`, and
+every character whose code lies between them, from the lowest code up. A start equal to the end selects that one
 character. An omitted `start` is `'00'x`, and an omitted `end`, or an end
 the call has no argument for, is `'FF'x`. A `start` and an `end` are
 single characters, as [the groups rule](r:bif.xrange.groups) reads them.
 
 ```rexx
-say xrange('a', 'f') xrange('k', 'k')
-say c2x(xrange(, '04'x)) c2x(xrange('FD'x)) c2x(xrange('FD'x, ))
+say xrange('m', 'q') xrange('k', 'k')
+say c2x(xrange(, '03'x)) c2x(xrange('FD'x)) c2x(xrange('FD'x, ))
 ```
 
 ```output
-abcdef k
-0001020304 FDFEFF FDFEFF
+mnopq k
+00010203 FDFEFF FDFEFF
 ```
 
 r[bif.xrange.wrap]
-A range whose `start` is greater than its `end` wraps around: it selects
-the characters from `start` to `'FF'x` and then those from `'00'x` to `end`,
-in that order.
+When the code of `start` is above the code of `end`, the range runs
+around the end of the code space: it selects the characters from `start` to
+`'FF'x` and then those from `'00'x` to `end`, in that order.
 
 ```rexx
-say c2x(xrange('FE'x, '02'x)) c2x(xrange('ff'x, '00'x)) length(xrange('b', 'a'))
+say c2x(xrange('FD'x, '01'x)) c2x(xrange('ff'x, '00'x)) length(xrange('b', 'a'))
 ```
 
 ```output
-FEFF000102 FF00 256
+FDFEFF0001 FF00 256
 ```
 
 r[bif.xrange.end]
@@ -172,8 +178,7 @@ The classes of letters and digits are these sets of characters, each in
 ascending order of code: `DIGIT` is `0` to `9`; `UPPER` is `A` to `Z`;
 `LOWER` is `a` to `z`; `ALPHA` is `UPPER` followed by `LOWER`; `ALNUM` is
 `DIGIT`, `UPPER` and `LOWER` in that order; and `XDIGIT` is `0` to `9`, then
-`A` to `F`, then `a` to `f`. No other character belongs to them, so a letter
-with an accent, which is not one character here, is in none.
+`A` to `F`, then `a` to `f`. No other character belongs to them.
 
 ```rexx
 say (xrange('digit') == xrange('0', '9')) (xrange('upper') == xrange('A', 'Z')),
@@ -194,7 +199,7 @@ r[bif.xrange.class.space]
 is the characters `'09'x` to `'0D'x` and then the blank. `CNTRL` is the
 characters `'00'x` to `'1F'x` and then `'7F'x`. `SPACE` is not the
 [whitespace](r:conv.string.whitespace) of this book's other rules: it holds
-the line feed, `'0A'x`, which they do not.
+`'0A'x` to `'0D'x`, which they do not.
 
 ```rexx
 say c2x(xrange('blank')) c2x(xrange('space')) length(xrange('cntrl'))
@@ -215,7 +220,8 @@ ASCII. `PRINT` is the same with the blank in front: `'20'x` to `'7E'x`.
 ```rexx
 say (xrange('graph') == xrange('21'x, '7e'x)) (xrange('print') == xrange('20'x, '7e'x))
 say xrange('punct')
-say (xrange('punct') == xrange('21'x, '2f'x) || xrange(':', '@') || xrange('[', '`') || xrange('{', '~'))
+say (xrange('punct') == xrange('21'x, '2f'x) || xrange(':', '@'),
+    || xrange('[', '`') || xrange('{', '~'))
 ```
 
 ```output
@@ -304,9 +310,9 @@ say (xrange('a', 'a') == 'a') (xrange('a', 'b') == 'ab') (xrange('digit') == xra
 1 1 1
 ```
 
-> **Note.** The ANSI draft (9.3.30) takes two arguments, `start` and `end`, each a
-> single character that defaults to the null string, and has no class names
-> or further groups; the groups and the classes are ooRexx's. The ANSI
-> draft raises `SYNTAX 23.1` for an argument that is not one character, where
-> ooRexx raises `SYNTAX 40.23` for an end and `SYNTAX 40.28` for an argument
-> that starts a group and is neither one character long nor a class name.
+> **Note.** The ANSI draft (9.3.30) takes two arguments, `start` and `end`,
+> checks each present one as a pad and raises `SYNTAX 40.23` when it is not
+> one character long, the null string included; an omitted one is the lowest
+> or highest character. It has no class names and no further groups; those
+> are ooRexx's, and so is `SYNTAX 40.28` for an argument that starts a group
+> and is neither one character long nor a class name.

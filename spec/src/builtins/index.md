@@ -291,8 +291,8 @@ A0 A1 A0
 r[bif.index.bit.pad.check]
 A `pad` that is present is checked as [a pad](r:conv.pad) whether or not the
 call needs it: a `pad` that is not one character long raises `SYNTAX 40.23`
-when the operands are equally long, and when both are null, and the null
-string is not a pad, as [an empty argument](r:conv.arg.empty) is not
+even when the operands are equally long or both null, so that no character
+of it would be used, and the null string is not a pad, as [an empty argument](r:conv.arg.empty) is not
 omitted.
 
 ```rexx
@@ -350,9 +350,9 @@ say c2x(bitxor('ab', 'a')) c2x(bitor('a', 'ab'))
 ```
 
 r[bif.index.bit.pad]
-When `pad` is present, the shorter operand is first extended on the right
-with copies of `pad` until it is as long as the longer one, and the two are
-then combined character by character. The answer is as long as the longer
+When `pad` is present, copies of `pad` are appended to the shorter operand
+until the two are equally long, and the two are then combined character by
+character. The answer is as long as the longer
 operand, and each character of it beyond the end of the shorter operand is
 the operation applied to the longer's character and `pad`.
 
@@ -367,8 +367,8 @@ say c2x(bitxor('ab', 'a', ' ')) c2x(bitor('a', 'ab', ' '))
 ```
 
 r[bif.index.bit.string2-default]
-An omitted `string2` is the null string, and so is one that is the null
-string. The answer is then `string1` itself when `pad` is omitted, and with
+An omitted `string2` is the null string, and a `string2` given as the null
+string behaves the same. The answer is then `string1` itself when `pad` is omitted, and with
 a `pad` it is each character of `string1` combined with `pad`.
 
 ```rexx
@@ -386,7 +386,8 @@ Exchanging the first two arguments does not change the answer, with a `pad`
 or without one.
 
 ```rexx
-say (bitand('abcd', 'ef') == bitand('ef', 'abcd')) (bitor('abcd', 'ef', 'x') == bitor('ef', 'abcd', 'x'))
+say (bitand('abcd', 'ef') == bitand('ef', 'abcd')),
+    (bitor('abcd', 'ef', 'x') == bitor('ef', 'abcd', 'x'))
 say (bitxor('abc', 'z', 'q') == bitxor('z', 'abc', 'q')) (bitxor('', 'z') == bitxor('z', ''))
 ```
 
