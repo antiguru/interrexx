@@ -1,6 +1,6 @@
 # interrexx
 
-A Rust implementation of the ooRexx language. Behaviour is defined differentially: output must match the C++ ooRexx interpreter byte for byte, apart from the deviations in `docs/superpowers/plans/phase-4-exclusions.txt`.
+A Rust implementation of the ooRexx language. Behaviour is defined differentially: output must match the C++ ooRexx interpreter byte for byte, apart from the deviations in `spec/src/deviations.md`.
 
 It keeps ooRexx's dynamic object model and replaces the execution model: a register IR, stackless activities under a scheduler, and value representations a program cannot observe.
 
@@ -25,6 +25,9 @@ scripts/setup-third-party.sh
 cd rust
 cargo test --workspace
 ```
+
+`docs/developing.md` covers running the tests and both interpreters safely; `docs/design/`
+describes the implementation.
 
 ## License
 
