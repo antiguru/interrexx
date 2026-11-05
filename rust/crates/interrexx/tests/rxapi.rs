@@ -471,6 +471,8 @@ fn the_oracles_daemon_stops_with_its_test_process() {
             "--ignored",
             "--nocapture",
         ])
+        // The child is a test process of its own, not of the run it is in.
+        .env_remove("NEXTEST_RUN_ID")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()

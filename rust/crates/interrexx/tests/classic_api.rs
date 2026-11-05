@@ -161,7 +161,8 @@ fn run_group(dir: &str, group: &str, library_path: OsString) -> Outcome {
 /// [`run_group`] with `env` added to the run's environment.
 fn run_group_in(dir: &str, group: &str, library_path: OsString, env: &[(&str, &Path)]) -> Outcome {
     let ootest = repository().join("ootest");
-    let run = scratch().join(format!("run-{group}"));
+    // Named by process too: under nextest each test is a process, and tests share groups.
+    let run = scratch().join(format!("run-{group}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&run);
     std::fs::create_dir_all(run.join("ooRexx").join(dir)).expect("the run directory");
     let copy = |from: &Path, to: &Path| {
@@ -181,7 +182,7 @@ fn run_group_in(dir: &str, group: &str, library_path: OsString, env: &[(&str, &P
     for file in ["testOORexx.rex", "worker.rex", "ooTest.frm"] {
         copy(&ootest.join(file), &run);
     }
-    let api = scratch().join(format!("api-{group}"));
+    let api = scratch().join(format!("api-{group}-{}", std::process::id()));
     let group_file = format!("ooRexx/{dir}/{group}.testGroup");
     let mut command = rexx(
         &["testOORexx.rex", "-f", &group_file, "-U", "-V", "2"],
@@ -198,6 +199,8 @@ fn run_group_in(dir: &str, group: &str, library_path: OsString, env: &[(&str, &P
         "no summary:\n{stdout}\n{}",
         String::from_utf8_lossy(&output.stderr)
     );
+    let _ = std::fs::remove_dir_all(&run);
+    let _ = std::fs::remove_dir_all(&api);
     let mut failed = BTreeSet::new();
     let mut in_detail = false;
     for line in stdout.lines() {

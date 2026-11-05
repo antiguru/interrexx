@@ -64,6 +64,21 @@ build() {
 
 mkdir -p "$out"
 out=$(cd "$out" && pwd)
+
+# Callers that name --libs may run at once (cargo nextest runs every test as a process of its
+# own): they take turns, and one whose inputs are those of the build already in --out has
+# nothing left to do.
+stamp=
+if [ -n "$libs" ] && [ -z "$check_only" ]; then
+    exec 9>"$out.lock"
+    flock 9
+    stamp=$(stat -c '%n %s %.9Y' "$libs/librexx.so" "$libs/librexxapi.so" "$0")
+    if [ -f "$out/.stamp" ] && [ "$(cat "$out/.stamp")" = "$stamp" ]; then
+        echo "build-extensions.sh: $out is up to date"
+        exit 0
+    fi
+    rm -f "$out/.stamp"
+fi
 [ -n "$check_only" ] || build
 products=()
 for product in "$out/libhostemu.so" "$out/liborxncurses.so"; do
@@ -94,3 +109,4 @@ for product in "${products[@]}"; do
     check "$product" LD_LIBRARY_PATH="$oracle_lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 done
 echo "build-extensions.sh: built into $out"
+[ -z "$stamp" ] || printf '%s\n' "$stamp" > "$out/.stamp"
