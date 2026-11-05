@@ -25,6 +25,11 @@ pub fn prefix_for(relative: &Path) -> Option<String> {
         "parsing" => "parse",
         "conditions" => "cond",
         "classes" => "class",
+        "lexical" => "lex",
+        "numbers" => "num",
+        "directives" => "dir",
+        "rexxutil" => "util",
+        "environment" => "env",
         _ => return None,
     };
     let stem = file.strip_suffix(".md")?;

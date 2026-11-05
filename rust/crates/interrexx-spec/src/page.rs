@@ -23,6 +23,8 @@ pub struct Example {
     /// The output block's lines, each followed by `\n`.
     pub output: String,
     pub rc: i32,
+    /// The open issue that tracks an interrexx failure of this example.
+    pub defect: Option<u32>,
 }
 
 /// A `[text](r:ID)` link.
@@ -315,7 +317,22 @@ fn finish_block(
         Some("rexx") => *pending_rexx = Some((f.line, content)),
         Some("output") => {
             let mut rc = 0;
+            let mut defect = None;
             for w in words {
+                if let Some(d) = w.strip_prefix("defect=") {
+                    let number = d
+                        .strip_prefix('#')
+                        .filter(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+                        .and_then(|n| n.parse::<u32>().ok());
+                    match number {
+                        Some(n) => defect = Some(n),
+                        None => err(
+                            f.line,
+                            format!("malformed output block option `{w}`: expected `defect=#N`"),
+                        ),
+                    }
+                    continue;
+                }
                 match w.strip_prefix("rc=").and_then(|n| n.parse::<i32>().ok()) {
                     Some(n) => rc = n,
                     None => err(f.line, format!("unrecognised output block option `{w}`")),
@@ -335,6 +352,7 @@ fn finish_block(
                     program,
                     output: content,
                     rc,
+                    defect,
                 }),
                 None => err(line, "example appears before any rule".into()),
             }

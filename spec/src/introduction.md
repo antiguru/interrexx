@@ -60,7 +60,9 @@ An identifier names the page that holds its rule, so a reader of the raw
 Markdown finds any rule from its identifier alone. The first word names the
 chapter: `bif` for built-in functions in `builtins/`, `instr` for
 `instructions/`, `expr` for `expressions/`, `parse` for `parsing/`, `cond`
-for `conditions/` and `class` for `classes/`. The second word is the page's
+for `conditions/`, `class` for `classes/`, `lex` for `lexical/`, `num` for
+`numbers/`, `dir` for `directives/`, `util` for `rexxutil/` and `env` for
+`environment/`. The second word is the page's
 file name: `bif.substr.pad` is in `builtins/substr.md`, and the rules for a
 whole chapter, such as `bif.index.call.count`, are in its `index.md`. The
 conventions are one page, `conventions.md`, and every `conv.` rule is there.
@@ -78,6 +80,12 @@ standard output. When the program ends with a non-zero exit code, the output
 is marked with that code. The checker runs every example with an empty
 standard input and compares the output byte for byte, so an example is
 evidence, not decoration. An example belongs to the rule above it.
+
+An output marked `defect=#N` (combinable with the exit code, as in
+`output defect=#12 rc=1`) is an example interrexx fails today because of open
+issue N. The output shown is still the specified one, and the checker accepts
+the mismatch on interrexx; when the example starts to pass, it reports that
+the marker is to be removed.
 
 ## Sources
 

@@ -380,7 +380,9 @@ fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
 
 /// Runs one example in process with an empty standard input, bounded as the
 /// corpus runs are. `None` when stdout is exactly the output block (its lines,
-/// each followed by one `\n`) and the exit code is `rc`.
+/// each followed by one `\n`) and the exit code is `rc`. An example marked
+/// `defect=#N` is the reverse: a mismatch is expected, and a match is reported
+/// so the marker is removed.
 fn run_example(
     page: &interrexx_spec::Page,
     example: &interrexx_spec::Example,
@@ -399,7 +401,16 @@ fn run_example(
         ));
     }
     let actual = String::from_utf8_lossy(&outcome.stdout);
-    if actual == example.output && outcome.exit_code == example.rc {
+    let matches = actual == example.output && outcome.exit_code == example.rc;
+    if let Some(issue) = example.defect {
+        return matches.then(|| {
+            format!(
+                "example under `{}`: defect #{issue} no longer reproduces: remove the marker",
+                example.rule
+            )
+        });
+    }
+    if matches {
         return None;
     }
     let mut message = format!(
@@ -676,6 +687,32 @@ fn the_exit_code_is_compared() {
     let bad = check_example("exit 4", " rc=3");
     assert_eq!(bad.len(), 1, "{}", render(&bad));
     assert!(bad[0].message.contains('3') && bad[0].message.contains('4'));
+}
+
+#[test]
+fn a_defect_example_that_still_fails_is_accepted() {
+    let ok = check_example("say 'a'", " defect=#7\nb");
+    assert!(ok.is_empty(), "{}", render(&ok));
+    let rc = check_example("exit 4", " defect=#7 rc=3");
+    assert!(rc.is_empty(), "{}", render(&rc));
+}
+
+#[test]
+fn a_defect_example_that_now_passes_is_reported() {
+    let bad = check_example("say 'a'", " defect=#7\na");
+    assert_eq!(bad.len(), 1, "{}", render(&bad));
+    assert!(
+        bad[0].message.contains("defect #7 no longer reproduces"),
+        "{}",
+        bad[0].message
+    );
+}
+
+#[test]
+fn a_malformed_defect_marker_is_reported() {
+    let bad = check_example("say 'a'", " defect=7\na");
+    assert_eq!(bad.len(), 1, "{}", render(&bad));
+    assert!(bad[0].message.contains("defect=#N"), "{}", bad[0].message);
 }
 
 #[test]

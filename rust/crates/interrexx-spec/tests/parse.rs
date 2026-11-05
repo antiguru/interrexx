@@ -50,6 +50,29 @@ fn output_rc_is_read() {
 }
 
 #[test]
+fn output_defect_is_read_and_combines_with_rc() {
+    let text = page_text().replace("```output\n", "```output defect=#12 rc=1\n");
+    let e = &parse(&text).unwrap().examples[0];
+    assert_eq!((e.defect, e.rc), (Some(12), 1));
+    assert_eq!(parse(&page_text()).unwrap().examples[0].defect, None);
+}
+
+#[test]
+fn a_malformed_defect_is_a_problem() {
+    for bad in [
+        "defect=12",
+        "defect=#",
+        "defect=#x",
+        "defect=#1a",
+        "defect=",
+        "defect=#-1",
+    ] {
+        let text = page_text().replace("```output\n", &format!("```output {bad}\n"));
+        assert!(parse(&text).is_err(), "{bad}");
+    }
+}
+
+#[test]
 fn an_empty_output_block_is_the_empty_string() {
     let text = page_text().replace("bc\n```\n", "```\n");
     assert_eq!(parse(&text).unwrap().examples[0].output, "");
@@ -149,6 +172,11 @@ fn prefixes_name_the_page() {
     assert_eq!(p("parsing/x.md").as_deref(), Some("parse.x."));
     assert_eq!(p("conditions/x.md").as_deref(), Some("cond.x."));
     assert_eq!(p("classes/x.md").as_deref(), Some("class.x."));
+    assert_eq!(p("lexical/x.md").as_deref(), Some("lex.x."));
+    assert_eq!(p("numbers/x.md").as_deref(), Some("num.x."));
+    assert_eq!(p("directives/x.md").as_deref(), Some("dir.x."));
+    assert_eq!(p("rexxutil/x.md").as_deref(), Some("util.x."));
+    assert_eq!(p("environment/x.md").as_deref(), Some("env.x."));
     assert_eq!(p("conventions.md").as_deref(), Some("conv."));
     assert_eq!(p("intro.md"), None);
     assert_eq!(p("other/x.md"), None);
