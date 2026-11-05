@@ -57,9 +57,9 @@ f: say condition('o')~code
 
 r[bif.verify.option]
 `option` selects what VERIFY scans for, by its first character alone, in
-either case: `N` or `n` selects Nomatch, and `M` or `m` selects Match. The
-characters after the first are ignored, whatever they are. When `option` is
-omitted, it is Nomatch.
+either case: `N` or `n` selects Nomatch, and `M` or `m` selects Match.
+Only that character decides; `option` may go on with any characters, and
+they change nothing. When `option` is omitted, it is Nomatch.
 
 ```rexx
 say verify('xy', 'x') verify('xy', 'x', 'n') verify('xy', 'x', 'Nope'),
@@ -128,7 +128,7 @@ When `length` is omitted, the scan runs from position `start` to the end of
 `string`.
 
 ```rexx
-say verify('abcd', 'abc', , 2) verify('abcd', 'abc', , 2, 2)
+say verify('x--y', '-', , 2) verify('x--y', '-', , 2, 2)
 ```
 
 ```output
@@ -145,7 +145,7 @@ character of `string` at `i` does not occur in `reference`, and `0` when
 every character in that run occurs in it.
 
 ```rexx
-say verify('1024', '0123456789') verify('10-24', '0123456789'),
+say verify('cafe', 'efac') verify('ca-fe', 'efac'),
     verify('ab-cd', 'abcd', 'N', 4) verify('ab-cd', 'abcd', 'N', 2, 1)
 ```
 

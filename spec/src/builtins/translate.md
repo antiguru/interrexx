@@ -171,17 +171,17 @@ aca 212
 ```
 
 r[bif.translate.tableo.length]
-`tableo` may be of any length. When it is shorter than `tablei`, a
+`tableo` need not be as long as `tablei`. When it is shorter, a
 character found in `tablei` at a position past the end of `tableo` is
 replaced by `pad`; when it is longer, its characters past the length of
 `tablei` are never used.
 
 ```rexx
-say translate('abcd', 'AB', 'abcd', '.') translate('abcd', 'ABCDEFG', 'ab')
+say translate('wxyz', 'WX', 'wxyz', '+') translate('wxyz', 'WXYZ123', 'wx')
 ```
 
 ```output
-AB.. ABcd
+WX++ WXyz
 ```
 
 r[bif.translate.pad-only]
@@ -214,10 +214,14 @@ say translate('abc', 'xyz', '') translate('abc', , '', '*') translate('abc', '',
 abc abc abc
 ```
 
-The project register records a known gap at this rule: the oracle tells an
-omitted `tablei` from a given one by whether it is one particular null
-string object, so it treats a null `tablei` produced by some builtins, such
-as `LEFT(s, 0)`, as omitted. interrexx treats every null `tablei` alike.
+The project register records a known gap at this rule. A null `tablei`
+that some builtins produce, such as `LEFT(s, 0)`, still counts as given on
+the oracle, so it never uppercases; but the oracle searches the
+[default table](r:bif.translate.tablei.default) in its place, so every
+character of the run is translated. With `z = LEFT('abc', 0)`, the oracle
+answers three blanks for `translate('abc', , z)` and `***` for
+`translate('abc', , z, '*')`, where interrexx answers `abc`, as for any
+other null `tablei`.
 
 r[bif.translate.past-end]
 When `pos` is greater than `LENGTH(string)`, no character is translated and
@@ -283,15 +287,15 @@ r[bif.translate.deviation.4]
 interrexx does not specify whether the result of TRANSLATE is the same
 object as another string of equal value: as `string` itself, when no
 character of it changes, as in `translate(s, '', '')`, or as an equal
-string produced some other way, such as the literal `'ABCDEF'` beside
-`translate('abc' || 'def')`. Through `identityHash`, or as a key of an
+string produced some other way, such as the literal `'MNOP'` beside
+`translate('mn' || 'op')`. Through `identityHash`, or as a key of an
 `IdentityTable` or `IdentitySet`, the answer may be either, and a program
 can rely only on the value, which is equal under `==`. The oracle differs:
 it often answers a new object where interrexx answers the existing one.
 
 ```rexx
-s = 'abc' || 'def'
-say (translate(s, '', '') == s) (translate('abc' || 'def') == 'ABCDEF')
+s = 'mn' || 'op'
+say (translate(s, '', '') == s) (translate('mn' || 'op') == 'MNOP')
 ```
 
 ```output
