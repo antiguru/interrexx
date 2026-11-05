@@ -88,7 +88,7 @@ fn main() {
         // `say (((...('a')...)))` with `n` levels of nesting, to measure the
         // parenthesis-descent recursion in `subterm`/`full_subexpression`
         // rather than the flat-chain recursions above. `paren_sized` uses
-        // the 512 MiB stack D19 gives `rexx-exec`'s public entry point;
+        // the 512 MiB stack `rexx-exec`'s public entry point runs on;
         // `paren_default` uses no explicit `stack_size`, i.e. what a
         // `cargo test` thread gets, which is the number that decides
         // whether any of this crate's own tests are near the cliff.

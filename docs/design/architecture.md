@@ -190,6 +190,7 @@ gating.
 | D12 | the security manager has one check mechanism with hooks at each interception site | one mechanism, call sites added as subsystems land |
 | D13 | the AST is plain owned Rust data | nothing exposes code below Method, Routine and Package |
 | D14 | strings are byte strings; character semantics, if added, arrive as operations | `'FFFE'x` is a legal value, so a UTF-8 type cannot hold Rexx strings |
+| D15 | a value's identity is its bytes or its number, and a number's rendering is fixed under the `NUMERIC DIGITS` and `FORM` in force when it is created | ooRexx makes the difference observable: `x = 1e10 + 0` renders `1E+10` under `DIGITS 9` and still does under `DIGITS 20` |
 | D-U1 | `unsafe` only in granted modules, listed in `rexx-core/tests/unsafe_sites.rs`; `libloading` for `dlopen` | the workspace denies `unsafe`; each grant is one module behind a safe interface |
 | D-U2 | the interpreter island is `Send` only inside `island.rs`'s baton wrapper | moving a driver between threads; `Rc` and `Cell` are touched by the baton holder only |
 | D-U3 | signal handlers in `signal.rs` only set an atomic and write to a self-pipe | async-signal safety |

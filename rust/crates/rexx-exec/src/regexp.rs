@@ -6,7 +6,8 @@
 //! `(a*)*` and a set range ending at `'7F'x` terminate).
 //!
 //! The language is the grammar's, with standard meanings for alternation and
-//! repetition; the oracle's two departures from it, D4 and D5, are not
+//! repetition; the oracle's departures from it (a starred factor at the
+//! start of an alternative, and `X+` followed by a starred factor) are not
 //! reproduced.
 
 /// One automaton state.

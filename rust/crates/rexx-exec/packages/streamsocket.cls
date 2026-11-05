@@ -1,8 +1,8 @@
 /*----------------------------------------------------------------------------*/
 /* streamsocket.cls: a stream over a connected Socket.                        */
 /*                                                                            */
-/* Written for this crate from docs/superpowers/specs/extensions-behaviour.md */
-/* ("streamsocket.cls"); its line numbers are its own (Deviation 89).         */
+/* Written for this crate from the extension's documented behaviour;          */
+/* its line numbers are its own (Deviation 89).                               */
 /*----------------------------------------------------------------------------*/
 
 ::requires 'socket.cls'
@@ -94,7 +94,7 @@
 
 /* Sends data, answering the count. A failed send reproduces the oracle's    */
 /* defect: it asks a string of its own for its errno, which raises 97.1      */
-/* and leaves the state as it was (D10).                                      */
+/* and leaves the state as it was.                                            */
 ::method transmit private
   expose socket
   use arg data

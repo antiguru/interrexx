@@ -1,6 +1,6 @@
 /* rxregexp.cls: the RegularExpression class over the rxregexp library's
-   native methods, written for this interpreter from
-   docs/superpowers/specs/extensions-behaviour.md ("rxregexp").
+   native methods, written for this interpreter from the library's
+   documented behaviour.
 
    init, uninit, parse, match and pos are the library's. Each of parse, match
    and pos leaves the position it computed in the object variable !POS, which

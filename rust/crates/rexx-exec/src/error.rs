@@ -204,7 +204,7 @@ impl Raised {
         Raised::syntax(34, 903, vec![found.to_vec()])
     }
 
-    /// 11.1: "Insufficient control stack space" -- D19's evaluation-depth
+    /// 11.1: "Insufficient control stack space" -- the evaluation-depth
     /// limit (`eval.rs`'s own `MAX_EVAL_DEPTH`). No substitution: measured
     /// against the oracle's own parse-side 11.1 (nested parens/calls,
     /// Deviation 2), the catalogue's `(11, 1)`
@@ -411,7 +411,7 @@ impl Raised {
     }
 
     /// 98.991: `run`, `setMethod` or `unsetMethod` sent from somewhere
-    /// `RexxObject::checkRestrictedMethod` does not allow (D66). One
+    /// `RexxObject::checkRestrictedMethod` does not allow. One
     /// substitution, the method's own name.
     pub(crate) fn restricted_method(name: &[u8]) -> Raised {
         Raised::syntax(98, 991, vec![name.to_vec()])

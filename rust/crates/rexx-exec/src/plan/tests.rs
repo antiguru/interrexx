@@ -240,7 +240,7 @@ fn build_registers_every_name_a_stem_or_compound_touches() {
         // say a.b -- the stem "A." and the tail-piece variable "B",
         // neither of which `note`'s old match handled at all.
         (&b"say a.b"[..], &["A.", "B"][..]),
-        // a.1 = 'x' -- a bare digit tail is a constant (D15a), so only
+        // a.1 = 'x' -- a bare digit tail is a constant, so only
         // the stem itself needs a slot.
         (b"a.1 = 'x'", &["A."]),
         // q. = 1 -- a bare Stem assignment target, dropped by the same
@@ -863,8 +863,7 @@ fn a_runtime_name_grows_the_frame() {
 
 #[test]
 fn names_are_keyed_upcased_but_tail_values_are_not() {
-    // The two rules live in different decision blocks (D16 vs D15a) and
-    // are easy to swap. A NAME is upcased before a `SymbolId` even
+    // The two rules are easy to swap. A NAME is upcased before a `SymbolId` even
     // exists for it -- the *tokenizer* does that (`SymbolTable::intern`),
     // not `Plan` or `slot_of`, which never see a lowercase spelling to
     // begin with: `v.i`, however the source writes it, interns as
@@ -883,8 +882,8 @@ fn names_are_keyed_upcased_but_tail_values_are_not() {
         other => panic!("expected a SAY with an expression, got {other:?}"),
     };
     // The compound's own interned spelling is already upcased regardless
-    // of how the source wrote it -- the fact D16's "keyed by upcased
-    // name" rests on, checked here rather than assumed.
+    // of how the source wrote it -- the fact "keyed by upcased name" rests
+    // on, checked here rather than assumed.
     assert_eq!(program.symbols.name(id), "V.I");
 
     let program = activate(&mut interp, program);
@@ -904,7 +903,7 @@ fn names_are_keyed_upcased_but_tail_values_are_not() {
         .tail_key(&code, id)
         .expect("the tail pieces are strings");
     // The tail VALUE "abc" survives verbatim, lowercase and all -- not
-    // upcased to "ABC", which is the distinct rule D15a states.
+    // upcased to "ABC", which is the distinct rule for tails.
     assert_eq!(key, b"abc");
 }
 

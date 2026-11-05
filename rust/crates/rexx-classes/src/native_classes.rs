@@ -1,7 +1,6 @@
 //! Bootstraps the native class set `interpreter/memory/Setup.cpp` builds in
-//! C++, before `CoreClasses.orx` ever runs -- D25's checklist, per-class
-//! against the oracle rather than transcribed (see this task's brief and
-//! ruling).
+//! C++, before `CoreClasses.orx` ever runs, checked per class against the
+//! oracle rather than transcribed.
 
 use crate::class_graph::ClassKind;
 use crate::registry::ClassRegistry;
@@ -89,7 +88,7 @@ fn definition_for(block_name: &str) -> &'static ClassDefinition {
 
 /// `Setup.cpp:1809`'s `TheClassClass->removeSetupMethods()`: `TheClassClass`
 /// specifically, applied at image-save time to delete exactly the names
-/// below from `.Class`'s own instance methods (D39).
+/// below from `.Class`'s own instance methods.
 const REMOVED_BY_IMAGE_SAVE: &[&str] = &["DefineClassMethod", "InheritInstanceMethods"];
 
 /// The names [`remove_setup_methods`] deletes, in the spelling a dictionary
@@ -193,7 +192,7 @@ fn build(keep_setup_methods: bool, mint: &mut dyn FnMut() -> ObjRef) -> ClassReg
         definition_for("Class"),
         keep_setup_methods,
     );
-    // `.Class`'s own class-behaviour self-merge (D44's self-reference) ran
+    // `.Class`'s own class-behaviour self-merge (it is its own metaclass) ran
     // once already, inside `define_reserved`'s initial cascade, against its
     // *own* still-empty instance methods -- see
     // `ClassGraph::refresh_class_behaviour`'s doc comment for why this

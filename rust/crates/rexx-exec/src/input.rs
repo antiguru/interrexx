@@ -653,7 +653,7 @@ impl Interp {
 
     /// Reads standard input until it holds a line where `line`, else a byte,
     /// or has ended: each chunk off the baton, with this thread idle until
-    /// it is posted or a signal's halt arrives (ruling P60). A halt abandons
+    /// it is posted or a signal's halt arrives. A halt abandons
     /// the wait, whose chunk is filed when it comes, and answers `false`:
     /// the read answers nothing, as the oracle's interrupted read does.
     /// Other posts wait for the next drain, held here so that an idle waits

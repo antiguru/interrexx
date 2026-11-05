@@ -1,4 +1,4 @@
-//! **D45, site two: `.local`/`.environment` lookup passes through exactly one
+//! **D12, site two: `.local`/`.environment` lookup passes through exactly one
 //! chokepoint.**
 
 use std::fs;
@@ -44,7 +44,7 @@ fn occurrences(needle: &str) -> Vec<String> {
     found
 }
 
-/// D45's site-two claim: one chokepoint, and one place a clearance is spent.
+/// The site-two claim: one chokepoint, and one place a clearance is spent.
 #[test]
 fn directory_lookup_passes_through_exactly_one_chokepoint() {
     // Built rather than written literally, so this file's own text does not
@@ -54,7 +54,7 @@ fn directory_lookup_passes_through_exactly_one_chokepoint() {
     let directory = format!("{module}::{}(", "directory");
 
     // Two, not one: the read path (`directory_lookup`) and the write path
-    // (`set_directory_entry`). D45's sentence says "lookup", and a write is
+    // (`set_directory_entry`). The claim says "lookup", and a write is
     // not one -- but a manager that can veto a read of `.local` and not a
     // write to it would be a seam with a hole, so the second call stays and
     // this count admits it. A third is still red.

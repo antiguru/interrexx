@@ -38,7 +38,7 @@ pub use pinning::{ParkKind, PinKind, PinReport};
 // and a `SmallInt` is admissible only within the DIGITS that produced it).
 mod value;
 
-// Stems and compound variables (D15a): tail resolution, the tombstone rule,
+// Stems and compound variables: tail resolution, the tombstone rule,
 // and the "replace the object, mutate a tail in place" split.
 mod stem;
 
@@ -71,13 +71,13 @@ mod input;
 mod lines;
 use input::Input;
 
-// The per-body resolution plan (D16): `Plan`, `BodyKey`, `ProgramId`, the
+// The per-body resolution plan: `Plan`, `BodyKey`, `ProgramId`, the
 // plan cache, and the full name-resolution order (plan, then `extra`, then
 // growth).
 mod plan;
 use plan::{BodyKey, BodyKind, ClassPackage, CompoundName, Package, Plan, ProgramId};
 
-// One activation: everything about the frame currently executing (D16).
+// One activation: everything about the frame currently executing.
 mod activation;
 use activation::{Activation, ActivationId, CallType, InstanceVar};
 mod activity;
@@ -98,7 +98,7 @@ mod eval;
 // reaches for a name `resolve_call` answered `Resolved::Builtin` for.
 pub(crate) mod builtin;
 
-// The instruction loop (D16's "Control flow"): `Flow`, and `step` and its two
+// The instruction loop: `Flow`, and `step` and its two
 // callers, together with the borrow discipline `run_activation` is written
 // down to prove.
 mod clause;
@@ -139,7 +139,7 @@ mod parse_template;
 // what `PARSE VERSION`, `PARSE SOURCE`, `.ENDOFLINE` and `RexxInfo` answer.
 mod version;
 
-// `TRACE` (D17): the mode, the nine reachable prefixes' own byte formatting,
+// `TRACE`: the mode, the nine reachable prefixes' own byte formatting,
 // and the classification a `TRACE`/`TRACE VALUE` setting goes through to
 // become one. The `Op::Clause` region and its loop drivers, and
 // `eval.rs`'s `eval`, own *when* to call into this module; this module owns
@@ -154,13 +154,12 @@ use trace::ChunkTrace;
 mod ir;
 
 // Message dispatch: the object model a send resolves against, the
-// `resolve`/`invoke` pair D24 asks for, and the one security chokepoint D45
-// asks for.
+// `resolve`/`invoke` pair, and the one security chokepoint (D12).
 mod dispatch;
 
-// `.environment`, `.local`, `.context` and `.methods` as objects (D33), the
+// `.environment`, `.local`, `.context` and `.methods` as objects, the
 // order `PackageClass::findClass` resolves a `.NAME` in, and the one directory
-// chokepoint D45 asks for.
+// chokepoint (D12).
 mod environment;
 
 // `::OPTIONS`: the numeric, trace and condition settings a file's
@@ -1318,7 +1317,7 @@ struct Interp {
     /// How many times `chunk_for` has refused a body because it does not fit
     /// the index widths the compiled stream commits to (`ChunkTooLarge`) --
     /// never because a body contains a construct the compiler does not
-    /// know, which does not exist (D21: every instruction compiles).
+    /// know, which does not exist: every instruction compiles.
     chunks_refused: usize,
     /// Whether a program has written any package's `.ROUTINES` table, which
     /// is the one test a routine lookup makes while none has.
@@ -1344,8 +1343,8 @@ struct Interp {
     /// [`rexx_classes::ClassRegistry`] is the one class model here (R9), not
     /// one of two.
     object_model: Option<dispatch::ObjectModel>,
-    /// `.environment`, `.local` and what `.context`/`.methods` are built from
-    /// (D33). `None` until a `.NAME` is resolved, for the reason
+    /// `.environment`, `.local` and what `.context`/`.methods` are built from.
+    /// `None` until a `.NAME` is resolved, for the reason
     /// [`Interp::object_model`] is: building it forces the native class set.
     environment: Option<environment::EnvironmentModel>,
     /// The arena object holding each class object's own variable pools and
@@ -2172,7 +2171,7 @@ struct CallContext {
     /// left as `None` rather than closed up. Measured: that call into `use
     /// arg p, q, r` gives `[1] [Q] [3]`, so an omission holds its place.
     arguments: Rc<[Option<ObjRef>]>,
-    /// **The receiver, which is part of the calling convention** (D24): the
+    /// **The receiver, which is part of the calling convention**: the
     /// object a message send was addressed to, and `None` for a call that has
     /// none.
     receiver: Option<ObjRef>,
@@ -2702,7 +2701,7 @@ impl Interp {
         // A called program's level is a `ROUTINE` frame named as it was called,
         // whose line while its directives install is the one installing.
         let called = matches!(call_type, CallType::Subroutine | CallType::Function);
-        // D19/I6, as `Interp::begin_call` takes it: this body runs on a nested
+        // As `Interp::begin_call` takes it: this body runs on a nested
         // driver, so recursion through programs is bounded by the same count.
         let nested = self.running_activation().is_some();
         let probe = 0u8;
@@ -3935,7 +3934,7 @@ pub fn render_ir(text: Vec<u8>, setting: &[u8]) -> Result<String, String> {
 
 // ---- the registry projection ----
 
-/// One row of the `LIBRARY REXX` entry-point registry (D37), for a caller
+/// One row of the `LIBRARY REXX` entry-point registry, for a caller
 /// that walks it.
 pub struct NativeEntryPoint {
     /// The name the `REXX` package exports the entry point under, spelled as
@@ -4407,7 +4406,7 @@ fn execute_kept(
 
     // The oracle's termination waits for every activity
     // (`InterpreterInstance::terminate`); a refusal in main ends the run
-    // without the wait (ruling P40).
+    // without the wait.
     let started = if refused_main {
         interp.take_late_failures()
     } else {
@@ -4421,7 +4420,7 @@ fn execute_kept(
     // whatever the program's own outcome was. Measured, oracle: a program
     // whose main body raises 42.3 still prints its class `UNINIT` and exits
     // 214, and one ending `exit 7` prints it and exits 7.
-    // An activity those `UNINIT`s start is not waited for (ruling P39).
+    // An activity those `UNINIT`s start is not waited for.
     refused.extend(interp.terminate());
     refused.extend(interp.sim_finish());
     for loud in refused {

@@ -1,4 +1,4 @@
-//! The `LIBRARY REXX` entry-point registry (D37): the method names the `REXX`
+//! The `LIBRARY REXX` entry-point registry: the method names the `REXX`
 //! package exports, and what a send to a `::METHOD` bound to one of them
 //! runs.
 //! ```text

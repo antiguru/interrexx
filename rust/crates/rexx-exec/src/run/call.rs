@@ -197,7 +197,7 @@ pub(crate) enum Started<T> {
     Entered,
 }
 
-/// The receiver the callee's calling convention carries (D24), given the
+/// The receiver the callee's calling convention carries, given the
 /// caller's own.
 pub(super) fn entered_receiver(
     entered: Entered,
@@ -1191,7 +1191,7 @@ impl Interp {
             self.set_sigl(self.activity.clause_state.line());
         }
 
-        // D19/I6: one Rust frame per activation, plus this counter, so an
+        // One Rust frame per activation, plus this counter, so an
         // unbounded recursion becomes a reportable condition instead of a
         // native abort. `Raised::insufficient_stack` already existed
         // (`error.rs`); measured, the oracle answers the same 11.1 at rc 245

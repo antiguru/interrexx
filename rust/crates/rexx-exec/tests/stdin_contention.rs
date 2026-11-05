@@ -2,7 +2,7 @@
 //! runs `rexx` with standard input a pipe, writes lines to it (and
 //! signals it) at the times its `run` line names, and compares all three
 //! descriptors with the oracle's, 30 runs each. Every case depends on a
-//! wall-clock boundary (ruling P48), so a mismatch is run again once.
+//! wall-clock boundary, so a mismatch is run again once.
 
 #![expect(
     clippy::disallowed_methods,

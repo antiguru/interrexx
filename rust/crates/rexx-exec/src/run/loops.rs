@@ -1349,8 +1349,7 @@ impl Interp {
         // instruction step), so it has not moved.
         let do_indent = self.activity.clause_state.current_value_indent;
         let loop_indent = do_indent + 2;
-        // `TRACE`'s own per-iteration re-echo (D17, this task's report,
-        // "Step 6"): the oracle's `DO`/`LOOP` instruction is re-executed
+        // `TRACE`'s own per-iteration re-echo: the oracle's `DO`/`LOOP` instruction is re-executed
         // once per pass (`DoBlock::checkControl`, read directly), so its
         // own clause -- and `END`'s -- echo again on every pass, unlike
         // every other construct in this crate, which resolves its whole

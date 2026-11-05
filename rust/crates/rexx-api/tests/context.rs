@@ -29,7 +29,7 @@ fn repository_root() -> PathBuf {
 }
 
 /// The oracle's own build of the `rxregexp` extension, loaded and never
-/// rebuilt (D5's amendment).
+/// rebuilt.
 fn rxregexp() -> load::Library {
     let path = repository_root().join("build/lib/librxregexp.so");
     load::open_path(&path, "rxregexp")

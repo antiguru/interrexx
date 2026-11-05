@@ -579,8 +579,7 @@ impl Interp {
 
     /// Whether a native call made now leaves its driver: from a resumable entry nothing pins, and where another activity
     /// is alive or a test mode asks for every exit. A lone activity's call
-    /// runs on the baton, which costs a single-activity program nothing
-    /// (ruling P43).
+    /// runs on the baton, which costs a single-activity program nothing.
     pub(crate) fn leaves_driver(&self) -> bool {
         self.activity.pin_depth == 0
             && !self.activity.resuming

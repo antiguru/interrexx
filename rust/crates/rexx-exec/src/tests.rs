@@ -89,7 +89,7 @@ fn the_ir_render_covers_every_body_and_only_the_ones_that_exist() {
 }
 
 /// **The `TRACE` setting is an input to compilation, not a display
-/// option** (D23), and the render shows the difference.
+/// option**, and the render shows the difference.
 #[test]
 fn the_ir_render_compiles_under_the_setting_it_is_given() {
     let untraced = super::render_ir(EVERY_BODY.to_vec(), b"n").expect("the program parses");

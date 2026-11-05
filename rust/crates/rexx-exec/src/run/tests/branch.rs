@@ -654,7 +654,7 @@ fn whencase_comma_is_an_or_of_equals_the_opposite_of_a_plain_whens_and() {
 }
 
 /// `==` is strict: byte-for-byte, no padding, no numeric awareness.
-/// Measured (D15's own example, restated in the brief): `'007'` does not
+/// Measured: `'007'` does not
 /// match `when 7`, because the two are not byte-identical.
 #[test]
 fn select_case_compares_with_strict_equality_not_numeric_equality() {

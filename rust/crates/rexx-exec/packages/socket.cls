@@ -1,8 +1,8 @@
 /*----------------------------------------------------------------------------*/
 /* socket.cls: the Socket, InetAddress and HostInfo classes over rxsock.      */
 /*                                                                            */
-/* Written for this crate from docs/superpowers/specs/extensions-behaviour.md */
-/* ("socket.cls"); its line numbers are its own (Deviation 89).               */
+/* Written for this crate from the extension's documented behaviour;          */
+/* its line numbers are its own (Deviation 89).                               */
 /*----------------------------------------------------------------------------*/
 
 ::requires 'rxsock' LIBRARY
@@ -307,7 +307,7 @@
   if name = '' then
     raise syntax 93.901 array(1)
   /* The counts start at zero, so that a failed lookup leaves the Arrays     */
-  /* empty; its address is then the unset element's name (D8).               */
+  /* empty; its address is then the unset element's name.                    */
   hostinfo.!addr.0 = 0
   hostinfo.!alias.0 = 0
   if name~verify('0123456789.') = 0 then

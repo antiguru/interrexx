@@ -36,7 +36,7 @@ impl Interp {
             resolution.method,
             crate::guards::directive_guarded(&directive.kind),
         );
-        // D19/I6, the same guard `Interp::invoke_call` takes and for the same
+        // The same guard `Interp::invoke_call` takes and for the same
         // reason: a method that sends itself a message is an unbounded
         // recursion, and it must become a reportable condition rather than a
         // native abort.

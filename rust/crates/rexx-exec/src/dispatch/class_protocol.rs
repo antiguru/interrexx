@@ -663,8 +663,8 @@ pub(super) fn new_instance(interp: &mut Interp, class: ObjRef) -> Result<ObjRef,
         return Err(Raised::abstract_class(&id).into());
     }
     // The object's behaviour is set from the class here, once. What the class
-    // holds later is a different behaviour or the same one rebuilt, and D58
-    // turns on which.
+    // holds later is a different behaviour or the same one rebuilt, and an
+    // instance dispatches against the one its class held at construction.
     let behaviour = interp.classes().instance_behaviour_handle(class);
     let object = interp.alloc_with(
         rexx_core::BehaviourId::OBJECT,

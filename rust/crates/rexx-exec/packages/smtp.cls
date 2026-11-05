@@ -1,8 +1,8 @@
 /*----------------------------------------------------------------------------*/
 /* smtp.cls: an SMTP client over streamsocket.cls.                            */
 /*                                                                            */
-/* Written for this crate from docs/superpowers/specs/extensions-behaviour.md */
-/* ("smtp.cls"); its line numbers are its own (Deviation 89).                 */
+/* Written for this crate from the extension's documented behaviour;          */
+/* its line numbers are its own (Deviation 89).                               */
 /*----------------------------------------------------------------------------*/
 
 ::requires 'mime.cls'
@@ -77,7 +77,7 @@
   host = ''
   port = 25
   /* The last character is the letter l: a name lookup that normally fails  */
-  /* (D8).                                                                   */
+  /* (an ooRexx defect).                                                     */
   localhost = .Socket~gethostbyaddr('127.0.0.l')
 
 /* Reads a reply, every line of it, into cmdresponse; answers its lines.     */

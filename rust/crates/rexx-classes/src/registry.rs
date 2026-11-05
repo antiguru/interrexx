@@ -458,7 +458,7 @@ impl ClassRegistry {
     }
 
     /// The class object's own (class-side) method set -- what `.class`'s
-    /// class-behaviour merge (D44) donates on top of each class's own
+    /// class-behaviour merge donates on top of each class's own
     /// `::method ... class` definitions.
     pub fn class_method_names(&self, class: ObjRef) -> std::collections::BTreeSet<String> {
         self.graph
@@ -468,7 +468,7 @@ impl ClassRegistry {
     /// True once `scope` is folded into `class`'s current class-behaviour --
     /// see [`ClassGraph::has_scope_at`] for why this, not a method-presence
     /// check, is what witnesses [`MethodDict::merge`]'s scope-copying half
-    /// of the metaclass merge (D44).
+    /// of the metaclass merge.
     pub fn class_behaviour_has_scope(&self, class: ObjRef, scope: ObjRef) -> bool {
         self.graph
             .has_scope_at(self.graph.class_behaviour_handle(class), scope)
@@ -485,7 +485,7 @@ impl ClassRegistry {
 
     /// The handle a class hands to an instance built now -- what
     /// [`rexx_core::Body::Instance`] stores, and what every reader below
-    /// takes in place of a class (D58).
+    /// takes in place of a class.
     pub fn instance_behaviour_handle(&self, class: ObjRef) -> BehaviourHandle {
         self.graph.instance_behaviour_handle(class)
     }
@@ -520,7 +520,7 @@ impl ClassRegistry {
     /// Every name a behaviour a receiver holds resolves -- what
     /// `Object~instanceMethods` walks, the counterpart of
     /// [`ClassRegistry::instance_method_names`] for a receiver that carries a
-    /// handle rather than a class (D58).
+    /// handle rather than a class.
     pub fn method_names_at(&self, handle: BehaviourHandle) -> std::collections::BTreeSet<String> {
         self.graph.method_names_at(handle)
     }
@@ -596,8 +596,8 @@ impl ClassRegistry {
     /// a pre-existing instance is unaffected), this is bootstrap-time
     /// population before any instance can exist, so the handle churn
     /// `define` costs is spent for no reason here -- accepted rather than
-    /// building a second populate-then-cascade-once primitive, since no
-    /// axis this task is guarded against (D35) ever calls it.
+    /// building a second populate-then-cascade-once primitive, since nothing
+    /// after bootstrap calls it.
     pub fn add_instance_method(&mut self, class: ObjRef, name: &str) -> MethodId {
         let method = self.next_method_id();
         self.graph.define(class, name, method);
@@ -649,7 +649,7 @@ impl ClassRegistry {
     /// `~inherit` -- see [`ClassGraph::inherit`]. Exposed here because R6's
     /// `mixinclass class` probe needs it: `inheritInstanceMethods` (below)
     /// never adds a superclass edge, so it cannot reach the metaclass side
-    /// the way `~inherit` does (D44).
+    /// the way `~inherit` does.
     pub fn inherit(&mut self, class: ObjRef, mixin: ObjRef) -> Result<(), InheritRefusal> {
         self.graph.inherit(class, mixin)
     }

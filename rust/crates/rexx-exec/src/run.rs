@@ -817,7 +817,7 @@ impl Interp {
                 Ok(Flow::Next)
             }
 
-            // `TRACE` (D17): sets the running activation's own trace mode, or
+            // `TRACE`: sets the running activation's own trace mode, or
             // raises 24.901 for
             // the interactive-only skip-count forms. See `exec_trace`.
             InstructionKind::Trace(setting) => {
@@ -2549,7 +2549,7 @@ impl Interp {
         // a routine's first clause announced the pair here and nothing on the
         // oracle.
         activation.trace_entry = activation.trace_entry.stepped();
-        // `TRACE`'s own `*-*` clause echo (D17), and the single insertion
+        // `TRACE`'s own `*-*` clause echo, and the single insertion
         // point for it -- exactly the analogue of `eval`'s own split from
         // `eval_node`, since this is the one place `run_bounded`'s loop
         // (this function's only non-test caller) visits every flat

@@ -1,4 +1,4 @@
-//! **D45, site one: dispatch passes through exactly one chokepoint.**
+//! **D12, site one: dispatch passes through exactly one chokepoint.**
 //! ```ignore
 //! pub(super) fn clear_for(..) -> Cleared { let ok = (); Cleared(ok) }
 //! ```
@@ -125,7 +125,7 @@ fn heap_collect_is_called_from_collect_now_alone() {
     );
 }
 
-/// The whole of D45's site-one claim: one call to the seam, and one way to
+/// The whole site-one claim: one call to the seam, and one way to
 /// build the token it hands out.
 #[test]
 fn dispatch_passes_through_exactly_one_chokepoint() {

@@ -91,7 +91,7 @@ impl Interp {
                     self.trace_assignment(indent, name, &rendered, value);
                 }
             }
-            // `stem. = expr`: replace-and-rebind (D15a), through the
+            // `stem. = expr`: replace-and-rebind, through the
             // library `stem_assign` already builds -- this arm is the
             // dispatch, not new stem logic.
             ExprKind::Stem(id) => {

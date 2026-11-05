@@ -38,7 +38,7 @@ mod seam {
         Answered(Option<ObjRef>),
     }
 
-    /// **The dispatch chokepoint (D45, site one).** Every method invocation
+    /// **The dispatch chokepoint (D12, site one).** Every method invocation
     /// passes here, whatever kind [`super::Invocable`] finds it to be, and
     /// the security manager's `METHOD` checkpoint is asked here for a method
     /// the send has found to be `PROTECTED`.
@@ -67,7 +67,7 @@ mod seam {
 
 use seam::Cleared;
 
-// The `LIBRARY REXX` entry-point registry (D37): the names a
+// The `LIBRARY REXX` entry-point registry: the names a
 // `::METHOD ... EXTERNAL 'LIBRARY REXX name'` binds to at install, and which
 // phase owes each of them a body. A child of this module rather than a
 // sibling, because the table's rows point at `NativeMethod`s, whose
@@ -963,7 +963,7 @@ static NATIVE_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     // `AddPrivateMethod("Run", RexxObject::run, A_COUNT)`,
     // `memory/Setup.cpp:549`. Private, so a program context is refused by
     // the private check before this entry is reached, and restricted
-    // besides -- D66 and [`check_restricted_method`].
+    // besides -- [`check_restricted_method`].
     ("Object", "RUN", Arity::Counted, native_run),
     // `AddPrivateMethod("SetMethod", ..., 3)` and its partner at
     // `memory/Setup.cpp:550`-`:551`. Private, which is where the refusal a
@@ -1269,7 +1269,7 @@ static NATIVE_CLASS_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
 ];
 
 /// The two methods `Setup.cpp` puts on `.Class` for the image build and
-/// `removeSetupMethods` deletes before the image is saved (D39).
+/// `removeSetupMethods` deletes before the image is saved.
 static SETUP_METHODS: &[(&str, &str, Arity, NativeMethod)] = &[
     (
         "Class",
@@ -1651,7 +1651,7 @@ enum Primitive {
     /// their own class.
     String,
     /// A receiver whose whole value is in the handle's integer tag
-    /// ([`Decoded::SmallInt`]) -- **D24's `SmallInt` behaviour arm**.
+    /// ([`Decoded::SmallInt`]) -- **the `SmallInt` behaviour arm**.
     SmallInt,
     /// `.nil`, measured: `.nil~class~id` is `Object`.
     Object,
@@ -1701,7 +1701,7 @@ enum Primitive {
     /// `.K~hasMethod('LENGTH')` is `0`.
     Class(ObjRef),
     /// What `~new` builds: an object carrying both the class it belongs to
-    /// and the behaviour it was given at construction (D58). Measured,
+    /// and the behaviour it was given at construction. Measured,
     /// `::class K` and `o = .K~new`: `o~class~id` is `K` and `o~string` is
     /// `a K`.
     Instance {
@@ -1741,7 +1741,7 @@ pub(crate) struct MessageTerm<'a> {
     pub(crate) assigned: Option<&'a Expr>,
 }
 
-/// The sending side of a send, which the receiver does not carry (D53).
+/// The sending side of a send, which the receiver does not carry.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub(crate) struct Caller {
     /// The receiver of the call in progress, from the calling convention.
@@ -2226,7 +2226,7 @@ impl Interp {
         self.admit(resolution, receiver, caller)
     }
 
-    /// **Step one of a send** (D24): which method a name reaches on this
+    /// **Step one of a send**: which method a name reaches on this
     /// receiver, whose behaviour is `behaviour`, and from which scope, or why
     /// the send has none to run.
     fn resolve_in(
@@ -2698,7 +2698,7 @@ impl Interp {
         Err(Loud::unbound_method(name, &scope).into())
     }
 
-    /// **Step two of a send** (D24): run what [`Interp::resolve_in`] found.
+    /// **Step two of a send**: run what [`Interp::resolve_in`] found.
     pub(crate) fn invoke(
         &mut self,
         resolution: Resolution,
@@ -3589,8 +3589,7 @@ impl Interp {
     /// `activation` and its slot frame moved into it. The oracle's replier
     /// yields only to a thread already waiting (`ActivityManager.hpp:293`),
     /// which the continuation's is not: the sender yields at its next clause
-    /// boundary where another activity is ready, and otherwise keeps running
-    /// (rulings P34, P36).
+    /// boundary where another activity is ready, and otherwise keeps running.
     #[cold]
     #[inline(never)]
     fn spawn_continuation(
@@ -3745,8 +3744,8 @@ impl Interp {
         drained
     }
 
-    /// The termination sweep: every live object still carrying the flag
-    /// (D69), then every class object with a class-side `UNINIT` (D60) in the
+    /// The termination sweep: every live object still carrying the flag,
+    /// then every class object with a class-side `UNINIT` in the
     /// order [`ClassRegistry::take_uninit_classes_in_sweep_order`] gives,
     /// and then the same again once.
     pub(crate) fn run_termination_uninits(&mut self) -> Vec<Loud> {

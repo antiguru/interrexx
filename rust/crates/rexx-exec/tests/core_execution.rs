@@ -36,7 +36,7 @@ fn a_variable_round_trips_through_its_slot() {
     assert_eq!(outcome.exit_code, 0);
 }
 
-/// An uninitialised read yields the derived name, upcased (D16).
+/// An uninitialised read yields the derived name, upcased.
 #[test]
 fn an_unset_variable_reads_as_its_own_name() {
     let outcome = run_program(
@@ -163,14 +163,13 @@ fn records_the_stack_cost_of_one_eval_frame() {
          INTERPRETER_STACK_BYTES was sized against"
     );
 
-    // The two-sided bound D19 states, checked against the size actually
-    // configured rather than against the comment describing it. The limit Task
-    // 11 picks has to fit between 100,000 and this.
+    // The two-sided bound on the evaluation depth, checked against the size
+    // actually configured: the limit has to fit between 100,000 and this.
     let survivable = rexx_exec::INTERPRETER_STACK_BYTES as f64 / bytes_per_frame;
     assert!(
         survivable > 100_000.0,
-        "the stack survives only {survivable:.0} eval frames, and D19 needs the depth \
-         limit to be at least 100,000"
+        "the stack survives only {survivable:.0} eval frames, and the depth \
+         limit must be at least 100,000"
     );
 }
 
@@ -203,7 +202,7 @@ fn a_raised_condition_reports_the_failing_clause() {
     );
 }
 
-/// I6/D10: unbounded `CALL` recursion is a reportable 11.1 condition, not a
+/// Unbounded `CALL` recursion is a reportable 11.1 condition, not a
 /// native abort.
 #[test]
 fn unbounded_call_recursion_raises_11_1_rather_than_overflowing() {

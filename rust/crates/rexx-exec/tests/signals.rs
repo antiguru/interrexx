@@ -7,11 +7,11 @@
 //! same PID or group signal, 30 runs each, except where a test says
 //! otherwise.
 //!
-//! Every test here depends on a wall-clock boundary (ruling P48): the signal
+//! Every test here depends on a wall-clock boundary: the signal
 //! must land inside a sleep, and the halt within [`PROMPT`]. A mismatch is
 //! run again once, and only a second mismatch fails; the Ctrl-C witnesses
 //! run once, since the thread that takes a terminal's signal is the one
-//! that waits on the command (ruling P67).
+//! that waits on the command.
 
 #![expect(
     clippy::disallowed_methods,
@@ -203,7 +203,7 @@ fn first_signal(steps: &[Step]) -> &'static str {
 }
 
 /// [`run_steps`] with one signal, asserting it ended as `expected` within [`PROMPT`],
-/// with one rerun on a mismatch (ruling P48).
+/// with one rerun on a mismatch.
 fn halts(
     name: &str,
     source: &str,
@@ -485,7 +485,7 @@ fn under_nohup_sighup_stays_ignored() {
 }
 
 /// A non-interactive shell starts a background job with SIGINT ignored; the
-/// handler is installed over that (ruling P61), as the oracle's is.
+/// handler is installed over that, as the oracle's is.
 #[test]
 fn sigint_ignored_at_start_still_halts() {
     halts(
@@ -732,7 +732,7 @@ fn call_on_halt_sees_an_interrupted_read() {
 
 /// The halt withdraws main's untimed `SysWaitEventSem`, which answers `0` as
 /// the oracle's interrupted `sem_wait` does, and main takes 4.1 there; the
-/// started activity is woken from its sleep and takes its own (ruling P59).
+/// started activity is woken from its sleep and takes its own.
 #[test]
 fn sigint_ends_a_semaphore_wait() {
     halts(
@@ -1251,7 +1251,7 @@ fn halting_blocked(pid: u32) -> Vec<(String, bool)> {
 }
 
 /// The halting signals reach only the interpreter's thread and a thread in a
-/// command's wait or a read of standard input (ruling P67): measured on each
+/// command's wait or a read of standard input: measured on each
 /// thread while a command runs, after it, and while a read waits.
 #[test]
 fn only_the_interpreter_and_its_waits_take_the_halting_signals() {

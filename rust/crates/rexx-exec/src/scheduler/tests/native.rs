@@ -118,8 +118,7 @@ fn a_native_call_where_another_activity_lives_leaves_its_driver() {
     assert_eq!(run.exits, 2);
 }
 
-/// A lone activity's call runs on the baton, with no driver exit
-/// (ruling P43).
+/// A lone activity's call runs on the baton, with no driver exit.
 #[test]
 fn a_lone_activitys_native_call_keeps_its_driver() {
     let run = counted(
@@ -463,7 +462,7 @@ fn a_library_routine_called_again_reaches_the_row_its_name_finds() {
 /// A started activity's loud refusal, met while main's call has left its
 /// driver and waits to finish, ends main's park in place of the completion:
 /// the call is abandoned, its frame popped, and the run ends with the
-/// refusal. The empty stdout is that refusal's (P40), not a schedule the
+/// refusal. The empty stdout is that refusal's, not a schedule the
 /// oracle takes: measured over 5 runs, the oracle answers the entry and
 /// prints `5` and `after` in every one.
 #[test]

@@ -195,7 +195,7 @@ impl MethodDict {
     /// walked independently by that same cascade. This method is for the one
     /// case where the source's scope history has to come along wholesale
     /// instead of being re-derived: `createClassBehaviour`'s metaclass merge
-    /// (D44, `ClassClass.cpp:1123-1127`), where a class's class-behaviour
+    /// (`ClassClass.cpp:1123-1127`), where a class's class-behaviour
     /// absorbs its metaclass's already-built instance behaviour verbatim.
     pub fn merge(&mut self, source: &MethodDict) {
         self.merge_methods(source);

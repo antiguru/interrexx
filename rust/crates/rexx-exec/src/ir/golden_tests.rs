@@ -22,7 +22,7 @@ fn compile_for_test(source: &[u8]) -> Result<Chunk, ChunkTooLarge> {
 }
 
 /// [`compile_for_test`] under a named trace setting, which is an input to
-/// what `compile` emits (D23).
+/// what `compile` emits.
 fn compile_for_test_under(source: &[u8], trace: ChunkTrace) -> Result<Chunk, ChunkTooLarge> {
     let program = parse_program(source.to_vec()).expect("test program parses");
     let plan = Plan::build(
@@ -1354,7 +1354,7 @@ fn chunk_for_compiles_a_body_once_across_repeated_lookups() {
 }
 
 /// **One body, two settings, two chunks.** The trace setting is an input to
-/// compilation (D23), so a cache keyed on `BodyKey` alone hands the body
+/// compilation, so a cache keyed on `BodyKey` alone hands the body
 /// entered under the second setting a stream compiled for the first one.
 #[test]
 fn one_body_under_two_trace_settings_is_two_cached_chunks() {

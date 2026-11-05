@@ -7012,8 +7012,7 @@ mod tests {
     }
 
     /// A callback takes the baton before it borrows the call's conversion
-    /// state, which a thread holding the baton may test from another call
-    /// (ruling P50).
+    /// state, which a thread holding the baton may test from another call.
     #[test]
     fn a_callback_takes_the_baton_before_it_borrows_the_conversion() {
         let mut host = FakeHost::new();

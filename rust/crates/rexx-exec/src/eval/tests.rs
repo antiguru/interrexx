@@ -839,7 +839,7 @@ fn a_comma_list_short_circuits_on_the_first_false_element() {
     assert_eq!((raised.number, raised.sub), (42, 3));
 }
 
-// ---- D19's evaluation-depth limit ----
+// ---- the evaluation-depth limit ----
 
 /// A left-deep chain of `terms` `SAY`-able terms, joined by `||''` --
 /// the concatenation analogue `records_the_stack_cost_of_one_eval_frame`
@@ -901,7 +901,7 @@ fn a_native_chain_past_the_eval_limit_runs() {
 /// default 2 MiB is far smaller than what this depth needs, and `eval`
 /// would die natively, as an unreported guard-page abort, long before
 /// reaching either boundary this pair tests -- precisely the silent
-/// failure D19's limit exists to prevent, so a plain `#[cfg(test)]`
+/// failure the limit exists to prevent, so a plain `#[cfg(test)]`
 /// unit test calling `eval` directly cannot exercise this at all. This
 /// is a unit test file, not `tests/`, but the subject it is testing
 /// (`run_program`'s own observable behaviour at the limit) is public

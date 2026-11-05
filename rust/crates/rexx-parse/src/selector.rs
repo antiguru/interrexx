@@ -53,7 +53,7 @@ impl SelectorTable {
 mod tests {
     use super::*;
 
-    /// **The interning constraint's own test** (D24): one spelling is one
+    /// **The interning constraint's own test**: one spelling is one
     /// allocation within a parse, so a resolution keyed on a selector's
     /// identity answers the same for every site that names the method.
     #[test]

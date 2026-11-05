@@ -1,4 +1,4 @@
-//! Criterion 3 (D17): `TRACE` output matches the oracle byte for byte, over a
+//! `TRACE` output matches the oracle byte for byte, over a
 //! committed table mapping each reachable prefix to a witness program.
 //! ```bash
 //! ( ulimit -v 1048576; \
@@ -411,7 +411,7 @@ enum Coverage {
     WitnessedLive(&'static str),
 }
 
-/// **Criterion 3's coverage measure** (D14 amendment 3). Without this table
+/// **The trace coverage measure.** Without this table
 /// the honest statement is that the witnesses verify what they cover and
 /// *how much of the trace surface that is* is measured by nothing.
 const PREFIX_COVERAGE: &[(&str, Coverage)] = &[

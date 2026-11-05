@@ -65,7 +65,7 @@ impl Interp {
     /// class object carries.
     pub(crate) fn copy_class_package(&mut self, class: ObjRef, copy: ObjRef) {
         // The copy does not hold the package: `class`, which is never
-        // collected (D59), already does.
+        // collected, already does.
         if let Some(package) = self.class_packages.get(&class).copied() {
             self.class_packages.insert(copy, package);
         }

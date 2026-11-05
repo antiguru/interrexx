@@ -1,4 +1,4 @@
-//! D73's guard: a class `corpus/docs/class-set.txt` marks `unreachable` still
+//! A class `corpus/docs/class-set.txt` marks `unreachable` still
 //! has no route to an instance, on both engines and on the oracle.
 
 mod gate_tables;
@@ -66,7 +66,7 @@ fn a_class_marked_unreachable_still_has_no_route_to_an_instance() {
     let staging = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("unreachable-classes-{}", std::process::id()));
     let mut report = Report::new(
-        "rexx-exec D73 -- every class-set.txt row marked `unreachable` still refuses its \
+        "rexx-exec -- every class-set.txt row marked `unreachable` still refuses its \
          documented construction route",
     );
     let mut answered: Vec<String> = Vec::new();
@@ -76,7 +76,7 @@ fn a_class_marked_unreachable_still_has_no_route_to_an_instance() {
         fs::create_dir_all(&dir).unwrap_or_else(|e| panic!("cannot create {}: {e}", dir.display()));
         let file = dir.join("probe.rex");
         let text = format!(
-            "/* D73: {name} is `{UNREACHABLE_STATUS}` in corpus/docs/class-set.txt, so its\n\
+            "/* {name} is `{UNREACHABLE_STATUS}` in corpus/docs/class-set.txt, so its\n\
              \x20  documented construction route must not answer an instance. Derived by\n\
              \x20  crates/rexx-exec/tests/unreachable_classes.rs on every run. */\n\
              o = {route}\n\

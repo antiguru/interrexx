@@ -125,7 +125,7 @@ fn the_timer_sets_slice_while_the_holder_idles() {
 }
 
 /// A model with more than one registration, explored with at most five
-/// preemptions (ruling P58): unbounded, each also explores the timer thread
+/// preemptions: unbounded, each also explores the timer thread
 /// its first registration starts, and does not finish in a gate's time.
 fn registration_model(body: impl Fn() + Sync + Send + 'static) {
     let mut builder = loom::model::Builder::new();

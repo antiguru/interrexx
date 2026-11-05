@@ -165,7 +165,7 @@ fn an_inverted_pinned_wait_is_refused() {
 
 /// The same waits with main parked at its root driver, unpinned: its state
 /// is all in its record, so `s2`'s loop runs it and every wait ends, as on
-/// the oracle (ruling P30). The oracle's order of the last lines varies
+/// the oracle. The oracle's order of the last lines varies
 /// between runs, so the lines are compared as a set.
 #[test]
 fn a_wait_main_can_end_from_its_root_is_satisfied() {
@@ -676,7 +676,7 @@ const MAIN_ENDS_PINNED: &str = "g = .flag~new\ng~start('spin')\ndo while g~start
 
 /// Main is not buried by its own root loop: a started activity's pinned
 /// yields run it, and where its body ends there, the program ends with its
-/// status once the pinned activity has (ruling P30).
+/// status once the pinned activity has.
 #[test]
 fn main_ends_inside_a_pinned_yield() {
     let source = MAIN_ENDS_PINNED;
@@ -890,7 +890,7 @@ fn lines_of<'a>(out: &'a str, prefix: &str) -> Vec<&'a str> {
 }
 
 /// A `REPLY` asks for no switch: the sender runs on until an ordinary one,
-/// here its end, and the rest of the method runs after it (ruling P34).
+/// here its end, and the rest of the method runs after it.
 #[test]
 fn a_reply_leaves_its_sender_running_until_an_ordinary_switch() {
     let outcome = run(REPLIED);
@@ -903,8 +903,8 @@ fn a_reply_leaves_its_sender_running_until_an_ordinary_switch() {
 
 /// With another activity ready, a `REPLY`'s sender yields at its next clause
 /// boundary, so the waiting continuation and the new one run before the
-/// sender's next line; the first `REPLY`, with none ready, does not yield
-/// (ruling P36). `AtClause` far past the program keeps the timer out.
+/// sender's next line; the first `REPLY`, with none ready, does not yield.
+/// `AtClause` far past the program keeps the timer out.
 #[test]
 fn a_reply_yields_at_the_next_boundary_only_where_another_activity_is_ready() {
     let program = "o = .k~new\nsay o~a\nsay o~b\nsay 'main 1'\nsay 'main 2'\n\
@@ -1275,8 +1275,8 @@ fn notifier_failures_in_several_started_activities_each_end_their_own() {
 }
 
 /// A notifier that fails in a started activity run inside main's pinned
-/// notifier wait replaces the message's outcome before main reads it
-/// (ruling P38): main is buried below that round. The oracle mostly lets main
+/// notifier wait replaces the message's outcome before main reads it:
+/// main is buried below that round. The oracle mostly lets main
 /// read first: `outer waited 1 42.3`, and `outer waited 3` at rc 0.
 #[test]
 fn a_notifier_failing_inside_a_pinned_notifier_wait_replaces_the_outcome() {
@@ -1366,7 +1366,7 @@ fn an_activity_a_termination_uninit_starts_is_not_waited_for() {
 }
 
 /// The continuation a termination `UNINIT`'s `REPLY` starts is not waited
-/// for (ruling P39), so its line never shows; the oracle prints it in most
+/// for, so its line never shows; the oracle prints it in most
 /// runs, racing its own process exit.
 #[test]
 fn a_termination_uninits_reply_continuation_is_not_waited_for() {
@@ -1436,7 +1436,7 @@ fn a_refusal_in_main_does_not_wait_for_the_other_activities() {
 
 /// A started activity blocked in a `GUARD WHEN` nothing can make true keeps
 /// the program's end waiting, as the oracle's does, until the run's deadline;
-/// main alone blocked there is the wait nothing left can end (ruling P27).
+/// main alone blocked there is the wait nothing left can end.
 #[test]
 fn a_blocked_guard_when_keeps_the_programs_end_waiting() {
     let began = std::time::Instant::now();

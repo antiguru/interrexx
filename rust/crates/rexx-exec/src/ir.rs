@@ -620,10 +620,8 @@ pub(crate) struct Chunk {
     /// the key it is cached under and the thing the driver compares the
     /// setting in force against.
     trace: ChunkTrace,
-    /// One entry per instruction, in instruction order -- D21's "every
-    /// instruction compiles, nothing refuses" is a claim about instructions,
-    /// not about promotion, so an instruction no task has promoted still gets
-    /// an op.
+    /// One entry per instruction, in instruction order: every instruction
+    /// compiles, so an instruction no specialised op covers still gets one.
     ops: valid::ValidOps,
     /// Instruction index -> **the op control resumes at** when it arrives at
     /// that instruction. One entry per instruction, in order, plus one final

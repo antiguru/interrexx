@@ -7,7 +7,7 @@ use crate::frame::{FrameArena, FrameBlock};
 #[derive(Copy, Clone, Debug)]
 pub struct FrameId(usize);
 
-/// A handle to one activation's segment of local-variable slots (D16).
+/// A handle to one activation's segment of local-variable slots.
 /// `push_slots`/`pop_slots` bracket its lifetime; `frame_slot`,
 /// `set_frame_slot` and `grow_slots_of` address within it by an offset from
 /// the segment's start, which only the segment's record holds.
@@ -180,7 +180,7 @@ impl RootSet {
 
     /// Opens a new slot frame of `initial_len` unassigned slots in the
     /// running activity, for an activation entering with a plan of that many
-    /// resolved names (D16).
+    /// resolved names.
     pub fn push_slots(&mut self, initial_len: usize) -> SlotFrame {
         let serial = self.next_serial;
         self.next_serial += 1;

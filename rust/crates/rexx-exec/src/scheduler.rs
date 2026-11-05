@@ -264,7 +264,7 @@ pub(crate) struct Activities {
     next_sleeper: u64,
     /// The activities whose loops of [`Interp::run_others`] are on the Rust
     /// stack, outermost first, each with whether it is buried: whether it
-    /// entered its loop from Rust frames that stay live below it (ruling P30).
+    /// entered its loop from Rust frames that stay live below it.
     owners: Vec<(ActivityId, bool)>,
     /// Ready owners a loop could not run, each with the index in `owners` of
     /// the loop that set it aside; it goes back to the ready queue when that
@@ -1802,7 +1802,7 @@ impl Interp {
     /// where it waits from Rust frames below this loop; a buried activity is
     /// not run by a loop above its own: it is set aside and goes back to the
     /// ready queue for its own loop when this one returns. An activity whose
-    /// state is all in its record runs in any loop (ruling P30).
+    /// state is all in its record runs in any loop.
     fn run_others(&mut self, buried: bool) -> Result<Waited, Failure> {
         self.run_round(buried).map(|(waited, _)| waited)
     }
@@ -2223,7 +2223,7 @@ impl Interp {
     /// The running activity's main-program root, a park or slice in which
     /// runs the other activities until it is ready again. Its continuation
     /// is kept in its record, so a nested loop may run it too, and its end
-    /// there is recorded for this loop to answer (ruling P30).
+    /// there is recorded for this loop to answer.
     pub(crate) fn run_activity_root(&mut self) -> Result<Ended, Failure> {
         let level = self.prepare_level()?;
         let driven = self.drive_from(DriveStart::Level(level), true);
@@ -2497,12 +2497,12 @@ impl Interp {
         self.run_round(true).map(|_| ())
     }
 
-    /// A pinned activity's yield (ruling P29): one round of the other ready
+    /// A pinned activity's yield: one round of the other ready
     /// activities on its own stack, as a pinned wait runs them, each until it
     /// parks, ends or its own slice ends; those whose frames lie below are
     /// set aside, and a round that set one aside is counted as an inverted
     /// yield. A pinned busy-wait on a buried activity therefore spins where
-    /// the oracle completes, a recorded divergence (ruling P31).
+    /// the oracle completes, a recorded divergence.
     fn pinned_yield(&mut self) -> Result<(), Failure> {
         pinned_yield!(self);
         self.yield_at_slice();
@@ -2611,7 +2611,7 @@ impl Interp {
     /// `runtime/InterpreterInstance.cpp:686`): every activity with a Rexx
     /// frame is asked to raise `HALT` with no description, and one parked in
     /// `SysSleep`, a `GUARD WHEN`, a semaphore wait or a command's wait is
-    /// woken to take it (rulings P59, P60), in handle order.
+    /// woken to take it, in handle order.
     pub(crate) fn halt_all(&mut self) {
         let mark = self.activities.ready.len();
         self.halt_each();

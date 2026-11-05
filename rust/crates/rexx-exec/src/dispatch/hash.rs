@@ -593,7 +593,7 @@ fn hash_of(interp: &mut Interp, keys: Keys, index: ObjRef) -> Result<u64, Failur
     }
     // `RexxObject::hash` branches on whether the behaviour is a primitive one
     // (`classes/ObjectClass.cpp:416`). **"Has a string value" and "is a
-    // base-class object" are different questions**, which is spec D96's trap:
+    // base-class object" are different questions**:
     // a `String` subclass has a string value and is not a base class, so its
     // `HASHCODE` override is reached where a plain string's -- which cannot
     // exist, since `.String~define` is 98.985 -- would not be.
@@ -1186,8 +1186,8 @@ fn native_hash_all_items(
     Ok(Some(super::collection::array_of(interp, items)))
 }
 
-/// `makeArray` answers the INDEXES, where `Array`'s answers the items -- spec
-/// D98. Measured, a `.Directory` holding `k1` and `k2` answers `makeArray` as
+/// `makeArray` answers the INDEXES, where `Array`'s answers the items.
+/// Measured, a `.Directory` holding `k1` and `k2` answers `makeArray` as
 /// `k1 k2` against `allItems` as `v1 v2`.
 fn native_hash_make_array(
     interp: &mut Interp,

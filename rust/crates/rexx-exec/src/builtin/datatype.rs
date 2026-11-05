@@ -578,7 +578,7 @@ mod tests {
     /// A stem with an explicit default makes every tail report as existing,
     /// including tails never individually assigned -- `s.9` itself
     /// classifies as `SymbolKind::CompoundName` (one period, not trailing),
-    /// and the D15a rule this pins is that its existence check falls back
+    /// and the stem rule this pins is that its existence check falls back
     /// to `StemClass::realCompoundVariableValue`'s stem-level default
     /// rather than to `tails.is_empty()`.
     #[test]

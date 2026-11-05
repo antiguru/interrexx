@@ -266,8 +266,8 @@ max	[([|*?^]+	(*|?^[
 0@17 1@3 1@3
 0@9 1@6 1@6
 
-# Deviation 87: the grammar's language, where the oracle departs from it (D4, D5) or never answers (D2, D11). These expectations are this crate's; the comments give the oracle's.
-# Oracle (D4): a*b|c matches ac; a*|b and [ab]*|c match their subjects; d(a*b|c) matches dac.
+# Deviation 87: the grammar's language, where the oracle departs from it or never answers. These expectations are this crate's; the comments give the oracle's.
+# Oracle: a*b|c matches ac; a*|b and [ab]*|c match their subjects; d(a*b|c) matches dac.
 deviation
 max	a*b|c	ac
 max	a*|b	ab
@@ -279,7 +279,7 @@ max	d(a*b|c)	dac
 0@7 0@1 1@1
 0@8 0@2 0@0
 
-# Oracle (D5): X+Y* behaves as XY*, so each of these fails to match.
+# Oracle: X+Y* behaves as XY*, so each of these fails to match.
 deviation
 max	a+c*	aa
 max	(a|b)+c*	aa
@@ -291,7 +291,7 @@ max	b+c*	bbcc
 0@7 1@4 1@4
 0@4 1@4 1@4
 
-# Oracle (D11): match and pos never return. Oracle (D2): a range ending at '7F'x never compiles.
+# Oracle: match and pos never return; a range ending at '7F'x never compiles.
 deviation
 max	(a*)*	aaab
 max	(a*)*b	aaab
@@ -311,7 +311,7 @@ max	[a-%7f]	%7f
 0@5 0@0 0@0
 0@5 1@1 1@1
 
-# Deviation 88: a method with no pattern compiled, or after uninit, raises 93.900 where the oracle crashes (D1, D3). Oracle: SIGSEGV.
+# Deviation 88: a method with no pattern compiled, or after uninit, raises 93.900 where the oracle crashes. Oracle: SIGSEGV.
 ours
 r = .RegularExpression~new
 say r~position

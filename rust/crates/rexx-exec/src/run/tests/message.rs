@@ -211,7 +211,7 @@ fn a_condition_inside_a_method_body_echoes_the_body_and_then_the_send() {
     );
 }
 
-/// **The receiver a callee's calling convention carries** (D24), for each
+/// **The receiver a callee's calling convention carries**, for each
 /// route into a callee that this crate has.
 #[test]
 fn a_trap_handler_and_an_internal_call_do_not_carry_the_same_receiver() {
@@ -350,7 +350,7 @@ fn the_guard_instructions_answers_and_their_refusals() {
         },
         Row {
             name: "a WHEN that does not hold with no other activity, where the oracle \
-                   blocks for ever (ruling P27)",
+                   blocks for ever",
             source: "say .K~m\n::class K\n::method m class\n  expose v\n  v = 0\n  \
                      guard on when v = 1\n  return 'no'\n",
             stdout: b"",

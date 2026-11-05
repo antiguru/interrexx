@@ -667,8 +667,8 @@ fn a_redirected_command_does_not_stop_another_activity() {
     assert_eq!(ran.stdout(), "w 1\nw 2\nw 3\nmain 0\n");
 }
 
-/// A lone activity's native call keeps the baton for its whole length
-/// (ruling P43), so an activity its callback starts runs only once the call
+/// A lone activity's native call keeps the baton for its whole length,
+/// so an activity its callback starts runs only once the call
 /// has returned: the call waits for that activity's file in vain.
 #[test]
 fn a_lone_call_keeps_the_baton_after_its_callback_starts_an_activity() {

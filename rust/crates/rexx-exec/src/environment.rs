@@ -65,7 +65,7 @@ mod env_seam {
         Directories { environment, local }
     }
 
-    /// **The directory chokepoint (D45, site two).** Every read of `.local`
+    /// **The directory chokepoint (D12, site two).** Every read of `.local`
     /// and of `.environment` passes here, and an [`Access::Resolve`] read is
     /// the one the security manager's `LOCAL` and `ENVIRONMENT` checkpoints
     /// see.

@@ -681,7 +681,7 @@ fn a_string_answer_reads_as_primitive_make_string_reads_it() {
     }
 }
 
-/// **D24's `SmallInt` behaviour arm is taken for a small integer
+/// **The `SmallInt` behaviour arm is taken for a small integer
 /// receiver**, where the general path is what a receiver whose bytes are
 /// in the arena takes.
 #[test]
@@ -735,7 +735,7 @@ fn a_small_integer_receiver_takes_the_small_int_arm() {
     );
 }
 
-/// **D24's receiver in the calling convention**: `SELF` is the object the
+/// **The receiver in the calling convention**: `SELF` is the object the
 /// send was addressed to, taken from `crate::CallContext`, and not the
 /// scope the resolution found the method at.
 #[test]

@@ -230,7 +230,7 @@ impl Interp {
                 _ => {}
             }
 
-            // **The eager bind** (D37), in this walk because the oracle does
+            // **The eager bind**, in this walk because the oracle does
             // it while the directive is being translated:
             // `createNativeMethod` raises from inside `methodDirective`
             // (`parser/DirectiveParser.cpp:1385`), so the file is refused

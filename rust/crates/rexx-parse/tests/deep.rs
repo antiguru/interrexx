@@ -24,8 +24,8 @@ fn deep_call_program(depth: usize) -> Vec<u8> {
     src.into_bytes()
 }
 
-/// Runs `parse_program` on the 512 MiB thread D19 gives `rexx-exec`'s public
-/// entry point, which is the stack every depth limit here is calibrated
+/// Runs `parse_program` on a 512 MiB thread, as `rexx-exec`'s public entry
+/// point runs, which is the stack every depth limit here is calibrated
 /// against.
 fn parse_on_a_sized_thread(bytes: Vec<u8>) -> Result<(), rexx_parse::ParseError> {
     std::thread::Builder::new()

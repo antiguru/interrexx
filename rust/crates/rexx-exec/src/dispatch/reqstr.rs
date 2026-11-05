@@ -43,7 +43,7 @@ enum StringConversion {
 }
 
 impl Interp {
-    /// The required-string protocol, D52: `request("STRING")`, then the
+    /// The required-string protocol: `request("STRING")`, then the
     /// receiver's `makeString`, then the NOSTRING condition if trapped, else
     /// `defaultName`. **This is the value every context `provide.xml`
     /// `reqstr` lists renders, and rendering it without coming through here
