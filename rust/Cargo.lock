@@ -672,6 +672,7 @@ dependencies = [
  "rexx-num",
  "rexx-parse",
  "rexx-rxapi",
+ "rexx-spec",
  "rustc-hash",
  "rustix",
  "tz-rs",
