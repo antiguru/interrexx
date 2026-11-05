@@ -61,7 +61,7 @@ impl TokenCursor {
 
     /// Yield the next token index and step past it. Deliberately not called
     /// `next`: `clippy::should_implement_trait` fires on an inherent `next`
-    /// with this signature, and the phase gate runs clippy with `-D warnings`.
+    /// with this signature, and the workspace runs clippy with `-D warnings`.
     pub(crate) fn advance(&mut self) -> Option<usize> {
         let i = self.peek()?;
         self.pos += 1;

@@ -733,9 +733,9 @@ pub(crate) fn run(
     let BuiltinTarget::Row(row) = target else {
         // A builtin name this crate has no code for. It reads as the same
         // declared gap an unresolved name gets, and deliberately so: a
-        // builtin *is* a routine as far as the message is concerned, the
-        // owning phase is the same one, and `tests/keyword_assertions.rs`
-        // reads the owner out of exactly this shape.
+        // builtin *is* a routine as far as the message is concerned, and
+        // `tests/keyword_assertions.rs` reads the construct out of exactly
+        // this shape.
         return Err(Loud::unresolved_call(name).into());
     };
     let builtin = &IMPLEMENTED[row as usize];

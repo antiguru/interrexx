@@ -252,8 +252,7 @@ fn a_registered_routine_nothing_supplies_is_90_999_before_the_first_clause() {
 }
 
 /// **A routine one of the oracle's internal packages exports refuses loudly**,
-/// naming the phase that owes it, where a routine some phase has written
-/// answers. Either way the name is the oracle's own, and answering 43.1 for
+/// where a routine this crate has written answers. Either way the name is the oracle's own, and answering 43.1 for
 /// it -- "no such routine", which a program cannot tell from its own typo --
 /// is what this boundary exists to prevent. The last case is the adjacent
 /// one: a name no package exports still raises 43.1.

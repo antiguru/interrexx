@@ -205,7 +205,7 @@ fn generate_errors(path: &Path) -> String {
     if messages.is_empty() {
         panic!("no messages parsed from {}", path.display());
     }
-    // A silently colliding key would let a later phase report false
+    // A silently colliding key would let a harness report false
     // conformance, so refuse to emit a table that has one.
     let mut keys: Vec<(u16, u16)> = messages.iter().map(|m| (m.major, m.sub)).collect();
     keys.sort_unstable();

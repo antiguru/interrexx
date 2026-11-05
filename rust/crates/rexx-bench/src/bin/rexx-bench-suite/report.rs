@@ -681,8 +681,7 @@ pub(super) fn write_blocked(
     let _ = writeln!(
         report,
         "Measured here rather than left out of the table, with the status and message each one \
-         actually produced. These belong to later tasks in this phase; what belongs to this one \
-         is that they are visible.\n"
+         actually produced, so that they are visible.\n"
     );
     let _ = writeln!(report, "| axis | exit status | message |");
     let _ = writeln!(report, "|---|---:|---|");

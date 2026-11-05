@@ -8,13 +8,11 @@ pub mod errors {
 pub mod builtins {
     include!(concat!(env!("OUT_DIR"), "/builtins.rs"));
 
-    /// The builtins excluded, whole or in part, each with the phase that owes
-    /// it and the reason: the whole exclusions followed by the partial rows.
-    /// The owner rides here, so a name and the phase blamed for it cannot
-    /// drift apart.
+    /// The builtins excluded, whole or in part, each with its owner and the
+    /// reason: the whole exclusions followed by the partial rows.
     pub const EXCLUDED: &[(&str, &str, &str)] = &[];
 
-    /// The phase owing `name`'s excluded form and its reason, or `None` for
+    /// The owner of `name`'s excluded form and its reason, or `None` for
     /// a name [`EXCLUDED`] does not list.
     pub fn owner_of(name: &str) -> Option<(&'static str, &'static str)> {
         EXCLUDED

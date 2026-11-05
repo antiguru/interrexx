@@ -63,7 +63,7 @@ impl Interp {
     ///
     /// # Errors
     /// The condition the extension raised, whatever converting an argument or
-    /// the result refuses, and [`Loud`] for a conversion this phase has not
+    /// the result refuses, and [`Loud`] for a conversion this crate has not
     /// written.
     /// `reserved` says the send holds the method's guard lock, which the
     /// call's frame then holds and releases where it still does.
@@ -664,7 +664,7 @@ impl Interp {
     ///
     /// # Errors
     /// The condition the hook raised, and [`Loud`] for an interface member it
-    /// reached that this phase has not written.
+    /// reached that this crate has not written.
     pub(crate) fn run_package_hook(
         &mut self,
         library: &Library,
@@ -709,7 +709,7 @@ impl Interp {
     ///
     /// # Errors
     /// A condition a string conversion raised, and [`Loud`] for an interface
-    /// member the handler reached that this phase has not written. A
+    /// member the handler reached that this crate has not written. A
     /// condition the handler raised is answered, not returned as an error.
     pub(crate) fn run_command_handler(
         &mut self,
@@ -1215,7 +1215,7 @@ impl Interp {
             }
             Refused::ClassicStyle => return Loud::classic_style_routine().into(),
             Refused::UnfilledSlot { entry } => return Loud::unfilled_slot(entry).into(),
-            // No phase owes a stale handle: a local reference protects its
+            // A stale handle stays refused: a local reference protects its
             // object only until the call that made it ends
             // (`NativeActivation::createLocalReference`,
             // `interpreter/execution/NativeActivation.cpp:1179-1185`), so an

@@ -1203,8 +1203,8 @@ fn package_scope_refuses_a_caller_from_another_package() {
     );
 }
 
-/// **`checkPrivate`'s `isInstanceOf` limb, which no program in this phase
-/// can reach either.**
+/// **`checkPrivate`'s `isInstanceOf` limb, which no program can reach
+/// either.**
 #[test]
 fn a_private_send_from_another_instance_of_the_declaring_class_is_allowed() {
     let mut interp = Interp::new();

@@ -244,7 +244,7 @@ fn indent_in_range(instructions: &[Instruction], start: usize, end: usize, targe
                             // the `OTHERWISE` one three lines of history
                             // below: "`whens` holds only `When`/`WhenCase`"
                             // is `rexx-parse`'s own invariant, not this
-                            // function's, and this phase's invariants have
+                            // function's, and such invariants have
                             // not all held -- the absorbed-`WHEN` case
                             // (`when_absorbing_a_when_parses_and_runs_at_
                             // rc_0`, `run`'s own test) is exactly a

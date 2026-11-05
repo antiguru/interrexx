@@ -23,7 +23,7 @@ impl Arm {
     }
 }
 
-/// One of the two instruments every claim in this phase is stated on.
+/// One of the two instruments every performance claim is stated on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Instrument {
     Instructions,

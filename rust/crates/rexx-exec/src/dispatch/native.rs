@@ -65,7 +65,7 @@ pub(crate) struct NativeExternal {
 
 /// What a send to a method bound to an entry point runs.
 pub(in crate::dispatch) enum ExternalBody {
-    /// A body this phase runs, with the parameter count the C++ entry
+    /// A body this crate runs, with the parameter count the C++ entry
     /// declares.
     Implemented { arity: Arity, run: NativeMethod },
     /// A body that runs in the method's scope, with the parameter count the
@@ -747,7 +747,7 @@ fn attribute_accessors(
 }
 
 /// [`MethodExternal`] for one `::METHOD`. Half of the boundary between the
-/// forms this phase binds and the forms it refuses; [`attribute_external`] is
+/// forms this crate binds and the forms it refuses; [`attribute_external`] is
 /// the other half and the library test is shared.
 pub(crate) fn method_external(method: &MethodDirective) -> Option<MethodExternal> {
     let spec = method.external.as_ref()?;

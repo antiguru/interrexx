@@ -1021,8 +1021,7 @@ fn form_name(kind: &ExprKind) -> String {
     name.to_string()
 }
 
-/// The `REXX` and `REXXUTIL` packages' routine names and the phase owing each
-/// a body, consulted between the running package's `::ROUTINE`s and the
+/// The `REXX` and `REXXUTIL` packages' routine names and their bodies, consulted between the running package's `::ROUTINE`s and the
 /// external file search.
 pub(crate) mod internal_routines;
 

@@ -68,8 +68,7 @@ mod seam {
 use seam::Cleared;
 
 // The `LIBRARY REXX` entry-point registry: the names a
-// `::METHOD ... EXTERNAL 'LIBRARY REXX name'` binds to at install, and which
-// phase owes each of them a body. A child of this module rather than a
+// `::METHOD ... EXTERNAL 'LIBRARY REXX name'` binds to at install. A child of this module rather than a
 // sibling, because the table's rows point at `NativeMethod`s, whose
 // parameter list names a type only this module can.
 pub(crate) mod native;
@@ -2035,7 +2034,7 @@ impl Interp {
     }
 
     /// Which native class a value answers to, or the value's own shape when
-    /// this phase builds no class for it.
+    /// this crate builds no class for it.
     fn receiver_kind(&self, receiver: ObjRef) -> Result<Primitive, &'static str> {
         match receiver.decode() {
             Decoded::Nil => Ok(Primitive::Object),
@@ -2166,7 +2165,7 @@ impl Interp {
     }
 
     /// The behaviour a value's messages resolve against, or the value's own
-    /// shape when this phase builds no class for it.
+    /// shape when this crate builds no class for it.
     fn receiver_behaviour(&mut self, receiver: ObjRef) -> Result<Behaviour, &'static str> {
         let kind = self.receiver_kind(receiver)?;
         let model = self.object_model();
@@ -2549,7 +2548,7 @@ impl Interp {
     }
 
     /// `RexxObject::classObject()`, the class an arbitrary value is an
-    /// instance of, or `None` for a value this phase builds no class for.
+    /// instance of, or `None` for a value this crate builds no class for.
     pub(crate) fn class_of_value(&mut self, value: ObjRef) -> Option<ObjRef> {
         match self.receiver_behaviour(value).ok()? {
             Behaviour::Instance { owner, .. } => Some(owner),

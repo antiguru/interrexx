@@ -577,8 +577,7 @@ fn the_report_echoes_one_clause_per_activation_innermost_first() {
 }
 
 /// Arguments are evaluated in the caller, before the callee starts. Not
-/// observable through `USE ARG`/`ARG()` in this phase -- both still fail
-/// loudly -- but a failing argument is: the condition is 42.3 and it is
+/// observable through `USE ARG`/`ARG()`, but a failing argument is: the condition is 42.3 and it is
 /// reported against the `CALL` clause, not against anything in `sub`.
 #[test]
 fn a_calls_arguments_are_evaluated_in_the_caller() {

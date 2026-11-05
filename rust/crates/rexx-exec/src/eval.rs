@@ -1796,7 +1796,7 @@ fn is_strict_compare(op: Operator) -> bool {
 #[cfg(test)]
 mod tests;
 
-/// **R12: an operator whose left operand is an object this phase can build
+/// **An operator whose left operand is an object this crate can build
 /// and send no message to.**
 #[cfg(test)]
 mod object_operand_tests;

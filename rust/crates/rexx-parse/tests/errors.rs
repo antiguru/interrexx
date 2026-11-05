@@ -1,4 +1,4 @@
-//! The phase's error gate: what this parser rejects, what it accepts, and the
+//! The error gate: what this parser rejects, what it accepts, and the
 //! number, sub-number and line it reports, all against `build/bin/rexxc`.
 
 use std::path::{Path, PathBuf};

@@ -601,7 +601,7 @@ macro_rules! region_ops {
                     };
                     $registers.set(*dst, value);
                 }
-                // **The phase's first native expression op**:
+                // **A native expression op**:
                 // the literal's value, built from the chunk's
                 // own interned bytes through the same
                 // `Interp::literal` that `eval_node`'s `Literal`

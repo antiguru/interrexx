@@ -432,8 +432,8 @@ fn native_stem_all_items(
     Ok(Some(super::collection::array_of(interp, items)))
 }
 
-/// `makeArray` answers the INDEXES here as it does for every other class in
-/// this phase -- measured, `A,C` for a stem holding `A` and `C`, not `1,3`.
+/// `makeArray` answers the INDEXES here as it does for every other mapped
+/// collection -- measured, `A,C` for a stem holding `A` and `C`, not `1,3`.
 /// The stem's own value, which is what `StemClass`'s forwarding methods send
 /// to -- the `value` field every one of them names.
 fn stem_value(interp: &mut Interp, receiver: ObjRef) -> ObjRef {

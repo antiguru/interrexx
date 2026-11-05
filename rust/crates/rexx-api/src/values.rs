@@ -112,7 +112,7 @@ pub enum Failure {
     /// match it. The oracle raises
     /// this once the extension has run (`NativeActivation.cpp:1301-1310`).
     ResultSignature,
-    /// The extension reached an interface member this phase has not written,
+    /// The extension reached an interface member this crate has not written,
     /// named `Table.Member`; the member recorded itself and returned.
     UnfilledSlot { entry: &'static str },
     /// The argument has no value as a C `double`.

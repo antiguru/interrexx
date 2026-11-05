@@ -37,7 +37,7 @@ fn bootstrap_directives() -> Vec<(PathBuf, rexx_parse::Program)> {
         .collect()
 }
 
-/// Every `EXTERNAL` the bootstrap files declare is the form this phase
+/// Every `EXTERNAL` the bootstrap files declare is the form this crate
 /// binds, and every one of them resolves.
 #[test]
 fn every_bootstrap_external_binds_to_an_entry_point_this_registry_holds() {
@@ -59,7 +59,7 @@ fn every_bootstrap_external_binds_to_an_entry_point_this_registry_holds() {
                     reached += 1;
                     check_binds(&path, "::ATTRIBUTE", &external);
                 }
-                // `::ROUTINE` carries an `EXTERNAL` too and this phase
+                // `::ROUTINE` carries an `EXTERNAL` too and this crate
                 // refuses every spelling of it, so a bootstrap file
                 // declaring one would be refused at install whatever this
                 // registry holds. Asserted rather than written down,
@@ -67,7 +67,7 @@ fn every_bootstrap_external_binds_to_an_entry_point_this_registry_holds() {
                 // EXTERNAL`" is a premise this registry's scope rests on.
                 DirectiveKind::Routine(routine) => assert!(
                     routine.external.is_none(),
-                    "{} declares a ::ROUTINE EXTERNAL, which this phase refuses",
+                    "{} declares a ::ROUTINE EXTERNAL, which this crate refuses",
                     path.display()
                 ),
                 _ => {}

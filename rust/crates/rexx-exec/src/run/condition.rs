@@ -1145,8 +1145,7 @@ impl Interp {
     /// the same reason: measured, `interpret "signal there"` reaches an
     /// enclosing `there:`, and `call sub` into `sub:` containing `signal
     /// caller_label` reaches a label back in the caller's own text, because
-    /// at this phase every internal `CALL` target shares its caller's exact
-    /// body (no `::routine` directive gives it one of its own yet) -- not
+    /// an internal `CALL` target shares its caller's exact body -- not
     /// because `SIGNAL` reaches across an activation boundary on its own.
     pub(crate) fn signal_to_label(&mut self, name: &[u8]) -> Result<Flow, Failure> {
         let target = self.resolve_signal_target(name)?;

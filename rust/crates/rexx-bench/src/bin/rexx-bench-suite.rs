@@ -241,7 +241,7 @@ fn main() -> ExitCode {
     // rather than one with `../..` in the middle of it.
     let rust_binary = rust_binary.canonicalize().unwrap_or(rust_binary);
 
-    // The entire output of this phase is ratios against the oracle, so an
+    // The entire output of this tool is ratios against the oracle, so an
     // oracle that could not be identified is not a measurement to report with
     // a caveat -- it is a run that must not produce a table at all.
     let objects = oracle_objects(&oracle_binary);

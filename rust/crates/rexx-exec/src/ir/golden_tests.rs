@@ -228,7 +228,7 @@ fn every_instruction_of_an_all_delegating_body_compiles_to_one_exec_op() {
     assert!(chunk.consts.is_empty());
 }
 
-/// **The phase's first native expression op.** An assignment whose value is a
+/// **A native expression op.** An assignment whose value is a
 /// literal compiles to a constant load, the literal's own value line, and the
 /// write -- with no `EvalExpr` in it at all, which is what makes it native.
 #[test]

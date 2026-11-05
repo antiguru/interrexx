@@ -208,7 +208,7 @@ impl<'a> std::ops::DerefMut for HostRef<'a> {
 /// `interpreter/api/MethodContextStubs.cpp:374`).
 ///
 /// A plain initializer nothing patches, so it lives at one address for the
-/// process; the members this phase has not written still refuse loudly.
+/// process; the members this crate has not written still refuse loudly.
 ///
 /// A member trusts the context it is handed, so calling one is `unsafe`:
 ///
