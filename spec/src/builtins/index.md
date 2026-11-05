@@ -19,9 +19,9 @@ the number of required ones is the fewest.
 
 r[bif.call.count]
 The argument count of a call is the position of the last argument in it
-that is not [omitted](r:conv.arg.omitted). Commas after that argument are
-ignored, however many there are, and a call whose arguments are all omitted
-has a count of 0.
+that is not [omitted](r:conv.arg.omitted). Omitted places at the end of the
+list therefore add nothing to the count, and a call with only omitted
+places counts as a call with no arguments, a count of 0.
 
 ```rexx
 say substr('abc', 2, , ) word('a b', 2, , , )
@@ -90,27 +90,35 @@ b: say condition('o')~code
 40.5
 ```
 
-r[bif.call.order]
-The [too-few](r:bif.call.too-few) and [too-many](r:bif.call.too-many) checks
-come before every other check of a call. The check for an omitted
-[required argument](r:bif.call.missing) comes next, before any argument's
-value is checked; the value checks then follow
-[their own order](r:conv.check.order).
+r[bif.call.order.count-before-missing]
+A call whose argument count is wrong raises the [too-few](r:bif.call.too-few)
+or [too-many](r:bif.call.too-many) error even when it also omits a
+[required argument](r:bif.call.missing).
 
 ```rexx
 signal on syntax name a
-say word(, 'x', 2)
+say word(, 1, 2)
 a: say condition('o')~code
-signal on syntax name b
-say substr(, 'x')
-b: say condition('o')~code
-signal on syntax name c
-say substr('abc', , , '**')
-c: say condition('o')~code
 ```
 
 ```output
 40.4
-40.5
-40.5
+```
+
+r[bif.call.order.count-before-values]
+A call whose argument count is wrong raises the too-few or too-many error
+even when an argument it does pass would fail its own check.
+
+```rexx
+signal on syntax name a
+say substr('abc', 'x', 1, '**', 5)
+a: say condition('o')~code
+signal on syntax name b
+say word('a b', 0, 2)
+b: say condition('o')~code
+```
+
+```output
+40.4
+40.4
 ```

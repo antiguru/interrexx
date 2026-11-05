@@ -31,9 +31,10 @@ A9
 ```
 
 r[conv.string.null]
-The null string is the string of length 0, written `''`. An argument a page
-names as a string accepts every string, the null string and strings holding
-any byte value included, and it is never checked.
+The null string is the string of length 0, written `''`. A builtin makes no
+check of an argument its page calls a string: no value there raises an
+error, so the null string and a string of any bytes are as valid as any
+other.
 
 ```rexx
 say length(upper(''))
@@ -88,13 +89,15 @@ r[conv.whole.form]
 A whole-number argument must be a string of this form: optional whitespace;
 an optional sign, `+` or `-`, which may be followed by whitespace; one or
 more digits, with at most one period among or around them; optionally an
-exponent, which is `E` or `e` directly after the digits, an optional sign,
-and one or more digits; optional whitespace. Any other string raises
-`SYNTAX 40.12`, the null string and a string of only whitespace included.
+exponent, which is `E` or `e` directly after the last digit or the period,
+an optional sign, and one or more digits; optional whitespace. Any other
+string raises `SYNTAX 40.12`, the null string and a string of only
+whitespace included.
 
 ```rexx
 say substr('abcdef', ' + 2 ', 1) substr('abcdef', '2.', 1),
-    substr('abcdef', '.2E1', 1) substr('abcdef', '20e-1', 1)
+    substr('abcdef', '.2E1', 1) substr('abcdef', '20e-1', 1),
+    substr('abcdef', '2.E0', 1)
 signal on syntax name a
 say substr('abc', '')
 a: say condition('o')~code
@@ -110,7 +113,7 @@ d: say condition('o')~code
 ```
 
 ```output
-b b b b
+b b b b b
 40.12
 40.12
 40.12
@@ -118,12 +121,14 @@ b b b b
 ```
 
 r[conv.whole.digits]
-The value of a whole-number argument is its number rounded to 18
-significant digits; when the first digit dropped is 5 or more, the magnitude
-rounds up, otherwise down. The
-caller's NUMERIC DIGITS setting plays no part. If the rounded value has a
-fractional part other than zero, or its magnitude is 10\*\*18 or more, the
-argument raises `SYNTAX 40.12`; otherwise its value is that integer.
+On a 64-bit host, which is what interrexx targets, the value of a
+whole-number argument is its number rounded to 18 significant digits; when
+the first digit dropped is 5 or more, the magnitude rounds up, otherwise
+down. The caller's NUMERIC DIGITS setting plays no part. If the rounded
+value has a fractional part other than zero, or its magnitude is 10\*\*18 or
+more, the argument raises `SYNTAX 40.12`; otherwise its value is that
+integer. (The reference manual gives 9 digits for 32-bit hosts; this book
+does not specify those.)
 
 ```rexx
 say substr('abcdef', '2.000', 1) substr('abcdef', '1.0000000000000000001', 1)
@@ -152,9 +157,21 @@ b a
 40.12
 ```
 
+## Builtins that run as String methods
+
+Many builtins do their work by sending a message of the same name to a
+`String` object. One of the arguments, usually the first and for a few
+builtins the second, is the receiver; the others become the message's
+arguments, in their order. The reference manual (Functions > Built-in
+Functions) names these builtins, and a builtin page says when its builtin
+is one of them. The range checks below, and
+the order in [conv.check.order](r:conv.check.order), are rules for these
+builtins only; any other builtin's page states its own range checks.
+
 r[conv.position.check]
-A position argument is a whole-number argument whose value must be
-positive. A value of 0 or less raises `SYNTAX 93.924`; `-0` is 0.
+In a builtin that runs as a String method, a position argument is a
+whole-number argument whose value must be positive. A value of 0 or less
+raises `SYNTAX 93.924`; `-0` is 0.
 
 ```rexx
 signal on syntax name a
@@ -175,8 +192,8 @@ c: say condition('o')~code
 ```
 
 r[conv.length.check]
-A length argument is a whole-number argument whose value must not be
-negative. A negative value raises `SYNTAX 93.923`. A length of 0 is
+In a builtin that runs as a String method, a length argument is a
+whole-number argument whose value must not be negative. A negative value raises `SYNTAX 93.923`. A length of 0 is
 allowed, and so is `-0`, which is 0.
 
 ```rexx
@@ -191,19 +208,20 @@ a: say condition('o')~code
 93.923
 ```
 
-The reference manual lists codes for these two checks both among the
-routine errors (error 40) and among the method errors (error 93), and does
-not say which ones a builtin raises; the ANSI draft (9.2.1) raises 40.14 for
-a position and 40.13 for a length. The two rules above follow the observed
-behaviour.
+These two codes follow from the reference manual: a builtin of this kind
+sends a String message, the range of a position or length is checked by
+that method, and an incorrect call to a method is error 93, whose subcodes
+924 and 923 are the position and length cases. The ANSI draft (9.2.1),
+which has no such methods, raises 40.14 for a position and 40.13 for a
+length.
 
 ## Pad arguments
 
 r[conv.pad]
 A pad argument must be a string of exactly one character. Any character may
 be the pad, the blank and `'00'x` included. A pad of any other length raises
-`SYNTAX 40.23`; so does the null string, and so does a two-byte character
-(r:conv.string.chars).
+`SYNTAX 40.23`; so does the null string, and so does a character that an
+encoding writes as two bytes ([two characters](r:conv.string.chars)).
 
 ```rexx
 say substr('ab', 1, 4, '*') c2x(substr('ab', 1, 3, '00'x))
@@ -244,8 +262,8 @@ abc bc
 r[conv.arg.empty]
 An argument whose expression yields the null string is not omitted and never
 takes the default. It is checked like any other value: as a whole number it
-raises `SYNTAX 40.12` (r:conv.whole.form), as a pad `SYNTAX 40.23`
-(r:conv.pad), and as a string it is the null string.
+raises `SYNTAX 40.12` ([whole-number form](r:conv.whole.form)), as a pad
+`SYNTAX 40.23` ([pad](r:conv.pad)), and as a string it is the null string.
 
 ```rexx
 signal on syntax name a
@@ -264,7 +282,8 @@ b: say condition('o')~code
 ## The order of the checks
 
 r[conv.check.order]
-When more than one argument fails, the form checks run first: the
+In a builtin that runs as a String method, when more than one argument
+fails, the form checks run first: the
 whole-number checks of [form](r:conv.whole.form) and
 [value](r:conv.whole.digits), and the [pad](r:conv.pad) check, applied to
 the arguments from left to right, and the first failure is raised. Only when
@@ -299,9 +318,12 @@ f: say condition('o')~code
 93.924
 ```
 
-The reference manual does not give this order, and the ANSI draft (9.2.1)
-checks each argument's form and range together, one argument at a time.
-This rule follows the observed behaviour.
+The range checks come last because they belong to the String method, which
+runs only once the call has been made. The reference manual does not say
+that the function call checks the form of its arguments, under error 40,
+before it sends the message; that part follows the observed behaviour. The
+ANSI draft (9.2.1) checks each argument's form and range together, one
+argument at a time.
 
 ## Errors and results
 
