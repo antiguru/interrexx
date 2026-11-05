@@ -1,0 +1,40 @@
+# cargo-nextest configuration; the workspace root is this directory's parent.
+# Doc tests are not run by nextest: `cargo test --workspace --doc` runs them.
+
+nextest-version = "0.9.150"
+experimental = ["setup-scripts"]
+
+[profile.default]
+slow-timeout = { period = "60s" }
+
+[profile.ci]
+fail-fast = false
+retries = 0
+slow-timeout = { period = "60s" }
+
+[profile.ci.junit]
+# JUnit output stays off; a path here would turn it on.
+
+# Tests whose assertion is a wall-clock boundary (a signal inside a sleep, a halt before a
+# program ends, a prompt before a read, a watchdog's deadline, a replayed clock). Each waits on
+# time, so they run one at a time and claim four test threads each, which keeps a saturated
+# machine from stretching the window they measure.
+[test-groups.wall-clock]
+max-threads = 1
+
+[[profile.default.overrides]]
+filter = '''
+binary(signals) | binary(stdin_contention) | binary(program_end) | binary(prompt_before_read)
+| binary(oracle_deadline) | binary(deadline) | binary(sim_processes)
+| test(a_run_ending_with_a_call_in_flight_serves_the_call_then_drops_the_interpreter)
+| (binary(classic_api) & test(/sigint|halt|group_signal|the_classic_family_answers/))
+'''
+test-group = 'wall-clock'
+threads-required = 4
+
+[scripts.setup.method-bodies-api]
+command = '.config/scripts/method-bodies-api.sh'
+
+[[profile.default.scripts]]
+filter = 'binary(method_bodies)'
+setup = 'method-bodies-api'

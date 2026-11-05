@@ -23,7 +23,8 @@ Tests compare against an ooRexx build and run ooTest:
 ```sh
 scripts/setup-third-party.sh
 cd rust
-cargo test --workspace
+cargo nextest run --workspace --profile ci
+cargo test --workspace --doc
 ```
 
 `docs/developing.md` covers running the tests and both interpreters safely; `docs/design/`

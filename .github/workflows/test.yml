@@ -12,7 +12,7 @@ defaults:
 
 jobs:
   test:
-    name: cargo test
+    name: cargo nextest
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -29,8 +29,14 @@ jobs:
           printf '#!/bin/sh\nshift\nexec "$@"\n' > "$HOME/.local/bin/memcap"
           chmod +x "$HOME/.local/bin/memcap"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - name: Cargo test
-        run: cargo test --locked --workspace --no-fail-fast -j4
+      - name: Install nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest@0.9.150
+      - name: Cargo nextest
+        run: cargo nextest run --locked --workspace --profile ci
+      - name: Cargo doc tests
+        run: cargo test --locked --workspace --doc
 
   fmt:
     name: Cargo fmt
