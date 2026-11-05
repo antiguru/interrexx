@@ -122,3 +122,25 @@ b: say condition('o')~code
 40.4
 40.4
 ```
+
+## Words
+
+r[bif.words.split]
+The builtins that count words split a string into words the same way. A
+word is a run of one or more characters, none of them
+[whitespace](r:conv.string.whitespace), that has whitespace or an end of
+the string on each side. The words of a string are numbered from 1, left to
+right. Whitespace before the first word, between two words and after the
+last belongs to no word, so the null string and a string of only whitespace
+have no words. Every other character, line feed and `'00'x` among them, can
+be part of a word.
+
+```rexx
+say words(' a'||'09'x||'b  c ') words('') words('  '||'09'x)
+say word('one  two', 2) c2x(word('a'||'0a00'x||'b c', 1))
+```
+
+```output
+3 0 0
+two 610A0062
+```
