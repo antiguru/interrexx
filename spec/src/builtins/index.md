@@ -412,3 +412,356 @@ say (bitor(s) == s) (bitand('', s) == 'abcd') (bitand('a', 'a') == 'a')
 ```output
 1 1 1
 ```
+
+## Conversion functions
+
+> **Note.** B2X, C2D, C2X, D2C, D2X, X2B, X2C and X2D convert between the characters
+> of a string, a number written in decimal, and a string of hexadecimal or
+> binary digits. The rules below are the ones that more than one of them
+> follows; a function's page links the ones it uses and states the rest.
+
+r[bif.index.conv.digits]
+In an argument that is a string of binary digits, the digits are `0` and
+`1`. In an argument that is a string of hexadecimal digits, the digits are
+`0` to `9` and the letters `A` to `F`, each in either case, and the two
+cases may be mixed. Any character other than a digit that is not
+[whitespace](r:conv.string.whitespace) raises `SYNTAX 93.934` in a binary
+string and `SYNTAX 93.933` in a hexadecimal string. A sign, a period, a
+letter past `F`, a decimal digit above 1 in a binary string, line feed and
+`'00'x` are all such characters.
+
+```rexx
+say b2x('0110') x2c('4a4B') x2b('aF')
+signal on syntax name a
+say b2x('102')
+a: say condition('o')~code
+signal on syntax name b
+say b2x('1' || '0a'x)
+b: say condition('o')~code
+signal on syntax name c
+say x2c('4G')
+c: say condition('o')~code
+signal on syntax name d
+say x2c('-4')
+d: say condition('o')~code
+```
+
+```output
+6 JK 10101111
+93.934
+93.934
+93.933
+93.933
+```
+
+r[bif.index.conv.digits.null]
+The null string is a valid digit string, binary or hexadecimal: it has no
+digits. B2X, X2B and X2C answer the null string for it, and X2D answers 0.
+
+```rexx
+say '['b2x('')']' '['x2b('')']' '['x2c('')']' x2d('')
+```
+
+```output
+[] [] [] 0
+```
+
+r[bif.index.conv.groups]
+A digit string may have whitespace between its digits, to make it easier to
+read; the whitespace is not part of the number. A run of any number of
+blanks and tabs, in any mix, counts as one gap. A gap is allowed only where the digits
+that follow it, up to the end of the string, can be read in whole units:
+a multiple of 4 binary digits (the digits of one hexadecimal digit) in a
+binary string, and a multiple of 2 hexadecimal digits (the digits of one
+character) in a hexadecimal string. The first group of digits, before the
+first gap, may have any number of digits. A gap that does not fall at such a
+boundary raises `SYNTAX 93.977` in a binary string and `SYNTAX 93.976` in a
+hexadecimal string.
+
+```rexx
+say b2x('1 1111 0000') b2x('1  1111') b2x('1111' || '09'x || ' 0000')
+say x2c('4a 4B') c2x(x2c('4 4a4b')) x2d('1 23 45')
+signal on syntax name a
+say b2x('11 11')
+a: say condition('o')~code
+signal on syntax name b
+say b2x('1 111 1')
+b: say condition('o')~code
+signal on syntax name c
+say x2c('4A 4')
+c: say condition('o')~code
+signal on syntax name d
+say x2c('1 2 3')
+d: say condition('o')~code
+```
+
+```output
+1F0 1F F0
+JK 044A4B 74565
+93.977
+93.977
+93.976
+93.976
+```
+
+r[bif.index.conv.groups.edge]
+A digit string that starts or ends with whitespace raises `SYNTAX 93.932` in
+a binary string and `SYNTAX 93.931` in a hexadecimal string, as does a
+string that has only whitespace and so no digit. The null string is not
+such a string.
+
+```rexx
+signal on syntax name a
+say b2x(' 1111')
+a: say condition('o')~code
+signal on syntax name b
+say b2x('1111 ')
+b: say condition('o')~code
+signal on syntax name c
+say b2x('  ')
+c: say condition('o')~code
+signal on syntax name d
+say x2c(' 41')
+d: say condition('o')~code
+signal on syntax name e
+say x2b('41' || '09'x)
+e: say condition('o')~code
+signal on syntax name f
+say x2d('  ')
+f: say condition('o')~code
+```
+
+```output
+93.932
+93.932
+93.932
+93.931
+93.931
+93.931
+```
+
+> **Note.** The reference manual says whitespace may not lead or trail, and that groups
+> are at 4-digit boundaries for binary strings and at byte boundaries for
+> hexadecimal ones. When a string has more than one of the faults above
+> (such as a non-digit and a misplaced gap), this book does not say which of
+> the errors is raised; the examples above have one fault each.
+
+r[bif.index.conv.length]
+Where a conversion function takes a length `n`, it is an optional
+[whole-number argument](r:conv.whole.form) whose value must not be negative
+([a length](r:conv.length.check)): a negative `n` raises `SYNTAX 93.923`, and
+an `n` of 0 is allowed. An omitted `n` is not the same as an `n` of 0, and
+the null string is not omitted. Its unit is the character in C2D and D2C and the
+hexadecimal digit in D2X and X2D.
+
+```rexx
+signal on syntax name a
+say c2d('a', -1)
+a: say condition('o')~code
+signal on syntax name b
+say d2x(65, -1)
+b: say condition('o')~code
+signal on syntax name c
+say c2d('a', '')
+c: say condition('o')~code
+signal on syntax name d
+say d2c(65, 'x')
+d: say condition('o')~code
+say c2d('a') c2d('a', 0) c2d('a', '-0') '['d2c(65, 0)']' '['d2x(65, 0)']'
+```
+
+```output
+93.923
+93.923
+40.12
+40.12
+97 0 0 [] []
+```
+
+r[bif.index.conv.signed.read]
+When C2D or X2D is given an `n`, the string is read as a signed number of
+exactly `n` units. It is first made `n` units long: when it is longer, its
+leftmost units are dropped, and when it is shorter, `'00'x` units (zero
+digits in X2D) are added on its left. The result is then
+read as a two's-complement number: when the leftmost bit of the leftmost
+unit is set, the number is negative, and its value is the unsigned value minus
+256\*\*`n` in C2D and 16\*\*`n` in X2D. An `n` of 0 answers 0. Without an `n`,
+the string is read as an unsigned number, whatever its leftmost bit, and
+the answer is never negative.
+
+```rexx
+say c2d('81'x) c2d('81'x, 1) c2d('81'x, 2) c2d('f081'x, 1) c2d('f081'x, 2)
+say c2d('ff7f'x, 1) c2d('0031'x, 0) c2d('', 3)
+say x2d('81') x2d('81', 2) x2d('81', 3) x2d('f081', 2) x2d('f081', 3) x2d('f081', 4)
+```
+
+```output
+129 -127 129 -127 -3967
+127 0 0
+129 -127 129 -127 129 -3967
+```
+
+r[bif.index.conv.signed.write]
+When D2C or D2X is given an `n`, the answer is exactly `n` units long: the
+last `n` units of the number's two's-complement form, which is the number
+itself for a non-negative one and its sum with 256\*\*`n` in D2C and
+16\*\*`n` in D2X for a negative one. The units to the left of the number's
+own are `'00'x` (zero digits in D2X) for a non-negative number and `'FF'x`
+(`F` digits in D2X) for a negative one, and a number that needs more than
+`n` units loses its leftmost ones. An `n` of 0 answers the null string.
+Without an `n`, a non-negative number is written in as few units as it
+takes, and at least one, so that no `'00'x` (or `0`) stands on its left
+unless the number is 0; a negative number raises `SYNTAX 93.927`.
+
+```rexx
+say c2x(d2c(65)) c2x(d2c(65, 3)) c2x(d2c(-65, 3)) c2x(d2c(321, 1)) c2x(d2c(-129, 1))
+say d2x(65) d2x(65, 4) d2x(-65, 4) d2x(321, 2) d2x(-129, 2)
+say c2x(d2c(0)) d2x(0) c2x(d2c(256)) d2x(256) c2x(d2c(-256, 1)) c2x(d2c(-256, 2))
+signal on syntax name a
+say d2c(-1)
+a: say condition('o')~code
+signal on syntax name b
+say d2x(-65)
+b: say condition('o')~code
+```
+
+```output
+41 000041 FFFFBF 41 7F
+41 0041 FFBF 41 7F
+00 0 0100 100 00 FF00
+93.927
+93.927
+```
+
+r[bif.index.conv.decimal]
+The decimal argument of D2C and D2X is a number: a string written as a
+Rexx number, with optional surrounding whitespace, a sign, a period and an
+exponent, whose value is a whole number of at most NUMERIC DIGITS digits.
+Each of these raises `SYNTAX 93.929` in D2C and `SYNTAX 93.928` in D2X: a
+string that is not a number, the null string among them; a number with a
+nonzero fractional part, when it is written with no more digits than
+NUMERIC DIGITS; and a whole number with more digits than NUMERIC DIGITS. The
+value is the number however it is written: `6.5E1` and `65.0` are 65. This
+book does not specify a number written with more digits than NUMERIC DIGITS
+and a fractional part.
+
+```rexx
+say c2x(d2c(' 65 ')) c2x(d2c('+65')) c2x(d2c('6.5E1')) c2x(d2c('65.0')) d2x('0.65E2')
+signal on syntax name a
+say d2c('x')
+a: say condition('o')~code
+signal on syntax name b
+say d2x('')
+b: say condition('o')~code
+signal on syntax name c
+say d2c('65.5')
+c: say condition('o')~code
+signal on syntax name d
+say d2x('1234567890')
+d: say condition('o')~code
+numeric digits 3
+signal on syntax name e
+say d2c(1000)
+e: say condition('o')~code
+say d2x(999) d2x('1E2') d2x('-0')
+```
+
+```output
+41 41 41 41 41
+93.929
+93.928
+93.929
+93.928
+93.929
+3E7 64 0
+```
+
+r[bif.index.conv.decimal.order]
+The checks of a D2C or D2X call run in this order, and the first that fails
+is raised: the form of `n` ([whole-number form](r:conv.whole.form), `SYNTAX
+40.12`); whether the decimal argument is a number at all; the sign of `n`
+(`SYNTAX 93.923`); and last whether the decimal argument is a whole number
+with at most NUMERIC DIGITS digits. A decimal argument that is not a number is therefore
+raised even when `n` is negative, and a number that is not whole, or has too
+many digits, is raised only when `n` is not negative.
+
+```rexx
+signal on syntax name a
+say d2c('x', 'y')
+a: say condition('o')~code
+signal on syntax name b
+say d2c('x', -1)
+b: say condition('o')~code
+signal on syntax name c
+say d2c('1234567890', -1)
+c: say condition('o')~code
+signal on syntax name d
+say d2x('1.5', -1)
+d: say condition('o')~code
+signal on syntax name e
+say d2x('x', -1)
+e: say condition('o')~code
+```
+
+```output
+40.12
+93.929
+93.923
+93.923
+93.928
+```
+
+r[bif.index.conv.digits-limit]
+The answer of C2D and X2D is a whole number written in decimal digits, with
+a leading `-` when it is negative, no leading zero, no period and no
+exponent, and `0` for zero. If the answer has more digits than NUMERIC
+DIGITS, the call raises `SYNTAX 93.936` in C2D and `SYNTAX 93.935` in X2D,
+instead of rounding it; the sign is not a digit. An answer with exactly
+NUMERIC DIGITS digits is allowed.
+
+```rexx
+say c2d('3b9ac9ff'x) c2d(copies('00'x, 20) || '01'x) x2d('0' || 'ff') x2d('f6', 2)
+signal on syntax name a
+say c2d('3b9aca00'x)
+a: say condition('o')~code
+signal on syntax name b
+say x2d('3b9aca00')
+b: say condition('o')~code
+numeric digits 3
+say c2d('03e7'x) c2d('fc19'x, 2) x2d('3e7') x2d('fc19', 4)
+signal on syntax name c
+say c2d('03e8'x)
+c: say condition('o')~code
+signal on syntax name d
+say c2d('fc18'x, 2)
+d: say condition('o')~code
+```
+
+```output
+999999999 1 255 -10
+93.936
+93.935
+999 -999 999 -999
+93.936
+93.936
+```
+
+r[bif.index.conv.deviation.4]
+interrexx does not specify whether the answer of a conversion function is
+the same object as another string of equal value, such as a literal, the
+argument itself when the answer equals it, or the equal answer of another
+call. Through `identityHash`, or as a key of an `IdentityTable` or
+`IdentitySet`, the answer may be either, and a program can rely only on the
+value, which is equal under `==`. ooRexx differs: it often answers a new
+object where interrexx answers the existing one.
+
+```rexx
+s = '6' || '1'
+say (b2x('10000') == '10') (c2x('a') == s) (x2c(s) == 'a')
+say (d2c(97) == 'a') (c2d('') == 0) (c2d(s) == 13873)
+```
+
+```output
+1 1 1
+1 1 1
+```
