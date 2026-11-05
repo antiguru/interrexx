@@ -95,6 +95,7 @@ Xabc Xabc
 > **Note.** A [position](r:conv.position.check) elsewhere must be positive;
 > `n` here counts the characters before the insertion, so 0 is its first
 > value.
+
 r[bif.insert.n.default]
 When `n` is omitted, it is 0: `new` goes before the first character of
 `target`.

@@ -24,8 +24,9 @@ arguments, in that order. `string` is a [string](r:conv.string.null),
 the [builtin call rules](r:bif.index.call.count): two are required and three
 is the most. Unlike [SUBSTR](substr.md), LEFT does not default `length`: it
 is a required argument, so a call without it fails by the
-[call rules](r:bif.index.call.too-few), with `SYNTAX 40.3` when nothing
-follows its place and `SYNTAX 40.5` when a pad does.
+call rules, with `SYNTAX 40.3` when nothing follows its place
+([too few](r:bif.index.call.too-few)) and `SYNTAX 40.5` when a pad does
+([missing](r:bif.index.call.missing)).
 
 ```rexx
 say left('hi yo', 7) '|' 'hi yo'~left(7, '.')
@@ -162,6 +163,7 @@ a: say condition('o')~code
 
 > **Note.** Whether, when and with which code LEFT fails for a `length`
 > whose result cannot be held in memory is not specified.
+
 ## Deviations
 
 r[bif.left.deviation.4]
