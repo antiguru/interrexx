@@ -149,3 +149,44 @@ The ANSI draft (9.3.26 and the other word builtins) separates words by a
 set of blank characters that it leaves to the configuration: the blank and
 any others the configuration names. ooRexx fixes that set as the blank and
 the horizontal tab, and so does this book.
+
+r[bif.words.number]
+Where a word builtin's page calls an argument a word number, that argument
+is a [position](r:conv.position.check) that counts words: the word number
+`n` names word `n` of the string as [the word rule](r:bif.words.split)
+numbers them. A word number greater than the number of words in the string
+is not an error, however large it is; it names no word, and the builtin's
+page says what the builtin answers then.
+
+```rexx
+say '['word('a b', 3)']' wordindex('a b', 3) wordlength('a b', 999999999999999999),
+    wordpos('a', 'a b', 3)
+signal on syntax name e
+say wordindex('a b', 0)
+e: say condition('o')~code
+```
+
+```output
+[] 0 0 0
+93.924
+```
+
+r[bif.words.answer]
+WORDINDEX, WORDLENGTH and WORDPOS each answer a count, of characters or of
+words, and they write it as a whole number in decimal digits only: no sign,
+no leading zero, no period and no exponent, and `0` for zero. The caller's
+NUMERIC DIGITS setting plays no part, so the answer is exact however many
+digits it has.
+
+```rexx
+numeric digits 3
+say wordindex(copies(' ', 1000) || 'a', 1) wordlength(copies('z', 1234), 1),
+    wordpos('y', copies('x ', 1200) || 'y') wordpos('q', 'a b')
+```
+
+```output
+1001 1234 1201 0
+```
+
+The reference manual does not say how these answers are written or whether
+NUMERIC DIGITS applies to them; this follows the observed behaviour.
