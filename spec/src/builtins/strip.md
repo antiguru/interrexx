@@ -25,8 +25,8 @@ arguments, in that order. `string` and `chars` are
 the most.
 
 ```rexx
-x = ' ab '~strip('t')
-say '['strip('  ab  ')']' '[' || x || ']'
+x = ' pq '~strip('t')
+say '['strip('   mn   ')']' '[' || x || ']'
 signal on syntax name a
 say strip('ab', 'Q')
 a: say condition('o')~code
@@ -42,7 +42,7 @@ d: say condition('o')~code
 ```
 
 ```output
-[ab] [ ab]
+[mn] [ pq]
 93.915
 40.4
 40.5
@@ -57,13 +57,14 @@ decides; `option` may go on with any characters, and they change nothing.
 When `option` is omitted, it is `B`.
 
 ```rexx
-say '['strip('  a  ', 'L')']' '['strip('  a  ', 't')']' '['strip('  a  ')']'
-say '['strip('  a  ', 'Leading')']' '['strip('  a  ', 'trailing')']' '['strip('  a  ', 'Both')']'
+say '['strip(' k  l ', 'l')']' '['strip(' k  l ', 'T')']' '['strip(' k  l ')']'
+say '['strip('  a  ', 'Leading')']' '['strip('  a  ', 'trailing')']',
+    '['strip('  a  ', 'Both')']'
 say '['strip('  a  ', 'lx')']' '['strip('  a  ', , )']'
 ```
 
 ```output
-[a  ] [  a] [a]
+[k  l ] [ k  l] [k  l]
 [a  ] [  a] [a]
 [a  ] [a]
 ```
@@ -71,9 +72,8 @@ say '['strip('  a  ', 'lx')']' '['strip('  a  ', , )']'
 r[bif.strip.option.check]
 An `option` whose first character is not one of those six, and an `option`
 that is the null string, raise `SYNTAX 93.915`. No other argument has a
-check, so this is the only error a call with the right argument count and
-no omitted `string` can raise, and it is made whatever `string` and `chars`
-are.
+check, so this is the only check STRIP makes of its own after the argument
+count, and it is made whatever `string` and `chars` are.
 
 ```rexx
 signal on syntax name a
@@ -106,12 +106,11 @@ g: say condition('o')~code
 ```
 
 > **Note.** The reference manual names error 93.915 for a method option that is not
-> one of those allowed. The ANSI draft (9.3.20) allows only `L`, `T` and
-> `B` as the first character of `option`, and makes `chars` one character
-> where ooRexx takes the characters of `chars` as a set, as
-> [the rule below](r:bif.strip.chars) says.
-
-## The result
+> one of those allowed. The ANSI draft (9.3.20) reads `option` the same way,
+> by its first character in either case, but raises 40.21 for a null option
+> and 40.28 for any other bad one, where ooRexx raises 93.915; and it makes
+> `chars` one character, where ooRexx takes the characters of `chars` as a
+> set, as [the rule below](r:bif.strip.chars) says.
 
 r[bif.strip.chars]
 `chars` is the set of unwanted characters: the characters it holds, in any
@@ -134,9 +133,11 @@ say c2x(strip('0b'x || 'a' || '0c'x)) c2x(strip('09'x || ' a ' || '09'x, , ' '))
 0B610C 0920612009
 ```
 
+## The result
+
 r[bif.strip.result]
-STRIP returns `string` without its leading characters, its trailing
-characters, or both, as `option` says. The leading characters removed are
+STRIP returns `string` with the run that `option` selects removed: the run
+at its start, the run at its end, or both. The leading characters removed are
 the longest run at the start of `string` made of characters in the
 [set](r:bif.strip.chars), and the trailing ones the longest such run at the
 end. Characters between them are not touched, whether or not they are in
@@ -144,7 +145,8 @@ the set. A character of the set that is not in such a run, because a
 character outside the set stands between it and the end, stays.
 
 ```rexx
-say '['strip('xxaxbxx', 'L', 'x')']' '['strip('xxaxbxx', 'T', 'x')']' '['strip('xxaxbxx', 'B', 'x')']'
+say '['strip('xxaxbxx', 'L', 'x')']' '['strip('xxaxbxx', 'T', 'x')']',
+    '['strip('xxaxbxx', 'B', 'x')']'
 say '['strip('abcba', 'L', 'ba')']' '['strip('abcba', , 'ba')']' '['strip('  a b  ')']'
 say c2x(strip(' ' || '09'x || 'a', , ' '))
 ```
@@ -170,12 +172,13 @@ say '['strip('')']' '['strip('  ' || '09'x)']' '['strip('', , 'x')']'
 ```
 
 r[bif.strip.chars.null]
-When `chars` is the null string, the set is empty and nothing is removed:
-the result is `string`, for every `option`. A null `chars` is not
-omitted, so it does not give the default set.
+A null `chars` is an empty set, so STRIP removes nothing and returns
+`string`, for every `option`. A null `chars` is not omitted, so it does not
+give the default set.
 
 ```rexx
-say '['strip('  a  ', , '')']' '['strip('  a  ', 'L', '')']' '['strip('  a  ', 'T', '')']'
+say '['strip('  a  ', , '')']' '['strip('  a  ', 'L', '')']',
+    '['strip('  a  ', 'T', '')']'
 ```
 
 ```output

@@ -53,27 +53,40 @@ a b a..b
 40.5
 ```
 
-r[bif.space.defaults]
-When `n` is omitted, it is 1, and when `pad` is omitted, it is the blank,
-`'20'x`. An omitted `n` and an omitted `pad` are independent of each other.
+r[bif.space.n.default]
+When `n` is omitted, it is 1: one fill character goes between each two
+words.
 
 ```rexx
-say space('a b c') space('a b c', , '+') space('a b c', 2)
+say space('a   b    c') space('a b c', , '+')
 ```
 
 ```output
-a b c a+b+c a  b  c
+a b c a+b+c
+```
+
+r[bif.space.pad.default]
+When `pad` is omitted, it is the blank, `'20'x`, whatever `n` is, and an
+omitted `n` does not change that.
+
+```rexx
+say space('a b c', 2) space('a b c', 0) space('a b c', , '+')
+```
+
+```output
+a  b  c abc a+b+c
 ```
 
 ## The result
 
 r[bif.space.result]
 When `string` has at least one word, SPACE returns its words in order,
-each unchanged, with `n` copies of `pad` between each word and the next.
-There is nothing before the first word and nothing after the last. The characters of a word are copied as they are,
-including any that [the word rule](r:bif.index.words.split) places inside
-it, such as a line feed. The whitespace of `string` is not part of the
-result, whether it was blanks or tabs and however long it ran.
+each unchanged, with each pair of neighbouring words separated by `n`
+copies of `pad`. There is nothing before the first word and nothing after
+the last. The characters of a word are copied as they are, including any
+that [the word rule](r:bif.index.words.split) places inside it, such as a
+line feed. The whitespace of `string` is not part of the result, whether it
+was blanks or tabs and however long it ran.
 
 ```rexx
 say '['space('  one two' || '09'x || '09'x || 'three ', 3, '-')']'

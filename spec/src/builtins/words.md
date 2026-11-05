@@ -48,14 +48,14 @@ d: say condition('o')~code
 ## The result
 
 r[bif.words.result]
-WORDS returns the number of words in `string`, the largest word number
+WORDS returns how many words `string` has, which is the largest word number
 that [the word rule](r:bif.index.words.split) gives it. The number is
 [written as a count](r:bif.index.count.answer), and whether it is a new
 object is [not specified](r:bif.index.count.answer.deviation.4).
 
 ```rexx
 numeric digits 3
-say words('Now is the time') words(copies('w ', 1500)) words(' a ' || '09'x)
+say words('four short words here') words(copies('w ', 1500)) words(' a ' || '09'x)
 ```
 
 ```output
@@ -67,7 +67,7 @@ A string with no words, the null string or one of only whitespace, has 0
 words.
 
 ```rexx
-say words('') words('   ') words('09'x || ' ' || '09'x)
+say words('') words('  ') words('09'x || ' ' || '09'x)
 ```
 
 ```output
@@ -103,8 +103,9 @@ say words(.object~new) words(.object~new~string)
 2 2
 ```
 
-> **Note.** The ANSI draft (9.3.29) defines WORDS as the largest `k` for which
-> `SUBWORD(string, k)` is not the null string, which counts the same words.
+> **Note.** The ANSI draft (9.3.29) defines WORDS as the number of leading
+> word numbers `k`, counting from 1, for which `SUBWORD(string, k)` is not the
+> null string; it is 0 when there is no word. This counts the same words.
 
 ## Deviations
 
@@ -113,14 +114,19 @@ say words(.object~new) words(.object~new~string)
 > every builtin.
 
 r[bif.words.deviation.4]
-The result of WORDS is a count, and [the identity rule for
-counts](r:bif.index.count.answer.deviation.4) applies to it.
+interrexx does not specify whether the result of WORDS is the same object as
+another string of equal value: as an equal number the program already holds,
+or a literal such as `'3'`, or the equal answer of another call. Through
+`identityHash`, or as a key of an `IdentityTable` or `IdentitySet`, the answer
+may be either, and a program can rely only on the value, which is equal under
+`==`. ooRexx differs: it often answers a new object where interrexx answers
+the existing one.
 
 ```rexx
-n = words('a b') + 0
-say (words('a b c') == 3) (words('x y') == n)
+n = words('a b') + 1
+say (words('a b c') == n) (words('a b c') == '3') (words('x y') == words('p q'))
 ```
 
 ```output
-1 1
+1 1 1
 ```
