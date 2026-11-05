@@ -323,8 +323,6 @@ OWNERSHIP").
 | `operators.rex` | `+ - * / % // **` across sign combinations |
 | `comparison.rex` | numeric vs strict comparison, `<<` and `>>` |
 | `fuzz.rex` | `NUMERIC FUZZ` altering `=` but not `==` |
-| `format_trunc.rex` | `FORMAT()` in all argument forms, `TRUNC()` |
-| `datatype_num.rex` | `DATATYPE` `N`/`W`/default |
 | `exponential.rex` | E-notation thresholds, which are asymmetric |
 | `errors.rex` | error numbers 42, 41 and 26 |
 | `canonical_form.rex` | trailing-zero preservation; zero collapsing |
