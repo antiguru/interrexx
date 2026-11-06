@@ -285,20 +285,25 @@ main x+ main y LIT
 ## The list form
 
 r[instr.procedure.list]
-A name in parentheses is not exposed as it stands. The name may be a simple, a
-stem or a compound symbol. It is exposed first, as a name outside parentheses
-is, and its value in the routine after that is converted to a string as [the
-DROP list rule](r:instr.drop.list) describes, split at
+A name in parentheses is exposed as a name outside them is, and its value in
+the routine after that is a list of further names. The name may be a simple, a
+stem or a compound symbol. The value is converted to a string as [the DROP
+list rule](r:instr.drop.list) describes, split at
 [whitespace](r:conv.string.whitespace), and each word is exposed as if it had
 been written in the clause, as a simple, stem or compound symbol. A list that
-is empty or all whitespace exposes nothing. The variable that holds the list
-is exposed too, so the routine sees it and an assignment to it reaches the
-caller. For a compound name whose tail has a variable, the tail is resolved
-with the routine's variables. While that variable is still the routine's own
-unset one, the list is the compound name itself, in capitals and with the tail
-as written, which is then exposed as a name of the clause would be; whether an
-earlier name of the clause can change that is the matter of [the deviation
-rule](r:instr.procedure.deviation.70). Blanks may stand inside the
+is empty or all whitespace exposes nothing. The routine sees the variable that
+holds the list, and an assignment to it reaches the caller. For a compound
+name whose tail has a variable, the name exposes the caller's variable,
+with the tail resolved in the caller as [the compound
+rule](r:instr.procedure.compound) says. The list is the value of the name in
+the routine, and the tail is resolved there, with the routine's own variables.
+Where the tail variable is unset in the routine, that value is the compound
+with the tail as written, in capitals, such as `A.I`. This is the exposed
+variable only when the tail variable is unset in the caller too; then the list
+is the caller's value of it. Otherwise it is the routine's own unset variable,
+whose value is its name, and that name is exposed as a name of the clause
+would be. Whether an earlier name of the clause can change that is the
+matter of [the deviation rule](r:instr.procedure.deviation.70). Blanks may stand inside the
 parentheses, and one list may follow another without a blank.
 
 ```rexx
@@ -340,6 +345,19 @@ f: procedure expose (a.i)
 
 ```output
 LIT VAR LIT A.I
+```
+
+```rexx
+a.i = 'x y'; x = 'X'; y = 'Y'
+call f
+exit
+f: procedure expose (a.i)
+  say symbol('x') symbol('y') symbol('a.i') a.i
+  return
+```
+
+```output
+VAR VAR VAR x y
 ```
 
 r[instr.procedure.list.error]

@@ -42,7 +42,9 @@ say digits()
 numeric fuzz 1 + 1
 say fuzz()
 signal on syntax name e
-interpret 'numeric digits 5, 6'
+say 'before'
+numeric digits 5, 6
+say 'not reached'
 e: say condition('o')~code digits()
 ```
 
@@ -52,6 +54,7 @@ e: say condition('o')~code digits()
 3
 100
 2
+before
 26.5 100
 ```
 

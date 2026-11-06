@@ -175,11 +175,14 @@ r[instr.exit.code]
 The value of the main program, which is that of its EXIT or of a RETURN that
 ends it, becomes the exit code of the process in this way. A value that is
 not a string is first replaced by a string as [the conversion
-rule](r:conv.string.object) says. A string that has the form of a
+rule](r:conv.string.object) says; where that rule refuses the conversion, as
+for an object whose `MAKESTRING` or `STRING` method is private, the exit code
+is 0 and no error is raised. A string that has the form of a
 [whole-number argument](r:conv.whole.form), and that is a whole number from
 -2147483648 to 2147483647, is handed to the host as that integer. Blanks
-around the number, an exponent, and a decimal part of zeros do not matter.
-What a host makes of an integer outside 0 to 255 is not specified. Any other
+around the number, an exponent, and a decimal part of zeros do not matter. An
+integer from 0 to 255 is the exit status itself. What a host makes of an
+integer outside 0 to 255 is not specified. Any other
 value gives the exit code 0 and raises no error: no value, a fraction, a
 string that is no number, a whole number outside the 32-bit range, and an
 object whose string is none of these. A string of more than 18 digits, zeros
@@ -199,6 +202,18 @@ exit 5
 
 ```output rc=5
 done
+```
+
+```rexx
+exit .hidden~new
+::class hidden
+::method makestring private
+  return '25'
+::method string
+  return '24'
+```
+
+```output rc=0
 ```
 
 ```rexx
