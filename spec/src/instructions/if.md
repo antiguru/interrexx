@@ -16,7 +16,7 @@ a branch needs several. The keywords THEN and ELSE end the clause they are in,
 so a branch may follow on the same line, as [the lexical
 rule](r:lex.clauses.implied) says. This page specifies how the test is read,
 which ELSE pairs with which IF, what a branch may be, and the errors. The
-chapter on [SELECT](select.md) is the instruction for more than two branches.
+[SELECT](select.md) page is the instruction for more than two branches.
 
 ## What it does
 
@@ -28,6 +28,8 @@ the ELSE instruction when there is an ELSE. The branch is one instruction: a
 second instruction on the same line or the next line is not part of it, so it
 runs whatever the test said. A DO group, a SELECT or another IF is a single
 instruction, so a branch that holds one of them can hold many clauses.
+THEN need not stand in the clause of the expression: [the rule for
+THEN](r:instr.if.then) says where it may begin.
 
 ```rexx
 n = 3
@@ -55,6 +57,32 @@ e2
 end
 ```
 
+r[instr.if.then]
+THEN may begin a later clause than the expression. Any number of null clauses
+may stand between the expression and THEN, so a line end, a semicolon, blank
+lines and comments there do not end the IF, and a THEN on the next line
+belongs to the IF above it. The same holds for the WHEN of a
+[SELECT](r:instr.select.run). The null clauses after THEN are the subject of
+[the rule for branches](r:instr.if.branch).
+
+```rexx
+if 1
+then say 'a'
+if 1; then say 'b'
+if 1;; then say 'c'
+if 1 /* c */
+
+  /* c2 */
+then say 'd'
+```
+
+```output
+a
+b
+c
+d
+```
+
 ## The value
 
 r[instr.if.value]
@@ -63,11 +91,13 @@ The value of the expression must be a string that is exactly `0` or exactly
 for their operands: `01`, `1.0`, a blank around the digit, the null string and
 every other text are refused. An IF that gets another value raises
 `SYNTAX 34.1`, and no branch runs. A value that is an object and not a string
-counts by its string value, so an object whose string value is `1` takes the
-THEN branch, and one that has any other string value, such as `.nil`, raises
-`34.1`. The test does not look at the number form: `1 + 0` and `5 - 5` are
-logical because they come out as `1` and `0`, and `01` is not logical because
-it is the text `01`.
+counts as the string it converts to, which [the conversion
+rule](r:conv.string.object) gives: the answer of its `MAKESTRING` method when
+it has one, and the answer of its `STRING` method otherwise. An object that
+converts to `1` takes the THEN branch, and one that converts to any other
+string, such as `.nil`, raises `34.1`. The test does not look at the number
+form: `1 + 0` and `5 - 5` are logical because they come out as `1` and `0`,
+and `01` is not logical because it is the text `01`.
 
 ```rexx
 call try '1 + 0'
@@ -80,6 +110,7 @@ call try '01'
 call try '.nil'
 call try '(1 = 1)'
 call try '.probe~new'
+call try '.both~new'
 exit
 try:
   signal on syntax name e
@@ -89,6 +120,11 @@ try:
 e: say arg(1) '=>' condition('o')~code
   return
 ::class probe
+::method string
+  return 1
+::class both
+::method makestring
+  return 0
 ::method string
   return 1
 ```
@@ -104,6 +140,7 @@ e: say arg(1) '=>' condition('o')~code
 .nil => 34.1
 (1 = 1) => then
 .probe~new => then
+.both~new => else
 ```
 
 r[instr.if.list]
@@ -191,16 +228,16 @@ if 1 then say 1; else say 2; else say 3 => 8.2
 ## What a branch is
 
 r[instr.if.branch]
-A null clause after THEN or after ELSE is skipped, and the instruction of the
-branch is the next clause that is not null, so `then;` followed by a line
-holds that line's instruction. A branch with no instruction is an error, and
-the do-nothing instruction is [NOP](nop.md). A THEN that is followed directly
-by ELSE has the ELSE as its instruction, and an ELSE with no IF waiting is
-`SYNTAX 8.2`, so `if 1 then ; else say 'f'` raises `8.2` and the same IF with
-`nop` after THEN does not. The word ELSE after THEN, with a `=` next to it, is
-a variable assignment, as [the lexical rule](r:lex.clauses.assignment) says.
-A label cannot be a branch: [the label rule](r:lex.clauses.label) gives its
-error.
+The null clauses after THEN or after ELSE are passed over, as [the null-clause
+rule](r:lex.clauses.null) says, so `then;` followed by a line holds that
+line's instruction. A branch with no instruction is an error, and the
+do-nothing instruction is [NOP](nop.md). An ELSE directly after THEN, or after
+THEN and null clauses, leaves the THEN without an instruction, so the ELSE has
+no IF waiting for it and raises `SYNTAX 8.2`: `if 1 then ; else say 'f'`
+raises `8.2` and the same IF with `nop` after THEN does not. The word ELSE
+after THEN, with a `=` next to it, is a variable assignment, as [the lexical
+rule](r:lex.clauses.assignment) says. A label cannot be a branch: [the label
+rule](r:lex.clauses.label) gives its error.
 
 ```rexx
 if 1 then

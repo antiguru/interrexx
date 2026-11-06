@@ -87,13 +87,18 @@ return
 
 r[instr.call.search]
 A name written as a symbol is read in upper case and searched in this order: a
-label of the program with that name, then a built-in function, then an
-external routine. A label wins over a built-in function of the same name, so
-a program can replace a built-in one. A name written as a string is used as it
-is written and is not searched among the labels at all, so the search starts
-with the built-in functions, whose names are in capitals, and goes on to the
-external routines. A string that is not in capitals therefore never reaches a
-built-in function, and a label of the same text is not found by it either. How
+label of the code that holds the CALL, then a built-in function, then an
+external routine. That code is the main program, or the body of the one
+routine or method that the CALL is in, so the labels of the other parts of the
+file are not searched. A label wins over a built-in function of the same name,
+so a program can replace a built-in one. A name written as a string is used as
+it is written and is not searched among the labels at all, so the search
+starts with the built-in functions, whose names are in capitals, and goes on
+to the external routines. A string that is not in capitals therefore never
+reaches a built-in function, and a label of the same text is not found by it
+either: with the labels `'myLab':` and `mylab:`, the string `'myLab'` finds
+neither. The labels of a method are the ones that a CALL in it finds, as the
+second example shows. How
 external routines are found is the subject of the environment chapter. A name
 that nothing answers to raises `SYNTAX 43.1` when the CALL runs.
 
@@ -107,8 +112,16 @@ say 'expression:' result
 call try '"length"'
 call try '("length")'
 call try 'nosuch'
+call try '"myLab"'
+call try '"MYLAB"'
+call try '(n)'
+call try 'mylab'
+n = 'myLab'
+call try '(n)'
 exit
 length: return 'label'
+'myLab': return 'string label'
+mylab: return 'symbol label'
 try:
   signal on syntax name e
   interpret 'call' arg(1) '"abc"'
@@ -125,16 +138,42 @@ expression: label
 "length" => 43.1
 ("length") => 43.1
 nosuch => 43.1
+"myLab" => 43.1
+"MYLAB" => 43.1
+(n) => 43.1
+mylab => ok symbol label
+(n) => ok string label
+```
+
+```rexx
+.c~new~m
+exit
+mainlab: say 'main label'
+::class c
+::method m
+  call inner 'x'
+  say 'method' sigl result
+  signal on syntax name e
+  call mainlab
+e: say 'method' condition('o')~code
+  return
+inner: return 'inner' arg(1)
+```
+
+```output
+method 6 inner x
+method 43.1
 ```
 
 r[instr.call.expr]
-`CALL (expression)` evaluates the expression before any argument and uses its
-string value as the name. The text is not changed to upper case, so it has to
-match the label or the built-in function exactly: `GREET` matches a label in
-the example, `SUBSTR` the built-in function, and a lower-case value matches
-neither.
-Unlike a name written as a string, the value is searched among the labels
-first, so the order of [the search rule](r:instr.call.search) holds for it.
+`CALL (expression)` evaluates the expression first, and the arguments after
+it, and uses the string the value converts to as the name, by [the conversion
+rule](r:conv.string.object): the answer of its `MAKESTRING` method when it has
+one and of its `STRING` method otherwise. The name is compared as it is, so
+`GREET` matches a label in the example, `SUBSTR` the built-in function, and a
+lower-case value matches neither. Unlike a name written as a string, the value
+is searched among the labels first, so the order of [the search
+rule](r:instr.call.search) holds for it.
 
 ```rexx
 n = 'GREET'
@@ -143,8 +182,12 @@ call ('SUBSTR') 'abcdef', 3, 2
 say result
 call try '"greet"'
 call try 'n || "x"'
+call (.z~new)
+call (.y~new)
 exit
 greet: say 'hello' arg(1); return
+cms: say 'makestring'; return
+cst: say 'string'; return
 try:
   signal on syntax name e
   interpret 'call (' || arg(1) || ') 1'
@@ -152,6 +195,14 @@ try:
   return
 e: say arg(1) '=>' condition('o')~code
   return
+::class z
+::method makestring
+  return 'CMS'
+::method string
+  return 'CST'
+::class y
+::method string
+  return 'CST'
 ```
 
 ```output
@@ -159,6 +210,8 @@ hello world
 cd
 "greet" => 43.1
 n || "x" => 43.1
+makestring
+string
 ```
 
 ## What the call leaves
@@ -199,18 +252,45 @@ quiet: LIT RESULT
 function: kept
 ```
 
+r[instr.call.restore]
+The settings of an internal routine are its own. When NUMERIC settings, the
+trace setting or the default environment of ADDRESS are changed inside the
+routine, the caller has the ones it had before the CALL when the routine
+returns, whether or not the routine starts with PROCEDURE. For NUMERIC, [the
+scope rule](r:num.settings.call) says it. The same holds for the trace
+setting and the address environment, which the TRACE and ADDRESS pages
+specify, and the traps of conditions that the conditions chapter specifies.
+
+```rexx
+numeric digits 5
+trace o
+address foo
+call s
+say digits() 1/3 address()
+exit
+s: numeric digits 3; trace r; address bar
+  return
+```
+
+```output
+5 0.33333 FOO
+```
+
 r[instr.call.sigl]
 A CALL of an internal routine sets `SIGL`, in the variable scope of the
 caller, to the line number of the CALL clause, which is the line where the
 clause starts when it runs over several lines. A routine that starts with
 PROCEDURE has its own scope and sees `SIGL` only if it exposes it. A CALL of a
-built-in function or of an external routine does not set it. [The SIGNAL
+built-in function or of an external routine does not set it, and an external
+routine has a scope of its own that holds no `SIGL`. [The SIGNAL
 rule](r:instr.signal.sigl) says what SIGNAL sets.
 
 ```rexx
 say 'start' sigl
 call abs 1
 say 'builtin' sigl
+call ext
+say 'external' sigl
 call sub
 say 'sub' sigl
 call psub
@@ -226,17 +306,21 @@ psub: procedure
 esub: procedure expose sigl
   say 'in esub' sigl
   return
+::routine ext
+  say 'in ext' symbol('sigl')
 ```
 
 ```output
 start SIGL
 builtin SIGL
-in sub 4
-sub 4
+in ext LIT
+external SIGL
+in sub 6
+sub 6
 in psub LIT
-in esub 7
-in sub 8
-two lines 8
+in esub 9
+in sub 10
+two lines 10
 ```
 
 ## Errors
@@ -287,14 +371,15 @@ call nosuch 1 => 43.1
 r[instr.call.on]
 `CALL ON condition` enables the trap of a condition and `CALL OFF condition`
 disables it, and neither calls a routine. The condition is ERROR, FAILURE,
-HALT or NOTREADY, or ANY, or USER followed by the name of a user condition,
-a symbol taken as written. ON may be followed by `NAME` and a routine name,
-a symbol or a string, and the default name is the name of the condition. The
-routine is not looked for when the trap is enabled, so a CALL ON for a name
-that is not a routine is not an error then. What a trap does when its
-condition occurs belongs to the chapter on conditions. The conditions that
-only SIGNAL can trap are not accepted: NOVALUE, SYNTAX, LOSTDIGITS, NOMETHOD
-and NOSTRING raise `SYNTAX 25.1` after ON and `25.2` after OFF.
+HALT or NOTREADY, or ANY, or USER followed by the name of a user condition, a
+symbol read as a constant in upper case, not a string. ON may be followed by
+`NAME` and a routine name, a symbol or a string, and the default name is the
+name of the condition. The routine is not looked for when the trap is enabled,
+so a CALL ON for a name that is not a routine is not an error then. What a
+trap does when its condition occurs belongs to the chapter on conditions. The
+conditions that only SIGNAL can trap are not accepted: NOVALUE, SYNTAX,
+LOSTDIGITS, NOMETHOD and NOSTRING raise `SYNTAX 25.1` after ON and `25.2`
+after OFF.
 
 ```rexx
 do c over .array~of('error', 'failure', 'halt', 'notready', 'any')
@@ -321,17 +406,20 @@ done
 ```
 
 r[instr.call.on.error]
-The errors of the ON and OFF forms are found when the program is read. A
-CALL ON with no condition raises `SYNTAX 20.911` and an OFF `20.912`, and a
-USER with no name `20.915`. A word that is not a condition raises `25.1` after
-ON and `25.2` after OFF. A NAME with no routine name raises `19.3`, data after
-the name raises `21.903` on an ON, and any NAME on an OFF raises `21.904`. A
-word after the condition that is not NAME raises `25.914`.
+The errors of the ON and OFF forms are found when the program is read. A CALL
+ON with no condition raises `SYNTAX 20.911` and an OFF `20.912`, and a USER
+with no name, or with a string for the name, `20.915`. A word that is not a
+condition raises `25.1` after ON and `25.2` after OFF. A NAME with no routine
+name raises `19.3`, data after the name raises `21.903` on an ON, and any NAME
+on an OFF raises `21.904`. A word after the condition that is not NAME raises
+`25.914`.
 
 ```rexx
 call try 'call on'
 call try 'call off'
 call try 'call on user'
+call try 'call on user "foo"'
+call try 'call off user "foo"'
 call try 'call on syntax'
 call try 'call off novalue'
 call try 'call on foo'
@@ -353,6 +441,8 @@ e: say arg(1) '=>' condition('o')~code
 call on => 20.911
 call off => 20.912
 call on user => 20.915
+call on user "foo" => 20.915
+call off user "foo" => 20.915
 call on syntax => 25.1
 call off novalue => 25.2
 call on foo => 25.1

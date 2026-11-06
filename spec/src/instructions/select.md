@@ -1,7 +1,7 @@
 ---
 element: SELECT
 kind: instruction
-syntax: "SELECT [LABEL name] [CASE expression]; WHEN expression [, expression]... THEN instruction ... [OTHERWISE [instructions]] END [name]"
+syntax: "SELECT [LABEL name] [CASE expression]; WHEN expression [, expression]... [;] THEN instruction ... [OTHERWISE [instructions]] END [name]"
 ansi: "6.3.2.17, 8.3.24"
 rexxref: "Keyword Instructions > SELECT"
 deviations: [39]
@@ -24,9 +24,10 @@ SELECT evaluates the expressions of its WHEN clauses from the first to the
 last, and it stops at the first one that is true. The instruction after the
 THEN of that clause runs, and control then passes to the clause after the END
 of the SELECT, so the WHEN clauses after it are not evaluated and the
-OTHERWISE part does not run. The WHEN clauses and the instruction after each
-THEN follow [the rules of IF](r:instr.if.branch) for null clauses and for
-the implied semicolons after THEN.
+OTHERWISE part does not run. THEN may begin a later clause than the
+expression of its WHEN, as [the rule for THEN](r:instr.if.then) says, and the
+instruction after each THEN follows [the rules of IF](r:instr.if.branch) for
+null clauses and for the implied semicolons after THEN.
 
 ```rexx
 n = 7
@@ -52,11 +53,11 @@ r[instr.select.when]
 In a SELECT without CASE, the expression of a WHEN must have the value `0` or
 `1`, as [the value of an IF](r:instr.if.value) must, and any other value
 raises `SYNTAX 34.2`. A WHEN can hold a list of expressions separated by
-commas. The list is true when every expression is, the expressions are
-evaluated from left to right until one is false, and an expression of the list
-that is evaluated and is not `0` or `1` raises `SYNTAX 34.6`. The error is
-raised when the WHEN is reached, so a WHEN that comes after a true one is
-never evaluated and cannot raise it.
+commas, and the list is true and is evaluated as [the list of an
+IF](r:instr.if.list) is. An expression of the list that is evaluated and
+is not `0` or `1` raises `SYNTAX 34.6`. The error is raised when the WHEN is
+reached, so a WHEN that comes after a true one is never evaluated and cannot
+raise it.
 
 ```rexx
 call try 'select; when 2 then nop; end'
@@ -147,7 +148,9 @@ first true comparison. The comparison is the strict one, so `1` does not equal
 `1.0`, a blank counts, and the case of letters counts. The expressions need
 not be `0` or `1`, and no value of a WHEN raises `SYNTAX 34.2`, so a case that
 matches no WHEN raises `SYNTAX 7.3` as above. When the case value is an
-object, the `==` message goes to it.
+object, the `==` message goes to it, and its answer must be `0` or `1`: any
+other answer, such as the text `banana` or the number `2`, raises
+`SYNTAX 34.905`.
 
 ```rexx
 x = 'b'
@@ -173,6 +176,8 @@ select case .probe~new('A')
   when .probe~new('A') then say 'matched A'
 end
 call try 'select case 3; when 1, 2 then nop; end'
+call try 'select case .bad~new; when 1 then nop; end'
+call try 'select case .num~new; when 1 then nop; end'
 exit
 f: say 'f('arg(1)')'; return arg(1)
 try:
@@ -190,6 +195,12 @@ e: say arg(1) '=>' condition('o')~code
   use arg other
   say 'receiver' n 'argument' other~n
   return n = other~n
+::class bad
+::method '=='
+  return 'banana'
+::class num
+::method '=='
+  return 2
 ```
 
 ```output
@@ -204,6 +215,8 @@ receiver A argument B
 receiver A argument A
 matched A
 select case 3; when 1, 2 then nop; end => 7.3
+select case .bad~new; when 1 then nop; end => 34.905
+select case .num~new; when 1 then nop; end => 34.905
 ```
 
 r[instr.select.case.syntax]
@@ -291,7 +304,9 @@ select; when 1 then nop; end 5 => 10.7
 
 r[instr.select.body]
 Between the SELECT and its OTHERWISE or END, the only clauses are WHEN
-clauses with their instruction, and null clauses. The instruction after a THEN
+clauses with their instruction, and null clauses. A label there raises
+`SYNTAX 47.4` when the program is read, as [the label
+rule](r:lex.clauses.label) says. The instruction after a THEN
 is one instruction, which may be a DO group, an IF or another SELECT, so a
 second instruction raises `SYNTAX 7.2` when the program is read. In an IF in
 the instruction, an ELSE that follows pairs with that IF, as [the ELSE

@@ -21,15 +21,17 @@ SIGNAL's role there.
 ## The label
 
 r[instr.signal.label]
-`SIGNAL name` continues the program at the first label that has the text of
-the name. A name written as a symbol is read in upper case, and a name written
-as a string is used as it is written, so a label written as a string with
-lower-case letters is found by the same string and not by a symbol. A symbol
-is a constant here: its value as a variable plays no part, and a number is a
-symbol too. When no label has the name, the instruction raises `SYNTAX 16.1`.
-The error is raised when the SIGNAL runs, so the clauses before it have run.
-Which label is the first of several of one name is [the label
-rule](r:lex.clauses.label).
+`SIGNAL name` continues at the first label that has the text of the name,
+among the labels of the code that holds the SIGNAL: the main program, or the
+body of the one routine or method that the SIGNAL is in. A name written as a
+symbol is read in upper case, and a name written as a string is used as it is
+written. [The label rule](r:lex.clauses.label) says which labels these find
+and which of several of one name is the first. A symbol is a constant here:
+its value as a variable plays no part. When no label has the name, the
+instruction raises `SYNTAX 16.1`. The error is raised when the SIGNAL runs, so
+the clauses before it have run. A label of the main program is therefore not
+one that a method or a routine can reach, and the labels of a method are not
+those of the main program.
 
 ```rexx
 signal Go
@@ -65,17 +67,42 @@ mixed => 16.1
 nosuch => 16.1
 ```
 
+```rexx
+.c~new~m
+exit
+mainlab: say 'main label'
+::class c
+::method m
+  signal on syntax name e
+  signal mainlab
+e: say 'method' condition('o')~code
+  signal here
+  say 'skipped'
+here: say 'method label'
+```
+
+```output
+method 16.1
+method label
+```
+
 r[instr.signal.value]
-`SIGNAL VALUE expression` evaluates the expression and uses its string value
-as the name. The text is not changed to upper case, so it has to be the text
-of the label exactly: a symbol label is found only by a value in capitals. The
-word VALUE may be left out when the expression starts with a token that is
-neither a symbol nor a string, such as a parenthesis or an operator, because
-a symbol or a string right after SIGNAL is the name itself. A value that
-matches no label raises `SYNTAX 16.1`, and so does one that is not a name at
-all, such as `-1`.
+`SIGNAL VALUE expression` evaluates the expression and uses the string it
+converts to as the name, by [the conversion rule](r:conv.string.object): the
+answer of its `MAKESTRING` method when it has one and of its `STRING` method
+otherwise. The value is compared with the labels as it is, so a lower-case
+value finds no symbol label, which is written in capitals. A token after
+SIGNAL that is neither a symbol nor a string, such as a parenthesis, starts an
+expression, so VALUE is needed only when the expression itself starts with a
+symbol or a string, which would otherwise be the name. A value that matches
+no label raises `SYNTAX 16.1`, and so does one that is not a name at all, such
+as `-1`.
 
 ```rexx
+signal value .name~new
+say 'skipped'
+ms: say 'at ms'
+st: say 'at st'
 name = 'DEST'
 signal value name
 say 'skipped'
@@ -96,9 +123,16 @@ try:
   interpret 'signal' arg(1)
 e: say arg(1) '=>' condition('o')~code
   return
+::class name
+::method makestring
+  return 'MS'
+::method string
+  return 'ST'
 ```
 
 ```output
+at ms
+at st
 at dest
 at dest2
 at dest3
@@ -148,8 +182,10 @@ signal value => 35.915
 r[instr.signal.ends]
 A jump ends every DO, LOOP, SELECT and IF that is open in the routine that
 holds the SIGNAL, without running their tests and without stepping a control
-variable, which keeps its value. A LEAVE after the jump therefore raises
-`SYNTAX 28.1` unless a loop of its own is open. The blocks of the callers of
+variable, which keeps its value. A loop that was ended is not resumed, and a
+jump to a label before a loop runs the loop afresh. A label cannot stand
+inside a loop, as [the label rule](r:lex.clauses.label) says, so a SIGNAL
+cannot enter one. The blocks of the callers of
 the routine are not ended: a routine that jumps inside itself returns to a
 caller that is still in its loop. A SIGNAL in the text of an INTERPRET also
 leaves the text, as [the INTERPRET rule](r:instr.interpret.transfer) says.
@@ -167,7 +203,14 @@ do j = 1 to 3
   end
 end
 out: say 'out' j
-leave
+n = 0
+top:
+do k = 1 to 3
+  n = n + 1
+  if n = 2 then signal top
+  say n k
+end
+say 'again' n k
 exit
 sub:
   do 2
@@ -177,13 +220,18 @@ done: say 'done' i
   return
 ```
 
-```output rc=228
+```output
 done 1
 caller loop 1
 done 2
 caller loop 2
 end 3
 out 2
+1 1
+3 1
+4 2
+5 3
+again 5 4
 ```
 
 ## What it sets
@@ -248,7 +296,8 @@ r[instr.signal.on]
 `SIGNAL ON condition` enables the trap of a condition, and
 `SIGNAL OFF condition` disables it. The condition is ERROR, FAILURE, HALT,
 LOSTDIGITS, NOMETHOD, NOSTRING, NOTREADY, NOVALUE, SYNTAX or ANY, or USER
-followed by the name of a user condition, a symbol that is taken as written.
+followed by the name of a user condition, which is a symbol read as a constant
+in upper case, so `user foo` names the condition `USER FOO`, and not a string.
 ON may be followed by `NAME` and a label, a symbol or a string, that the trap
 goes to, and the default label is the name of the condition. The label is not
 looked for when the trap is enabled, so an ON for a label that does not exist
@@ -286,18 +335,34 @@ any on and off
 done
 ```
 
+```rexx
+signal on user foo name h
+call raiser
+h: say condition('c')
+exit
+::routine raiser
+  raise user foo
+```
+
+```output
+USER FOO
+```
+
 r[instr.signal.on.error]
 The errors of the ON and OFF forms are found when the program is read. A
-SIGNAL ON with no condition raises `SYNTAX 20.911` and an OFF `20.912`, and
-a USER with no name `20.915`. A word that is not a condition raises `25.3`
-after ON and `25.4` after OFF. A NAME with no label raises `19.3`. Data after
-the label raises `21.903` on an ON and any NAME on an OFF raises `21.904`. A
-word after the condition that is not NAME raises `25.915`.
+SIGNAL ON with no condition raises `SYNTAX 20.911` and an OFF `20.912`, and a
+USER with no name, or with a string for the name, `20.915`. A word that is not
+a condition raises `25.3` after ON and `25.4` after OFF. A NAME with no label
+raises `19.3`. Data after the label raises `21.903` on an ON and any NAME on
+an OFF raises `21.904`. A word after the condition that is not NAME raises
+`25.915`.
 
 ```rexx
 call try 'signal on'
 call try 'signal off'
 call try 'signal on user'
+call try 'signal on user "foo"'
+call try 'signal off user "foo"'
 call try 'signal on foo'
 call try 'signal off foo'
 call try 'signal on error name'
@@ -318,6 +383,8 @@ e: say arg(1) '=>' condition('o')~code
 signal on => 20.911
 signal off => 20.912
 signal on user => 20.915
+signal on user "foo" => 20.915
+signal off user "foo" => 20.915
 signal on foo => 25.3
 signal off foo => 25.4
 signal on error name => 19.3
