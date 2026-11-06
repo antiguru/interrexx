@@ -70,17 +70,16 @@ c: say condition('o')~code
 r[bif.x2b.result]
 The answer has four binary digits for each hexadecimal digit of `hex_string`,
 in order: the digits of the hexadecimal digit's value, with `0` digits on
-the left to make four. The answer has no whitespace in it, and four times as
-many digits as `hex_string` has, not counting its whitespace. Leading zeros
-are kept, and a letter has the answer of its capital.
+the left to make four. Leading zeros are kept, a letter has the answer of its
+capital, and whitespace in `hex_string` leaves no trace in the answer.
 
 ```rexx
-say x2b('0') x2b('1') x2b('9') x2b('a') x2b('F') x2b('00ff') x2b('c3')
+say x2b('0') x2b('1') x2b('9') x2b('a') x2b('F') x2b('00ff') x2b('d9')
 say length(x2b('1 23 45')) x2b('1 23')
 ```
 
 ```output
-0000 0001 1001 1010 1111 0000000011111111 11000011
+0000 0001 1001 1010 1111 0000000011111111 11011001
 20 000100100011
 ```
 
@@ -123,8 +122,9 @@ A5F 00FF []
 
 r[bif.x2b.deviation.4]
 interrexx does not specify whether the answer of X2B is the same object as
-another string of equal value, as [the shared rule](r:bif.index.conv.deviation.4)
-says for every conversion function. A program can rely only on the value,
+another string of equal value, as
+[the shared rule](r:bif.index.conv.deviation.4) says for every conversion
+function. A program can rely only on the value,
 which is equal under `==`.
 
 ```rexx

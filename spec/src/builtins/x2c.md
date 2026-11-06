@@ -75,17 +75,17 @@ of its 2 digits, from `'00'x` to `'FF'x`, and a letter is read in either
 case.
 
 ```rexx
-say x2c('48656c6C6f') c2x(x2c('00ff7F80')) length(x2c('41 42 43'))
+say x2c('52657878') c2x(x2c('00ff7F80')) length(x2c('41 42 43'))
 say x2c('4a 4B') x2c('4A4b')
 ```
 
 ```output
-Hello 00FF7F80 3
+Rexx 00FF7F80 3
 JK JK
 ```
 
 r[bif.x2c.partial]
-When the number of digits is odd, the leftmost group has one digit and is
+When the number of digits is odd, the first digit stands alone and is
 read as if a `0` digit stood on its left. The answer has `ceil(n/2)`
 characters for `n` digits.
 
@@ -139,8 +139,9 @@ A5F0 00FF 0A5F []
 
 r[bif.x2c.deviation.4]
 interrexx does not specify whether the answer of X2C is the same object as
-another string of equal value, as [the shared rule](r:bif.index.conv.deviation.4)
-says for every conversion function. A program can rely only on the value,
+another string of equal value, as
+[the shared rule](r:bif.index.conv.deviation.4) says for every conversion
+function. A program can rely only on the value,
 which is equal under `==`.
 
 ```rexx

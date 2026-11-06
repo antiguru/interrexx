@@ -542,8 +542,8 @@ f: say condition('o')~code
 93.931
 ```
 
-> **Note.** The reference manual says whitespace may not lead or trail, and that groups
-> are at 4-digit boundaries for binary strings and at byte boundaries for
+> **Note.** The reference manual says whitespace may not lead or trail, and
+> that groups are at 4-digit boundaries for binary strings and at byte boundaries for
 > hexadecimal ones. When a string has more than one of the faults above
 > (such as a non-digit and a misplaced gap), this book does not say which of
 > the errors is raised; the examples above have one fault each.
@@ -609,10 +609,10 @@ r[bif.index.conv.signed.write]
 When D2C or D2X is given an `n`, the answer is exactly `n` units long. It
 is the number's remainder on division by 256\*\*`n` in D2C and 16\*\*`n` in
 D2X, a remainder that is never negative, written with `'00'x` units (`0`
-digits in D2X) on its left to make `n` units. For a negative number that
-fits in `n` units, those units on the left are `'FF'x` (`F` digits in D2X);
-for a number that needs more than `n` units, the leftmost ones are lost,
-so -257 with an `n` of 1 is `'FF'x`. An `n` of 0 answers the null string.
+digits in D2X) on its left to make `n` units. A small negative number
+therefore has `'FF'x` units (`F` digits in D2X) on its left, and for a
+number that needs more than `n` units the leftmost ones are lost, so -257
+with an `n` of 1 is `'FF'x`. An `n` of 0 answers the null string.
 Without an `n`, a non-negative number is written in as few units as it
 takes, and at least one, so that no `'00'x` (or `0`) stands on its left
 unless the number is 0; a negative number raises `SYNTAX 93.927`.
@@ -621,7 +621,8 @@ unless the number is 0; a negative number raises `SYNTAX 93.927`.
 say c2x(d2c(72)) c2x(d2c(65, 3)) c2x(d2c(-65, 3)) c2x(d2c(321, 1))
 say c2x(d2c(-129, 1))
 say d2x(65) d2x(65, 4) d2x(-65, 4) d2x(321, 2) d2x(-129, 2)
-say c2x(d2c(0)) d2x(0) c2x(d2c(256)) d2x(256) c2x(d2c(-256, 1)) c2x(d2c(-256, 2))
+say c2x(d2c(0)) d2x(0) c2x(d2c(256)) d2x(256) c2x(d2c(-256, 1)),
+    c2x(d2c(-256, 2))
 say c2x(d2c(-257, 1)) d2x(-4097, 2) c2x(d2c(-65537, 2))
 signal on syntax name a
 say d2c(-1)
@@ -645,19 +646,19 @@ r[bif.index.conv.decimal]
 The decimal argument of D2C and D2X is a [string](r:conv.string.object)
 written as a Rexx number, with optional whitespace around it and after its
 sign, a period and an exponent, whose value is a whole number of at most
-NUMERIC DIGITS significant digits; leading zeros and zeros after the point
-are not counted.
+NUMERIC DIGITS digits; leading zeros and zeros after the point are not
+counted, and zeros at the end of the whole part are.
 Each of these raises `SYNTAX 93.929` in D2C and `SYNTAX 93.928` in D2X: a
 string that is not a number, the null string among them; a number with a
-nonzero fractional part, when it is written with no more significant
-digits than NUMERIC DIGITS; and a whole number with more digits than
-NUMERIC DIGITS. The
-value is the number however it is written: `6.5E1` and `65.0` are 65. This
-book does not specify a number written with more significant digits than
+nonzero fractional part, when it is written with no more digits than
+NUMERIC DIGITS; and a whole number with more digits than NUMERIC DIGITS.
+The value is the number however it is written: `6.5E1` and `65.0` are 65.
+This book does not specify a number written with more digits than
 NUMERIC DIGITS and a nonzero fractional part.
 
 ```rexx
-say c2x(d2c(' 65 ')) c2x(d2c('+65')) c2x(d2c('6.5E1')) c2x(d2c('65.0')) d2x('0.65E2')
+say c2x(d2c(' 65 ')) c2x(d2c('+65')) c2x(d2c('6.5E1')) c2x(d2c('65.0')),
+    d2x('0.65E2')
 signal on syntax name a
 say d2c('x')
 a: say condition('o')~code
@@ -692,9 +693,9 @@ The checks of a D2C or D2X call run in this order, and the first that fails
 is raised: the form of `n` ([whole-number form](r:conv.whole.form), `SYNTAX
 40.12`); whether the decimal argument is a number at all; the sign of `n`
 (`SYNTAX 93.923`); and last whether the decimal argument is a whole number
-with at most NUMERIC DIGITS digits. A decimal argument that is not a number is therefore
-raised even when `n` is negative, and a number that is not whole, or has too
-many digits, is raised only when `n` is not negative.
+with at most NUMERIC DIGITS digits. A decimal argument that is not a number
+is therefore raised even when `n` is negative, and a number that is not
+whole, or has too many digits, is raised only when `n` is not negative.
 
 ```rexx
 signal on syntax name a
@@ -731,7 +732,8 @@ instead of rounding it; the sign is not a digit. An answer with exactly
 NUMERIC DIGITS digits is allowed.
 
 ```rexx
-say c2d('3b9ac9ff'x) c2d(copies('00'x, 20) || '01'x) x2d('0' || 'ff') x2d('f6', 2)
+say c2d('3b9ac9ff'x) c2d(copies('00'x, 20) || '01'x) x2d('0' || 'ff'),
+    x2d('f6', 2)
 signal on syntax name a
 say c2d('3b9aca00'x)
 a: say condition('o')~code
@@ -756,6 +758,18 @@ d: say condition('o')~code
 93.936
 93.936
 ```
+
+> **Note.** The ANSI draft (9.6.1 to 9.6.11) differs from this book in the
+> codes of the argument errors. It raises `40.24` for a binary string and
+> `40.25` for a hexadecimal one that is not valid, where this book has the
+> 93.9xx codes above; `40.12` for a decimal argument
+> that is not a whole number, where D2C and D2X raise 93.929 and 93.928; and
+> `40.13` for a negative `n`, or a negative decimal argument without an `n`,
+> where this book raises 93.923 and 93.927. It raises `40.35` for an answer
+> that does not fit NUMERIC DIGITS, where C2D raises 93.936 and X2D 93.935.
+> The draft also checks the hexadecimal string of X2D when `n` is 0, which
+> raises an error there for a string with a bad character; this book
+> answers 0 without examining the string.
 
 r[bif.index.conv.deviation.4]
 interrexx does not specify whether the answer of a conversion function is

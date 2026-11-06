@@ -128,27 +128,29 @@ say x2d('0') x2d('f') x2d('FF') x2d('0ff') x2d('1 00') x2d('aBcD') x2d('8000')
 
 r[bif.x2d.signed]
 With `n`, the digits are read as [a signed number of `n`
-hexadecimal digits](r:bif.index.conv.signed.read): they are made `n` digits
-long, by dropping digits on the left or adding `0` digits there, and the
-answer is negative when the leftmost bit of the result is set, which is
-when its leftmost digit is `8` or more. Padding with `0` means that a
+hexadecimal digits](r:bif.index.conv.signed.read): the answer is negative
+when the leftmost bit of the digits, made `n` long by dropping some on the
+left or adding `0` digits there, is set, which is when the leftmost digit
+is `8` or more. Padding with `0` means that a
 string shorter than `n` is never negative, and that only the last `n` digits
 of a longer one matter.
 
 ```rexx
-say x2d('81', 2) x2d('81', 3) x2d('f081', 2) x2d('f081', 3) x2d('f081', 4)
-say x2d('8', 1) x2d('7', 1) x2d('f', 2) x2d('ffff', 1) x2d('f ff', 2) x2d('8000', 4)
+say x2d('a7', 2) x2d('a7', 3) x2d('c4d9', 2) x2d('c4d9', 3) x2d('c4d9', 4)
+say x2d('8', 1) x2d('7', 1) x2d('f', 2) x2d('ffff', 1) x2d('f ff', 2),
+    x2d('8000', 4)
 ```
 
 ```output
--127 129 -127 129 -3967
+-89 167 -39 1241 -15143
 -8 7 15 -1 -1 -32768
 ```
 
 r[bif.x2d.n.default]
-When `n` is omitted, the digits are read as an unsigned number whatever
-the leftmost bit is. An omitted `n` is not an `n` of the number of digits:
-with that `n` a string whose leftmost digit is `8` or more is negative.
+When `n` is omitted, the leftmost bit does not make the number negative:
+every string is read as a number with no sign. An omitted `n` is not an
+`n` of the number of digits: with that `n` a string whose leftmost digit
+is `8` or more is negative.
 
 ```rexx
 say x2d('80') x2d('80', ) x2d('ff') x2d('ff', , )
@@ -210,8 +212,8 @@ say x2d('') x2d('', 0) x2d('', 1) x2d('', 8)
 r[bif.x2d.not-number]
 X2D reads the characters of its argument and not its value as a number, so
 an argument written as a number is treated as the digits it is written with:
-NUMERIC DIGITS plays no part in reading it, and a number written with a period or
-with a signed exponent has a character that is not a digit.
+NUMERIC DIGITS plays no part in reading it, and a number written with a
+period or with a signed exponent has a character that is not a digit.
 
 ```rexx
 say x2d(10) x2d(0010)
@@ -256,10 +258,10 @@ say x2d('ffffffffffffffff') x2d('8000000000000000', 16)
 ```
 
 r[bif.x2d.inverse]
-D2X undoes X2D. For a hexadecimal string without an `n`, D2X of the answer of
-X2D is `hex_string` with its leading zeros and its whitespace removed, its
-letters in capitals, and `0` for a string with no digit but `0`, or none at
-all.
+D2X undoes X2D. For a hexadecimal string without an `n` whose value has at
+most NUMERIC DIGITS digits, D2X of the answer of X2D is `hex_string` with
+its leading zeros and its whitespace removed, its letters in capitals, and
+`0` for a string with no digit but `0`, or none at all.
 
 ```rexx
 say d2x(x2d('00ff')) d2x(x2d('aB 12')) d2x(x2d('0')) d2x(x2d(''))
@@ -271,8 +273,9 @@ FF AB12 0 0
 
 r[bif.x2d.deviation.4]
 interrexx does not specify whether the answer of X2D is the same object as
-another string of equal value, as [the shared rule](r:bif.index.conv.deviation.4)
-says for every conversion function. A program can rely only on the value,
+another string of equal value, as
+[the shared rule](r:bif.index.conv.deviation.4) says for every conversion
+function. A program can rely only on the value,
 which is equal under `==`.
 
 ```rexx

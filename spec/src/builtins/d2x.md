@@ -74,11 +74,10 @@ d: say condition('o')~code
 ## The result
 
 r[bif.d2x.unsigned]
-Without `n`, `wholenumber` must not be negative; a negative one raises
-`SYNTAX 93.927`. The answer is the number written in base 16 with the
-digits `0` to `9` and `A` to `F`, in as few digits as it needs and at least
-one: no `0` stands on its left unless the number is 0, whose answer is the
-single digit `0`.
+Without `n`, a negative `wholenumber` raises `SYNTAX 93.927`. The answer
+for any other number is its base-16 form, with the digits `0` to `9` and
+`A` to `F`, in as few digits as it needs and at least one: 0 is the single
+digit `0`, and no other answer starts with `0`.
 
 ```rexx
 say d2x(65) d2x(0) d2x(255) d2x(256) d2x(65535) d2x(1234567) d2x('0065')
@@ -111,9 +110,9 @@ AB BEEF AB AB AB 0
 
 r[bif.d2x.n]
 With `n`, the answer is exactly `n` hexadecimal digits, as [the signed-writing
-rule](r:bif.index.conv.signed.write) says: the digits on the left of the
-number's own are `0` for a non-negative number and `F` for a negative one,
-and a number that needs more than `n` digits is cut to its last `n`.
+rule](r:bif.index.conv.signed.write) says. A non-negative number has `0`
+digits added on the left of its own digits, and one that needs more than `n`
+digits is cut to its last `n`; a negative number is the next rule's.
 
 ```rexx
 say d2x(65, 1) d2x(65, 2) d2x(65, 5) d2x(76, 3) d2x(-1, 1) d2x(-1, 3)
@@ -135,11 +134,13 @@ on its left. For `n` of 1, -17 leaves the remainder 15, so its answer is
 ```rexx
 say d2x(-16, 1) d2x(-17, 1) d2x(-128, 2) d2x(-129, 2) d2x(-129, 3)
 say d2x(-256, 2) d2x(-256, 3) d2x(-257, 3) d2x(-65536, 4) d2x(-65536, 5)
+say d2x(-257, 1) d2x(-4097, 2) d2x(-32769, 4)
 ```
 
 ```output
 0 F 80 7F F7F
 00 F00 EFF 0000 F0000
+F FF 7FFF
 ```
 
 r[bif.d2x.n.zero]
@@ -175,12 +176,13 @@ FFFFFFFFFFFFFFFF FFFFFFFFFFFFFFFF 10000000000000000
 r[bif.d2x.inverse]
 X2D undoes D2X. For a non-negative whole number with at most NUMERIC DIGITS
 digits, X2D of the answer of D2X without an `n` is the number. When both
-calls are given the same `n` it holds as well for every whole number from
--8\*16\*\*(`n`-1) up to 8\*16\*\*(`n`-1)-1, the numbers that `n` digits hold as a
-signed number, the negative ones included.
+calls are given the same `n` it holds as well for every such number from
+-8\*16\*\*(`n`-1) up to 8\*16\*\*(`n`-1)-1, the numbers that `n` digits hold
+as a signed number, the negative ones included.
 
 ```rexx
-say x2d(d2x(300)) x2d(d2x(0)) x2d(d2x(65535)) x2d(d2x(300, 4), 4) x2d(d2x(-300, 4), 4)
+say x2d(d2x(300)) x2d(d2x(0)) x2d(d2x(65535)) x2d(d2x(300, 4), 4),
+    x2d(d2x(-300, 4), 4)
 say x2d(d2x(7, 1), 1) x2d(d2x(-8, 1), 1) x2d(d2x(8, 1), 1)
 ```
 
@@ -191,8 +193,9 @@ say x2d(d2x(7, 1), 1) x2d(d2x(-8, 1), 1) x2d(d2x(8, 1), 1)
 
 r[bif.d2x.deviation.4]
 interrexx does not specify whether the answer of D2X is the same object as
-another string of equal value, as [the shared rule](r:bif.index.conv.deviation.4)
-says for every conversion function. A program can rely only on the value,
+another string of equal value, as
+[the shared rule](r:bif.index.conv.deviation.4) says for every conversion
+function. A program can rely only on the value,
 which is equal under `==`.
 
 ```rexx

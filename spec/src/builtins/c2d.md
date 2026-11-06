@@ -172,9 +172,6 @@ c: say condition('o')~code
 93.936
 ```
 
-> **Note.** The ANSI draft (9.6.5) raises `40.35` for an answer that does not fit
-> NUMERIC DIGITS; ooRexx raises 93.936, and so does this book.
-
 r[bif.c2d.deviation.4]
 interrexx does not specify whether the answer of C2D is the same object as
 another string of equal value, as [the shared rule](r:bif.index.conv.deviation.4)
