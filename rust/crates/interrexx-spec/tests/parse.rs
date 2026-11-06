@@ -88,6 +88,44 @@ fn a_duplicate_output_option_is_a_problem() {
     }
 }
 
+fn escaped_page(output: &str, options: &str) -> String {
+    page_text().replace("```output\nbc\n", &format!("```output {options}\n{output}"))
+}
+
+#[test]
+fn an_escaped_output_block_is_decoded() {
+    let text = escaped_page("\\a[] 0\n\\x07\\x41\\\\a\n", "escaped");
+    assert_eq!(
+        parse(&text).unwrap().examples[0].output,
+        "\u{7}[] 0\n\u{7}A\\a\n"
+    );
+    let text = escaped_page("\\a\n", "defect=#3 escaped rc=2");
+    let e = &parse(&text).unwrap().examples[0];
+    assert_eq!((e.output.as_str(), e.defect, e.rc), ("\u{7}\n", Some(3), 2));
+}
+
+#[test]
+fn a_backslash_in_an_unmarked_output_block_is_text() {
+    let text = escaped_page("\\a\\x07\n", "");
+    assert_eq!(parse(&text).unwrap().examples[0].output, "\\a\\x07\n");
+}
+
+#[test]
+fn a_bad_escape_is_a_problem_at_its_line() {
+    for bad in ["\\n", "\\x7", "\\x80", "\\xg0", "\\x+7", "\\", "ok\\"] {
+        let text = escaped_page(&format!("fine\n{bad}\n"), "escaped");
+        let found = problems(&text);
+        assert_eq!(found.len(), 1, "{bad}: {found:?}");
+        assert_eq!(found[0].0, 18, "{bad}: {found:?}");
+    }
+}
+
+#[test]
+fn a_duplicate_escaped_option_is_a_problem() {
+    let text = escaped_page("x\n", "escaped escaped");
+    assert_eq!(problems(&text).len(), 1);
+}
+
 #[test]
 fn an_empty_output_block_is_the_empty_string() {
     let text = page_text().replace("bc\n```\n", "```\n");

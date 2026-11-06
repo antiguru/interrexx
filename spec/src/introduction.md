@@ -87,6 +87,12 @@ issue N. The output shown is still the specified one, and the checker accepts
 the mismatch on interrexx; when the example starts to pass, it reports that
 the marker is to be removed.
 
+An output marked `escaped` (combinable with the other markers) writes a
+character that cannot be shown as itself with an escape: `\a` or `\x07` is the
+bell character, `\xNN` is the ASCII character of code `NN` in hexadecimal,
+and `\\` is a backslash. The checker decodes the escapes before it compares,
+and any other backslash in such a block is an error.
+
 ## Sources
 
 Two documents are cited by section and are not copied: the ooRexx reference

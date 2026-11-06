@@ -76,3 +76,33 @@ fn the_interpreter_never_writes_the_process_environment_or_directory() {
         hits.join("\n")
     );
 }
+
+/// Nested saves are taken back innermost first, each on the interpreter's own
+/// environment and directory, and the process's are untouched. The reference
+/// implementation aborts on a second restore, so this runs on interrexx only.
+// spec: bif.endlocal.nested
+#[test]
+fn nested_saves_are_taken_back_innermost_first() {
+    let program = b"here = directory()\n\
+        call value 'SPEC_ENDLOCAL_NESTED', 'n0', 'ENVIRONMENT'\n\
+        call setlocal\n\
+        call value 'SPEC_ENDLOCAL_NESTED', 'n1', 'ENVIRONMENT'\n\
+        call directory '/'\n\
+        call setlocal\n\
+        call value 'SPEC_ENDLOCAL_NESTED', 'n2', 'ENVIRONMENT'\n\
+        call directory here\n\
+        say endlocal() value('SPEC_ENDLOCAL_NESTED',, 'ENVIRONMENT') directory()\n\
+        say endlocal() value('SPEC_ENDLOCAL_NESTED',, 'ENVIRONMENT') (directory() == here)\n\
+        say endlocal()\n";
+    let outcome = interrexx::run_program(
+        "/nonexistent/program.rex",
+        program.to_vec(),
+        interrexx::Invocation::none(),
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&outcome.stdout),
+        "1 n1 /\n1 n0 1\n0\n"
+    );
+    assert_eq!(outcome.exit_code, 0);
+    assert!(std::env::var_os("SPEC_ENDLOCAL_NESTED").is_none());
+}

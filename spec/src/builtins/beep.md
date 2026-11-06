@@ -15,11 +15,10 @@ runs on, and this book does not specify it. It specifies what a program can
 check: the arguments that are accepted, the answer, and what is written to
 standard output when no tone can be sounded.
 
-> **Note.** The examples use a duration of 0 only, so that they do not wait.
-> They run with their output captured, where no tone can be sounded, so every
-> accepted call in them writes the bell character, which the output blocks
-> show as a raw character of code 7 and which is invisible when the page is
-> read.
+> **Note.** The examples run with their output captured, where no tone can be
+> sounded, so every accepted call in them writes the bell character, code 7.
+> Their output blocks are marked `escaped` and show it as `\a`, as
+> [Reading an example](../introduction.md#reading-an-example) describes.
 
 ## Arguments
 
@@ -64,14 +63,14 @@ done
 ```
 
 r[bif.beep.range]
-`frequency` and `duration` are whole numbers, in the [form](r:conv.whole.form)
-and with the [value](r:conv.whole.digits) that those rules give, whatever the
-NUMERIC DIGITS setting. The frequency must be from 37 to 32767 and the
-duration from 0 to 60000. An argument that is not a whole number, that is out
-of its range, or that is the null string raises `SYNTAX 88.907`, and so does
-an object with no string value, such as `.nil`. Both arguments are first
-checked to be whole numbers, the frequency before the duration, and only then
-is each checked against its range, again the frequency first.
+`frequency` and `duration` are whole numbers in the [form](r:conv.whole.form)
+that rule gives. The value of each is its number rounded to 20 significant
+digits, whatever the NUMERIC DIGITS setting; when the first digit dropped is
+5 or more, the magnitude rounds up, otherwise down. The frequency must be
+from 37 to 32767 and the duration from 0 to 60000. An argument that is not in
+that form, whose rounded value has a fractional part other than zero, that
+is out of its range, or that is the null string raises `SYNTAX 88.907`, and
+so does an object whose string value fails these checks, such as `.nil`.
 
 ```rexx
 signal on syntax name a
@@ -98,27 +97,76 @@ g: say condition('o')~code
 signal on syntax name h
 call beep 36, 'x'
 h: say condition('o')~code
+signal on syntax name i
+call beep '37.000000000000000001', 0
+i: say condition('o')~code
+signal on syntax name j
+call beep 100, '60000.000000000000001'
+j: say condition('o')~code
+signal on syntax name k
+call beep '36.9999999999999999994', 0
+k: say condition('o')~code
 signal off syntax
 numeric digits 3
 call beep ' + 100 ', '-0'
 call beep '1e+2', '0.0e1'
 call beep 99.99999999999999999999, 60000.0000000000000000001
+call beep '37.0000000000000000001', '60000.0000000000000001'
+call beep '36.9999999999999999995', 0
 call beep 37, 0
 call beep 32767, 0
 call beep .mutablebuffer~new('12345'), 0
 say 'done'
 ```
 
+```output escaped
+88.907
+88.907
+88.907
+88.907
+88.907
+88.907
+88.907
+88.907
+88.907
+88.907
+88.907
+\a\a\a\a\a\a\a\adone
+```
+
+r[bif.beep.order]
+A call with two arguments checks the frequency first and the duration next,
+each for being present and a whole number, and only then checks the ranges:
+a frequency that is not a whole number is reported before a missing
+duration, and a missing duration before a frequency out of range. A third
+argument is reported before an argument out of range. When a call has a
+third argument and also a frequency or duration that is missing or not a
+whole number, which of the two errors it raises is not specified.
+
+```rexx
+signal on syntax name a
+x = beep('x', )
+a: say condition('o')~code
+signal on syntax name b
+x = beep(36, )
+b: say condition('o')~code
+signal on syntax name c
+x = beep(, 'x')
+c: say condition('o')~code
+signal on syntax name d
+x = beep(36, 0, 1)
+d: say condition('o')~code
+signal on syntax name e
+x = beep(100, 60001, 1)
+e: say condition('o')~code
+```
+
 ```output
 88.907
-88.907
-88.907
-88.907
-88.907
-88.907
-88.907
-88.907
-done
+88.901
+88.901
+88.922
+88.922
 ```
 
 ## The result
@@ -134,17 +182,19 @@ call beep 32767, 0
 say symbol('RESULT') length(result)
 ```
 
-```output
-[] 0
-VAR 0
+```output escaped
+\a\a[] 0
+\aVAR 0
 ```
 
 r[bif.beep.bell]
 When no tone can be sounded, as when the output of the program is not a
 console, an accepted call writes one bell character, code 7, to standard
-output, at the point of the call, and nothing else. A call that raises an
-error writes nothing. When a tone can be sounded the program cannot rely on
-anything being written.
+output, at the point of the call, and nothing else. It is not written through
+the `.OUTPUT` monitor: a program that has redirected `.OUTPUT` still has the
+bell written to standard output. A call that raises an error writes nothing.
+When a tone can be sounded the program cannot rely on anything being
+written.
 
 ```rexx
 call beep 100, 0
@@ -152,9 +202,25 @@ say 'after'
 signal on syntax name a
 call beep 100, 60001
 a: say condition('o')~code
+sink = .counter~new
+.output~destination(sink)
+say 'hidden'
+call beep 100, 0
+.output~destination
+say 'shown' sink~count
+exit
+::class counter
+::attribute count
+::method init
+  expose count
+  count = 0
+::method say
+  expose count
+  count += 1
 ```
 
-```output
-after
+```output escaped
+\aafter
 88.907
+\ashown 1
 ```

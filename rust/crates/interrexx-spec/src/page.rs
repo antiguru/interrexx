@@ -20,7 +20,8 @@ pub struct Example {
     /// Line of the opening fence of the `rexx` block.
     pub line: usize,
     pub program: String,
-    /// The output block's lines, each followed by `\n`.
+    /// The output block's lines, each followed by `\n`, with their escapes
+    /// decoded when the block is marked `escaped`.
     pub output: String,
     pub rc: i32,
     /// The open issue that tracks an interrexx failure of this example.
@@ -319,7 +320,15 @@ fn finish_block(
             let mut rc = 0;
             let mut rc_seen = false;
             let mut defect = None;
+            let mut escaped = false;
             for w in words {
+                if w == "escaped" {
+                    if escaped {
+                        err(f.line, "duplicate `escaped` option".into());
+                    }
+                    escaped = true;
+                    continue;
+                }
                 if let Some(d) = w.strip_prefix("defect=") {
                     let number = d
                         .strip_prefix('#')
@@ -346,6 +355,16 @@ fn finish_block(
                     None => err(f.line, format!("unrecognised output block option `{w}`")),
                 }
             }
+            if escaped {
+                content.clear();
+                for (offset, l) in f.body.iter().enumerate() {
+                    match unescape(l) {
+                        Ok(text) => content.push_str(&text),
+                        Err(message) => err(f.line + 1 + offset, message),
+                    }
+                    content.push('\n');
+                }
+            }
             let Some((line, program)) = pending_rexx.take() else {
                 err(
                     f.line,
@@ -367,6 +386,50 @@ fn finish_block(
         }
         _ => *pending_rexx = None,
     }
+}
+
+/// One line of an `escaped` output block with its escapes decoded: `\a` and
+/// `\x07` are the bell character, `\xNN` is the ASCII character of that code
+/// (`00` to `7F`), and `\\` is a backslash. Any other backslash is an error.
+fn unescape(line: &str) -> Result<String, String> {
+    let mut out = String::with_capacity(line.len());
+    let mut chars = line.chars();
+    while let Some(c) = chars.next() {
+        if c != '\\' {
+            out.push(c);
+            continue;
+        }
+        match chars.next() {
+            Some('\\') => out.push('\\'),
+            Some('a') => out.push('\u{7}'),
+            Some('x') => {
+                let hex: String = chars.by_ref().take(2).collect();
+                let code = if hex.len() == 2 && hex.bytes().all(|b| b.is_ascii_hexdigit()) {
+                    u8::from_str_radix(&hex, 16).ok().filter(u8::is_ascii)
+                } else {
+                    None
+                };
+                match code {
+                    Some(code) => out.push(char::from(code)),
+                    None => {
+                        return Err(format!(
+                            "malformed escape `\\x{hex}`: expected two hex digits from 00 to 7F"
+                        ));
+                    }
+                }
+            }
+            Some(other) => {
+                return Err(format!(
+                    "unknown escape `\\{other}`: an escaped output block knows `\\a`, \
+                     `\\xNN` and `\\\\`"
+                ));
+            }
+            None => {
+                return Err("a backslash ends the line: write `\\\\` for a backslash".into());
+            }
+        }
+    }
+    Ok(out)
 }
 
 /// Record every `[text](r:ID)` on `text`, and report every link that targets

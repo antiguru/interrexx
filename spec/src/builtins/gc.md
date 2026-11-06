@@ -50,10 +50,11 @@ say gc(,) == gc()
 r[bif.gc.force]
 `force` is [converted to a string](r:conv.string.object) and must begin with
 the letter `F`, in either case: `force`, `Force`, `FORCE` and `f` are
-accepted, and so is any other string that starts so. Any other value raises
-`SYNTAX 40.904`: a string that starts with another character, including a
-blank, the null string, and the digits `0` and `1`, and `.nil`. The argument
-is checked after the count of arguments.
+accepted, and so is any other string whose first character is `F` or `f`.
+Any other value raises `SYNTAX 40.904`: a string whose first character is
+something else, a blank or the digit `1` among them, the null string, and an
+object whose string value starts otherwise, such as `.nil` or `.false`. The
+argument is checked after the count of arguments.
 
 ```rexx
 signal on syntax name a

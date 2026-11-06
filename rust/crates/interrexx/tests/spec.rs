@@ -612,7 +612,8 @@ fn check_fixture(spec_root: &Path) -> Vec<Problem> {
         .into_iter()
         .filter(|p| {
             !(p.path.starts_with(&repo)
-                && p.message.ends_with("which is not a rule in the specification"))
+                && p.message
+                    .ends_with("which is not a rule in the specification"))
         })
         .collect()
 }
