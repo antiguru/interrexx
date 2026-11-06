@@ -119,8 +119,8 @@ and the brackets may hold no expression at all. When the message has its own
 arguments, as in `term~name(a) = expression`, the value comes first and the
 arguments follow. The answer of the message is treated as for any message
 instruction, so it is assigned to `RESULT`, or `RESULT` is dropped. A `~~`
-in front of the name has no effect on that, so `RESULT` never holds the
-receiver after a message assignment.
+in front of the name has no effect on that, so `RESULT` holds what `name=`
+answered, not the receiver.
 
 ```rexx
 o = .rec~new

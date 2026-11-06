@@ -110,10 +110,11 @@ r[instr.command.rc]
 When the environment has run a command, the variable `RC` is assigned the
 return code it answered, also when that is 0, and the new value replaces
 whatever `RC` held, an assignment of the program included. Until the first
-command, `RC` has no value. No instruction other than a command assigns `RC`
-on its own account. A trapped condition sets it as [the error
-rule](r:conv.error.name) and the conditions chapter say, so a trapped
-`SYNTAX` error sets it to the error number.
+command or the first trapped condition that sets it, `RC` has no value. No
+instruction other than a command assigns `RC` on its own account. A trapped
+`SYNTAX`, `ERROR` or `FAILURE` condition sets it as [the error
+rule](r:conv.error.name) and the conditions chapter say, so a trapped `SYNTAX`
+error sets it to the error number.
 
 ```rexx
 address system
@@ -217,9 +218,9 @@ r[instr.command.status.scope]
 `.RS` follows a different rule from `RC`. A routine that the program calls by
 its label starts with the `.RS` of its caller, with or without PROCEDURE, and
 the commands it runs change only its own `.RS`, so the caller's value is the
-same on return, where a routine without PROCEDURE shares `RC`. A method starts
-with no `.RS` and sets its own. An INTERPRET instruction shares the `.RS` of
-the code that ran it.
+same on return, where a routine without PROCEDURE shares `RC`. A method, and a
+routine of a `::routine` directive, starts with no `.RS` and sets its own. An
+INTERPRET instruction shares the `.RS` of the code that ran it.
 
 ```rexx
 address system
