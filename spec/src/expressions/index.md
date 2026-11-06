@@ -266,3 +266,33 @@ n: say 'term' arg(1); return arg(1)
 term 1
 41.1
 ```
+
+## Nesting
+
+r[expr.index.nesting]
+Nesting has a limit that this book does not fix, and a program that goes past
+it raises `SYNTAX 11.1`. The limit applies to parentheses nested inside one
+another, which raise the error when the text is read, and to routine calls
+nested inside one another, which raise it when the call that goes too deep is
+made. Many terms side by side at one level are not nesting and have no such
+limit. Parentheses nested 100,000 deep and calls nested 1,000,000 deep both
+raise the error.
+
+```rexx
+signal on syntax name a
+interpret 'x =' copies('(', 100000) 1 copies(')', 100000)
+a: say condition('o')~code
+signal on syntax name b
+say deep(1000000)
+b: say condition('o')~code
+exit
+deep: procedure
+  arg n
+  if n = 0 then return 0
+  return deep(n - 1)
+```
+
+```output
+11.1
+11.1
+```

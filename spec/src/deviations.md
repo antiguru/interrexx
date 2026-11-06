@@ -27,11 +27,9 @@ DO OVER on a stem visits its tails in an order this book does not specify.
 ooRexx visits them in an order fixed by its internal storage, which is
 neither insertion nor sorted order.
 
-## 2. Expression size limit
+## 2. Withdrawn
 
-An expression of more than 100,000 terms at one level raises `SYNTAX 11.1`.
-ooRexx evaluates such expressions until it crashes, a little above that
-size. Nested parentheses and nested calls raise 11.1 on both.
+interrexx evaluates an expression of any number of terms at one level.
 
 ## 3. Withdrawn
 
@@ -111,9 +109,9 @@ code 120. ooRexx runs each activity on its own thread and completes.
 
 ## 15. REPLY inside a nested construct
 
-A REPLY executed inside a loop that is not flattened, an INTERPRET or a
-CALL ON handler is refused, exit code 120. ooRexx continues the method on a
-new thread.
+A REPLY executed inside a loop that is not flattened or inside a CALL ON
+handler is refused, exit code 120. ooRexx continues the method on a new
+thread. A REPLY in the text of an INTERPRET raises `SYNTAX 99.924` on both.
 
 ## 16. Blocking operations hold every activity
 
@@ -664,3 +662,10 @@ is reported. ooRexx reports an omitted argument, an object with no
 `MAKESTRING` method and an argument that is not a whole number before the
 count, and the count before an argument's value: an option it does not allow
 or a number out of range.
+
+## 102. LOSTDIGITS before the right operand's errors
+
+When LOSTDIGITS is trapped, a wide operand of an arithmetic operator raises it
+before the operator raises `SYNTAX 42.3` for a zero divisor or `SYNTAX 26.8`
+for an exponent that is not a whole number, as the ANSI standard orders the
+operations. ooRexx raises the error for the right operand first.
