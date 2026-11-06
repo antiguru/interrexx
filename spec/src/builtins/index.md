@@ -793,7 +793,7 @@ say (d2c(97) == 'a') (c2d('') == 0) (c2d(s) == 13873)
 
 ## Numbers
 
-> **Note.** ABS, SIGN, TRUNC and FORMAT take a number as their first argument, which is
+> **Note.** ABS, SIGN, TRUNC, FORMAT, MAX and MIN take a number as their first argument, which is
 > the receiver when they run as String methods. The rules below say which
 > strings are numbers, how a number is rounded to NUMERIC DIGITS, and how a
 > result is written; the pages link to them instead of restating them.
@@ -947,3 +947,85 @@ say abs('-1234567890') abs('2e11') abs('1.5e-19') abs('12345678e10')
 > the count of digits before the point and a fixed count of zeros after it,
 > where ooRexx, which this book follows, lets the limit on the zeros grow
 > with the trigger.
+
+> **Note.** MAX and MIN take a list of numbers instead of one, and the next two
+> rules are theirs.
+
+r[bif.index.num.list]
+The arguments of a call that takes a list of numbers are each a
+[number](r:bif.index.num.arg) that the call checks before it compares
+anything: first the receiver, which raises `SYNTAX 93.943` when it is not a
+number, and then the other arguments in order, the first one that is not a
+number raising `SYNTAX 93.904`. The list has no upper limit on its length.
+Its argument count is checked by the [builtin call rules](r:bif.index.call.count),
+with one required argument and no most, so a call with no arguments raises
+`SYNTAX 40.3` and no call raises `SYNTAX 40.4`; an omitted first argument
+raises `SYNTAX 40.5`. This book does not specify the error of a call that
+omits an argument after the first but passes one after it.
+
+```rexx
+say max(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27),
+    max(5,)
+signal on syntax name a
+say max()
+a: say condition('o')~code
+signal on syntax name b
+say max(, 4)
+b: say condition('o')~code
+signal on syntax name c
+say min('one', 2, 'three')
+c: say condition('o')~code
+signal on syntax name d
+say min(2, 'three', 'one')
+d: say condition('o')~code
+signal on syntax name e
+say min(2, 3, .nil)
+e: say condition('o')~code
+signal on syntax name f
+say max('x', 3, 'y')
+f: say condition('o')~code
+signal on syntax name g
+say max(3, '')
+g: say condition('o')~code
+```
+
+```output
+27 5
+40.3
+40.5
+93.943
+93.904
+93.904
+93.943
+93.904
+```
+
+r[bif.index.num.pick]
+A call that picks one number from a list [rounds](r:bif.index.num.round) every
+number to NUMERIC DIGITS digits first, then takes the first as the
+candidate and goes through the others in order, replacing the candidate by
+that number when the call's own test between the candidate and that number holds. The
+call answers the candidate, [written](r:bif.index.num.write) as that rule
+says with NUMERIC DIGITS as the trigger. The test compares the two rounded
+numbers as the `<` and `>` operators do, so two numbers that NUMERIC FUZZ makes
+equal are equal here: the candidate stays, and the answer has its written
+form, the number of its decimal places included. So a call whose list has
+only one number answers that number rounded and written.
+
+```rexx
+numeric digits 3
+say max(1.0, 1.00) max(1.00, 1.0) min(1.0, 1.00) min(1.00, 1.0)
+say max(1.0004, 1.0) min(1.0004, 1.0) min(1.0, 1.0004)
+say max('+7') min(' 0.00 ') max(-1234567) min(12.3456)
+numeric fuzz 1
+say max(1.04, 1.01) min(1.04, 1.01) max(1.01, 1.04) min(1.01, 1.04)
+say max(1.04, 1.09) min(1.04, 1.09)
+```
+
+```output
+1.0 1.00 1.0 1.00
+1.00 1.00 1.0
+7 0 -1.23E+6 12.3
+1.04 1.04 1.01 1.01
+1.09 1.04
+```
