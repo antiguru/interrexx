@@ -351,8 +351,10 @@ it answers the caller's earlier value until the INTERPRET ends.
 
 ## 52. An ADDRESS target that fails
 
-An output target whose write raises a condition raises `42.3` whatever the
-command's return code. ooRexx raises it only when the command answers 0.
+When a write to an output or error redirection target raises a condition,
+that condition is raised whatever return code the command answered. ooRexx
+raises it only when the command answered 0, and otherwise ends the clause
+with the return code as if every write had succeeded.
 
 ## 53. Numeric rules from the reference manual
 
