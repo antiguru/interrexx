@@ -162,10 +162,11 @@ local like the rest: the UTC reading of F is `F - O`. A call that gives O
 with a `string` reads the string as usual and answers the same offset, except
 with the [informat O](r:bif.time.in.offset), whose answer is the offset that
 the string gives. This book does not specify which time zone a program runs
-in. The zone is read at each call, so a program that changes it, as by setting
-`TZ` with [VALUE](r:bif.value.os) in the environment, has the new zone from
-its next clause; within one clause the offset belongs to the clause's
-[moment](r:bif.index.dt.stamp).
+in. The zone is read with the clock, at the clause's
+[moment](r:bif.index.dt.stamp). A program that changes it, as by setting `TZ`
+with [VALUE](r:bif.value.os) in the environment, has the new zone at the next
+reading of the clock: in the same clause when no DATE or TIME call came
+before the change there, and from the next clause otherwise.
 
 ```rexx
 numeric digits 20
@@ -194,6 +195,7 @@ call value 'TZ', 'UTC-2', 'ENVIRONMENT'
 say time('O')
 say time('O') value('TZ', 'UTC', 'ENVIRONMENT') time('O')
 say time('O')
+say value('TZ', 'UTC-2', 'ENVIRONMENT') time('O')
 ```
 
 ```output defect=#90
@@ -201,6 +203,7 @@ say time('O')
 7200000000
 7200000000 UTC-2 7200000000
 0
+UTC 7200000000
 ```
 
 ## Reading a time

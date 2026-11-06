@@ -513,7 +513,9 @@ a SEEK answers 0, and a CHAROUT or LINEOUT naming a position there writes
 nothing, all NOTREADY. ooRexx moves the position there, and the write goes
 after the last character as any other does. After a write, the write position
 reported is just after the last character. ooRexx reports the position that
-the write named, or that a SEEK set, moved past the characters written.
+a CHAROUT start named, or that a SEEK set, moved past the characters written;
+after a LINEOUT that names a line it reports the position just after the last
+character.
 
 ## 80. First SEEK of an unopened transient stream
 
@@ -626,8 +628,9 @@ answers `1E-7`, and after a change to NUMERIC FORM ENGINEERING it answers
 CHAROUT and LINEOUT never close a standard stream. A call of either that gives
 no string, on a standard stream, writes nothing and does nothing else, and the
 later output of the program is written as usual. ooRexx closes the standard
-output for such a call, and the later output is lost; which forms of the call
-do so varies from program to program.
+stream for such a call, the standard output or the standard error, and the
+later output to it is lost; which forms of the call do so varies from program
+to program.
 
 ## 99. Reading the standard output or error
 
@@ -648,5 +651,7 @@ DIRECTORY, FILESPEC, BEEP and the RexxUtil file functions, such as
 SysFileDelete, check their arguments in the order that every other builtin
 follows, the ANSI order: the count of arguments first, so that an argument
 past the last one raises `SYNTAX 88.922` before an omitted or wrong argument
-is reported. ooRexx checks the arguments before their count, and raises
-88.922 only when they pass.
+is reported. ooRexx reports an omitted argument, an object with no
+`MAKESTRING` method and an argument that is not a whole number before the
+count, and the count before an argument's value: an option it does not allow
+or a number out of range.

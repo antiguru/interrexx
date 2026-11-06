@@ -439,7 +439,9 @@ r[bif.stream.close]
 `CLOSE` closes the stream and answers `READY:`; its state is then `UNKNOWN`.
 The characters written are in the file, and the next use of the name
 [opens the stream afresh](r:bif.index.stream.lifetime). A stream that is not
-open has nothing to close, and the answer is the null string.
+open has nothing to close, and the answer is the null string. What `CLOSE`
+does to a standard stream, and to the later output written to it, is not
+specified.
 
 ```rexx
 f = 'spec-stream-close.tmp'
@@ -1055,8 +1057,9 @@ LINEOUT that names a position there writes nothing, all of them `NOTREADY`.
 After a write, the write position is just after the last character, wherever
 the write was asked to go. ooRexx differs there: it moves the position, and
 the write goes after the last character as any other does; the write position
-it reports afterwards is the one the write named, or that a `SEEK` set, moved
-past the characters written.
+it reports afterwards is the one that a CHAROUT start named, or that a `SEEK`
+set, moved past the characters written, and after a LINEOUT that names a line
+it is just after the last character.
 
 ```rexx
 f = 'spec-stream-dev79.tmp'

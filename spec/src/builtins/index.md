@@ -213,8 +213,10 @@ before the arguments themselves, as [the other
 builtins](r:bif.index.call.order.count-before-values) do: a call that has an
 argument past the last one on the syntax line raises `SYNTAX 88.922` even when
 an argument before it is omitted, is an object with no `MAKESTRING` method, or
-fails a check that its page gives. ooRexx checks the arguments first, and
-raises 88.922 only when they pass.
+fails a check that its page gives. ooRexx reports an omitted argument, an
+object with no `MAKESTRING` method and an argument that is not a whole number
+before the count, and the count before an argument's value: an option it does
+not allow or a number out of range.
 
 ```rexx
 signal on syntax name a
@@ -1496,9 +1498,10 @@ r[bif.index.stream.lifetime.deviation.98]
 CHAROUT and LINEOUT never close a standard stream. A call of either that gives
 neither a string nor a start or line, and either no stream name or the name of
 a standard stream, writes nothing, answers 0 and does nothing else: the later
-output of the program is written as usual. ooRexx closes the standard output
-for such a call, and the later output is lost; which forms of the call do so
-varies from program to program.
+output of the program is written as usual. ooRexx closes the standard stream
+for such a call, the standard output or the standard error, and the later
+output to it is lost; which forms of the call do so varies from program to
+program.
 
 ```rexx
 say 'one'
