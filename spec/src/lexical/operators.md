@@ -45,8 +45,10 @@ A run of operator characters is split from the left into the longest
 operators of [the set](r:lex.operators.set) that fit. A run that cannot be
 split that way, because a character other than `<` or `>` is left over with
 no operand, such as `&&&`, `====`, `\>=` or `<==`, raises `SYNTAX 35.1`. A
-`<` or `>` that is left over begins a variable reference term instead. That
-term takes a symbol, and the clause raises `SYNTAX 20.930` when none follows.
+single `<` or `>` that is left over begins a variable reference term
+instead. That term takes a symbol, and the clause raises `SYNTAX 20.930` when
+none follows. A leftover `<<` or `>>` is an operator with no left operand and
+raises `SYNTAX 35.1`, as `1 =<< 2` does.
 
 ```rexx
 x = 5
@@ -56,6 +58,7 @@ call try '1 &&& 0'
 call try '1 ==== 1'
 call try '1 \>= 0'
 call try '1 <== 0'
+call try '1 =<< 2'
 exit
 try:
   signal on syntax name bad
@@ -68,6 +71,7 @@ bad: say condition('o')~code
 ```output
 0 0 1 1 0
 20.930
+35.1
 35.1
 35.1
 35.1

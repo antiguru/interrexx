@@ -56,8 +56,8 @@ r[lex.symbols.constant]
 A symbol that starts with a digit is a constant symbol. It names no
 variable: its value is its own characters in upper case and otherwise
 unchanged, so it is not normalized as a number is. A clause that assigns to a
-symbol that starts with a digit raises `SYNTAX 31.2`. A constant symbol that
-starts with a period raises `SYNTAX 31.3`, as
+symbol that starts with a digit raises `SYNTAX 31.2`. Assigning to a
+constant symbol that starts with a period raises `SYNTAX 31.3`, as
 [the environment rule](r:lex.symbols.environment) says.
 
 ```rexx
@@ -146,7 +146,6 @@ searches or in which order.
 .environment['WIDGET'] = 'found'
 say .widget .Widget .nosuch
 say . .5 .5e1 + 0
-signal on syntax name e
 call try ".widget = 2"
 call try ".5 = 2"
 call try ". = 2"

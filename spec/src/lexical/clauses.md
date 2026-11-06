@@ -78,7 +78,7 @@ They have this effect only where they are keywords: THEN after the
 expression of IF or WHEN, and ELSE and OTHERWISE as the first token of a
 clause that is not an [assignment](r:lex.clauses.assignment). Anywhere else
 they are ordinary symbols. In the expression of IF or WHEN, outside
-parentheses, THEN is never a symbol, so `if then = 1 then` raises
+parentheses and brackets, THEN is never a symbol, so `if then = 1 then` raises
 `SYNTAX 35.929`, while `if (then = 1) then` reads the variable.
 
 ```rexx
@@ -119,9 +119,9 @@ starts with a period included. When two labels have the same name, the first
 is the one that is found. The colon makes a label before it can make an
 assignment, so `x: = 3` is the label `x` followed by the clause `= 3`, which
 raises `SYNTAX 35.1` when the program is read, so that the program produces
-no output and ends with the exit code 221. A label inside a DO body raises
-`SYNTAX 47.2` when the program is read, and a label in the text given to
-INTERPRET raises `SYNTAX 47.1`.
+no output and ends with the exit code 221. A label inside a DO, IF or
+SELECT body raises `SYNTAX 47.2`, `47.3` or `47.4` when the program is read,
+and a label in the text given to INTERPRET raises `SYNTAX 47.1`.
 
 ```rexx
 go : /* c */ say 'a'
@@ -178,6 +178,23 @@ call sysfiledelete f
 ```rexx
 say 'before'
 do 1; inner: say 1; end
+```
+
+```output rc=209
+```
+
+```rexx
+say 'before'
+if 1 then
+lab: say 1
+```
+
+```output rc=209
+```
+
+```rexx
+say 'before'
+select; when 1 then nop; lab: otherwise nop; end
 ```
 
 ```output rc=209
@@ -276,7 +293,8 @@ token is a symbol and the second is `=`, the clause is an
 [assignment](r:lex.clauses.assignment). Otherwise, if the first token is a
 symbol that is an [instruction keyword](r:lex.clauses.keyword), the clause
 is that instruction. A clause whose first token is a symbol and whose second
-token is `==` raises `SYNTAX 35.1` when the program is read. A clause of the
+token is `==` raises `SYNTAX 35.1` when the program is read, and so does a
+clause of the form `term[...] ==` or `term~name ==`. A clause of the
 form `term[...] = expression` or `term~name = expression` is a message
 assignment, which the expressions chapter specifies. Any other clause is a
 [command](r:lex.clauses.command).
@@ -303,13 +321,19 @@ a[1] = 2
 d = .directory~new
 d~x = 1
 say a[1] d~x
-signal on syntax name e
-interpret 'x == 1'
+call try 'x == 1'
+call try 'a[1] == 2'
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
 e: say condition('o')~code
+  return
 ```
 
 ```output
 2 1
+35.1
 35.1
 ```
 
