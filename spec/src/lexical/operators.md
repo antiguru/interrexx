@@ -43,11 +43,15 @@ say (1&0) (1|0) (1&&0) (\0) (-3) (+3) 'a'||'b'
 r[lex.operators.longest]
 A run of operator characters is split from the left into the longest
 operators of [the set](r:lex.operators.set) that fit. A run that cannot be
-split that way, because a character is left over with no operand, such as
-`&&&`, `====`, `\>=` or `<==`, raises `SYNTAX 35.1`.
+split that way, because a character other than `<` or `>` is left over with
+no operand, such as `&&&`, `====`, `\>=` or `<==`, raises `SYNTAX 35.1`. A
+`<` or `>` that is left over begins a variable reference term instead. That
+term takes a symbol, and the clause raises `SYNTAX 20.930` when none follows.
 
 ```rexx
-say (1<=-1) (1==-1) (2>-1) (1=\0)
+x = 5
+say (1<=-1) (1==-1) (2>-1) (1=\0) (1=>x)
+call try '1 => 2'
 call try '1 &&& 0'
 call try '1 ==== 1'
 call try '1 \>= 0'
@@ -62,7 +66,8 @@ bad: say condition('o')~code
 ```
 
 ```output
-0 0 1 1
+0 0 1 1 0
+20.930
 35.1
 35.1
 35.1
@@ -71,23 +76,23 @@ bad: say condition('o')~code
 
 r[lex.operators.gap]
 The characters of a two-character or three-character operator may be
-separated by blanks, tabs and comments. They are joined when the characters,
-taken without the separators, form an operator of
-[the set](r:lex.operators.set), and otherwise they stay separate tokens.
-So `> =` is `>=` and `= =` is `==`,
-while `- -` is two prefix minus signs and `\ \` two nots, because `--` and
-`\\` are no operators.
+separated by blanks, tabs and comments. The separators are dropped, and the
+run of operator characters that remains is split as
+[the longest rule](r:lex.operators.longest) says. So `> =` is `>=` and
+`= =` is `==`, while `- -` is two prefix minus signs and `\ \` two nots,
+because `--` and `\\` are no operators, and `1 > = - 1` is `>=` followed by
+a prefix minus.
 
 ```rexx
 say (2 > = 1) (2 = = 2) (2 \ = 1) (2 > < 1) (2 < /* c */ < 3)
 say 2 | | 3 1 |/**/| 2
-say (- - 1) (\ \ 0) (+ + 4)
+say (- - 1) (\ \ 0) (+ + 4) (1 > = - 1) (1 \ = \ 1)
 ```
 
 ```output
 1 1 1 1 1
 23 12
-1 0 4
+1 0 4 1 1
 ```
 
 r[lex.operators.comment]
@@ -149,7 +154,7 @@ r[lex.operators.blank]
 A blank, or a run of blanks and tabs, between two terms is the concatenation
 operator. A blank next to an operator, a comma or a tilde has no effect. So
 does a blank after an opening `(` or `[` and one before a closing `)` or `]`.
-A comment never counts as a blank.
+A comment is [no blank](r:lex.comments.separator).
 
 ```rexx
 say 'a'   'b' 'a'||'b' 'a'/**/'b'
@@ -169,24 +174,31 @@ ab ab
 r[lex.operators.adjacent]
 A `(` that follows a symbol or a string with no blank between them opens the
 arguments of a function call, and a `[` that follows a term with no blank
-between them opens a subscript. A comment between them is no blank. With a
-blank, a `(` starts a parenthesized term that is concatenated with the term
-before it, and a `[` is an error, `SYNTAX 35.1`. A `(` after a `)` with no
-blank between them concatenates the two terms without a blank.
+between them opens a subscript. A `(` that follows the name in a message term
+in the same way holds the arguments of the message. A comment between them
+is [no blank](r:lex.comments.separator). With a blank, a `(` starts a
+parenthesized term that is concatenated with the term before it, so that a
+message is sent without arguments, and a `[` is an error, `SYNTAX 35.1`. A
+`(` after a `)` with no blank between them concatenates the two terms without
+a blank.
 
 ```rexx
 say abs(-1) abs/**/(-1) abs (-1) abs /**/(-1)
 say (1)(2) (1) (2) (1)/**/(2)
 a = .array~of(5, 6)
-say a[2] a/**/[2]
+say a[2] a/**/[2] 'abc'~left(2) 'abc'~left/**/(2)
 signal on syntax name e
 interpret 'say a [2]'
 e: say condition('o')~code
+signal on syntax name f
+interpret "say 'abc'~left (2)"
+f: say condition('o')~code
 ```
 
 ```output
 1 1 ABS -1 ABS -1
 12 1 2 12
-6 6
+6 6 ab ab
 35.1
+93.903
 ```

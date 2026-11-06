@@ -14,10 +14,10 @@ comments and strings are written, and where one token ends and the next
 begins. The meaning of a clause, and of the expressions inside it, is the
 business of the chapters that follow.
 
-Every token is a string in quotes, a symbol or number, or a single
-operator or special character, and strings carry an optional radix suffix
-that makes them hexadecimal or binary. Blanks and comments sit between
-tokens and are not tokens themselves. The chapter has these pages:
+Every token is a string in quotes, a symbol or number, an operator of one to
+three characters, or a special character, and strings carry an optional
+radix suffix that makes them hexadecimal or binary. Blanks and comments sit
+between tokens and are not tokens themselves. The chapter has these pages:
 
 * [Characters](characters.md): the characters a program may use, case, blanks
   and line ends.
@@ -35,14 +35,13 @@ in the text, even after an `exit` or inside a routine that is never called,
 is raised before the first clause runs. A fault in the lexical form of the
 text is an unmatched quote or comment delimiter (`SYNTAX 6.1`, `6.2` and
 `6.3`), a character outside the [character set](r:lex.characters.set)
-(`SYNTAX 13.1`) or a malformed hexadecimal or binary string
-(`SYNTAX 15.1` to `15.6`). The program then produces no output and its
-process exit status is the negated error number, which a shell shows as
-`256` minus that number: 243 for 13.1. The empty `rc=` block shows the
-status and that no clause ran, but not the subcode, so the second example
-names it. The text given to INTERPRET is read when the INTERPRET instruction
-runs, so the same fault there is an ordinary condition that a trap can
-handle, and the instructions before it in the string never run.
+(`SYNTAX 13.1`) or a malformed hexadecimal or binary string (`SYNTAX 15.1`
+to `15.6`). The program then produces no output, and the interpreter exits
+with the negated error number, so that the exit status is `256` minus the
+error number: 243 for 13.1. The text given to INTERPRET is read when the
+INTERPRET instruction runs, so the same fault there is an ordinary condition
+that a trap can handle, and the instructions before it in the string never
+run.
 
 ```rexx
 say 'before'; exit
@@ -65,24 +64,12 @@ before
 13.1
 ```
 
-```rexx
-signal on syntax name e
-say 'before'
-interpret "say 'x'; say 1 #"
-say 'not reached'
-e: say condition('o')~code
-```
-
-```output
-before
-13.1
-```
-
 r[lex.index.token-end]
 A token ends at the first character that cannot be part of it. A string
 ends at its closing quote, a symbol at the first character that is not a
 symbol character, and an operator character is a token of its own or
-joins a following operator character, also across blanks and comments.
+joins a following operator character where the two form one operator, also
+across blanks and comments, as [the gap rule](r:lex.operators.gap) says.
 Blanks are needed only where two tokens would otherwise read as one, so
 `1+2` and `1 + 2` are the same three tokens. A string may also
 [touch the symbol after it](r:lex.literals.adjacent).

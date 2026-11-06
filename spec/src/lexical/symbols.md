@@ -1,7 +1,7 @@
 ---
 element: "Symbols"
 kind: concept
-ansi: "6.2.2, 7.2"
+ansi: "6.2.2, 6.2.1.1, 6.2.1.2, 7.2"
 rexxref: "General Concepts > Structure and General Syntax > Tokens"
 ---
 
@@ -55,8 +55,10 @@ var 1V .V
 r[lex.symbols.constant]
 A symbol that starts with a digit is a constant symbol. It names no
 variable: its value is its own characters in upper case and otherwise
-unchanged, so it is not normalized as a number is. A clause that assigns to
-it raises `SYNTAX 31.2`.
+unchanged, so it is not normalized as a number is. A clause that assigns to a
+symbol that starts with a digit raises `SYNTAX 31.2`. A constant symbol that
+starts with a period raises `SYNTAX 31.3`, as
+[the environment rule](r:lex.symbols.environment) says.
 
 ```rexx
 say 1e3 007 1.50 1a 2b.c
@@ -84,10 +86,11 @@ is used in arithmetic.
 ```rexx
 say 1e+3 + 0
 say 5.e-1 + 0 .5E2 + 0 12E+0 + 1
-call try '3ae+6'
+call try '2x9e+4'
+call try '4..1e+2'
+call try '..e+5'
 call try '1e+3.5'
 call try '1e+3a'
-call try '.e+3'
 call try '1.2.3'
 exit
 try:
@@ -101,21 +104,22 @@ bad: say condition('o')~message
 ```output
 1000
 0.5 50 13
-Nonnumeric value ("3AE") used in arithmetic operation.
+Nonnumeric value ("2X9E") used in arithmetic operation.
+Nonnumeric value ("4..1E") used in arithmetic operation.
+Nonnumeric value ("..E") used in arithmetic operation.
 Nonnumeric value ("1E") used in arithmetic operation.
 Nonnumeric value ("1E") used in arithmetic operation.
-Nonnumeric value (".E") used in arithmetic operation.
 Nonnumeric value ("1.2.3") used in arithmetic operation.
 ```
 
 r[lex.symbols.variable]
-A symbol that starts with a letter, `!`, `?` or `_` names a variable. It is a
-simple symbol when it holds no period, a stem symbol when its only period is
-its last character, and a compound symbol otherwise, where the characters
+A symbol that starts with a letter, `!`, `?` or `_` names a variable. It is
+a simple symbol when it holds no period, a stem symbol when its only period
+is its last character, and a compound symbol otherwise, where the characters
 before the first period are its stem and the rest is its tail. The simple
 symbol `a`, the stem symbol `a.` and the compound symbol `a.b` name three
-different variables, and since symbols are read in upper case, `a.b` and
-`A.B` name the same one.
+different variables, and since a symbol is [read in upper
+case](r:lex.characters.case), `a.b` and `A.B` name the same one.
 
 ```rexx
 a = 1; a. = 2; a.b = 3; A.B = 4
@@ -133,8 +137,9 @@ and `.5e1` do: those two are constant symbols. The characters after the
 period, in upper case, are the name that the environment of the program
 looks up. When the lookup finds an object, that is the value of the symbol,
 and when it finds none, the value is the symbol's own characters in upper
-case, period included. A clause that assigns to an environment symbol raises
-`SYNTAX 31.3`. This book does not specify which directories the lookup
+case, period included. A clause that assigns to a symbol that starts with a
+period raises `SYNTAX 31.3`, the constant symbols `.`, `.5` and `.5e1`
+included. This book does not specify which directories the lookup
 searches or in which order.
 
 ```rexx
@@ -142,13 +147,22 @@ searches or in which order.
 say .widget .Widget .nosuch
 say . .5 .5e1 + 0
 signal on syntax name e
-interpret ".widget = 2"
+call try ".widget = 2"
+call try ".5 = 2"
+call try ". = 2"
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
 e: say condition('o')~code
+  return
 ```
 
 ```output
 found found .NOSUCH
 . .5 5
+31.3
+31.3
 31.3
 ```
 

@@ -1,7 +1,7 @@
 ---
 element: "Clauses"
 kind: concept
-ansi: "6.2.3, 6.4.3"
+ansi: "6.2.1.1, 6.2.3, 6.3.2"
 rexxref: "General Concepts > Structure and General Syntax"
 ---
 
@@ -13,13 +13,15 @@ says where a clause ends, which clauses do nothing, how a label is
 recognized, how a line is continued, and how the first tokens of a clause
 decide whether it is a label, an assignment, an instruction or a command.
 The line ends of this page are those of a program file. The text given to
-INTERPRET ends its lines in ways that this book does not specify, so
-examples of INTERPRET here hold no line end.
+INTERPRET has [no line ends](r:lex.characters.interpret), so only a
+semicolon and the end of the text end a clause there, and examples of
+INTERPRET here hold no line end.
 
 r[lex.clauses.end]
 A clause ends at a semicolon, at a line end, or at the end of the program.
 A semicolon inside a string or a comment ends nothing. A line end inside a
-comment ends nothing either, and neither does a line end after a
+[comment](r:lex.comments.span) ends nothing either, and neither does a line
+end after a
 [continuation character](r:lex.clauses.continuation). Several clauses may
 share a line when semicolons separate them.
 
@@ -54,9 +56,12 @@ say 1;;;say 2
 /* only a comment */
 ; ;
 say 3
-if 1 then ; say 4
+if 0 then ; say 'no'
+if 0 then
+  /* c */ ;
+  say 'no'
 if 0 then nop; else
-  ; say 5
+  ; say 4
 ```
 
 ```output
@@ -64,7 +69,6 @@ if 0 then nop; else
 2
 3
 4
-5
 ```
 
 r[lex.clauses.implied]
@@ -72,7 +76,10 @@ The keywords THEN, ELSE and OTHERWISE end the clause they are in, so that
 the instruction after one may follow on the same line with no semicolon.
 They have this effect only where they are keywords: THEN after the
 expression of IF or WHEN, and ELSE and OTHERWISE as the first token of a
-clause. Anywhere else they are ordinary symbols.
+clause that is not an [assignment](r:lex.clauses.assignment). Anywhere else
+they are ordinary symbols. In the expression of IF or WHEN, outside
+parentheses, THEN is never a symbol, so `if then = 1 then` raises
+`SYNTAX 35.929`, while `if (then = 1) then` reads the variable.
 
 ```rexx
 if 1 then say 'a'; else say 'b'
@@ -82,6 +89,10 @@ select; when 0 then say 'e'; otherwise say 'f'; end
 say 1 then say 2 else say 3 otherwise say 4
 then = 5; else = 6; otherwise = 7
 say then else otherwise
+if (then = 5) then say 'g'
+signal on syntax name e
+interpret 'if then = 5 then say 1'
+e: say condition('o')~code
 ```
 
 ```output
@@ -90,23 +101,27 @@ d
 f
 1 THEN SAY 2 ELSE SAY 3 OTHERWISE SAY 4
 5 6 7
+g
+35.929
 ```
 
 ## Labels
 
 r[lex.clauses.label]
-A clause that is a single symbol or a single string followed by a colon is a
-label. Blanks and comments may stand before the colon, and the colon implies
-a semicolon, so another clause, or another label, may follow on the same
-line. A label does nothing when it is reached. A symbol label is read in
-upper case, and a string label keeps its characters as written, so a label
-written as a lower-case string is not found by a name that is written as a
-symbol. Any kind of [symbol](r:lex.symbols.kinds) is a label, a number and a
-symbol that starts with a period included. When two labels have the same
-name, the first is the one that is found. The colon makes a label before it
-can make an assignment, so `x: = 3` is the label `x` followed by the clause
-`= 3`, which raises `SYNTAX 35.1` when the program is read, so that the
-program produces no output and ends with the exit code 221.
+A clause that holds only a symbol or a string and a colon is a label. Blanks
+and comments may stand before the colon, and the colon implies a semicolon,
+so another clause, or another label, may follow on the same line. A label
+does nothing when it is reached. A symbol label is read in upper case, and a
+string label keeps its characters as written, so a label written as a
+lower-case string is not found by a name that is written as a symbol. Any
+kind of [symbol](r:lex.symbols.kinds) is a label, a number and a symbol that
+starts with a period included. When two labels have the same name, the first
+is the one that is found. The colon makes a label before it can make an
+assignment, so `x: = 3` is the label `x` followed by the clause `= 3`, which
+raises `SYNTAX 35.1` when the program is read, so that the program produces
+no output and ends with the exit code 221. A label inside a DO body raises
+`SYNTAX 47.2` when the program is read, and a label in the text given to
+INTERPRET raises `SYNTAX 47.1`.
 
 ```rexx
 go : /* c */ say 'a'
@@ -118,8 +133,11 @@ signal go2
 say 'skipped'
 "go2": say 'string label, not found'
 Go2: say 'found'
-d: say 'first'; d: say 'second'
+signal d
+say 'skipped'
+d: say 'first'
 signal stop
+d: say 'second'
 "Stop": say 'string label, as written'
 e: say condition('o')~code
 ```
@@ -131,7 +149,6 @@ c
 d
 found
 first
-second
 16.1
 ```
 
@@ -143,12 +160,45 @@ x: = 3
 ```output rc=221
 ```
 
+```rexx
+f = 'spec-lex-label.tmp'
+call sysfiledelete f
+call charout f, "say 'before'" || '0a'x || "x: = 3" || '0a'x
+call charout f
+signal on syntax name e
+call (f)
+e: say condition('o')~code
+call sysfiledelete f
+```
+
+```output
+35.1
+```
+
+```rexx
+say 'before'
+do 1; inner: say 1; end
+```
+
+```output rc=209
+```
+
+```rexx
+signal on syntax name e
+interpret 'lab: say 1'
+e: say condition('o')~code
+```
+
+```output
+47.1
+```
+
 ## Continuation
 
 r[lex.clauses.continuation]
 A comma or a minus sign that is the last token on a line, followed by
 nothing but blanks, tabs and comments, continues the clause on the next
-line. The character is replaced by a blank, and no semicolon is implied. A
+line. The character acts as a blank, and the line end implies no semicolon. A
 comment after it may span lines, and the line end after the comment is the
 one that counts. The next line is joined whole, so when it is empty the
 clause ends at its line end. At the end of a program, the character just
@@ -225,7 +275,11 @@ instruction or a command, and the first tokens decide which. If the first
 token is a symbol and the second is `=`, the clause is an
 [assignment](r:lex.clauses.assignment). Otherwise, if the first token is a
 symbol that is an [instruction keyword](r:lex.clauses.keyword), the clause
-is that instruction. Any other clause is a [command](r:lex.clauses.command).
+is that instruction. A clause whose first token is a symbol and whose second
+token is `==` raises `SYNTAX 35.1` when the program is read. A clause of the
+form `term[...] = expression` or `term~name = expression` is a message
+assignment, which the expressions chapter specifies. Any other clause is a
+[command](r:lex.clauses.command).
 
 ```rexx
 signal on failure name f
@@ -242,6 +296,31 @@ assigned
 2
 a command
 ```
+
+```rexx
+a = .array~new
+a[1] = 2
+d = .directory~new
+d~x = 1
+say a[1] d~x
+signal on syntax name e
+interpret 'x == 1'
+e: say condition('o')~code
+```
+
+```output
+2 1
+35.1
+```
+
+```rexx
+say 'before'
+x == 1
+```
+
+```output rc=221
+```
+
 r[lex.clauses.assignment]
 A clause whose first token is a symbol and whose second token is `=` is an
 assignment, whatever the symbol is, so the names of instructions and the
@@ -269,11 +348,13 @@ d i t e o
 ```
 
 r[lex.clauses.assignment.op]
-The tokens `+=` `-=` `*=` `/=` `%=` `//=` `||=` `&=` `|=` `&&=` and `**=`
-start an assignment too, when a symbol comes first. `x op= expression` assigns
-the result of `x op (expression)`, so the whole expression is evaluated before
-the operator is applied. The characters of the token may be separated as those
-of [any operator](r:lex.operators.gap) may be.
+The tokens `+=` `-=` `*=` `/=` `%=` `//=` and `**=` for the arithmetic
+operators, `||=` for concatenation and `&=` `|=` and `&&=` for the logical
+operators start an assignment too, when a symbol comes first. `x op=
+expression` assigns the result of `x op (expression)`, so the whole
+expression is evaluated before the operator is applied. The characters of
+the token may be separated as those of [any operator](r:lex.operators.gap)
+may be.
 
 ```rexx
 x = 10; x += 5; x -= 3; x *= 2; x /= 4; x %= 2; say x
@@ -323,8 +404,8 @@ stem
 
 r[lex.clauses.command]
 A clause that is not a label, an assignment or an instruction is a command.
-Its expression is evaluated, and the resulting string is handed to the
-current environment. How that is done is the business of the ADDRESS
+The string that its expression evaluates to is sent to the current
+environment. How that is done is the business of the ADDRESS
 instruction, and here only the recognition matters.
 
 ```rexx

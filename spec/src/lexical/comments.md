@@ -79,8 +79,9 @@ after it, and it is not a blank. Two terms with only a comment between them
 are therefore joined without a blank, and a blank on either side of the
 comment, or on both, is the blank of the join. A comment cannot sit inside a
 symbol, a number or a string: it splits a symbol or number that surrounds it
-into two. Between two operator characters a comment is dropped as a blank
-is, so the characters still form one operator.
+into two. Between two operator characters a comment is dropped as
+[the gap rule](r:lex.operators.gap) says, so the characters still form one
+operator.
 
 ```rexx
 ab = 'whole'; a = 'p'; b = 'q'

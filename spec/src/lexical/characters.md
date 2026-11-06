@@ -10,8 +10,9 @@ rexxref: "General Concepts > Structure and General Syntax > Characters"
 A program is a sequence of bytes, and this page says which bytes it may hold
 and what each one means to the reader of the program. The set of characters
 that may stand between tokens is small: letters, digits, a few marks and the
-blank. Strings and comments may hold any byte at all. Case matters inside
-strings only, and blanks matter only in where they separate tokens.
+blank. Strings and comments may hold almost any byte, and any byte in the text
+given to INTERPRET. Case matters inside strings only, and blanks matter only
+in where they separate tokens.
 
 r[lex.characters.bytes]
 The text of a program is read as bytes, with no decoding. A character in a
@@ -260,7 +261,6 @@ text is unmatched.
 
 ```rexx
 lf = '0a'x
-say length('a' || lf || 'b')
 interpret "say 'a" || lf || "b'"
 interpret "say 1 /* x" || lf || "y */ + 1"
 interpret "say 2 -- c" || lf || "say 3"
@@ -276,7 +276,6 @@ c: say condition('o')~code
 ```
 
 ```output
-3
 a
 b
 2
