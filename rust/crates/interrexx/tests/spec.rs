@@ -378,6 +378,33 @@ fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
     problems
 }
 
+/// Points this process's API connection at a service of its own below the
+/// target directory, so the examples that use external data queues never reach
+/// the user's service, and starts a watcher that stops that service and removes
+/// its directory once this process has ended.
+fn private_service() {
+    static CHOSEN: std::sync::Once = std::sync::Once::new();
+    CHOSEN.call_once(|| {
+        let dir =
+            Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("spec-api-{}", std::process::id()));
+        let daemon = Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi");
+        interrexx::use_api_service(&dir, &daemon);
+        let _ = Command::new("sh")
+            .arg("-c")
+            .arg(
+                "while kill -0 \"$0\" 2>/dev/null; do sleep 1; done; \
+                 REXX_API_DIR=\"$1\" \"$2\" --stop >/dev/null 2>&1; rm -rf \"$1\"",
+            )
+            .arg(std::process::id().to_string())
+            .arg(&dir)
+            .arg(&daemon)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+    });
+}
+
 /// Runs one example in process with an empty standard input, bounded as the
 /// corpus runs are. `None` when stdout is exactly the output block (its lines,
 /// each followed by one `\n`) and the exit code is `rc`. An example marked
@@ -388,6 +415,7 @@ fn run_example(
     example: &interrexx_spec::Example,
     directory: &Path,
 ) -> Option<String> {
+    private_service();
     let name = format!("{}:{}", page.path.display(), example.line);
     let invocation = interrexx::Invocation::none()
         .with_directory(directory.to_path_buf())
