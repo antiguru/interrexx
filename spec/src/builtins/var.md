@@ -62,19 +62,19 @@ hold for VAR as well. A variable holding the null string holds a value, and so
 does one holding an object that is not a string.
 
 ```rexx
-j = 3
-drop a.3
+n = 7
+drop t.7
 v = ''
-say var('j') var(j) var('J') var('a.j') var(2) var('*') var('v')
-say var('') var('j ') var(' j') var('a b') var('3') var('.nil') var('.x')
-a.3 = 1
-say var('a.j') var('a.3') var('A.J') var('a.4') var('a')
+say var('*') var(n) var('t.n') var('N') var('v') var(7) var('n')
+say var('') var('n ') var(' n') var('a b') var('3') var('.nil') var('.x')
+t.7 = 1
+say var('t.n') var('t.7') var('T.N') var('t.8') var('t')
 x = .array~new
 say var('x') var(copies('a', 250)) var(copies('a', 251))
 ```
 
 ```output
-1 0 1 0 0 0 1
+0 0 0 1 1 0 1
 0 0 0 0 0 0 0
 1 1 1 0 0
 1 0 0

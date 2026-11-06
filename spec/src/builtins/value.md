@@ -136,10 +136,10 @@ string is replaced by a string, as [a string argument](r:conv.string.object)
 says.
 
 ```rexx
-k = 3
-list.3 = 'three'
+idx = 3
+box.3 = 'three'
 ab = 'plain'
-say value('AB') value('ab') value('list.k') value('LIST.KK') value('list.3')
+say value('AB') value('ab') value('box.idx') value('BOX.IDXX') value('box.3')
 signal on syntax name a
 say value('')
 a: say condition('o')~code
@@ -159,7 +159,7 @@ say length(value(copies('a', 250)))
 ```
 
 ```output
-plain plain three LIST.KK three
+plain plain three BOX.IDXX three
 40.26
 40.26
 40.26
@@ -173,9 +173,10 @@ The result is the value of the variable named by `name`, as the program sees
 it when it uses the symbol. A variable that holds no value, or has been
 dropped, answers the name as the program would then see it: in uppercase, with
 the parts of a compound name's tail that name a variable holding a value
-replaced by that value and the others left as they are. The NOVALUE condition
-is not raised. A symbol that is a constant symbol, a number or one that starts
-with a period, is answered as it is, in uppercase, except that a name that
+replaced by that value and the others left as they are. VALUE never raises the
+NOVALUE condition, so a trap for it does not see the call. A symbol that is a
+constant symbol, a number or one that starts with a period, is answered as it
+is, in uppercase, except that a name that
 stands for an object of the environment, such as `.nil`, answers that object.
 The value is the object the variable holds, not a copy of it, and a variable
 that holds a non-string object answers it, so the call can be used with
@@ -303,8 +304,9 @@ value of the variable, and the null string when there is none, so a variable
 that is not set and one that is set to the null string are not told apart. A
 `newvalue` that is not omitted is the value the variable has afterwards, as the
 string it is replaced by, and `.nil` removes the variable. A character
-`'00'x` ends the value, so what follows it is lost. This book does not specify a name that
-contains an equals sign.
+`'00'x` ends the name as well as the value, so what follows it is lost. A call
+whose name is the null string assigns nothing and answers the null string. This
+book does not specify a name that contains an equals sign.
 
 ```rexx
 e = 'ENVIRONMENT'
@@ -316,7 +318,6 @@ say '['value('T14 V', 'blank', 'environment')']' '['value('T14 V', , e)']',
     '['value('T14 V', .nil, e)']'
 say '['value('T14_V', 'ab' || '00'x || 'cd', e)']' '['value('T14_V', .nil, e)']'
 say '['value('T14_V', , e)']' '['value('T14_V', .nil, e)']'
-say length(value('PATH', , e)) > 0
 ```
 
 ```output
@@ -326,9 +327,35 @@ say length(value('PATH', , e)) > 0
 [] [blank] [blank]
 [] [ab]
 [] []
-1
+```
+
+r[bif.value.os.command]
+A command that the program starts sees the environment variables as VALUE has
+left them: a variable it gave a value has that value, one that it removed with
+`.nil` is not there, and one it set to the null string is there with the null
+string as its value.
+
+```rexx
+e = 'ENVIRONMENT'
+call value 'T14F_PROBE', 'from rexx', e
+address system 'printf "[%s]\n" "$T14F_PROBE"'
+call value 'T14F_PROBE', .nil, e
+address system 'printf "[%s]\n" "$T14F_PROBE"'
+call value 'T14F_PROBE', '', e
+address system 'printf "[%s]\n" "${T14F_PROBE+set}"'
+```
+
+```output
+[from rexx]
+[]
+[set]
 ```
 
 > **Note.** The reference manual says that an environment variable set by VALUE
-> is passed to the commands the program starts and is not kept after the
-> program ends.
+> is not kept after the program ends.
+>
+> The ANSI draft (9.8.6) raises `SYNTAX 40.37` for an external pool that does
+> not exist and `SYNTAX 40.36` for a name the pool rejects, and checks `name`
+> as a symbol only for the variables of the running code. ooRexx raises
+> `SYNTAX 40.914` for a selector that is not valid, as the [selector
+> rule](r:bif.value.selector) says, and this book follows it.

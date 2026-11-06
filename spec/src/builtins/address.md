@@ -73,8 +73,9 @@ r[bif.address.name]
 After `ADDRESS name`, the result is the name written in uppercase when it is
 a symbol, and exactly as written when it is a string, the case, leading and
 trailing blanks included. After `ADDRESS VALUE expression`, or an expression
-in parentheses, it is the value of the expression as it is, also when that is
-the null string. The name is not checked and need not name any environment
+in parentheses, it is the value of the expression, also when that is
+the null string; a value that is not a string is replaced by a string, as [a
+string argument](r:conv.string.object) says. The name is not checked and need not name any environment
 the program can use.
 
 ```rexx
@@ -156,8 +157,8 @@ FIRST 0
 ## Scope
 
 r[bif.address.scope.routine]
-A routine that the program calls starts with the caller's current environment
-and its previous one, and when it returns, the caller has its own back: a
+An internal routine, one that the program calls by its label, starts with the
+caller's current environment and its previous one, and when it returns, the caller has its own back: a
 setting made inside the routine, by ADDRESS instructions or in a routine it
 called, is lost on return. This holds for a routine with PROCEDURE and for one
 without it.
@@ -201,8 +202,10 @@ OUTER
 ```
 
 r[bif.address.scope.method]
-A method starts with the environment the program started with, not the
-caller's, and as for a routine, a setting made in it is lost when it returns.
+A method, and a `::ROUTINE`, starts with the environment the program started
+with, not the caller's, and as for an internal routine, a setting made in it
+is lost when it returns. Both have the start environment as the previous one
+too, so the instruction with no operand there swaps back to it.
 
 ```rexx
 d = address()
@@ -210,6 +213,15 @@ address outer
 o = .o~new
 say (o~start == d) (o~set == 'INNER') address()
 say (o~start == d) address()
+address one
+say (word(rr(), 1) == d) (word(rr(), 2) == d) (word(rr(), 3) == d) address()
+exit
+::routine rr
+a = address()
+address
+b = address()
+address x
+return a b address()
 ::class o
 ::method start
 return address()
@@ -221,6 +233,7 @@ return address()
 ```output
 1 1 OUTER
 1 OUTER
+1 1 0 ONE
 ```
 
 r[bif.address.scope.interpret]

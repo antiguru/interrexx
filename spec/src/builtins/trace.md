@@ -71,9 +71,10 @@ L C
 r[bif.trace.letter]
 Of `option` after its prefix, only the first character matters. It selects the
 setting by the letter it is, in either case, and the characters after it play
-no part, so the name of a setting, or a word that starts with its letter, does
-as well. When `option` has nothing after its prefix, the null string among
-them, the setting is `N`.
+no part, a question mark among them, so the name of a setting, or a word that
+starts with its letter, does as well. When `option` is the null string, the
+setting is `N`; an option of only question marks is the case of [the prefix
+rule](r:bif.trace.prefix).
 
 ```rexx
 call show
@@ -90,6 +91,19 @@ N A C O R
 N R
 N F ?F
 N
+```
+
+```rexx
+call show
+exit
+show: procedure
+say trace('N?') trace('a?') trace('?N?') trace()
+say trace('N??') trace('??N?') trace()
+```
+
+```output defect=#80
+N N A ?N
+?N N N
 ```
 
 r[bif.trace.prefix]
@@ -149,11 +163,11 @@ O
 ## Scope
 
 r[bif.trace.scope]
-The setting belongs to the code that is running, not to the program. A routine
-that the program calls starts with the caller's setting, and the caller has
-its own back when the routine returns, whatever the routine set. A method
-starts with `N` whatever the caller's setting is, and its setting is lost on
-return as well. Code run by INTERPRET shares the setting of the code that runs
+The setting belongs to the code that is running, not to the program. An internal
+routine, one that the program calls by its label, starts with the caller's
+setting, and the caller has its own back when the routine returns, whatever
+the routine set. A method, and a `::ROUTINE`, starts with `N` whatever the
+caller's setting is, and its setting is lost on return as well. Code run by INTERPRET shares the setting of the code that runs
 it.
 
 ```rexx
@@ -163,6 +177,7 @@ say 'caller' trace()
 call hidden
 say 'caller' trace()
 say .o~new~m 'caller' trace()
+say rr() 'caller' trace()
 interpret 'x = trace("F")'
 say 'interpret' trace()
 call trace 'O'
@@ -183,6 +198,10 @@ return
 x = trace()
 call trace 'F'
 return x trace()
+::routine rr
+x = trace()
+call trace 'F'
+return x trace()
 ```
 
 ```output
@@ -192,6 +211,7 @@ caller E
 hidden E
 hidden I
 caller E
+N F caller E
 N F caller E
 interpret F
 ```
