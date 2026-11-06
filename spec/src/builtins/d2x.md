@@ -126,9 +126,11 @@ say d2x(321, 1) d2x(321, 2) d2x(4095, 2) d2x(65535, 1) d2x(1234567, 4)
 ```
 
 r[bif.d2x.n.negative]
-A negative number with an `n` is written in two's complement: as the sum of
-the number and 16 to the power of `n`, in its last `n` digits. A negative
-number that needs more than `n` digits is cut like a positive one.
+A negative number with an `n` is written in two's complement: the answer
+is the number's remainder on division by 16 to the power of `n`, taken as
+a non-negative number and written in exactly `n` digits, with `0` digits
+on its left. For `n` of 1, -17 leaves the remainder 15, so its answer is
+`F`; a number that needs more than `n` digits is cut like a positive one.
 
 ```rexx
 say d2x(-16, 1) d2x(-17, 1) d2x(-128, 2) d2x(-129, 2) d2x(-129, 3)

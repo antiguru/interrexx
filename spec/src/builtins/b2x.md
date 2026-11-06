@@ -46,7 +46,7 @@ digit, `SYNTAX 93.932` for whitespace at an end and `SYNTAX 93.977` for a gap
 at a place that is not a multiple of 4 digits from the end.
 
 ```rexx
-say b2x('1 1111 0000') b2x('0001' || '09'x || '1111')
+say b2x('10 0101 1100') b2x('0001' || '09'x || '1111')
 signal on syntax name a
 say b2x('12')
 a: say condition('o')~code
@@ -59,7 +59,7 @@ c: say condition('o')~code
 ```
 
 ```output
-1F0 1F
+25C 1F
 93.934
 93.932
 93.977
@@ -76,28 +76,27 @@ digit of its value, `0` to `9` and `A` to `F`, with the letters in
 capitals. Leading zero digits are kept.
 
 ```rexx
-say b2x('11000011') b2x('00001010') b2x('0000') b2x('1111 0001 0010')
+say b2x('10010110') b2x('00001010') b2x('0000') b2x('1111 0001 0010')
 say b2x('0000000011111111')
 ```
 
 ```output
-C3 0A 0 F12
+96 0A 0 F12
 00FF
 ```
 
 r[bif.b2x.partial]
-When the number of binary digits is not a multiple of 4, the leftmost group
-has fewer than 4 digits and is read as if enough `0` digits stood on its
-left to make it 4. The answer has `ceil(n/4)` hexadecimal digits for `n`
-digits.
+The leftmost group may have 1, 2 or 3 digits; it is read as the 4-digit
+group that has `0` digits before it, so that `110` stands for `0110`. The
+answer has `ceil(n/4)` hexadecimal digits for `n` digits.
 
 ```rexx
-say b2x('1') b2x('10') b2x('101') b2x('10111') b2x('1 0000 0000')
+say b2x('1') b2x('10') b2x('110') b2x('11001') b2x('1 0000 0000')
 say length(b2x(copies('1', 9)))
 ```
 
 ```output
-1 2 5 17 100
+1 2 6 19 100
 3
 ```
 

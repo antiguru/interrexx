@@ -43,15 +43,14 @@ r[bif.c2x.result]
 The answer has two hexadecimal digits for each character of `string`, in
 order. The digits of a character are those of its code, from `'00'x` to
 `'FF'x`: the code's value divided by 16, then its remainder, each as `0`
-to `9` or `A` to `F` in capitals. The answer has no whitespace in it, and
-twice the length of `string`.
+to `9` or `A` to `F` in capitals.
 
 ```rexx
-say c2x('0123'x) c2x('7f80ff'x) c2x('Zd8') length(c2x('abc'))
+say c2x('4567'x) c2x('7f80ff'x) c2x('Qz9') length(c2x('abc'))
 ```
 
 ```output
-0123 7F80FF 5A6438 6
+4567 7F80FF 517A39 6
 ```
 
 r[bif.c2x.any-character]

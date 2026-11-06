@@ -43,7 +43,7 @@ c: say condition('o')~code
 ```
 
 r[bif.c2d.n.default]
-When `n` is omitted, the string is read as an unsigned number whatever its
+When `n` is omitted, the string is read as a number with no sign whatever its
 leftmost bit is, and the answer is never negative. An omitted `n` is not an
 `n` of the length of `string`: with that `n` a string whose leftmost bit is
 set is negative.
@@ -66,29 +66,30 @@ character's code times 256 to the power of the number of characters
 after it. Leading `'00'x` characters therefore change nothing.
 
 ```rexx
-say c2d('09'x) c2d('0100'x) c2d('ff81'x) c2d('00000007'x) c2d('abc')
+say c2d('0c'x) c2d('0100'x) c2d('e3a1'x) c2d('00000007'x) c2d('abc')
 ```
 
 ```output
-9 256 65409 7 6382179
+12 256 58273 7 6382179
 ```
 
 r[bif.c2d.signed]
 With `n`, the string is read as [a signed number of `n`
-characters](r:bif.index.conv.signed.read): it is made `n` characters long, by
-dropping characters on its left or adding `'00'x` characters there, and the
-answer is negative when the leftmost bit of the result is set. Padding with
+characters](r:bif.index.conv.signed.read): it is brought to `n` characters
+by adding `'00'x` characters on its left or removing characters from there,
+and the answer is negative when the leftmost bit of the result is set.
+Padding with
 `'00'x` means that a string shorter than `n` is never negative, and that
 only the last `n` characters of a longer string matter.
 
 ```rexx
-say c2d('81'x, 1) c2d('81'x, 2) c2d('ff81'x, 2) c2d('ff81'x, 1) c2d('ff7f'x, 1)
-say c2d('f081'x, 2) c2d('0031'x, 0) c2d('ff'x, 5) c2d('80'x, 1) c2d('7f'x, 1)
+say c2d('93'x, 1) c2d('93'x, 2) c2d('ffa5'x, 2) c2d('ffa5'x, 1) c2d('ff5a'x, 1)
+say c2d('e3a1'x, 2) c2d('0107'x, 0) c2d('ff'x, 5) c2d('80'x, 1) c2d('7f'x, 1)
 ```
 
 ```output
--127 129 -127 -127 127
--3967 0 255 -128 127
+-109 147 -91 -91 90
+-7263 0 255 -128 127
 ```
 
 r[bif.c2d.null]

@@ -422,8 +422,9 @@ say (bitor(s) == s) (bitand('', s) == 'abcd') (bitand('a', 'a') == 'a')
 > follows; a function's page links the ones it uses and states the rest.
 
 r[bif.index.conv.digits]
-In an argument that is a string of binary digits, the digits are `0` and
-`1`. In an argument that is a string of hexadecimal digits, the digits are
+In an argument that is a [string](r:conv.string.object) of binary digits,
+the digits are `0` and `1`. In an argument that is a string of
+hexadecimal digits, the digits are
 `0` to `9` and the letters `A` to `F`, each in either case, and the two
 cases may be mixed. Any character other than a digit that is not
 [whitespace](r:conv.string.whitespace) raises `SYNTAX 93.934` in a binary
@@ -468,10 +469,10 @@ say '['b2x('')']' '['x2b('')']' '['x2c('')']' x2d('')
 ```
 
 r[bif.index.conv.groups]
-A digit string may have whitespace between its digits, to make it easier to
-read; the whitespace is not part of the number. A run of any number of
-blanks and tabs, in any mix, counts as one gap. A gap is allowed only where the digits
-that follow it, up to the end of the string, can be read in whole units:
+A digit string may have whitespace between its digits, which is not read as
+part of the number. A run of any number of blanks and tabs, in any mix,
+counts as one gap. A gap is allowed only where the digits that follow it,
+up to the end of the string, can be read in whole units:
 a multiple of 4 binary digits (the digits of one hexadecimal digit) in a
 binary string, and a multiple of 2 hexadecimal digits (the digits of one
 character) in a hexadecimal string. The first group of digits, before the
@@ -480,7 +481,7 @@ boundary raises `SYNTAX 93.977` in a binary string and `SYNTAX 93.976` in a
 hexadecimal string.
 
 ```rexx
-say b2x('1 1111 0000') b2x('1  1111') b2x('1111' || '09'x || ' 0000')
+say b2x('10 0101 1100') b2x('1  1111') b2x('1111' || '09'x || ' 0000')
 say x2c('4a 4B') c2x(x2c('4 4a4b')) x2d('1 23 45')
 signal on syntax name a
 say b2x('11 11')
@@ -497,7 +498,7 @@ d: say condition('o')~code
 ```
 
 ```output
-1F0 1F F0
+25C 1F F0
 JK 044A4B 74565
 93.977
 93.977
@@ -581,43 +582,47 @@ say c2d('a') c2d('a', 0) c2d('a', '-0') '['d2c(65, 0)']' '['d2x(65, 0)']'
 
 r[bif.index.conv.signed.read]
 When C2D or X2D is given an `n`, the string is read as a signed number of
-exactly `n` units. It is first made `n` units long: when it is longer, its
-leftmost units are dropped, and when it is shorter, `'00'x` units (zero
-digits in X2D) are added on its left. The result is then
+exactly `n` units. It is first made `n` units long: units are removed from
+its left when it is longer, and `'00'x` units (zero digits in X2D) are
+added there when it is shorter. The result is then
 read as a two's-complement number: when the leftmost bit of the leftmost
 unit is set, the number is negative, and its value is the unsigned value minus
 256\*\*`n` in C2D and 16\*\*`n` in X2D. An `n` of 0 answers 0. Without an `n`,
-the string is read as an unsigned number, whatever its leftmost bit, and
-the answer is never negative.
+the string is read as a number with no sign, whatever its leftmost bit,
+and the answer is never negative.
 
 ```rexx
-say c2d('81'x) c2d('81'x, 1) c2d('81'x, 2) c2d('f081'x, 1) c2d('f081'x, 2)
-say c2d('ff7f'x, 1) c2d('0031'x, 0) c2d('', 3)
-say x2d('81') x2d('81', 2) x2d('81', 3) x2d('f081', 2) x2d('f081', 3) x2d('f081', 4)
+say c2d('93'x) c2d('93'x, 1) c2d('93'x, 2) c2d('e3a1'x, 1) c2d('e3a1'x, 2)
+say c2d('ff5a'x, 1) c2d('0107'x, 0) c2d('', 3)
+say x2d('93') x2d('93', 2) x2d('93', 3)
+say x2d('e3a1', 2) x2d('e3a1', 3) x2d('e3a1', 4)
 ```
 
 ```output
-129 -127 129 -127 -3967
-127 0 0
-129 -127 129 -127 129 -3967
+147 -109 147 -95 -7263
+90 0 0
+147 -109 147
+-95 929 -7263
 ```
 
 r[bif.index.conv.signed.write]
-When D2C or D2X is given an `n`, the answer is exactly `n` units long: the
-last `n` units of the number's two's-complement form, which is the number
-itself for a non-negative one and its sum with 256\*\*`n` in D2C and
-16\*\*`n` in D2X for a negative one. The units to the left of the number's
-own are `'00'x` (zero digits in D2X) for a non-negative number and `'FF'x`
-(`F` digits in D2X) for a negative one, and a number that needs more than
-`n` units loses its leftmost ones. An `n` of 0 answers the null string.
+When D2C or D2X is given an `n`, the answer is exactly `n` units long. It
+is the number's remainder on division by 256\*\*`n` in D2C and 16\*\*`n` in
+D2X, a remainder that is never negative, written with `'00'x` units (`0`
+digits in D2X) on its left to make `n` units. For a negative number that
+fits in `n` units, those units on the left are `'FF'x` (`F` digits in D2X);
+for a number that needs more than `n` units, the leftmost ones are lost,
+so -257 with an `n` of 1 is `'FF'x`. An `n` of 0 answers the null string.
 Without an `n`, a non-negative number is written in as few units as it
 takes, and at least one, so that no `'00'x` (or `0`) stands on its left
 unless the number is 0; a negative number raises `SYNTAX 93.927`.
 
 ```rexx
-say c2x(d2c(65)) c2x(d2c(65, 3)) c2x(d2c(-65, 3)) c2x(d2c(321, 1)) c2x(d2c(-129, 1))
+say c2x(d2c(72)) c2x(d2c(65, 3)) c2x(d2c(-65, 3)) c2x(d2c(321, 1))
+say c2x(d2c(-129, 1))
 say d2x(65) d2x(65, 4) d2x(-65, 4) d2x(321, 2) d2x(-129, 2)
 say c2x(d2c(0)) d2x(0) c2x(d2c(256)) d2x(256) c2x(d2c(-256, 1)) c2x(d2c(-256, 2))
+say c2x(d2c(-257, 1)) d2x(-4097, 2) c2x(d2c(-65537, 2))
 signal on syntax name a
 say d2c(-1)
 a: say condition('o')~code
@@ -627,24 +632,29 @@ b: say condition('o')~code
 ```
 
 ```output
-41 000041 FFFFBF 41 7F
+48 000041 FFFFBF 41
+7F
 41 0041 FFBF 41 7F
 00 0 0100 100 00 FF00
+FF FF FFFF
 93.927
 93.927
 ```
 
 r[bif.index.conv.decimal]
-The decimal argument of D2C and D2X is a number: a string written as a
-Rexx number, with optional surrounding whitespace, a sign, a period and an
-exponent, whose value is a whole number of at most NUMERIC DIGITS digits.
+The decimal argument of D2C and D2X is a [string](r:conv.string.object)
+written as a Rexx number, with optional whitespace around it and after its
+sign, a period and an exponent, whose value is a whole number of at most
+NUMERIC DIGITS significant digits; leading zeros and zeros after the point
+are not counted.
 Each of these raises `SYNTAX 93.929` in D2C and `SYNTAX 93.928` in D2X: a
 string that is not a number, the null string among them; a number with a
-nonzero fractional part, when it is written with no more digits than
-NUMERIC DIGITS; and a whole number with more digits than NUMERIC DIGITS. The
+nonzero fractional part, when it is written with no more significant
+digits than NUMERIC DIGITS; and a whole number with more digits than
+NUMERIC DIGITS. The
 value is the number however it is written: `6.5E1` and `65.0` are 65. This
-book does not specify a number written with more digits than NUMERIC DIGITS
-and a fractional part.
+book does not specify a number written with more significant digits than
+NUMERIC DIGITS and a nonzero fractional part.
 
 ```rexx
 say c2x(d2c(' 65 ')) c2x(d2c('+65')) c2x(d2c('6.5E1')) c2x(d2c('65.0')) d2x('0.65E2')
