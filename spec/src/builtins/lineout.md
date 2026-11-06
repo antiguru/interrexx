@@ -216,8 +216,9 @@ r[bif.lineout.close]
 When both `string` and `line` are omitted, LINEOUT closes the stream and
 answers 0, as [CHAROUT given only a name](r:bif.charout.close) does. A
 file that does not exist is created by it, and the characters written are in
-the file afterwards. Whether the call closes the standard output is
-[not specified](r:bif.index.stream.lifetime).
+the file afterwards. The call closes no standard stream: on one it writes
+nothing and answers 0, as [Deviation
+98](r:bif.index.stream.lifetime.deviation.98) says.
 
 ```rexx
 f = 'spec-lineout-close.tmp'

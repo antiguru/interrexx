@@ -3,7 +3,7 @@ element: "Built-in functions"
 kind: chapter
 ansi: "9.2.1"
 rexxref: "Functions > Built-in Functions"
-deviations: [4]
+deviations: [4, 98, 99, 101]
 ---
 
 # Built-in functions
@@ -11,9 +11,11 @@ deviations: [4]
 This chapter has a page for each builtin function, and each page specifies the
 function call. The rules here hold for every builtin call, except that a
 builtin whose page links [the native call rule](r:bif.index.call.native)
-follows that rule in place of the rules for the number of arguments. The pages
-link to these rules, and to the [conventions](../conventions.md), instead of
-restating them.
+follows that rule in place of the rules for the number of arguments, and
+also for the [conversion](r:conv.string.object) of an object that is not a
+string, which has no fallback to `STRING` there. The pages link to these
+rules, and to the [conventions](../conventions.md), instead of restating
+them.
 
 A page's syntax line names the arguments in order. A name in square
 brackets is an optional argument; every other argument is required. The
@@ -171,10 +173,11 @@ the count. An argument that such a page calls a string and that is an object
 other than a string is replaced by the answer of its `MAKESTRING` method, as
 [for the other builtins](r:conv.string.object), but there is no fallback to
 the `STRING` method: an object with no `MAKESTRING` method raises
-`SYNTAX 88.909`, whatever its `STRING` method answers. When a call has an
-argument past the last one on the syntax line and also an argument that is
-omitted or that is to be a string and has no `MAKESTRING` method, which of the
-two errors it raises is not specified.
+`SYNTAX 88.909`, whatever its `STRING` method answers. As for the other
+builtins, the count comes first: a call that has an argument past the last
+one on the syntax line raises 88.922 even when an argument before it is
+omitted or fails its own check (see [Deviation
+101](r:bif.index.call.native.deviation.101)).
 
 ```rexx
 signal on syntax name a
@@ -202,6 +205,39 @@ say filespec('E', 'x/y.z', , ) filespec('N', .mutablebuffer~new('p/q'))
 88.922
 88.909
 z q
+```
+
+r[bif.index.call.native.deviation.101]
+A builtin that follows the native call rule checks the count of its arguments
+before the arguments themselves, as [the other
+builtins](r:bif.index.call.order.count-before-values) do: a call that has an
+argument past the last one on the syntax line raises `SYNTAX 88.922` even when
+an argument before it is omitted, is an object with no `MAKESTRING` method, or
+fails a check that its page gives. ooRexx reports an omitted argument, an
+object with no `MAKESTRING` method and an argument that is not a whole number
+before the count, and the count before an argument's value: an option it does
+not allow or a number out of range.
+
+```rexx
+signal on syntax name a
+say filespec(, 'a/b', 'c')
+a: say condition('o')~code
+signal on syntax name b
+say filespec('N', .nil, 'c')
+b: say condition('o')~code
+signal on syntax name c
+say directory(.nil, 'x')
+c: say condition('o')~code
+signal on syntax name d
+say beep('x', 0, 1)
+d: say condition('o')~code
+```
+
+```output
+88.922
+88.922
+88.922
+88.922
 ```
 
 ## Words
@@ -1344,8 +1380,10 @@ positions. A start or line number given to a transient stream raises
 `SYNTAX 93.958`, whatever its value: after the checks of [the argument
 rule](r:bif.index.stream.args) on the argument count, the form of the
 arguments and the count, and in place of that rule's check that the start is 1
-or more. What CHAROUT does with a start that it is given together with the
-name `STDIN`, a write to the standard input, is not specified. The examples of
+or more. CHAROUT given the name `STDIN` and a start is the exception: the
+start is not checked beyond its form, and the call [fails as any write to the
+standard input does](r:bif.charout.fail), with NOTREADY and the number of
+characters it did not write as its answer. The examples of
 this book run with a pipe as standard input and as standard output. What a
 standard stream that is connected to anything else does with a start is not
 specified either. Named transient streams, such as FIFOs and devices, are not
@@ -1434,9 +1472,8 @@ ends. [CHAROUT given only a name](r:bif.charout.close) closes a stream; the
 pages of the other stream builtins name their forms. The next use of a closed
 name opens the stream again: the read position is at the start and the write
 position at the end of the data, and the characters written before the close
-are in the file. Whether a CHAROUT or LINEOUT call that gives no string, and
-either no stream name or the name of the standard output, closes the standard
-output, and what the later output of the program does then, is not specified.
+are in the file. CHAROUT and LINEOUT never close a standard stream, as
+[Deviation 98](r:bif.index.stream.lifetime.deviation.98) says.
 
 ```rexx
 f = 'spec-streams-life.tmp'
@@ -1457,6 +1494,30 @@ a
 abcd
 ```
 
+r[bif.index.stream.lifetime.deviation.98]
+CHAROUT and LINEOUT never close a standard stream. A call of either that gives
+neither a string nor a start or line, and either no stream name or the name of
+a standard stream, writes nothing, answers 0 and does nothing else: the later
+output of the program is written as usual. ooRexx closes the standard stream
+for such a call, the standard output or the standard error, and output written
+to it, before or after the call, can be lost; which forms of the call do so
+varies from program to program.
+
+```rexx
+say 'one'
+call charout
+say charout('STDOUT') lineout('stdout:') charout('') lineout()
+call lineout 'stdout'
+call charout 'stderr'
+say 'two'
+```
+
+```output
+one
+0 0 0 0
+two
+```
+
 r[bif.index.stream.notready]
 A call that cannot read, or write, as many characters as it was asked to
 raises the NOTREADY condition. That happens at the end of the data, when the
@@ -1469,9 +1530,10 @@ trapped, or after a `CALL ON` trap returns, the call goes on and answers what
 its page says. A trap by `SIGNAL ON NOTREADY` abandons the clause that raised
 it, like any other condition. Reading the standard output or the standard
 error by name, with CHARIN or LINEIN and a count that is not 0, is a read the
-stream does not allow and raises NOTREADY too; `condition('D')` is `STDOUT` or
-`STDERR`, whatever the spelling of the name, with or without the colon. CHARS
-and LINES of them raise nothing and answer 0.
+stream does not allow, whatever the stream is connected to, and raises
+NOTREADY too (see [Deviation 99](r:bif.index.stream.notready.deviation.99));
+`condition('D')` is `STDOUT` or `STDERR`, whatever the spelling of the name,
+with or without the colon. CHARS and LINES of them raise nothing and answer 0.
 
 ```rexx
 f = 'spec-streams-nr.tmp'
@@ -1514,6 +1576,28 @@ return
 NOTREADY STDOUT
 NOTREADY STDERR
 0 0
+```
+
+r[bif.index.stream.notready.deviation.99]
+A read of the standard output or the standard error reads nothing and raises
+NOTREADY whatever the stream is connected to, a file that is open for reading
+as well as for writing included. ooRexx reads from such a stream when it is
+open for reading, and answers the characters it finds there.
+
+```rexx
+call on notready name std
+say '[' || charin('Stdout', , 2) || ']'
+say '[' || linein('stderr:') || ']'
+exit
+std: say condition('d')
+return
+```
+
+```output defect=#82
+[]
+STDOUT
+[]
+STDERR
 ```
 
 r[bif.index.stream.line-end]

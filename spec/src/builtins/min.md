@@ -159,9 +159,11 @@ MIN applies NUMERIC FUZZ to whole numbers as it does to any other numbers, so
 function call that omits an argument and passes a later one raises
 `SYNTAX 40.5`, whether the omitted argument is the first or a later one; the
 message form raises `SYNTAX 93.903`, as [its rule](r:bif.min.omitted) says.
-ooRexx departs from both: it compares two whole numbers written without a
-decimal point as if NUMERIC FUZZ were 0, and its function call raises 93.903
-when the omitted argument is not the first.
+ooRexx departs from both. It compares some pairs of whole numbers as if
+NUMERIC FUZZ were 0. Which pairs depends on how each number was written and
+produced, and on earlier uses of the same string in the program, so the same
+call can apply FUZZ in one program and not in another. Its function call
+raises 93.903 when the omitted argument is not the first.
 
 ```rexx
 signal on syntax name a

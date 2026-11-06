@@ -4,7 +4,7 @@ kind: builtin
 syntax: "ABS(number)"
 ansi: "9.4.1"
 rexxref: "Functions > Built-in Functions > ABS (Absolute Value)"
-deviations: [4]
+deviations: [4, 97]
 ---
 
 # ABS
@@ -110,4 +110,22 @@ say (abs(s) == s) (abs('125') == '125') (abs(-s) == s)
 
 ```output
 1 1 1
+```
+
+r[bif.abs.deviation.97]
+ABS writes its answer in the NUMERIC FORM in force at the call, as [the
+result rule](r:bif.abs.result) says, also for a string that was converted to
+a number under the other form before. ooRexx may answer such a string as it
+was written.
+
+```rexx
+numeric digits 3
+say abs('0.0000001')
+numeric form engineering
+say abs('0.0000001')
+```
+
+```output
+1E-7
+100E-9
 ```
