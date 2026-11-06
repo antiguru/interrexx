@@ -1,0 +1,442 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>SYMBOL - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">3.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">3.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">3.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">3.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">3.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">3.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">3.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">3.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">3.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">3.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">3.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">3.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">3.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">3.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">3.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">3.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">3.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">3.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">3.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">3.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">3.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">3.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">3.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">3.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">3.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">3.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">3.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">3.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">3.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">3.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">3.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">3.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">3.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">3.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">3.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">3.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">3.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">3.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">3.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">3.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">3.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">3.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">3.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">3.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">3.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">3.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">3.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">3.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">3.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">3.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">3.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">3.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">3.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">3.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">3.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">3.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">3.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">3.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">3.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">3.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">3.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">3.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">3.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">3.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">3.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html" class="active"><strong aria-hidden="true">3.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">3.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">3.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">3.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">3.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">3.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">3.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">3.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">3.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">3.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">3.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">3.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">3.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">3.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">3.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">3.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">3.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">3.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">3.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">4.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="symbol"><a class="header" href="#symbol">SYMBOL</a></h1>
+<pre><code>SYMBOL(name)
+</code></pre>
+<p class="references">ANSI: 9.8.4; rexxref: Functions &gt; Built-in Functions &gt; SYMBOL</p>
+<p>SYMBOL tells whether a string is a symbol and, if so, whether a variable of
+that name holds a value where SYMBOL is called. The answer is one of the three
+strings <code>BAD</code>, <code>VAR</code> and <code>LIT</code>.</p>
+<h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
+<div class="rule" id="r-bif.symbol.args"><a href="#r-bif.symbol.args">[bif.symbol.args]</a></div>
+<p>SYMBOL takes one argument, <code>name</code>, which is a <a href="../conventions.html#r-conv.string.null">string</a>,
+and nothing else. The argument count is checked by the <a href="index.html#r-bif.index.call.count">builtin call
+rules</a>: one argument is required and one is the
+most. SYMBOL does not run as a String method: sending the message <code>SYMBOL</code>
+to a string raises <code>SYNTAX 97.1</code>.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say symbol()
+a: say condition('o')~code
+signal on syntax name b
+say symbol('a', 'b')
+b: say condition('o')~code
+signal on syntax name c
+say symbol(, )
+c: say condition('o')~code
+signal on syntax name d
+say 'a'~symbol
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.3
+40.4
+40.3
+97.1
+</code></pre>
+<h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
+<div class="rule" id="r-bif.symbol.result"><a href="#r-bif.symbol.result">[bif.symbol.result]</a></div>
+<p>The answer is <code>BAD</code> when <code>name</code> is not a symbol, <code>VAR</code> when it is a symbol
+that names a variable holding a value, and <code>LIT</code> for any other symbol. A
+string is a symbol when it has at least one character and each is a letter,
+a digit, or one of <code>.</code>, <code>!</code>, <code>?</code> and <code>_</code>, as it is for
+<a href="datatype.html#r-bif.datatype.symbol">the symbol type of DATATYPE</a>, and it has at most 250
+characters; the null string, a string with whitespace anywhere in it, even at
+an end, one with any other character, and one of more than 250 characters,
+whatever they are, is <code>BAD</code>. The string is read as it is, without trimming.
+A <code>name</code> that is an object other than a string is replaced by a string as
+<a href="../conventions.html#r-conv.string.object">any string argument</a> says.</p>
+<pre><code class="language-rexx">n = 7
+say symbol('n') symbol('p') symbol('a_b') symbol('a!') symbol('a?') symbol('_')
+say symbol('') symbol(' j') symbol('j ') symbol('a b') symbol('+5') symbol('a-b'),
+    symbol('a$') symbol('"j"') symbol('é')
+say symbol(.nil) symbol(.array~new) symbol(.mutablebuffer~new('n'))
+say symbol(copies('a', 250)) symbol(copies('a', 251)) symbol(copies('1', 251)),
+    symbol(copies('a', 100)'.'copies('b', 149)) symbol(copies('a', 100)'.'copies('b', 150))
+</code></pre>
+<pre><code class="language-output">VAR LIT LIT LIT LIT LIT
+BAD BAD BAD BAD BAD BAD BAD BAD BAD
+BAD BAD VAR
+LIT BAD BAD LIT BAD
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The limit of 250 is on the whole string, stem and tail together.</p>
+</blockquote>
+<div class="rule" id="r-bif.symbol.case"><a href="#r-bif.symbol.case">[bif.symbol.case]</a></div>
+<p>SYMBOL reads <code>name</code> in uppercase, as a program reads a symbol, so <code>name</code>
+names the same variable in either case.</p>
+<pre><code class="language-rexx">n = 7
+say symbol('n') symbol('N') symbol('p') symbol('P')
+</code></pre>
+<pre><code class="language-output">VAR VAR LIT LIT
+</code></pre>
+<div class="rule" id="r-bif.symbol.constant"><a href="#r-bif.symbol.constant">[bif.symbol.constant]</a></div>
+<p>A symbol that starts with a digit or a period is a constant symbol and is
+never a variable, so SYMBOL answers <code>LIT</code> for it. The name <code>.nil</code> and the
+other names that stand for environment objects are of this kind, whether or
+not the object exists.</p>
+<pre><code class="language-rexx">say symbol('3') symbol('1.5') symbol('.5') symbol('1e5') symbol('.') symbol('..'),
+    symbol('.nil') symbol('.zzz')
+</code></pre>
+<pre><code class="language-output">LIT LIT LIT LIT LIT LIT LIT LIT
+</code></pre>
+<div class="rule" id="r-bif.symbol.simple"><a href="#r-bif.symbol.simple">[bif.symbol.simple]</a></div>
+<p>For any other symbol without a period inside it, SYMBOL answers <code>VAR</code> when
+a variable of that name holds a value and <code>LIT</code> when it does not. A variable
+that has been dropped holds no value. SYMBOL looks at the name itself, not at
+the value: a variable whose value is the name of another variable makes the
+answer for the name <code>VAR</code>, and the answer for the value is a separate one that
+the call gets when it is given the value.</p>
+<pre><code class="language-rexx">a = 'b'
+b = 'c'
+say symbol('a') symbol('b') symbol('c') symbol(a) symbol(b)
+drop a
+say symbol('a')
+</code></pre>
+<pre><code class="language-output">VAR VAR LIT VAR LIT
+LIT
+</code></pre>
+<div class="rule" id="r-bif.symbol.compound"><a href="#r-bif.symbol.compound">[bif.symbol.compound]</a></div>
+<p>A symbol whose first period has at least one character after it, and that
+does not start with a period, is a compound symbol: the part before the first
+period is its stem, and the parts after it are its tail, so <code>a.b.</code> is a
+compound symbol with the tail <code>b.</code>. Every part of the tail that
+names a variable holding a value is replaced by that value, as in a
+program, and the answer is <code>VAR</code> when the compound variable so named holds a
+value, and <code>LIT</code> when it does not. The value of a tail part is used as it
+is, not translated to uppercase, and can be any string, whitespace included;
+it is not itself checked to be a symbol. An unset part of the tail stands for
+its own name in uppercase.</p>
+<pre><code class="language-rexx">n = 7
+t.7 = 'x'
+say symbol('t.7') symbol('t.n') symbol('T.N') symbol('t.8') symbol('t.m')
+drop n
+say symbol('n') symbol('t.n') symbol('t.7')
+w = 'x y'
+c.w = 1
+say symbol('c.w') symbol('c.x y')
+v = 'k'
+d.k = 1
+say symbol('d.v') symbol('d.k') symbol('d.K')
+e.f. = 1
+say symbol('e.f.') symbol('e.f')
+</code></pre>
+<pre><code class="language-output">VAR VAR VAR LIT LIT
+LIT LIT VAR
+VAR BAD
+LIT VAR VAR
+VAR LIT
+</code></pre>
+<div class="rule" id="r-bif.symbol.stem"><a href="#r-bif.symbol.stem">[bif.symbol.stem]</a></div>
+<p>A symbol that ends at its first period is a stem. A stem is <code>LIT</code> until the
+program refers to the stem or to a compound variable of it, and <code>VAR</code> from
+then on, also after the stem is dropped. A reference is an assignment, a
+read, a DROP of the stem or of a compound variable of it, or a call of SYMBOL
+that names a compound variable of it; a call that names the stem itself is
+not a reference. After an assignment to the whole stem, a compound variable
+of it that was never assigned or dropped is <code>VAR</code>, because it has the value
+given to the stem. A compound variable that was dropped, and every compound
+variable of a dropped stem, holds no value and is <code>LIT</code>.</p>
+<pre><code class="language-rexx">say symbol('a.')
+say symbol('b.1') symbol('b.')
+stem. = 0
+say symbol('stem.') symbol('stem.zzz') symbol('other.')
+h. = 0
+drop h.1
+say symbol('h.') symbol('h.1') symbol('h.2')
+c.1 = 5
+drop c.
+say symbol('c.') symbol('c.1')
+d = e.1
+say symbol('e.')
+</code></pre>
+<pre><code class="language-output">LIT
+LIT VAR
+VAR VAR LIT
+VAR LIT VAR
+VAR LIT
+VAR
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> In the second line the call that names <code>b.1</code> is a reference to
+<code>b.</code>, which the call after it sees; the same two calls in the other order
+answer <code>LIT</code> <code>LIT</code>.</p>
+</blockquote>
+<h2 id="scope"><a class="header" href="#scope">Scope</a></h2>
+<div class="rule" id="r-bif.symbol.scope"><a href="#r-bif.symbol.scope">[bif.symbol.scope]</a></div>
+<p>SYMBOL looks at the variables that the routine or method running it can
+see. A routine called with a PROCEDURE instruction sees none of its caller's
+variables, except the ones it EXPOSEs; a method sees an object variable only
+once it exposes it, and the variable is <code>VAR</code> only when it holds a value.</p>
+<pre><code class="language-rexx">g = 1
+call hide
+call show
+exit
+hide: procedure
+say symbol('g')
+return
+show: procedure expose g
+say symbol('g')
+return
+</code></pre>
+<pre><code class="language-output">LIT
+VAR
+</code></pre>
+<pre><code class="language-rexx">o = .o~new
+say o~plain '/' o~exposing '/' o~assigning '/' o~exposing
+::class o
+::attribute at
+::method plain
+return symbol('at') symbol('un')
+::method exposing
+expose at un
+return symbol('at') symbol('un')
+::method assigning
+expose at
+at = 1
+return symbol('at')
+</code></pre>
+<pre><code class="language-output">LIT LIT / LIT LIT / VAR / VAR LIT
+</code></pre>
+<div class="rule" id="r-bif.symbol.result-var"><a href="#r-bif.symbol.result-var">[bif.symbol.result-var]</a></div>
+<p>The variable <code>RESULT</code> is <code>VAR</code> after a CALL of a routine that returned a
+value and <code>LIT</code> after a CALL of one that returned none, as the instruction
+sets or drops it.</p>
+<pre><code class="language-rexx">call none
+say symbol('result')
+call one
+say symbol('result')
+call none
+say symbol('result')
+exit
+none: return
+one: return 1
+</code></pre>
+<pre><code class="language-output">LIT
+VAR
+LIT
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../builtins/subword.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../builtins/time.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../builtins/subword.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../builtins/time.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

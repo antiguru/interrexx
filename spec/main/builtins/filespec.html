@@ -1,0 +1,420 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>FILESPEC - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">3.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">3.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">3.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">3.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">3.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">3.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">3.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">3.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">3.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">3.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">3.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">3.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">3.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">3.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">3.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">3.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">3.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">3.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">3.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">3.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">3.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">3.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">3.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">3.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">3.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">3.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">3.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">3.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">3.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">3.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">3.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html" class="active"><strong aria-hidden="true">3.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">3.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">3.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">3.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">3.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">3.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">3.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">3.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">3.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">3.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">3.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">3.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">3.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">3.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">3.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">3.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">3.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">3.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">3.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">3.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">3.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">3.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">3.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">3.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">3.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">3.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">3.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">3.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">3.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">3.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">3.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">3.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">3.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">3.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">3.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">3.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">3.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">3.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">3.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">3.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">3.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">3.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">3.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">3.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">3.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">3.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">3.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">3.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">3.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">3.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">3.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">3.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">3.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">4.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="filespec"><a class="header" href="#filespec">FILESPEC</a></h1>
+<pre><code>FILESPEC(option, filespec)
+</code></pre>
+<p class="references">rexxref: Functions &gt; Built-in Functions &gt; FILESPEC</p>
+<p>FILESPEC takes a file specification apart and answers one piece of it: its
+directory, its file name or the extension of that name. It works on the
+characters of the specification alone. It looks at no file, so the file need
+not exist, and it never asks the file system anything.</p>
+<p>The rules here are those of a Unix-like system, where the components of a
+specification are separated by slashes. The specifications of other
+platforms, such as those with a drive letter or with backslashes, are not
+specified.</p>
+<h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
+<div class="rule" id="r-bif.filespec.args"><a href="#r-bif.filespec.args">[bif.filespec.args]</a></div>
+<p><code>option</code> is a string whose first character picks the piece, as <a href="#r-bif.filespec.option">the next
+rule</a> says, and <code>filespec</code> is a
+<a href="../conventions.html#r-conv.string.null">string</a>; both are required. FILESPEC does not run as a
+String method: sending the message <code>FILESPEC</code> to a string raises
+<code>SYNTAX 97.1</code>. It follows <a href="index.html#r-bif.index.call.native">the native call rule</a>,
+both for the number of arguments and for an argument that is an object other
+than a string, such as <code>.nil</code>.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say filespec()
+a: say condition('o')~code
+signal on syntax name b
+say filespec('N')
+b: say condition('o')~code
+signal on syntax name c
+say filespec(, 'a/b')
+c: say condition('o')~code
+signal on syntax name d
+say filespec('N', 'a/b', 'c')
+d: say condition('o')~code
+signal on syntax name e
+say filespec('N', .nil)
+e: say condition('o')~code
+signal on syntax name f
+say 'a/b'~filespec('N')
+f: say condition('o')~code
+signal on syntax name g
+say filespec('N', .told~new)
+g: say condition('o')~code
+signal off syntax
+say filespec('N', 'a/b', ) filespec(.array~of('N'), .mutablebuffer~new('a/b'))
+::class told
+::method string
+  return 'a/b'
+</code></pre>
+<pre><code class="language-output">88.901
+88.901
+88.901
+88.922
+88.909
+97.1
+88.909
+b b
+</code></pre>
+<div class="rule" id="r-bif.filespec.option"><a href="#r-bif.filespec.option">[bif.filespec.option]</a></div>
+<p>The first character of <code>option</code> picks the piece, in either case, and the
+characters after it are ignored. The pieces are <code>Drive</code>, <code>Extension</code>,
+<code>Location</code>, <code>Name</code> and <code>Path</code>, so the first character is one of <code>D</code>, <code>E</code>,
+<code>L</code>, <code>N</code> and <code>P</code>. Any other first character, and the null string, raises
+<code>SYNTAX 40.904</code>. A blank is a character: it does not pick a piece, and
+nothing strips it. The checks of <a href="#r-bif.filespec.args">the arguments</a> come
+first, so a call with a wrong <code>option</code> and a wrong argument raises the
+error of the argument.</p>
+<pre><code class="language-rexx">f = '/usr/lib/libm.so'
+say filespec('Name', f) filespec('NAMEXYZ', f) filespec('n', f)
+say filespec('path', f) filespec('Location', f) filespec('P', f)
+say '[' || filespec('drive', f) || ']' filespec('ext', f) filespec('e', f)
+signal on syntax name a
+say filespec('', f)
+a: say condition('o')~code
+signal on syntax name b
+say filespec('X', f)
+b: say condition('o')~code
+signal on syntax name c
+say filespec(' N', f)
+c: say condition('o')~code
+signal on syntax name d
+say filespec('X', .nil)
+d: say condition('o')~code
+signal on syntax name e
+say filespec('X', f, 'x')
+e: say condition('o')~code
+signal on syntax name g
+say filespec('X')
+g: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">libm.so libm.so libm.so
+/usr/lib/ /usr/lib/ /usr/lib/
+[] so so
+40.904
+40.904
+40.904
+88.909
+88.922
+88.901
+</code></pre>
+<h2 id="the-pieces"><a class="header" href="#the-pieces">The pieces</a></h2>
+<div class="rule" id="r-bif.filespec.path"><a href="#r-bif.filespec.path">[bif.filespec.path]</a></div>
+<p><code>Path</code> is the part of <code>filespec</code> up to and including its last slash, and the
+null string when <code>filespec</code> has no slash. <code>Location</code> is the same string. A
+specification that ends in a slash is all path, and one that is only slashes
+is its own path.</p>
+<pre><code class="language-rexx">say '[' || filespec('P', '/usr/lib/libm.so') || ']' '[' || filespec('L', 'a/b') || ']'
+say '[' || filespec('P', 'libm.so') || ']' '[' || filespec('L', 'libm.so') || ']'
+say '[' || filespec('P', '/usr/lib/') || ']' '[' || filespec('P', 'a/b/') || ']'
+say '[' || filespec('P', '/') || ']' '[' || filespec('L', '//') || ']'
+say '[' || filespec('P', '/x') || ']' '[' || filespec('P', 'a//b') || ']'
+</code></pre>
+<pre><code class="language-output">[/usr/lib/] [a/]
+[] []
+[/usr/lib/] [a/b/]
+[/] [//]
+[/] [a//]
+</code></pre>
+<div class="rule" id="r-bif.filespec.name"><a href="#r-bif.filespec.name">[bif.filespec.name]</a></div>
+<p><code>Name</code> is the part of <code>filespec</code> after its last slash. It is the whole of
+<code>filespec</code> when there is no slash, and the null string when <code>filespec</code> ends
+in a slash. A name of periods, such as <code>.</code> or <code>..</code>, is a name like another.
+A <code>'00'x</code> ends <code>filespec</code>: every piece is taken from the characters before
+the first <code>'00'x</code>, and the characters from it on are part of no piece. A line
+feed, a tab and every other character are ordinary characters. The path and
+the name together are <code>filespec</code> up to its first <code>'00'x</code>, with nothing lost
+between them.</p>
+<pre><code class="language-rexx">say '[' || filespec('N', '/usr/lib/libm.so') || ']' '[' || filespec('N', 'libm.so') || ']'
+say '[' || filespec('N', '/usr/lib/') || ']' '[' || filespec('N', '/') || ']'
+say '[' || filespec('N', '.') || ']' '[' || filespec('N', '/x/..') || ']'
+say '[' || filespec('N', 'x y/z w') || ']' '[' || filespec('P', 'x y/z w') || ']'
+r = ''
+do s over .array~of('/a/b.c', 'a//b', '/', '', 'a/', ' a/b ')
+  r = r (filespec('P', s) || filespec('N', s) == s)
+end
+say strip(r)
+s = 'x/y.v' || '00'x || '/z.w'
+say '[' || filespec('P', s) || ']' '[' || filespec('N', s) || ']' '[' || filespec('E', s) || ']'
+say filespec('N', 'a/b' || '0a'x || 'c') == 'b' || '0a'x || 'c'
+</code></pre>
+<pre><code class="language-output">[libm.so] [libm.so]
+[] []
+[.] [..]
+[z w] [x y/]
+1 1 1 1 1 1
+[x/] [y.v] [v]
+1
+</code></pre>
+<div class="rule" id="r-bif.filespec.extension"><a href="#r-bif.filespec.extension">[bif.filespec.extension]</a></div>
+<p><code>Extension</code> is the part of the name after its last period. It is the null
+string when the name has no period and when its last period is its last
+character. A period that starts the name counts like any other, so a name
+that is only an extension has it as its extension. Periods in the path
+before the name play no part.</p>
+<pre><code class="language-rexx">say '[' || filespec('E', 'libm.so') || ']' '[' || filespec('E', 'a.b.c') || ']'
+say '[' || filespec('E', 'archive.tar.gz') || ']' '[' || filespec('E', '/x/.hidden') || ']'
+say '[' || filespec('E', 'noext') || ']' '[' || filespec('E', 'dot.') || ']'
+say '[' || filespec('E', '/a.b/c') || ']' '[' || filespec('E', 'a.b/') || ']'
+say '[' || filespec('E', '/a/b.c.') || ']' '[' || filespec('E', '..x') || ']'
+say '[' || filespec('E', 'x/b.c d') || ']' '[' || filespec('E', '.') || ']'
+</code></pre>
+<pre><code class="language-output">[so] [c]
+[gz] [hidden]
+[] []
+[] []
+[] [x]
+[c d] []
+</code></pre>
+<div class="rule" id="r-bif.filespec.drive"><a href="#r-bif.filespec.drive">[bif.filespec.drive]</a></div>
+<p><code>Drive</code> is the null string, whatever <code>filespec</code> is: a Unix-like system has no
+drives, and a colon or a letter that looks like a drive is part of the name.</p>
+<pre><code class="language-rexx">say '[' || filespec('D', '/usr/lib') || ']' '[' || filespec('D', 'c:/x.txt') || ']'
+say '[' || filespec('D', 'C:\win\f.txt') || ']' '[' || filespec('D', '') || ']'
+say filespec('N', 'c:/x.txt') filespec('N', 'C:\win\f.txt')
+</code></pre>
+<pre><code class="language-output">[] []
+[] []
+x.txt C:\win\f.txt
+</code></pre>
+<div class="rule" id="r-bif.filespec.null"><a href="#r-bif.filespec.null">[bif.filespec.null]</a></div>
+<p>The null string has no pieces: every option answers the null string for it.
+A specification that is a number or has blanks in it is a specification like
+any other, taken by its string value.</p>
+<pre><code class="language-rexx">r = ''
+do o over .array~of('D', 'E', 'L', 'N', 'P')
+  r = r || '[' || filespec(o, '') || ']'
+end
+say strip(r)
+say filespec('N', 12) filespec('E', 1.5) filespec('N', 'a b.c d')
+</code></pre>
+<pre><code class="language-output">[][][][][]
+12 5 a b.c d
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../builtins/errortext.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../builtins/form.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../builtins/errortext.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../builtins/form.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

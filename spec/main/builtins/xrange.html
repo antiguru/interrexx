@@ -1,0 +1,474 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>XRANGE - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">3.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">3.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">3.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">3.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">3.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">3.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">3.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">3.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">3.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">3.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">3.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">3.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">3.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">3.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">3.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">3.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">3.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">3.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">3.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">3.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">3.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">3.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">3.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">3.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">3.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">3.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">3.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">3.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">3.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">3.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">3.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">3.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">3.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">3.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">3.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">3.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">3.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">3.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">3.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">3.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">3.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">3.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">3.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">3.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">3.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">3.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">3.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">3.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">3.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">3.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">3.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">3.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">3.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">3.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">3.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">3.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">3.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">3.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">3.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">3.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">3.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">3.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">3.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">3.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">3.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">3.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">3.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">3.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">3.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">3.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">3.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">3.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">3.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">3.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">3.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">3.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">3.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">3.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">3.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">3.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">3.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">3.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">3.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html" class="active"><strong aria-hidden="true">3.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">4.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="xrange"><a class="header" href="#xrange">XRANGE</a></h1>
+<pre><code>XRANGE([start] [, end] ...)
+</code></pre>
+<p class="references">ANSI: 9.3.30; rexxref: Functions &gt; Built-in Functions &gt; XRANGE (Hexadecimal Range)</p>
+<p class="deviations">Deviations: D4</p>
+<p>XRANGE builds a string out of characters picked by their codes: every
+character from a start character to an end character, or every character of
+a named class, such as the digits. Any number of ranges and class names can
+be given, and the answer joins what each of them selects.</p>
+<h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
+<div class="rule" id="r-bif.xrange.method"><a href="#r-bif.xrange.method">[bif.xrange.method]</a></div>
+<p>XRANGE takes any number of arguments, none included, and every argument may
+be omitted. It does not run as a String method: a string has no message
+named <code>XRANGE</code>, and sending it raises <code>SYNTAX 97.1</code>. Each argument is one
+character, an omitted place or the name of a class, as the rules below read
+them; an argument that is not a string is first converted
+<a href="#r-bif.xrange.object">as any string argument is</a>.</p>
+<pre><code class="language-rexx">say length(xrange()) length(xrange('a')) length(xrange('a', 'c', 'digit', 'x'))
+signal on syntax name e
+say 'a'~xrange
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">256 159 149
+97.1
+</code></pre>
+<div class="rule" id="r-bif.xrange.groups"><a href="#r-bif.xrange.groups">[bif.xrange.groups]</a></div>
+<p>XRANGE reads its arguments from left to right as a series of groups, and
+the answer is what the groups select, joined in that order. A group starts
+at an argument that is <a href="../conventions.html#r-conv.arg.omitted">omitted</a> or one character long:
+that argument is the group's <code>start</code> and the argument after it is its
+<code>end</code>, so the group takes two arguments and selects a
+<a href="#r-bif.xrange.range">range</a>. A group starts at any other argument, the null
+string among them, and takes that argument alone: the argument names a
+<a href="#r-bif.xrange.class">class</a>. The argument after a group starts the next
+group. The arguments read are the first <code>count</code> of them, where <code>count</code> is the
+<a href="index.html#r-bif.index.call.count">argument count</a> of the call: the omitted places
+after the last argument that is not omitted are not read and start no group.</p>
+<pre><code class="language-rexx">say xrange('a', 'c', 'x', 'z') xrange('a', 'b', 'digit', 'c', 'd')
+say xrange('digit', 'upper') length(xrange('digit', 'a')) xrange('digit', 'a', 'a')
+say length(xrange('a', , , )) length(xrange('a', , , 'b'))
+</code></pre>
+<pre><code class="language-output">abcxyz ab0123456789cd
+0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ 169 0123456789a
+159 258
+</code></pre>
+<div class="rule" id="r-bif.xrange.default"><a href="#r-bif.xrange.default">[bif.xrange.default]</a></div>
+<p>A call whose <a href="index.html#r-bif.index.call.count">argument count</a> is 0, such as
+<code>xrange()</code> or <code>xrange(, )</code>, reads no group by
+<a href="#r-bif.xrange.groups">the groups rule</a> and selects every character instead:
+the range from <code>'00'x</code> to <code>'FF'x</code>, 256 characters in ascending order of
+code. A group whose start and end are both omitted selects the same 256
+characters, but only when an argument that is not omitted comes after it;
+omitted places after the last such argument start no group, so they add
+nothing to a call that has one.</p>
+<pre><code class="language-rexx">say c2x(left(xrange(), 4)) length(xrange()) length(xrange(, ))
+say length(xrange('digit', , )) length(xrange('digit', , , )) length(xrange('digit', , , 'a'))
+</code></pre>
+<pre><code class="language-output">00010203 256 256
+10 10 425
+</code></pre>
+<h2 id="ranges"><a class="header" href="#ranges">Ranges</a></h2>
+<div class="rule" id="r-bif.xrange.range"><a href="#r-bif.xrange.range">[bif.xrange.range]</a></div>
+<p>When the code of <code>start</code> is not above the code of <code>end</code>, a range selects
+the character with the code of <code>start</code>, the one with the code of <code>end</code>, and
+every character whose code lies between them, from the lowest code up. A
+start equal to the end selects that one character. An omitted <code>start</code> is
+<code>'00'x</code>, and an omitted <code>end</code>, or an end the call has no argument for, is
+<code>'FF'x</code>. A <code>start</code> and an <code>end</code> are single characters, as
+<a href="#r-bif.xrange.groups">the groups rule</a> reads them.</p>
+<pre><code class="language-rexx">say xrange('m', 'q') xrange('k', 'k')
+say c2x(xrange(, '03'x)) c2x(xrange('FD'x)) c2x(xrange('FD'x, ))
+</code></pre>
+<pre><code class="language-output">mnopq k
+00010203 FDFEFF FDFEFF
+</code></pre>
+<div class="rule" id="r-bif.xrange.wrap"><a href="#r-bif.xrange.wrap">[bif.xrange.wrap]</a></div>
+<p>When the code of <code>start</code> is above the code of <code>end</code>, the range runs
+around the end of the code space: it selects the characters from <code>start</code> to
+<code>'FF'x</code> and then those from <code>'00'x</code> to <code>end</code>, in that order.</p>
+<pre><code class="language-rexx">say c2x(xrange('FD'x, '01'x)) c2x(xrange('ff'x, '00'x)) length(xrange('b', 'a'))
+</code></pre>
+<pre><code class="language-output">FDFEFF0001 FF00 256
+</code></pre>
+<div class="rule" id="r-bif.xrange.end"><a href="#r-bif.xrange.end">[bif.xrange.end]</a></div>
+<p>An <code>end</code> that is present must be one character long: an end that is the
+null string, or longer than one character, a class name among them, raises
+<code>SYNTAX 40.23</code>. A character of any code can be an end, and a start.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say xrange('a', '')
+a: say condition('o')~code
+signal on syntax name b
+say xrange('a', 'digit')
+b: say condition('o')~code
+signal on syntax name c
+say xrange('a', 'zz')
+c: say condition('o')~code
+say c2x(xrange('00'x, '00'x)) c2x(xrange('ff'x, 'ff'x))
+</code></pre>
+<pre><code class="language-output">40.23
+40.23
+40.23
+00 FF
+</code></pre>
+<h2 id="classes"><a class="header" href="#classes">Classes</a></h2>
+<div class="rule" id="r-bif.xrange.class"><a href="#r-bif.xrange.class">[bif.xrange.class]</a></div>
+<p>An argument that names a class selects the characters of that class in
+ascending order of code. The twelve names are <code>ALNUM</code>, <code>ALPHA</code>, <code>BLANK</code>,
+<code>CNTRL</code>, <code>DIGIT</code>, <code>GRAPH</code>, <code>LOWER</code>, <code>PRINT</code>, <code>PUNCT</code>, <code>SPACE</code>, <code>UPPER</code> and
+<code>XDIGIT</code>, in any mix of upper and lower case. The whole argument must be the
+name: an abbreviation, a name with a blank or any other character before or
+after it, a plural, and the null string name no class, and an argument that
+names no class and is not one character long raises <code>SYNTAX 40.28</code>.</p>
+<pre><code class="language-rexx">say xrange('Digit') xrange('xDIGIT')
+signal on syntax name a
+say xrange('digits')
+a: say condition('o')~code
+signal on syntax name b
+say xrange('dig')
+b: say condition('o')~code
+signal on syntax name c
+say xrange('digit ')
+c: say condition('o')~code
+signal on syntax name d
+say xrange('')
+d: say condition('o')~code
+signal on syntax name e
+say xrange('ab', 'c')
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">0123456789 0123456789ABCDEFabcdef
+40.28
+40.28
+40.28
+40.28
+40.28
+</code></pre>
+<div class="rule" id="r-bif.xrange.class.letters"><a href="#r-bif.xrange.class.letters">[bif.xrange.class.letters]</a></div>
+<p>The classes of letters and digits are these sets of characters, each in
+ascending order of code: <code>DIGIT</code> is <code>0</code> to <code>9</code>; <code>UPPER</code> is <code>A</code> to <code>Z</code>;
+<code>LOWER</code> is <code>a</code> to <code>z</code>; <code>ALPHA</code> is <code>UPPER</code> followed by <code>LOWER</code>; <code>ALNUM</code> is
+<code>DIGIT</code>, <code>UPPER</code> and <code>LOWER</code> in that order; and <code>XDIGIT</code> is <code>0</code> to <code>9</code>, then
+<code>A</code> to <code>F</code>, then <code>a</code> to <code>f</code>. No other character belongs to them.</p>
+<pre><code class="language-rexx">say (xrange('digit') == xrange('0', '9')) (xrange('upper') == xrange('A', 'Z')),
+    (xrange('lower') == xrange('a', 'z'))
+say (xrange('alpha') == xrange('A', 'Z') || xrange('a', 'z')),
+    (xrange('alnum') == xrange('0', '9') || xrange('A', 'Z') || xrange('a', 'z'))
+say (xrange('xdigit') == xrange('0', '9') || xrange('A', 'F') || xrange('a', 'f'))
+</code></pre>
+<pre><code class="language-output">1 1 1
+1 1
+1
+</code></pre>
+<div class="rule" id="r-bif.xrange.class.space"><a href="#r-bif.xrange.class.space">[bif.xrange.class.space]</a></div>
+<p><code>BLANK</code> is the tab, <code>'09'x</code>, and the blank, <code>'20'x</code>, in that order. <code>SPACE</code>
+is the characters <code>'09'x</code> to <code>'0D'x</code> and then the blank. <code>CNTRL</code> is the
+characters <code>'00'x</code> to <code>'1F'x</code> and then <code>'7F'x</code>. <code>SPACE</code> is not the
+<a href="../conventions.html#r-conv.string.whitespace">whitespace</a> of this book's other rules: it holds
+<code>'0A'x</code> to <code>'0D'x</code>, which they do not.</p>
+<pre><code class="language-rexx">say c2x(xrange('blank')) c2x(xrange('space')) length(xrange('cntrl'))
+say (xrange('cntrl') == xrange('00'x, '1f'x) || '7f'x)
+</code></pre>
+<pre><code class="language-output">0920 090A0B0C0D20 33
+1
+</code></pre>
+<div class="rule" id="r-bif.xrange.class.symbol"><a href="#r-bif.xrange.class.symbol">[bif.xrange.class.symbol]</a></div>
+<p><code>GRAPH</code> is the characters <code>'21'x</code> to <code>'7E'x</code>, the visible characters of
+ASCII. <code>PRINT</code> is the same with the blank in front: <code>'20'x</code> to <code>'7E'x</code>.
+<code>PUNCT</code> is the characters of <code>GRAPH</code> that are not in <code>ALNUM</code>: <code>'21'x</code> to
+<code>'2F'x</code>, <code>'3A'x</code> to <code>'40'x</code>, <code>'5B'x</code> to <code>'60'x</code> and <code>'7B'x</code> to <code>'7E'x</code>.</p>
+<pre><code class="language-rexx">say (xrange('graph') == xrange('21'x, '7e'x)) (xrange('print') == xrange('20'x, '7e'x))
+say xrange('punct')
+say (xrange('punct') == xrange('21'x, '2f'x) || xrange(':', '@'),
+    || xrange('[', '`') || xrange('{', '~'))
+</code></pre>
+<pre><code class="language-output">1 1
+!"#$%&amp;'()*+,-./:;&lt;=&gt;?@[\]^_`{|}~
+1
+</code></pre>
+<h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
+<div class="rule" id="r-bif.xrange.join"><a href="#r-bif.xrange.join">[bif.xrange.join]</a></div>
+<p>The answer is the selections of the groups joined in the order of the
+groups, with nothing between them. A character that two groups both select
+appears once for each of them, so the answer can be longer than 256
+characters, and a class given twice is selected twice.</p>
+<pre><code class="language-rexx">say xrange('digit', 'digit') length(xrange('a', 'c', 'b', 'd', 'digit', 'digit'))
+say length(xrange(, , , )) length(xrange(, , 'a'))
+</code></pre>
+<pre><code class="language-output">01234567890123456789 26
+256 415
+</code></pre>
+<div class="rule" id="r-bif.xrange.errors"><a href="#r-bif.xrange.errors">[bif.xrange.errors]</a></div>
+<p>The groups are read from left to right and the first group that has an
+error decides: an error in a later argument is raised even when the groups
+before it are valid, and no argument after the failing one is read.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say xrange('a', 'b', 'zz')
+a: say condition('o')~code
+signal on syntax name b
+say xrange('a', '', 'zz')
+b: say condition('o')~code
+signal on syntax name c
+say xrange('zz', 'a', '')
+c: say condition('o')~code
+signal on syntax name d
+say xrange('digit', 'a', 'b', 'q', 'r', 'rs')
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">40.28
+40.23
+40.28
+40.28
+</code></pre>
+<div class="rule" id="r-bif.xrange.object"><a href="#r-bif.xrange.object">[bif.xrange.object]</a></div>
+<p>An argument that is not a string is replaced by the answer of its <code>STRING</code>
+method before it is read, <a href="../conventions.html#r-conv.string.object">as for any string argument</a>,
+so a number is read by its characters and an object by the string it
+answers.</p>
+<pre><code class="language-rexx">say xrange(1, 3) xrange(.mutablebuffer~new('c'), .mutablebuffer~new('e'))
+signal on syntax name a
+say xrange(.object~new)
+a: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">123 cde
+40.28
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The ANSI draft (9.3.30) takes two arguments, <code>start</code> and <code>end</code>,
+checks each present one as a pad and raises <code>SYNTAX 40.23</code> when it is not
+one character long, the null string included; an omitted one is the lowest
+or highest character. It has no class names and no further groups; those are
+ooRexx's, and so is <code>SYNTAX 40.28</code> for an argument that starts a group and
+is neither one character long nor a class name.</p>
+</blockquote>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-bif.xrange.deviation.4"><a href="#r-bif.xrange.deviation.4">[bif.xrange.deviation.4]</a></div>
+<p>interrexx does not specify whether the answer of XRANGE is the same object
+as another string of equal value, such as the literal <code>'a'</code> beside the answer
+of <code>xrange('a', 'a')</code>, or the equal answer of another call. Through
+<code>identityHash</code>, or as a key of an <code>IdentityTable</code> or <code>IdentitySet</code>, the
+answer may be either, and a program can rely only on the value, which is
+equal under <code>==</code>. ooRexx differs: it often answers a new object where
+interrexx answers the existing one.</p>
+<pre><code class="language-rexx">say (xrange('a', 'a') == 'a') (xrange('a', 'b') == 'ab') (xrange('digit') == xrange('0', '9'))
+</code></pre>
+<pre><code class="language-output">1 1 1
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../builtins/x2d.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../deviations.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../builtins/x2d.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../deviations.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

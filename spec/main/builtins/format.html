@@ -1,0 +1,511 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>FORMAT - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">3.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">3.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">3.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">3.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">3.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">3.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">3.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">3.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">3.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">3.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">3.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">3.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">3.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">3.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">3.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">3.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">3.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">3.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">3.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">3.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">3.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">3.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">3.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">3.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">3.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">3.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">3.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">3.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">3.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">3.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">3.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">3.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">3.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html" class="active"><strong aria-hidden="true">3.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">3.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">3.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">3.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">3.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">3.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">3.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">3.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">3.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">3.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">3.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">3.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">3.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">3.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">3.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">3.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">3.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">3.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">3.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">3.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">3.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">3.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">3.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">3.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">3.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">3.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">3.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">3.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">3.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">3.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">3.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">3.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">3.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">3.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">3.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">3.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">3.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">3.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">3.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">3.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">3.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">3.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">3.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">3.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">3.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">3.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">3.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">3.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">3.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">3.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">3.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">4.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="format"><a class="header" href="#format">FORMAT</a></h1>
+<pre><code>FORMAT(number [, before [, after [, expp [, expt]]]])
+</code></pre>
+<p class="references">ANSI: 9.4.2; rexxref: Functions &gt; Built-in Functions &gt; FORMAT</p>
+<p class="deviations">Deviations: D4</p>
+<p>FORMAT writes a number in a chosen layout: a fixed width for the integer
+part, a fixed count of decimal places, and a choice of when the exponent form
+is used and how wide its exponent is. Called with only a number it writes the
+number the way arithmetic would.</p>
+<h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
+<div class="rule" id="r-bif.format.method"><a href="#r-bif.format.method">[bif.format.method]</a></div>
+<p>FORMAT is a builtin that runs as a String method, and <code>number</code>, its first
+argument, is the receiver; <code>before</code>, <code>after</code>, <code>expp</code> and <code>expt</code> become the
+message's arguments. <code>number</code> is a <a href="index.html#r-bif.index.num.arg">number</a>, and each of
+the others is a <a href="../conventions.html#r-conv.whole.form">whole-number</a> argument that is a count of
+character places. The argument count is checked by the <a href="index.html#r-bif.index.call.count">builtin call
+rules</a>: one is required and five is the most.</p>
+<pre><code class="language-rexx">say '['format(3.5, 4)']' '['3.5~format(4)']' '['3.5~format(4, 2)']'
+signal on syntax name a
+say format()
+a: say condition('o')~code
+signal on syntax name b
+say format(, 4)
+b: say condition('o')~code
+signal on syntax name c
+say format(1, 2, 3, 4, 5, 6)
+c: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">[   3.5] [   3.5] [   3.50]
+40.3
+40.5
+40.4
+</code></pre>
+<div class="rule" id="r-bif.format.errors"><a href="#r-bif.format.errors">[bif.format.errors]</a></div>
+<p>The checks run in this order, and the first that fails is raised: the
+<a href="../conventions.html#r-conv.whole.form">form</a> and <a href="../conventions.html#r-conv.whole.digits">value</a> of <code>before</code>,
+<code>after</code>, <code>expp</code> and <code>expt</code>, from left to right, which raise <code>SYNTAX 40.12</code>;
+that <code>number</code> is a <a href="index.html#r-bif.index.num.arg">number</a>, <code>SYNTAX 93.943</code>; that none
+of the four counts is negative, from left to right, <code>SYNTAX 93.906</code>; and
+last the fit of the result: that the exponent has at most <code>expp</code> digits,
+<code>SYNTAX 93.941</code>, and then that the integer part has at most <code>before</code>
+characters, <code>SYNTAX 93.942</code>. The null string is not <a href="../conventions.html#r-conv.arg.empty">omitted</a>
+and raises 40.12, and <code>-0</code> is 0.</p>
+<pre><code class="language-rexx">say '['format(5, ' 2 ', '-0')']'
+signal on syntax name a
+say format(5, , '')
+a: say condition('o')~code
+signal on syntax name b
+say format('x', 'y', -1)
+b: say condition('o')~code
+signal on syntax name c
+say format('x', -1)
+c: say condition('o')~code
+signal on syntax name d
+say format(5, 1, -1, -1)
+d: say condition('o')~code
+signal on syntax name e
+say format(5, , 1.5)
+e: say condition('o')~code
+signal on syntax name f
+say format('1e15', 0, , 1)
+f: say condition('o')~code
+signal on syntax name g
+say format('1e15', 1, , 0)
+g: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">[ 5]
+40.12
+40.12
+93.943
+93.906
+40.12
+93.941
+93.942
+</code></pre>
+<h2 id="the-result"><a class="header" href="#the-result">The result</a></h2>
+<div class="rule" id="r-bif.format.default"><a href="#r-bif.format.default">[bif.format.default]</a></div>
+<p>When only <code>number</code> is given, or <code>before</code>, <code>after</code>, <code>expp</code> and <code>expt</code> are
+all omitted, FORMAT returns the number <a href="index.html#r-bif.index.num.round">rounded</a> to
+NUMERIC DIGITS digits and <a href="index.html#r-bif.index.num.write">written</a> with NUMERIC
+DIGITS as the trigger, which is what the arithmetic of <code>number + 0</code> gives.</p>
+<pre><code class="language-rexx">say format('3') format(' - 48.06') format('1.50') format('00.00') format('-0')
+say format('1234567890') format('0.0000000000000000001') format(5, , , , )
+numeric digits 3
+say format('1.2345') format('-1.2355') format('12345')
+</code></pre>
+<pre><code class="language-output">3 -48.06 1.50 0 0
+1.23456789E+9 1E-19 5
+1.23 -1.24 1.23E+4
+</code></pre>
+<div class="rule" id="r-bif.format.before"><a href="#r-bif.format.before">[bif.format.before]</a></div>
+<p><code>before</code> is the width of the integer part. The integer part of the result,
+with its <code>-</code> when the number is negative, is padded on the left with
+blanks to <code>before</code> characters; when <code>before</code> is omitted it is not padded.
+The integer part is the characters before the point, or before the <code>E</code>
+when there is no point, so in plain notation a magnitude below 1 has the
+integer part <code>0</code>.
+When the integer part, with its sign, is longer than <code>before</code>, the call raises
+<code>SYNTAX 93.942</code>. Since the integer part is never empty, a <code>before</code> of 0
+always raises it.</p>
+<pre><code class="language-rexx">say '['format(7, 3)']' '['format(-7, 3)']' '['format(0.5, 3)']',
+    '['format(-12.5, 3)']' '['format(1234, 4)']'
+signal on syntax name a
+say format(-1234, 4)
+a: say condition('o')~code
+signal on syntax name b
+say format(0, 0)
+b: say condition('o')~code
+signal on syntax name c
+say format(1, 0)
+c: say condition('o')~code
+say '['format(-0, 1)']' '['format(5, , 0)']'
+</code></pre>
+<pre><code class="language-output">[  7] [ -7] [  0.5] [-12.5] [1234]
+93.942
+93.942
+93.942
+[0] [5]
+</code></pre>
+<div class="rule" id="r-bif.format.before.rounded"><a href="#r-bif.format.before.rounded">[bif.format.before.rounded]</a></div>
+<p>The integer part that <code>before</code> is checked against is the one the result
+has, after the rounding to NUMERIC DIGITS and to <code>after</code> places, so a number
+whose rounding adds a digit to the integer part needs the room for it.</p>
+<pre><code class="language-rexx">say '['format(9.4, 1, 0)']'
+signal on syntax name a
+say format(9.6, 1, 0)
+a: say condition('o')~code
+say '['format(9.6, 2, 0)']'
+</code></pre>
+<pre><code class="language-output">[9]
+93.942
+[10]
+</code></pre>
+<div class="rule" id="r-bif.format.after"><a href="#r-bif.format.after">[bif.format.after]</a></div>
+<p><code>after</code> is the count of decimal places. When it is given, the number is
+rounded to that many places, the magnitude going up when the first dropped
+digit is 5 or more, or is extended with zeros to that many; and a point
+separates them from the integer part, unless <code>after</code> is 0, when there is
+no point. This rounding follows the rounding to NUMERIC DIGITS, and it is
+not limited by it, so <code>after</code> can ask for more places than NUMERIC DIGITS.
+When <code>after</code> is omitted, the places are those the number has. A negative
+number whose value rounds to zero loses its <code>-</code>. This book does not specify
+the result when the rounding to <code>after</code> carries the first digit to a power
+of ten above 999999999.</p>
+<pre><code class="language-rexx">say format(123.456, , 2) format(123.456, , 5) format(123.456, , 0),
+    format(-1.235, , 2) format(9.99, , 1) format(0.5, , 0)
+say format(-0.4, , 0) format(-0.04, , 1) format(-0.05, , 1) format(-0, , 2)
+numeric digits 3
+say format(1.2345, , 6) format(12345678, , 1) format(0.12345, , 4)
+</code></pre>
+<pre><code class="language-output">123.46 123.45600 123 -1.24 10.0 1
+0 0.0 -0.1 0.00
+1.230000 1.2E+7 0.1230
+</code></pre>
+<div class="rule" id="r-bif.format.trigger"><a href="#r-bif.format.trigger">[bif.format.trigger]</a></div>
+<p><code>expp</code> and <code>expt</code> control the notation. The trigger <code>T</code> of the <a href="index.html#r-bif.index.num.write">writing
+rule</a> is <code>expt</code> when it is given and NUMERIC DIGITS
+otherwise. The two counts of that rule are taken at different steps. <code>S</code>,
+the count of decimal places, is that of the number
+<a href="index.html#r-bif.index.num.round">rounded</a> to NUMERIC DIGITS, so it does not depend on
+<code>after</code>. <code>W</code>, the count of digits before the point, is that of the number
+after the rounding to <code>after</code> as well, so a rounding that carries into a new
+integer digit can make the number scientific. Which of the two tests applies
+is decided by the number rounded to NUMERIC DIGITS, before <code>after</code> is
+applied: a number below 1 that <code>after</code> then rounds up to 1 is still tested
+with <code>S</code>, and a number of 1 or more with <code>W</code>. An <code>expp</code> of 0 overrides the
+trigger: the result is then always in plain notation, whatever its size.
+With <code>expp</code> omitted or above 0, the number is written in
+<a href="index.html#r-bif.index.num.sci">scientific notation</a> exactly when the writing rule says
+so for <code>T</code>. A <code>T</code> of 0 therefore makes every number scientific, zero
+included, unless <code>expp</code> is 0.</p>
+<pre><code class="language-rexx">say format('12345.5', , , , 5) format('12345.5', , , , 4),
+    format('0.00001234', , , , 4) format('0.00001234', , , , 3)
+say format('1e30', , , 0) format('1e5', , , , 5) format('1e5', , , , 6)
+say format('1e5', , , 0, 5) format('1e5', , , 3, 5) format('0.5', , , , 0)
+say format('99999.5', , 0, , 5) format('99999.4', , 0, , 5),
+    format('9999.96', , 1, , 4) format('99999.5', , 0, 0, 5)
+say format('0.000000123', , 8, , 4) format('0.00000012', , 9, , 4)
+numeric digits 3
+say format('1e5') format('1e5', , , , 6) format('1.2345', , , 1, 1)
+say '['format('0.999', , 0, 2, 1)']' '['format('0.999', , 0, 2, 3)']',
+    '['format('1.4', , 0, 2, 1)']'
+</code></pre>
+<pre><code class="language-output">12345.5 1.23455E+4 0.00001234 1.234E-5
+1000000000000000000000000000000 1E+5 100000
+100000 1E+005 5E-1
+1E+5 99999 1.0E+4 100000
+1.23000000E-7 0.000000120
+1E+5 100000 1.23
+[1    ] [1] [1]
+</code></pre>
+<div class="rule" id="r-bif.format.sci"><a href="#r-bif.format.sci">[bif.format.sci]</a></div>
+<p>In <a href="index.html#r-bif.index.num.sci">scientific notation</a>, <code>after</code> is the count of
+digits after the point in the part before the <code>E</code>: the digits are rounded to
+it or extended with zeros, as in the plain case, and with 0 there is no
+point. A rounding that carries into a new leading digit raises the exponent,
+so the part before the <code>E</code> keeps the form the notation gives. <code>before</code> is the
+width of the part before the point. NUMERIC FORM decides the exponent as the
+notation rule says.</p>
+<pre><code class="language-rexx">say format('1e30', , 3) format('9.96e10', , 1) format('9.96e10', , 0),
+    format('-1.2345e10', , 2)
+say '['format('1.2345e10', 5, 1)']' '['format('-1.2345e-20', 3, 2)']'
+numeric form engineering
+say format('1.2345e10', , 1) format('1e11', 4, 1) format('9.96e10', , 1)
+</code></pre>
+<pre><code class="language-output">1.000E+30 1.0E+11 1E+11 -1.23E+10
+[    1.2E+10] [ -1.23E-20]
+12.3E+9  100.0E+9 99.6E+9
+</code></pre>
+<div class="rule" id="r-bif.format.expp"><a href="#r-bif.format.expp">[bif.format.expp]</a></div>
+<p>In scientific notation, <code>expp</code> is the width of the exponent: its digits are
+padded on the left with zeros to <code>expp</code> places, and when it needs more
+places, the call raises <code>SYNTAX 93.941</code>. The sign <code>+</code> or <code>-</code> is always
+written. When <code>expp</code> is omitted the exponent has as many digits as it needs.
+No such error comes from a number written in plain notation, whatever its
+size.</p>
+<pre><code class="language-rexx">say format('1e15', , , 2) format('1e-25', , , 3) format('1e150', , , 3),
+    format('1e15', , , 2, 16) format('5', , , 3, 6)
+signal on syntax name a
+say format('1e150', , , 2)
+a: say condition('o')~code
+signal on syntax name b
+say format('1e-25', , , 1)
+b: say condition('o')~code
+signal on syntax name c
+say format('1e999999999', , , 3)
+c: say condition('o')~code
+say format('1e999999999', , , 9)
+</code></pre>
+<pre><code class="language-output">1E+15 1E-025 1E+150 1000000000000000 5
+93.941
+93.941
+93.941
+1E+999999999
+</code></pre>
+<div class="rule" id="r-bif.format.exponent-zero"><a href="#r-bif.format.exponent-zero">[bif.format.exponent-zero]</a></div>
+<p>A number that is to be in scientific notation but whose exponent would be
+0 is written without an exponent. That number is zero, or a result, after
+the rounding to <code>after</code>, whose magnitude is at least 1 and below 10 (below
+1000 under NUMERIC FORM ENGINEERING). When <code>expp</code> is above 0, the result then
+ends with <code>expp + 2</code> blanks, the room the exponent would have taken; when
+<code>expp</code> is omitted nothing follows. An <code>expp</code> of 0 never writes the exponent,
+and adds no blanks.</p>
+<pre><code class="language-rexx">say '['format('1.2345', , 2, , 0)']' '['format('1.2345', , 2, 2, 0)']',
+    '['format('1.2345', 5, 2, 3, 0)']'
+say '['format(0, , , 1, 0)']' '['format(0, 2, 1, 0, 0)']' '['format(50, , , 2, 1)']'
+say '['format('-5', , , 1, 0)']' '['format('9.996', , 2, 1, 0)']'
+numeric form engineering
+say '['format(123, , , 2, 2)']' '['format(123, , , , 2)']' '['format(1234, , , 2, 3)']'
+say '['format('-999.4', , , 1, 2)']' '['format('999.6', , 0, 1, 2)']'
+</code></pre>
+<pre><code class="language-output">[1.23] [1.23    ] [    1.23     ]
+[0   ] [ 0.0] [5.0E+01]
+[-5   ] [1.00E+1]
+[123    ] [123] [1.234E+03]
+[-999.4   ] [1E+3]
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The ANSI draft (9.4.2) differs from ooRexx, which this book
+follows, in three ways. It checks <code>number</code> before a count that is not a
+whole number, where ooRexx raises <code>SYNTAX 40.12</code> for the count first (for a
+negative count both check <code>number</code> first), and it raises
+<code>SYNTAX 40.13</code> for a negative count and <code>SYNTAX 40.38</code> for a result that
+does not fit, in the exponent or in the integer part. It decides the
+notation before it rounds to <code>after</code>, so there a carry out of the integer
+part does not make the number scientific: <code>format('99999.5', , 0, , 5)</code> is
+<code>100000</code>. And it tests the zeros after the point against a fixed limit, as
+the <a href="index.html#r-bif.index.num.sci">note on the writing rule</a> says.</p>
+</blockquote>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-bif.format.deviation.4"><a href="#r-bif.format.deviation.4">[bif.format.deviation.4]</a></div>
+<p>interrexx does not specify whether the answer of FORMAT is the same object as
+another string of equal value: as <code>number</code> itself, when the call leaves it
+unchanged, or as an equal string produced some other way. Through
+<code>identityHash</code>, or as a key of an <code>IdentityTable</code> or <code>IdentitySet</code>, the answer
+may be either, and a program can rely only on the value, which is equal under
+<code>==</code>. ooRexx differs: it answers the argument itself in a case where interrexx
+may answer an equal new string.</p>
+<pre><code class="language-rexx">s = '12' || '5'
+say (format(s) == s) (format('125') == '125') (format(s, 5) == '  125')
+</code></pre>
+<pre><code class="language-output">1 1 1
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../builtins/form.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../builtins/fuzz.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../builtins/form.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../builtins/fuzz.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

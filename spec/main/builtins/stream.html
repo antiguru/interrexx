@@ -1,0 +1,1134 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>STREAM - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">3.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">3.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">3.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">3.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">3.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">3.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">3.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">3.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">3.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">3.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">3.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">3.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">3.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">3.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">3.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">3.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">3.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">3.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">3.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">3.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">3.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">3.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">3.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">3.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">3.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">3.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">3.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">3.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">3.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">3.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">3.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">3.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">3.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">3.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">3.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">3.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">3.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">3.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">3.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">3.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">3.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">3.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">3.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">3.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">3.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">3.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">3.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">3.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">3.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">3.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">3.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">3.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">3.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">3.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">3.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">3.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">3.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">3.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">3.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">3.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">3.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html" class="active"><strong aria-hidden="true">3.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">3.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">3.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">3.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">3.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">3.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">3.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">3.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">3.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">3.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">3.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">3.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">3.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">3.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">3.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">3.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">3.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">3.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">3.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">3.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">3.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">3.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">3.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">4.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="stream"><a class="header" href="#stream">STREAM</a></h1>
+<pre><code>STREAM(name [, operation [, command]])
+</code></pre>
+<p class="references">ANSI: 9.7.8; rexxref: Functions &gt; Built-in Functions &gt; STREAM</p>
+<p class="deviations">Deviations: D34, D35, D49, D55, D57, D59, D62, D74, D79</p>
+<p>STREAM asks a <a href="index.html#r-bif.index.stream.name">stream</a> for its state, describes the
+state, or carries out a command on the stream: opening and closing it,
+moving its positions, and asking about the file behind it. The other stream
+builtins open a stream when they need it, and the program that needs nothing
+STREAM offers does not call it.</p>
+<blockquote>
+<p><strong>Note.</strong> What a command answers about the host, a size or a time or a
+handle, is the host's. The examples here read back the file they make, and
+check the shape of an answer where its value belongs to the host.</p>
+</blockquote>
+<h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
+<div class="rule" id="r-bif.stream.args"><a href="#r-bif.stream.args">[bif.stream.args]</a></div>
+<p><code>name</code> is a <a href="../conventions.html#r-conv.string.null">string</a> that names the stream, and is
+required: it must be neither omitted nor null. <code>operation</code> is a string
+that chooses what STREAM does, and <code>command</code> is a string, the command that
+the operation <code>C</code> carries out. STREAM is not a String method. It takes
+three arguments at the most, by the <a href="index.html#r-bif.index.call.too-many">call rules</a>.
+The call is checked in this order. The count of arguments comes first,
+by the <a href="index.html#r-bif.index.call.count">call rules</a>. An omitted <code>name</code> then raises
+<code>SYNTAX 40.5</code> and a null one <code>SYNTAX 40.27</code>; an <code>operation</code> that
+is <a href="#r-bif.stream.operation">none of those of the next rule</a> raises
+<code>SYNTAX 40.904</code>. Last, a <code>command</code> that is missing for the operation <code>C</code>
+raises <code>SYNTAX 40.3</code>, and a <code>command</code> given for any other operation raises
+<code>SYNTAX 40.4</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-args.tmp'
+do e over "stream()", "stream(,'s')", "stream('','s')", "stream(f,'x')", "stream('','x')",,
+          "stream(f,'c')", "stream(f,'s','close')", "stream(f,'d','close')",,
+          "stream(f,'c','close','x')", "stream(f,,'close')", "stream(f,'x','close')",,
+          "stream(f,'c','query exists')"
+  say left(e, 28) '=&gt;' try(e)
+end
+exit
+try: signal on syntax name oops
+  interpret 'r =' arg(1)
+  return 'no error'
+oops: return condition('o')~code
+</code></pre>
+<pre><code class="language-output">stream()                     =&gt; 40.3
+stream(,'s')                 =&gt; 40.5
+stream('','s')               =&gt; 40.27
+stream(f,'x')                =&gt; 40.904
+stream('','x')               =&gt; 40.27
+stream(f,'c')                =&gt; 40.3
+stream(f,'s','close')        =&gt; 40.4
+stream(f,'d','close')        =&gt; 40.4
+stream(f,'c','close','x')    =&gt; 40.4
+stream(f,,'close')           =&gt; 40.4
+stream(f,'x','close')        =&gt; 40.904
+stream(f,'c','query exists') =&gt; no error
+</code></pre>
+<div class="rule" id="r-bif.stream.operation"><a href="#r-bif.stream.operation">[bif.stream.operation]</a></div>
+<p>The operation is <code>S</code> for the state of the stream, <code>D</code> for its description and
+<code>C</code> for a command, and it is the first character of <code>operation</code>, in either
+case, that decides: the characters after it are ignored. An omitted
+<code>operation</code> is <code>S</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-op.tmp'
+say stream(f) stream(f, ) stream(f, 'S') stream(f, 'state') stream(f, 'Sxyz')
+say '['stream(f, 'D')']' '['stream(f, 'description')']' '['stream(f, 'c', 'query exists')']'
+</code></pre>
+<pre><code class="language-output">UNKNOWN UNKNOWN UNKNOWN UNKNOWN UNKNOWN
+[UNKNOWN:] [UNKNOWN:] []
+</code></pre>
+<h2 id="state-and-description"><a class="header" href="#state-and-description">State and description</a></h2>
+<div class="rule" id="r-bif.stream.state"><a href="#r-bif.stream.state">[bif.stream.state]</a></div>
+<p>The state of a stream is one of four words. <code>UNKNOWN</code> is the state of a stream
+that is not open. <code>READY</code> is that of an open stream whose last operation went
+as asked. <code>NOTREADY</code> is that of an open stream whose last read or write could
+not do all it was asked to, at the end of the data for example. <code>ERROR</code> is
+that of a stream whose last read or write failed, such as a read of a name
+that could not be opened, or a write to a stream that was opened for reading
+only. The state belongs to the one stream: an operation on another changes
+nothing in it.</p>
+<pre><code class="language-rexx">a = 'spec-stream-state-a.tmp'
+b = 'spec-stream-state-b.tmp'
+call sysfiledelete a
+call sysfiledelete b
+say stream(a) stream(b)
+call charout a, 'xy'
+call charout b, 'pq'
+say stream(a) stream(b)
+x = charin(a, 1, 5)
+say stream(a) stream(b)
+x = charin(b, 1, 1)
+say stream(a) stream(b)
+say stream('spec-stream-state-none.tmp', 'c', 'open read')
+x = charin('spec-stream-state-none.tmp')
+say stream('spec-stream-state-none.tmp')
+call charout a
+call charout b
+call sysfiledelete a
+call sysfiledelete b
+</code></pre>
+<pre><code class="language-output">UNKNOWN UNKNOWN
+READY READY
+NOTREADY READY
+NOTREADY READY
+ERROR:2
+ERROR
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The number after <code>ERROR:</code> is the host's number for the failure. It
+is 2 where a file does not exist, on a Unix-like system. The
+<a href="#r-bif.stream.description">next rule</a> gives the form.</p>
+</blockquote>
+<div class="rule" id="r-bif.stream.change"><a href="#r-bif.stream.change">[bif.stream.change]</a></div>
+<p>Opening a stream, and every read, write, and <code>SEEK</code> or <code>POSITION</code> that
+succeeds, leave it <code>READY</code>, or <code>NOTREADY</code> when a read or write could not do it
+all, and a read or write that fails leaves <code>ERROR</code>. <code>CLOSE</code> leaves it
+<code>UNKNOWN</code>. <code>FLUSH</code> and <code>QUERY</code> leave the state as it was.</p>
+<pre><code class="language-rexx">f = 'spec-stream-change.tmp'
+call sysfiledelete f
+call charout f, 'abc'
+x = charin(f, 1, 9)
+say stream(f) stream(f, 'c', 'query size') stream(f) stream(f, 'c', 'flush') stream(f)
+say stream(f, 'c', 'seek 2') stream(f)
+x = charin(f, 1, 1)
+say stream(f) stream(f, 'c', 'close') stream(f)
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">NOTREADY 3 NOTREADY READY: NOTREADY
+2 READY
+READY READY: UNKNOWN
+</code></pre>
+<div class="rule" id="r-bif.stream.description"><a href="#r-bif.stream.description">[bif.stream.description]</a></div>
+<p>The description of a stream is its state, a colon, and more information about
+the state when there is any. <code>READY:</code> and <code>UNKNOWN:</code> have none. A stream whose
+last read stopped at the end of the data is <code>NOTREADY:EOF</code>. A stream in the
+<code>ERROR</code> state has the host's number for the failure, and may have words
+after it; in the examples that follow the number is not shown.</p>
+<pre><code class="language-rexx">f = 'spec-stream-desc.tmp'
+call sysfiledelete f
+say stream(f, 'd')
+call charout f, 'ab'
+say stream(f, 'd')
+x = charin(f, 1, 5)
+say stream(f, 'd')
+call charout f
+say stream(f, 'c', 'open read')
+x = charout(f, 'q')
+d = stream(f, 'd')
+say left(d, 6) datatype(substr(d, 7, 2), 'W')
+call charout f
+x = charin('spec-stream-desc-none.tmp')
+d = stream('spec-stream-desc-none.tmp', 'd')
+say left(d, 6) datatype(substr(d, 7, 1), 'W')
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">UNKNOWN:
+READY:
+NOTREADY:EOF
+READY:
+ERROR: 1
+ERROR: 1
+</code></pre>
+<h2 id="commands"><a class="header" href="#commands">Commands</a></h2>
+<div class="rule" id="r-bif.stream.command"><a href="#r-bif.stream.command">[bif.stream.command]</a></div>
+<p>With the operation <code>C</code>, STREAM carries out <code>command</code>, which begins with a
+word that names the command: <code>OPEN</code>, <code>CLOSE</code>, <code>FLUSH</code>, <code>SEEK</code>, <code>POSITION</code>
+or <code>QUERY</code>. The word may be in any case, and may be shortened to any of its
+leading letters down to the first. What is after the word is the command's
+own, and the rules for each say what it is. A first word
+that no command begins with raises <code>SYNTAX 93.914</code>, and anything the
+command does not take after it, <code>SYNTAX 93.0</code>. A <code>command</code> that is the null
+string, or only blanks, has no first word, and what it does is not specified.</p>
+<pre><code class="language-rexx">f = 'spec-stream-command.tmp'
+call sysfiledelete f
+call charout f, 'abc'
+say stream(f, 'c', 'seek 2') stream(f, 'c', 'SEEK 2') stream(f, 'c', 's 2') stream(f, 'c', 'se 2')
+say stream(f, 'c', 'position 3') stream(f, 'c', 'p 3') stream(f, 'c', 'f') stream(f, 'c', 'q size')
+signal on syntax name a
+say stream(f, 'c', 'seeker 2')
+a: say condition('o')~code
+signal on syntax name b
+say stream(f, 'c', 'flush now')
+b: say condition('o')~code
+signal on syntax name c
+say stream(f, 'c', 'frobnicate')
+c: say condition('o')~code
+call stream f, 'c', 'close'
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">2 2 2 2
+3 3 READY: 3
+93.914
+93.0
+93.914
+</code></pre>
+<h3 id="open"><a class="header" href="#open">OPEN</a></h3>
+<div class="rule" id="r-bif.stream.open.result"><a href="#r-bif.stream.open.result">[bif.stream.open.result]</a></div>
+<p><code>OPEN</code> opens the stream and answers <code>READY:</code>. If it cannot, it answers
+<code>ERROR:</code> and the host's number for the failure, and raises
+<a href="index.html#r-bif.index.stream.notready">NOTREADY</a>. A name that is a directory, or is in
+a directory that does not exist, cannot be opened, and the stream is then not
+open: its state is <code>UNKNOWN</code>. With no option the stream is opened for reading
+and writing, and the <code>OPEN</code> of a file that does not allow both fails, where a
+read alone would open it. A file that does not exist is created by <code>OPEN</code>,
+unless it is opened for reading only. What follows <code>OPEN</code> is a list of
+options, <a href="#r-bif.stream.open.mode">the next rules</a> give them. The words
+<code>SHARED</code>, <code>SHAREREAD</code>, <code>SHAREWRITE</code> and <code>NOBUFFER</code> are accepted, and what they
+do is not specified; so are their shortenings as far as <code>SHARER</code>, <code>SHAREW</code> and
+<code>NOB</code>. Any other word in the list raises <code>SYNTAX 93.0</code>, a shortening of
+<code>SHARED</code> among them.</p>
+<pre><code class="language-rexx">f = 'spec-stream-open.tmp'
+call sysfiledelete f
+n = 0
+call on notready name nr
+say stream(f, 'c', 'open read') (stream(f, 'c', 'query exists') == '')
+say n
+say stream(f, 'c', 'open') (stream(f, 'c', 'query exists') \== '')
+say stream(f, 'c', 'close') stream(f, 'c', 'open nobuffer')
+say stream(f, 'c', 'close')
+say stream('.', 'c', 'open')
+say n
+say stream('spec-stream-nodir/x.tmp', 'c', 'open write')
+say n
+say stream('.') stream('spec-stream-nodir/x.tmp')
+signal on syntax name a
+say stream(f, 'c', 'open reading')
+a: say condition('o')~code
+call sysfiledelete f
+exit
+nr: n = n + 1
+return
+</code></pre>
+<pre><code class="language-output">ERROR:2 1
+1
+READY: 1
+READY: READY:
+READY:
+ERROR:21
+2
+ERROR:2
+3
+UNKNOWN UNKNOWN
+93.0
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The numbers are those of a Unix-like system: 2 for a file that
+does not exist, and 21 for a directory. Another host may count differently.</p>
+</blockquote>
+<div class="rule" id="r-bif.stream.open.mode"><a href="#r-bif.stream.open.mode">[bif.stream.open.mode]</a></div>
+<p>The options of <code>OPEN</code> say what the stream is for and where it begins. <code>READ</code>
+opens it for reading only, <code>WRITE</code> for writing only, and <code>BOTH</code>, which is the
+default, for both. <code>APPEND</code> puts the write position after the last character,
+which is where a stream that is open for writing and neither <code>APPEND</code> nor
+<code>REPLACE</code> has it as well, and keeps it there: the write position cannot be
+moved into the data that the file held when it was opened, by <code>SEEK</code> or by a
+start or line that a write gives; see <a href="#r-bif.stream.deviation.79">Deviation
+79</a>. A position at the end of that data, or past
+it, is allowed, but a write still goes after the last character. On a file
+that the stream can only write, see <a href="#r-bif.stream.deviation.74">Deviation 74</a>.
+<code>REPLACE</code> empties the file and begins the write position at its start. An
+option may be shortened as far as to <code>REA</code>, <code>W</code>, <code>BO</code>, <code>AP</code> and <code>REP</code>, and its
+case does not matter. A word that is given twice, two of <code>READ</code>, <code>WRITE</code> and
+<code>BOTH</code>, <code>READ</code> with <code>APPEND</code> or <code>REPLACE</code>, and <code>APPEND</code> with <code>REPLACE</code> raise
+<code>SYNTAX 93.0</code>. A stream for reading only refuses a write: it fails, and the
+state is <code>ERROR</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-mode.tmp'
+call sysfiledelete f
+call charout f, 'abcdef'
+call charout f
+say stream(f, 'c', 'open write') stream(f, 'c', 'query position write')
+say charout(f, 'X') stream(f, 'c', 'close') c2x(charin(f, 1, 100))
+say stream(f, 'c', 'close')
+say stream(f, 'c', 'open both replace') stream(f, 'c', 'query position write') stream(f, 'c', 'query size')
+say charout(f, 'YZ') stream(f, 'c', 'close') charin(f, 1, 100)
+say stream(f, 'c', 'close')
+say stream(f, 'c', 'open read') charout(f, 'Q') left(stream(f, 'd'), 6) charin(f, 1, 1)
+say stream(f, 'c', 'close')
+say stream(f, 'c', 'open ap') stream(f, 'c', 'query position write') stream(f, 'c', 'close')
+say stream(f, 'c', 'open bo rep') stream(f, 'c', 'query size') stream(f, 'c', 'close')
+signal on syntax name a
+say stream(f, 'c', 'open read replace')
+a: say condition('o')~code
+signal on syntax name b
+say stream(f, 'c', 'open re')
+b: say condition('o')~code
+signal on syntax name c
+say stream(f, 'c', 'open write read')
+c: say condition('o')~code
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY: 7
+0 READY: 61626364656658
+READY:
+READY: 1 0
+0 READY: YZ
+READY:
+READY: 1 ERROR: Y
+READY:
+READY: 3 READY:
+READY: 0 READY:
+93.0
+93.0
+93.0
+</code></pre>
+<div class="rule" id="r-bif.stream.open.again"><a href="#r-bif.stream.open.again">[bif.stream.open.again]</a></div>
+<p><code>OPEN</code> of a stream that is open opens it afresh: the positions are those
+of a stream just opened, the read position at the first character and the
+write position after the last, and the state is <code>READY</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-again.tmp'
+call sysfiledelete f
+call charout f, 'abcdef'
+x = charin(f, , 4)
+say stream(f, 'c', 'query position read') stream(f, 'c', 'query position write')
+say stream(f, 'c', 'open') stream(f, 'c', 'query position read') stream(f, 'c', 'query position write')
+x = charin(f, , 9)
+say stream(f)
+say stream(f, 'c', 'open') stream(f)
+call charout f
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">5 7
+READY: 1 7
+NOTREADY
+READY: READY
+</code></pre>
+<div class="rule" id="r-bif.stream.open.binary"><a href="#r-bif.stream.open.binary">[bif.stream.open.binary]</a></div>
+<p>The option <code>BINARY RECLENGTH n</code> opens the stream as a stream of records of <code>n</code>
+characters, <code>n</code> being 1 or more: its lines are not delimited by line ends but
+are consecutive <code>n</code> characters, whatever they are. The words may be shortened
+as far as to <code>BI</code> and <code>REC</code>. A line end in the data is data.
+<a href="linein.html#r-bif.linein.result">LINEIN</a> answers a record, and the last record may be
+short. <a href="lines.html#r-bif.lines.count">LINES</a> counts records.
+<a href="lineout.html#r-bif.lineout.result">LINEOUT</a> writes its string and then blanks up to the
+end of the record that the write position is in, with no line end; a string
+that is longer than the rest of that record raises <code>SYNTAX 93.0</code> and writes
+nothing, and the stream stays <code>READY</code>. The option <code>BINARY</code> without <code>RECLENGTH</code>
+is not specified, and neither is <code>BINARY RECLENGTH</code> without <code>n</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-binary.tmp'
+call sysfiledelete f
+call charout f, 'abcdefghij' || '0a'x || 'kl'
+call charout f
+say stream(f, 'c', 'open binary reclength 4')
+say lines(f) lines(f, 'C') chars(f)
+say '[' || linein(f) || ']' '[' || linein(f) || ']' c2x(linein(f)) lines(f, 'C')
+say '[' || linein(f, 2) || ']' '[' || linein(f, 1) || ']'
+call lineout f, 'XY', 2
+say stream(f, 'c', 'close')
+say c2x(charin(f, 1, 100))
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY:
+1 4 13
+[abcd] [efgh] 696A0A6B 1
+[efgh] [abcd]
+READY:
+6162636458592020696A0A6B6C
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-stream-binary2.tmp'
+call sysfiledelete f
+call charout f, 'ab'
+call charout f
+say stream(f, 'c', 'open binary reclength 4')
+say lineout(f, '') lineout(f, 'xy')
+signal on syntax name a
+say lineout(f, 'abcde', 1)
+a: say condition('o')~code stream(f)
+say stream(f, 'c', 'close')
+say '[' || translate(charin(f, 1, 100), '_', ' ') || ']'
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY:
+0 0
+93.0 READY
+READY:
+[ab__xy__]
+</code></pre>
+<h2 id="closing-and-flushing"><a class="header" href="#closing-and-flushing">Closing and flushing</a></h2>
+<div class="rule" id="r-bif.stream.close"><a href="#r-bif.stream.close">[bif.stream.close]</a></div>
+<p><code>CLOSE</code> closes the stream and answers <code>READY:</code>; its state is then <code>UNKNOWN</code>.
+The characters written are in the file, and the next use of the name
+<a href="index.html#r-bif.index.stream.lifetime">opens the stream afresh</a>. A stream that is not
+open has nothing to close, and the answer is the null string.</p>
+<pre><code class="language-rexx">f = 'spec-stream-close.tmp'
+call sysfiledelete f
+say '['stream(f, 'c', 'close')']' stream(f)
+call charout f, 'abc'
+say stream(f) stream(f, 'c', 'close') stream(f) '['stream(f, 'c', 'close')']'
+say chars(f) charin(f, , 1)
+call charout f
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">[] UNKNOWN
+READY READY: UNKNOWN []
+3 a
+</code></pre>
+<div class="rule" id="r-bif.stream.flush"><a href="#r-bif.stream.flush">[bif.stream.flush]</a></div>
+<p><code>FLUSH</code> answers <code>READY:</code>. A file can be asked about, or read back, by the
+program as it is, whether <code>FLUSH</code> was used or not, so that <code>FLUSH</code> has no
+other effect that a program can see.</p>
+<pre><code class="language-rexx">f = 'spec-stream-flush.tmp'
+call sysfiledelete f
+call charout f, 'abc'
+say stream(f, 'c', 'flush') stream(f, 'c', 'query size') stream(f)
+call charout f, 'd'
+say stream(f, 'c', 'flush') stream(f, 'c', 'query size') chars(f)
+call charout f
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY: 3 READY
+READY: 4 4
+</code></pre>
+<h2 id="positions"><a class="header" href="#positions">Positions</a></h2>
+<div class="rule" id="r-bif.stream.seek"><a href="#r-bif.stream.seek">[bif.stream.seek]</a></div>
+<p><code>SEEK</code> sets a position of the stream and answers the new one. <code>POSITION</code> is
+the same command. After the word there is an offset, and then options in any
+order. The offset is a whole number, which may have a prefix: <code>=</code> or no prefix
+for a position counted from the start of the data, 1 being its first
+character; <code>&lt;</code> for a position counted back from the end, <code>&lt;0</code> being the one
+past the last character; <code>+</code> and <code>-</code> for a position counted forward or back
+from the read position with <code>READ</code>, and from the write position with <code>WRITE</code>
+(see <a href="#r-bif.stream.deviation.49">Deviation 49</a>). <code>READ</code> sets the read
+position, <code>WRITE</code> the write position, and when neither is given a stream open
+for reading and writing has both set to the answer; which of the two positions
+a <code>+</code> or <code>-</code> then counts from is not specified. <code>CHAR</code> counts characters and
+is the default; for <code>LINE</code> see <a href="#r-bif.stream.seek.line">the next rule</a>. A
+position past the end of the data is allowed: a read there finds nothing, and
+a write there <a href="charout.html#r-bif.charout.start">fills the gap</a>, except on a stream opened
+<code>APPEND</code>, where <a href="#r-bif.stream.deviation.79">a write goes after the last
+character</a> wherever the write position is. A stream
+that is not open is opened by <code>SEEK</code>; when it cannot be, <code>SEEK</code> answers 0,
+raises <a href="index.html#r-bif.index.stream.notready">NOTREADY</a>, leaves the state <code>ERROR</code>, and
+creates nothing. An offset that is not a whole number or an option that is not
+one of these raises <code>SYNTAX 93.0</code>, and a missing offset <code>SYNTAX 93.903</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-seek.tmp'
+call sysfiledelete f
+call charout f, '0123456789'
+say stream(f, 'c', 'seek 3') stream(f, 'c', 'query position read') stream(f, 'c', 'query position write')
+say stream(f, 'c', 'seek =5 read') stream(f, 'c', 'query position read') stream(f, 'c', 'query position write')
+say stream(f, 'c', 'seek +2 read') charin(f, , 1)
+say stream(f, 'c', 'seek -2 read') charin(f, , 1)
+say stream(f, 'c', 'seek &lt;2 read') charin(f, , 1)
+say stream(f, 'c', 'seek &lt;0 read') stream(f, 'c', 'seek &lt;1 write') stream(f, 'c', 'position 4 read')
+say stream(f, 'c', 'seek read 4') stream(f, 'c', 'seek char write 6') stream(f, 'c', 'query position write')
+say stream(f, 'c', 'seek 2 write') charout(f, 'W') c2x(charin(f, 1, 10))
+say stream(f, 'c', 'seek 20 read') stream(f, 'c', 'query position read') stream(f)
+say '[' || charin(f, , 2) || ']'
+signal on syntax name a
+say stream(f, 'c', 'seek x read')
+a: say condition('o')~code
+signal on syntax name b
+say stream(f, 'c', 'seek 2 read write')
+b: say condition('o')~code
+signal on syntax name c
+say stream(f, 'c', 'seek')
+c: say condition('o')~code
+call stream f, 'c', 'close'
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">3 3 3
+5 5 3
+7 6
+6 5
+9 8
+11 10 4
+4 6 6
+2 0 30573233343536373839
+20 20 READY
+[]
+93.0
+93.0
+93.903
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The data is <code>0123456789</code>. The character written after
+<code>seek 2 write</code> is <code>W</code>, in place of the <code>1</code>, as the hex string shows. The
+position <code>&lt;2</code> is the one two characters back from the end of the data, the
+character <code>8</code>.</p>
+</blockquote>
+<div class="rule" id="r-bif.stream.seek.line"><a href="#r-bif.stream.seek.line">[bif.stream.seek.line]</a></div>
+<p>With <code>LINE</code>, the offset counts <a href="index.html#r-bif.index.stream.line-end">lines</a> and not
+characters: <code>=</code> counts from the first line, being line 1, and <code>+</code> and <code>-</code>
+from the line the position is in. The position is set to the start of the
+line, and the answer is the line number. A line number past the last line
+sets the position to the end of the data, and the answer is the number of
+the line that position is in. The prefix <code>&lt;</code> with <code>LINE</code> is not specified.
+A <code>SEEK</code> by line of a text stream that was opened for writing only answers 0
+and raises NOTREADY; see <a href="#r-bif.stream.deviation.55">Deviation 55</a>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-line.tmp'
+call sysfiledelete f
+call lineout f, 'ab'
+call lineout f, 'cd'
+call lineout f, 'ef'
+call lineout f
+say stream(f, 'c', 'seek =2 read line') linein(f)
+say stream(f, 'c', 'seek =3 read line') stream(f, 'c', 'seek -1 read line') linein(f)
+say stream(f, 'c', 'seek =1 read line') stream(f, 'c', 'seek +2 read line') linein(f)
+say stream(f, 'c', 'seek 9 read line') stream(f, 'c', 'query position read') chars(f)
+say stream(f, 'c', 'seek 2 write line') charout(f, 'X') stream(f, 'c', 'close')
+say c2x(charin(f, 1, 100))
+call lineout f
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">2 cd
+3 2 cd
+1 3 ef
+4 10 0
+2 0 READY:
+61620A58640A65660A
+</code></pre>
+<div class="rule" id="r-bif.stream.query.position"><a href="#r-bif.stream.query.position">[bif.stream.query.position]</a></div>
+<p><code>QUERY POSITION</code> answers the read position of the stream, or, with the option
+<code>WRITE</code>, the write position, with <code>READ</code> the read position; with no option a
+stream open for reading and writing answers its read position, and one open
+for one thing the position that it has. The option <code>CHAR</code> counts characters
+and is the default; <code>LINE</code> counts lines, and the answer is the number of the
+line that the position is in. Each option may be shortened to its first
+letter. The option <code>SYS</code> may be given alone, and what it answers is not
+specified. A stream that is not open has no positions, and the answer is the
+null string. What <code>QUERY POSITION</code> answers for a standard stream is not
+specified, and nor is the write position of a stream opened <code>APPEND</code> once a
+write on it has named a start.</p>
+<pre><code class="language-rexx">f = 'spec-stream-qpos.tmp'
+call sysfiledelete f
+call charout f, 'ab' || '0a'x || 'cd' || '0a'x || 'ef'
+call charout f
+say '['stream(f, 'c', 'query position')']'
+say stream(f, 'c', 'open')
+say stream(f, 'c', 'query position') stream(f, 'c', 'query position read') stream(f, 'c', 'query position write')
+x = charin(f, , 4)
+say stream(f, 'c', 'query position') stream(f, 'c', 'query position read line') stream(f, 'c', 'query pos r c')
+say stream(f, 'c', 'seek 1 write') stream(f, 'c', 'q pos w')
+say stream(f, 'c', 'close')
+say stream(f, 'c', 'open read') stream(f, 'c', 'query position')
+call stream f, 'c', 'close'
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">[]
+READY:
+1 1 9
+5 2 5
+1 1
+READY:
+READY: 1
+</code></pre>
+<h2 id="asking-about-the-file"><a class="header" href="#asking-about-the-file">Asking about the file</a></h2>
+<div class="rule" id="r-bif.stream.query.exists"><a href="#r-bif.stream.query.exists">[bif.stream.query.exists]</a></div>
+<p><code>QUERY EXISTS</code> answers the full name of the file, as
+<a href="qualify.html#r-bif.qualify.relative">QUALIFY</a> makes it (see <a href="#r-bif.stream.deviation.34">Deviation
+34</a>), if it exists, and the null string if not. A
+directory is not a file for it, and the answer for one is the null string. It
+does not create the file, and it does not depend on the stream being open. For
+a standard stream the answer is its name: <code>STDIN</code>, <code>STDOUT</code> or <code>STDERR</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-exists.tmp'
+call sysfiledelete f
+say '['stream(f, 'c', 'query exists')']' '['stream('.', 'c', 'query exists')']'
+call charout f, 'abc'
+say stream(f, 'c', 'query exists') == qualify(f)
+call charout f
+say stream(f, 'c', 'query exists') == qualify(f)
+call sysfiledelete f
+say '['stream(f, 'c', 'query exists')']'
+say stream('stdin', 'c', 'query exists') stream('STDERR:', 'c', 'query exists')
+</code></pre>
+<pre><code class="language-output">[] []
+1
+1
+[]
+STDIN STDERR
+</code></pre>
+<div class="rule" id="r-bif.stream.query.size"><a href="#r-bif.stream.query.size">[bif.stream.query.size]</a></div>
+<p><code>QUERY SIZE</code> answers the number of characters of the file, 0 for
+an empty file and for a directory, and the null string for a name that is not
+a file. Characters written are counted at once, whether or not the stream is
+open.</p>
+<pre><code class="language-rexx">f = 'spec-stream-size.tmp'
+call sysfiledelete f
+say '['stream(f, 'c', 'query size')']' stream('.', 'c', 'query size')
+call charout f
+say stream(f, 'c', 'query size')
+call charout f, 'a' || '0d0a'x
+say stream(f, 'c', 'query size')
+call charout f, 'bc'
+say stream(f, 'c', 'query size') chars(f)
+call charout f
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">[] 0
+0
+3
+5 5
+</code></pre>
+<div class="rule" id="r-bif.stream.query.type"><a href="#r-bif.stream.query.type">[bif.stream.query.type]</a></div>
+<p><code>QUERY STREAMTYPE</code> answers <code>PERSISTENT</code> for an open file, a stream that can be
+positioned, <code>TRANSIENT</code> for an open stream that cannot, such as the standard
+input when it is a pipe, and <code>UNKNOWN</code> for a stream that is not open: a file
+that is closed, a name that is not a file, a directory.</p>
+<pre><code class="language-rexx">f = 'spec-stream-type.tmp'
+call sysfiledelete f
+say stream(f, 'c', 'query streamtype') stream('.', 'c', 'query streamtype')
+call charout f, 'a'
+say stream(f, 'c', 'query streamtype') stream('stdin', 'c', 'query streamtype')
+call charout f
+say stream(f, 'c', 'query streamtype')
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">UNKNOWN UNKNOWN
+PERSISTENT TRANSIENT
+UNKNOWN
+</code></pre>
+<div class="rule" id="r-bif.stream.query.time"><a href="#r-bif.stream.query.time">[bif.stream.query.time]</a></div>
+<p><code>QUERY TIMESTAMP</code> answers the date and time that the file was last changed
+as <code>yyyy-mm-dd hh:mm:ss</code>, and <code>QUERY DATETIME</code> the same moment as
+<code>mm-dd-yy hh:mm:ss</code>; the null string for a name that is not a file. For a
+directory they answer its time. They hold the host's time zone, which
+is not specified.</p>
+<pre><code class="language-rexx">f = 'spec-stream-time.tmp'
+call sysfiledelete f
+say '['stream(f, 'c', 'query timestamp')']' '['stream(f, 'c', 'query datetime')']'
+call charout f, 'a'
+call charout f
+ts = stream(f, 'c', 'query timestamp')
+dt = stream(f, 'c', 'query datetime')
+say translate(ts, copies('9', 10), '0123456789') translate(dt, copies('9', 10), '0123456789')
+say (substr(dt, 1, 2) == substr(ts, 6, 2)) (substr(dt, 4, 2) == substr(ts, 9, 2)),
+    (substr(dt, 7, 2) == substr(ts, 3, 2)) (substr(dt, 10) == substr(ts, 12))
+say length(stream('.', 'c', 'query timestamp')) length(stream('.', 'c', 'query datetime'))
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">[] []
+9999-99-99 99:99:99 99-99-99 99:99:99
+1 1 1 1
+19 17
+</code></pre>
+<div class="rule" id="r-bif.stream.query.handle"><a href="#r-bif.stream.query.handle">[bif.stream.query.handle]</a></div>
+<p><code>QUERY HANDLE</code> answers the host's handle for a stream that is open, a whole
+number, and the null string for one that is not.</p>
+<pre><code class="language-rexx">f = 'spec-stream-handle.tmp'
+call sysfiledelete f
+say '['stream(f, 'c', 'query handle')']'
+call charout f, 'a'
+say datatype(stream(f, 'c', 'query handle'), 'W')
+call charout f
+say '['stream(f, 'c', 'query handle')']'
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">[]
+1
+[]
+</code></pre>
+<div class="rule" id="r-bif.stream.query.words"><a href="#r-bif.stream.query.words">[bif.stream.query.words]</a></div>
+<p>The word after <code>QUERY</code> is <code>EXISTS</code>, <code>SIZE</code>, <code>STREAMTYPE</code>, <code>TIMESTAMP</code>,
+<code>DATETIME</code>, <code>HANDLE</code> or <code>POSITION</code>, in either case. It may be shortened to any
+of its leading letters, as far as to its first letter for <code>EXISTS</code>, <code>HANDLE</code>,
+<code>TIMESTAMP</code> and <code>DATETIME</code>, to <code>SI</code> for <code>SIZE</code>, to <code>ST</code> for <code>STREAMTYPE</code> and
+to <code>P</code> for <code>POSITION</code>; what a shorter word answers is not specified. A <code>QUERY</code>
+with no word is not specified. A word that is none of them, and words after it
+that the query does not take, raise <code>SYNTAX 93.0</code>.</p>
+<pre><code class="language-rexx">f = 'spec-stream-words.tmp'
+call sysfiledelete f
+call charout f, 'abc'
+say stream(f, 'c', 'query size') stream(f, 'c', 'q si') stream(f, 'c', 'QUERY ST') stream(f, 'c', 'query streamtype')
+say (stream(f, 'c', 'query e') == qualify(f)) length(stream(f, 'c', 'query t')) length(stream(f, 'c', 'query d'))
+signal on syntax name a
+say stream(f, 'c', 'query streamtypes')
+a: say condition('o')~code
+signal on syntax name b
+say stream(f, 'c', 'query size 1')
+b: say condition('o')~code
+call charout f
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">3 3 PERSISTENT PERSISTENT
+1 19 17
+93.0
+93.0
+</code></pre>
+<h2 id="the-standard-streams"><a class="header" href="#the-standard-streams">The standard streams</a></h2>
+<div class="rule" id="r-bif.stream.std"><a href="#r-bif.stream.std">[bif.stream.std]</a></div>
+<p>The standard input, output and error streams are open from the start of the
+program, and their state is <code>READY</code>. Their names are those of
+<a href="index.html#r-bif.index.stream.std">the standard names</a>. The standard input is
+transient when it is a pipe, and the commands that need positions are not for
+a transient stream: a <code>SEEK</code> or <code>POSITION</code> of it raises <code>SYNTAX 93.958</code>.</p>
+<pre><code class="language-rexx">say stream('stdin') stream('STDOUT:') stream('stderr') stream('stdin', 'd')
+signal on syntax name a
+say stream('stdin', 'c', 'seek 1')
+a: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">READY READY READY READY:
+93.958
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-bif.stream.deviation.34"><a href="#r-bif.stream.deviation.34">[bif.stream.deviation.34]</a></div>
+<p>In a stream's name, as in every name interrexx qualifies, each <code>..</code> removes
+exactly the one component before it, however the component was written, so
+<code>.b/../c</code> names the file <code>c</code> beside the directory <code>.b</code>. ooRexx removes none
+after a doubled slash and two after a component that starts with a period, so
+its stream can be a different file.</p>
+<pre><code class="language-rexx">address system 'mktemp -d' with output stem t.
+base = t.1
+call sysmkdir base || '/.b'
+f = base || '/c'
+call charout f, 'abc'
+call charout f
+g = base || '/.b/../c'
+say (stream(g, 'c', 'query exists') == f) chars(g) charin(g, 1, 3)
+call stream g, 'c', 'close'
+call sysfiledelete f
+call sysrmdir base || '/.b'
+call sysrmdir base
+</code></pre>
+<pre><code class="language-output">1 3 abc
+</code></pre>
+<div class="rule" id="r-bif.stream.deviation.35"><a href="#r-bif.stream.deviation.35">[bif.stream.deviation.35]</a></div>
+<p>The names <code>HANDLE:0</code>, <code>HANDLE:1</code> and <code>HANDLE:2</code> denote the standard input,
+output and error streams, and read and write them; a <code>HANDLE:</code> stream with any
+other descriptor is refused when it is created. In ooRexx a <code>HANDLE:</code> stream
+never reaches its descriptor: reads see end of file, and writes crash.</p>
+<pre><code class="language-rexx">call charout 'HANDLE:1', 'hello '
+call charout 'handle:1', 'again'
+say
+say stream('HANDLE:1') '['charin('HANDLE:0')']'
+</code></pre>
+<pre><code class="language-output">hello again
+READY []
+</code></pre>
+<div class="rule" id="r-bif.stream.deviation.49"><a href="#r-bif.stream.deviation.49">[bif.stream.deviation.49]</a></div>
+<p>On a stream open for reading and writing, a relative <code>SEEK</code> with <code>READ</code> moves
+from the read position, and one with <code>WRITE</code> from the write position, whatever
+operation came before. ooRexx counts from a position that it tracks, which can
+be the other one.</p>
+<pre><code class="language-rexx">f = 'spec-stream-dev49.tmp'
+call sysfiledelete f
+call lineout f, 'ab'
+call lineout f, 'cd'
+call lineout f, 'ef'
+call lineout f
+say stream(f, 'c', 'open')
+say stream(f, 'c', 'seek +1 read') stream(f, 'c', 'query position read')
+say stream(f, 'c', 'open')
+x = charin(f, , 3)
+say stream(f, 'c', 'seek +1 write') stream(f, 'c', 'query position read')
+call stream f, 'c', 'close'
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY:
+2 2
+READY:
+11 4
+</code></pre>
+<div class="rule" id="r-bif.stream.deviation.55"><a href="#r-bif.stream.deviation.55">[bif.stream.deviation.55]</a></div>
+<p>A stream opened <code>WRITE</code> reads nothing: a read fails and the state is <code>ERROR</code>,
+<code>CHARS</code> and <code>LINES</code> answer 0, and positioning by line is <code>NOTREADY</code>: a <code>SEEK</code>
+by line answers 0 and a LINEOUT that gives a line answers 1. ooRexx opens it
+for reading and writing.</p>
+<pre><code class="language-rexx">f = 'spec-stream-dev55.tmp'
+call sysfiledelete f
+call charout f, 'ab' || '0a'x || 'cd'
+call charout f
+say stream(f, 'c', 'open write')
+x = charin(f, 1, 1)
+say '[' || x || ']' stream(f) chars(f) lines(f) lines(f, 'C')
+n = 0
+call on notready name nr
+say stream(f, 'c', 'seek 1 write line')
+say n
+say lineout(f, 'M', 1)
+say n
+call stream f, 'c', 'close'
+call sysfiledelete f
+exit
+nr: n = n + 1
+return
+</code></pre>
+<pre><code class="language-output">READY:
+[] ERROR 0 0 0
+0
+1
+1
+2
+</code></pre>
+<div class="rule" id="r-bif.stream.deviation.57"><a href="#r-bif.stream.deviation.57">[bif.stream.deviation.57]</a></div>
+<p><code>QUERY POSITION ... LINE</code> answers the line that the position is in, and 0 for
+the write position of a stream open for reading only. ooRexx answers a line
+number it tracks.</p>
+<pre><code class="language-rexx">f = 'spec-stream-dev57.tmp'
+call sysfiledelete f
+call charout f, 'ab' || '0a'x || 'cd' || '0a'x || 'ef'
+call charout f
+say stream(f, 'c', 'open')
+say stream(f, 'c', 'query position write line') stream(f, 'c', 'query position write')
+say stream(f, 'c', 'close')
+say stream(f, 'c', 'open read')
+say stream(f, 'c', 'query position write line') stream(f, 'c', 'query position read line')
+call stream f, 'c', 'close'
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY:
+3 9
+READY:
+READY:
+0 1
+</code></pre>
+<div class="rule" id="r-bif.stream.deviation.59"><a href="#r-bif.stream.deviation.59">[bif.stream.deviation.59]</a></div>
+<p>A <code>SEEK</code> or <code>POSITION</code> to a position below 1 answers 0, raises NOTREADY and
+moves nothing; so does one of the write position of a stream open for reading
+only. ooRexx answers a position it has not checked.</p>
+<pre><code class="language-rexx">f = 'spec-stream-dev59.tmp'
+call sysfiledelete f
+call charout f, 'abc'
+call charout f
+say stream(f, 'c', 'open read')
+n = 0
+call on notready name nr
+say stream(f, 'c', 'seek 0 read') stream(f, 'c', 'query position read') n
+say stream(f, 'c', 'seek -9 read') stream(f, 'c', 'query position read') n
+say stream(f, 'c', 'seek 2 write') n
+call stream f, 'c', 'close'
+call sysfiledelete f
+exit
+nr: n = n + 1
+return
+</code></pre>
+<pre><code class="language-output">READY:
+0 1 0
+0 1 1
+0 2
+</code></pre>
+<div class="rule" id="r-bif.stream.deviation.62"><a href="#r-bif.stream.deviation.62">[bif.stream.deviation.62]</a></div>
+<p>A read that finds nothing at the end of the data leaves the stream <code>NOTREADY</code>
+with the description <code>NOTREADY:EOF</code>. ooRexx leaves <code>ERROR:0</code> after a <code>CHARIN</code>
+of nothing.</p>
+<pre><code class="language-rexx">f = 'spec-stream-dev62.tmp'
+call sysfiledelete f
+call charout f, 'ab'
+call charout f
+x = charin(f, 1, 2)
+say stream(f, 'd')
+x = charin(f, , 1)
+say stream(f, 'd')
+call charout f
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">READY:
+NOTREADY:EOF
+</code></pre>
+<div class="rule" id="r-bif.stream.deviation.74"><a href="#r-bif.stream.deviation.74">[bif.stream.deviation.74]</a></div>
+<p>A stream opened <code>APPEND</code> on a file it can only write writes every line at the
+file's current end, after what another writer appended since the stream was
+opened. ooRexx writes at the end as it was when the stream was opened,
+overwriting what another writer appended meanwhile.</p>
+<pre><code class="language-rexx">f = 'spec-stream-dev74.tmp'
+call sysfiledelete f
+call lineout f, 'one'
+call lineout f
+address system 'chmod 200' f
+call stream f, 'c', 'open write append'
+address system 'printf "two\n" &gt;&gt;' f
+call lineout f, 'three'
+call lineout f
+address system 'chmod 600' f
+do while lines(f) &gt; 0
+  say linein(f)
+end
+call stream f, 'c', 'close'
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">one
+two
+three
+</code></pre>
+<div class="rule" id="r-bif.stream.deviation.79"><a href="#r-bif.stream.deviation.79">[bif.stream.deviation.79]</a></div>
+<p>On a stream opened <code>APPEND</code>, every write goes after the last character,
+wherever the write position has been set: a position past the end leaves no
+gap, and a position in data written since the stream was opened does not
+overwrite it. The write position cannot be moved into the data that the file
+held when it was opened: a <code>SEEK</code> of it there answers 0, and a CHAROUT or
+LINEOUT that names a position there writes nothing, all of them <code>NOTREADY</code>.
+ooRexx differs there: it moves the position, and the write goes after the last
+character as any other does.</p>
+<pre><code class="language-rexx">f = 'spec-stream-dev79.tmp'
+call sysfiledelete f
+call charout f, 'abcdefgh'
+call charout f
+n = 0
+call on notready name nr
+say stream(f, 'c', 'open append')
+say stream(f, 'c', 'seek 2 write')
+say n stream(f, 'c', 'query position write')
+say charout(f, 'Y', 1)
+say n
+say stream(f, 'c', 'seek 9 write') charout(f, 'Z', 9)
+say stream(f, 'c', 'seek 20 write') charout(f, 'W') charout(f, 'V', 10) n
+call stream f, 'c', 'close'
+say charin(f, 1, 100)
+call sysfiledelete f
+exit
+nr: n = n + 1
+return
+</code></pre>
+<pre><code class="language-output">READY:
+0
+1 9
+1
+2
+9 0
+20 0 0 2
+abcdefghZWV
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../builtins/space.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../builtins/strip.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../builtins/space.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../builtins/strip.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>
