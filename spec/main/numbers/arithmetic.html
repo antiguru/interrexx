@@ -1,0 +1,634 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Arithmetic - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html" class="active"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">6.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">6.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">6.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">6.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">6.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">6.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">6.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">6.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">6.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">6.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">6.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">6.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">6.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">6.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">6.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">6.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">6.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">6.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">6.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">6.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">6.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">6.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">6.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">6.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">6.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">6.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">6.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">6.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">6.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">6.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">6.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">6.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">6.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">6.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">6.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">6.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">6.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">6.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">6.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">6.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">6.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">6.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">6.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">6.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">6.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">6.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">6.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">6.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">6.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">6.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">6.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">6.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">6.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">6.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">6.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">6.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">6.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">6.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">6.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">6.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">6.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">6.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">6.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">6.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">6.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">6.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">6.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">6.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">6.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">6.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">6.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">6.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">6.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">6.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">6.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">6.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">6.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">6.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">6.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">6.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">6.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">6.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">6.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">6.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">7.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="arithmetic"><a class="header" href="#arithmetic">Arithmetic</a></h1>
+<p class="references">ANSI: 7.4.2, 7.4.3, 7.4.4, 7.4.5, 7.4.10; rexxref: Numbers and Arithmetic &gt; Arithmetic</p>
+<p class="deviations">Deviations: D53</p>
+<p>The arithmetic operators are the infix <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>%</code>, <code>//</code> and <code>**</code>,
+and the prefix <code>+</code> and <code>-</code>. Each reads its operands as numbers, works to the
+precision that NUMERIC DIGITS sets, and answers a new number. This page says
+how many digits an operation looks at in its operands, how it rounds, what
+each operator answers, and which errors an operation raises. How an answer is
+written is the business of <a href="formats.html">the formats page</a>, the size limits of
+<a href="limits.html">the limits page</a>, and the settings of <a href="settings.html">the settings
+page</a>. Where the operators stand in an expression is left to <a href="../expressions/arithmetic.html">the
+expressions chapter</a>.</p>
+<h2 id="operands-and-precision"><a class="header" href="#operands-and-precision">Operands and precision</a></h2>
+<div class="rule" id="r-num.arithmetic.operand"><a href="#r-num.arithmetic.operand">[num.arithmetic.operand]</a></div>
+<p>Each operand of an arithmetic operator must be a <a href="index.html#r-num.index.form">number</a>,
+and a string that is not one raises <code>SYNTAX 41.1</code>, as <a href="index.html#r-num.index.use">the use
+rule</a> says. Both operands, and the operand of a prefix
+operator, are checked before the operator does anything else, so a bad operand
+wins over a zero divisor or any other error that the operator would otherwise
+find. The right operand of <code>**</code> is the exception: it is the exponent and is
+checked by <a href="#r-num.arithmetic.exponent">its own rule</a>. A string whose exponent
+is out of <a href="limits.html#r-num.limits.not-number">range</a> is not a number either.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say 'ten' / 0
+a: say condition('o')~code
+signal on syntax name b
+say 10 % 'x'
+b: say condition('o')~code
+signal on syntax name c
+say -'1 2'
+c: say condition('o')~code
+signal on syntax name d
+say 1 + ''
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">41.1
+41.1
+41.1
+41.1
+</code></pre>
+<div class="rule" id="r-num.arithmetic.digits"><a href="#r-num.arithmetic.digits">[num.arithmetic.digits]</a></div>
+<p>An operation works at NUMERIC DIGITS significant digits and rounds its result
+to that many, as <a href="../builtins/index.html#r-bif.index.num.round">the rounding rule</a> of the builtins
+says and as <a href="formats.html#r-num.formats.result">the result rule</a> applies to every operator.
+An operand is not rounded before the operation: it takes part with the digits
+it has, apart from the cut that the next two rules describe for the digits
+beyond DIGITS plus one. Under NUMERIC DIGITS 1 the product of 2 and 1.5 is
+therefore 3, where rounding 1.5 to 2 first would give 4, and rounding happens
+once, on the result.</p>
+<pre><code class="language-rexx">numeric digits 1
+say (2 * 1.5) (1.5 + 1.5) (6 / 4) (0.4 + 0.4)
+numeric digits 3
+say (1 / 3) (2 / 3) (100 / 3) (1000 / 3) (10000 / 3) (2.5 * 2.5)
+numeric digits 12
+say (1 / 3) (2 / 3) (1 / 7)
+</code></pre>
+<pre><code class="language-output">3 3 2 0.8
+0.333 0.667 33.3 333 3.33E+3 6.25
+0.333333333333 0.666666666667 0.142857142857
+</code></pre>
+<div class="rule" id="r-num.arithmetic.cut"><a href="#r-num.arithmetic.cut">[num.arithmetic.cut]</a></div>
+<p>Before <code>*</code>, <code>/</code>, <code>%</code> or <code>//</code> uses an operand that has more than DIGITS plus
+one significant digits, it cuts the operand to its first DIGITS plus one
+digits, counted from the first nonzero digit. The cut drops the later digits
+and does not round them. The digit kept beyond DIGITS takes part in the
+operation, so it shapes the digit on which the result is rounded. The two
+products and the two quotients below therefore differ from the exact ones,
+which would round to 4, 4, 1.0 and 0.32.</p>
+<pre><code class="language-rexx">numeric digits 1
+say (1.19 * 3) (1.19 * 3.19)
+numeric digits 2
+say (1.499 / 1.5) (2.999 / 9.5)
+</code></pre>
+<pre><code class="language-output">3 3
+0.99 0.31
+</code></pre>
+<div class="rule" id="r-num.arithmetic.addsub"><a href="#r-num.arithmetic.addsub">[num.arithmetic.addsub]</a></div>
+<p>The result of <code>+</code> and <code>-</code> is rounded to DIGITS digits counted from the first
+digit of the operand whose first digit stands higher, and not from the first
+digit of the result. Let that higher digit stand at power of ten <code>H</code>, taking
+no account of an operand with the value zero. Both operands are first cut
+after the digit at <code>H - DIGITS</code>, which is one digit more than the rounding
+keeps. Their exact sum or difference is then rounded once, half up in
+magnitude, at the coarser of <code>H - DIGITS + 1</code> and the DIGITS significant
+digits of that sum. So two close numbers can cancel down to zero, and a sum
+that carries into a new leading digit keeps one digit less after the point.</p>
+<pre><code class="language-rexx">numeric digits 3
+say (1234 - 1233) (1234 - 1200) (12.34 - 12.3) (1.0006 - 1)
+say (1234 + 1) (1234 + 0) (0 + 1234) (1.234 - 0)
+say (999 + 1) (995 + 9.5) (9.99 + 0.006) (99.5 + 0.5)
+a = -1234
+say (a + 1233) (a - 1) (1233 + a) (-1 + 1)
+numeric digits 4
+say (8909.31002 - 800.8374) (8909.31002 + 0) (800.8374 - 8909.31002)
+</code></pre>
+<pre><code class="language-output">0 30 0 0
+1.24E+3 1.23E+3 1.23E+3 1.23
+1.00E+3 1.00E+3 10.0 100
+0 -1.23E+3 0 0
+8109 8909 -8109
+</code></pre>
+<div class="rule" id="r-num.arithmetic.prefix"><a href="#r-num.arithmetic.prefix">[num.arithmetic.prefix]</a></div>
+<p>The prefix <code>+</code> and <code>-</code> round their operand to DIGITS significant digits as
+<code>0 + x</code> and <code>0 - x</code> would, and <code>-</code> also flips the sign. The operand is a
+number like any other, so a prefix applied to zero answers <code>0</code> without a
+sign. The sign of a number in a program is a prefix operator applied to the
+number without the sign, so a literal that is wider than DIGITS is rounded by
+its own sign before the operator beside it sees it.</p>
+<pre><code class="language-rexx">numeric digits 3
+say (-1.2345) (+2.4999) (-0.00012345) (+' 5.0 ') (-0) (-0.0)
+numeric digits 1
+x = '-1.5'
+say (-1.5 + 2) (x + 2) (-1.5) x (+1.5) (+15)
+</code></pre>
+<pre><code class="language-output">-1.23 2.50 -0.000123 5.0 0 0
+0 1 -2 -1.5 2 2E+1
+</code></pre>
+<h2 id="division"><a class="header" href="#division">Division</a></h2>
+<div class="rule" id="r-num.arithmetic.divide"><a href="#r-num.arithmetic.divide">[num.arithmetic.divide]</a></div>
+<p><code>/</code> answers the quotient of its operands, which are cut as the <a href="#r-num.arithmetic.cut">cut
+rule</a> says, rounded to DIGITS digits. A dividend of zero
+answers <code>0</code>, and the quotient has the <a href="formats.html#r-num.formats.trailing">trailing zeros</a>
+removed. The quotient need not be whole, and a quotient with a repeating
+expansion is the first DIGITS digits of it, rounded.</p>
+<pre><code class="language-rexx">say (1 / 3) (2 / 3) (10 / 4) (1 / 8) (6.0 / 3) (0 / 5) (-9 / 4) (7 / -2)
+numeric digits 4
+say (1 / 3) (2 / 3) (22 / 7) (1 / 80000) (12345 / 100) (1 / 800000000)
+</code></pre>
+<pre><code class="language-output">0.333333333 0.666666667 2.5 0.125 2 0 -2.25 -3.5
+0.3333 0.6667 3.143 0.0000125 123.5 1.25E-9
+</code></pre>
+<div class="rule" id="r-num.arithmetic.zero"><a href="#r-num.arithmetic.zero">[num.arithmetic.zero]</a></div>
+<p>A zero divisor raises <code>SYNTAX 42.3</code> for <code>/</code>, <code>%</code> and <code>//</code>, whatever the
+dividend is, zero included. A divisor is zero when it is a number of value
+zero, whatever its written form. The <a href="#r-num.arithmetic.operand">operand
+check</a> comes first, as the last example shows.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say 1 / 0
+a: say condition('o')~code
+signal on syntax name b
+say 0 / 0
+b: say condition('o')~code
+signal on syntax name c
+say 7 % 0.00
+c: say condition('o')~code
+signal on syntax name d
+say 7 // '-0e5'
+d: say condition('o')~code
+signal on syntax name e
+say 7 / 'x'
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">42.3
+42.3
+42.3
+42.3
+41.1
+</code></pre>
+<div class="rule" id="r-num.arithmetic.integer"><a href="#r-num.arithmetic.integer">[num.arithmetic.integer]</a></div>
+<p><code>%</code> answers the integer part of the quotient, its magnitude rounded down, with
+the sign of the quotient, and <code>//</code> answers what remains of the dividend after
+that many divisors are taken from it, which has the sign of the dividend and
+is rounded to DIGITS digits. Both cut their operands as the <a href="#r-num.arithmetic.cut">cut
+rule</a> says before they divide. The integer part must
+fit in DIGITS digits, or <code>%</code> raises <code>SYNTAX 26.11</code> and <code>//</code> raises <code>SYNTAX 26.12</code>, so a remainder is refused when the quotient it belongs to is too wide.
+A result of zero is <code>0</code> with no sign.</p>
+<pre><code class="language-rexx">say (7 % 2) (-7 % 2) (7 % -2) (7 // 2) (-7 // 2) (7 // -2) (-7 // -2)
+say (7.5 // 2) (-7.5 % 2) (0.5 % 1) (-0.5 // 1) (-0.5 % 1) (6 // 3) (6 % 3)
+numeric digits 3
+say (999 % 1) (1234 // 1000) (1234 % 1000) (12.3456789 // 1) (9.9999 // 10)
+signal on syntax name a
+say 1000 % 1
+a: say condition('o')~code
+signal on syntax name b
+say 1000 // 1
+b: say condition('o')~code
+signal on syntax name c
+say 12.5 // 0.001
+c: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">3 -3 -3 1 -1 1 -1
+1.5 -3 0 -0.5 0 0 2
+999 234 1 0.34 10.0
+26.11
+26.12
+26.12
+</code></pre>
+<h2 id="powers"><a class="header" href="#powers">Powers</a></h2>
+<div class="rule" id="r-num.arithmetic.exponent"><a href="#r-num.arithmetic.exponent">[num.arithmetic.exponent]</a></div>
+<p>The right operand of <code>**</code> must be a whole number of at most DIGITS digits,
+after it is rounded to DIGITS digits as <code>exponent + 0</code> would round it, and
+its value may be negative. A string that is not a number at all, a number
+with a fraction after that rounding, and a number of more than DIGITS digits
+raise <code>SYNTAX 26.8</code> where the other operators raise <code>SYNTAX 41.1</code>. The
+base is checked first, so a base that is not a number raises 41.1 even when
+the exponent is bad too.</p>
+<pre><code class="language-rexx">numeric digits 3
+say (2 ** 3.0) (2 ** 3.001) (2 ** 010) (2 ** 1e2) (2 ** -2) (2 ** 999)
+signal on syntax name a
+say 2 ** 1.5
+a: say condition('o')~code
+signal on syntax name b
+say 2 ** 'x'
+b: say condition('o')~code
+signal on syntax name c
+say 2 ** 1000
+c: say condition('o')~code
+signal on syntax name d
+say 'x' ** 'y'
+d: say condition('o')~code
+signal on syntax name e
+say 2 ** ''
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">8 8 1.02E+3 1.27E+30 0.25 5.36E+300
+26.8
+26.8
+26.8
+41.1
+26.8
+</code></pre>
+<div class="rule" id="r-num.arithmetic.power"><a href="#r-num.arithmetic.power">[num.arithmetic.power]</a></div>
+<p>A power answers the base raised to the exponent, rounded to DIGITS digits and
+written without the zeros that end its decimal places, as <a href="formats.html#r-num.formats.trailing">the trailing-zero
+rule</a> says. Any base to the power 0 is 1, zero
+included, a base to a positive exponent is that many factors, and a base to a
+negative exponent is the reciprocal of the power with the exponent's
+magnitude. A negative base keeps its sign for an odd exponent. The base is cut
+to DIGITS plus one digits first, and the factors are multiplied under rounding
+of their own, so a power whose exact value does not fit in DIGITS digits may
+differ from that value rounded in its last digit, and this book does not
+specify which.</p>
+<pre><code class="language-rexx">say (2 ** 10) (2 ** -3) ((-2) ** 3) ((-2) ** 2) (1.5 ** 2) (0 ** 3) (0 ** 0)
+say (5.0 ** 1) (1.50 ** 2) (10 ** -2) (2.5 ** 0) (0.5 ** 3) (3 ** 20)
+numeric digits 3
+say (1.01 ** 100) (1.5 ** 10) (7 ** 7) (2 ** -999)
+numeric digits 1
+say (3 ** 3) (7 ** 2) (2 ** 9)
+</code></pre>
+<pre><code class="language-output">1024 0.125 -8 4 2.25 0 1
+5 2.25 0.01 1 0.125 3.4867844E+9
+2.7 57.7 8.24E+5 1.87E-301
+3E+1 5E+1 5E+2
+</code></pre>
+<div class="rule" id="r-num.arithmetic.power.error"><a href="#r-num.arithmetic.power.error">[num.arithmetic.power.error]</a></div>
+<p>Only a zero base raises <code>SYNTAX 42.903</code>, and it does so for a negative
+exponent. A power raises <code>SYNTAX 42.1</code> when the first digit of the base, at
+power of ten <code>A</code>, and the exponent <code>N</code> have a product <code>A * N</code> that is more
+than 999999999 in magnitude. The test is made before any digit is computed and
+does not look at the value, so it also refuses a power whose value is within
+the <a href="limits.html#r-num.limits.range">exponent range</a>. A power that passes the test is
+computed. A product of the computation whose first digit stands above the
+range raises <code>SYNTAX 42.901</code>, whatever the sign of the exponent. The last
+digit of a product is not tested, so an intermediate value that is out of
+range only at its last digit raises nothing. The final result, which for a
+negative exponent is the reciprocal of the unrounded product, is tested as
+<a href="limits.html#r-num.limits.power">the power rule</a> and <a href="limits.html#r-num.limits.underflow">the underflow
+rule</a> say. A base such as 100 therefore raises <code>42.1</code>
+at an exponent for which 11 raises <code>42.901</code>.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say 0 ** -1
+a: say condition('o')~code
+signal on syntax name b
+say 100 ** 999999999
+b: say condition('o')~code
+signal on syntax name c
+say 11 ** 999999999
+c: say condition('o')~code
+signal on syntax name d
+say 3e333333333 ** 3
+d: say condition('o')~code
+signal on syntax name e
+say 0.1000000001 ** 999999999
+e: say condition('o')~code
+signal on syntax name f
+say 3e-333333334 ** 3
+f: say condition('o')~code
+signal on syntax name h
+say 11 ** -999999999
+h: say condition('o')~code
+numeric digits 12
+signal on syntax name g
+say 0.5 ** 1000000000
+g: say condition('o')~code
+say (0.5 ** 999999999) (1.5 ** 1000000000) (0 ** 0)
+numeric digits 9
+say (10 ** 999999999) (2e333333333 ** 3) (3e-333333333 ** 3)
+</code></pre>
+<pre><code class="language-output">42.903
+42.1
+42.901
+42.901
+42.902
+42.1
+42.901
+42.1
+4.33559593523E-301029996 1.13679261102E+176091259 1
+1E+999999999 8E+999999999 2.7E-999999998
+</code></pre>
+<h2 id="errors-in-the-multiplicative-and-additive-operators"><a class="header" href="#errors-in-the-multiplicative-and-additive-operators">Errors in the multiplicative and additive operators</a></h2>
+<div class="rule" id="r-num.arithmetic.range"><a href="#r-num.arithmetic.range">[num.arithmetic.range]</a></div>
+<p>A result of <code>+</code>, <code>-</code>, <code>*</code> or <code>/</code> that is out of the exponent range raises the
+errors that <a href="limits.html">the limits page</a> gives, <code>SYNTAX 42.901</code> for an
+overflow and <code>SYNTAX 42.902</code> for an underflow, and the integer division
+operators raise <a href="#r-num.arithmetic.integer">the errors above</a> for a result that
+is too wide. No operator answers a value outside the range, and <a href="limits.html#r-num.limits.underflow">the underflow
+rule</a> says that a result that is too small is not
+replaced by zero.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say 5e999999999 * 20
+a: say condition('o')~code
+signal on syntax name b
+say 1e-999999999 / 10
+b: say condition('o')~code
+signal on syntax name c
+say 1e999999999 % 7
+c: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">42.901
+42.902
+26.11
+</code></pre>
+<h2 id="lost-digits"><a class="header" href="#lost-digits">Lost digits</a></h2>
+<div class="rule" id="r-num.arithmetic.lostdigits"><a href="#r-num.arithmetic.lostdigits">[num.arithmetic.lostdigits]</a></div>
+<p>An operand of an arithmetic operator that has more digits than NUMERIC DIGITS
+raises the LOSTDIGITS condition, and so does the base of <code>**</code> but not its
+exponent. The digits counted are those from the first nonzero digit to the
+last one written, so zeros that end the operand count, and the exponent and
+the zeros that start the operand do not. An operand of value zero has no
+digits. The condition is raised for the left operand first and only after both
+operands were found to be numbers, and the builtins raise no such condition.
+When the condition is not trapped the operation goes on with the digits it
+has, cut as the <a href="#r-num.arithmetic.cut">cut rule</a> says. When the condition is
+trapped, this book does not specify which comes first: the condition for a
+wide left operand, or an error from the checks of the right operand, which are
+<code>SYNTAX 42.3</code> for a zero divisor of <code>/</code>, <code>%</code> and <code>//</code> (<a href="#r-num.arithmetic.zero">the zero
+rule</a>) and <code>SYNTAX 26.8</code> for an exponent of <code>**</code> that
+is a number but not a whole number of at most DIGITS digits (<a href="#r-num.arithmetic.exponent">the exponent
+rule</a>).</p>
+<pre><code class="language-rexx">numeric digits 3
+say 1234 + 1
+signal on lostdigits name a
+say 1234 + 1
+a: say condition('c') condition('d')
+signal on lostdigits name b
+say 5 * 1.200
+b: say condition('d')
+signal on lostdigits name c
+say 99 * 1000
+c: say condition('d')
+signal on lostdigits name d
+say 1234 * 5678
+d: say condition('d')
+signal on syntax name e
+say 1234 + 'x'
+e: say condition('o')~code
+signal on syntax name f
+say 2 ** 1234
+f: say condition('o')~code
+signal on lostdigits name g
+say (100 + 1e10 + 0.0000 + 1.00e-5) (0.0123 * 2) (1234 == 1234) abs(1234)
+g: say 'end'
+</code></pre>
+<pre><code class="language-output">1.24E+3
+LOSTDIGITS 1234
+1.200
+1000
+1234
+41.1
+26.8
+1E+10 0.0246 1 1.23E+3
+end
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-num.arithmetic.deviation.53"><a href="#r-num.arithmetic.deviation.53">[num.arithmetic.deviation.53]</a></div>
+<p>A divisor that is wider than NUMERIC DIGITS raises LOSTDIGITS even when the
+dividend is zero, and the description of the condition is the text of the
+operand as it was written, whichever operator produced the condition. ooRexx
+does not check the divisor when the dividend is zero and answers <code>0</code>. It
+describes the operand of <code>*</code>, <code>/</code>, <code>%</code>, <code>//</code> and <code>**</code> and the operand of a
+prefix operator by its value, written as <a href="../builtins/index.html#r-bif.index.num.write">the notation
+rule</a> writes a result under the settings in force, with
+every digit kept and none rounded, so <code>1234.50</code> becomes <code>1.23450E+3</code>. An
+operand whose last digit stands at the units is written without an exponent
+however wide it is. It keeps the text as written for the operands of <code>+</code>, <code>-</code>
+and the comparisons.</p>
+<pre><code class="language-rexx">numeric digits 3
+signal on lostdigits name a
+say 0 / 1.234
+a: say condition('d')
+z = '1.234E3'
+signal on lostdigits name b
+say -z
+b: say condition('d')
+signal on lostdigits name c
+say z * 1
+c: say condition('d')
+signal on lostdigits name d
+say 1 * '1234.5'
+d: say condition('d')
+</code></pre>
+<pre><code class="language-output">1.234
+1.234E3
+1.234E3
+1234.5
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../numbers/limits.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../numbers/settings.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../numbers/limits.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../numbers/settings.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>
