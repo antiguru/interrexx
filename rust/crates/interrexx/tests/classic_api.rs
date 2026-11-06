@@ -219,8 +219,7 @@ fn run_group_in(dir: &str, group: &str, library_path: OsString, env: &[(&str, &P
     }
 }
 
-/// One run of the CLASSIC group, which the three checks below read: each test is a process of
-/// its own under nextest, so they are one test rather than three that would each run the group.
+/// One run of the CLASSIC group, which every check below reads.
 #[test]
 fn the_classic_group_passes() {
     let classic = run_group("API/classic", "CLASSIC", library_path(true));

@@ -79,14 +79,14 @@ fn run_directory(rel_path: &str) -> PathBuf {
         .join(rel_path.replace('/', "__"))
 }
 
-/// Runs the executor in process, on `path`, from `directory`, with
-/// `overrides` laid over the process's own environment.
 /// The runs of this crate that share this process. A library one run has loaded is still loaded
 /// for a run on another thread that did not name its path, so the sidecar control, which asks
 /// what a run does without a sidecar's `LD_LIBRARY_PATH`, runs alone ([`run_rust_alone`]) and
 /// every other run shares. Under nextest each test is a process and nothing waits.
 static IN_PROCESS_RUNS: std::sync::RwLock<()> = std::sync::RwLock::new(());
 
+/// Runs the executor in process, on `path`, from `directory`, with
+/// `overrides` laid over the process's own environment.
 fn run_rust(
     path: &Path,
     directory: &Path,
@@ -99,6 +99,7 @@ fn run_rust(
     run_rust_locked(path, directory, overrides, stdin)
 }
 
+/// [`run_rust`] with no other in-process run alongside it.
 fn run_rust_alone(
     path: &Path,
     directory: &Path,
@@ -111,6 +112,7 @@ fn run_rust_alone(
     run_rust_locked(path, directory, overrides, stdin)
 }
 
+/// [`run_rust`] without taking [`IN_PROCESS_RUNS`]; the caller holds it.
 fn run_rust_locked(
     path: &Path,
     directory: &Path,
@@ -146,7 +148,7 @@ struct Mismatch {
     /// ordinary byte divergence. Kept as its own field rather than inferred from
     /// `reason`'s text, because a structural failure is red in every mode
     /// and a divergence is red only under the gate -- the `corpus_differential_NN` tests
-    /// asserts on this field unconditionally, before the gated assertion
+    /// assert on this field unconditionally, before the gated assertion
     /// over the whole list, and a bit that says which kind a `Mismatch` is
     /// cannot be conflated with prose the way a substring match could be.
     structural: bool,
@@ -482,14 +484,21 @@ fn check_case(oracle: &Oracle, corpus_dir: &Path, rel_path: &str) -> Option<Mism
 /// Builds the report text. A `String`, not a `println!` stream: the whole
 /// point is that this text crosses to [`emit_uncaptured`] as one payload
 /// rather than going through libtest's per-call capture at all.
-fn build_report(matched: usize, total: usize, mismatches: &[Mismatch], gate: bool) -> String {
+fn build_report(
+    shard: usize,
+    matched: usize,
+    total: usize,
+    mismatches: &[Mismatch],
+    gate: bool,
+) -> String {
     let banner = "=".repeat(78);
     let mut report = String::new();
     let w = &mut report;
     writeln!(w, "{banner}").unwrap();
     writeln!(
         w,
-        "interrexx differential corpus report -- rust/corpus/{}",
+        "interrexx differential corpus report -- rust/corpus/{} -- shard {shard} of \
+         {DIFFERENTIAL_SHARDS}",
         SUBSET_FILES.join(" + ")
     )
     .unwrap();
@@ -1006,7 +1015,7 @@ fn corpus_differential_shard(shard: usize) {
 
     let total = subset.len();
     let gate = gate_mode();
-    emit_uncaptured(&build_report(matched, total, &mismatches, gate));
+    emit_uncaptured(&build_report(shard, matched, total, &mismatches, gate));
 
     // Unconditional, and checked before the gated assertion below: a
     // structural failure is red in every mode, per the global constraints,
@@ -1159,7 +1168,7 @@ fn demonstrate_the_report_reaches_a_plain_cargo_test() {
     );
 }
 
-/// The sharing fraction over the corpus: the crate's side of every program the `corpus_differential_NN` tests runs, the
+/// The sharing fraction over the corpus: the crate's side of every program the `corpus_differential_NN` tests run, the
 /// counts summed, and each program with a shared object listed.
 #[cfg(feature = "sharing")]
 #[test]
@@ -1216,7 +1225,7 @@ fn sharing_fraction_over_the_corpus() {
     println!("{text}\nwritten to {}", out.display());
 }
 
-/// The pinning report over the corpus: the crate's side of every program the `corpus_differential_NN` tests runs, in the
+/// The pinning report over the corpus: the crate's side of every program the `corpus_differential_NN` tests run, in the
 /// mode `REXX_CORPUS_SWITCH` names, the arrivals summed per park and the
 /// waits per kind, with each program that reached a wait listed. Panics when a
 /// program does not finish, reaches an inverted wait or ends with a frame pushed.

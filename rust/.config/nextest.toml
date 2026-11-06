@@ -53,3 +53,9 @@ command = '.config/scripts/method-bodies-api.sh'
 [[profile.default.scripts]]
 filter = 'binary(method_bodies)'
 setup = 'method-bodies-api'
+
+# The collect_stress `_heavy_` tests each reach the call-depth cap with a collection at every
+# allocation and run for minutes. They start first so that they overlap the rest of the run.
+[[profile.default.overrides]]
+filter = 'binary(collect_stress) & test(/_heavy_/)'
+priority = 100

@@ -111,8 +111,7 @@ const COLLECTION_TIMED_PROGRAMS: &[&str] = &[
 
 /// How many tests the subset is spread over. A program belongs to the shard
 /// its index in the list, modulo this count, names: the unit nextest runs in
-/// parallel is a test function, and one test over the whole subset was the
-/// longest in the workspace.
+/// parallel is a test function.
 const SHARDS: usize = 16;
 
 /// The subset, read from the corpus list.
@@ -171,10 +170,10 @@ fn the_l0_subset_names_every_listed_program() {
     }
 }
 
-/// The programs that take over 15 s alone under the stress mode (measured
-/// 18, 36 and 64 s: the call-depth cap is reached with a collection at every
-/// allocation). Each is a test of its own, so that none of them holds a
-/// shard's other programs back; they are not in any shard.
+/// The programs that run longest under the stress mode: each reaches the
+/// call-depth cap with a collection at every allocation, a cost quadratic in the
+/// cap. Each is a test of its own, so that none of them holds a shard's other
+/// programs back; they are not in any shard.
 const HEAVY_PROGRAMS: &[&str] = &[
     "lang/call_depth_cap_call.rex",
     "lang/call_depth_cap_function.rex",

@@ -603,13 +603,15 @@ struct Measured {
 
 /// Where the derived probes are written, one directory per row so that an
 /// oracle run's own working directory holds exactly the program it runs.
-fn staging_root() -> PathBuf {
+fn staging_root(shard: Option<usize>) -> PathBuf {
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .expect("the clock is after the epoch")
         .as_nanos();
-    Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .join(format!("method-bodies-{}-{nanos}", std::process::id()))
+    Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "method-bodies-{}-{shard:?}-{nanos}",
+        std::process::id()
+    ))
 }
 
 /// Every `class-set.txt` name a [`RECEIVER_OVERRIDES`] entry claims exists.
@@ -1014,7 +1016,7 @@ fn run_table(shard: Option<usize>) {
         check_receivers_match_table_c(&corpus, &classes, &arms, &mut structural);
     }
 
-    let staging = staging_root();
+    let staging = staging_root(shard);
     let mut measured: BTreeMap<(String, String, String), Measured> = BTreeMap::new();
     let mut pending: Vec<Pending> = Vec::new();
     let shard_of = shard_of_classes(&rows);
@@ -1229,10 +1231,14 @@ fn run_table(shard: Option<usize>) {
 
     // ---------------------------------------------------------------- report
 
-    let mut report = Report::new(
+    let scope = match shard {
+        Some(shard) => format!("shard {shard} of {SHARDS}"),
+        None => "every row".to_string(),
+    };
+    let mut report = Report::new(&format!(
         "interrexx method-body table -- whether each documented method works \
-         (corpus/method-bodies.txt)",
-    );
+         (corpus/method-bodies.txt) -- {scope}",
+    ));
     report.line(&format!(
         "{} row(s) over corpus/docs/class-methods.txt, one zero-argument send each. \
          The oracle ran {} time(s): the rows pass one did not classify.",
@@ -1245,7 +1251,7 @@ fn run_table(shard: Option<usize>) {
         *by_verdict.entry(cell.verdict.label()).or_insert(0) += 1;
     }
     report.line("");
-    report.line("verdicts, over every row of this table:");
+    report.line(&format!("verdicts, over the rows of {scope}:"));
     for (label, count) in &by_verdict {
         report.line(&format!("  {label}: {count}"));
     }

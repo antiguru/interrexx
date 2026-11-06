@@ -425,7 +425,7 @@ fn committed_exempt() -> BTreeMap<String, String> {
     out
 }
 
-/// How many tests each of the two row passes is spread over: the unit nextest
+/// How many tests the rows are spread over: the unit nextest
 /// runs in parallel is a test function. A row belongs to the shard its index
 /// in the sorted file order, modulo this count, names.
 const SHARDS: usize = 16;
@@ -443,15 +443,13 @@ fn refresh_requested() -> bool {
     matches!(env::var(REFRESH_ENV), Ok(value) if !value.is_empty() && value != "0")
 }
 
-/// Every shard index below `SHARDS` has a test running it, for both passes.
+/// Every shard index below `SHARDS` has a test running it.
 #[test]
 fn every_row_shard_has_a_test() {
     let source = include_str!("bif_assertions.rs");
     for shard in 0..SHARDS {
-        for call in ["exempt_set_shard", "differential_shard"] {
-            let call = format!("\n    {call}({shard});\n");
-            assert_eq!(source.matches(&call).count(), 1, "{call:?}");
-        }
+        let call = format!("\n    row_shard({shard});\n");
+        assert_eq!(source.matches(&call).count(), 1, "{call:?}");
     }
 }
 
@@ -460,6 +458,9 @@ fn every_row_shard_has_a_test() {
 /// rows, both ways; an entry naming no row belongs to no shard.)
 #[test]
 fn every_exempt_entry_names_a_row() {
+    if refresh_requested() {
+        return;
+    }
     let (rows, _, _) = collect();
     let keys: BTreeSet<&str> = rows.iter().map(|row| row.key.as_str()).collect();
     let orphans: Vec<String> = committed_exempt()
@@ -488,9 +489,8 @@ fn refresh_the_exempt_set_when_asked() {
             measured.insert(row.key.clone(), attribution);
         }
     }
-    // Both listings of the exempt test are bounded at 40 rows, so a committed
-    // set larger than that could not be rebuilt by reading a failing run's
-    // output -- which is how this file came to need a writer at all.
+    // A failing run lists at most 40 rows, so a committed set larger than that
+    // cannot be rebuilt from its output.
     let path = exempt_path();
     let existing =
         fs::read_to_string(&path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
@@ -511,15 +511,8 @@ fn refresh_the_exempt_set_when_asked() {
 /// Polices the committed exempt set itself, in every mode, independent of
 /// [`GATE_ENV`]: the current failure set of one shard's rows must equal the
 /// committed entries of those rows exactly, attribution included.
-fn exempt_set_shard(shard: usize) {
-    if refresh_requested() {
-        return;
-    }
-    let (rows, _, _) = collect();
-    let rows = shard_rows(&rows, shard);
+fn exempt_set_shard(shard: usize, rows: &[&Row], outcomes: &[RowOutcome]) {
     let committed = committed_exempt();
-
-    let outcomes: Vec<RowOutcome> = rows.iter().map(|row| evaluate(&row.kind)).collect();
     let mut measured: BTreeMap<String, String> = BTreeMap::new();
     for (row, outcome) in rows.iter().zip(outcomes) {
         if let Some(attribution) = outcome.attribution() {
@@ -578,9 +571,13 @@ fn exempt_set_shard(shard: usize) {
 /// REPORT mode; under [`GATE_ENV`] it additionally fails on a row with no
 /// matching exempt entry, which is the same condition `exempt_set_shard`
 /// asserts in one direction.
-fn differential_shard(shard: usize) {
-    let (rows, dropped, calls) = collect();
-    let rows = shard_rows(&rows, shard);
+fn differential_shard(
+    shard: usize,
+    rows: &[&Row],
+    outcomes: &[RowOutcome],
+    dropped: &BTreeMap<DropReason, (usize, usize)>,
+    calls: usize,
+) {
     let committed = committed_exempt();
 
     let mut value_total = 0usize;
@@ -593,7 +590,6 @@ fn differential_shard(shard: usize) {
     let mut unaccounted = Vec::new();
     let mut anomalies = Vec::new();
 
-    let outcomes: Vec<RowOutcome> = rows.iter().map(|row| evaluate(&row.kind)).collect();
     for (row, outcome) in rows.iter().zip(outcomes) {
         let (group, raise) = match &row.kind {
             RowKind::Value(r) => (r.group.clone(), false),
@@ -607,10 +603,10 @@ fn differential_shard(shard: usize) {
             value_total += 1;
         }
 
-        if let RowOutcome::Blocked { construct, .. } = &outcome {
+        if let RowOutcome::Blocked { construct, .. } = outcome {
             *by_construct.entry(construct.clone()).or_insert(0) += 1;
         }
-        if let RowOutcome::Anomaly { detail } = &outcome {
+        if let RowOutcome::Anomaly { detail } = outcome {
             anomalies.push(format!("  {}: {detail}", row.key));
         }
         match outcome.attribution() {
@@ -636,7 +632,7 @@ fn differential_shard(shard: usize) {
         calls,
         (value_pass, value_total),
         (raise_pass, raise_total),
-        &dropped,
+        dropped,
         &by_attribution,
         &by_construct,
         &per_group,
@@ -654,164 +650,97 @@ fn differential_shard(shard: usize) {
     );
 }
 
-#[test]
-fn the_exempt_set_matches_the_current_failures_0() {
-    exempt_set_shard(0);
+/// Evaluates the rows of one shard once and runs both passes over the outcomes:
+/// the report (and, under [`GATE_ENV`], its gate) and the exempt-set check,
+/// which stands aside while [`REFRESH_ENV`] is set.
+fn row_shard(shard: usize) {
+    let (rows, dropped, calls) = collect();
+    let rows = shard_rows(&rows, shard);
+    let outcomes: Vec<RowOutcome> = rows.iter().map(|row| evaluate(&row.kind)).collect();
+    differential_shard(shard, &rows, &outcomes, &dropped, calls);
+    if !refresh_requested() {
+        exempt_set_shard(shard, &rows, &outcomes);
+    }
 }
 
 #[test]
-fn bif_assertions_differential_0() {
-    differential_shard(0);
+fn bif_assertions_shard_0() {
+    row_shard(0);
 }
 
 #[test]
-fn the_exempt_set_matches_the_current_failures_1() {
-    exempt_set_shard(1);
+fn bif_assertions_shard_1() {
+    row_shard(1);
 }
 
 #[test]
-fn bif_assertions_differential_1() {
-    differential_shard(1);
+fn bif_assertions_shard_2() {
+    row_shard(2);
 }
 
 #[test]
-fn the_exempt_set_matches_the_current_failures_2() {
-    exempt_set_shard(2);
+fn bif_assertions_shard_3() {
+    row_shard(3);
 }
 
 #[test]
-fn bif_assertions_differential_2() {
-    differential_shard(2);
+fn bif_assertions_shard_4() {
+    row_shard(4);
 }
 
 #[test]
-fn the_exempt_set_matches_the_current_failures_3() {
-    exempt_set_shard(3);
+fn bif_assertions_shard_5() {
+    row_shard(5);
 }
 
 #[test]
-fn bif_assertions_differential_3() {
-    differential_shard(3);
+fn bif_assertions_shard_6() {
+    row_shard(6);
 }
 
 #[test]
-fn the_exempt_set_matches_the_current_failures_4() {
-    exempt_set_shard(4);
+fn bif_assertions_shard_7() {
+    row_shard(7);
 }
 
 #[test]
-fn bif_assertions_differential_4() {
-    differential_shard(4);
+fn bif_assertions_shard_8() {
+    row_shard(8);
 }
 
 #[test]
-fn the_exempt_set_matches_the_current_failures_5() {
-    exempt_set_shard(5);
+fn bif_assertions_shard_9() {
+    row_shard(9);
 }
 
 #[test]
-fn bif_assertions_differential_5() {
-    differential_shard(5);
+fn bif_assertions_shard_10() {
+    row_shard(10);
 }
 
 #[test]
-fn the_exempt_set_matches_the_current_failures_6() {
-    exempt_set_shard(6);
+fn bif_assertions_shard_11() {
+    row_shard(11);
 }
 
 #[test]
-fn bif_assertions_differential_6() {
-    differential_shard(6);
+fn bif_assertions_shard_12() {
+    row_shard(12);
 }
 
 #[test]
-fn the_exempt_set_matches_the_current_failures_7() {
-    exempt_set_shard(7);
+fn bif_assertions_shard_13() {
+    row_shard(13);
 }
 
 #[test]
-fn bif_assertions_differential_7() {
-    differential_shard(7);
+fn bif_assertions_shard_14() {
+    row_shard(14);
 }
 
 #[test]
-fn the_exempt_set_matches_the_current_failures_8() {
-    exempt_set_shard(8);
-}
-
-#[test]
-fn bif_assertions_differential_8() {
-    differential_shard(8);
-}
-
-#[test]
-fn the_exempt_set_matches_the_current_failures_9() {
-    exempt_set_shard(9);
-}
-
-#[test]
-fn bif_assertions_differential_9() {
-    differential_shard(9);
-}
-
-#[test]
-fn the_exempt_set_matches_the_current_failures_10() {
-    exempt_set_shard(10);
-}
-
-#[test]
-fn bif_assertions_differential_10() {
-    differential_shard(10);
-}
-
-#[test]
-fn the_exempt_set_matches_the_current_failures_11() {
-    exempt_set_shard(11);
-}
-
-#[test]
-fn bif_assertions_differential_11() {
-    differential_shard(11);
-}
-
-#[test]
-fn the_exempt_set_matches_the_current_failures_12() {
-    exempt_set_shard(12);
-}
-
-#[test]
-fn bif_assertions_differential_12() {
-    differential_shard(12);
-}
-
-#[test]
-fn the_exempt_set_matches_the_current_failures_13() {
-    exempt_set_shard(13);
-}
-
-#[test]
-fn bif_assertions_differential_13() {
-    differential_shard(13);
-}
-
-#[test]
-fn the_exempt_set_matches_the_current_failures_14() {
-    exempt_set_shard(14);
-}
-
-#[test]
-fn bif_assertions_differential_14() {
-    differential_shard(14);
-}
-
-#[test]
-fn the_exempt_set_matches_the_current_failures_15() {
-    exempt_set_shard(15);
-}
-
-#[test]
-fn bif_assertions_differential_15() {
-    differential_shard(15);
+fn bif_assertions_shard_15() {
+    row_shard(15);
 }
 
 #[expect(
