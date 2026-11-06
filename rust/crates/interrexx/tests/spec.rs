@@ -389,13 +389,17 @@ fn check(spec_root: &Path, repo: &Path, cited: &Citations) -> Vec<Problem> {
 /// process has ended. The directory is directly under the temp directory, so the
 /// service's socket path stays within the platform's limit wherever the
 /// checkout is. The daemon is built first when the target directory lacks it.
+///
+/// # Panics
+/// If the daemon cannot be built; every later call panics with the same
+/// message.
 fn private_service() {
-    static CHOSEN: std::sync::Once = std::sync::Once::new();
-    CHOSEN.call_once(|| {
+    static CHOSEN: std::sync::OnceLock<Result<(), String>> = std::sync::OnceLock::new();
+    let chosen = CHOSEN.get_or_init(|| {
         let dir = std::env::temp_dir().join(format!("interrexx-spec-api-{}", std::process::id()));
         let daemon = Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi");
         if !daemon.is_file() {
-            build_daemon(&daemon);
+            build_daemon(&daemon)?;
         }
         interrexx::use_api_service(&dir, &daemon);
         let _ = Command::new("sh")
@@ -411,7 +415,11 @@ fn private_service() {
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .spawn();
+        Ok(())
     });
+    if let Err(message) = chosen {
+        panic!("{message}");
+    }
 }
 
 /// Builds `interrexx-rxapi`'s `rxapi` binary to `daemon`, the path of a binary
@@ -419,19 +427,21 @@ fn private_service() {
 /// directory. Cargo's lock on the target directory makes test processes that
 /// build it at the same time wait for each other.
 ///
-/// # Panics
-/// If cargo cannot run, or the build fails or leaves no file at `daemon`; the
-/// message holds cargo's standard error.
-fn build_daemon(daemon: &Path) {
-    let profile_dir = daemon.parent().expect("a binary is in a profile directory");
-    let target_dir = profile_dir
+/// # Errors
+/// If `daemon` is not in a profile directory of a target directory, cargo
+/// cannot run, or the build fails or leaves no file at `daemon`; the message
+/// of a failed build holds cargo's standard error.
+fn build_daemon(daemon: &Path) -> Result<(), String> {
+    let in_target = daemon
         .parent()
-        .expect("a profile directory is in a target directory");
-    let profile = match profile_dir.file_name().and_then(|n| n.to_str()) {
-        Some("debug") => "dev",
-        Some(name) => name,
-        None => panic!("no profile name in {}", profile_dir.display()),
+        .and_then(|p| Some((p.parent()?, p.file_name()?.to_str()?)));
+    let Some((target_dir, profile)) = in_target else {
+        return Err(format!(
+            "{} is not in a profile directory of a target directory",
+            daemon.display()
+        ));
     };
+    let profile = if profile == "debug" { "dev" } else { profile };
     let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
     let output = Command::new(&cargo)
         .args([
@@ -448,14 +458,16 @@ fn build_daemon(daemon: &Path) {
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .stdin(std::process::Stdio::null())
         .output()
-        .unwrap_or_else(|e| panic!("running {}: {e}", Path::new(&cargo).display()));
-    assert!(
-        output.status.success() && daemon.is_file(),
+        .map_err(|e| format!("running {}: {e}", Path::new(&cargo).display()))?;
+    if output.status.success() && daemon.is_file() {
+        return Ok(());
+    }
+    Err(format!(
         "building {} failed ({}):\n{}",
         daemon.display(),
         output.status,
         String::from_utf8_lossy(&output.stderr)
-    );
+    ))
 }
 
 /// Runs one example in process with an empty standard input, bounded as the
