@@ -2,7 +2,7 @@
 element: "Templates"
 kind: concept
 ansi: "8.3.17"
-rexxref: "Parsing > Simple Templates for Parsing into Words, Parsing > The Period as a Placeholder, Parsing > Parse with Message Terms Assignments"
+rexxref: "Parsing > Simple Templates for Parsing into Words, Parsing > The Period as a Placeholder, Parsing > Message Term Assignments"
 ---
 
 # Templates
@@ -142,8 +142,8 @@ parse value 'p q r' with s. t
 say s.1 s.any t
 slots = .array~new
 k = 1
-parse value '3 red blue' with k slots[k] slots[k + 1]
-say k slots[3] slots[4]
+parse value '2 red blue' with k slots[k * 2] slots[k - 1]
+say k slots[4] slots[1]
 result = 'untouched'
 reg = .directory~new
 box = .cell~new
@@ -162,7 +162,7 @@ exit
 
 ```output
 p p q r
-3 red blue
+2 red blue
 7 9 untouched
 ```
 

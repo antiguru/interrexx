@@ -318,8 +318,8 @@ abcde|de|de|fghij
 
 r[parse.patterns.length.before]
 `<n` puts the point `n` characters before the start of the previous break,
-limited to position 1, and it does not leave the targets before it the piece
-that the earlier triggers gave them. Those targets receive the `n` characters
+limited to position 1, and it does not leave the targets between the previous
+break and `<n` the piece that the earlier triggers gave them. Those targets receive the `n` characters
 that lie just before the start of the previous break, or the characters from
 position 1 when fewer lie there, and the next piece begins at the point. So
 `<n` reads again the text before the break that precedes it. It is not the
@@ -359,10 +359,16 @@ number, whether constant or expression, must be whole: a constant may be
 written in any form whose value is whole, such as `03`, `4.0` or `1e1`, and
 `3.5` is not. It must have no more digits than the current [NUMERIC
 DIGITS](r:num.settings.digits) allows, so `1e9` is accepted only when that
-setting is at least 10, and it must not be negative. A number that fails any
+setting is at least 10, counted on its value (`0999` passes under 3 and
+`0.1e4` does not), and it must not be negative. A number that fails any
 of these checks raises `SYNTAX 26.4` when the clause runs. A fraction, text,
 the null string and a negative value of an expression all raise it; the
-direction of a relative position is the sign in the template.
+direction of a relative position is the sign in the template. A constant
+that is a [symbol](r:lex.symbols.constant) is checked the same way when the
+clause runs, so `3.5` and `3a` raise `SYNTAX 26.4` then and not when the
+program is read. A value of an expression that is an object and not a string
+is replaced by its string, as [the conventions](r:conv.string.object) say, and
+that string is then checked; this holds after `=`, `+`, `-`, `>` and `<`.
 
 ```rexx
 parse value 'abcdefghij' with u 03 v 4.0 w 1e1 y
@@ -381,6 +387,9 @@ call try 999, 'abcdefghij'
 call try 1000, 'abcdefghij'
 call lit 'u 999 v'
 call lit 'u 1000 v'
+call lit 'u 0999 v'
+call lit 'u 0.1e4 v'
+call lit 'u +3a v'
 call lit 'u 1e3 v'
 call lit 'u +3.5 v'
 call lit 'u >1000 v'
@@ -416,10 +425,29 @@ ab 26.4
 1000 26.4
 u 999 v ok
 u 1000 v 26.4
+u 0999 v ok
+u 0.1e4 v 26.4
+u +3a v 26.4
 u 1e3 v 26.4
 u +3.5 v 26.4
 u >1000 v 26.4
 u 1e9 v ok
+```
+
+```rexx
+arr = .array~of(2)
+parse value 'abcdefghij' with u +(arr) v
+say u'|'v
+parse value 'abcdefghij' with u >(arr) v
+say u'|'v
+parse value 'abcdefghij' with u =(arr) v
+say u'|'v
+```
+
+```output defect=#105
+ab|cdefghij
+ab|cdefghij
+a|bcdefghij
 ```
 
 ## Errors in the template
@@ -428,7 +456,8 @@ r[parse.patterns.syntax]
 A template is checked when the program is read. A token that cannot be part
 of a template, such as `*`, `||`, `>>` or `>=`, raises `SYNTAX 38.1`. A sign,
 `=`, `>` or `<` followed by any token other than a number or an opening
-parenthesis, a comma or a symbol among them, raises `SYNTAX 38.2`, and one
+parenthesis, a comma or a symbol that does not start with a digit or a period among
+them, raises `SYNTAX 38.2`, and one
 that is the last token of the clause raises `SYNTAX 38.901`. (A `-` that ends
 a line is a [continuation](r:lex.clauses.continuation) and not a template
 token.) A program file that holds any of these does not run at all, and its
