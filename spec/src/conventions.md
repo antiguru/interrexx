@@ -50,27 +50,43 @@ say c2x(upper('61007a'x))
 r[conv.string.object]
 An argument that a page calls a string and that is an object other than a
 string is replaced by a string, and the builtin works on that string. When
-the object has a `MAKESTRING` method that answers a string, the replacement
-is that answer, as for an `Array` or a `MutableBuffer`. When the object has
-no `MAKESTRING` method, the replacement is the answer of its `STRING`
-method; when that answer is not a string either, see
-[Deviation 30](r:conv.string.deviation.30). This book does not specify the
-replacement when `MAKESTRING` answers an object other than a string, or for
-an object whose class defines its own `REQUEST` method.
+the object has a public `MAKESTRING` method that answers a string, the
+replacement is that answer, as for an `Array` or a `MutableBuffer`. When the
+object has no `MAKESTRING` method, the replacement is the answer of its
+public `STRING` method; when that answer is not a string either, see
+[Deviation 30](r:conv.string.deviation.30). A `MAKESTRING` or `STRING` method
+that is private is not one the replacement can use: the call raises
+`SYNTAX 97.2`. This book does not specify the replacement when `MAKESTRING`
+answers an object other than a string, including an instance of a subclass
+of `String`, or for an object whose class defines its own `REQUEST` method.
 
 ```rexx
 say upper(.object~new) upper(.both~new) upper(.mutablebuffer~new('mb'))
 say c2x(.array~of(1, 2)) length(.array~of(1, 2)~string)
+signal on syntax name a
+say upper(.hidden~new)
+a: say condition('o')~code
+signal on syntax name b
+say upper(.hiddenstr~new)
+b: say condition('o')~code
 ::class both
 ::method makestring
   return 'made'
 ::method string
   return 'told'
+::class hidden
+::method makestring private
+  return 'secret'
+::class hiddenstr
+::method string private
+  return 'secret'
 ```
 
 ```output
 AN OBJECT MADE MB
 310A32 8
+97.2
+97.2
 ```
 
 r[conv.string.whitespace]

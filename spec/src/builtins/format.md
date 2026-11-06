@@ -199,7 +199,10 @@ the count of decimal places, is that of the number
 [rounded](r:bif.index.num.round) to NUMERIC DIGITS, so it does not depend on
 `after`. `W`, the count of digits before the point, is that of the number
 after the rounding to `after` as well, so a rounding that carries into a new
-integer digit can make the number scientific. An `expp` of 0 overrides the
+integer digit can make the number scientific. Which of the two tests applies
+is decided by the number rounded to NUMERIC DIGITS, before `after` is
+applied: a number below 1 that `after` then rounds up to 1 is still tested
+with `S`, and a number of 1 or more with `W`. An `expp` of 0 overrides the
 trigger: the result is then always in plain notation, whatever its size.
 With `expp` omitted or above 0, the number is written in
 [scientific notation](r:bif.index.num.sci) exactly when the writing rule says
@@ -216,6 +219,8 @@ say format('99999.5', , 0, , 5) format('99999.4', , 0, , 5),
 say format('0.000000123', , 8, , 4) format('0.00000012', , 9, , 4)
 numeric digits 3
 say format('1e5') format('1e5', , , , 6) format('1.2345', , , 1, 1)
+say '['format('0.999', , 0, 2, 1)']' '['format('0.999', , 0, 2, 3)']',
+    '['format('1.4', , 0, 2, 1)']'
 ```
 
 ```output
@@ -225,6 +230,7 @@ say format('1e5') format('1e5', , , , 6) format('1.2345', , , 1, 1)
 1E+5 99999 1.0E+4 100000
 1.23000000E-7 0.000000120
 1E+5 100000 1.23
+[1    ] [1] [1]
 ```
 
 r[bif.format.sci]
@@ -309,8 +315,9 @@ say '['format('-999.4', , , 1, 2)']' '['format('999.6', , 0, 1, 2)']'
 ```
 
 > **Note.** The ANSI draft (9.4.2) differs from ooRexx, which this book
-> follows, in three ways. It checks the arguments from left to right, so a
-> `number` that is not a number is raised before a bad count, and it raises
+> follows, in three ways. It checks `number` before a count that is not a
+> whole number, where ooRexx raises `SYNTAX 40.12` for the count first (for a
+> negative count both check `number` first), and it raises
 > `SYNTAX 40.13` for a negative count and `SYNTAX 40.38` for a result that
 > does not fit, in the exponent or in the integer part. It decides the
 > notation before it rounds to `after`, so there a carry out of the integer

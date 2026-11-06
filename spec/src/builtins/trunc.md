@@ -145,9 +145,10 @@ say trunc(-0.5) trunc(-0.5, 2) trunc(-0.001, 2) trunc(-0.001, 3),
 0 -0.50 0.00 -0.001 0 0.0 -1
 ```
 
-> **Note.** The ANSI draft (9.4.6) checks `number` before `n`, and raises
-> `SYNTAX 40.13` for a negative `n`, where ooRexx, which this book follows,
-> raises 93.906.
+> **Note.** The ANSI draft (9.4.6) checks `number` before an `n` that is not
+> a whole number, where ooRexx, which this book follows, raises 40.12 for `n`
+> first (for a negative `n` both check `number` first). It raises
+> `SYNTAX 40.13` for a negative `n`, where ooRexx raises 93.906.
 
 ## Deviations
 

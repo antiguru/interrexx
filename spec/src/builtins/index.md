@@ -1006,15 +1006,17 @@ The arguments of a call that takes a list of numbers are each a
 [number](r:bif.index.num.arg) that the call checks before it compares
 anything: first the receiver, which raises `SYNTAX 93.943` when it is not a
 number, and then the other arguments in order, the first one that is not a
-number raising `SYNTAX 93.904`. The list has no upper limit on its length.
-Its argument count is checked by the [builtin call rules](r:bif.index.call.count),
-with one required argument and no most, so a call with no arguments raises
+number raising `SYNTAX 93.904`. This includes a number outside the
+[exponent range](r:bif.index.num.limit), which for a later argument raises
+93.904 where the receiver, and the other builtins, raise 93.943. The list
+has no upper limit on its length. Its argument count is checked by the
+[builtin call rules](r:bif.index.call.count), with one required argument and no most, so a call with no arguments raises
 `SYNTAX 40.3` and no call raises `SYNTAX 40.4`; an omitted first argument
-raises `SYNTAX 40.5`. This book does not specify the error of a call that
-omits an argument after the first but passes one after it.
+raises `SYNTAX 40.5`. This book does not specify the error of a function
+call that omits an argument after the first but passes one after it.
 
 ```rexx
-say max(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27),
+say max(31,7,-4,19,22,-8,0,13,5,26,-15,9,17,2,28,-1,11,24,6,3,20,14,-9,25,12),
     max(5,)
 signal on syntax name a
 say max()
@@ -1037,10 +1039,16 @@ f: say condition('o')~code
 signal on syntax name g
 say max(3, '')
 g: say condition('o')~code
+signal on syntax name h
+say max(1, '1e1000000000')
+h: say condition('o')~code
+signal on syntax name i
+say max('1e1000000000', 1)
+i: say condition('o')~code
 ```
 
 ```output
-27 5
+31 5
 40.3
 40.5
 93.943
@@ -1048,6 +1056,8 @@ g: say condition('o')~code
 93.904
 93.943
 93.904
+93.904
+93.943
 ```
 
 r[bif.index.num.pick]
