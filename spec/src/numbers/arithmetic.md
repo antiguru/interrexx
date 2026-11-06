@@ -81,10 +81,10 @@ r[num.arithmetic.cut]
 Before `*`, `/`, `%` or `//` uses an operand that has more than DIGITS plus
 one significant digits, it cuts the operand to its first DIGITS plus one
 digits, counted from the first nonzero digit. The cut drops the later digits
-and does not round them, and the one digit kept beyond DIGITS is the one that
-decides the rounding of the result. The two products and the two quotients
-below therefore differ from the exact ones, which would round to 4, 4, 1.0 and
-0.32.
+and does not round them. The digit kept beyond DIGITS takes part in the
+operation, so it shapes the digit on which the result is rounded. The two
+products and the two quotients below therefore differ from the exact ones,
+which would round to 4, 4, 1.0 and 0.32.
 
 ```rexx
 numeric digits 1
@@ -408,8 +408,9 @@ has, cut as the [cut rule](r:num.arithmetic.cut) says. When the condition is
 trapped, this book does not specify which comes first: the condition for a
 wide left operand, or an error from the checks of the right operand, which are
 `SYNTAX 42.3` for a zero divisor of `/`, `%` and `//` ([the zero
-rule](r:num.arithmetic.zero)) and `SYNTAX 26.8` for the exponent of `**` ([the
-exponent rule](r:num.arithmetic.exponent)).
+rule](r:num.arithmetic.zero)) and `SYNTAX 26.8` for an exponent of `**` that
+is a number but not a whole number of at most DIGITS digits ([the exponent
+rule](r:num.arithmetic.exponent)).
 
 ```rexx
 numeric digits 3
@@ -457,9 +458,12 @@ dividend is zero, and the description of the condition is the text of the
 operand as it was written, whichever operator produced the condition. ooRexx
 does not check the divisor when the dividend is zero and answers `0`. It
 describes the operand of `*`, `/`, `%`, `//` and `**` and the operand of a
-prefix operator by its value, written in plain notation without leading zeros,
-a plus sign, a trailing point, surrounding blanks or an exponent, and it keeps
-the text as written for the operands of `+`, `-` and the comparisons.
+prefix operator by its value, written as [the notation
+rule](r:bif.index.num.sci) writes a result under the settings in force, with
+every digit kept and none rounded, so `1234.50` becomes `1.23450E+3`. An
+operand whose last digit stands at the units is written without an exponent
+however wide it is. It keeps the text as written for the operands of `+`, `-`
+and the comparisons.
 
 ```rexx
 numeric digits 3
@@ -473,10 +477,14 @@ b: say condition('d')
 signal on lostdigits name c
 say z * 1
 c: say condition('d')
+signal on lostdigits name d
+say 1 * '1234.5'
+d: say condition('d')
 ```
 
 ```output
 1.234
 1.234E3
 1.234E3
+1234.5
 ```

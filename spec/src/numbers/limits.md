@@ -246,8 +246,9 @@ tests it, so `9.99999999e999999998 ** -1` raises `42.902` under DIGITS 9
 although its written result `1E-999999999` is within the range. The code is
 that of the result, except that a base raised to a positive exponent that
 overflows gives `42.901` even when the exponent is negative and the result is
-too small: `11 ** -999999999` raises `42.901`, not `42.902`. Only the result decides: an
-intermediate value of the computation that is out of range raises nothing
+too small: `11 ** -999999999` raises `42.901`, not `42.902`. Only the result
+decides: an intermediate value of the computation that is out of range raises
+nothing
 when the result is in range. The powers of the second example pass the
 pre-test and have results within the range, although the base to the positive
 exponent has its last digit below the range, and interrexx raises `SYNTAX
