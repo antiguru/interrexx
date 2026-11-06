@@ -159,9 +159,11 @@ MAX applies NUMERIC FUZZ to whole numbers as it does to any other numbers, so
 function call that omits an argument and passes a later one raises
 `SYNTAX 40.5`, whether the omitted argument is the first or a later one; the
 message form raises `SYNTAX 93.903`, as [its rule](r:bif.max.omitted) says.
-ooRexx departs from both: it compares two whole numbers written without a
-decimal point as if NUMERIC FUZZ were 0, and its function call raises 93.903
-when the omitted argument is not the first.
+ooRexx departs from both. It compares as if NUMERIC FUZZ were 0 when every
+argument is a plain integer of at most NUMERIC DIGITS digits: one written as
+digits alone, with no sign, blank, leading zero, decimal point or exponent, or
+one that arithmetic produced. Its function call raises 93.903 when the
+omitted argument is not the first.
 
 ```rexx
 signal on syntax name a

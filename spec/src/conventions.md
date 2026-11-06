@@ -51,14 +51,17 @@ r[conv.string.object]
 An argument that a page calls a string and that is an object other than a
 string is replaced by a string, and the builtin works on that string. When
 the object has a public `MAKESTRING` method that answers a string, the
-replacement is that answer, as for an `Array` or a `MutableBuffer`. When the
-object has no `MAKESTRING` method, the replacement is the answer of its
-public `STRING` method; when that answer is not a string either, see
-[Deviation 30](r:conv.string.deviation.30). A `MAKESTRING` or `STRING` method
-that is private is not one the replacement can use: the call raises
-`SYNTAX 97.2`. This book does not specify the replacement when `MAKESTRING`
-answers an object other than a string, including an instance of a subclass
-of `String`, or for an object whose class defines its own `REQUEST` method.
+replacement is that answer, as for an `Array` or a `MutableBuffer`. An
+instance of a subclass of `String` is a string here, as it is when it is
+passed directly: when `MAKESTRING` answers one, that instance is the
+replacement. When the object has no `MAKESTRING` method, the replacement is
+the answer of its public `STRING` method; when that answer is not a string
+either, see [Deviation 30](r:conv.string.deviation.30). A builtin whose page
+links [the native call rule](r:bif.index.call.native) has no such fallback to
+`STRING`, as that rule says. A `MAKESTRING` or `STRING` method that is private
+is not one the replacement can use: the call raises `SYNTAX 97.2`. This book
+does not specify the replacement when `MAKESTRING` answers an object that is
+not a string, or for an object whose class defines its own `REQUEST` method.
 
 ```rexx
 say upper(.object~new) upper(.both~new) upper(.mutablebuffer~new('mb'))
@@ -87,6 +90,18 @@ AN OBJECT MADE MB
 310A32 8
 97.2
 97.2
+```
+
+```rexx
+say upper(.mk~new) upper(.strsub~new('abc'))
+::class strsub subclass string
+::class mk
+::method makestring
+  return .strsub~new('ss')
+```
+
+```output defect=#89
+SS ABC
 ```
 
 r[conv.string.whitespace]

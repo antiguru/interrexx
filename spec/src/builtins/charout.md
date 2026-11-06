@@ -126,8 +126,9 @@ answers 0. The characters written are in the stream afterwards, and its
 [next use](r:bif.index.stream.lifetime) opens it afresh. CHAROUT opens a stream
 that is not open in order to close it, so on a file that does not exist
 this creates it; the same is true of every call of CHAROUT, even one that
-writes nothing. Whether the call closes the standard output is
-[not specified](r:bif.index.stream.lifetime).
+writes nothing. The call closes no standard stream: on one it writes nothing
+and answers 0, as [Deviation 98](r:bif.index.stream.lifetime.deviation.98)
+says.
 
 ```rexx
 f = 'spec-charout-close.tmp'
@@ -155,8 +156,10 @@ of characters of `string`, and raises [NOTREADY](r:bif.index.stream.notready).
 That is the case when the name cannot be opened for writing, as a name in a
 directory that does not exist, or a directory, and when the name is `STDIN`.
 For a name that cannot be opened, a `start` is not checked (see [the start
-rule](r:bif.index.stream.start)). What a `start` does together with the name
-`STDIN` is [not specified](r:bif.index.stream.transient).
+rule](r:bif.index.stream.start)). Nor is a `start` given with the name
+`STDIN` checked beyond its form, whatever its value (see [the transient
+rule](r:bif.index.stream.transient)): the call fails in the same way, and
+without a `string` it answers 0.
 
 ```rexx
 n = 0
@@ -176,6 +179,25 @@ return
 3 1
 5 2
 1 3
+```
+
+```rexx
+n = 0
+call on notready name nr
+say charout('stdin', 'a', 0) n
+say charout('STDIN:', 'abc', -1) n
+say charout('stdin', , 1) n
+say n
+exit
+nr: n = n + 1
+return
+```
+
+```output defect=#91
+1 0
+3 1
+0 2
+3
 ```
 
 ## The standard streams

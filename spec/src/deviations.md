@@ -331,7 +331,10 @@ manual describes, buffered or not: a write starts at the write position, and
 a relative SEEK moves from the position it names. ooRexx tracks a stale
 position on a buffered stream, so a write can land on bytes the program never
 named, and on an unbuffered stream its relative and from-the-end seeks land
-elsewhere.
+elsewhere. A relative SEEK that names neither position, on a stream open for
+reading and writing, counts from the read position. ooRexx counts it from the
+position that the last read, write or SEEK used, and from the write position
+when there has been none since the stream was opened.
 
 ## 50. A trace line that cannot be delivered
 
@@ -508,7 +511,9 @@ On a stream opened APPEND, every write goes after the last character, and
 the write position cannot be moved into the file as it was when opened: such
 a SEEK answers 0, and a CHAROUT or LINEOUT naming a position there writes
 nothing, all NOTREADY. ooRexx moves the position there, and the write goes
-after the last character as any other does.
+after the last character as any other does. After a write, the write position
+reported is just after the last character. ooRexx reports the position that
+the write named, or that a SEEK set, moved past the characters written.
 
 ## 80. First SEEK of an unopened transient stream
 
@@ -607,3 +612,41 @@ returns) names interrexx, its version, the ooRexx version it follows and its
 licence. The `MathLoadFuncs` banner names the library and interrexx's version.
 Neither prints ooRexx's product line, copyright or licence lines.
 `PARSE VERSION` and `RexxInfo` are unchanged.
+
+## 97. ABS under a changed NUMERIC FORM
+
+ABS writes its answer in the current NUMERIC FORM, whatever form was in force
+when the same string was converted to a number before. ooRexx may answer such
+a string as it was written: under NUMERIC DIGITS 3, `abs('0.0000001')`
+answers `1E-7`, and after a change to NUMERIC FORM ENGINEERING it answers
+`0.0000001` where interrexx answers `100E-9`.
+
+## 98. CHAROUT and LINEOUT never close a standard stream
+
+CHAROUT and LINEOUT never close a standard stream. A call of either that gives
+no string, on a standard stream, writes nothing and does nothing else, and the
+later output of the program is written as usual. ooRexx closes the standard
+output for such a call, and the later output is lost; which forms of the call
+do so varies from program to program.
+
+## 99. Reading the standard output or error
+
+A read of the standard output or the standard error, by CHARIN or LINEIN with
+a count that is not 0, reads nothing and raises NOTREADY, whatever the stream
+is connected to. ooRexx reads from such a stream when it is open for reading
+as well, as a file opened for reading and writing is, and then answers the
+characters there.
+
+## 100. QUERY POSITION of a standard stream
+
+`QUERY POSITION` of a transient standard stream answers the null string,
+because a transient stream has no position. ooRexx answers 1.
+
+## 101. Argument checks of the native builtins
+
+DIRECTORY, FILESPEC, BEEP and the RexxUtil file functions, such as
+SysFileDelete, check their arguments in the order that every other builtin
+follows, the ANSI order: the count of arguments first, so that an argument
+past the last one raises `SYNTAX 88.922` before an omitted or wrong argument
+is reported. ooRexx checks the arguments before their count, and raises
+88.922 only when they pass.
