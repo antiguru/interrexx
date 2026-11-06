@@ -272,9 +272,10 @@ answers 0. The characters written are in the stream afterwards, and its
 <a href="index.html#r-bif.index.stream.lifetime">next use</a> opens it afresh. CHAROUT opens a stream
 that is not open in order to close it, so on a file that does not exist
 this creates it; the same is true of every call of CHAROUT, even one that
-writes nothing. The call closes no standard stream: on one it writes nothing
-and answers 0, as <a href="index.html#r-bif.index.stream.lifetime.deviation.98">Deviation 98</a>
-says.</p>
+writes nothing.
+A standard stream is closed in the same way, and its next use opens it again,
+as <a href="index.html#r-bif.index.stream.lifetime">the lifetime rule</a> says; ooRexx differs (see
+<a href="index.html#r-bif.index.stream.lifetime.deviation.98">Deviation 98</a>).</p>
 <pre><code class="language-rexx">f = 'spec-charout-close.tmp'
 call sysfiledelete f
 say stream(f, 'c', 'query exists') == ''

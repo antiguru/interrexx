@@ -1837,7 +1837,12 @@ ends. <a href="builtins/charout.html#r-bif.charout.close">CHAROUT given only a n
 pages of the other stream builtins name their forms. The next use of a closed
 name opens the stream again: the read position is at the start and the write
 position at the end of the data, and the characters written before the close
-are in the file. CHAROUT and LINEOUT never close a standard stream, as
+are in the file. A standard stream is closed in the same way, by
+<a href="builtins/stream.html#r-bif.stream.close"><code>CLOSE</code></a> and by CHAROUT or LINEOUT given neither a string
+nor a start or line: its state is then <code>UNKNOWN</code>, and the next stream builtin
+that reads from it, writes to it, counts what is left in it (CHARS or LINES)
+or opens it opens it again on the same input or output, so that later reads
+and writes carry on. ooRexx differs, as
 <a href="builtins/index.html#r-bif.index.stream.lifetime.deviation.98">Deviation 98</a> says.</p>
 <pre><code class="language-rexx">f = 'spec-streams-life.tmp'
 call sysfiledelete f
@@ -1855,13 +1860,21 @@ a
 abcd
 </code></pre>
 <div class="rule" id="r-bif.index.stream.lifetime.deviation.98"><a href="builtins/index.html#r-bif.index.stream.lifetime.deviation.98">[bif.index.stream.lifetime.deviation.98]</a></div>
-<p>CHAROUT and LINEOUT never close a standard stream. A call of either that gives
-neither a string nor a start or line, and either no stream name or the name of
-a standard stream, writes nothing, answers 0 and does nothing else: the later
-output of the program is written as usual. ooRexx closes the standard stream
-for such a call, the standard output or the standard error, and output written
-to it, before or after the call, can be lost; which forms of the call do so
-varies from program to program.</p>
+<p>A close of a standard stream is a logical one, as for a file: the <a href="builtins/index.html#r-bif.index.stream.lifetime">lifetime
+rule</a> holds for the standard input, output and
+error too. A call of CHAROUT or LINEOUT that gives neither a string nor a
+start or line, and either no stream name or the name of a standard stream,
+writes nothing, answers 0 and closes the stream, and the later output of the
+program is written as usual. In ooRexx, output written to the standard output
+or error after such a call, or after a <code>CLOSE</code> of it, does not appear at
+once: it appears when the program next closes, flushes or opens the stream,
+and what is written after the last of these is lost. Output written before
+the close can be lost too: when the stream is a file, the output written
+after the close can replace it. On the standard input, the same call of
+CHAROUT answers 0 and that of LINEOUT 1 in ooRexx, the state is then <code>ERROR</code>,
+and NOTREADY is raised. A <code>CLOSE</code> of the standard input has the same outcome
+on both until the program first reads from it; after a read, ooRexx can lose
+the input that the program had not read yet.</p>
 <pre><code class="language-rexx">say 'one'
 call charout
 say charout('STDOUT') lineout('stdout:') charout('') lineout()
@@ -4098,9 +4111,10 @@ answers 0. The characters written are in the stream afterwards, and its
 <a href="builtins/index.html#r-bif.index.stream.lifetime">next use</a> opens it afresh. CHAROUT opens a stream
 that is not open in order to close it, so on a file that does not exist
 this creates it; the same is true of every call of CHAROUT, even one that
-writes nothing. The call closes no standard stream: on one it writes nothing
-and answers 0, as <a href="builtins/index.html#r-bif.index.stream.lifetime.deviation.98">Deviation 98</a>
-says.</p>
+writes nothing.
+A standard stream is closed in the same way, and its next use opens it again,
+as <a href="builtins/index.html#r-bif.index.stream.lifetime">the lifetime rule</a> says; ooRexx differs (see
+<a href="builtins/index.html#r-bif.index.stream.lifetime.deviation.98">Deviation 98</a>).</p>
 <pre><code class="language-rexx">f = 'spec-charout-close.tmp'
 call sysfiledelete f
 say stream(f, 'c', 'query exists') == ''
@@ -8881,9 +8895,10 @@ call sysfiledelete f
 <p>When both <code>string</code> and <code>line</code> are omitted, LINEOUT closes the stream and
 answers 0, as <a href="builtins/charout.html#r-bif.charout.close">CHAROUT given only a name</a> does. A
 file that does not exist is created by it, and the characters written are in
-the file afterwards. The call closes no standard stream: on one it writes
-nothing and answers 0, as <a href="builtins/index.html#r-bif.index.stream.lifetime.deviation.98">Deviation
-98</a> says.</p>
+the file afterwards.
+A standard stream is closed in the same way, and its next use opens it again,
+as <a href="builtins/index.html#r-bif.index.stream.lifetime">the lifetime rule</a> says; ooRexx differs (see
+<a href="builtins/index.html#r-bif.index.stream.lifetime.deviation.98">Deviation 98</a>).</p>
 <pre><code class="language-rexx">f = 'spec-lineout-close.tmp'
 call sysfiledelete f
 say lineout(f) (stream(f, 'c', 'query exists') \== '') chars(f)
@@ -11990,7 +12005,7 @@ say (space(s) == s) (space('x  y') == 'x y')
 <pre><code>STREAM(name [, operation [, command]])
 </code></pre>
 <p class="references">ANSI: 9.7.8; rexxref: Functions &gt; Built-in Functions &gt; STREAM</p>
-<p class="deviations">Deviations: D34, D35, D49, D55, D57, D59, D62, D74, D79, D100</p>
+<p class="deviations">Deviations: D34, D35, D49, D55, D57, D59, D62, D74, D79, D98, D100</p>
 <p>STREAM asks a <a href="builtins/index.html#r-bif.index.stream.name">stream</a> for its state, describes the
 state, or carries out a command on the stream: opening and closing it,
 moving its positions, and asking about the file behind it. The other stream
@@ -12364,9 +12379,14 @@ READY:
 <p><code>CLOSE</code> closes the stream and answers <code>READY:</code>; its state is then <code>UNKNOWN</code>.
 The characters written are in the file, and the next use of the name
 <a href="builtins/index.html#r-bif.index.stream.lifetime">opens the stream afresh</a>. A stream that is not
-open has nothing to close, and the answer is the null string. What <code>CLOSE</code>
-does to a standard stream, and to the later output written to it, is not
-specified.</p>
+open has nothing to close, and the answer is the null string. A standard
+stream is closed in the same way: <code>CLOSE</code> of the standard input, output or
+error answers <code>READY:</code> and leaves its state <code>UNKNOWN</code>, and the next stream
+builtin that reads from it, writes to it, counts what is left in it (CHARS
+or LINES) or opens it opens it again on the same input or output, so that
+later reads and writes carry on, as <a href="builtins/index.html#r-bif.index.stream.lifetime">the lifetime
+rule</a> says. A <code>QUERY</code> or a <code>FLUSH</code> leaves the
+state as it was.</p>
 <pre><code class="language-rexx">f = 'spec-stream-close.tmp'
 call sysfiledelete f
 say '['stream(f, 'c', 'close')']' stream(f)
@@ -12379,6 +12399,12 @@ call sysfiledelete f
 <pre><code class="language-output">[] UNKNOWN
 READY READY: UNKNOWN []
 3 a
+</code></pre>
+<pre><code class="language-rexx">say stream('stdin', 'c', 'close') stream('stdin')
+say '['linein()']' stream('stdin')
+</code></pre>
+<pre><code class="language-output">READY: UNKNOWN
+[] NOTREADY
 </code></pre>
 <div class="rule" id="r-bif.stream.flush"><a href="builtins/stream.html#r-bif.stream.flush">[bif.stream.flush]</a></div>
 <p><code>FLUSH</code> answers <code>READY:</code>. A file can be asked about, or read back, by the
@@ -12912,6 +12938,24 @@ return
 20 0 0 2
 12 0 13
 abcdefghZWVU
+</code></pre>
+<div class="rule" id="r-bif.stream.deviation.98"><a href="builtins/stream.html#r-bif.stream.deviation.98">[bif.stream.deviation.98]</a></div>
+<p><code>CLOSE</code> of the standard output or error closes it as it
+<a href="builtins/stream.html#r-bif.stream.close">closes any stream</a>, and the output written after it
+appears. In ooRexx, that output does not appear at once: it appears when the
+program next closes, flushes or opens the stream, and what is written after
+the last of these is lost.
+<a href="builtins/index.html#r-bif.index.stream.lifetime.deviation.98">Deviation 98</a> gives the whole of
+the difference.</p>
+<pre><code class="language-rexx">say 'one'
+r = stream('stdout', 'c', 'close')
+s = stream('stdout')
+call lineout 'stdout', r s
+say 'two' stream('stdout')
+</code></pre>
+<pre><code class="language-output">one
+READY: UNKNOWN
+two READY
 </code></pre>
 <div class="rule" id="r-bif.stream.deviation.100"><a href="builtins/stream.html#r-bif.stream.deviation.100">[bif.stream.deviation.100]</a></div>
 <p><code>QUERY POSITION</code> of a standard stream that is
@@ -17010,13 +17054,21 @@ when the same string was converted to a number before. ooRexx may answer such
 a string as it was written: under NUMERIC DIGITS 3, <code>abs('0.0000001')</code>
 answers <code>1E-7</code>, and after a change to NUMERIC FORM ENGINEERING it answers
 <code>0.0000001</code> where interrexx answers <code>100E-9</code>.</p>
-<h2 id="98-charout-and-lineout-never-close-a-standard-stream"><a class="header" href="#98-charout-and-lineout-never-close-a-standard-stream">98. CHAROUT and LINEOUT never close a standard stream</a></h2>
-<p>CHAROUT and LINEOUT never close a standard stream. A call of either that gives
-no string, on a standard stream, writes nothing and does nothing else, and the
-later output of the program is written as usual. ooRexx closes the standard
-stream for such a call, the standard output or the standard error, and output
-written to it, before or after the call, can be lost; which forms of the call
-do so varies from program to program.</p>
+<h2 id="98-closing-a-standard-stream"><a class="header" href="#98-closing-a-standard-stream">98. Closing a standard stream</a></h2>
+<p>A close of the standard input, output or error is a logical close, as for a
+file, whether it is a <code>CLOSE</code> command of STREAM or a call of CHAROUT or
+LINEOUT that gives no string. The state is then <code>UNKNOWN</code>, and the next stream
+builtin that reads from it, writes to it, counts what is left in it (CHARS or
+LINES) or opens it opens it again on the same input or output, so that later
+reads and writes carry on. In ooRexx, output written to the standard output or
+error after the close does not appear at once: it appears when the program
+next closes, flushes or opens the stream, and what is written after the last
+of these is lost. Output written before the close can be lost too, as when the
+stream is a file and the later output replaces it. On the standard input, a
+<code>CLOSE</code> has the same outcome on both until the program first reads from it;
+after a read, ooRexx can lose the input not yet read. A CHAROUT or LINEOUT
+that gives no string on the standard input leaves it in the <code>ERROR</code> state in
+ooRexx and raises NOTREADY there, and LINEOUT answers 1.</p>
 <h2 id="99-reading-the-standard-output-or-error"><a class="header" href="#99-reading-the-standard-output-or-error">99. Reading the standard output or error</a></h2>
 <p>A read of the standard output or the standard error, by CHARIN or LINEIN with
 a count that is not 0, reads nothing and raises NOTREADY, whatever the stream

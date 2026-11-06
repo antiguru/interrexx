@@ -177,7 +177,7 @@
 <pre><code>STREAM(name [, operation [, command]])
 </code></pre>
 <p class="references">ANSI: 9.7.8; rexxref: Functions &gt; Built-in Functions &gt; STREAM</p>
-<p class="deviations">Deviations: D34, D35, D49, D55, D57, D59, D62, D74, D79, D100</p>
+<p class="deviations">Deviations: D34, D35, D49, D55, D57, D59, D62, D74, D79, D98, D100</p>
 <p>STREAM asks a <a href="index.html#r-bif.index.stream.name">stream</a> for its state, describes the
 state, or carries out a command on the stream: opening and closing it,
 moving its positions, and asking about the file behind it. The other stream
@@ -551,9 +551,14 @@ READY:
 <p><code>CLOSE</code> closes the stream and answers <code>READY:</code>; its state is then <code>UNKNOWN</code>.
 The characters written are in the file, and the next use of the name
 <a href="index.html#r-bif.index.stream.lifetime">opens the stream afresh</a>. A stream that is not
-open has nothing to close, and the answer is the null string. What <code>CLOSE</code>
-does to a standard stream, and to the later output written to it, is not
-specified.</p>
+open has nothing to close, and the answer is the null string. A standard
+stream is closed in the same way: <code>CLOSE</code> of the standard input, output or
+error answers <code>READY:</code> and leaves its state <code>UNKNOWN</code>, and the next stream
+builtin that reads from it, writes to it, counts what is left in it (CHARS
+or LINES) or opens it opens it again on the same input or output, so that
+later reads and writes carry on, as <a href="index.html#r-bif.index.stream.lifetime">the lifetime
+rule</a> says. A <code>QUERY</code> or a <code>FLUSH</code> leaves the
+state as it was.</p>
 <pre><code class="language-rexx">f = 'spec-stream-close.tmp'
 call sysfiledelete f
 say '['stream(f, 'c', 'close')']' stream(f)
@@ -566,6 +571,12 @@ call sysfiledelete f
 <pre><code class="language-output">[] UNKNOWN
 READY READY: UNKNOWN []
 3 a
+</code></pre>
+<pre><code class="language-rexx">say stream('stdin', 'c', 'close') stream('stdin')
+say '['linein()']' stream('stdin')
+</code></pre>
+<pre><code class="language-output">READY: UNKNOWN
+[] NOTREADY
 </code></pre>
 <div class="rule" id="r-bif.stream.flush"><a href="#r-bif.stream.flush">[bif.stream.flush]</a></div>
 <p><code>FLUSH</code> answers <code>READY:</code>. A file can be asked about, or read back, by the
@@ -1099,6 +1110,24 @@ return
 20 0 0 2
 12 0 13
 abcdefghZWVU
+</code></pre>
+<div class="rule" id="r-bif.stream.deviation.98"><a href="#r-bif.stream.deviation.98">[bif.stream.deviation.98]</a></div>
+<p><code>CLOSE</code> of the standard output or error closes it as it
+<a href="#r-bif.stream.close">closes any stream</a>, and the output written after it
+appears. In ooRexx, that output does not appear at once: it appears when the
+program next closes, flushes or opens the stream, and what is written after
+the last of these is lost.
+<a href="index.html#r-bif.index.stream.lifetime.deviation.98">Deviation 98</a> gives the whole of
+the difference.</p>
+<pre><code class="language-rexx">say 'one'
+r = stream('stdout', 'c', 'close')
+s = stream('stdout')
+call lineout 'stdout', r s
+say 'two' stream('stdout')
+</code></pre>
+<pre><code class="language-output">one
+READY: UNKNOWN
+two READY
 </code></pre>
 <div class="rule" id="r-bif.stream.deviation.100"><a href="#r-bif.stream.deviation.100">[bif.stream.deviation.100]</a></div>
 <p><code>QUERY POSITION</code> of a standard stream that is

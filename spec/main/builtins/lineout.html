@@ -353,9 +353,10 @@ call sysfiledelete f
 <p>When both <code>string</code> and <code>line</code> are omitted, LINEOUT closes the stream and
 answers 0, as <a href="charout.html#r-bif.charout.close">CHAROUT given only a name</a> does. A
 file that does not exist is created by it, and the characters written are in
-the file afterwards. The call closes no standard stream: on one it writes
-nothing and answers 0, as <a href="index.html#r-bif.index.stream.lifetime.deviation.98">Deviation
-98</a> says.</p>
+the file afterwards.
+A standard stream is closed in the same way, and its next use opens it again,
+as <a href="index.html#r-bif.index.stream.lifetime">the lifetime rule</a> says; ooRexx differs (see
+<a href="index.html#r-bif.index.stream.lifetime.deviation.98">Deviation 98</a>).</p>
 <pre><code class="language-rexx">f = 'spec-lineout-close.tmp'
 call sysfiledelete f
 say lineout(f) (stream(f, 'c', 'query exists') \== '') chars(f)

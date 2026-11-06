@@ -593,13 +593,21 @@ when the same string was converted to a number before. ooRexx may answer such
 a string as it was written: under NUMERIC DIGITS 3, <code>abs('0.0000001')</code>
 answers <code>1E-7</code>, and after a change to NUMERIC FORM ENGINEERING it answers
 <code>0.0000001</code> where interrexx answers <code>100E-9</code>.</p>
-<h2 id="98-charout-and-lineout-never-close-a-standard-stream"><a class="header" href="#98-charout-and-lineout-never-close-a-standard-stream">98. CHAROUT and LINEOUT never close a standard stream</a></h2>
-<p>CHAROUT and LINEOUT never close a standard stream. A call of either that gives
-no string, on a standard stream, writes nothing and does nothing else, and the
-later output of the program is written as usual. ooRexx closes the standard
-stream for such a call, the standard output or the standard error, and output
-written to it, before or after the call, can be lost; which forms of the call
-do so varies from program to program.</p>
+<h2 id="98-closing-a-standard-stream"><a class="header" href="#98-closing-a-standard-stream">98. Closing a standard stream</a></h2>
+<p>A close of the standard input, output or error is a logical close, as for a
+file, whether it is a <code>CLOSE</code> command of STREAM or a call of CHAROUT or
+LINEOUT that gives no string. The state is then <code>UNKNOWN</code>, and the next stream
+builtin that reads from it, writes to it, counts what is left in it (CHARS or
+LINES) or opens it opens it again on the same input or output, so that later
+reads and writes carry on. In ooRexx, output written to the standard output or
+error after the close does not appear at once: it appears when the program
+next closes, flushes or opens the stream, and what is written after the last
+of these is lost. Output written before the close can be lost too, as when the
+stream is a file and the later output replaces it. On the standard input, a
+<code>CLOSE</code> has the same outcome on both until the program first reads from it;
+after a read, ooRexx can lose the input not yet read. A CHAROUT or LINEOUT
+that gives no string on the standard input leaves it in the <code>ERROR</code> state in
+ooRexx and raises NOTREADY there, and LINEOUT answers 1.</p>
 <h2 id="99-reading-the-standard-output-or-error"><a class="header" href="#99-reading-the-standard-output-or-error">99. Reading the standard output or error</a></h2>
 <p>A read of the standard output or the standard error, by CHARIN or LINEIN with
 a count that is not 0, reads nothing and raises NOTREADY, whatever the stream
