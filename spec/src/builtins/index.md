@@ -1089,3 +1089,136 @@ say max(1.04, 1.09) min(1.04, 1.09)
 1.04 1.04 1.01 1.01
 1.09 1.04
 ```
+
+## Date and time
+
+> **Note.** DATE and TIME answer the current date or time, or convert a date or a
+> time from one format to another. The rules here hold for both.
+
+r[bif.index.dt.letter]
+Where an argument of DATE or TIME names an option or a format, only its first
+character counts, as a letter in either case; the rest of the argument is
+ignored, so `Standard`, `s` and `s9` all name S. The argument is not
+trimmed: one that begins with a blank names nothing, and neither does the
+null string. A first character that is not one of the letters the page
+allows for that argument raises `SYNTAX 40.904`.
+
+```rexx
+say date('Standard', '1 Jan 2000') date('s9', '1 Jan 2000') date('s', '20000101', 'Standard')
+say time('Civil', '13:05:09') time('c', '13:05:09', 'N')
+signal on syntax name a
+say date(' S')
+a: say condition('o')~code
+signal on syntax name b
+say date('')
+b: say condition('o')~code
+signal on syntax name c
+say time('Q')
+c: say condition('o')~code
+signal on syntax name d
+say time('N', '13:05:09', 'Q')
+d: say condition('o')~code
+```
+
+```output
+20000101 20000101 20000101
+1:05pm 1:05pm
+40.904
+40.904
+40.904
+40.904
+```
+
+r[bif.index.dt.convert]
+A call of DATE or TIME with a `string` is a conversion: it reads `string` in
+the format that `informat` names (N when `informat` is omitted) and answers
+it in the format that `option` names (N when `option` is omitted). A
+conversion does not ask the clock, except where a page says it does. A
+`string` that is not valid in `informat` raises `SYNTAX 40.19`. An
+`informat` with no `string` raises `SYNTAX 40.5`, since a call that omits
+`string` asks for the current value and has nothing to read.
+
+```rexx
+say date('E', '20000229', 'S') time('C', '13:05:09') date(, '29 Feb 2000') time(, '13:05:09')
+signal on syntax name a
+say date('S', , 'S')
+a: say condition('o')~code
+signal on syntax name b
+say time('N', , 'N')
+b: say condition('o')~code
+signal on syntax name c
+say time('N', 'noon')
+c: say condition('o')~code
+signal on syntax name d
+say date('S', '2000-02-29')
+d: say condition('o')~code
+```
+
+```output
+29/02/00 1:05pm 29 Feb 2000 13:05:09
+40.5
+40.5
+40.19
+40.19
+```
+
+> **Note.** The ANSI draft (9.8.1, 9.8.5) raises `SYNTAX 40.19` for an `informat` that
+> has no `string`; ooRexx raises 40.5, and so does this book.
+
+r[bif.index.dt.stamp]
+The first call of DATE or TIME in a clause reads the clock, and every other
+call of either in that clause answers from the same reading: the dates and
+times, the offset from UTC, and the elapsed time of the TIME clock all
+belong to one moment, however long the clause takes to run. A clause that
+continues over several lines is one clause. The next clause reads the clock
+again.
+
+```rexx
+a = time('F') syssleep(0.1) time('F')
+say word(a, 1) == word(a, 3)
+b = time('F'),
+    syssleep(0.1) time('F')
+say word(b, 1) == word(b, 3)
+c = time('F'); x = syssleep(0.1); d = time('F')
+say c \== d
+say (date('F') == time('F')) (date('T') == time('T')) (date('S') == date('S', time('T'), 'T'))
+```
+
+```output
+1
+1
+1
+1 1 1
+```
+
+r[bif.index.dt.stamp.scope]
+A routine or a method that a clause calls reads the clock for itself, in
+each of its own clauses. Its readings are not seen by the clause that called
+it, and the reading of that clause is not seen by it, so a clause that
+calls a slow function still has one moment for its own calls.
+
+```rexx
+a = time('F') slow() time('F')
+say (word(a, 1) == word(a, 3)) (word(a, 1) == word(a, 2))
+a = time('F') .o~new~m time('F')
+say (word(a, 1) == word(a, 3)) (word(a, 1) == word(a, 2))
+a = time('F') routine_slow() time('F')
+say (word(a, 1) == word(a, 3)) (word(a, 1) == word(a, 2))
+exit
+slow:
+call syssleep 0.1
+return time('F')
+::routine routine_slow
+call syssleep 0.1
+return time('F')
+::class o
+::method m
+call syssleep 0.1
+return time('F')
+```
+
+```output
+1 0
+1 0
+1 0
+```
