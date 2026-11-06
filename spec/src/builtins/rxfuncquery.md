@@ -9,12 +9,11 @@ rexxref: "Functions > Built-in Functions > RXFUNCQUERY"
 
 RXFUNCQUERY asks whether a function of the given name is available to the
 program without a library having to be asked for it first. It answers `0`
-when the function is available and `1` when it is not, and it changes
-nothing. [RXFUNCADD](rxfuncadd.md) makes functions of a library available, and
+for an available function and `1` otherwise, and it changes nothing. [RXFUNCADD](rxfuncadd.md) makes functions of a library available, and
 [RXFUNCDROP](rxfuncdrop.md) removes a registration.
 
 > **Note.** The examples register nothing that they do not drop, so they do
-> not depend on which registrations exist when they start. Making a function
+> not depend on registrations of other names. Making a function
 > of the library `rxmath` available is not a registration that can be
 > dropped, as [RXFUNCADD](rxfuncadd.md) explains: it lasts until the
 > program ends, and the example that does it picks a function that no other
@@ -57,14 +56,19 @@ d: say condition('o')~code
 r[bif.rxfuncquery.answer]
 The answer is `0` for a name that is available: a function the interpreter
 provides from the start, such as `SysSleep`, a function of a library that
-[RXFUNCADD](rxfuncadd.md) has loaded, and a name that
-[RXFUNCADD](rxfuncadd.md) has registered. The answer is `1` for every other
-name, including the null string and a name that was never registered. It is
-written as the digit `0` or `1`.
+[RXFUNCADD](rxfuncadd.md) or a `::requires` directive with the `LIBRARY`
+keyword has loaded, and a name that [RXFUNCADD](rxfuncadd.md) has registered.
+The answer is `1` for every other name, such as a name that was never
+registered. The null string is a name like any other. The answer is written as
+the digit `0` or `1`.
 
 ```rexx
 say rxfuncquery('SysSleep')
-say rxfuncquery('spec_rxfuncquery_never') rxfuncquery('')
+say rxfuncquery('spec_rxfuncquery_never')
+say rxfuncquery('')
+say rxfuncadd('', 'no_such_library_spec')
+say rxfuncquery('')
+say rxfuncdrop('') rxfuncquery('')
 say rxfuncquery('RxCalcTan')
 say rxfuncadd('RxCalcTan', 'rxmath')
 say rxfuncquery('RxCalcTan')
@@ -73,7 +77,11 @@ say rxfuncquery('RxCalcArcTan')
 
 ```output
 0
-1 1
+1
+1
+1
+0
+0 1
 1
 0
 0
@@ -98,7 +106,9 @@ r[bif.rxfuncquery.registered]
 A name that [RXFUNCADD](rxfuncadd.md) registered for a
 [library it could not find](r:bif.rxfuncadd.unknown-library) is available to
 RXFUNCQUERY, in any case, until [RXFUNCDROP](rxfuncdrop.md) removes the
-registration, although a call of it raises `SYNTAX 43.1`.
+registration, although a call of it raises `SYNTAX 43.1`. A name that another
+program registered is available in the same way, whether or not that program
+is still running.
 
 ```rexx
 say rxfuncadd('spec_rxfuncquery_reg', 'no_such_library_spec', 'entry')

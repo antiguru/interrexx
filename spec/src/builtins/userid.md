@@ -54,7 +54,9 @@ say userid(,) == userid()
 r[bif.userid.name]
 The answer is the login name of the account the process runs as, which is
 what the `id -un` command prints. It has no blanks around it, and it is
-not the null string.
+not the null string. For an account that the system's account database does
+not hold, such as one that only a network directory knows, the answer is not
+specified.
 
 ```rexx
 address system 'id -un' with output stem name.
@@ -68,19 +70,31 @@ say (userid() == strip(userid())) (userid() \== '')
 ```
 
 r[bif.userid.environment]
-USERID does not read the environment: setting the `USER` or `LOGNAME`
-environment variable, or removing either of them, does not change the answer.
+For an account the system's account database holds, USERID does not read the
+environment: setting the `USER` or `LOGNAME` environment variable, or removing
+either of them, does not change the answer.
 
 ```rexx
 before = userid()
+oldUser = value('USER', , 'ENVIRONMENT')
+oldLog = value('LOGNAME', , 'ENVIRONMENT')
 call value 'USER', 'spec_userid_other', 'ENVIRONMENT'
 call value 'LOGNAME', 'spec_userid_other', 'ENVIRONMENT'
-say userid() == before
-call value 'USER', , 'ENVIRONMENT'
-say userid() == before
+address system 'test -z "${USER+set}${LOGNAME+set}"'
+say rc (userid() == before)
+call value 'USER', .nil, 'ENVIRONMENT'
+call value 'LOGNAME', .nil, 'ENVIRONMENT'
+address system 'test -z "${USER+set}${LOGNAME+set}"'
+say rc (userid() == before)
+if oldUser == '' then call value 'USER', .nil, 'ENVIRONMENT'
+else call value 'USER', oldUser, 'ENVIRONMENT'
+if oldLog == '' then call value 'LOGNAME', .nil, 'ENVIRONMENT'
+else call value 'LOGNAME', oldLog, 'ENVIRONMENT'
+say (value('USER', , 'ENVIRONMENT') == oldUser) (value('LOGNAME', , 'ENVIRONMENT') == oldLog)
 ```
 
 ```output
-1
-1
+1 1
+0 1
+1 1
 ```

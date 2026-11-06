@@ -8,13 +8,13 @@ rexxref: "Functions > Built-in Functions > RXFUNCDROP"
 # RXFUNCDROP
 
 RXFUNCDROP removes one registration of a function name that
-[RXFUNCADD](rxfuncadd.md) made. It answers `0` when it removed a
-registration and `1` when it did not. [RXFUNCQUERY](rxfuncquery.md) asks
+[RXFUNCADD](rxfuncadd.md) made. It answers `0` if it removed a registration
+and `1` if it did not. [RXFUNCQUERY](rxfuncquery.md) asks
 whether a name is available afterwards.
 
 > **Note.** The examples drop every registration they make, so they leave
-> nothing behind and do not depend on which registrations exist when they
-> start. A registration can be removed only by the program that made it.
+> nothing behind and do not depend on registrations of other names. A
+> registration can be removed only by the program that made it.
 > Making a function of the library `rxmath` available is not a registration,
 > as [RXFUNCADD](rxfuncadd.md) explains, and the example that does it picks
 > a function that no other example on this page uses.
@@ -54,8 +54,8 @@ d: say condition('o')~code
 ## The result
 
 r[bif.rxfuncdrop.registered]
-A name that [RXFUNCADD](rxfuncadd.md) registered for a [library it could not
-find](r:bif.rxfuncadd.unknown-library) is removed, and the answer is `0`. The
+A name that this program had [RXFUNCADD](rxfuncadd.md) register for a [library
+it could not find](r:bif.rxfuncadd.unknown-library) is removed, and the answer is `0`. The
 name is compared without regard to case, as
 [RXFUNCQUERY](rxfuncquery.md) does. Afterwards the name is no longer
 available, and a call of it raises `SYNTAX 43.1` as that of any unknown
@@ -80,8 +80,10 @@ a: say condition('o')~code
 
 r[bif.rxfuncdrop.unregistered]
 A name that has no registration to remove answers `1` and changes nothing.
-That covers a name that was never registered and a name whose registration
-an earlier call has removed.
+That covers a name that was never registered, a name whose registration
+an earlier call has removed, and a name that only another program registered:
+the answer is `1` and the name stays available, whether or not that program
+is still running.
 
 ```rexx
 say rxfuncdrop('spec_rxfuncdrop_never')
@@ -124,8 +126,8 @@ r[bif.rxfuncdrop.provided]
 A name that is available without a registration of its own is not removed:
 the answer is `1` and the function stays available. That covers the functions
 the interpreter provides from the start, such as `SysSleep`, and the
-functions of a library that [RXFUNCADD](rxfuncadd.md) has loaded, which
-stay callable.
+functions of a library that is loaded, by [RXFUNCADD](rxfuncadd.md) or by a
+`::requires` directive with the `LIBRARY` keyword, which stay callable.
 
 ```rexx
 say rxfuncdrop('SysSleep') rxfuncquery('SysSleep')
@@ -138,4 +140,15 @@ say rxcalcsqrt(16)
 1 0
 1 0
 4
+```
+
+```rexx
+say rxfuncdrop('RxCalcLog') rxfuncquery('RxCalcLog')
+say rxcalclog(1)
+::requires 'rxmath' LIBRARY
+```
+
+```output
+1 0
+0
 ```
