@@ -51,7 +51,8 @@ call rxqueue 'Delete', q
 
 r[instr.push.value]
 The expression is everything after the keyword. PUSH evaluates it once and
-puts the string value of the result on the queue as one line, and nothing is
+puts the string value of the result, made [as the conversion
+rule](r:conv.string.object) says, on the queue as one line, and nothing is
 converted or trimmed, so a line keeps its blanks and its case. Without an
 expression the line is the null string. A string that holds a line feed or
 other control characters is still one line, and it comes back whole. If the
@@ -62,11 +63,13 @@ leaves `RC` and `RESULT` as they were.
 q = rxqueue('Create', 'spec_instr_push_value')
 call rxqueue 'Set', q
 numeric digits 3
+rc = 'kept rc'
+result = 'kept result'
 push 1 / 3
 push 'x' || '0a'x || 'y'
 push
 push '  Mixed  Case  '
-say queued()
+say queued() rc result
 parse pull a
 say '[' || a || ']'
 parse pull a
@@ -74,6 +77,8 @@ say '[' || a || ']'
 say queued()
 pull a
 say c2x(a)
+parse pull a
+say a
 signal on novalue name nv
 push unset_name
 say 'not reached'
@@ -83,20 +88,20 @@ call rxqueue 'Delete', q
 ```
 
 ```output
-4
+4 kept rc kept result
 [  Mixed  Case  ]
 []
 2
 580A59
-NOVALUE 1
+0.333
+NOVALUE 0
 ```
 
 r[instr.push.queue]
 The queue that receives the line is the current one at the time of the
-instruction. It is `SESSION` when the program starts, until the builtin
-[RXQUEUE](r:bif.rxqueue.set) chooses another. If the current queue does not
-exist, PUSH raises `SYNTAX 48.1` and the line is lost. A fault in the
-expression is the error of the expression, such as `35.1`.
+instruction, the one [RXQUEUE](r:bif.rxqueue.get) names. If the current
+queue does not exist, PUSH raises `SYNTAX 48.1` and the line is lost. A
+fault in the expression is the error of the expression, such as `35.1`.
 
 ```rexx
 say rxqueue('Get')

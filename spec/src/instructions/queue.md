@@ -95,11 +95,10 @@ NOVALUE 0
 ```
 
 r[instr.queue.queue]
-The queue that receives the line is the current one at the time of the
-instruction, `SESSION` unless the builtin [RXQUEUE](r:bif.rxqueue.set) chose
-another. If that queue does not exist, QUEUE raises `SYNTAX 48.1` and the line
-is lost. A fault in the expression is the error of the expression, such as
-`35.1`.
+QUEUE finds its queue as [PUSH does](r:instr.push.queue): the line goes to
+the current queue, a current queue that does not exist gives `SYNTAX 48.1`
+and the line is lost, and a fault in the expression is the error of the
+expression.
 
 ```rexx
 a = rxqueue('Create', 'spec_instr_queue_a')

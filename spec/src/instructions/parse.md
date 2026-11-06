@@ -4,6 +4,7 @@ kind: instruction
 syntax: "PARSE [UPPER | LOWER] [CASELESS] source [template_list]"
 ansi: "6.3.2.71, 8.3.17"
 rexxref: "Keyword Instructions > PARSE"
+deviations: [77]
 ---
 
 # PARSE
@@ -22,7 +23,10 @@ r[instr.parse.form]
 After PARSE come the case keywords, if any, then one source keyword, and then
 the template list, which runs to the end of the clause. The source keywords
 are ARG, LINEIN, PULL, SOURCE, VALUE, VAR and VERSION. Keywords are not case
-sensitive. The first token after the keywords starts the template list, so in
+sensitive. What is parsed is the string value of what the source gives; a
+value that is not a string becomes one [as the conversion
+rule](r:conv.string.object) says. The first token after the keywords starts
+the template list, so in
 `parse var s with` the word `with` is a variable of the template, and so is
 `upper` in `parse arg upper`. A template list may be empty, and then the
 instruction [assigns nothing](r:parse.templates.empty) but still obtains its
@@ -85,8 +89,8 @@ PARSE ARG reads the arguments of the routine, method or program that is
 running, as [the ARG builtin](r:bif.arg.scope) defines them. The first
 template parses the string value of the first argument, the next template the
 second argument, and so on, as [the comma rule](r:parse.multiple.comma) says.
-Nothing is converted unless UPPER or LOWER is given. Without an argument the
-source is the null string.
+Nothing is converted unless UPPER or LOWER is given. An argument that is
+missing is [the null string](r:parse.multiple.comma).
 
 ```rexx
 call show 'Mixed  Case', 'two'
@@ -113,7 +117,9 @@ builtin [LINEIN](r:bif.linein.stdin) does with no stream name, and parses it.
 It never takes a line from the external data queue, even when the queue holds
 lines, and it leaves the queue as it was. At the end of the input the source
 is the null string, and the `NOTREADY` condition is raised with the
-description `STDIN`. The standard input of the examples is empty.
+description `STDIN`; when no trap is set that ends nothing, and the
+instruction completes with the null string. The standard input of the
+examples is empty.
 
 ```rexx
 q = rxqueue('Create', 'spec_instr_parse_linein')
@@ -122,6 +128,8 @@ queue 'in the queue'
 call on notready name nr
 parse linein a b
 say '[' || a || '][' || b || ']' queued()
+call rxqueue 'Set', 'SESSION'
+call rxqueue 'Delete', q
 exit
 nr: say 'notready' condition('d')
     return
@@ -136,12 +144,9 @@ notready STDIN
 > is the subject of [Deviation 13](../deviations.md).
 
 r[instr.parse.pull]
-PARSE PULL takes the first line of the current external data queue, removes
-it from the queue and parses it. If the queue holds no line, it reads a line
-of the default input stream instead, and the end of that input gives the null
-string and raises `NOTREADY` as PARSE LINEIN does. The line keeps its case
-unless UPPER or LOWER is given. The page of [PULL](pull.md) says more about
-the queue.
+PARSE PULL takes its line from the current external data queue, and from the
+default input stream when the queue has none, as [PULL](r:instr.pull.source)
+specifies. The line keeps its case unless UPPER or LOWER is given.
 
 ```rexx
 q = rxqueue('Create', 'spec_instr_parse_pull')
@@ -169,10 +174,13 @@ PARSE SOURCE reads a string of three or more words. The first word names the
 operating system, and its value is not specified. The second tells how the
 running code was started: `COMMAND` for the program itself, and also for an
 internal routine, since it runs in the program, `SUBROUTINE` for a routine
-or a program started with CALL, `FUNCTION` for one started by a function call
-in an expression, and `METHOD` for a method. The rest of the string is the
-name of the file or package that holds the code, which may itself contain
-blanks; for a program it is the name that `.context~package~name` gives.
+or a program started with CALL, `FUNCTION` for one that was called as a
+function, and `METHOD` for a method. Any other start, such as the prolog of
+a package that a `::REQUIRES` directive loads, is not specified. The rest of
+the string is the name of the file or package that holds the code, which may
+itself contain blanks; for code that comes from a file it is the name that
+`.context~package~name` gives, and for a method or routine made from source
+text it is the name given when it was made.
 
 ```rexx
 parse source sys how file
@@ -206,11 +214,13 @@ METHOD
 r[instr.parse.value]
 PARSE VALUE evaluates the expression between VALUE and the keyword WITH,
 and parses the string value of the result. Without an expression the source
-is the null string. The first WITH that is not inside parentheses and not
-part of a string ends the expression, so a variable named `with` can be used
-in the expression only in parentheses, and a template may use `with` as a
-variable. The expression is evaluated before anything is assigned. A VALUE
-source with no WITH is a syntax error that [the error
+is the null string. The expression ends at the first WITH that stands as a
+symbol of the expression itself, outside parentheses and brackets. A WITH
+that is a message name after `~` or `~~`, an argument inside `[ ]` or part
+of a string does not end it. A variable named `with` can therefore be used
+in the expression only in parentheses or as an argument, and a template may
+use `with` as a variable. The expression is evaluated before anything is
+assigned. A VALUE source with no WITH is a syntax error that [the error
 rule](r:instr.parse.syntax) lists.
 
 ```rexx
@@ -226,6 +236,12 @@ parse value with a with b
 say '[' || a || '][' || b || ']'
 parse value substr('abcdef', 2, 3) with a +1 b
 say a b
+parse value .o~new~with with a b
+say '[' || a || '][' || b || ']'
+exit
+::class o
+::method with
+  return 'MSG'
 ```
 
 ```output
@@ -234,13 +250,16 @@ a with W
 W W
 [][]
 b cd
+[MSG][]
 ```
 
 r[instr.parse.var]
-PARSE VAR names a variable, a simple symbol or a compound one, and parses its
-string value. The variable is only read: it changes only if it is also a
-target of the template, and the [order of work](r:parse.index.order) says
-that its old value is the one parsed. A variable with no value is treated
+PARSE VAR names a variable, a simple symbol, a compound one or a stem, and
+parses its string value; the string value of a stem is
+[the stem rule's](r:expr.variables.stem). The variable is only read: it
+changes only if it is also a target of the template, and the
+[order of work](r:parse.index.order) says that its old value is the one
+parsed. A variable with no value is treated
 like any other [use of such a variable](r:expr.variables.value): its
 name is the source, or the `NOVALUE` condition is raised if it is enabled,
 with the name as its description, and then nothing is assigned. A compound
@@ -256,6 +275,11 @@ parse var x.i p q
 say p q
 parse var nothing_here p q
 say '[' || p || '][' || q || ']'
+parse var st. m n
+say '[' || m || '][' || n || ']'
+st. = 'def val'
+parse var st. m n
+say '[' || m || '][' || n || ']'
 signal on novalue name nv
 parse var y.i p q
 say 'not reached'
@@ -266,6 +290,8 @@ nv: say condition('c') condition('d') '[' || p || '][' || q || ']'
 one | two three
 a b
 [NOTHING_HERE][]
+[ST.][]
+[def][val]
 NOVALUE Y.4 [NOTHING_HERE][]
 ```
 
@@ -356,4 +382,25 @@ parse var .s a => 31.3
 parse value 1 + with a => 35.1
 parse value 1 => 38.3
 parse numeric a => 25.12
+```
+
+## Deviations
+
+r[instr.parse.deviation.77]
+The string value of a stem is its default value's, and NOSTRING is raised,
+naming the stem, only when the default has none, so a stem that holds
+compound variables and no default parses as its own name. ooRexx raises
+NOSTRING for every stem used as a source.
+
+```rexx
+t.1 = 'only element'
+signal on nostring name ns
+parse var t. a b
+say 'parsed' '[' || a || '][' || b || ']'
+exit
+ns: say 'nostring' condition('d')
+```
+
+```output
+parsed [T.][]
 ```

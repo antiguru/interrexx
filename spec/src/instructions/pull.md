@@ -22,8 +22,9 @@ the lines and choose the queue.
 r[instr.pull.short]
 `PULL` followed by a template list is the instruction `PARSE UPPER PULL`
 followed by the same list. The line is made upper case before the template
-sees it, so the patterns of the template are written in upper case, and the
-case of the line that was in the queue is not kept. A PULL with no template
+sees it, as [the case conversion](r:parse.multiple.convert) defines, so the
+patterns of the template are written in upper case, and the case of the line
+that was in the queue is not kept. A PULL with no template
 still takes the line out of the queue and assigns nothing.
 
 ```rexx
@@ -52,11 +53,10 @@ r[instr.pull.source]
 PULL takes the line at the head of the current queue and removes it, so lines
 come out in the order in which [PUSH](r:instr.push.lifo) and
 [QUEUE](r:instr.queue.fifo) arranged them. Only when the queue holds no line
-does PULL read the next line of the default input stream, as the builtin
-[LINEIN](r:bif.linein.stdin) does with no name. At the end of that input the
-line is the null string and `NOTREADY` is raised with the description
-`STDIN`, which stops no one unless a trap is set. A line that is the null
-string is a line: a PULL that takes it does not read the input.
+does PULL read the next line of the default input stream, as
+[PARSE LINEIN](r:instr.parse.linein) does, and the end of that input ends
+the same way. A line that is the null string is a line: a PULL that takes it
+does not read the input.
 
 ```rexx
 q = rxqueue('Create', 'spec_instr_pull_source')

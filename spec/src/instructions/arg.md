@@ -20,9 +20,8 @@ r[instr.arg.short]
 followed by the same list. Each argument, in order, is the source of the
 template that stands in the same place after the commas, as [the comma
 rule](r:parse.multiple.comma) says, and every one of them is made upper case
-before it is parsed. An argument that was omitted, and every argument
-beyond those passed, is the null string. A program that was started with no
-argument parses the null string.
+before it is parsed, as [the case conversion](r:parse.multiple.convert)
+defines. An argument that is missing is the null string, by the same rule.
 
 ```rexx
 call show 'Mixed  Case', 'two words'
