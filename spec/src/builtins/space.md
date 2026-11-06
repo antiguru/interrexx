@@ -185,7 +185,8 @@ c: say condition('o')~code
 93.923
 ```
 
-> **Note.** A result of many characters needs memory for them; a request larger than
+> **Note.** A result of many characters needs memory for them; a request
+> larger than
 > the machine can serve ends in an error that this book does not specify.
 > The ANSI draft (9.3.19) defines SPACE through `COPIES` and `SUBWORD`, with
 > the same answers, and checks `n` for a value below 0 under error 40.13,
@@ -193,7 +194,8 @@ c: say condition('o')~code
 
 ## Deviations
 
-> **Note.** An argument whose `STRING` method answers an object that is not a string
+> **Note.** An argument whose `STRING` method answers an object that is not a
+> string
 > falls under [Deviation 30](r:conv.string.deviation.30), as it does for
 > every builtin.
 

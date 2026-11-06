@@ -73,7 +73,8 @@ say digits()
 
 r[bif.digits.default]
 The default of a package is 9 unless a `::OPTIONS` directive of
-the package names another value with its `DIGITS` keyword. Where it does, that value is the setting at
+the package names another value with its `DIGITS` keyword. Where it does, that
+value is the setting at
 the start of the program, the setting at the start of each of its
 `::ROUTINE` routines and methods, and the setting that the NUMERIC
 DIGITS instruction without an expression returns to.
@@ -108,7 +109,8 @@ setting in force at the call, and the caller's setting is unchanged when it
 returns, whatever it set meanwhile. A routine of a `::ROUTINE` directive,
 public or private, a method (also one that another method sends the message
 to), and an external routine in another file all start with the
-[default](r:bif.digits.default) of their own package, whatever the setting of the
+[default](r:bif.digits.default) of their own package, whatever the setting of
+the
 caller. The NUMERIC instruction in an INTERPRET string changes the setting of
 the running routine, and the change stays after the INTERPRET.
 

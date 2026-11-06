@@ -20,7 +20,8 @@ argument, is the receiver; `string2` and `pad` become the message's
 arguments, in that order. `string1` and `string2` are
 [strings](r:conv.string.null), and `pad` is a [pad](r:conv.pad). The
 arguments are checked in the [order](r:conv.check.order) the conventions
-give, and the argument count by the [builtin call rules](r:bif.index.call.count):
+give, and the argument count by the
+[builtin call rules](r:bif.index.call.count):
 two are required and three is the most.
 
 ```rexx

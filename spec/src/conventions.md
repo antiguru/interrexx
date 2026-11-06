@@ -125,7 +125,8 @@ y
 
 ## Whole-number arguments
 
-> **Note.** Position and length arguments are whole numbers. The two rules below say
+> **Note.** Position and length arguments are whole numbers. The two rules
+> below say
 > which strings a whole-number argument accepts and what value it then has.
 
 r[conv.whole.form]
@@ -265,7 +266,8 @@ a: say condition('o')~code
 93.923
 ```
 
-> **Note.** These two codes follow from the reference manual: a builtin of this kind
+> **Note.** These two codes follow from the reference manual: a builtin of
+> this kind
 > sends a String message, the range of a position or length is checked by
 > that method, and an incorrect call to a method is error 93, whose subcodes
 > 924 and 923 are the position and length cases. The ANSI draft (9.2.1),
@@ -375,7 +377,8 @@ f: say condition('o')~code
 93.924
 ```
 
-> **Note.** The range checks come last because they belong to the String method, which
+> **Note.** The range checks come last because they belong to the String
+> method, which
 > runs only once the call has been made. The reference manual does not say
 > that the function call checks the form of its arguments, under error 40,
 > before it sends the message; that part matches ooRexx. The

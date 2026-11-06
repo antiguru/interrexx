@@ -23,7 +23,8 @@ omitted or null, the [standard output](r:bif.index.stream.std) is written.
 [whole-number argument](r:bif.index.stream.args) whose
 [value](r:bif.index.stream.value) the stream rules give, and a
 [valid start](r:bif.index.stream.start). LINEOUT is not a String method. It
-takes three arguments at the most, by the [call rules](r:bif.index.call.too-many),
+takes three arguments at the most, by the
+[call rules](r:bif.index.call.too-many),
 and none is required.
 
 ```rexx
@@ -87,7 +88,8 @@ one [] 24 a b
 ```
 
 > **Note.** The line end is data of the stream like any other character, and
-> [it counts as one](r:bif.index.stream.line-end) however the platform writes it.
+> [it counts as one](r:bif.index.stream.line-end) however the platform writes
+> it.
 
 r[bif.lineout.append]
 The write position of a stream just opened is after the last character, so
@@ -149,8 +151,10 @@ call sysfiledelete f
 ```
 
 > **Note.** The first write puts `XY` and a line feed over `abc`, so that `def`
-> is now line 2 and `ghi` line 3. The second write puts its ten letters and a line
-> feed over `ghi` and `jkl` and their line ends, and goes on three characters past them.
+> is now line 2 and `ghi` line 3. The second write puts its ten letters and a
+> line
+> feed over `ghi` and `jkl` and their line ends, and goes on three characters
+> past them.
 
 r[bif.lineout.line.end]
 A `line` that is past the last line of the data, one more than the number of
@@ -334,7 +338,8 @@ READY:
 ```
 
 r[bif.lineout.deviation.56]
-A `line` counts from the start of the data, as [the line rule](r:bif.lineout.line)
+A `line` counts from the start of the data, as
+[the line rule](r:bif.lineout.line)
 says, by the line ends that are there, whichever operation touched the stream
 before. ooRexx counts from a line
 number that it tracks, which an operation on characters resets: a LINEOUT

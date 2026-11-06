@@ -50,7 +50,8 @@ SCIENTIFIC SCIENTIFIC SCIENTIFIC
 r[bif.form.result]
 FORM answers `SCIENTIFIC` or `ENGINEERING`, in capital letters, whatever
 case the NUMERIC FORM instruction wrote the keyword in. The setting at the start
-of a program is the [default](r:bif.form.default) of the package. The instruction can also take its keyword from
+of a program is the [default](r:bif.form.default) of the package. The
+instruction can also take its keyword from
 the value of an expression, with `VALUE`, where the value must be exactly
 `SCIENTIFIC` or `ENGINEERING`, in capital letters and without blanks around
 it, or `SYNTAX 25.11` is raised and the setting stays as it was.
@@ -89,7 +90,8 @@ ENGINEERING
 
 r[bif.form.default]
 The default of a package is `SCIENTIFIC` unless a `::OPTIONS` directive of
-the package names another value with its `FORM` keyword. Where it does, that value is the setting at
+the package names another value with its `FORM` keyword. Where it does, that
+value is the setting at
 the start of the program, the setting at the start of each of its
 `::ROUTINE` routines and methods, and the setting that the NUMERIC
 FORM instruction without an expression returns to.

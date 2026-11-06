@@ -198,7 +198,8 @@ say translate('secret', , , '*') translate('secret', , , '*', 3, 2)
 ****** se**et
 ```
 
-> **Note.** The ANSI draft (9.3.23) uppercases whenever both tables are omitted and
+> **Note.** The ANSI draft (9.3.23) uppercases whenever both tables are
+> omitted and
 > ignores `pad` then. This page follows ooRexx, where the reference manual
 > says a given pad replaces the whole string.
 
@@ -215,7 +216,8 @@ say translate('abc', 'xyz', '') translate('abc', , '', '*') translate('abc', '',
 abc abc abc
 ```
 
-> **Note.** This holds however the null string was produced, which ooRexx does not
+> **Note.** This holds however the null string was produced, which ooRexx does
+> not
 > do: see [Deviation 94](r:bif.translate.deviation.94).
 
 r[bif.translate.past-end]
@@ -298,7 +300,8 @@ say (translate(s, '', '') == s) (translate('mn' || 'op') == 'MNOP')
 ```
 
 r[bif.translate.deviation.94]
-A `tablei` given as the null string is an [empty table](r:bif.translate.tablei.empty)
+A `tablei` given as the null string is an
+[empty table](r:bif.translate.tablei.empty)
 whether it was written as `''` or answered by an expression, such as
 `LEFT(s, 0)`, `COPIES(s, 0)` or `STRIP` of a string of blanks. ooRexx
 differs: a null string that some of its builtins answer counts as given, so

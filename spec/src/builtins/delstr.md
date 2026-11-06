@@ -72,7 +72,8 @@ say '['delstr('fghij')']' '['delstr('fghij', )']' delstr('fghij', , 2)
 [] [] hij
 ```
 
-> **Note.** The ANSI draft (9.3.9) requires `n`. The reference manual and ooRexx make it
+> **Note.** The ANSI draft (9.3.9) requires `n`. The reference manual and
+> ooRexx make it
 > optional, with the default above.
 
 r[bif.delstr.length.default]

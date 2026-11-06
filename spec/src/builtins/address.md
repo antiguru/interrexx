@@ -75,7 +75,8 @@ a symbol, and exactly as written when it is a string, the case, leading and
 trailing blanks included. After `ADDRESS VALUE expression`, or an expression
 in parentheses, it is the value of the expression, also when that is
 the null string; a value that is not a string is replaced by a string, as [a
-string argument](r:conv.string.object) says. The name is not checked and need not name any environment
+string argument](r:conv.string.object) says. The name is not checked and need
+not name any environment
 the program can use.
 
 ```rexx
@@ -158,7 +159,8 @@ FIRST 0
 
 r[bif.address.scope.routine]
 An internal routine, one that the program calls by its label, starts with the
-caller's current environment and its previous one, and when it returns, the caller has its own back: a
+caller's current environment and its previous one, and when it returns, the
+caller has its own back: a
 setting made inside the routine, by ADDRESS instructions or in a routine it
 called, is lost on return. This holds for a routine with PROCEDURE and for one
 without it.

@@ -22,7 +22,8 @@ is a line number, and `count` a count: both are
 [whole-number arguments](r:bif.index.stream.args) whose
 [value](r:bif.index.stream.value) the stream rules give, the line number a
 [valid start](r:bif.index.stream.start). LINEIN is not a String method. It
-takes three arguments at the most, by the [call rules](r:bif.index.call.too-many),
+takes three arguments at the most, by the
+[call rules](r:bif.index.call.too-many),
 and none is required.
 
 ```rexx
@@ -119,7 +120,8 @@ return
 0  1
 ```
 
-> **Note.** The fourth line is `e`, a carriage return and `f`: the carriage return
+> **Note.** The fourth line is `e`, a carriage return and `f`: the carriage
+> return
 > has no line feed after it, so the line does not end there.
 
 r[bif.linein.partial]

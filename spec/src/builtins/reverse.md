@@ -82,7 +82,8 @@ When `string` is a number, REVERSE reverses the characters of the string the
 number is, as it is written, and the result is a string of those characters
 and nothing more: a sign, a period or an exponent moves like any other
 character. A quoted literal keeps its spelling; an unquoted one is a symbol,
-so its exponent letter is `E` whatever the source wrote. When `string` is an object other than a string, it is
+so its exponent letter is `E` whatever the source wrote. When `string` is an
+object other than a string, it is
 [replaced by its string](r:conv.string.object).
 
 ```rexx
@@ -116,5 +117,6 @@ say (reverse(s) == 'cba') (reverse(reverse(s)) == s) (reverse('') == '')
 1 1 1
 ```
 
-> **Note.** The ANSI draft (9.3.17) builds the result one character at a time, putting
+> **Note.** The ANSI draft (9.3.17) builds the result one character at a time,
+> putting
 > each character in front of those before it, which gives the string above.

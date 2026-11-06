@@ -9,7 +9,8 @@ rexxref: "Functions > Built-in Functions > RXFUNCQUERY"
 
 RXFUNCQUERY asks whether a function of the given name is available to the
 program without a library having to be asked for it first. It answers `0`
-for an available function and `1` otherwise, and it changes nothing. [RXFUNCADD](rxfuncadd.md) makes functions of a library available, and
+for an available function and `1` otherwise, and it changes nothing.
+[RXFUNCADD](rxfuncadd.md) makes functions of a library available, and
 [RXFUNCDROP](rxfuncdrop.md) removes a registration.
 
 > **Note.** The examples register nothing that they do not drop, so they do

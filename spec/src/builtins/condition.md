@@ -47,7 +47,8 @@ r[bif.condition.option]
 CONDITION answers, and every character after the first is ignored, so
 `Condition`, `cond` and `C` select the same. The letters are `A`, `C`, `D`,
 `E`, `I`, `O`, `R` and `S`. Any other first character, a blank included, and
-the null string raise `SYNTAX 40.904`. When `option` is omitted, the call is the call with the option `I`.
+the null string raise `SYNTAX 40.904`. When `option` is omitted, the call is
+the call with the option `I`.
 
 ```rexx
 signal on syntax name h
@@ -286,7 +287,8 @@ OFF
 r[bif.condition.object]
 After a trap has caught a condition, the option `O` answers a directory that
 holds the information of the condition, the same information as the other
-options answer, and more. Its entries `CONDITION`, `DESCRIPTION` and `INSTRUCTION` equal what `C`, `D`
+options answer, and more. Its entries `CONDITION`, `DESCRIPTION` and
+`INSTRUCTION` equal what `C`, `D`
 and `I` answer, and so does `ADDITIONAL` when the condition carries additional
 information. When it carries none, as with NOVALUE, the directory has no
 `ADDITIONAL` entry, and `~additional` answers `.nil` as for any absent entry,
@@ -422,6 +424,7 @@ caller USER FOO
 ```
 
 > **Note.** The ANSI draft (9.5.3) has the options `C`, `D`, `E`, `I` and `S`
-> only, and says every answer is null when no condition has been trapped. ooRexx adds `A`, `O` and `R`, and interrexx follows
+> only, and says every answer is null when no condition has been trapped.
+> ooRexx adds `A`, `O` and `R`, and interrexx follows
 > ooRexx. The conditions chapter lists every condition, the information each
 > carries, and the traps that catch them.

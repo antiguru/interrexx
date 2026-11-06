@@ -9,7 +9,8 @@ deviations: [4]
 
 # BITXOR
 
-BITXOR combines two strings bit by bit, setting a bit where exactly one of the two
+BITXOR combines two strings bit by bit, setting a bit where exactly one of the
+two
 strings has it set, and answers the string of the combined characters. How
 the two strings are lined up and what happens when their lengths differ are
 the rules of [the bit-by-bit functions](r:bif.index.bit.bytes), shared with
@@ -80,7 +81,8 @@ say c2x(bitxor('a0'x, , 'ff'x)) c2x(bitxor('abc', 'a', 'ff'x))
 
 r[bif.bitxor.deviation.4]
 interrexx does not specify whether the answer of BITXOR is the same object
-as another string of equal value, as [the shared rule](r:bif.index.bit.deviation.4)
+as another string of equal value, as
+[the shared rule](r:bif.index.bit.deviation.4)
 says for every bit-by-bit function. A program can rely only on the value,
 which is equal under `==`.
 

@@ -19,7 +19,8 @@ first argument, is the receiver. `string` is a
 [string](r:conv.string.null) and `n` is a
 [word number](r:bif.index.words.number). The arguments are checked in the
 [order](r:conv.check.order) the conventions give, and the argument count
-by the [builtin call rules](r:bif.index.call.count): both are required and two is
+by the [builtin call rules](r:bif.index.call.count): both are required and two
+is
 the most.
 
 ```rexx
@@ -52,7 +53,8 @@ When `string` has a word `n`, WORDINDEX returns the
 that word. The position counts characters of `string` from its first, so
 whitespace before the word, and the words and whitespace before that, all
 count toward it. The answer is
-[written as a count](r:bif.index.count.answer), and whether it is a new object is
+[written as a count](r:bif.index.count.answer), and whether it is a new object
+is
 [not specified](r:bif.index.count.answer.deviation.4).
 
 ```rexx

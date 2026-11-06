@@ -69,7 +69,8 @@ WORDPOS then returns the smallest word number `k`, with `k` at least
 to `m`, word `k + i - 1` of `string` is equal under `==` to word `i` of
 `phrase`. When there is no such `k`, the result is `0`. A phrase with no
 words is the case of [its own rule](r:bif.wordpos.empty-phrase). The answer
-is [written as a count](r:bif.index.count.answer), and whether it is a new object
+is [written as a count](r:bif.index.count.answer), and whether it is a new
+object
 is [not specified](r:bif.index.count.answer.deviation.4).
 
 ```rexx
@@ -149,7 +150,8 @@ say wordpos('four five', s) wordpos('three four five', s) wordpos('x y', 'x')
 
 r[bif.wordpos.past-end]
 When `start` is greater than the number of words in `string`, the result
-is `0`, for every `start` that passes its check. A `start` equal to the number of words
+is `0`, for every `start` that passes its check. A `start` equal to the number
+of words
 searches the last word alone.
 
 ```rexx
@@ -190,7 +192,8 @@ say wordpos('a', '') wordpos('a', '  ' || '09'x, 1)
 0 0
 ```
 
-> **Note.** The ANSI draft (9.3.28) defines WORDPOS by comparing the phrase, with its
+> **Note.** The ANSI draft (9.3.28) defines WORDPOS by comparing the phrase,
+> with its
 > whitespace reduced to single blanks, against each run of the same number
 > of words of the string, reduced the same way, from `start` on. That gives
 > the answers above.

@@ -96,7 +96,8 @@ say (x2c(c2x(s)) == s) (x2c(c2x('')) == '')
 
 r[bif.c2x.deviation.4]
 interrexx does not specify whether the answer of C2X is the same object as
-another string of equal value, as [the shared rule](r:bif.index.conv.deviation.4)
+another string of equal value, as
+[the shared rule](r:bif.index.conv.deviation.4)
 says for every conversion function. A program can rely only on the value,
 which is equal under `==`.
 

@@ -109,7 +109,8 @@ since the start of 1 January 1970, which is negative before it. T is F
 divided by 1000000, rounded down, less 62135596800. A string read with the
 informat C, H, L, M, N or S has no date, so its date is 1 January 0001: F is
 then the time of day in microseconds, and T is that time of day in seconds less
-62135596800, a negative number. NUMERIC DIGITS plays no part in how they are written.
+62135596800, a negative number. NUMERIC DIGITS plays no part in how they are
+written.
 
 ```rexx
 say time('F', '00:00:00') time('F', '00:00:01') time('F', '23:59:59.999999', 'L')
@@ -193,7 +194,8 @@ a field. N has two-digit hours from 00 to 23, minutes from 00 to 59 and
 seconds from 00 to 59. L has the same, followed by a point and from one to six
 digits, which are the microseconds when read as if completed on the right with
 zeros. C has an hour from 1 to 12 written with or without a leading zero,
-a colon, minutes of two digits from 00 to 59, and `am` or `pm` in lower case; 12 with
+a colon, minutes of two digits from 00 to 59, and `am` or `pm` in lower case;
+12 with
 `am` is midnight, 12 with `pm` is noon.
 
 ```rexx
@@ -268,7 +270,8 @@ at most 18 for F and T, its significant digits being those from the first digit
 that is not 0 to the last digit that is not 0. This book does not specify
 whether a string with more significant digits, whose value is not a whole
 number, is accepted, nor what it then reads as. H must be from 0 to 23, M from
-0 to 1439 and S from 0 to 86399. F must be from 0 to 315537897599999999 and T from -62135596800 to
+0 to 1439 and S from 0 to 86399. F must be from 0 to 315537897599999999 and T
+from -62135596800 to
 253402300799, which are the instants from 1 January 0001 to 31 December 9999.
 An F or T names a date and a time, and a format other than F or T keeps only the
 time of day; F and T keep both.
@@ -448,7 +451,8 @@ say time('E') >= 0.25
 
 r[bif.time.elapsed.value]
 After the clock has started, E answers the time since the start or the last
-reset in seconds with a fraction of six digits: whole seconds with no leading zeros,
+reset in seconds with a fraction of six digits: whole seconds with no leading
+zeros,
 a point, and the six digits of the microseconds, `0.300268` and `12.000001`
 being examples. The figure is written whatever NUMERIC DIGITS is.
 
@@ -627,9 +631,14 @@ f: say condition('o')~code
 40.904
 ```
 
-> **Note.** The ANSI draft (9.8.5) has neither the options F and T nor the informats F,
-> O and T, and it raises `SYNTAX 40.29` for O as well as E and R as `option` with a
-> `string`, where ooRexx answers the offset. The reference manual describes an error
-> when the system clock is set back below the start of the elapsed-time clock, and
-> one for an elapsed time of more than nine digits of seconds; this book specifies
+> **Note.** The ANSI draft (9.8.5) has neither the options F and T nor the
+> informats F,
+> O and T, and it raises `SYNTAX 40.29` for O as well as E and R as `option`
+> with a
+> `string`, where ooRexx answers the offset. The reference manual describes an
+> error
+> when the system clock is set back below the start of the elapsed-time clock,
+> and
+> one for an elapsed time of more than nine digits of seconds; this book
+> specifies
 > neither.

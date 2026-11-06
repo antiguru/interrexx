@@ -167,7 +167,8 @@ The setting belongs to the code that is running, not to the program. An internal
 routine, one that the program calls by its label, starts with the caller's
 setting, and the caller has its own back when the routine returns, whatever
 the routine set. A method, and a `::ROUTINE`, starts with `N` whatever the
-caller's setting is, and its setting is lost on return as well. Code run by INTERPRET shares the setting of the code that runs
+caller's setting is, and its setting is lost on return as well. Code run by
+INTERPRET shares the setting of the code that runs
 it.
 
 ```rexx
@@ -225,7 +226,8 @@ question marks at its start, its first character is a letter of the
 [setting](r:bif.trace.setting) in either case. Any other first character is
 invalid, among them a blank, a digit, a sign, another letter, a character that
 is not a letter in ASCII, a null character and a further question mark after a
-blank. An option that is only question marks is valid. An object other than a string is
+blank. An option that is only question marks is valid. An object other than a
+string is
 replaced by a string, as [a string argument](r:conv.string.object) says.
 
 ```rexx

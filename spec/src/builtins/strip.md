@@ -105,7 +105,8 @@ g: say condition('o')~code
 40.5
 ```
 
-> **Note.** The reference manual names error 93.915 for a method option that is not
+> **Note.** The reference manual names error 93.915 for a method option that
+> is not
 > one of those allowed. The ANSI draft (9.3.20) reads `option` the same way,
 > by its first character in either case, but raises 40.21 for a null option
 > and 40.28 for any other bad one, where ooRexx raises 93.915; and it makes
@@ -199,7 +200,8 @@ say '['strip('  a  ', 'L', )']' '['strip('  a  ', , )']' '['strip('xxaxx', , 'x'
 
 ## Deviations
 
-> **Note.** An argument whose `STRING` method answers an object that is not a string
+> **Note.** An argument whose `STRING` method answers an object that is not a
+> string
 > falls under [Deviation 30](r:conv.string.deviation.30), as it does for
 > every builtin.
 

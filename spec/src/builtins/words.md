@@ -109,7 +109,8 @@ say words(.object~new) words(.object~new~string)
 
 ## Deviations
 
-> **Note.** An argument whose `STRING` method answers an object that is not a string
+> **Note.** An argument whose `STRING` method answers an object that is not a
+> string
 > falls under [Deviation 30](r:conv.string.deviation.30), as it does for
 > every builtin.
 

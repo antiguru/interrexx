@@ -96,7 +96,8 @@ call sysfiledelete f
 61620D0A631A64
 ```
 
-> **Note.** The second line shows the short read at the end of the data: 100 characters
+> **Note.** The second line shows the short read at the end of the data: 100
+> characters
 > were asked for and the 7 that the stream has were returned.
 
 r[bif.charin.start]
@@ -155,9 +156,11 @@ three [c] 2
 four [] 3
 ```
 
-> **Note.** A call that reads exactly the characters that are left raises nothing;
+> **Note.** A call that reads exactly the characters that are left raises
+> nothing;
 > only the next call, which finds none, does. The example shows the
-> condition raised after the clause that made the call, which is when a `CALL ON`
+> condition raised after the clause that made the call, which is when a
+> `CALL ON`
 > trap runs.
 
 r[bif.charin.zero]
@@ -193,7 +196,8 @@ return
 
 r[bif.charin.missing]
 A file that does not exist has no characters: CHARIN returns the null
-string and raises NOTREADY, whatever `start` is and whatever the valid `length` is, and creates
+string and raises NOTREADY, whatever `start` is and whatever the valid
+`length` is, and creates
 no file. A name that cannot be opened for another reason, a directory for
 example, is answered the same way. The `start` of such a call is not checked
 (see [the start rule](r:bif.index.stream.start)), but a `length` that is
@@ -252,7 +256,8 @@ notready STDIN
 r[bif.charin.deviation.62]
 A CHARIN that reads no character because the data is at its end leaves the
 stream in the state `NOTREADY`, with the description `NOTREADY:EOF`
-(STREAM answers them with its `S` and `D` options). ooRexx leaves the state `ERROR`, with the description `ERROR:0`.
+(STREAM answers them with its `S` and `D` options). ooRexx leaves the state
+`ERROR`, with the description `ERROR:0`.
 
 ```rexx
 f = 'spec-charin-dev62.tmp'

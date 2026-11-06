@@ -200,7 +200,8 @@ Type `X` answers `1` when the string is a string of hexadecimal digits, as
 [the digit rule](r:bif.index.conv.digits) defines the digits, and where a
 conversion function would raise an error for the string, `X` answers `0`:
 whitespace in the string only where [the group rule](r:bif.index.conv.groups)
-allows a gap, so that every group after the first has an even count of digits; no
+allows a gap, so that every group after the first has an even count of digits;
+no
 whitespace at the start or the end; and a character that is neither a digit
 nor whitespace. The null string is a string of hexadecimal digits, while a
 string of only whitespace is not. A string with an odd number of digits is
@@ -226,7 +227,8 @@ Type `B` answers `1` when the string is a string of binary digits, with the
 same allowances as `X`: whitespace only where [the group
 rule](r:bif.index.conv.groups) allows a gap, so that every group after the
 first has a count of digits that is a multiple of four, none at the start or
-the end, and no other character. The null string is a string of binary digits, a string of only
+the end, and no other character. The null string is a string of binary digits,
+a string of only
 whitespace is not. A string with a count of digits that is not a multiple of
 four is binary when it has no gap.
 
@@ -289,7 +291,8 @@ Type `S` answers `1` when the string is a symbol that
 character, and each is a letter, a digit, or one of `.`, `!`, `?` and `_`,
 and it has at most 250 characters; a longer string is not a symbol, whatever
 its characters. The other characters are not symbol characters, among them
-`$`, `@`, `#`, whitespace and the null character. Case does not matter, and the string is
+`$`, `@`, `#`, whitespace and the null character. Case does not matter, and
+the string is
 not translated or looked up as a variable.
 
 ```rexx

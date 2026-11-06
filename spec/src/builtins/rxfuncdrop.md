@@ -55,7 +55,8 @@ d: say condition('o')~code
 
 r[bif.rxfuncdrop.registered]
 A name that this program had [RXFUNCADD](rxfuncadd.md) register for a [library
-it could not find](r:bif.rxfuncadd.unknown-library) is removed, and the answer is `0`. The
+it could not find](r:bif.rxfuncadd.unknown-library) is removed, and the answer
+is `0`. The
 name is compared without regard to case, as
 [RXFUNCQUERY](rxfuncquery.md) does. Afterwards the name is no longer
 available, and a call of it raises `SYNTAX 43.1` as that of any unknown

@@ -98,7 +98,8 @@ r[bif.lastpos.result]
 Let `n` be the length of `haystack` and `m` the length of `needle`. Let `e`
 be `start`, or `n` when `start` is omitted or greater than `n`. The characters
 that the search covers are those at the positions from `e - length + 1`
-(or from 1, when that is less, or when `length` is omitted) through `e`; this is the window, and it holds
+(or from 1, when that is less, or when `length` is omitted) through `e`; this
+is the window, and it holds
 no characters when `length` is 0. When `m` is at least 1, LASTPOS returns the
 greatest position `k` such that the `m` characters of `haystack` from
 position `k` on all lie in the window and are equal under `==` to `needle`.
@@ -123,7 +124,8 @@ r[bif.lastpos.window]
 An occurrence is found only when all of it lies in the window: a `start`
 before the end of an occurrence hides it, even when the occurrence begins at
 or before `start`, and one that begins before the window is not found.
-A `length` that would reach before the first character is cut off there, and `start`
+A `length` that would reach before the first character is cut off there, and
+`start`
 is limited to `n` before `length` is applied.
 
 ```rexx
@@ -239,7 +241,8 @@ say (lastpos('x', h, n) == n) (lastpos('x', h) == '1234') (lastpos('x', h) == la
 1 1 1
 ```
 
-> **Note.** The ANSI draft (9.3.12) has no `length` argument, and defines LASTPOS by
+> **Note.** The ANSI draft (9.3.12) has no `length` argument, and defines
+> LASTPOS by
 > comparing the needle with each stretch of the haystack of its length that
 > ends at or before `start`, working backward. It does not limit `start` to
 > the length of the haystack: it reads the places past the end as blanks, so a

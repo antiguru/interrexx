@@ -106,7 +106,8 @@ g: say condition('o')~code
 93.915
 ```
 
-> **Note.** The reference manual names error 93.915 for a method option that is not
+> **Note.** The reference manual names error 93.915 for a method option that
+> is not
 > one of those allowed. The ANSI draft (9.3.24) checks the option with its
 > other arguments and raises 40.28.
 
@@ -225,7 +226,8 @@ say verify('abc', '') verify('abc', '', 'N', 3) verify('abc', '', 'N', 2, 0),
 1 3 2 0 0
 ```
 
-> **Note.** The Nomatch answer for a `length` of 0 follows the reference manual, which
+> **Note.** The Nomatch answer for a `length` of 0 follows the reference
+> manual, which
 > gives `start` for a null `reference` without a condition on `length`; the
 > ANSI draft has no `length` argument.
 
@@ -242,5 +244,6 @@ say verify('abc', 'x', 'N', 1, 0) verify('abc', 'a', 'M', 1, 0)
 ```
 
 > **Note.** VERIFY's answer, a position or `0`, is a count: it is
-> [written as a count](r:bif.index.count.answer), and whether it is a new object is
+> [written as a count](r:bif.index.count.answer), and whether it is a new
+> object is
 > [not specified](r:bif.index.count.answer.deviation.4).

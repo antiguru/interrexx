@@ -9,7 +9,8 @@ rexxref: "Functions > Built-in Functions > SYMBOL"
 # SYMBOL
 
 SYMBOL tells whether a string is a symbol and, if so, whether a variable of
-that name holds a value where SYMBOL is called. The answer is one of the three strings `BAD`,
+that name holds a value where SYMBOL is called. The answer is one of the three
+strings `BAD`,
 `VAR` and `LIT`.
 
 ## Arguments

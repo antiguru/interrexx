@@ -50,7 +50,8 @@ r[bif.abs.result]
 ABS returns the number [rounded](r:bif.index.num.round) to NUMERIC DIGITS
 digits with its sign removed, and [written](r:bif.index.num.write) in plain
 or scientific notation as that rule says, with NUMERIC DIGITS as the
-trigger. So the result has the value of the number when it is not negative, and the
+trigger. So the result has the value of the number when it is not negative,
+and the
 value of its negation when it is.
 
 ```rexx
