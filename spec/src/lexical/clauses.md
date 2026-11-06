@@ -290,13 +290,17 @@ r[lex.clauses.kinds]
 A clause that is not a null clause or a label is an assignment, an instruction
 or a command, and the first tokens decide which. If the first token is a
 symbol and the second is `=`, the clause is an
-[assignment](r:lex.clauses.assignment). Otherwise, if the first token is a
-symbol that is an [instruction keyword](r:lex.clauses.keyword), the clause is
-that instruction. A clause whose first token is a symbol and whose second
-token is `==` raises `SYNTAX 35.1` when the program is read, and so does a
-clause of the form `term[...] ==` or `term~name ==`. A clause of the form
-`term[...] = expression` or `term~name = expression` is a message assignment
-and not a command. Any other clause is a [command](r:lex.clauses.command).
+[assignment](r:lex.clauses.assignment), and if the second is an operator
+such as `+=`, it is an
+[extended assignment](r:instr.assignment.extended). Otherwise, if the first
+token is a symbol that is an [instruction keyword](r:lex.clauses.keyword),
+the clause is that instruction. A clause whose first token is a symbol and
+whose second token is `==` raises `SYNTAX 35.1` when the program is read, and
+so does a clause of the form `term[...] ==` or `term~name ==`. A clause of
+the form `term[...] = expression` or `term~name = expression` is a message
+assignment, and a clause that is a single message term, such as `o~tell` or
+`o~~tell`, is a [message instruction](r:instr.message.clause). Neither is a
+command. Any other clause is a [command](r:lex.clauses.command).
 
 ```rexx
 signal on failure name f
