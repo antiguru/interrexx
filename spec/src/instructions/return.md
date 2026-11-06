@@ -27,7 +27,10 @@ abandons. A RETURN with an expression hands its value to the caller, and a
 CALL stores it in `RESULT` as [the CALL rule](r:instr.call.result) says. A
 RETURN without an expression hands over no value, so a CALL drops `RESULT`,
 and a function call that has no value raises `SYNTAX 44.1`, as [the rule for
-a call in an expression](r:expr.terms.call.result) says.
+a call in an expression](r:expr.terms.call.result) says. The caller has its
+own ADDRESS, TRACE and NUMERIC settings back, as [the ADDRESS
+rule](r:bif.address.scope.routine), [the TRACE rule](r:bif.trace.scope) and
+[the NUMERIC rule](r:num.settings.call) say.
 
 ```rexx
 call find 6
@@ -81,38 +84,13 @@ sum: procedure
 14 caller total
 ```
 
-r[instr.return.settings]
-When a routine returns, the caller has its own settings back: the
-[ADDRESS environment](r:bif.address.scope.routine), the [trace
-setting](r:bif.trace.scope) and the [NUMERIC settings](r:num.settings.call)
-that the routine changed are lost, whether or not the routine started with
-PROCEDURE.
-
-```rexx
-address alpha
-numeric digits 5
-call change
-say address() digits() trace()
-exit
-change:
-  address beta
-  numeric digits 12
-  call trace 'O'
-  say address() digits() trace()
-  return
-```
-
-```output
-BETA 12 O
-ALPHA 5 N
-```
-
 ## Returning from a program, a method or a routine directive
 
 r[instr.return.program]
-A RETURN outside any internal routine ends the program, as [EXIT](exit.md)
-does, and its value is the program's value, whose use as the exit code is
-[specified with EXIT](r:instr.exit.code). This holds for a RETURN inside a
+A RETURN in the code of the main program, outside any internal routine,
+method or routine directive, ends the program, as [EXIT](exit.md) does, and
+its value is the program's value, whose use as the exit code is [specified
+with EXIT](r:instr.exit.code). This holds for a RETURN inside a
 DO, IF or SELECT, and for a RETURN after a label that the program reached by
 running into it, since no CALL started that code. A RETURN without an
 expression gives no value and the exit code 0.

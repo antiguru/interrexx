@@ -23,14 +23,14 @@ names are those of [the variables chapter](r:expr.variables.stem), and
 r[instr.procedure.scope]
 After PROCEDURE the routine sees none of its caller's variables: a name that
 the caller has set is unset in the routine, and a variable that the routine
-sets belongs to the routine and is gone when it returns. The arguments stay
-available through `ARG`. A routine that does not start with PROCEDURE, and a
-routine it calls without PROCEDURE, work on the variables of the routine that
-called them.
+sets belongs to the routine and is gone when it returns. The arguments the
+routine was called with stay available through `ARG`. A routine that does not
+start with PROCEDURE, and a routine it calls without PROCEDURE, work on the
+variables of the routine that called them.
 
 ```rexx
 a = 'caller a'
-call hidden
+call hidden 'p'
 say a symbol('b')
 call shared
 say a symbol('b')
@@ -38,7 +38,7 @@ call bare
 say a symbol('b') symbol('c')
 exit
 hidden: procedure
-  say symbol('a') arg(1)
+  say symbol('a') arg() arg(1)
   a = 'hidden a'
   b = 'hidden b'
   return
@@ -56,7 +56,7 @@ setter:
 ```
 
 ```output
-LIT 
+LIT 1 p
 caller a LIT
 shared a VAR
 VAR
@@ -64,16 +64,15 @@ shared a VAR LIT
 ```
 
 r[instr.procedure.first]
-PROCEDURE has to be the first instruction that runs after a CALL or a
-function call has reached the label of an internal routine. Labels and null
-clauses, which are comments and semicolons, may stand between that label and
-the PROCEDURE. Any other clause before it, a NOP included, makes it a
-misplaced one, and so does a PROCEDURE inside a DO or IF, in the text of an
-INTERPRET, in the main program, in a method or in a routine of a `::ROUTINE`
-directive, after a SIGNAL to its label, and a second PROCEDURE in the same
-routine. A misplaced PROCEDURE raises `SYNTAX 17.1` when it runs. In the
-example with a loop, the handler's RETURN leaves the failing routine, as [the
-rule on a jump out of a routine](r:instr.signal.routine) says.
+Nothing but labels and null clauses, which are comments and semicolons, may
+run between the label of an internal routine, once a CALL or a function call
+has reached it, and the PROCEDURE. Any other clause before it, a NOP included,
+makes it a misplaced one, and so does a PROCEDURE inside a DO or IF, in the
+text of an INTERPRET, in the main program, in a method or in a routine of a
+`::ROUTINE` directive, after a SIGNAL to its label, and a second PROCEDURE in
+the same routine. A misplaced PROCEDURE raises `SYNTAX 17.1` when it runs. In
+the example with a loop, the handler's RETURN leaves the failing routine, as
+[the rule on a jump out of a routine](r:instr.signal.routine) says.
 
 ```rexx
 call ok1
@@ -184,7 +183,8 @@ variable is the caller's variable: the routine reads its value, and an
 assignment in the routine changes the caller's variable. A name the caller has
 not set stays unset in the routine, and setting it in the routine sets it in
 the caller. A name that is not listed is the routine's own. The names are
-variable symbols separated by blanks, and they are taken in upper case.
+variable symbols separated by [whitespace](r:conv.string.whitespace), and they
+are taken in upper case. A name may be listed twice.
 
 ```rexx
 a = 1; b = 2; c = 3
@@ -285,15 +285,21 @@ main x+ main y LIT
 ## The list form
 
 r[instr.procedure.list]
-A name in parentheses is not exposed as it stands. The value of the variable,
-as the caller has it, is converted to a string as [the DROP list
-rule](r:instr.drop.list) describes, split at
+A name in parentheses is not exposed as it stands. The name may be a simple, a
+stem or a compound symbol. It is exposed first, as a name outside parentheses
+is, and its value in the routine after that is converted to a string as [the
+DROP list rule](r:instr.drop.list) describes, split at
 [whitespace](r:conv.string.whitespace), and each word is exposed as if it had
-been written in the clause, as a simple, stem or compound symbol. A list
-that is empty or all whitespace exposes nothing. The variable that holds the
-list is exposed too, so the routine sees it and an assignment to it reaches
-the caller. Blanks may stand inside the parentheses, and one list may follow
-another without a blank.
+been written in the clause, as a simple, stem or compound symbol. A list that
+is empty or all whitespace exposes nothing. The variable that holds the list
+is exposed too, so the routine sees it and an assignment to it reaches the
+caller. For a compound name whose tail has a variable, the tail is resolved
+with the routine's variables. While that variable is still the routine's own
+unset one, the list is the compound name itself, in capitals and with the tail
+as written, which is then exposed as a name of the clause would be; whether an
+earlier name of the clause can change that is the matter of [the deviation
+rule](r:instr.procedure.deviation.70). Blanks may stand inside the
+parentheses, and one list may follow another without a blank.
 
 ```rexx
 x = 'X'; y = 'Y'; s.1 = 's1'; i = 1
@@ -321,6 +327,19 @@ VAR VAR VAR LIT s1
 x set Y s2 set new list
 new list
 new list
+```
+
+```rexx
+i = 1; a.1 = 'x'; x = 'X'
+call f
+exit
+f: procedure expose (a.i)
+  say symbol('x') symbol('a.1') symbol('a.i') a.i
+  return
+```
+
+```output
+LIT VAR LIT A.I
 ```
 
 r[instr.procedure.list.error]

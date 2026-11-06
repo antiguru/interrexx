@@ -2,7 +2,7 @@
 element: EXIT
 kind: instruction
 syntax: "EXIT [expression [, expression]...]"
-ansi: "6.3.2.60, 8.3.8"
+ansi: "6.3.2.61, 8.3.8"
 rexxref: "Keyword Instructions > EXIT"
 ---
 
@@ -108,6 +108,33 @@ a
 in f
 ```
 
+r[instr.exit.end.unit]
+A method or a routine of a `::ROUTINE` directive that runs past its last
+clause is different: it returns to its sender without a value, as [a RETURN
+without an expression](r:instr.return.unit) does, and the program goes on.
+
+```rexx
+signal on syntax name e
+.box~new~m
+say 'a' symbol('result')
+call r
+say 'b' symbol('result')
+say 'c' .box~new~m
+e: say condition('o')~code
+exit
+::class box
+::method m
+  nop
+::routine r
+  nop
+```
+
+```output
+a LIT
+b LIT
+91.999
+```
+
 ## The expression
 
 r[instr.exit.value]
@@ -146,18 +173,24 @@ Array
 
 r[instr.exit.code]
 The value of the main program, which is that of its EXIT or of a RETURN that
-ends it, becomes the exit code of the process in this way. A string that has
-the form of a [whole-number argument](r:conv.whole.form), and that is a
-whole number from -2147483648 to 2147483647, is handed to the host as that
-integer. Blanks around the number, an exponent, and a decimal part of zeros
-do not matter. An exit code from 0 to 255 is the exit status itself. What a
-host makes of an integer outside 0 to 255 is not specified: Unix-like hosts
-keep its low eight bits, so that 257 and -1 give 1 and 255, and another host
-may report the integer as it is. Any other value gives the exit code 0 and
-raises no error: no value, a fraction, a string that is no number, a whole
-number outside the 32-bit range, and an object whose string value is none of
-these. The book does not specify a value with more than 17 significant
-digits.
+ends it, becomes the exit code of the process in this way. A value that is
+not a string is first replaced by a string as [the conversion
+rule](r:conv.string.object) says. A string that has the form of a
+[whole-number argument](r:conv.whole.form), and that is a whole number from
+-2147483648 to 2147483647, is handed to the host as that integer. Blanks
+around the number, an exponent, and a decimal part of zeros do not matter.
+What a host makes of an integer outside 0 to 255 is not specified. Any other
+value gives the exit code 0 and raises no error: no value, a fraction, a
+string that is no number, a whole number outside the 32-bit range, and an
+object whose string is none of these. A string of more than 18 digits, zeros
+included, is not specified.
+
+> **Note.** Unix-like hosts keep the low eight bits of the integer, so that
+> 257 and -1 give 1 and 255; another host may report the integer as it is.
+> An expression such as `-2147483647` is not a string but a negation, whose
+> result is rounded at the NUMERIC DIGITS setting, so `exit -2147483647`
+> gives 0 and `exit -1073741823` gives 4, while the strings `'-2147483647'`
+> and `'-1073741823'` give 1.
 
 ```rexx
 say 'done'
@@ -215,6 +248,13 @@ exit 2147483649
 ```
 
 ```output
+```
+
+```rexx
+exit .mutablebuffer~new('13')
+```
+
+```output defect=#102 rc=13
 ```
 
 ```rexx

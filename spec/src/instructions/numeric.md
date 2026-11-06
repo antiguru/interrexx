@@ -24,8 +24,11 @@ NUMERIC DIGITS and NUMERIC FUZZ take an optional expression. The expression
 is an ordinary one, so it may use operators, variables and function calls,
 and it is evaluated before the setting changes, with the setting in force.
 Its value is then checked and stored as [the DIGITS](r:num.settings.digits)
-and [the FUZZ](r:num.settings.fuzz) rules say. The keywords may be written in
-any case, and a comment may stand between the words.
+and [the FUZZ](r:num.settings.fuzz) rules say. A comma after the
+expression is not refused when the program is read; the clause then fails as
+a value that the setting does not accept, `26.5` for DIGITS and `26.6` for
+FUZZ. The keywords may be written in any case, and a comment may stand
+between the words.
 
 ```rexx
 numeric digits 5 + 5
@@ -38,6 +41,9 @@ numeric digits 100 + 0.4
 say digits()
 numeric fuzz 1 + 1
 say fuzz()
+signal on syntax name e
+interpret 'numeric digits 5, 6'
+e: say condition('o')~code digits()
 ```
 
 ```output
@@ -46,6 +52,7 @@ say fuzz()
 3
 100
 2
+26.5 100
 ```
 
 r[instr.numeric.default]
@@ -70,10 +77,10 @@ say digits() fuzz()
 
 r[instr.numeric.form]
 NUMERIC FORM has four shapes. The symbol SCIENTIFIC or ENGINEERING, in any
-case, sets the form directly. The keyword `VALUE` followed by an expression
-sets the form to the value of the expression. An expression that does not
-start with a symbol, such as a string or a parenthesized expression, needs no
-`VALUE`. With nothing after FORM the form returns to its
+case, names the form to set. The keyword `VALUE` followed by an expression
+sets the form to the value of the expression. `VALUE` may be left out when
+the first token of the expression is not a symbol, as with a string or a
+parenthesis. With nothing after FORM the form returns to its
 [default](r:bif.form.default). The value of an expression has to be exactly
 `SCIENTIFIC` or `ENGINEERING`, in capitals, with no blanks round it and no
 abbreviation.
@@ -112,10 +119,9 @@ SCIENTIFIC
 r[instr.numeric.form.error]
 A value that is not exactly one of the two words raises `SYNTAX 25.11` when
 the instruction runs, and the form stays as it was. Lower case, mixed case,
-blanks round the word, an abbreviation and a number are all such values. A
-symbol after FORM that is neither of the two words nor VALUE is read as an
-expression without `VALUE`, and the program is refused with `25.11` when it
-is read.
+blanks round the word, an abbreviation and a number are all such values. Any
+other symbol directly after FORM, a variable or a number included, is refused
+with `25.11` when the program is read, and its value is never looked at.
 
 ```rexx
 call try "numeric form 'engineering'"
@@ -149,6 +155,7 @@ numeric form nosuch => 25.11 SCIENTIFIC
 ```
 
 ```rexx
+nosuch = 'ENGINEERING'
 say 'before'
 numeric form nosuch
 ```
