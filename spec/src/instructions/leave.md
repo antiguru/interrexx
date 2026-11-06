@@ -123,8 +123,7 @@ r[instr.leave.name]
 [name](r:instr.do.label) is `name`. The name must be a plain symbol, and the
 instruction takes nothing after it: a name that is not a symbol raises
 `SYNTAX 20.907` and extra data `21.907`. When no running block has the name,
-LEAVE raises `SYNTAX 28.3`. When two running blocks have the same name, the
-innermost is selected.
+LEAVE raises `SYNTAX 28.3`.
 
 ```rexx
 do i = 1 to 3

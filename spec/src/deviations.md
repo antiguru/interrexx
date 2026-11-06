@@ -316,8 +316,9 @@ A DO repetitor or FOR count wider than NUMERIC DIGITS raises `26.2` or
 `26.3`, or LOSTDIGITS first when that is trapped. ooRexx refuses such a count
 too while NUMERIC DIGITS is below 9. At 9 or more it runs the loop when the
 count is an unquoted integer literal of at most 18 digits, written without a
-sign, a leading zero, a decimal point or an exponent, or the value of such a
-literal carried unchanged through variables and arguments.
+sign, a leading zero, a decimal point or an exponent, or that literal's own
+value carried unchanged through variables, arguments, returns and
+collections.
 
 ## 48. Writing to a transient stream
 

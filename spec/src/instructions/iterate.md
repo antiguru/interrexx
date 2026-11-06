@@ -122,8 +122,7 @@ r[instr.iterate.name]
 `ITERATE name` selects the innermost running loop whose name is `name`. The
 names are those of [the LABEL rule](r:instr.do.label). When no running loop
 has the name, ITERATE raises `SYNTAX 28.4`. A name that is not a symbol raises
-`SYNTAX
-20.908`, and data after the name `SYNTAX 21.908`.
+`SYNTAX 20.908`, and data after the name `SYNTAX 21.908`.
 
 ```rexx
 do label outer i = 1 to 2
