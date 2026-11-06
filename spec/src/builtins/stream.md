@@ -546,10 +546,10 @@ call sysfiledelete f
 93.903
 ```
 
-> **Note.** The data is `0123456789`. The character written after `seek 2
-> write` is `W`, in place of the `1`, as the hex string shows. The position
-> `<2` is the one two characters back from the end of the data, the character
-> `8`.
+> **Note.** The data is `0123456789`. The character written after
+> `seek 2 write` is `W`, in place of the `1`, as the hex string shows. The
+> position `<2` is the one two characters back from the end of the data, the
+> character `8`.
 
 r[bif.stream.seek.line]
 With `LINE`, the offset counts [lines](r:bif.index.stream.line-end) and not

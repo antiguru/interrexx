@@ -157,8 +157,8 @@ four [] 3
 
 > **Note.** A call that reads exactly the characters that are left raises
 > nothing; only the next call, which finds none, does. The example shows the
-> condition raised after the clause that made the call, which is when a `CALL
-> ON` trap runs.
+> condition raised after the clause that made the call, which is when a
+> `CALL ON` trap runs.
 
 r[bif.charin.zero]
 When `length` is 0, CHARIN reads nothing and returns the null string. If
