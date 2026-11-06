@@ -657,9 +657,15 @@ fn row_shard(shard: usize) {
     let (rows, dropped, calls) = collect();
     let rows = shard_rows(&rows, shard);
     let outcomes: Vec<RowOutcome> = rows.iter().map(|row| evaluate(&row.kind)).collect();
-    differential_shard(shard, &rows, &outcomes, &dropped, calls);
+    // A gated differential failure must not hide this shard's exempt-set message.
+    let differential = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        differential_shard(shard, &rows, &outcomes, &dropped, calls);
+    }));
     if !refresh_requested() {
         exempt_set_shard(shard, &rows, &outcomes);
+    }
+    if let Err(payload) = differential {
+        std::panic::resume_unwind(payload);
     }
 }
 

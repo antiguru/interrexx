@@ -27,6 +27,9 @@ cargo nextest run --workspace --profile ci
 cargo test --workspace --doc
 ```
 
+Install nextest with `cargo install cargo-nextest --locked` or from a prebuilt binary
+(<https://nexte.st>); `cargo test --workspace` runs the same tests, more slowly.
+
 `docs/developing.md` covers running the tests and both interpreters safely; `docs/design/`
 describes the implementation.
 
