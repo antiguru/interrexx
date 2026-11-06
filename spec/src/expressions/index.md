@@ -142,9 +142,9 @@ infix operator without the operand it needs, which includes an empty pair of
 parentheses, raises `35.1`. A prefix operator without an operand raises
 `35.901` instead, as [the arithmetic](r:expr.arithmetic.missing) and
 [the logical](r:expr.logical.prefix) rules say, and a message operator
-without a message name raises `19.909`. The fault is found when the program is read,
-before any clause of it runs, so the program writes nothing and exits with
-`256` minus the error number, as [the read rule](r:lex.index.read-first)
+without a message name raises `19.909`. The fault is found when the program
+is read, before any clause of it runs, so the program writes nothing and exits
+with `256` minus the error number, as [the read rule](r:lex.index.read-first)
 says. In the text of an INTERPRET instruction the same errors are ordinary
 conditions that a trap can handle.
 

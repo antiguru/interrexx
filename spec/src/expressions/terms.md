@@ -2,7 +2,7 @@
 element: "Terms"
 kind: concept
 ansi: "7.4.1, 7.4.9"
-rexxref: "Terms, Expressions, and Operators > Terms and Expressions"
+rexxref: "General Concepts > Terms, Expressions, and Operators > Terms and Expressions"
 ---
 
 # Terms
@@ -35,10 +35,10 @@ str 12 var 3 3 2 2
 
 r[expr.terms.string]
 The value of a literal string is the one that [the lexical
-rule](r:lex.literals.string) gives, and that of a [hexadecimal](r:lex.literals.hex)
-or [binary](r:lex.literals.bin) string is the characters it spells. A literal
-is not a number until an operation reads it as one, so `'007'` keeps its
-zeros.
+rule](r:lex.literals.string) gives, and that of a
+[hexadecimal](r:lex.literals.hex) or [binary](r:lex.literals.bin) string is
+the characters it spells. A literal is not a number until an operation reads
+it as one, so `'007'` keeps its zeros.
 
 ```rexx
 say 'Don''t' "say ""no""" '41 42'x '01000001'b

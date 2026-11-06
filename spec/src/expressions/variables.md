@@ -2,7 +2,7 @@
 element: "Variables"
 kind: concept
 ansi: "7.3, 7.3.1"
-rexxref: "Terms, Expressions, and Operators > Terms and Expressions"
+rexxref: "General Concepts > Terms, Expressions, and Operators > Terms and Expressions"
 ---
 
 # Variables
@@ -18,13 +18,18 @@ to, and the way a compound symbol becomes a name.
 
 r[expr.variables.value]
 A variable symbol has the value that the variable was last assigned. A
-variable that has never been assigned, or that has been dropped, is unset,
-and the value of its symbol is the name of the symbol, in upper case, or for
-a compound symbol its [derived name](r:expr.variables.compound). [The
-SYMBOL function](r:bif.symbol.result) tells the two states apart: it answers
-`VAR` for a variable that has a value and `LIT` for one that has none.
-Reading an unset variable is what the NOVALUE condition reports when it is
-enabled, and the conditions chapter specifies it.
+simple or compound variable that has never been assigned, or that has been
+dropped, is unset, and the value of its symbol is the name of the symbol, in
+upper case, or for a compound symbol its
+[derived name](r:expr.variables.compound). [The SYMBOL
+function](r:bif.symbol.result) tells the two states apart: it answers `VAR`
+for a variable that has a value and `LIT` for one that has none. Reading an
+unset variable is what the NOVALUE condition reports when it is enabled, and
+the conditions chapter specifies it. A stem symbol is never unset in this
+sense, because its value is a `Stem` in every state, as
+[the stem rule](r:expr.variables.stem) says: reading one that was never
+assigned raises no NOVALUE, and SYMBOL answers `LIT` for it only until it has
+been read, after which it, and a dropped stem symbol, answer `VAR`.
 
 ```rexx
 say foo symbol('foo')
@@ -38,6 +43,26 @@ say foo symbol('foo')
 FOO LIT
 bar VAR
 FOO LIT
+```
+
+```rexx
+signal on novalue name trap
+say symbol('s.')
+x = s.
+say x symbol('s.')
+drop d.
+say symbol('d.')
+say e.
+say e.1
+trap: say 'NOVALUE' condition('d')
+```
+
+```output
+LIT
+S. VAR
+VAR
+E.
+NOVALUE E.1
 ```
 
 r[expr.variables.stem]
@@ -78,13 +103,13 @@ two Q. 1
 r[expr.variables.compound]
 The variable that a compound symbol names has a name derived from the symbol.
 The symbol has a stem and a tail, [as the lexical
-rule](r:lex.symbols.variable) splits it. The stem is used as written. The tail is split at its periods into
-components, and each component that is a symbol starting with a letter, `!`,
-`?` or `_` is replaced by the value of the variable of that name, or by its
-own name in upper case when that variable is unset. A component that starts
-with a digit is not replaced, nor is an empty component, such as the one
-that follows a period at the end of the symbol. The name is the stem and the
-components joined by periods.
+rule](r:lex.symbols.variable) splits it. The stem is used as written. The tail
+is split at its periods into components, and each component that is a symbol
+starting with a letter, `!`, `?` or `_` is replaced by the value of the
+variable of that name, or by its own name in upper case when that variable is
+unset. A component that starts with a digit is not replaced, nor is an empty
+component, such as the one that follows a period at the end of the symbol. The
+name is the stem and the components joined by periods.
 
 ```rexx
 k = 3; z = 'zed'; !q = 'bang'

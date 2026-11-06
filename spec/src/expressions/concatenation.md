@@ -2,7 +2,7 @@
 element: "Concatenation"
 kind: concept
 ansi: "7.4.6"
-rexxref: "Terms, Expressions, and Operators > String Concatenation"
+rexxref: "General Concepts > Terms, Expressions, and Operators > String Concatenation"
 ---
 
 # Concatenation
