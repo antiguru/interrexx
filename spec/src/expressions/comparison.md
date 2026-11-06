@@ -2,7 +2,7 @@
 element: "Comparison operators"
 kind: concept
 ansi: "7.4.7"
-rexxref: "General Concepts > Terms, Expressions, and Operators > Comparison"
+rexxref: "Terms, Expressions, and Operators > Operators > Comparison"
 ---
 
 # Comparison operators
@@ -50,21 +50,38 @@ The not sign in `\=` and in the other operators that start with it may be
 written as `'AA'x` or `'AC'x`, as [the not rule](r:lex.operators.not) says, so
 the spellings above have more than one form. A `\` that does not start one of
 these operators is a [logical prefix](r:expr.logical.prefix). A comparison
-operator that stands where its first operand should be, as in `= 1`, raises
-`SYNTAX 35.1`.
+operator that stands where its first operand should be, as in `(= 1)`, raises
+`SYNTAX 35.1`. A program file with that error runs no clause and exits with
+`256` minus the error number, as the second example shows, and the text of an
+INTERPRET instruction raises it as an ordinary condition, as the last one
+shows.
 
 ```rexx
 say (1 \= 2) (1 \== 1) (1 \< 2) (1 \>> 2)
 n = 'aa'x
 interpret 'say (1' n'= 2) (1' n'== 1)'
-signal on syntax name e
-interpret '= 1'
-e: say condition('o')~code
 ```
 
 ```output
 1 0 0 1
 1 0
+```
+
+```rexx
+say 'not reached'
+say (= 1)
+```
+
+```output rc=221
+```
+
+```rexx
+signal on syntax name e
+interpret 'say (= 1)'
+e: say condition('o')~code
+```
+
+```output
 35.1
 ```
 
@@ -74,8 +91,7 @@ r[expr.comparison.kind]
 A normal comparison compares its operands as numbers when both are numbers and
 as text when either one is not, as [the numeric comparison
 rule](r:num.comparison.when) says, and a strict comparison always compares
-text. The operands of a comparison are strings of any value, and none raises
-an error. The same two strings may therefore compare unequal as text and equal
+text. The same two strings may therefore compare unequal as text and equal
 as numbers, such as `'1.0'` and `'1'`, and the operator decides which of the
 two comparisons is made.
 
@@ -165,12 +181,13 @@ r[expr.comparison.object]
 A comparison is a message to its left operand, as [the operator
 rule](r:expr.messages.operator) says, and an object that does not define the
 ordering messages raises `SYNTAX 97.1` for `<` and for the other ordering
-operators, normal and strict. Every object understands `=`, `\=`, `==`, `\==`,
-`<>` and `><`, and by default they ask whether the two operands are the same
-object. A string on the left compares the text of the right operand, which for
-an instance of a program's own class that has no `MAKESTRING` method is the
-text such as `an O`, and which this book does not specify for the other
-classes.
+operators, normal and strict. The equality messages that every object
+understands are those of [the default rule](r:expr.messages.default). A string
+on the left compares the string that [the conversion
+rule](r:conv.string.object) makes of the right operand, which for an instance
+of a program's own class that has no `MAKESTRING` method is the text such as
+`an O`. This book does not specify the comparison with `.nil`, because
+`'The NIL object' = .nil` is `0` although `.nil` writes that text.
 
 ```rexx
 a = .array~new

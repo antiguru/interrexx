@@ -2,7 +2,7 @@
 element: "Arithmetic operators"
 kind: concept
 ansi: "7.4.2, 7.4.3, 7.4.4, 7.4.5"
-rexxref: "General Concepts > Terms, Expressions, and Operators > Arithmetic"
+rexxref: "Terms, Expressions, and Operators > Operators > Arithmetic"
 ---
 
 # Arithmetic operators
@@ -103,12 +103,11 @@ bad: say arg(1) '=>' condition('o')~code
 
 r[expr.arithmetic.number]
 Both operands of an infix operator, and the operand of a prefix one, must be
-[numbers](r:num.index.form). A string that is not a number raises
-`SYNTAX 41.1`. The null string and a string of blanks are not numbers, so they
-raise it too, as do a symbol with no value, whose value is its own name, and a
-string that begins like a number and carries other characters after it. Which
-operand is wrong makes no difference to the code, and the base of `**` raises
-`41.1` like any left operand, where its exponent raises `26.8`.
+numbers, and a string that is not one raises `SYNTAX 41.1`, as [the operand
+rule](r:num.arithmetic.operand) says. A symbol with no value is such a string,
+because its value is its own name. Which operand is wrong makes no difference
+to the code, and the base of `**` raises `41.1` like any left operand, where
+its exponent raises `26.8`.
 
 ```rexx
 call try '"ten" + 1'
@@ -179,14 +178,13 @@ f(1) + "ten" / 0 => 41.1
 ```
 
 r[expr.arithmetic.zero]
-A divisor of zero in `/`, `%` or `//` raises `SYNTAX 42.3`, for a dividend of
-zero as for any other. The value of `0 ** 0` is `1`, and a zero base with a
-negative exponent raises `SYNTAX 42.903`, as [the power
-rule](r:num.arithmetic.power.error) says. An operator whose result or operands
-are too large or too small raises the errors of [the numbers
-chapter](../numbers/limits.md), such as `42.1`, `42.901` and `42.902`, and an
-operand with more digits than NUMERIC DIGITS raises the LOSTDIGITS condition,
-which is not an error unless the program traps it.
+A divisor of zero in `/`, `%` or `//` raises `SYNTAX 42.3`, as [the zero
+rule](r:num.arithmetic.zero) says. The value of `0 ** 0` is `1`, and a zero
+base with a negative exponent raises `SYNTAX 42.903`, as [the power
+rule](r:num.arithmetic.power.error) says. A result that is too large raises
+`SYNTAX 42.901`, as [the overflow rule](r:num.limits.overflow) says, and an
+operand with more digits than NUMERIC DIGITS raises the condition that [the
+lost digits rule](r:num.arithmetic.lostdigits) describes.
 
 ```rexx
 call try '7 / 0'
@@ -221,10 +219,11 @@ The operand on the left of an infix operator decides how the operator runs:
 the operator is a message to it, as [the operator
 rule](r:expr.messages.operator) says. A left operand that is an object that
 does not understand the message raises `SYNTAX 97.1`, as `.nil + 1` does. A
-right operand that is not a string is replaced by its string value and must
-then be a number, so that `1 + .nil` raises `SYNTAX 41.1`, because
-`The NIL object` is not a number. A prefix operator sends its message with no
-arguments, so `-.nil` raises `97.1` too.
+right operand that is not a string is replaced by a string as [the conversion
+rule](r:conv.string.object) says, and that string must be a number, so that `1
++ .nil` raises `SYNTAX 41.1`, because `The NIL object` is not a number. A
+prefix operator sends its message with no arguments, so `-.nil` raises `97.1`
+too.
 
 ```rexx
 call try '.nil + 1'
@@ -256,9 +255,11 @@ r[expr.arithmetic.missing]
 An infix operator that lacks an operand on either side raises `SYNTAX 35.1`,
 whether the operand is missing at the start of the expression, before a
 closing parenthesis, or at the end of the clause. A prefix `+` or `-` with
-nothing after it raises `SYNTAX 35.901` instead. A `-` at the end of a line is
-a continuation, so a clause that ends in `-` has no missing operand if the
-next line is not empty. The error is found when the program is read, so a
+nothing after it raises `SYNTAX 35.901` instead. A `-` that is the last token
+of a line is a [continuation](r:lex.clauses.continuation) and takes the line
+end with it, in a program file and in the text of an INTERPRET instruction
+alike, so it is never an operator without a right operand and no example can
+show that error for `-`. The error is found when the program is read, so a
 program file with such an error runs no clause and exits with `256` minus the
 error number.
 
@@ -280,7 +281,7 @@ say 3 * (2 +)
 
 ```rexx
 say 'not reached'
-say + 
+say +
 ```
 
 ```output rc=221

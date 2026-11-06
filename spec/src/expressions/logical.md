@@ -1,8 +1,8 @@
 ---
 element: "Logical operators"
 kind: concept
-ansi: "7.4.8, 7.4.9"
-rexxref: "General Concepts > Terms, Expressions, and Operators > Logical"
+ansi: "7.4.2, 7.4.8, 7.4.9"
+rexxref: "Terms, Expressions, and Operators > Operators > Logical"
 ---
 
 # Logical operators
@@ -94,7 +94,8 @@ either is checked, so no operator stops early. A function call in the right
 operand runs even when the left operand has already decided the answer, and an
 error in the right operand is raised before a left operand that is not a
 logical value is found out. The check then goes from left to right, so that
-for two bad operands the left one is the one the error names.
+for two bad operands the left one is the one the error names, as the message
+of the last example shows.
 
 ```rexx
 say (0 & f(1)) (1 | f(2)) (1 && f(3))
@@ -125,6 +126,16 @@ f 4
 1 | "y" => 34.901
 ```
 
+```rexx
+signal on syntax name e
+say "x" | "y"
+e: say condition('o')~message
+```
+
+```output
+Logical value must be exactly "0" or "1"; found "x".
+```
+
 r[expr.logical.prefix]
 The prefix `\` takes the one term after it, as [the prefix
 rule](r:expr.index.prefix) says, so `\ 1 = 1` is `(\ 1) = 1`, and a comparison
@@ -132,7 +143,10 @@ to be negated is put in parentheses. A `\` with no term after it raises
 `SYNTAX 35.901`. The character is an operator only in front of a term or as
 the first character of a comparison operator, so an infix `\` such as in
 `1 \ 1` raises `SYNTAX 35.1`. The sign may be written `'AA'x` or `'AC'x`, as
-[the not rule](r:lex.operators.not) says.
+[the not rule](r:lex.operators.not) says. Both errors are found when the
+program is read, so a program file with one of them exits with `256` minus the
+error number before it runs a clause, and the text of an INTERPRET instruction
+raises them as ordinary conditions.
 
 ```rexx
 say (\ 1 = 1) (\ (1 = 1)) (\ 0 > 1) (\ \ 0 = 0)
@@ -152,17 +166,35 @@ say \ => 35.901
 say 1 \ 1 => 35.1
 ```
 
+```rexx
+say 'not reached'
+say \
+```
+
+```output rc=221
+```
+
+```rexx
+say 'not reached'
+say 1 \ 1
+```
+
+```output rc=221
+```
+
 r[expr.logical.object]
 A logical operator is a message to its left operand, as [the operator
 rule](r:expr.messages.operator) says, so an object on the left that does not
-define it raises `SYNTAX 97.1`, and a string on the left checks the right
-operand's text as a logical value. A right operand that is an object is
-therefore refused with `34.901` unless its text is `0` or `1`.
+define it raises `SYNTAX 97.1`, and a string on the left checks the string
+that [the conversion rule](r:conv.string.object) makes of the right operand as
+a logical value. A right operand that is an object is therefore refused with
+`34.901` unless that string is `0` or `1`.
 
 ```rexx
 call try '.nil & 1'
 call try '1 | .nil'
 call try '\ .nil'
+call try '1 & .one~new'
 exit
 try:
   signal on syntax name bad
@@ -171,10 +203,14 @@ try:
   return
 bad: say arg(1) '=>' condition('o')~code
   return
+::class one
+::method makestring
+  return '1'
 ```
 
 ```output
 .nil & 1 => 97.1
 1 | .nil => 34.901
 \ .nil => 97.1
+1 & .one~new => 1
 ```
