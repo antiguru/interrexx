@@ -8,9 +8,8 @@ rexxref: "Functions > Built-in Functions > SYMBOL"
 
 # SYMBOL
 
-SYMBOL answers the state of the symbol that a string names: whether the
-string is a symbol at all, and if so whether a variable of that name holds a
-value where SYMBOL is called. The answer is one of the three strings `BAD`,
+SYMBOL tells whether a string is a symbol and, if so, whether a variable of
+that name holds a value where SYMBOL is called. The answer is one of the three strings `BAD`,
 `VAR` and `LIT`.
 
 ## Arguments
@@ -51,34 +50,39 @@ The answer is `BAD` when `name` is not a symbol, `VAR` when it is a symbol
 that names a variable holding a value, and `LIT` for any other symbol. A
 string is a symbol when it has at least one character and each is a letter,
 a digit, or one of `.`, `!`, `?` and `_`, as it is for
-[the symbol type of DATATYPE](r:bif.datatype.symbol); the null string, a
-string with whitespace anywhere in it, even at an end, and one with any other
-character, is `BAD`. The string is read as it is, without trimming. A
-`name` that is an object other than a string is first replaced by the answer
-of its `STRING` method, as [any string argument](r:conv.string.object) is.
+[the symbol type of DATATYPE](r:bif.datatype.symbol), and it has at most 250
+characters; the null string, a string with whitespace anywhere in it, even at
+an end, one with any other character, and one of more than 250 characters,
+whatever they are, is `BAD`. The string is read as it is, without trimming.
+A `name` that is an object other than a string is replaced by a string as
+[any string argument](r:conv.string.object) says.
 
 ```rexx
-j = 3
-say symbol('j') symbol('k') symbol('a_b') symbol('a!') symbol('a?') symbol('_')
+n = 7
+say symbol('n') symbol('p') symbol('a_b') symbol('a!') symbol('a?') symbol('_')
 say symbol('') symbol(' j') symbol('j ') symbol('a b') symbol('+5') symbol('a-b'),
     symbol('a$') symbol('"j"') symbol('é')
-say symbol(.nil) symbol(.array~new) symbol(.mutablebuffer~new('j'))
+say symbol(.nil) symbol(.array~new) symbol(.mutablebuffer~new('n'))
+say symbol(copies('a', 250)) symbol(copies('a', 251)) symbol(copies('1', 251)),
+    symbol(copies('a', 100)'.'copies('b', 149)) symbol(copies('a', 100)'.'copies('b', 150))
 ```
 
 ```output
 VAR LIT LIT LIT LIT LIT
 BAD BAD BAD BAD BAD BAD BAD BAD BAD
 BAD BAD VAR
+LIT BAD BAD LIT BAD
 ```
 
+> **Note.** The limit of 250 is on the whole string, stem and tail together.
+
 r[bif.symbol.case]
-Letters of `name` are translated to uppercase before the symbol is looked
-up, as the symbols of a program are, so `name` names the same variable in
-either case.
+SYMBOL reads `name` in uppercase, as a program reads a symbol, so `name`
+names the same variable in either case.
 
 ```rexx
-j = 3
-say symbol('j') symbol('J') symbol('k') symbol('K')
+n = 7
+say symbol('n') symbol('N') symbol('p') symbol('P')
 ```
 
 ```output
@@ -122,59 +126,87 @@ LIT
 ```
 
 r[bif.symbol.compound]
-A symbol with a period in it that does not end at the period, and that does
-not start with one, is a compound symbol: the part before the first period is
-its stem, and the parts after it are its tail. Every part of the tail that
+A symbol whose first period has at least one character after it, and that
+does not start with a period, is a compound symbol: the part before the first
+period is its stem, and the parts after it are its tail, so `a.b.` is a
+compound symbol with the tail `b.`. Every part of the tail that
 names a variable holding a value is replaced by that value, as in a
 program, and the answer is `VAR` when the compound variable so named holds a
-value, and `LIT` when it does not. The value of a tail part can be any
-string, whitespace included; it is not itself checked to be a symbol. An
-unset part of the tail stands for its own name in uppercase.
+value, and `LIT` when it does not. The value of a tail part is used as it
+is, not translated to uppercase, and can be any string, whitespace included;
+it is not itself checked to be a symbol. An unset part of the tail stands for
+its own name in uppercase.
 
 ```rexx
-j = 3
-a.3 = 'x'
-say symbol('a.3') symbol('a.j') symbol('A.J') symbol('a.4') symbol('a.k')
-drop j
-say symbol('j') symbol('a.j') symbol('a.3')
-t = 'x y'
-c.t = 1
-say symbol('c.t') symbol('c.x y')
+n = 7
+t.7 = 'x'
+say symbol('t.7') symbol('t.n') symbol('T.N') symbol('t.8') symbol('t.m')
+drop n
+say symbol('n') symbol('t.n') symbol('t.7')
+w = 'x y'
+c.w = 1
+say symbol('c.w') symbol('c.x y')
+v = 'k'
+d.k = 1
+say symbol('d.v') symbol('d.k') symbol('d.K')
+e.f. = 1
+say symbol('e.f.') symbol('e.f')
 ```
 
 ```output
 VAR VAR VAR LIT LIT
 LIT LIT VAR
 VAR BAD
+LIT VAR VAR
+VAR LIT
 ```
 
 r[bif.symbol.stem]
-A symbol that ends at its first period is a stem. A stem that has never
-been touched is `LIT`. After an assignment to the whole stem, the stem is
-`VAR`, and so is a compound variable of it that was never assigned or
-dropped, because it has the value given to the stem.
+A symbol that ends at its first period is a stem. A stem is `LIT` until the
+program refers to the stem or to a compound variable of it, and `VAR` from
+then on, also after the stem is dropped. A reference is an assignment, a
+read, a DROP of the stem or of a compound variable of it, or a call of SYMBOL
+that names a compound variable of it; a call that names the stem itself is
+not a reference. After an assignment to the whole stem, a compound variable
+of it that was never assigned or dropped is `VAR`, because it has the value
+given to the stem. A compound variable that was dropped, and every compound
+variable of a dropped stem, holds no value and is `LIT`.
 
 ```rexx
-say symbol('stem.') symbol('stem.zzz')
+say symbol('a.')
+say symbol('b.1') symbol('b.')
 stem. = 0
-say symbol('stem.') symbol('stem.zzz') symbol('other.') symbol('other.1')
+say symbol('stem.') symbol('stem.zzz') symbol('other.')
+h. = 0
+drop h.1
+say symbol('h.') symbol('h.1') symbol('h.2')
+c.1 = 5
+drop c.
+say symbol('c.') symbol('c.1')
+d = e.1
+say symbol('e.')
 ```
 
 ```output
-LIT LIT
-VAR VAR LIT LIT
+LIT
+LIT VAR
+VAR VAR LIT
+VAR LIT VAR
+VAR LIT
+VAR
 ```
 
-> **Note.** This book does not specify the answer for a stem after one of its
-> compound variables is assigned or after the stem is dropped.
+> **Note.** In the second line the call that names `b.1` is a reference to
+> `b.`, which the call after it sees; the same two calls in the other order
+> answer `LIT` `LIT`.
 
 ## Scope
 
 r[bif.symbol.scope]
 SYMBOL looks at the variables that the routine or method running it can
 see. A routine called with a PROCEDURE instruction sees none of its caller's
-variables, except the ones it EXPOSEs; in a method, an attribute is seen as
-a variable once it is exposed.
+variables, except the ones it EXPOSEs; a method sees an object variable only
+once it exposes it, and the variable is `VAR` only when it holds a value.
 
 ```rexx
 g = 1
@@ -192,6 +224,26 @@ return
 ```output
 LIT
 VAR
+```
+
+```rexx
+o = .o~new
+say o~plain '/' o~exposing '/' o~assigning '/' o~exposing
+::class o
+::attribute at
+::method plain
+return symbol('at') symbol('un')
+::method exposing
+expose at un
+return symbol('at') symbol('un')
+::method assigning
+expose at
+at = 1
+return symbol('at')
+```
+
+```output
+LIT LIT / LIT LIT / VAR / VAR LIT
 ```
 
 r[bif.symbol.result-var]

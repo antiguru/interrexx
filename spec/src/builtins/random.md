@@ -112,7 +112,8 @@ r[bif.random.result]
 RANDOM answers a whole number from `min` to `max`, both included. The
 number is written without a sign when it is not negative, with a `-` when it
 is, and with no leading zeros, point or exponent; when `min` and `max` are
-equal, the number is that value.
+equal, the number is that value. RANDOM writes every result in full at every
+NUMERIC DIGITS setting.
 
 ```rexx
 bad = 0
@@ -125,15 +126,24 @@ a = -3; b = -2; c = -1
 say bad seen.a seen.b seen.c seen.0 seen.1 seen.2
 say random(-4, -4) random(0, 0) random(999999999, 999999999),
     random(1000000000, 1000000000)
+numeric digits 3
+say random('-123456', '-123456') random(123456, 123456)
+numeric digits 1
+say random('-55', '-55') random(55, 55)
 ```
 
 ```output
 0 1 1 1 1 1 1
 -4 0 999999999 1000000000
+-123456 123456
+-55 55
 ```
 
-> **Note.** This book does not specify the number answered when it has more digits than
-> NUMERIC DIGITS.
+> **Note.** A negative number written as a literal is an expression, whose
+> prefix minus rounds the number to NUMERIC DIGITS before RANDOM is called: at
+> `numeric digits 3`, the argument `-123456` is `-1.23E+5`, and RANDOM
+> answers -123000 for it. The example passes the bounds as quoted strings,
+> which the call receives as they are.
 
 r[bif.random.range-limit]
 The range from `min` to `max` can span at most 999999999: a call with `max`
@@ -180,20 +190,22 @@ e: say condition('o')~code
 r[bif.random.seed]
 A call with a `seed` starts a new sequence from it and answers the first
 number of that sequence, taken from the range of the call. A call without a
-`seed` answers the next number of the current sequence. The numbers a seed
-gives depend on the seed and on the ranges of the calls that draw from the
-sequence, and on nothing else, so a program that seeds the sequence prints
-the same numbers on every run, and a second call with the same seed starts the
-sequence again.
+`seed` answers the next number of the current sequence. The n-th number of a
+sequence depends on the seed, on n and on the range of the n-th call, and on
+nothing else: the ranges of the calls before it play no part. A program that
+seeds the sequence therefore prints the same numbers on every run, and a
+second call with the same seed starts the sequence again.
 
 ```rexx
 say random(,, 5) random() random() random() random()
 say random(,, 5) random() random() random() random()
 say random(,, 0) random() random() random()
 say random(,, 999999999) random() random()
-say random(5, 8, 7) random(5, 8) random(5, 8)
-say random(-5, 5, 7) random(-5, 5) random(-5, 5)
+say random(11, 14, 7) random(11, 14) random(11, 14)
+say random(-7, 4, 7) random(-7, 4) random(-7, 4)
 say random(10, , 7) random(10) random(10)
+say random(0, 1, 5) random() random()
+say random(0, 999999999, 5) random() random()
 ```
 
 ```output
@@ -201,19 +213,25 @@ say random(10, , 7) random(10) random(10)
 458 880 443 106 246
 579 728 246 192
 365 926 53
-8 6 8
--2 5 -5
+14 12 14
+0 -6 0
 695 10 0
+0 880 443
+807179458 880 443
 ```
 
 r[bif.random.seed.check]
 A `seed` must not be negative: a negative seed raises `SYNTAX 40.13`. This
 check comes after the checks of the form of all three arguments, and before
 those of the range of the numbers. A seed of 0 is a seed like any other, and
-`-0` is 0. This book does not specify a seed above 999999999.
+`-0` is 0. A seed is any [whole-number argument](r:conv.whole.digits)
+that is not negative, so it is below 10\*\*18, and the sequence is the same
+for it on every run. A seed of 10\*\*18 or more raises `SYNTAX 40.12`.
 
 ```rexx
 say random(,, 0) random(,, -0) random(,, '+0')
+say random(,, 1000000000) random() random()
+say random(,, 999999999999999999) random() random()
 signal on syntax name a
 say random(,, -1)
 a: say condition('o')~code
@@ -229,16 +247,26 @@ d: say condition('o')~code
 signal on syntax name e
 say random(5, 2, 'x')
 e: say condition('o')~code
+signal on syntax name f
+say random(,, 1000000000000000000)
+f: say condition('o')~code
 ```
 
 ```output
 579 579 579
+608 162 861
+768 891 817
 40.13
 40.13
 40.13
+40.12
 40.12
 40.12
 ```
+
+> **Note.** The reference manual gives a smaller upper limit for a seed. This
+> book follows the engines, which accept every seed that is a whole-number
+> argument and give the same sequence for it.
 
 r[bif.random.scope]
 A sequence belongs to the code that runs it. A program, its internal routines

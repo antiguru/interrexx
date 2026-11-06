@@ -85,7 +85,7 @@ as [the number test](r:bif.datatype.number) defines it, and `CHAR` if it is
 not; a `type` that is [omitted](r:conv.arg.omitted) behaves as an absent one.
 
 ```rexx
-say datatype(' 12 ') datatype('') datatype('1 2') datatype('12', ) datatype('x1', )
+say datatype('  7.5 ') datatype('') datatype('1 2') datatype('12', ) datatype('x1', )
 ```
 
 ```output
@@ -100,7 +100,7 @@ Type `N` answers `1` when the string is a number: a string of the
 range](r:bif.index.num.limit) of the language. The strings that
 [a number argument](r:bif.index.num.arg) rejects with `SYNTAX 93.943` are
 exactly the strings for which `N` answers `0`: the null string, a string of
-only whitespace, a string with a character in the middle that the form does
+only whitespace, a string with a character that the form does
 not allow, and a number whose exponent is out of range. The digits of the
 string are not rounded and NUMERIC DIGITS plays no part.
 
@@ -129,7 +129,7 @@ NUMERIC DIGITS significant digits first. It is whole when the rounded value has
 no decimal places other than zeros, which are ignored, and its integer part has
 no more digits than NUMERIC DIGITS, so that a whole value too large to be
 written in full at that setting is not whole. A string that is not a number is
-not whole. Zero is whole however it is written.
+not whole. Zero, where it is a number, is whole however it is written.
 
 ```rexx
 say datatype('12', 'W') datatype('1.0', 'W') datatype('1e3', 'W'),
@@ -200,7 +200,7 @@ Type `X` answers `1` when the string is a string of hexadecimal digits, as
 [the digit rule](r:bif.index.conv.digits) defines the digits, and where a
 conversion function would raise an error for the string, `X` answers `0`:
 whitespace in the string only where [the group rule](r:bif.index.conv.groups)
-allows a gap, so that every group after the first has two digits; no
+allows a gap, so that every group after the first has an even count of digits; no
 whitespace at the start or the end; and a character that is neither a digit
 nor whitespace. The null string is a string of hexadecimal digits, while a
 string of only whitespace is not. A string with an odd number of digits is
@@ -212,19 +212,21 @@ say datatype('4a4B', 'X') datatype('4a 4B', 'X') datatype('4 4a4b', 'X'),
 say datatype('a bcde', 'X') datatype('abc def', 'X') datatype('a b', 'X'),
     datatype(' 4a', 'X') datatype('4a ', 'X') datatype(' ', 'X') datatype('4g', 'X'),
     datatype('4a' || '0a'x || '4b', 'X') datatype('4a' || '09'x || '4b', 'X')
+say datatype('ab cdef', 'X') datatype('a bcdef', 'X')
 ```
 
 ```output
 1 1 1 1 1 1
 1 0 0 0 0 0 0 0 1
+1 0
 ```
 
 r[bif.datatype.binary]
 Type `B` answers `1` when the string is a string of binary digits, with the
 same allowances as `X`: whitespace only where [the group
 rule](r:bif.index.conv.groups) allows a gap, so that every group after the
-first has four digits, none at the start or the end, and no other
-character. The null string is a string of binary digits, a string of only
+first has a count of digits that is a multiple of four, none at the start or
+the end, and no other character. The null string is a string of binary digits, a string of only
 whitespace is not. A string with a count of digits that is not a multiple of
 four is binary when it has no gap.
 
@@ -234,11 +236,13 @@ say datatype('0101', 'B') datatype('1 0101', 'B') datatype('11111 1111', 'B'),
 say datatype('0101 11', 'B') datatype('01 01', 'B') datatype('0101 ', 'B'),
     datatype(' 0101', 'B') datatype('01012', 'B') datatype(' ', 'B'),
     datatype('0101' || '0a'x || '1111', 'B') datatype('0101' || '09'x || '1111', 'B')
+say datatype('1 01010101', 'B') datatype('1 0101010', 'B')
 ```
 
 ```output
 1 1 1 1 1
 0 0 0 0 0 0 0 1
+1 0
 ```
 
 ## Letters, digits and symbols
@@ -282,9 +286,10 @@ say datatype('0', 'O') datatype('1', 'O') datatype('10', 'O') datatype('01', 'O'
 r[bif.datatype.symbol]
 Type `S` answers `1` when the string is a symbol that
 [SYMBOL](r:bif.symbol.result) does not call `BAD`: it has at least one
-character, and each is a letter, a digit, or one of `.`, `!`, `?` and `_`.
-The other characters are not symbol characters, among them `$`, `@`, `#`,
-whitespace and the null character. Case does not matter, and the string is
+character, and each is a letter, a digit, or one of `.`, `!`, `?` and `_`,
+and it has at most 250 characters; a longer string is not a symbol, whatever
+its characters. The other characters are not symbol characters, among them
+`$`, `@`, `#`, whitespace and the null character. Case does not matter, and the string is
 not translated or looked up as a variable.
 
 ```rexx
@@ -292,11 +297,14 @@ say datatype('abc', 'S') datatype('A.b', 'S') datatype('5', 'S') datatype('.', '
     datatype('a!?_', 'S') datatype('1e3', 'S')
 say datatype('', 'S') datatype('a b', 'S') datatype('a-b', 'S') datatype('$a', 'S'),
     datatype('a#', 'S') datatype('+5', 'S') datatype('"a"', 'S')
+say datatype(copies('a', 250), 'S') datatype(copies('a', 251), 'S'),
+    datatype(copies('a', 251), 'V')
 ```
 
 ```output
 1 1 1 1 1 1
 0 0 0 0 0 0 0
+1 0 0
 ```
 
 r[bif.datatype.variable]
@@ -320,9 +328,8 @@ say datatype('1a', 'V') datatype('.a', 'V') datatype('.', 'V') datatype('5.', 'V
 ## Other forms of the arguments
 
 r[bif.datatype.object]
-A `string` that is an object other than a string is first replaced by the
-answer of its `STRING` method, as [any string argument](r:conv.string.object)
-is, and so is a `type`.
+A `string` that is an object other than a string is replaced by a string as
+[any string argument](r:conv.string.object) says, and so is a `type`.
 
 ```rexx
 say datatype(.mutablebuffer~new('12'), 'N') datatype('12', .mutablebuffer~new('Whole'))
