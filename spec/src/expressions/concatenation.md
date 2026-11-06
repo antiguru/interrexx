@@ -2,7 +2,7 @@
 element: "Concatenation"
 kind: concept
 ansi: "7.4.6"
-rexxref: "General Concepts > Terms, Expressions, and Operators > String Concatenation"
+rexxref: "Terms, Expressions, and Operators > String Concatenation"
 ---
 
 # Concatenation
@@ -60,20 +60,37 @@ The operator `||` concatenates the two terms with no blank, and blanks
 around it are dropped. A line end ends the clause even after the operator,
 so a `||` at the end of a line without a
 [continuation](r:lex.clauses.continuation) leaves it without a right operand
-and raises `SYNTAX 35.1`.
+and raises `SYNTAX 35.1`. The second example shows that in a program file,
+which exits with `256` minus the error number, and the third shows it in the
+text of an INTERPRET instruction, where the end of the text ends the clause
+and the error is an ordinary condition.
 
 ```rexx
 say 'a' || 'b' 'c'||'d'
 say 'a' ||,
     'b'
+```
+
+```output
+ab cd
+ab
+```
+
+```rexx
+say 'before'
+say 'a' ||
+```
+
+```output rc=221
+```
+
+```rexx
 signal on syntax name e
 interpret "say 'a' ||"
 e: say condition('o')~code
 ```
 
 ```output
-ab cd
-ab
 35.1
 ```
 
@@ -98,17 +115,39 @@ say (1 || 2 = 12) (1 2 = '1 2')
 r[expr.concatenation.operands]
 The operands are joined as they are, so a number is not put into its normal
 form, and `1.50 || 2.0` is `1.502.0`. An operand that is an object other
-than a string is replaced by its string value first, as the string value of
-`.nil` is `The NIL object`.
+than a string is replaced by a string first, on either side of the operator,
+by [the conversion rule](r:conv.string.object): its `MAKESTRING` method when
+it has one, and its `STRING` method otherwise, with `SYNTAX 97.2` for one that
+is private. The result is a `String` also when an operand is an instance of a
+subclass of `String`, and that operand contributes its own characters.
 
 ```rexx
 say 1.50 || 2.0 007 || 7
-say 'x' .nil
+arr = .array~of(1, 2)
+say ('x' arr) ('x' .both~new) (.both~new 'x') (.nil 'x')
+say ('x' .strsub~new('sub'))~class~id
+signal on syntax name e
+say 'x' .hidden~new
+e: say condition('o')~code
+::class both
+::method makestring
+  return 'made'
+::method string
+  return 'told'
+::class strsub subclass string
+::method string
+  return 'overridden'
+::class hidden
+::method makestring private
+  return 'secret'
 ```
 
 ```output
 1.502.0 0077
-x The NIL object
+x 1
+2 x made made x The NIL object x
+String
+97.2
 ```
 
 r[expr.concatenation.sign]

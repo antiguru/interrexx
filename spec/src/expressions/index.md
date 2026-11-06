@@ -82,13 +82,13 @@ say (1 | 0 & 0) (0 & 0 = 0)
 
 r[expr.index.assoc]
 Operators of the same level are applied from left to right, whatever the
-operator: `-` and `/` are, and so is `**`, where `2**2**3` is `(2**2)**3`.
+operator: `-` and `/` are, and so is `**`, where `2**3**2` is `(2**3)**2`.
 A chain of comparisons compares the result of the first with the next
 operand, and `|` and `&&` share one level, so a chain of them is applied in
 the order written.
 
 ```rexx
-say (7 - 2 - 1) (100 / 10 / 5) (2 ** 2 ** 3)
+say (7 - 2 - 1) (100 / 10 / 5) (2 ** 3 ** 2)
 say (2 = 2 = 2) (2 = 2 = 1)
 say (1 | 1 && 1) (1 && 0 | 1)
 ```
@@ -102,18 +102,18 @@ say (1 | 1 && 1) (1 && 0 | 1)
 r[expr.index.prefix]
 A prefix operator takes the term after it, with the messages sent to that
 term, as its only operand and binds tighter than every infix operator but the
-message operators. So `-3**2` is `(-3)**2`, which is 9, and a prefix operator
+message operators. So `-2**2` is `(-2)**2`, which is 4, and a prefix operator
 before a comparison applies to the left operand alone. The right operand of
 an infix operator may itself start with a prefix operator, as in `2 ** -1`,
 and prefix operators may follow one another, as in `- - 1`.
 
 ```rexx
-say (-3 ** 2) (- 2 ** 2) (2 ** -1) (- - 1)
+say (-2 ** 2) (- 5 ** 2) (2 ** -1) (- - 1)
 say (-'abc'~length) (\ 1 = 2) (\ (1 = 2))
 ```
 
 ```output
-9 4 0.5 1
+4 25 0.5 1
 -3 0 1
 ```
 
@@ -138,8 +138,11 @@ say (7 - (2 - 1)) ((7 - 2) - 1)
 r[expr.index.syntax]
 An expression that cannot be read raises a `SYNTAX` error: a `(` with no
 matching `)` raises `36.901`, a `)` with no `(` raises `37.2`, and an
-operator without the operand it needs, which includes an empty pair of
-parentheses, raises `35.1`. The fault is found when the program is read,
+infix operator without the operand it needs, which includes an empty pair of
+parentheses, raises `35.1`. A prefix operator without an operand raises
+`35.901` instead, as [the arithmetic](r:expr.arithmetic.missing) and
+[the logical](r:expr.logical.prefix) rules say, and a message operator
+without a message name raises `19.909`. The fault is found when the program is read,
 before any clause of it runs, so the program writes nothing and exits with
 `256` minus the error number, as [the read rule](r:lex.index.read-first)
 says. In the text of an INTERPRET instruction the same errors are ordinary
@@ -174,6 +177,8 @@ call try 'say (1 + 2'
 call try 'say 1 + 2)'
 call try 'say 1 +'
 call try 'say ()'
+call try 'say 1 + \'
+call try 'say 1 ~'
 exit
 try:
   signal on syntax name bad
@@ -187,6 +192,8 @@ bad: say condition('o')~code
 37.2
 35.1
 35.1
+35.901
+19.909
 ```
 
 ## Evaluation order

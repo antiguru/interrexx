@@ -2,7 +2,7 @@
 element: "Variables"
 kind: concept
 ansi: "7.3, 7.3.1"
-rexxref: "General Concepts > Terms, Expressions, and Operators > Terms and Expressions"
+rexxref: "Terms, Expressions, and Operators > Terms and Expressions"
 ---
 
 # Variables
@@ -19,7 +19,8 @@ to, and the way a compound symbol becomes a name.
 r[expr.variables.value]
 A variable symbol has the value that the variable was last assigned. A
 variable that has never been assigned, or that has been dropped, is unset,
-and the value of its symbol is the name of the symbol, in upper case. [The
+and the value of its symbol is the name of the symbol, in upper case, or for
+a compound symbol its [derived name](r:expr.variables.compound). [The
 SYMBOL function](r:bif.symbol.result) tells the two states apart: it answers
 `VAR` for a variable that has a value and `LIT` for one that has none.
 Reading an unset variable is what the NOVALUE condition reports when it is
@@ -40,28 +41,44 @@ FOO LIT
 ```
 
 r[expr.variables.stem]
-A stem symbol names one variable, and its value is that variable's value, or
-the name of the symbol with its period, in upper case, when it is unset.
-Assigning to a stem symbol also sets the [default](r:expr.variables.default)
-of every compound variable of that stem, and discards the values that they
-had until then.
+A stem symbol names one variable, and the value of the symbol is a `Stem`
+object in every state. The string value of that object is the default
+assigned to the stem, and the name of the symbol with its period, in upper
+case, when none was. Assigning a value that is not a `Stem` to a stem symbol
+makes a new `Stem` with that value as its default, which discards the values
+that the compound variables of the stem had until then and sets their
+[default](r:expr.variables.default). Assigning a `Stem` to a variable keeps
+that object, so a stem symbol assigned to another stem symbol shares the
+compound variables of one `Stem` with it, and the string value of a shared
+`Stem` is the name it was created with. A simple variable that holds a `Stem`
+is not changed by a later assignment to the stem symbol it came from.
 
 ```rexx
 a.1 = 'one'
 say a. a.1
 a. = 'all'
-say a. a.1 a.2
+say a. a.1 a.2 a.~class~id
+z. = 'stem'; z.2 = 'two'
+y = z.
+z. = 'new'
+say y[2] z.2 y z.
+q.1 = 'one'
+r. = q.
+r.2 = 'two'
+say q.2 r. (r. == q.)
 ```
 
 ```output
 A. one
-all all all
+all all all Stem
+two new stem new
+two Q. 1
 ```
 
 r[expr.variables.compound]
 The variable that a compound symbol names has a name derived from the symbol.
-The symbol is a stem, which ends at its first period, and a tail, which is
-the rest. The stem is used as written. The tail is split at its periods into
+The symbol has a stem and a tail, [as the lexical
+rule](r:lex.symbols.variable) splits it. The stem is used as written. The tail is split at its periods into
 components, and each component that is a symbol starting with a letter, `!`,
 `?` or `_` is replaced by the value of the variable of that name, or by its
 own name in upper case when that variable is unset. A component that starts
@@ -95,8 +112,14 @@ changed, a number is not put in its normal form, and its blanks and periods
 stay. Two tails that differ in any character, even only in case or in the
 leading zeros of a number, therefore name different variables. A value that
 holds periods names the same variable as a tail written with those
-characters: `a.n` and `a.x.y` below are one variable, because `x` and `y` are
-unset and stand for `X` and `Y`.
+characters, but the value is substituted once: it is not split at its
+periods and its components are not replaced again. So `a.n` and `a.x.y`
+below are different variables when `x` is set, because the tail `x.y` is
+`1.Y`, and the same one when `x` and `y` are unset. A value that is not a
+string is replaced by a string as [the conversion rule](r:conv.string.object)
+says, as [a concatenation operand](r:expr.concatenation.operands) is, so an
+object with a `MAKESTRING` method contributes that answer and not its
+`STRING` value.
 
 ```rexx
 i = 'bar'; j = '03'; n = 'X.Y'; w = ' 1 '
@@ -109,6 +132,18 @@ say a.BAR a.bar a.i
 say a.3 a.j a.03
 say a.x.y a.n
 say a.1 a.w
+drop x y
+say a.x.y a.n
+x = 1
+say a.x.y a.n
+b = .both~new
+a.b = 'object'
+say a.MADE a.b a.TOLD
+::class both
+::method makestring
+  return 'MADE'
+::method string
+  return 'TOLD'
 ```
 
 ```output
@@ -116,14 +151,18 @@ upper upper lower
 three A.03 A.03
 dotted dotted
 A.1 blanks
+dotted dotted
+A.1.Y dotted
+object object A.TOLD
 ```
 
 r[expr.variables.default]
-A compound variable that is unset has the value of its stem variable when
-that one has a value, and the derived name otherwise. A value assigned to a
-stem symbol is in this way the default of every compound variable of the
-stem. A compound variable that has been assigned keeps its value until the
-stem is assigned again.
+A compound variable that has never been assigned has the default of its stem
+when the stem has one, and the derived name otherwise. A compound variable
+that has been assigned keeps its value until the stem is assigned again or
+the variable is dropped. A dropped compound variable has the derived name as
+its value, which overrides the default of the stem, until it or its stem is
+assigned again.
 
 ```rexx
 f. = 'dflt'
@@ -132,18 +171,24 @@ k = 'key'
 say f.1 f.2 f.k f.k.k
 g.1 = 'one'
 say g.1 g.2
+u. = 'dflt'; u.1 = 'one'; u.2 = 'two'
+drop u.1
+say u.1 symbol('u.1') u.2 symbol('u.3')
+u. = 'again'
+say u.1 u.2 symbol('u.1')
 ```
 
 ```output
 one dflt dflt dflt
 one G.2
+U.1 LIT two VAR
+again again VAR
 ```
 
 r[expr.variables.separate]
-The simple symbol `a`, the stem symbol `a.` and the compound symbols with the
-stem `a.` name different variables, and assigning to the stem symbol
-changes the compound variables and the stem and leaves the simple variable
-as it was.
+Assigning to the stem symbol `a.` changes its compound variables and leaves
+the simple variable `a`, which [is another
+variable](r:lex.symbols.variable), as it was.
 
 ```rexx
 a = 'simple'

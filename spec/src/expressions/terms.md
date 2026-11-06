@@ -2,7 +2,7 @@
 element: "Terms"
 kind: concept
 ansi: "7.4.1, 7.4.9"
-rexxref: "General Concepts > Terms, Expressions, and Operators > Terms and Expressions"
+rexxref: "Terms, Expressions, and Operators > Terms and Expressions"
 ---
 
 # Terms
@@ -20,7 +20,9 @@ A term is one of these: a [literal string](r:lex.literals.string), a
 [symbol](r:lex.symbols.kinds), a [function call](r:expr.terms.call), a
 [message term](r:expr.terms.message), an expression in
 [parentheses](r:expr.terms.paren) or an [array term](r:expr.terms.array).
-Each has a value, and that value is an object.
+Each has a value, and that value is an object. This book does not specify the
+variable reference terms, which are written with a `>` or `<` before a
+symbol.
 
 ```rexx
 v = 'var'
@@ -32,10 +34,11 @@ str 12 var 3 3 2 2
 ```
 
 r[expr.terms.string]
-The value of a literal string is its content: the characters between the
-quotes, with each doubled quote reduced to one. A hexadecimal or binary
-string has the value of the characters it spells. A literal is not changed
-by case and is not a number until an operation reads it as one.
+The value of a literal string is the one that [the lexical
+rule](r:lex.literals.string) gives, and that of a [hexadecimal](r:lex.literals.hex)
+or [binary](r:lex.literals.bin) string is the characters it spells. A literal
+is not a number until an operation reads it as one, so `'007'` keeps its
+zeros.
 
 ```rexx
 say 'Don''t' "say ""no""" '41 42'x '01000001'b
@@ -49,11 +52,11 @@ Don't say "no" AB A
 
 r[expr.terms.symbol]
 The value of a symbol term follows from the kind of symbol that
-[the lexical rules](r:lex.symbols.kinds) set. A constant symbol has its own
-characters in upper case as its value. A variable symbol has the value of the
-variable it names, which [the variables page](r:expr.variables.value)
-describes. An environment symbol has the object that the environment finds
-under its name.
+[the lexical rules](r:lex.symbols.kinds) set. The value of a [constant
+symbol](r:lex.symbols.constant) and of an [environment
+symbol](r:lex.symbols.environment) is given there. A variable symbol has the
+value of the variable it names, which [the variables
+page](r:expr.variables.value) describes.
 
 ```rexx
 x = 'val'
@@ -95,25 +98,21 @@ eval 1
 
 r[expr.terms.call.name]
 The name of a call that is a symbol is read in upper case, and the name of a
-call that is a string is used as written. The function that is called is
-looked up by that name, so `'abs'(-1)` does not find the builtin `ABS` and
-raises `SYNTAX 43.1`, as does any name that no routine has. When a name could
-be more than one routine, which one is called is specified with the
-instructions that define routines and is not part of this page.
+call that is a string is used as [the lexical rule](r:lex.literals.function)
+says, as written. The function that is called is looked up by that name, and
+any name that no routine has raises `SYNTAX 43.1`. When a name could be more
+than one routine, which one is called is specified with the instructions that
+define routines and is not part of this page.
 
 ```rexx
-say abs(-1) 'ABS'(-1)
-signal on syntax name a
-say 'abs'(-1)
-a: say condition('o')~code
+say abs(-1) Abs(-2) 'ABS'(-3)
 signal on syntax name b
 say nosuch(1)
 b: say condition('o')~code
 ```
 
 ```output
-1 1
-43.1
+1 2 3
 43.1
 ```
 
@@ -160,7 +159,9 @@ e: say condition('o')~code
 r[expr.terms.message]
 A message term is a term followed by `~` and the name of a message, written
 as a symbol or a string and optionally followed by `(` and arguments with no
-blank between them. Its value is what the receiver answers to the message.
+blank between them. The name is used in upper case, whichever way it is
+written, so `'length'` and `length` are one message. Its value is what the
+receiver answers to the message.
 Message terms chain, each applying to the value of the one before it, and a
 subscript `[ ]` after a term sends the message `[]` to it. A `~~` instead of
 a `~` discards the answer and has the receiver as its value. The messages
@@ -172,12 +173,17 @@ as messages and does not repeat the term syntax.
 ```rexx
 x = 'abc'
 say x~length x~left(2)~upper x~~reverse x~length~length
-say (10, 20, 30)[2] 'abc'~"LENGTH"
+say (10, 20, 30)[2] 'abc'~"LENGTH" 'abc'~'length'
+say .point~new~'Shown' .point~new~shown
+::class point
+::method shown
+  return 'shown'
 ```
 
 ```output
 3 AB abc 1
-20 3
+20 3 3
+shown shown
 ```
 
 r[expr.terms.array]
