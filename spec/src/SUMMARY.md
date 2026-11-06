@@ -2,6 +2,10 @@
 
 - [Introduction](introduction.md)
 - [Conventions](conventions.md)
+- [Lexical structure](lexical/index.md)
+  - [Characters](lexical/characters.md)
+  - [Comments](lexical/comments.md)
+  - [Literals](lexical/literals.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
