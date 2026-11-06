@@ -428,7 +428,7 @@ fn committed_exempt() -> BTreeMap<String, String> {
 /// How many tests the rows are spread over: the unit nextest
 /// runs in parallel is a test function. A row belongs to the shard its index
 /// in the sorted file order, modulo this count, names.
-const SHARDS: usize = 16;
+const SHARDS: usize = 32;
 
 /// The rows of one shard.
 fn shard_rows(rows: &[Row], shard: usize) -> Vec<&Row> {
@@ -741,6 +741,86 @@ fn bif_assertions_shard_14() {
 #[test]
 fn bif_assertions_shard_15() {
     row_shard(15);
+}
+
+#[test]
+fn bif_assertions_shard_16() {
+    row_shard(16);
+}
+
+#[test]
+fn bif_assertions_shard_17() {
+    row_shard(17);
+}
+
+#[test]
+fn bif_assertions_shard_18() {
+    row_shard(18);
+}
+
+#[test]
+fn bif_assertions_shard_19() {
+    row_shard(19);
+}
+
+#[test]
+fn bif_assertions_shard_20() {
+    row_shard(20);
+}
+
+#[test]
+fn bif_assertions_shard_21() {
+    row_shard(21);
+}
+
+#[test]
+fn bif_assertions_shard_22() {
+    row_shard(22);
+}
+
+#[test]
+fn bif_assertions_shard_23() {
+    row_shard(23);
+}
+
+#[test]
+fn bif_assertions_shard_24() {
+    row_shard(24);
+}
+
+#[test]
+fn bif_assertions_shard_25() {
+    row_shard(25);
+}
+
+#[test]
+fn bif_assertions_shard_26() {
+    row_shard(26);
+}
+
+#[test]
+fn bif_assertions_shard_27() {
+    row_shard(27);
+}
+
+#[test]
+fn bif_assertions_shard_28() {
+    row_shard(28);
+}
+
+#[test]
+fn bif_assertions_shard_29() {
+    row_shard(29);
+}
+
+#[test]
+fn bif_assertions_shard_30() {
+    row_shard(30);
+}
+
+#[test]
+fn bif_assertions_shard_31() {
+    row_shard(31);
 }
 
 #[expect(
