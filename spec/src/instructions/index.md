@@ -74,13 +74,14 @@ The keyword instruction names are ADDRESS, ARG, CALL, [DO](do.md),
 [ITERATE](iterate.md), [LEAVE](leave.md), [LOOP](loop.md), [NOP](nop.md),
 NUMERIC, [OPTIONS](options.md), PARSE, PROCEDURE, PULL, PUSH, QUEUE, RAISE,
 REPLY, RETURN, [SAY](say.md), SELECT, SIGNAL, TRACE and USE. A clause that is
-not an assignment and whose first token is one of these names is that instruction, whatever the case of the name. A name that is not
-on the list starts no keyword instruction. A clause that begins with such a
-name is a command, so that the name is evaluated as an expression like any
-other symbol. The names of directives and of builtin functions are not
-keywords: `endlocal` as a clause is a command, and so are `class` and
-`method` without colons. The words THEN, ELSE, END, WHEN and OTHERWISE are
-the exception, and [the next rule](r:instr.index.parts) covers them.
+not an assignment and whose first token is one of these names is that
+instruction, whatever the case of the name. A name that is not on the list
+starts no keyword instruction. A clause that begins with such a name is a
+command, so that the name is evaluated as an expression like any other symbol.
+The names of directives and of builtin functions are not keywords: `endlocal`
+as a clause is a command, and so are `class` and `method` without colons. The
+words THEN, ELSE, END, WHEN and OTHERWISE are the exception, and [the next
+rule](r:instr.index.parts) covers them.
 
 ```rexx
 address nosuch
