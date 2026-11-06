@@ -803,12 +803,12 @@ The number argument must be a string of the [whole-number form](r:conv.whole.for
 which is also the form of a Rexx number, but its value need not be whole. Any
 other string raises `SYNTAX 93.943`, the null string and a string of only
 whitespace among them. An argument that is an object other than a string is
-first replaced by the answer of its `STRING` method, as
-[any string argument](r:conv.string.object) is.
+first [replaced by a string](r:conv.string.object), as any string argument
+is, and that string must be a number.
 
 ```rexx
 say abs(' + 2.50E1 ') abs('.5') abs('5.') abs('-' || '09'x || ' 7')
-say abs(.mutablebuffer~new('-7'))
+say abs(.mutablebuffer~new('-7')) abs(.array~of('-4'))
 signal on syntax name a
 say abs('')
 a: say condition('o')~code
@@ -828,13 +828,17 @@ e: say condition('o')~code
 
 ```output
 25.0 0.5 5 7
-7
+7 4
 93.943
 93.943
 93.943
 93.943
 93.943
 ```
+
+> **Note.** The ANSI draft raises `SYNTAX 40.11` for a string that does not
+> have the form of a number, where ooRexx, which this book follows, raises
+> 93.943.
 
 r[bif.index.num.limit]
 A nonzero number is a number only within the exponent range of the
@@ -893,16 +897,56 @@ say abs('0.45') abs('0.55') abs('25') abs('-4.9')
 0.5 0.6 3E+1 5
 ```
 
+r[bif.index.num.overflow]
+The rounding of the rule above can carry into a new first digit, one power
+of ten higher than the first digit of the number. When that power is above
+999999999, the call raises `SYNTAX 42.901`, although the number is within
+the [limits](r:bif.index.num.limit) before it is rounded. SIGN raises it
+too, for the same numbers, although its answer does not otherwise depend on
+NUMERIC DIGITS. In TRUNC and FORMAT the error comes after the checks of the
+arguments that their pages list, and in FORMAT before the checks of the fit
+of its result.
+
+```rexx
+numeric digits 1
+say abs('94e999999998') sign('94e999999998')
+signal on syntax name a
+say abs('99999e999999995')
+a: say condition('o')~code
+signal on syntax name b
+say sign('-95e999999998')
+b: say condition('o')~code
+signal on syntax name c
+say format('99999e999999995', 0)
+c: say condition('o')~code
+signal on syntax name d
+say format('99999e999999995', -1)
+d: say condition('o')~code
+numeric digits 9
+signal on syntax name e
+say abs('9.999999995e999999999')
+e: say condition('o')~code
+```
+
+```output defect=#78
+9E+999999999 1
+42.901
+42.901
+42.901
+93.906
+42.901
+```
+
 r[bif.index.num.write]
 A rounded number is written in plain or in scientific notation, depending on
 a trigger value `T` that is NUMERIC DIGITS unless a page gives another. In
 plain notation the digits are written in full, a point separates the integer
 part from the decimal part when the number has decimal places, and a number
 of magnitude below 1 starts `0.`. Let `W` be the count of digits before the
-point in that notation, with a magnitude below 1 having `W` of 0 and zero
-having 1, and `S` the count of digits after the point. A number of magnitude
-1 or more is written plain when `W` is at most `T`; a number below 1 is
-written plain when `S` is at most twice `T`; any other number is written in
+point in that notation and `S` the count of digits after it. A number of
+magnitude 1 or more, and zero, is written plain when `W` is at most `T`; a
+nonzero number of magnitude below 1 is written plain when `S` is at most
+twice `T`; any other number is written in
 [scientific notation](r:bif.index.num.sci). A negative number has a `-` before
 its first character.
 
@@ -912,12 +956,14 @@ say abs(123456789) abs(1234567890) abs('-0.000000000000000001'),
 numeric digits 3
 say abs(123) abs(1234) abs('0.000001') abs('0.0000012') abs('0.000012')
 say abs('-1234.5') abs('0.000000') abs('12.30')
+say '['format(0, , , 1, 0)']' '['format(0, , , 1, 1)']' '['format('0.5', , , 1, 1)']'
 ```
 
 ```output
 123456789 1.23456789E+9 0.000000000000000001 1E-19
 123 1.23E+3 0.000001 1.2E-6 0.000012
 1.23E+3 0 12.3
+[0   ] [0] [0.5]
 ```
 
 r[bif.index.num.sci]
@@ -942,11 +988,15 @@ say abs('-1234567890') abs('2e11') abs('1.5e-19') abs('12345678e10')
 1.23456789E+9 200E+9 150E-21 123.45678E+15
 ```
 
-> **Note.** The reference manual does not state when a number is written in scientific
-> notation. The ANSI draft (9.4.2) decides it for FORMAT, and only there, from
-> the count of digits before the point and a fixed count of zeros after it,
-> where ooRexx, which this book follows, lets the limit on the zeros grow
-> with the trigger.
+> **Note.** The reference manual gives the [writing rule](r:bif.index.num.write)
+> in its chapter on numbers, as the form of every arithmetic result. The ANSI
+> draft keeps its test of the digits before the point but replaces the test
+> of the digits after it: its arithmetic (7.4.10) writes a result in
+> exponential form when more than five zeros follow the point before the first
+> digit, whatever NUMERIC DIGITS is, and its FORMAT (9.4.2) decides again, with
+> the same limit of five zeros, when `expp` or `expt` is given. So under the
+> default NUMERIC DIGITS of 9 the ANSI draft writes `'0.0000000123' + 0` as
+> `1.23E-8`, where ooRexx, which this book follows, writes `0.0000000123`.
 
 > **Note.** MAX and MIN take a list of numbers instead of one, and the next two
 > rules are theirs.

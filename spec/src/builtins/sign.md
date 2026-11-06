@@ -46,13 +46,13 @@ d: say condition('o')~code
 ## The result
 
 r[bif.sign.result]
-SIGN returns `-1` when the value of `number` is below zero, `0` when it is
-zero and `1` when it is above zero. The written form does not matter: a
+SIGN answers `-1` for a negative number, `1` for a positive one and `0`
+for zero. The written form does not matter: a
 leading `+`, whitespace, trailing zeros and an exponent change nothing, and
 neither does a zero written with a minus sign.
 
 ```rexx
-say sign('12.3') sign(' -0.307 ') sign(0.0) sign('-0') sign('+5') sign('- 5'),
+say sign('7.25') sign(' -0.041 ') sign(0.00) sign('-0') sign('+5') sign('- 5'),
     sign('0e5') sign('-0.00E-9') sign('1E3') sign('-1e-3')
 ```
 
@@ -61,10 +61,11 @@ say sign('12.3') sign(' -0.307 ') sign(0.0) sign('-0') sign('+5') sign('- 5'),
 ```
 
 r[bif.sign.digits]
-NUMERIC DIGITS plays no part in the result. Rounding a number to fewer
-digits never changes it from nonzero to zero, so a number far below the
-precision still has its sign, and so does one of any exponent that is a
-number.
+NUMERIC DIGITS plays no part in the result, except that a number whose
+rounding to NUMERIC DIGITS [overflows](r:bif.index.num.overflow) raises an
+error. Rounding a number to fewer digits never changes it from nonzero to
+zero, so a number far below the precision still has its sign, and so does
+a number with an exponent at either end of the range.
 
 ```rexx
 numeric digits 1

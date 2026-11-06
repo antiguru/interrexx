@@ -54,7 +54,7 @@ trigger. So the result has the value of the number when it is not negative, and 
 value of its negation when it is.
 
 ```rexx
-say abs('12.3') abs(' -0.307') abs('-1.500') abs('+4') abs('-1E2')
+say abs('45.6') abs(' -0.809') abs('-1.500') abs('+4') abs('-1E2')
 numeric digits 4
 say abs('-123456') abs('123.456') abs('-0.00012345')
 numeric form engineering
@@ -62,7 +62,7 @@ say abs('-123456')
 ```
 
 ```output
-12.3 0.307 1.500 4 100
+45.6 0.809 1.500 4 100
 1.235E+5 123.5 0.0001235
 123.5E+3
 ```

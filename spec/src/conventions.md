@@ -49,16 +49,28 @@ say c2x(upper('61007a'x))
 
 r[conv.string.object]
 An argument that a page calls a string and that is an object other than a
-string is replaced by the answer of its `STRING` method, and the builtin
-works on that answer. When the answer is not a string either, see
-[Deviation 30](r:conv.string.deviation.30).
+string is replaced by a string, and the builtin works on that string. When
+the object has a `MAKESTRING` method that answers a string, the replacement
+is that answer, as for an `Array` or a `MutableBuffer`. When the object has
+no `MAKESTRING` method, the replacement is the answer of its `STRING`
+method; when that answer is not a string either, see
+[Deviation 30](r:conv.string.deviation.30). This book does not specify the
+replacement when `MAKESTRING` answers an object other than a string, or for
+an object whose class defines its own `REQUEST` method.
 
 ```rexx
-say upper(.object~new) length(.array~of(1, 2))
+say upper(.object~new) upper(.both~new) upper(.mutablebuffer~new('mb'))
+say c2x(.array~of(1, 2)) length(.array~of(1, 2)~string)
+::class both
+::method makestring
+  return 'made'
+::method string
+  return 'told'
 ```
 
 ```output
-AN OBJECT 3
+AN OBJECT MADE MB
+310A32 8
 ```
 
 r[conv.string.whitespace]

@@ -102,12 +102,12 @@ When the number has fewer than `n` decimal places, zeros are added to make
 `n`. With `n` of 0 the result is the integer part alone, with no point.
 
 ```rexx
-say trunc(127.09782, 3) trunc(127.1, 3) trunc(127, 2) trunc(-12.79, 1),
+say trunc(358.46913, 2) trunc(358.4, 3) trunc(358, 1) trunc(-12.79, 1),
     trunc(0.999, 0) trunc(-5.55, 1) trunc(5.55, 1)
 ```
 
 ```output
-127.097 127.100 127.00 -12.7 0 -5.5 5.5
+358.46 358.400 358.0 -12.7 0 -5.5 5.5
 ```
 
 r[bif.trunc.plain]
@@ -144,6 +144,10 @@ say trunc(-0.5) trunc(-0.5, 2) trunc(-0.001, 2) trunc(-0.001, 3),
 ```output
 0 -0.50 0.00 -0.001 0 0.0 -1
 ```
+
+> **Note.** The ANSI draft (9.4.6) checks `number` before `n`, and raises
+> `SYNTAX 40.13` for a negative `n`, where ooRexx, which this book follows,
+> raises 93.906.
 
 ## Deviations
 

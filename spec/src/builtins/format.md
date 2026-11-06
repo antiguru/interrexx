@@ -100,14 +100,14 @@ NUMERIC DIGITS digits and [written](r:bif.index.num.write) with NUMERIC
 DIGITS as the trigger, which is what the arithmetic of `number + 0` gives.
 
 ```rexx
-say format('3') format(' - 12.73') format('1.50') format('0.000') format('-0')
+say format('3') format(' - 48.06') format('1.50') format('00.00') format('-0')
 say format('1234567890') format('0.0000000000000000001') format(5, , , , )
 numeric digits 3
 say format('1.2345') format('-1.2355') format('12345')
 ```
 
 ```output
-3 -12.73 1.50 0 0
+3 -48.06 1.50 0 0
 1.23456789E+9 1E-19 5
 1.23 -1.24 1.23E+4
 ```
@@ -117,13 +117,14 @@ r[bif.format.before]
 with its `-` when the number is negative, is padded on the left with
 blanks to `before` characters; when `before` is omitted it is not padded.
 The integer part is the characters before the point, or before the `E`
-when there is no point, so a magnitude below 1 has the integer part `0`.
+when there is no point, so in plain notation a magnitude below 1 has the
+integer part `0`.
 When the integer part, with its sign, is longer than `before`, the call raises
 `SYNTAX 93.942`. Since the integer part is never empty, a `before` of 0
 always raises it.
 
 ```rexx
-say '['format(3, 4)']' '['format(-3, 4)']' '['format(0.5, 3)']',
+say '['format(7, 3)']' '['format(-7, 3)']' '['format(0.5, 3)']',
     '['format(-12.5, 3)']' '['format(1234, 4)']'
 signal on syntax name a
 say format(-1234, 4)
@@ -138,7 +139,7 @@ say '['format(-0, 1)']' '['format(5, , 0)']'
 ```
 
 ```output
-[   3] [  -3] [  0.5] [-12.5] [1234]
+[  7] [ -7] [  0.5] [-12.5] [1234]
 93.942
 93.942
 93.942
@@ -172,7 +173,9 @@ separates them from the integer part, unless `after` is 0, when there is
 no point. This rounding follows the rounding to NUMERIC DIGITS, and it is
 not limited by it, so `after` can ask for more places than NUMERIC DIGITS.
 When `after` is omitted, the places are those the number has. A negative
-number whose value rounds to zero loses its `-`.
+number whose value rounds to zero loses its `-`. This book does not specify
+the result when the rounding to `after` carries the first digit to a power
+of ten above 999999999.
 
 ```rexx
 say format(123.456, , 2) format(123.456, , 5) format(123.456, , 0),
@@ -191,10 +194,14 @@ say format(1.2345, , 6) format(12345678, , 1) format(0.12345, , 4)
 r[bif.format.trigger]
 `expp` and `expt` control the notation. The trigger `T` of the [writing
 rule](r:bif.index.num.write) is `expt` when it is given and NUMERIC DIGITS
-otherwise, and it is applied to the number [rounded](r:bif.index.num.round) to
-NUMERIC DIGITS, before `after` is applied. An `expp` of 0 overrides it: the
-result is then always in plain notation, whatever its size. With `expp`
-omitted or above 0, the number is written in
+otherwise. The two counts of that rule are taken at different steps. `S`,
+the count of decimal places, is that of the number
+[rounded](r:bif.index.num.round) to NUMERIC DIGITS, so it does not depend on
+`after`. `W`, the count of digits before the point, is that of the number
+after the rounding to `after` as well, so a rounding that carries into a new
+integer digit can make the number scientific. An `expp` of 0 overrides the
+trigger: the result is then always in plain notation, whatever its size.
+With `expp` omitted or above 0, the number is written in
 [scientific notation](r:bif.index.num.sci) exactly when the writing rule says
 so for `T`. A `T` of 0 therefore makes every number scientific, zero
 included, unless `expp` is 0.
@@ -204,6 +211,9 @@ say format('12345.5', , , , 5) format('12345.5', , , , 4),
     format('0.00001234', , , , 4) format('0.00001234', , , , 3)
 say format('1e30', , , 0) format('1e5', , , , 5) format('1e5', , , , 6)
 say format('1e5', , , 0, 5) format('1e5', , , 3, 5) format('0.5', , , , 0)
+say format('99999.5', , 0, , 5) format('99999.4', , 0, , 5),
+    format('9999.96', , 1, , 4) format('99999.5', , 0, 0, 5)
+say format('0.000000123', , 8, , 4) format('0.00000012', , 9, , 4)
 numeric digits 3
 say format('1e5') format('1e5', , , , 6) format('1.2345', , , 1, 1)
 ```
@@ -212,6 +222,8 @@ say format('1e5') format('1e5', , , , 6) format('1.2345', , , 1, 1)
 12345.5 1.23455E+4 0.00001234 1.234E-5
 1000000000000000000000000000000 1E+5 100000
 100000 1E+005 5E-1
+1E+5 99999 1.0E+4 100000
+1.23000000E-7 0.000000120
 1E+5 100000 1.23
 ```
 
@@ -271,25 +283,40 @@ say format('1e999999999', , , 9)
 
 r[bif.format.exponent-zero]
 A number that is to be in scientific notation but whose exponent would be
-0, which is a number from 1 up to 10 (from 1 up to 1000 under NUMERIC FORM
-ENGINEERING) or zero, is written without an exponent. When `expp` is above 0,
-the result then ends with `expp + 2` blanks, the room the exponent would
-have taken; when `expp` is omitted nothing follows. An `expp` of 0 never
-writes the exponent, and adds no blanks.
+0 is written without an exponent. That number is zero, or a result, after
+the rounding to `after`, whose magnitude is at least 1 and below 10 (below
+1000 under NUMERIC FORM ENGINEERING). When `expp` is above 0, the result then
+ends with `expp + 2` blanks, the room the exponent would have taken; when
+`expp` is omitted nothing follows. An `expp` of 0 never writes the exponent,
+and adds no blanks.
 
 ```rexx
 say '['format('1.2345', , 2, , 0)']' '['format('1.2345', , 2, 2, 0)']',
     '['format('1.2345', 5, 2, 3, 0)']'
 say '['format(0, , , 1, 0)']' '['format(0, 2, 1, 0, 0)']' '['format(50, , , 2, 1)']'
+say '['format('-5', , , 1, 0)']' '['format('9.996', , 2, 1, 0)']'
 numeric form engineering
 say '['format(123, , , 2, 2)']' '['format(123, , , , 2)']' '['format(1234, , , 2, 3)']'
+say '['format('-999.4', , , 1, 2)']' '['format('999.6', , 0, 1, 2)']'
 ```
 
 ```output
 [1.23] [1.23    ] [    1.23     ]
 [0   ] [ 0.0] [5.0E+01]
+[-5   ] [1.00E+1]
 [123    ] [123] [1.234E+03]
+[-999.4   ] [1E+3]
 ```
+
+> **Note.** The ANSI draft (9.4.2) differs from ooRexx, which this book
+> follows, in three ways. It checks the arguments from left to right, so a
+> `number` that is not a number is raised before a bad count, and it raises
+> `SYNTAX 40.13` for a negative count and `SYNTAX 40.38` for a result that
+> does not fit, in the exponent or in the integer part. It decides the
+> notation before it rounds to `after`, so there a carry out of the integer
+> part does not make the number scientific: `format('99999.5', , 0, , 5)` is
+> `100000`. And it tests the zeros after the point against a fixed limit, as
+> the [note on the writing rule](r:bif.index.num.sci) says.
 
 ## Deviations
 
