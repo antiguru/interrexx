@@ -88,6 +88,9 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
     // Inside a paragraph after the first rule that belongs to no rule; it is
     // reported once, at its first line.
     let mut stray_prose = false;
+    // Inside a block quote's paragraph: Markdown continues it on any later text
+    // line until a blank line, a fence or a heading, with or without a `>`.
+    let mut in_quote = false;
     let mut err = |line: usize, message: String| {
         problems.push(Problem {
             path: path.to_path_buf(),
@@ -124,6 +127,7 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
         match fence_line(text) {
             FenceLine::Fence { ticks, info } => {
                 collecting = false;
+                in_quote = false;
                 fence = Some(Fence {
                     ticks,
                     info: info.to_string(),
@@ -134,6 +138,7 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
             }
             FenceLine::NearMiss => {
                 collecting = false;
+                in_quote = false;
                 pending_rexx = None;
                 err(
                     line,
@@ -147,11 +152,23 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
         if text.is_empty() {
             collecting = false;
             stray_prose = false;
+            in_quote = false;
             continue;
         }
         pending_rexx = None;
+        let quote_line = text.trim_start().starts_with('>');
+        let lazy = in_quote && !quote_line;
+        in_quote = quote_line || (in_quote && !text.starts_with('#'));
 
         if let Some(inner) = text.strip_prefix("r[").and_then(|t| t.strip_suffix(']')) {
+            if lazy {
+                err(
+                    line,
+                    "a rule marker directly under a block quote line is part of the quote in \
+                     Markdown; put a blank line before it"
+                        .into(),
+                );
+            }
             collecting = true;
             if is_rule_id(inner) {
                 if has_deviation_segment(inner) && deviation_number(inner).is_none() {

@@ -361,6 +361,34 @@ fn a_near_miss_rule_marker_is_reported() {
 }
 
 #[test]
+fn a_rule_marker_continuing_a_block_quote_is_reported() {
+    // FRONT is lines 1-6; the marker is line 12, after the quote's last line.
+    for quote in ["> **Note.** A note.", ">"] {
+        let text = format!("{FRONT}\nr[bif.a.b]\nText.\n\n{quote}\nr[bif.c.d]\nMore.\n");
+        let p = problems(&text);
+        assert_eq!(p.len(), 1, "{quote:?}: {p:?}");
+        assert_eq!(p[0].0, 12, "{quote:?}");
+        assert!(p[0].1.contains("block quote"), "{p:?}");
+    }
+    // A lazy continuation line keeps the quote open for the marker under it.
+    let text = format!("{FRONT}\nr[bif.a.b]\nText.\n\n> A note\nlazy.\nr[bif.c.d]\nMore.\n");
+    let p = problems(&text);
+    assert!(
+        p.iter().any(|(l, m)| *l == 13 && m.contains("block quote")),
+        "{p:?}"
+    );
+    // A blank line, a heading or a fence ends the quote.
+    for between in ["\n\n", "\n## Heading\n", "\n```text\nx\n```\n"] {
+        let text = format!("{FRONT}\nr[bif.a.b]\nText.\n\n> A note.{between}r[bif.c.d]\nMore.\n");
+        assert!(
+            problems(&text).is_empty(),
+            "{between:?}: {:?}",
+            problems(&text)
+        );
+    }
+}
+
+#[test]
 fn deviation_numbers_are_read_only_from_a_final_deviation_segment() {
     assert_eq!(deviation_number("bif.substr.deviation.4"), Some(4));
     assert_eq!(deviation_number("bif.count.answer.deviation.90"), Some(90));
