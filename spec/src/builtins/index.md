@@ -1475,8 +1475,9 @@ position at the end of the data, and the characters written before the close
 are in the file. A standard stream is closed in the same way, by
 [`CLOSE`](r:bif.stream.close) and by CHAROUT or LINEOUT given neither a string
 nor a start or line: its state is then `UNKNOWN`, and the next stream builtin
-that reads from it, writes to it or opens it opens it again on the same input
-or output, so that later reads and writes carry on. ooRexx differs, as
+that reads from it, writes to it, counts what is left in it (CHARS or LINES)
+or opens it opens it again on the same input or output, so that later reads
+and writes carry on. ooRexx differs, as
 [Deviation 98](r:bif.index.stream.lifetime.deviation.98) says.
 
 ```rexx
@@ -1513,8 +1514,7 @@ after the close can replace it. On the standard input, the same call of
 CHAROUT answers 0 and that of LINEOUT 1 in ooRexx, the state is then `ERROR`,
 and NOTREADY is raised. A `CLOSE` of the standard input has the same outcome
 on both until the program first reads from it; after a read, ooRexx can lose
-the input that the program had not read yet, and a later read can leave the
-stream in the `ERROR` state.
+the input that the program had not read yet.
 
 ```rexx
 say 'one'

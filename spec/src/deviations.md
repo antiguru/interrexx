@@ -625,18 +625,18 @@ answers `1E-7`, and after a change to NUMERIC FORM ENGINEERING it answers
 
 A close of the standard input, output or error is a logical close, as for a
 file, whether it is a `CLOSE` command of STREAM or a call of CHAROUT or
-LINEOUT that gives no string. The state is then `UNKNOWN`, and the next
-stream builtin that uses the stream opens it again on the same input or
-output, so that later reads and writes carry on. In ooRexx, output written to
-the standard output or error after the close does not appear at once: it
-appears when the program next closes, flushes or opens the stream, and what is
-written after the last of these is lost. Output written before the close can
-be lost too, as when the stream is a file and the later output replaces it.
-On the standard input, a `CLOSE` has the same outcome on both until the
-program first reads from it; after a read, ooRexx can lose the input not yet
-read, and a later read can leave the stream in the `ERROR` state. A CHAROUT
-or LINEOUT that gives no string on the standard input leaves it in the
-`ERROR` state in ooRexx and raises NOTREADY there, and LINEOUT answers 1.
+LINEOUT that gives no string. The state is then `UNKNOWN`, and the next stream
+builtin that reads from it, writes to it, counts what is left in it (CHARS or
+LINES) or opens it opens it again on the same input or output, so that later
+reads and writes carry on. In ooRexx, output written to the standard output or
+error after the close does not appear at once: it appears when the program
+next closes, flushes or opens the stream, and what is written after the last
+of these is lost. Output written before the close can be lost too, as when the
+stream is a file and the later output replaces it. On the standard input, a
+`CLOSE` has the same outcome on both until the program first reads from it;
+after a read, ooRexx can lose the input not yet read. A CHAROUT or LINEOUT
+that gives no string on the standard input leaves it in the `ERROR` state in
+ooRexx and raises NOTREADY there, and LINEOUT answers 1.
 
 ## 99. Reading the standard output or error
 

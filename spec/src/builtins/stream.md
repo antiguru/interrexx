@@ -442,11 +442,11 @@ The characters written are in the file, and the next use of the name
 open has nothing to close, and the answer is the null string. A standard
 stream is closed in the same way: `CLOSE` of the standard input, output or
 error answers `READY:` and leaves its state `UNKNOWN`, and the next stream
-builtin that reads from it, writes to it or opens it opens it again on the
-same input or output, so that later reads and writes carry on, as [the
-lifetime rule](r:bif.index.stream.lifetime) says. A `QUERY` or a `FLUSH`
-leaves the state as it was. ooRexx differs, and opens a standard output or
-error on a `FLUSH` (see [Deviation 98](r:bif.stream.deviation.98)).
+builtin that reads from it, writes to it, counts what is left in it (CHARS
+or LINES) or opens it opens it again on the same input or output, so that
+later reads and writes carry on, as [the lifetime
+rule](r:bif.index.stream.lifetime) says. A `QUERY` or a `FLUSH` leaves the
+state as it was.
 
 ```rexx
 f = 'spec-stream-close.tmp'
