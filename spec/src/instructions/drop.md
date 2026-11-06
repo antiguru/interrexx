@@ -267,10 +267,9 @@ r[instr.drop.exposed]
 A variable that a PROCEDURE EXPOSE or an EXPOSE has made visible is dropped in
 the scope that owns it: DROP of the name unsets the variable of the exposing
 scope, so the caller of the routine or the other methods of the object find it
-unset. A name
-that is not exposed names a variable of the routine or the method, and DROP
-leaves any variable of the caller with that name as it was. The same holds for
-the names in a list.
+unset. A name that is not exposed names a variable of the routine or the
+method, and DROP leaves any variable of the caller with that name as it was.
+The same holds for the names in a list.
 
 ```rexx
 x = 'outer x'; y = 'outer y'; v = 'outer v'

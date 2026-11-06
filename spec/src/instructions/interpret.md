@@ -223,9 +223,10 @@ may not hold the end of a construct that began outside it. A simple DO with no
 END raises `SYNTAX 14.1`, a SELECT with no END `14.2`, and a loop with no END
 `14.5`. An IF with no THEN raises `18.1`, a THEN with no instruction after it
 `14.3` and an ELSE with none `14.4`. An END with no construct to end raises
-`10.1`, including an END that would close a loop around the INTERPRET. A THEN, an ELSE, a WHEN and an OTHERWISE with no
-IF or SELECT before it raise `8.1`, `8.2`, `9.1` and `9.2`, in that order.
-Complete constructs run as they do in a program.
+`10.1`, including an END that would close a loop around the INTERPRET. A
+THEN, an ELSE, a WHEN and an OTHERWISE with no IF or SELECT before it raise
+`8.1`, `8.2`, `9.1` and `9.2`, in that order. Complete constructs run as they
+do in a program.
 
 ```rexx
 interpret 'do 2; say "a"; end'
