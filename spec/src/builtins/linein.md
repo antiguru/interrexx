@@ -19,7 +19,8 @@ r[bif.linein.args]
 `name` is a [string](r:conv.string.null) that names the stream; when it is
 omitted or null, the [standard input](r:bif.index.stream.std) is read. `line`
 is a line number, and `count` a count: both are
-[whole-number arguments](r:bif.index.stream.args), the line number a
+[whole-number arguments](r:bif.index.stream.args) whose
+[value](r:bif.index.stream.value) the stream rules give, the line number a
 [valid start](r:bif.index.stream.start). LINEIN is not a String method. It
 takes three arguments at the most, by the [call rules](r:bif.index.call.too-many),
 and none is required.
@@ -30,7 +31,7 @@ call sysfiledelete f
 call lineout f, 'one'
 call lineout f, 'two'
 call lineout f
-say linein(f, 2, ) linein(f, , 0)'|' linein(f, 1)
+say linein(f, 2, ) linein(f, 2, 0)'|' linein(f, 1)
 signal on syntax name a
 say linein(f, 1, 1, 1)
 a: say condition('o')~code
@@ -168,7 +169,8 @@ line 4 line 1
 r[bif.linein.zero]
 When `count` is 0, LINEIN reads nothing and returns the null string. If
 `line` is given, it still sets the read position to the start of that line;
-the next read goes on from there.
+the next read goes on from there. A `line` that the stream does not have puts
+the read position at the end of the data and raises no condition.
 
 ```rexx
 f = 'spec-linein-zero.tmp'
@@ -177,24 +179,33 @@ call lineout f, 'ab'
 call lineout f, 'cd'
 call lineout f, 'ef'
 call lineout f
+n = 0
+call on notready name nr
 say '['linein(f, 3, 0)']' charin(f, , 2) '['linein(f, 2, 0)']' linein(f)
 say '['linein(f, , 0)']' linein(f)
+x = linein(f, 9, 0)
+say '[' || x || ']' n chars(f)
 call sysfiledelete f
+exit
+nr: n = n + 1
+return
 ```
 
 ```output
 [] ef [] cd
 [] ef
+[] 0 0
 ```
 
 ## The end of the data
 
 r[bif.linein.end]
-When the read position is at the end of the data, or when `line` names a line
-that the stream does not have, LINEIN returns the null string and raises
-NOTREADY. A line number one more than the number of lines is the case for a
-stream whose last line has a line end. A stream with no characters has no
-line. The read position is then at the end of the data.
+When `count` is 1 and the read position is at the end of the data, or `line`
+names a line that the stream does not have, LINEIN returns the null string and
+raises NOTREADY. The text after a final line end is not a line: line `n + 1` of
+a stream of `n` lines is such a line number, whether or not the last line has
+a line end. A stream with no characters has no line. The read position is then
+at the end of the data.
 
 ```rexx
 f = 'spec-linein-end.tmp'
@@ -213,9 +224,16 @@ x = linein(f, 99)
 say '[' || x || ']' n chars(f)
 x = linein(f, 1)
 say '[' || x || ']' n
+call charout f
 call sysfiledelete f
 call charout f
 x = linein(f)
+say '[' || x || ']' n chars(f)
+call charout f
+call sysfiledelete f
+call charout f, 'p' || '0a'x || 'q'
+call charout f
+x = linein(f, 3)
 say '[' || x || ']' n
 call sysfiledelete f
 exit
@@ -229,7 +247,8 @@ return
 [] 2
 [] 3 0
 [only] 3
-[] 4
+[] 4 0
+[] 5
 ```
 
 r[bif.linein.missing]
@@ -272,7 +291,7 @@ the input it returns the null string and raises NOTREADY.
 ```rexx
 call on notready name nr
 x = linein()
-say '[' || x || ']' '[' || linein(, , 0) || ']'
+say '[' || x || ']' '[' || linein('', , 0) || ']'
 exit
 nr: say 'notready' condition('d')
 return

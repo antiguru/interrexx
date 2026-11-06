@@ -1283,11 +1283,13 @@ one two three four
 r[bif.index.stream.transient]
 A standard stream that is connected to a pipe is transient: it has no
 positions. A start or line number given to a transient
-stream raises `SYNTAX 93.958`, whatever its value, and after the checks of
-[the argument rule](r:bif.index.stream.args) that come before it. The examples
-of this book run with a pipe as standard input and as standard output. What
-a standard stream that is connected to anything else does with a start is
-not specified.
+stream raises `SYNTAX 93.958`, whatever its value: after the checks of
+[the argument rule](r:bif.index.stream.args) on the argument count, the form
+of the arguments and the count, and in place of that rule's check that the
+start is 1 or more. What CHAROUT does with a start that it is given together
+with the name `STDIN`, a write to the standard input, is not specified. The examples of this book run with a pipe as standard input and
+as standard output. What a standard stream that is connected to anything else
+does with a start is not specified either.
 
 ```rexx
 signal on syntax name a
@@ -1313,8 +1315,9 @@ d: say condition('o')~code
 
 r[bif.index.stream.open]
 A stream builtin opens its stream when it first uses it, and the program
-does no opening of its own. A file is opened for reading and writing. A file
-that does not exist is created by a write, and a read of it creates nothing:
+does no opening of its own. A file is opened for reading and for writing, each
+as far as the file allows; an operation that the file does not allow has the
+NOTREADY outcome that its page gives. A file that does not exist is created by a write, and a read of it creates nothing:
 it finds no characters and raises the [NOTREADY condition](r:bif.index.stream.notready).
 A stream just opened has its read position at the first character and its
 write position after the last, so a write adds to the data a file already
@@ -1367,10 +1370,13 @@ aXYZ
 
 r[bif.index.stream.lifetime]
 A stream stays open, with its positions, until the program closes it or
-ends. Closing is done by [CHAROUT given only a name](r:bif.charout.close).
-The next use of a closed name opens the stream again: the read position is
-at the start and the write position at the end of the data, and the
-characters written before the close are in the file.
+ends. [CHAROUT given only a name](r:bif.charout.close) closes a stream; the
+pages of the other stream builtins name their forms. The next use of a closed
+name opens the stream again: the read position is at the start and the write
+position at the end of the data, and the characters written before the close
+are in the file. Whether a CHAROUT or LINEOUT call that gives no string, and
+either no stream name or the name of the standard output, closes the standard
+output, and what the later output of the program does then, is not specified.
 
 ```rexx
 f = 'spec-streams-life.tmp'
@@ -1395,8 +1401,10 @@ r[bif.index.stream.notready]
 A call that cannot read, or write, as many characters as it was asked to
 raises the NOTREADY condition. That happens at the end of the data, when the
 stream cannot be opened, and when a write fails. `condition('D')` in a trap
-for it is the stream's name as the call gave it, and `condition('C')` is
-`NOTREADY`. The condition is not an error: when it is not trapped, or after
+for it is the name of the stream, and `condition('C')` is `NOTREADY`. For a
+file the name is the one the call gave, in its spelling. For the standard
+input it is `STDIN`, whatever the spelling of the name in the call and also
+when the call gave none. The condition is not an error: when it is not trapped, or after
 a `CALL ON` trap returns, the call goes on and answers what its page says.
 A trap by `SIGNAL ON NOTREADY` abandons the clause that raised it, like
 any other condition.
@@ -1412,12 +1420,20 @@ signal on notready name trapped
 x = charin(f)
 say 'not reached'
 trapped: say condition('c') condition('d') x
+call on notready name std
+x = charin('Stdin:')
+x = linein()
 call sysfiledelete f
+exit
+std: say condition('d')
+return
 ```
 
 ```output
 [ab]
 NOTREADY spec-streams-nr.tmp ab
+STDIN
+STDIN
 ```
 
 r[bif.index.stream.line-end]
@@ -1453,11 +1469,12 @@ call sysfiledelete f
 
 r[bif.index.stream.args]
 A start, a count and a line number are
-[whole-number arguments](r:conv.whole.form); they are not checked as the
-position and length arguments of [the String methods](r:conv.method) are.
+[whole-number arguments](r:conv.whole.form) with the
+[value](r:bif.index.stream.value) that the next rule gives; they are not checked
+as the position and length arguments of [the String methods](r:conv.method) are.
 The call is checked in this order. The count of arguments comes first, by
-the [call rules](r:bif.index.call.count). Then the form of every such
-argument, from left to right, raises `SYNTAX 40.12`. Then a count that is
+the [call rules](r:bif.index.call.count). Then the form and the value of every
+such argument, from left to right, raise `SYNTAX 40.12`. Then a count that is
 negative raises `SYNTAX 88.907`, and a count that the builtin's page does not
 allow raises the error that page names. Last, a [start](r:bif.index.stream.start)
 or line number that is below 1 raises `SYNTAX 93.907`.
@@ -1486,6 +1503,53 @@ call sysfiledelete f
 88.907
 93.907
 88.907
+```
+
+r[bif.index.stream.value]
+The value of a start, a count or a line number is its number rounded to 20
+significant digits; when the first digit dropped is 5 or more, the magnitude
+rounds up, otherwise down. The caller's NUMERIC DIGITS setting plays no part.
+If the rounded value has a fractional part other than zero, or its magnitude
+is more than 2\*\*63 - 1, which is 9223372036854775807, the argument raises
+`SYNTAX 40.12`; otherwise its value is that integer. This is not the rule of
+[the conventions](r:conv.whole.digits), which rounds to 18 digits and refuses
+10\*\*18 and more.
+
+```rexx
+f = 'spec-streams-value.tmp'
+call sysfiledelete f
+call charout f, 'abc'
+call charout f
+n = 0
+call on notready name nr
+x = charin(f, 1000000000000000000, 1)
+say '[' || x || ']' n
+x = charin(f, 9223372036854775807, 1)
+say '[' || x || ']' n
+numeric digits 3
+say charin(f, '1.99999999999999999999', 1) charin(f, '3.00000000000000000004', 1)
+signal on syntax name a
+say charin(f, 9223372036854775808, 1)
+a: say condition('o')~code
+signal on syntax name b
+say charin(f, '2.0000000000000000001', 1)
+b: say condition('o')~code
+signal on syntax name c
+say charin(f, 1, '1.00000000000000000005')
+c: say condition('o')~code
+call sysfiledelete f
+exit
+nr: n = n + 1
+return
+```
+
+```output
+[] 1
+[] 2
+b c
+40.12
+40.12
+40.12
 ```
 
 r[bif.index.stream.start]

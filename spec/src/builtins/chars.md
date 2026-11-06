@@ -107,8 +107,9 @@ CHARS of the standard input, or of any other transient stream, answers
 whether characters wait to be read, 0 for none and a positive number
 otherwise, and consumes none. The positive number is not specified. When the
 input is empty, as it is for the examples of this book, the answer is 0.
-ooRexx reads a character to find out, which the program then misses, and
-answers 1 when the input is empty.
+ooRexx answers 1 to some of these questions when the standard input is
+`/dev/null`, which holds no character. For an empty pipe, a pipe that holds
+data, and a file, it answers as this rule says.
 
 ```rexx
 say chars() chars('stdin')

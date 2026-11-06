@@ -20,7 +20,8 @@ r[bif.charout.args]
 `name` is a [string](r:conv.string.null) that names the stream; when it is
 omitted or null, the [standard output](r:bif.index.stream.std) is written.
 `string` is a string too. `start` is a [whole-number argument](r:bif.index.stream.args)
-and a [valid start](r:bif.index.stream.start). CHAROUT is not a String method.
+whose [value](r:bif.index.stream.value) the stream rules give, and a
+[valid start](r:bif.index.stream.start). CHAROUT is not a String method.
 It takes three arguments at the most, by the [call rules](r:bif.index.call.too-many),
 and none is required.
 
@@ -64,15 +65,15 @@ object is [not specified](r:bif.index.count.answer.deviation.4).
 ```rexx
 f = 'spec-charout-result.tmp'
 call sysfiledelete f
-say charout(f, 'hello') charout(f, ' world') charout(f, 7 * 6)
-call charout f, 'J', 1
+say charout(f, 'Jelly') charout(f, ' world') charout(f, 7 * 6)
+call charout f, 'B', 1
 say charin(f, 1, 20)
 call sysfiledelete f
 ```
 
 ```output
 0 0 0
-Jello world42
+Belly world42
 ```
 
 r[bif.charout.start]
@@ -125,7 +126,8 @@ answers 0. The characters written are in the stream afterwards, and its
 [next use](r:bif.index.stream.lifetime) opens it afresh. CHAROUT opens a stream
 that is not open in order to close it, so on a file that does not exist
 this creates it; the same is true of every call of CHAROUT, even one that
-writes nothing.
+writes nothing. Whether the call closes the standard output is
+[not specified](r:bif.index.stream.lifetime).
 
 ```rexx
 f = 'spec-charout-close.tmp'
@@ -151,8 +153,10 @@ r[bif.charout.fail]
 When the stream cannot be written, CHAROUT writes nothing, answers the number
 of characters of `string`, and raises NOTREADY. That is the case when the
 name cannot be opened for writing, as a name in a directory that does not
-exist, or a directory, and when the name is `STDIN`. A `start` is not checked
-then (see [the start rule](r:bif.index.stream.start)).
+exist, or a directory, and when the name is `STDIN`. For a name that cannot be
+opened, a `start` is not checked (see [the start rule](r:bif.index.stream.start)).
+What a `start` does together with the name `STDIN` is
+[not specified](r:bif.index.stream.transient).
 
 ```rexx
 n = 0
@@ -178,8 +182,9 @@ return
 
 r[bif.charout.std]
 Without a `name`, CHAROUT writes to the standard output, and with the name
-`STDERR` to the standard error. A `start` for a standard stream that is
-[transient](r:bif.index.stream.transient) raises `SYNTAX 93.958`.
+`STDERR` to the standard error. A `start` for the standard output or the standard
+error, when it is [transient](r:bif.index.stream.transient), raises
+`SYNTAX 93.958`.
 
 ```rexx
 call charout , 'a'
@@ -188,11 +193,18 @@ say charout(, 'c')
 signal on syntax name a
 call charout , 'd', 5
 a: say condition('o')~code
+signal on syntax name b
+call charout 'STDERR', , 3
+b: say condition('o')~code
+signal off syntax
+say charout('STDERR', 'x')
 ```
 
 ```output
 abc0
 93.958
+93.958
+0
 ```
 
 ## Deviations

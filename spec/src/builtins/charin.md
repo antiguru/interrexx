@@ -19,7 +19,8 @@ for, one when `length` is omitted.
 r[bif.charin.args]
 `name` is a [string](r:conv.string.null) that names the stream; when it is
 omitted or null, the [standard input](r:bif.index.stream.std) is read.
-`start` and `length` are [whole-number arguments](r:bif.index.stream.args).
+`start` and `length` are [whole-number arguments](r:bif.index.stream.args)
+whose [value](r:bif.index.stream.value) the stream rules give.
 CHARIN is not a String method. It takes three arguments at the most, by the
 [call rules](r:bif.index.call.too-many), and none is required. `start` is
 checked as the [stream rules](r:bif.index.stream.start) say, and `length` must
@@ -176,7 +177,7 @@ x = charin(f, 3, 0)
 say '[' || x || ']' n charin(f, , 2)
 x = charin(f, 7, 0)
 say '[' || x || ']' n chars(f)
-x = charin(f, 1, 0)
+x = charin(f, 4, 0)
 say '[' || x || ']' n chars(f)
 call sysfiledelete f
 exit
@@ -187,7 +188,7 @@ return
 ```output
 [] 0 cd
 [] 1 2
-[] 1 6
+[] 1 3
 ```
 
 r[bif.charin.missing]
@@ -233,7 +234,7 @@ raises NOTREADY.
 ```rexx
 call on notready name nr
 x = charin()
-y = charin(, , 5)
+y = charin(, , 7)
 say '[' || x || ']' '[' || y || ']' '[' || charin(, , 0) || ']'
 exit
 nr: say 'notready' condition('d')
