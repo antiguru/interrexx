@@ -68,6 +68,29 @@ check of the program's own that no recorded ooRexx outcome shares. Known excepti
 `rust/corpus/sim-oracle/`, and differences from them are reported, never gating. A failing run
 prints a replay line naming the group, part, seed and policy.
 
+## Test runners
+
+CI runs `cargo nextest run --workspace --profile ci` and then `cargo test --workspace --doc`.
+nextest runs every test as a process of its own, in parallel across binaries, where `cargo test`
+runs one binary at a time; a binary of a few long tests bounds the wall-clock time. Both runners
+are supported, so a test may not assume the process it runs in is shared with the rest of its
+binary, or that it is alone.
+
+`rust/.config/nextest.toml` holds the configuration:
+
+* The `wall-clock` test group holds the tests whose assertion is a time boundary: a signal inside
+  a sleep, a halt, a prompt before a read, a watchdog deadline. They run one at a time and claim
+  four test threads each.
+* Tests started by nextest share one oracle `XDG_RUNTIME_DIR` per run, keyed by
+  `NEXTEST_RUN_ID`, so a run starts one oracle `rxapi` and not one per test; a watcher stops it
+  after nextest has ended. Under `cargo test` each test process has a directory of its own.
+* Gate mode (`REXX_CORPUS_GATE=1`) runs under `cargo test`: the group runner's quiet-machine and
+  row bounds hold within one process, which nextest does not provide.
+* The method-body table runs against an API service directory of its own, set by a setup script:
+  its `RexxQueue create` row is stable only against a service no other test holds open.
+* `scripts/build-testbinaries.sh` and `scripts/build-extensions.sh` take a lock and skip a build
+  whose inputs are those of the build already present, so tests that need them may start at once.
+
 ## The specification checker
 
 `tests/spec.rs` loads every page under `spec/src` through `interrexx-spec` and checks that each rule

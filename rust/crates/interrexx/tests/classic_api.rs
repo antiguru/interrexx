@@ -161,7 +161,8 @@ fn run_group(dir: &str, group: &str, library_path: OsString) -> Outcome {
 /// [`run_group`] with `env` added to the run's environment.
 fn run_group_in(dir: &str, group: &str, library_path: OsString, env: &[(&str, &Path)]) -> Outcome {
     let ootest = repository().join("ootest");
-    let run = scratch().join(format!("run-{group}"));
+    // Named by process too: under nextest each test is a process, and tests share groups.
+    let run = scratch().join(format!("run-{group}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&run);
     std::fs::create_dir_all(run.join("ooRexx").join(dir)).expect("the run directory");
     let copy = |from: &Path, to: &Path| {
@@ -181,7 +182,7 @@ fn run_group_in(dir: &str, group: &str, library_path: OsString, env: &[(&str, &P
     for file in ["testOORexx.rex", "worker.rex", "ooTest.frm"] {
         copy(&ootest.join(file), &run);
     }
-    let api = scratch().join(format!("api-{group}"));
+    let api = scratch().join(format!("api-{group}-{}", std::process::id()));
     let group_file = format!("ooRexx/{dir}/{group}.testGroup");
     let mut command = rexx(
         &["testOORexx.rex", "-f", &group_file, "-U", "-V", "2"],
@@ -198,6 +199,8 @@ fn run_group_in(dir: &str, group: &str, library_path: OsString, env: &[(&str, &P
         "no summary:\n{stdout}\n{}",
         String::from_utf8_lossy(&output.stderr)
     );
+    let _ = std::fs::remove_dir_all(&run);
+    let _ = std::fs::remove_dir_all(&api);
     let mut failed = BTreeSet::new();
     let mut in_detail = false;
     for line in stdout.lines() {
@@ -216,9 +219,13 @@ fn run_group_in(dir: &str, group: &str, library_path: OsString, env: &[(&str, &P
     }
 }
 
-fn classic() -> &'static Outcome {
-    static OUTCOME: OnceLock<Outcome> = OnceLock::new();
-    OUTCOME.get_or_init(|| run_group("API/classic", "CLASSIC", library_path(true)))
+/// One run of the CLASSIC group, which every check below reads.
+#[test]
+fn the_classic_group_passes() {
+    let classic = run_group("API/classic", "CLASSIC", library_path(true));
+    the_classic_queue_memory_and_macrospace_tests_pass(&classic);
+    the_classic_function_and_subcommand_tests_pass(&classic);
+    the_whole_classic_group_passes(&classic);
 }
 
 fn assert_pass(outcome: &Outcome, tests: &[&str]) {
@@ -235,10 +242,9 @@ fn assert_pass(outcome: &Outcome, tests: &[&str]) {
 }
 
 /// Queues, memory and the macrospace through `orxclassic`'s methods, which call `librexxapi`.
-#[test]
-fn the_classic_queue_memory_and_macrospace_tests_pass() {
+fn the_classic_queue_memory_and_macrospace_tests_pass(classic: &Outcome) {
     assert_pass(
-        classic(),
+        classic,
         &[
             "TEST_01_CREATE_QUEUE",
             "TEST_02_OPEN_QUEUE",
@@ -266,10 +272,9 @@ fn the_classic_queue_memory_and_macrospace_tests_pass() {
 /// `RxFuncAdd` of a C library, a classic function calling the registration API from inside the
 /// interpreter, an entry point registered from C and called from Rexx, and registered `Dll` and
 /// `Exe` subcommand environments.
-#[test]
-fn the_classic_function_and_subcommand_tests_pass() {
+fn the_classic_function_and_subcommand_tests_pass(classic: &Outcome) {
     assert_pass(
-        classic(),
+        classic,
         &[
             "TEST_50_EXTERNALFUNCTION",
             "TEST_51_EXTERNALFUNCTION",
@@ -289,9 +294,7 @@ fn the_classic_function_and_subcommand_tests_pass() {
 /// The whole CLASSIC group, its variable-pool tests included: `RexxVariablePool` from a routine
 /// reaches its caller's variables (set, fetch and drop, direct and symbolic, the private names
 /// and `RXSHV_NEXTV`), and from a method answers `RXSHV_NOAVL`.
-#[test]
-fn the_whole_classic_group_passes() {
-    let outcome = classic();
+fn the_whole_classic_group_passes(outcome: &Outcome) {
     assert!(
         outcome.failed.is_empty() && outcome.ran == 72,
         "{:?} failed of {} run:\n{}",
@@ -694,18 +697,25 @@ fn rexx_start_runs_twice_and_from_two_activities_at_once() {
 /// `ProcessInvocation` 54 and 284, which this crate matches with no failure: `TestLoadLibrary`
 /// loads `rxmath`, which it runs in Rust.
 #[test]
-fn the_invocation_groups_run_programs_in_instances() {
-    for (group, ran, assertions) in [("INVOCATION", 55, 295), ("ProcessInvocation", 54, 284)] {
-        let outcome = run_group("API/oo", group, library_path(true));
-        let failed: Vec<&str> = outcome.failed.iter().map(String::as_str).collect();
-        assert!(
-            failed.is_empty() && outcome.ran == ran && outcome.assertions == assertions,
-            "{group}: {failed:?} failed, {} ran, {} assertions:\n{}",
-            outcome.ran,
-            outcome.assertions,
-            outcome.stdout
-        );
-    }
+fn the_invocation_group_runs_programs_in_instances() {
+    an_invocation_group_runs_programs_in_instances("INVOCATION", 55, 295);
+}
+
+#[test]
+fn the_process_invocation_group_runs_programs_in_instances() {
+    an_invocation_group_runs_programs_in_instances("ProcessInvocation", 54, 284);
+}
+
+fn an_invocation_group_runs_programs_in_instances(group: &str, ran: usize, assertions: usize) {
+    let outcome = run_group("API/oo", group, library_path(true));
+    let failed: Vec<&str> = outcome.failed.iter().map(String::as_str).collect();
+    assert!(
+        failed.is_empty() && outcome.ran == ran && outcome.assertions == assertions,
+        "{group}: {failed:?} failed, {} ran, {} assertions:\n{}",
+        outcome.ran,
+        outcome.assertions,
+        outcome.stdout
+    );
 }
 
 /// `provoke_locks`: eight threads create an instance at once, each runs a program that leaves

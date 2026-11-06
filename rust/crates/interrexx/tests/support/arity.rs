@@ -401,6 +401,16 @@ fn probe_dir(prefix: &str) -> PathBuf {
 /// The three sides for every row, plus the oracle's stdout so the harness
 /// rule can be checked separately from the verdict.
 pub fn measured(layout: &Layout) -> Vec<(Row, String)> {
+    measured_where(layout, |_| true)
+}
+
+/// The rows of one shard of the argument list, the shard a row's index in the list, modulo
+/// `shards`, names: the unit nextest runs in parallel is a test function.
+pub fn measured_shard(layout: &Layout, shard: usize, shards: usize) -> Vec<(Row, String)> {
+    measured_where(layout, |index| index % shards == shard)
+}
+
+fn measured_where(layout: &Layout, wanted: impl Fn(usize) -> bool) -> Vec<(Row, String)> {
     let receivers = layout.receivers();
     let dir = probe_dir(layout.probe_prefix);
     let path = dir.join("probe.rex");
@@ -410,7 +420,10 @@ pub fn measured(layout: &Layout) -> Vec<(Row, String)> {
     let oracle = oracle::oracle_root();
     let binary = interpreter_binary();
     let mut rows = Vec::new();
-    for (class, method, arm, list) in layout.arguments() {
+    for (index, (class, method, arm, list)) in layout.arguments().into_iter().enumerate() {
+        if !wanted(index) {
+            continue;
+        }
         if let Some(reason) = list.strip_prefix(EXEMPT) {
             rows.push((
                 Row {
@@ -558,11 +571,105 @@ pub fn table_disagreements(layout: &Layout) -> Vec<(Row, Row)> {
         .collect()
 }
 
+/// The committed table against one shard of the rows the interpreters measure: the rows of the
+/// shard that moved, beside the committed row (or a `missing` one). Under the refresh variable
+/// nothing: [`table_disagreements`] writes the whole table.
+pub fn table_disagreements_in(layout: &Layout, shard: usize, shards: usize) -> Vec<(Row, Row)> {
+    if layout.refreshing() {
+        return Vec::new();
+    }
+    let committed: std::collections::HashMap<(String, String, String), Row> = layout
+        .committed()
+        .into_iter()
+        .map(|row| {
+            (
+                (row.class.clone(), row.method.clone(), row.arm.clone()),
+                row,
+            )
+        })
+        .collect();
+    measured_shard(layout, shard, shards)
+        .into_iter()
+        .filter_map(|(row, _)| {
+            let key = (row.class.clone(), row.method.clone(), row.arm.clone());
+            match committed.get(&key) {
+                Some(held) if *held == row => None,
+                Some(held) => Some((row, held.clone())),
+                None => {
+                    let missing = Row {
+                        verdict: "missing".into(),
+                        evidence: format!("{} has no such row", layout.table),
+                        ..row.clone()
+                    };
+                    Some((row, missing))
+                }
+            }
+        })
+        .collect()
+}
+
+/// What no one shard of [`table_disagreements_in`] can check: the committed table exists, and
+/// names each row of the argument list once and no other. Under the refresh variable nothing.
+pub fn table_rows_are_the_argument_rows(layout: &Layout) -> Vec<String> {
+    if layout.refreshing() {
+        return Vec::new();
+    }
+    let committed = layout.committed();
+    assert!(
+        !committed.is_empty(),
+        "{} is missing. Create it with `{}=1 cargo test --release -p interrexx --test <driver>`",
+        layout.table,
+        layout.refresh_env
+    );
+    let mut problems = Vec::new();
+    let mut held = std::collections::BTreeSet::new();
+    for row in &committed {
+        if !held.insert((row.class.clone(), row.method.clone(), row.arm.clone())) {
+            problems.push(format!(
+                "{} names {}~{} ({}) twice",
+                layout.table, row.class, row.method, row.arm
+            ));
+        }
+    }
+    let mut derived = std::collections::BTreeSet::new();
+    for (class, method, arm, _) in layout.arguments() {
+        let key = (class, method, arm);
+        if !derived.insert(key.clone()) {
+            problems.push(format!(
+                "{} lists {}~{} ({}) twice",
+                layout.arguments, key.0, key.1, key.2
+            ));
+        }
+    }
+    for key in derived.difference(&held) {
+        problems.push(format!(
+            "{} has no row for {}~{} ({})",
+            layout.table, key.0, key.1, key.2
+        ));
+    }
+    for key in held.difference(&derived) {
+        problems.push(format!(
+            "{} has a row for {}~{} ({}) that {} does not list",
+            layout.table, key.0, key.1, key.2, layout.arguments
+        ));
+    }
+    problems
+}
+
 /// **The harness rule.** The rows whose send the oracle does not complete,
 /// which are a failure of this instrument for that row and never a data point.
 pub fn unsent_rows(layout: &Layout) -> Vec<String> {
+    unsent(layout, measured(layout))
+}
+
+/// [`unsent_rows`] over one shard of the rows.
+pub fn unsent_rows_in(layout: &Layout, shard: usize, shards: usize) -> Vec<String> {
+    unsent(layout, measured_shard(layout, shard, shards))
+}
+
+fn unsent(layout: &Layout, measured: Vec<(Row, String)>) -> Vec<String> {
     let refused = refused_keys(layout);
-    measured(layout)
+    measured
         .iter()
         .filter(|(row, stdout)| {
             row.verdict != "exempt"
@@ -583,8 +690,21 @@ pub fn unsent_rows(layout: &Layout) -> Vec<String> {
 
 /// The rows marked [`REFUSED`] whose send the oracle does in fact complete.
 pub fn refusals_the_oracle_completes(layout: &Layout) -> Vec<String> {
+    completed_refusals(layout, measured(layout))
+}
+
+/// [`refusals_the_oracle_completes`] over one shard of the rows.
+pub fn refusals_the_oracle_completes_in(
+    layout: &Layout,
+    shard: usize,
+    shards: usize,
+) -> Vec<String> {
+    completed_refusals(layout, measured_shard(layout, shard, shards))
+}
+
+fn completed_refusals(layout: &Layout, measured: Vec<(Row, String)>) -> Vec<String> {
     let refused = refused_keys(layout);
-    measured(layout)
+    measured
         .iter()
         .filter(|(row, stdout)| {
             refused.contains(&(row.class.clone(), row.method.clone(), row.arm.clone()))

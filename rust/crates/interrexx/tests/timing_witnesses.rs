@@ -7,62 +7,89 @@ use std::path::Path;
 
 const EXPECTED: &[u8] = b"O:a slept 1\nO:b slept 0\nO:c slept 0\nsleep 0 3\nO:a waited 1\nO:b waited 0\nO:c waited 0\nsemaphore 0 3\nholding\nreleased\nO:a released 1\nO:b released 1\nO:c released 1\nguard 0 3 released 1\n";
 
-#[test]
-fn redirected_targets_preserve_wait_order_and_all_output() {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+fn witness_path() -> std::path::PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../corpus/lang/command_redirected_target_waits_elsewhere.rex")
         .canonicalize()
-        .unwrap();
+        .unwrap()
+}
+
+/// One run of the witness under one switch mode, with or without a collection at every
+/// allocation, in a directory of its own.
+fn redirected_run(name: &str, mode: Option<&str>, stress: bool) {
+    let path = witness_path();
     let source = std::fs::read(&path).unwrap();
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("redirected-timing");
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("redirected-timing-{name}"));
     std::fs::create_dir_all(&dir).unwrap();
-    let invocation = || {
-        support::sidecar::invocation(&dir, &[], None)
-            .with_deadline(std::time::Duration::from_secs(30))
-    };
-    for (mode, stress) in [
-        (None, false),
-        (None, true),
-        (Some("sim:1"), false),
-        (Some("sim:2,uniform:0.2"), false),
-        (Some("sim:3,pct:3,k=40"), true),
-    ] {
-        let mut invoke = invocation();
-        if let Some(mode) = mode {
-            invoke = invoke.with_switch_mode(SwitchMode::Sim(SimConfig::parse(mode).unwrap()));
-        }
-        let run = if stress {
-            run_program_collect_every_alloc(path.to_str().unwrap(), source.clone(), invoke)
-        } else {
-            run_program(path.to_str().unwrap(), source.clone(), invoke)
-        };
-        eprintln!(
-            "mode={mode:?} stress={stress} status={} stdout={} stderr={:?}",
-            run.exit_code,
-            String::from_utf8_lossy(&run.stdout),
-            String::from_utf8_lossy(&run.stderr)
-        );
-        assert_eq!(
-            run.exit_code,
-            0,
-            "{mode:?} stress={stress}: {:?}",
-            String::from_utf8_lossy(&run.stderr)
-        );
-        assert_eq!(
-            run.stdout,
-            EXPECTED,
-            "{mode:?} stress={stress}: {}",
-            String::from_utf8_lossy(&run.stdout)
-        );
-        assert!(
-            run.stderr.is_empty(),
-            "{:?}",
-            String::from_utf8_lossy(&run.stderr)
-        );
-        if stress {
-            assert!(run.collections > 0);
-        }
+    let mut invoke = support::sidecar::invocation(&dir, &[], None)
+        .with_deadline(std::time::Duration::from_secs(30));
+    if let Some(mode) = mode {
+        invoke = invoke.with_switch_mode(SwitchMode::Sim(SimConfig::parse(mode).unwrap()));
     }
+    let run = if stress {
+        run_program_collect_every_alloc(path.to_str().unwrap(), source, invoke)
+    } else {
+        run_program(path.to_str().unwrap(), source, invoke)
+    };
+    eprintln!(
+        "mode={mode:?} stress={stress} status={} stdout={} stderr={:?}",
+        run.exit_code,
+        String::from_utf8_lossy(&run.stdout),
+        String::from_utf8_lossy(&run.stderr)
+    );
+    assert_eq!(
+        run.exit_code,
+        0,
+        "{mode:?} stress={stress}: {:?}",
+        String::from_utf8_lossy(&run.stderr)
+    );
+    assert_eq!(
+        run.stdout,
+        EXPECTED,
+        "{mode:?} stress={stress}: {}",
+        String::from_utf8_lossy(&run.stdout)
+    );
+    assert!(
+        run.stderr.is_empty(),
+        "{:?}",
+        String::from_utf8_lossy(&run.stderr)
+    );
+    if stress {
+        assert!(run.collections > 0);
+    }
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn redirected_targets_preserve_wait_order_and_all_output_threaded() {
+    redirected_run("threaded", None, false);
+}
+
+#[test]
+fn redirected_targets_preserve_wait_order_and_all_output_threaded_stress() {
+    redirected_run("threaded-stress", None, true);
+}
+
+#[test]
+fn redirected_targets_preserve_wait_order_and_all_output_sim_1() {
+    redirected_run("sim-1", Some("sim:1"), false);
+}
+
+#[test]
+fn redirected_targets_preserve_wait_order_and_all_output_sim_uniform() {
+    redirected_run("sim-uniform", Some("sim:2,uniform:0.2"), false);
+}
+
+#[test]
+fn redirected_targets_preserve_wait_order_and_all_output_sim_pct_stress() {
+    redirected_run("sim-pct-stress", Some("sim:3,pct:3,k=40"), true);
+}
+
+#[test]
+fn the_oracle_prints_the_expected_output_every_time() {
+    let path = witness_path();
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("redirected-timing-oracle");
+    std::fs::create_dir_all(&dir).unwrap();
     let oracle = support::oracle::locate();
     for index in 0..8 {
         let oracle_dir = dir.join(format!("oracle-{index}"));

@@ -10,7 +10,7 @@ use interrexx_extract::bif::{DropReason, RaiseRow, extract_bif};
 use interrexx_extract::keyword::count_assert_same;
 use interrexx_extract::{AssertionRow, Form, RaiseExpectation, find_test_groups};
 use rayon::prelude::*;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fmt::Write as _;
 use std::fs;
@@ -425,14 +425,63 @@ fn committed_exempt() -> BTreeMap<String, String> {
     out
 }
 
-/// Polices the committed exempt set itself, in every mode, independent of
-/// [`GATE_ENV`]: the current failure set must equal the committed one exactly,
-/// attribution included.
-#[test]
-fn the_exempt_set_matches_the_current_failures() {
-    let (rows, _, _) = collect();
-    let committed = committed_exempt();
+/// How many tests the rows are spread over: the unit nextest
+/// runs in parallel is a test function. A row belongs to the shard its index
+/// in the sorted file order, modulo this count, names.
+const SHARDS: usize = 32;
 
+/// The rows of one shard.
+fn shard_rows(rows: &[Row], shard: usize) -> Vec<&Row> {
+    rows.iter()
+        .enumerate()
+        .filter(|(index, _)| index % SHARDS == shard)
+        .map(|(_, row)| row)
+        .collect()
+}
+
+fn refresh_requested() -> bool {
+    matches!(env::var(REFRESH_ENV), Ok(value) if !value.is_empty() && value != "0")
+}
+
+/// Every shard index below `SHARDS` has a test running it.
+#[test]
+fn every_row_shard_has_a_test() {
+    let source = include_str!("bif_assertions.rs");
+    for shard in 0..SHARDS {
+        let call = format!("\n    row_shard({shard});\n");
+        assert_eq!(source.matches(&call).count(), 1, "{call:?}");
+    }
+}
+
+/// The part of the exempt-set check no one shard can make: every committed
+/// entry names a row the suite yields. (A shard checks the entries of its own
+/// rows, both ways; an entry naming no row belongs to no shard.)
+#[test]
+fn every_exempt_entry_names_a_row() {
+    if refresh_requested() {
+        return;
+    }
+    let (rows, _, _) = collect();
+    let keys: BTreeSet<&str> = rows.iter().map(|row| row.key.as_str()).collect();
+    let orphans: Vec<String> = committed_exempt()
+        .into_keys()
+        .filter(|key| !keys.contains(key.as_str()))
+        .collect();
+    assert!(
+        orphans.is_empty(),
+        "committed exempt entries naming no row of the suite (now gone -- remove them): {orphans:?}"
+    );
+}
+
+/// Under [`REFRESH_ENV`], write what the whole suite measures; otherwise
+/// nothing. It takes every row, so it is a test of its own, and the shards
+/// stand aside while it is set.
+#[test]
+fn refresh_the_exempt_set_when_asked() {
+    if !refresh_requested() {
+        return;
+    }
+    let (rows, _, _) = collect();
     let outcomes: Vec<RowOutcome> = rows.par_iter().map(|row| evaluate(&row.kind)).collect();
     let mut measured: BTreeMap<String, String> = BTreeMap::new();
     for (row, outcome) in rows.iter().zip(outcomes) {
@@ -440,6 +489,40 @@ fn the_exempt_set_matches_the_current_failures() {
             measured.insert(row.key.clone(), attribution);
         }
     }
+    // A failing run lists at most 40 rows, so a committed set larger than that
+    // cannot be rebuilt from its output.
+    let path = exempt_path();
+    let existing =
+        fs::read_to_string(&path).unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
+    let mut out = String::new();
+    for line in existing.lines().take_while(|line| line.starts_with('#')) {
+        out.push_str(line);
+        out.push('\n');
+    }
+    for (key, attribution) in &measured {
+        out.push_str(key);
+        out.push('\t');
+        out.push_str(attribution);
+        out.push('\n');
+    }
+    fs::write(&path, out).unwrap_or_else(|e| panic!("cannot write {}: {e}", path.display()));
+}
+
+/// Polices the committed exempt set itself, in every mode, independent of
+/// [`GATE_ENV`]: the current failure set of one shard's rows must equal the
+/// committed entries of those rows exactly, attribution included.
+fn exempt_set_shard(shard: usize, rows: &[&Row], outcomes: &[RowOutcome]) {
+    let committed = committed_exempt();
+    let mut measured: BTreeMap<String, String> = BTreeMap::new();
+    for (row, outcome) in rows.iter().zip(outcomes) {
+        if let Some(attribution) = outcome.attribution() {
+            measured.insert(row.key.clone(), attribution);
+        }
+    }
+    let committed: BTreeMap<&String, &String> = committed
+        .iter()
+        .filter(|(key, _)| rows.iter().any(|row| &row.key == *key))
+        .collect();
 
     let mut problems = Vec::new();
     for (key, attribution) in &measured {
@@ -447,7 +530,7 @@ fn the_exempt_set_matches_the_current_failures() {
             None => problems.push(format!(
                 "{key} is failing ({attribution}) and is not on the committed exempt list"
             )),
-            Some(listed) if listed != attribution => problems.push(format!(
+            Some(listed) if *listed != attribution => problems.push(format!(
                 "{key} is listed as {listed:?} but now measures {attribution:?} -- its blocker \
                  moved"
             )),
@@ -455,34 +538,11 @@ fn the_exempt_set_matches_the_current_failures() {
         }
     }
     for key in committed.keys() {
-        if !measured.contains_key(key) {
+        if !measured.contains_key(*key) {
             problems.push(format!(
                 "{key} now PASSES but is still on the committed exempt list -- remove it"
             ));
         }
-    }
-
-    // Under [`REFRESH_ENV`], write what this run measured and stop. Both
-    // listings below are bounded at 40 rows, so a committed set larger than
-    // that could not be rebuilt by reading a failing run's output -- which is
-    // how this file came to need a writer at all.
-    if matches!(env::var(REFRESH_ENV), Ok(value) if !value.is_empty() && value != "0") {
-        let path = exempt_path();
-        let existing = fs::read_to_string(&path)
-            .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
-        let mut out = String::new();
-        for line in existing.lines().take_while(|line| line.starts_with('#')) {
-            out.push_str(line);
-            out.push('\n');
-        }
-        for (key, attribution) in &measured {
-            out.push_str(key);
-            out.push('\t');
-            out.push_str(attribution);
-            out.push('\n');
-        }
-        fs::write(&path, out).unwrap_or_else(|e| panic!("cannot write {}: {e}", path.display()));
-        return;
     }
 
     // Bounded, because the set can legitimately be thousands of rows wide and a
@@ -492,7 +552,7 @@ fn the_exempt_set_matches_the_current_failures() {
     let shown: Vec<&String> = problems.iter().take(SHOWN).collect();
     assert!(
         problems.is_empty(),
-        "the committed exempt set ({}) no longer describes reality ({} failing). Measured at \
+        "the committed exempt set of shard {shard} ({}) no longer describes reality ({} failing). Measured at \
          ooTest {OOTEST_REVISION}; check `svn info ootest` first if the corpus may have moved.\n\
          {} problem(s), first {}:\n{}",
         committed.len(),
@@ -507,13 +567,17 @@ fn the_exempt_set_matches_the_current_failures() {
     );
 }
 
-/// The runner and the report. Always green in REPORT mode; under [`GATE_ENV`]
-/// it additionally fails on a row with no matching exempt entry, which is the
-/// same condition [`the_exempt_set_matches_the_current_failures`] asserts in
-/// one direction.
-#[test]
-fn bif_assertions_differential() {
-    let (rows, dropped, calls) = collect();
+/// The runner and the report, for one shard of the rows. Always green in
+/// REPORT mode; under [`GATE_ENV`] it additionally fails on a row with no
+/// matching exempt entry, which is the same condition `exempt_set_shard`
+/// asserts in one direction.
+fn differential_shard(
+    shard: usize,
+    rows: &[&Row],
+    outcomes: &[RowOutcome],
+    dropped: &BTreeMap<DropReason, (usize, usize)>,
+    calls: usize,
+) {
     let committed = committed_exempt();
 
     let mut value_total = 0usize;
@@ -526,7 +590,6 @@ fn bif_assertions_differential() {
     let mut unaccounted = Vec::new();
     let mut anomalies = Vec::new();
 
-    let outcomes: Vec<RowOutcome> = rows.par_iter().map(|row| evaluate(&row.kind)).collect();
     for (row, outcome) in rows.iter().zip(outcomes) {
         let (group, raise) = match &row.kind {
             RowKind::Value(r) => (r.group.clone(), false),
@@ -540,10 +603,10 @@ fn bif_assertions_differential() {
             value_total += 1;
         }
 
-        if let RowOutcome::Blocked { construct, .. } = &outcome {
+        if let RowOutcome::Blocked { construct, .. } = outcome {
             *by_construct.entry(construct.clone()).or_insert(0) += 1;
         }
-        if let RowOutcome::Anomaly { detail } = &outcome {
+        if let RowOutcome::Anomaly { detail } = outcome {
             anomalies.push(format!("  {}: {detail}", row.key));
         }
         match outcome.attribution() {
@@ -569,21 +632,201 @@ fn bif_assertions_differential() {
         calls,
         (value_pass, value_total),
         (raise_pass, raise_total),
-        &dropped,
+        dropped,
         &by_attribution,
         &by_construct,
         &per_group,
         &anomalies,
         &unaccounted,
         gate,
+        shard,
     ));
 
     assert!(
         !gate || unaccounted.is_empty(),
-        "STRICT ({GATE_ENV}) mode: {} row(s) are failing with no matching entry in the committed \
+        "STRICT ({GATE_ENV}) mode: {} row(s) of shard {shard} are failing with no matching entry in the committed \
          exempt list; see the report above.",
         unaccounted.len()
     );
+}
+
+/// Evaluates the rows of one shard once and runs both passes over the outcomes:
+/// the report (and, under [`GATE_ENV`], its gate) and the exempt-set check,
+/// which stands aside while [`REFRESH_ENV`] is set.
+fn row_shard(shard: usize) {
+    let (rows, dropped, calls) = collect();
+    let rows = shard_rows(&rows, shard);
+    let outcomes: Vec<RowOutcome> = rows.iter().map(|row| evaluate(&row.kind)).collect();
+    // A gated differential failure must not hide this shard's exempt-set message.
+    let differential = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        differential_shard(shard, &rows, &outcomes, &dropped, calls);
+    }));
+    if !refresh_requested() {
+        exempt_set_shard(shard, &rows, &outcomes);
+    }
+    if let Err(payload) = differential {
+        std::panic::resume_unwind(payload);
+    }
+}
+
+#[test]
+fn bif_assertions_shard_0() {
+    row_shard(0);
+}
+
+#[test]
+fn bif_assertions_shard_1() {
+    row_shard(1);
+}
+
+#[test]
+fn bif_assertions_shard_2() {
+    row_shard(2);
+}
+
+#[test]
+fn bif_assertions_shard_3() {
+    row_shard(3);
+}
+
+#[test]
+fn bif_assertions_shard_4() {
+    row_shard(4);
+}
+
+#[test]
+fn bif_assertions_shard_5() {
+    row_shard(5);
+}
+
+#[test]
+fn bif_assertions_shard_6() {
+    row_shard(6);
+}
+
+#[test]
+fn bif_assertions_shard_7() {
+    row_shard(7);
+}
+
+#[test]
+fn bif_assertions_shard_8() {
+    row_shard(8);
+}
+
+#[test]
+fn bif_assertions_shard_9() {
+    row_shard(9);
+}
+
+#[test]
+fn bif_assertions_shard_10() {
+    row_shard(10);
+}
+
+#[test]
+fn bif_assertions_shard_11() {
+    row_shard(11);
+}
+
+#[test]
+fn bif_assertions_shard_12() {
+    row_shard(12);
+}
+
+#[test]
+fn bif_assertions_shard_13() {
+    row_shard(13);
+}
+
+#[test]
+fn bif_assertions_shard_14() {
+    row_shard(14);
+}
+
+#[test]
+fn bif_assertions_shard_15() {
+    row_shard(15);
+}
+
+#[test]
+fn bif_assertions_shard_16() {
+    row_shard(16);
+}
+
+#[test]
+fn bif_assertions_shard_17() {
+    row_shard(17);
+}
+
+#[test]
+fn bif_assertions_shard_18() {
+    row_shard(18);
+}
+
+#[test]
+fn bif_assertions_shard_19() {
+    row_shard(19);
+}
+
+#[test]
+fn bif_assertions_shard_20() {
+    row_shard(20);
+}
+
+#[test]
+fn bif_assertions_shard_21() {
+    row_shard(21);
+}
+
+#[test]
+fn bif_assertions_shard_22() {
+    row_shard(22);
+}
+
+#[test]
+fn bif_assertions_shard_23() {
+    row_shard(23);
+}
+
+#[test]
+fn bif_assertions_shard_24() {
+    row_shard(24);
+}
+
+#[test]
+fn bif_assertions_shard_25() {
+    row_shard(25);
+}
+
+#[test]
+fn bif_assertions_shard_26() {
+    row_shard(26);
+}
+
+#[test]
+fn bif_assertions_shard_27() {
+    row_shard(27);
+}
+
+#[test]
+fn bif_assertions_shard_28() {
+    row_shard(28);
+}
+
+#[test]
+fn bif_assertions_shard_29() {
+    row_shard(29);
+}
+
+#[test]
+fn bif_assertions_shard_30() {
+    row_shard(30);
+}
+
+#[test]
+fn bif_assertions_shard_31() {
+    row_shard(31);
 }
 
 #[expect(
@@ -602,6 +845,7 @@ fn build_report(
     anomalies: &[String],
     unaccounted: &[String],
     gate: bool,
+    shard: usize,
 ) -> String {
     let banner = "=".repeat(78);
     let mut report = String::new();
@@ -609,7 +853,8 @@ fn build_report(
     writeln!(w, "{banner}").unwrap();
     writeln!(
         w,
-        "interrexx bif row report -- ootest/ooRexx/base/bif @ {OOTEST_REVISION}"
+        "interrexx bif row report -- ootest/ooRexx/base/bif @ {OOTEST_REVISION} -- \
+         shard {shard} of {SHARDS}"
     )
     .unwrap();
     if gate {

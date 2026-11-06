@@ -471,11 +471,13 @@ fn the_oracles_daemon_stops_with_its_test_process() {
             "--ignored",
             "--nocapture",
         ])
+        // The child is a test process of its own, not of the run it is in.
+        .env_remove("NEXTEST_RUN_ID")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()
         .expect("the child runs");
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("oracle-runtime-{}", child.id()));
+    let dir = std::env::temp_dir().join(format!("orc-{}", child.id()));
     let status = child.wait_with_output().expect("the child ends").status;
     assert!(status.success(), "the child's oracle run failed");
     let stopped = (0..100).any(|_| {

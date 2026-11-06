@@ -1,0 +1,61 @@
+# cargo-nextest configuration; the workspace root is this directory's parent.
+# Doc tests are not run by nextest: `cargo test --workspace --doc` runs them.
+
+nextest-version = "0.9.150"
+experimental = ["setup-scripts"]
+
+[profile.default]
+slow-timeout = { period = "60s" }
+
+[profile.ci]
+fail-fast = false
+retries = 0
+slow-timeout = { period = "60s" }
+
+[profile.ci.junit]
+# JUnit output stays off; a path here would turn it on.
+
+# Tests whose assertion is a wall-clock boundary (a signal inside a sleep, a halt before a
+# program ends, a prompt before a read, a watchdog's deadline, a replayed clock). Each waits on
+# time, so they run one at a time and claim four test threads each, which keeps a saturated
+# machine from stretching the window they measure.
+[test-groups.wall-clock]
+max-threads = 1
+
+[[profile.default.overrides]]
+filter = '''
+(binary(signals) | binary(stdin_contention) | binary(program_end) | binary(prompt_before_read)
+| binary(oracle_deadline) | binary(deadline) | binary(sim_processes)) & !test(/^support::/)
+| test(a_run_ending_with_a_call_in_flight_serves_the_call_then_drops_the_interpreter)
+| (binary(classic_api) & test(/sigint|halt|group_signal|the_classic_family_answers/))
+'''
+test-group = 'wall-clock'
+threads-required = 4
+
+# These tests missed their time window on a loaded host while the suite ran. Each is run again
+# once; the run reports a pass on the second attempt as flaky and a second miss fails it.
+# Tests that rerun a mismatch themselves (signals, stdin_contention) and the Ctrl-C witnesses
+# run once.
+[[profile.ci.overrides]]
+filter = '''
+test(=a_valued_reply_ends_the_same_program)
+| test(=a_group_signal_halts_both_interpreters_waiting_on_commands)
+| test(=a_halt_from_another_thread_reaches_a_native_calls_activity)
+| test(=a_sigint_during_rexx_start_halts_the_program_not_the_process)
+| test(=the_classic_family_answers_as_the_oracle_does)
+| test(=two_instances_keep_their_environments_and_both_take_a_halt)
+'''
+retries = 1
+
+[scripts.setup.method-bodies-api]
+command = '.config/scripts/method-bodies-api.sh'
+
+[[profile.default.scripts]]
+filter = 'binary(method_bodies)'
+setup = 'method-bodies-api'
+
+# The collect_stress `_heavy_` tests each reach the call-depth cap with a collection at every
+# allocation. They start first so that they overlap the rest of the run.
+[[profile.default.overrides]]
+filter = 'binary(collect_stress) & test(/_heavy_/)'
+priority = 100

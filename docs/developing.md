@@ -54,8 +54,14 @@ allocate than ooRexx.
 From `rust/`, under the memory cap:
 
 * `cargo fmt --all --check` and `cargo clippy --workspace --all-targets -- -D warnings`.
-* `cargo test --workspace --no-fail-fast`, and the same with `REXX_CORPUS_GATE=1` in a debug build:
-  release compiles out `debug_assert`, which carries some of the interpreter's invariants.
+* `cargo nextest run --workspace --profile ci`, then `cargo test --workspace --doc` (nextest does
+  not run doc tests). Install nextest with `cargo install cargo-nextest --locked`. Run the gate
+  with `REXX_CORPUS_GATE=1 cargo test --workspace --no-fail-fast` in a debug build, not under
+  nextest: the group runner's quiet-machine and row bounds hold within one process. Release
+  compiles out `debug_assert`, which carries some of the interpreter's invariants.
+* `cargo test --workspace --no-fail-fast` runs the same tests, one binary after another, and
+  stays supported. `cargo nextest run -p interrexx --test NAME` or `-E 'test(NAME)'` runs a
+  subset; `cargo nextest list` shows what a filter matches.
 * `REXX_SPEC_ORACLE=1 cargo test -p interrexx --test spec` after changing `spec/`.
 * ThreadSanitizer runs take `TSAN_OPTIONS=suppressions=rust/tsan.supp`, which hides the dynamic
   linker's `dl_close` race that two interpreters in one process show.

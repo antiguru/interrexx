@@ -68,10 +68,42 @@ fn layout() -> arity::Layout {
     }
 }
 
-/// The committed table is what the three sides say today.
+/// How many tests each of the passes over the rows is spread over: the unit nextest runs in
+/// parallel is a test function. A row belongs to the shard its index in the argument list,
+/// modulo this count, names.
+const SHARDS: usize = 8;
+
+/// Every shard index below `SHARDS` has a test running it, for every pass.
 #[test]
-fn the_table_matches_the_three_sides() {
-    let moved = arity::table_disagreements(&layout());
+fn every_row_shard_has_a_test() {
+    let source = include_str!("introspection_arity.rs");
+    for shard in 0..SHARDS {
+        for call in ["table_shard", "sent_shard", "refused_shard"] {
+            let call = format!("\n    {call}({shard});\n");
+            assert_eq!(source.matches(&call).count(), 1, "{call:?}");
+        }
+    }
+}
+
+/// What no one shard can check: the committed table names each row of the argument list once
+/// and no other, so the shards, each finding its own rows as committed, have found the table.
+#[test]
+fn the_table_names_exactly_the_argument_rows() {
+    let problems = arity::table_rows_are_the_argument_rows(&layout());
+    assert!(problems.is_empty(), "{problems:#?}");
+}
+
+/// Under the refresh variable, the table written from every row; otherwise nothing.
+#[test]
+fn refresh_the_table_when_asked() {
+    if layout().refreshing() {
+        arity::table_disagreements(&layout());
+    }
+}
+
+/// The committed table is what the three sides say today, for one shard of its rows.
+fn table_shard(shard: usize) {
+    let moved = arity::table_disagreements_in(&layout(), shard, SHARDS);
     assert!(
         moved.is_empty(),
         "corpus/introspection-arity.tsv disagrees with the interpreters. A row that moved \
@@ -82,9 +114,8 @@ fn the_table_matches_the_three_sides() {
 
 /// **The harness rule.** A row whose send the oracle does not complete is a
 /// failure of this instrument for that row, never a data point.
-#[test]
-fn the_oracle_completes_every_send() {
-    let unsent = arity::unsent_rows(&layout());
+fn sent_shard(shard: usize) {
+    let unsent = arity::unsent_rows_in(&layout(), shard, SHARDS);
     assert!(
         unsent.is_empty(),
         "these argument lists are not real -- the oracle does not complete the send, so the \
@@ -94,10 +125,129 @@ fn the_oracle_completes_every_send() {
 }
 
 /// A row marked `REFUSED:` is one the oracle really does refuse.
-#[test]
-fn every_refused_row_is_really_refused() {
-    let completed = arity::refusals_the_oracle_completes(&layout());
+fn refused_shard(shard: usize) {
+    let completed = arity::refusals_the_oracle_completes_in(&layout(), shard, SHARDS);
     assert!(completed.is_empty(), "{completed:#?}");
+}
+
+#[test]
+fn the_committed_table_matches_the_three_sides_0() {
+    table_shard(0);
+}
+
+#[test]
+fn the_committed_table_matches_the_three_sides_1() {
+    table_shard(1);
+}
+
+#[test]
+fn the_committed_table_matches_the_three_sides_2() {
+    table_shard(2);
+}
+
+#[test]
+fn the_committed_table_matches_the_three_sides_3() {
+    table_shard(3);
+}
+
+#[test]
+fn the_committed_table_matches_the_three_sides_4() {
+    table_shard(4);
+}
+
+#[test]
+fn the_committed_table_matches_the_three_sides_5() {
+    table_shard(5);
+}
+
+#[test]
+fn the_committed_table_matches_the_three_sides_6() {
+    table_shard(6);
+}
+
+#[test]
+fn the_committed_table_matches_the_three_sides_7() {
+    table_shard(7);
+}
+
+#[test]
+fn the_oracle_completes_every_send_0() {
+    sent_shard(0);
+}
+
+#[test]
+fn the_oracle_completes_every_send_1() {
+    sent_shard(1);
+}
+
+#[test]
+fn the_oracle_completes_every_send_2() {
+    sent_shard(2);
+}
+
+#[test]
+fn the_oracle_completes_every_send_3() {
+    sent_shard(3);
+}
+
+#[test]
+fn the_oracle_completes_every_send_4() {
+    sent_shard(4);
+}
+
+#[test]
+fn the_oracle_completes_every_send_5() {
+    sent_shard(5);
+}
+
+#[test]
+fn the_oracle_completes_every_send_6() {
+    sent_shard(6);
+}
+
+#[test]
+fn the_oracle_completes_every_send_7() {
+    sent_shard(7);
+}
+
+#[test]
+fn every_refused_row_is_really_refused_0() {
+    refused_shard(0);
+}
+
+#[test]
+fn every_refused_row_is_really_refused_1() {
+    refused_shard(1);
+}
+
+#[test]
+fn every_refused_row_is_really_refused_2() {
+    refused_shard(2);
+}
+
+#[test]
+fn every_refused_row_is_really_refused_3() {
+    refused_shard(3);
+}
+
+#[test]
+fn every_refused_row_is_really_refused_4() {
+    refused_shard(4);
+}
+
+#[test]
+fn every_refused_row_is_really_refused_5() {
+    refused_shard(5);
+}
+
+#[test]
+fn every_refused_row_is_really_refused_6() {
+    refused_shard(6);
+}
+
+#[test]
+fn every_refused_row_is_really_refused_7() {
+    refused_shard(7);
 }
 
 /// An identity marker has an explicit classification and satisfies its contract.

@@ -26,7 +26,8 @@ pub mod oracle;
 /// headings it is held equal to.
 pub mod deviations;
 
-/// The oracle's private `XDG_RUNTIME_DIR`, whose daemon is stopped when the process ends.
+/// The oracle's private `XDG_RUNTIME_DIR`, whose daemon is stopped when the process, or under
+/// nextest the run, ends.
 pub mod oracle_runtime;
 
 /// What a corpus program runs with besides its own text, read and laid out the
