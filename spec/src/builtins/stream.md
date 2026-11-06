@@ -4,7 +4,7 @@ kind: builtin
 syntax: "STREAM(name [, operation [, command]])"
 ansi: "9.7.8"
 rexxref: "Functions > Built-in Functions > STREAM"
-deviations: [34, 35, 49, 55, 57, 59, 62, 74, 79, 100]
+deviations: [34, 35, 49, 55, 57, 59, 62, 74, 79, 98, 100]
 ---
 
 # STREAM
@@ -439,9 +439,13 @@ r[bif.stream.close]
 `CLOSE` closes the stream and answers `READY:`; its state is then `UNKNOWN`.
 The characters written are in the file, and the next use of the name
 [opens the stream afresh](r:bif.index.stream.lifetime). A stream that is not
-open has nothing to close, and the answer is the null string. What `CLOSE`
-does to a standard stream, and to the later output written to it, is not
-specified.
+open has nothing to close, and the answer is the null string. A standard
+stream is closed in the same way: `CLOSE` of the standard input, output or
+error answers `READY:` and leaves its state `UNKNOWN`, and the next stream
+builtin that uses it opens it again on the same input or output, so that later
+reads and writes carry on, as [the lifetime
+rule](r:bif.index.stream.lifetime) says. ooRexx differs (see [Deviation
+98](r:bif.stream.deviation.98)).
 
 ```rexx
 f = 'spec-stream-close.tmp'
@@ -458,6 +462,16 @@ call sysfiledelete f
 [] UNKNOWN
 READY READY: UNKNOWN []
 3 a
+```
+
+```rexx
+say stream('stdin', 'c', 'close') stream('stdin')
+say '['linein()']' stream('stdin')
+```
+
+```output
+READY: UNKNOWN
+[] NOTREADY
 ```
 
 r[bif.stream.flush]
@@ -1094,6 +1108,28 @@ READY:
 20 0 0 2
 12 0 13
 abcdefghZWVU
+```
+
+r[bif.stream.deviation.98]
+`CLOSE` of the standard output or error closes it as it
+[closes any stream](r:bif.stream.close), and the output written after it
+appears. In ooRexx, that output does not appear, and is lost unless the
+program closes the stream once more; an `OPEN WRITE` does not bring it back.
+[Deviation 98](r:bif.index.stream.lifetime.deviation.98) gives the whole of
+the difference.
+
+```rexx
+say 'one'
+r = stream('stdout', 'c', 'close')
+s = stream('stdout')
+call lineout 'stdout', r s
+say 'two' stream('stdout')
+```
+
+```output
+one
+READY: UNKNOWN
+two READY
 ```
 
 r[bif.stream.deviation.100]

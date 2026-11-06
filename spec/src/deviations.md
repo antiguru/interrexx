@@ -621,14 +621,22 @@ a string as it was written: under NUMERIC DIGITS 3, `abs('0.0000001')`
 answers `1E-7`, and after a change to NUMERIC FORM ENGINEERING it answers
 `0.0000001` where interrexx answers `100E-9`.
 
-## 98. CHAROUT and LINEOUT never close a standard stream
+## 98. Closing a standard stream
 
-CHAROUT and LINEOUT never close a standard stream. A call of either that gives
-no string, on a standard stream, writes nothing and does nothing else, and the
-later output of the program is written as usual. ooRexx closes the standard
-stream for such a call, the standard output or the standard error, and output
-written to it, before or after the call, can be lost; which forms of the call
-do so varies from program to program.
+A close of the standard input, output or error is a logical close, as for a
+file, whether it is a `CLOSE` command of STREAM or a call of CHAROUT or
+LINEOUT that gives no string. The state is then `UNKNOWN`, and the next
+stream builtin that uses the stream opens it again on the same input or
+output, so that later reads and writes carry on. In ooRexx, output written to
+the standard output or error after the close does not appear: it appears only
+if the program closes the stream once more, and what is written after the
+last close is lost, even after an `OPEN WRITE`. Output written before the
+close can be lost too, as when the stream is a file and the later output
+replaces it. On the standard input, a `CLOSE` has the same outcome on both
+while the program has read nothing from it; after a read, ooRexx can lose the
+input not yet read, and a later read can leave the stream in the `ERROR`
+state. A CHAROUT or LINEOUT that gives no string on the standard input leaves
+it in the `ERROR` state in ooRexx, and LINEOUT answers 1 there.
 
 ## 99. Reading the standard output or error
 

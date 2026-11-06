@@ -1472,8 +1472,12 @@ ends. [CHAROUT given only a name](r:bif.charout.close) closes a stream; the
 pages of the other stream builtins name their forms. The next use of a closed
 name opens the stream again: the read position is at the start and the write
 position at the end of the data, and the characters written before the close
-are in the file. CHAROUT and LINEOUT never close a standard stream, as
-[Deviation 98](r:bif.index.stream.lifetime.deviation.98) says.
+are in the file. A standard stream is closed in the same way, by
+[`CLOSE`](r:bif.stream.close) and by CHAROUT or LINEOUT given neither a string
+nor a start or line: its state is then `UNKNOWN`, and the next stream builtin
+that uses it opens it again on the same input or output, so that later reads
+and writes carry on. ooRexx differs, as [Deviation
+98](r:bif.index.stream.lifetime.deviation.98) says.
 
 ```rexx
 f = 'spec-streams-life.tmp'
@@ -1495,13 +1499,22 @@ abcd
 ```
 
 r[bif.index.stream.lifetime.deviation.98]
-CHAROUT and LINEOUT never close a standard stream. A call of either that gives
-neither a string nor a start or line, and either no stream name or the name of
-a standard stream, writes nothing, answers 0 and does nothing else: the later
-output of the program is written as usual. ooRexx closes the standard stream
-for such a call, the standard output or the standard error, and output written
-to it, before or after the call, can be lost; which forms of the call do so
-varies from program to program.
+A close of a standard stream is a logical one, as for a file: the [lifetime
+rule](r:bif.index.stream.lifetime) holds for the standard input, output and
+error too. A call of CHAROUT or LINEOUT that gives neither a string nor a
+start or line, and either no stream name or the name of a standard stream,
+writes nothing, answers 0 and closes the stream, and the later output of the
+program is written as usual. In ooRexx, output written to the standard output
+or error after such a call, or after a `CLOSE` of it, does not appear: it
+appears only if the program closes the stream once more, and what is written
+after the last close is lost. An `OPEN WRITE` does not bring it back. Output
+written before the close can be lost too: when the stream is a file, the
+output written after the close can replace it. On the standard input, the
+same call of CHAROUT answers 0 and that of LINEOUT 1 in ooRexx, and the state
+is then `ERROR`. A `CLOSE` of the standard input has the same outcome on both
+while the program has read nothing from it; after a read, ooRexx can lose the
+input that the program had not read yet, and a later read can leave the stream
+in the `ERROR` state.
 
 ```rexx
 say 'one'

@@ -126,9 +126,10 @@ answers 0. The characters written are in the stream afterwards, and its
 [next use](r:bif.index.stream.lifetime) opens it afresh. CHAROUT opens a stream
 that is not open in order to close it, so on a file that does not exist
 this creates it; the same is true of every call of CHAROUT, even one that
-writes nothing. The call closes no standard stream: on one it writes nothing
-and answers 0, as [Deviation 98](r:bif.index.stream.lifetime.deviation.98)
-says.
+writes nothing.
+A standard stream is closed in the same way, and its next use opens it again,
+as [the lifetime rule](r:bif.index.stream.lifetime) says; ooRexx differs (see
+[Deviation 98](r:bif.index.stream.lifetime.deviation.98)).
 
 ```rexx
 f = 'spec-charout-close.tmp'
