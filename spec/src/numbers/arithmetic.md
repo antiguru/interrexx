@@ -311,9 +311,14 @@ power of ten `A`, and the exponent `N` have a product `A * N` that is more
 than 999999999 in magnitude. The test is made before any digit is computed and
 does not look at the value, so it also refuses a power whose value is within
 the [exponent range](r:num.limits.range). A power that passes the test is
-computed, and an overflow or underflow in its multiplications raises `SYNTAX
-42.901` or `SYNTAX 42.902`, which `+`, `-`, `*` and `/` raise too. A base such
-as 100 therefore raises `42.1` at an exponent for which 11 raises `42.901`.
+computed. A product of the computation whose first digit stands above the
+range raises `SYNTAX 42.901`, whatever the sign of the exponent. The last
+digit of a product is not tested, so an intermediate value that is out of
+range only at its last digit raises nothing. The final result, which for a
+negative exponent is the reciprocal of the unrounded product, is tested as
+[the power rule](r:num.limits.power) and [the underflow
+rule](r:num.limits.underflow) say. A base such as 100 therefore raises `42.1`
+at an exponent for which 11 raises `42.901`.
 
 ```rexx
 signal on syntax name a
@@ -334,6 +339,9 @@ e: say condition('o')~code
 signal on syntax name f
 say 3e-333333334 ** 3
 f: say condition('o')~code
+signal on syntax name h
+say 11 ** -999999999
+h: say condition('o')~code
 numeric digits 12
 signal on syntax name g
 say 0.5 ** 1000000000
@@ -350,6 +358,7 @@ say (10 ** 999999999) (2e333333333 ** 3) (3e-333333333 ** 3)
 42.901
 42.902
 42.1
+42.901
 42.1
 4.33559593523E-301029996 1.13679261102E+176091259 1
 1E+999999999 8E+999999999 2.7E-999999998
