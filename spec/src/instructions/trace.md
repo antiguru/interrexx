@@ -55,11 +55,14 @@ O
 
 r[instr.trace.form.value]
 `TRACE VALUE expression` evaluates the expression and takes its value as the
-setting, with the same choice by first letter. The expression may be left
-without VALUE when it starts with a parenthesis, so `TRACE (expression)` is
-the same instruction. A null value is the setting `N`. The expression ends the
-clause, so `TRACE VALUE 'l' 'x'` takes the value `l x`, which is the setting
-`L`.
+setting, with the same choice by first letter. A value that is not a string is
+converted as [a string argument](r:conv.string.object) says, and `.nil` is not
+a setting. VALUE may be left out when the expression starts with a
+parenthesis, or with an operator character other than `+` and `-`, so
+`TRACE (expression)` is the same instruction; the expression is then the rest
+of the clause, as it is after VALUE. A null value is the setting `N`. The
+expression ends the clause, so `TRACE VALUE 'l' 'x'` takes the value `l x`,
+which is the setting `L`.
 
 ```rexx
 r = 'I'
@@ -86,11 +89,38 @@ N
 L
 ```
 
+```rexx
+call try "trace (r) || 'x'"
+call try "trace ('r') 'x'"
+call try "trace \'r'"
+call try "trace value .array~of('r')"
+call try "trace value .array~new"
+call try "trace value .nil"
+exit
+try: procedure
+  signal on syntax name e
+  interpret arg(1)
+  say arg(1) 'set' trace()
+  return
+e: say arg(1) condition('o')~code
+  return
+```
+
+```output
+trace (r) || 'x' set R
+trace ('r') 'x' set R
+trace \'r' 34.901
+trace value .array~of('r') set R
+trace value .array~new set N
+trace value .nil 24.1
+```
+
 r[instr.trace.form.bare]
 `TRACE` with nothing after it sets `N`, and so does the null string in any
-form of the instruction. Where interactive tracing is on, the instruction does
-nothing, as [the instruction rule](r:bif.trace.instruction) of the function
-says.
+form of the instruction. Where interactive tracing is on, a setting is
+ignored, as [the instruction rule](r:bif.trace.instruction) of the function
+says; a number still raises the error of [the number
+rule](r:instr.trace.number).
 
 ```rexx
 trace r
@@ -134,7 +164,11 @@ value of an expression, with a sign and blanks around it as a number may have,
 raises `SYNTAX 24.901`. A number only has a meaning in interactive tracing,
 which this book does not specify. A value that is not a whole number is not
 numeric here and is judged by [the letter rule](r:bif.trace.letter) as any
-other, so `1.5` raises `SYNTAX 24.1`, as does `.5`.
+other, so `1.5` raises `SYNTAX 24.1`, as does `.5`. A sign directly after
+TRACE, followed by one symbol or string, makes a signed number of it: a whole
+number raises `SYNTAX 24.901`, and any other operand raises `SYNTAX 26.7`.
+A parenthesis after the sign raises `SYNTAX 35.1`, and data after the number
+raises `SYNTAX 21.906`.
 
 ```rexx
 call try '5'
@@ -166,6 +200,32 @@ e: say arg(1) condition('o')~code
 .5 24.1
 ```
 
+```rexx
+call try 'trace -3'
+call try 'trace + 5'
+call try "trace -'r'"
+call try 'trace -3.5'
+call try 'trace -(3)'
+call try 'trace -3 x'
+exit
+try: procedure
+  signal on syntax name e
+  interpret arg(1)
+  say arg(1) 'set'
+  return
+e: say arg(1) condition('o')~code
+  return
+```
+
+```output
+trace -3 24.901
+trace + 5 24.901
+trace -'r' 26.7
+trace -3.5 26.7
+trace -(3) 35.1
+trace -3 x 21.906
+```
+
 r[instr.trace.invalid]
 A setting that is neither a number nor [valid](r:bif.trace.error) raises
 `SYNTAX 24.1`. A letter that is valid but is
@@ -194,11 +254,12 @@ resultsx set R
 ```
 
 r[instr.trace.syntax]
-Data after the setting, other than the expression of VALUE or a parenthesized
-expression, raises `SYNTAX 21.906`. VALUE with no expression raises `SYNTAX
-35.916`. Both are found when the program is read, so a program file that has
-one writes nothing and ends with the return code of the error, and the
-subcode shows only in INTERPRET text.
+Data after the setting, other than the expression of VALUE or the rest of a
+clause that starts as [the value rule](r:instr.trace.form.value) says, raises
+`SYNTAX 21.906`. VALUE with no expression raises `SYNTAX 35.916`. Both are
+found when the program is read, so a program file that has one writes nothing
+and ends with the return code of the error, and the subcode shows only in
+INTERPRET text.
 
 ```rexx
 say 'not run'
@@ -330,7 +391,8 @@ A line that shows a clause has the line number right-aligned in six columns,
 a blank, the flag `*-*`, a blank, [the indentation](r:instr.trace.indent) and
 the text of the clause. The line
 number is the program line on which the clause starts, and clauses that share
-a line share its number.
+a line share its number. A clause run by INTERPRET carries the line number of
+the INTERPRET clause, and its text is the text of the string.
 
 ```rexx
 .traceoutput~destination(.output)
@@ -356,14 +418,32 @@ w = 10
        >>>   "10"
 ```
 
+```rexx
+.traceoutput~destination(.output)
+trace r
+interpret 'x = 1; y = 2'
+```
+
+```output
+     3 *-* interpret 'x = 1; y = 2'
+       >>>   "x = 1; y = 2"
+     3 *-* x = 1;
+       >>>   "1"
+     3 *-* y = 2
+       >>>   "2"
+```
+
 r[instr.trace.text]
 The text of a clause is shown as it was written, from its first token on: the
 blanks between tokens are kept, a comment between tokens is kept, a comment
-after the last token on its line is kept, a comment before the first token and
-a line end are not, and a clause that ends with a semicolon shows the
-semicolon. A clause that ran over several lines by
-a continuation is shown on one line, with the line ends removed, and carries
-the number of its first line.
+before the first token and a line end are not, and a clause that ends with a
+semicolon shows the semicolon. A comment before that semicolon is shown, and
+one after it is not. A comment after the last token on its line, with no
+semicolon after it, is kept. A clause that ran over several lines, by a
+continuation or by a comment, is shown on one line with the line ends
+removed, the comma of a continuation and the blanks that begin the next line
+kept, and carries the number of its first line. The text of an IF or WHEN
+clause ends before THEN, so it keeps the blanks that stood before THEN.
 
 ```rexx
 .traceoutput~destination(.output)
@@ -383,13 +463,46 @@ c = 5   /* tail */
        >>>   "5"
 ```
 
+```rexx
+.traceoutput~destination(.output)
+trace r
+n = 1
+if n=1 then nop
+if (n=1)then nop
+g = 7 ; -- after the semicolon
+c = 3 /* before */ ;
+f = 6 /* two
+  lines */ + 1
+```
+
+```output
+     3 *-* n = 1
+       >>>   "1"
+     4 *-* if n=1 
+       >>>   "1"
+     4 *-*   then
+     4 *-*     nop
+     5 *-* if (n=1)
+       >>>   "1"
+     5 *-*   then
+     5 *-*     nop
+     6 *-* g = 7 ;
+       >>>   "7"
+     7 *-* c = 3 /* before */ ;
+       >>>   "3"
+     8 *-* f = 6 /* two  lines */ + 1
+       >>>   "7"
+```
+
 r[instr.trace.result]
 A line that shows a value is written below the line of its clause, with seven
 blanks, a three-character flag, a blank, the indentation of the clause, two
 more blanks and the value in double quotation marks. Blanks inside the quotes
-are the value's own. A control character below `'20'x` other than the tab
-`'09'x`, the line feed `'0A'x` and the carriage return `'0D'x` is shown as a
-question mark, and a value that is not a string is shown as its string value.
+are the value's own. The tab `'09'x`, the line feed `'0A'x`
+and the carriage return `'0D'x` are shown as themselves, every other byte
+below `'20'x` is shown as `?`, and the bytes from `'20'x` up, `'7F'x` and
+`'FF'x` among them, are shown as themselves. A value that is not a string is
+shown as its string value.
 
 ```rexx
 .traceoutput~destination(.output)
@@ -411,19 +524,19 @@ z = 1.50 + 1
 ```rexx
 .traceoutput~destination(.sink~new)
 trace r
-x = 'a' || '01'x || 'b' || '09'x || '1b'x || 'c'
+x = 'a' || '01'x || 'b' || '09'x || '1b'x || 'c' || '7f'x || 'ff'x
 trace n
 exit
 ::class sink
 ::method lineout
   use arg line
   line = '' || line
-  if line~pos('>>>') > 0 then say line~right(7)~c2x
+  if line~pos('>>>') > 0 then say line~right(10)~c2x
   return 0
 ```
 
 ```output
-613F62093F6322
+22613F62093F637FFF22
 ```
 
 ## What a setting lists
@@ -573,18 +686,23 @@ r[instr.trace.tags]
 The flag of a value line says what produced the value. Under `R` the value
 lines carry `>>>`, the final value of an expression, a value that a `PARSE`,
 `ARG`, `PULL` or `USE` instruction took from its source, and the value that a
-routine returns to its caller; the `+++` line of a command is the other kind
-of line of this setting. `I` adds `>L>` for a literal and `>V>` for the value
-of a variable, shown as `NAME => "value"`. It adds `>C>` for a compound
-variable whose tail was substituted, shown as the substituted name, as in
-`S.K => "S.1"`, and `>E>` for an environment symbol. It adds `>O>` for the
-result of a binary operator and `>P>` for that of a prefix operator, each
-shown as the operator and its result, `>F>` for the result of a function call
-and `>M>` for that of a message, shown as the name and the result, and `>A>`
-for an argument of a call or of a message. It adds `>K>` for the value of a
-keyword's expression in `DO`, `NUMERIC` or `PARSE`, `>=>` for an assignment,
-shown as `NAME <= "value"`, and `>.>` for a value that a placeholder period of
-a template took. Names are shown in upper case.
+routine returns to its caller; a message instruction and a message assignment
+write no value line. The flag `>K>` marks, under `R` and `I`, the value of a
+keyword's expression in `DO`, `NUMERIC`, `PARSE`, `SIGNAL VALUE` and `TRACE`
+with a value, and a redirection of an `ADDRESS` command; it is shown as the
+keyword and its value. `ADDRESS VALUE` and `OPTIONS` write only `>>>`. The
+`+++` line of a command is the other kind of line of this setting. The flags
+that follow belong to `I` alone. `>L>` is a literal and `>V>` the value of a
+variable, shown as `NAME => "value"`. `>C>` is a compound variable whose tail
+was substituted, shown as the substituted name, as in `S.K => "S.1"`, `>E>` an
+environment symbol, and `>N>` a symbol qualified by a namespace, shown as
+`NS:C => "The C class"`. `>O>` is the result of a binary operator and `>P>`
+that of a prefix operator, each shown as the operator and its result, `>F>`
+the result of a function call and `>M>` that of a message, shown as the name
+and the result, and `>A>` an argument of a call or of a message. `>R>` is a
+variable reference that `USE ARG` took, shown as `"V" => "W"`. `>=>` is an
+assignment, shown as `NAME <= "value"`, and `>.>` a value that a placeholder
+period of a template took. Names are shown in upper case.
 
 ```rexx
 .traceoutput~destination(.output)
@@ -667,6 +785,79 @@ sub: use arg a, b
      5 *-* exit
 ```
 
+```rexx
+.traceoutput~destination(.output)
+trace i
+v = 1
+call sub >v
+trace n
+exit
+sub: use arg >w
+  return
+```
+
+```output
+     3 *-* v = 1
+       >L>   "1"
+       >>>   "1"
+       >=>   V <= "1"
+     4 *-* call sub >v
+       >O>   ">" => "V"
+       >A>   "1"
+     7 *-*   sub:
+     7 *-*   use arg >w
+       >R>     "V" => "W"
+     8 *-*   return
+     5 *-* trace n
+```
+
+```rexx
+.traceoutput~destination(.output)
+trace i
+trace value 'r'
+trace ('n')
+```
+
+```output defect=#103
+     3 *-* trace value 'r'
+       >L>   "r"
+       >K>   "VALUE" => "r"
+     4 *-* trace ('n')
+       >K>   "VALUE" => "n"
+```
+
+```rexx
+lib = 'spec-trace-lib.tmp'
+use = 'spec-trace-use.tmp'
+call sysfiledelete lib
+call sysfiledelete use
+call lineout lib, '::class c public'
+call lineout lib, '::routine pub public'
+call lineout lib, '  return 1'
+call lineout lib
+call lineout use, 'trace i'
+call lineout use, 'x = ns:c~new'
+call lineout use, 'y = ns:pub()'
+call lineout use, 'trace n'
+call lineout use, "::requires '"lib"' namespace ns"
+call lineout use
+.traceoutput~destination(.sink~new)
+call (use)
+call sysfiledelete lib
+call sysfiledelete use
+::class sink
+::method lineout
+  use arg line
+  line = '' || line
+  if line~pos('>N>') > 0 | line~pos('>F>') > 0 then .output~lineout(line)
+  return 0
+```
+
+```output
+       >N>   NS:C => "The C class"
+       >F>   PUB => "1"
+```
+
 ## Indentation
 
 r[instr.trace.indent]
@@ -728,6 +919,7 @@ f:
 r[instr.trace.indent.signal]
 A SIGNAL sets the level to zero, so the clauses after it are shown from the
 left margin, also when the SIGNAL stood in a DO group or in a called routine.
+A condition that SIGNAL ON traps does the same.
 
 ```rexx
 .traceoutput~destination(.output)
@@ -759,6 +951,31 @@ g:
      4 *-* c = 3
        >>>   "3"
      5 *-* exit
+```
+
+```rexx
+.traceoutput~destination(.output)
+trace r
+signal on syntax name trap
+call f
+exit
+f:
+  do
+    x = 1 / 0
+  end
+trap:
+  z = 1
+```
+
+```output
+     3 *-* signal on syntax name trap
+     4 *-* call f
+     6 *-*   f:
+     7 *-*   do
+     8 *-*     x = 1 / 0
+    10 *-* trap:
+    11 *-* z = 1
+       >>>   "1"
 ```
 
 ## Concurrent activities
