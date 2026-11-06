@@ -101,6 +101,19 @@ enum Field {
     Text,
 }
 
+fn apply_text(stack: &mut [Message], field: &Field, raw: &str) {
+    if let Some(m) = stack.last_mut() {
+        match field {
+            Field::Code => m.major = parse_num(raw, "Code"),
+            Field::Subcode => m.sub = parse_num(raw, "Subcode"),
+            Field::Number => m.number = parse_num(raw, "MessageNumber"),
+            Field::Symbol => m.symbol.push_str(raw.trim()),
+            Field::Text => m.text.push_str(raw),
+            Field::None => {}
+        }
+    }
+}
+
 fn generate_errors(path: &Path) -> String {
     let xml = std::fs::read_to_string(path)
         .unwrap_or_else(|e| panic!("cannot read {}: {e}", path.display()));
@@ -121,21 +134,21 @@ fn generate_errors(path: &Path) -> String {
             Err(e) => panic!("malformed XML in {}: {e}", path.display()),
             Ok(Event::Eof) => break,
             Ok(Event::Start(e)) => match e.name().as_ref() {
-                b"Message" | b"SubMessage" => {
+                "Message" | "SubMessage" => {
                     stack.push(Message::default());
                     field = Field::None;
                 }
-                b"Code" => field = Field::Code,
-                b"Subcode" => field = Field::Subcode,
-                b"MessageNumber" => field = Field::Number,
-                b"SymbolicName" => field = Field::Symbol,
-                b"Text" => {
+                "Code" => field = Field::Code,
+                "Subcode" => field = Field::Subcode,
+                "MessageNumber" => field = Field::Number,
+                "SymbolicName" => field = Field::Symbol,
+                "Text" => {
                     field = Field::Text;
                     depth_in_text = 0;
                 }
                 // Rendering rules copied from RexxErrorMessages.xsl:86-96.
                 // <q> keeps its quotes -- it is not documentation-only markup.
-                b"q" if field == Field::Text => {
+                "q" if field == Field::Text => {
                     depth_in_text += 1;
                     if let Some(m) = stack.last_mut() {
                         m.text.push('"');
@@ -145,17 +158,17 @@ fn generate_errors(path: &Path) -> String {
             },
             Ok(Event::Empty(e)) if field == Field::Text => {
                 let rendered = match e.name().as_ref() {
-                    b"Sub" => {
+                    "Sub" => {
                         let pos = e
                             .attributes()
                             .flatten()
-                            .find(|a| a.key.as_ref() == b"position")
-                            .map(|a| String::from_utf8_lossy(&a.value).into_owned())
+                            .find(|a| a.key.as_ref() == "position")
+                            .map(|a| a.value.into_owned())
                             .expect("every <Sub> carries a position");
                         format!("&{pos}")
                     }
-                    b"sq" => "'".to_string(),
-                    b"dq" => "\"".to_string(),
+                    "sq" => "'".to_string(),
+                    "dq" => "\"".to_string(),
                     _ => String::new(),
                 };
                 if let Some(m) = stack.last_mut() {
@@ -163,26 +176,32 @@ fn generate_errors(path: &Path) -> String {
                 }
             }
             Ok(Event::Text(t)) => {
-                let raw = t.unescape().expect("well-formed entity").into_owned();
-                if let Some(m) = stack.last_mut() {
-                    match field {
-                        Field::Code => m.major = parse_num(&raw, "Code"),
-                        Field::Subcode => m.sub = parse_num(&raw, "Subcode"),
-                        Field::Number => m.number = parse_num(&raw, "MessageNumber"),
-                        Field::Symbol => m.symbol.push_str(raw.trim()),
-                        Field::Text => m.text.push_str(&raw),
-                        Field::None => {}
-                    }
-                }
+                // Entity references arrive as separate `GeneralRef` events,
+                // so `t` is already literal character data.
+                apply_text(&mut stack, &field, &t);
+            }
+            Ok(Event::GeneralRef(r)) => {
+                let resolved = match r.resolve_char_ref().expect("well-formed char ref") {
+                    Some(c) => c.to_string(),
+                    None => match &*r {
+                        "lt" => "<".to_string(),
+                        "gt" => ">".to_string(),
+                        "amp" => "&".to_string(),
+                        "apos" => "'".to_string(),
+                        "quot" => "\"".to_string(),
+                        other => panic!("unknown entity &{other}; in {}", path.display()),
+                    },
+                };
+                apply_text(&mut stack, &field, &resolved);
             }
             Ok(Event::End(e)) => match e.name().as_ref() {
-                b"q" if field == Field::Text && depth_in_text > 0 => {
+                "q" if field == Field::Text && depth_in_text > 0 => {
                     depth_in_text -= 1;
                     if let Some(m) = stack.last_mut() {
                         m.text.push('"');
                     }
                 }
-                b"Message" | b"SubMessage" => {
+                "Message" | "SubMessage" => {
                     let done = stack.pop().expect("balanced start/end");
                     if done.symbol.is_empty() {
                         panic!("message {}.{:03} has no SymbolicName", done.major, done.sub);
@@ -193,7 +212,7 @@ fn generate_errors(path: &Path) -> String {
                     messages.push(done);
                     field = Field::None;
                 }
-                b"Code" | b"Subcode" | b"MessageNumber" | b"SymbolicName" | b"Text" => {
+                "Code" | "Subcode" | "MessageNumber" | "SymbolicName" | "Text" => {
                     field = Field::None;
                 }
                 _ => {}
