@@ -257,9 +257,12 @@ The settings of an internal routine are its own. When NUMERIC settings, the
 trace setting or the default environment of ADDRESS are changed inside the
 routine, the caller has the ones it had before the CALL when the routine
 returns, whether or not the routine starts with PROCEDURE. For NUMERIC, [the
-scope rule](r:num.settings.call) says it. The same holds for the trace
-setting and the address environment, which the TRACE and ADDRESS pages
-specify, and the traps of conditions that the conditions chapter specifies.
+scope rule](r:num.settings.call) says it, and for the trace setting [the
+TRACE rule](r:bif.trace.scope) does. The same holds for the address
+environment, which the ADDRESS page specifies, and the traps of conditions
+that the conditions chapter specifies. The routine of the example traces, and
+that trace output goes to standard error, so the output block shows only the
+standard output.
 
 ```rexx
 numeric digits 5

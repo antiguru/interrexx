@@ -1,7 +1,7 @@
 ---
 element: SELECT
 kind: instruction
-syntax: "SELECT [LABEL name] [CASE expression]; WHEN expression [, expression]... [;] THEN instruction ... [OTHERWISE [instructions]] END [name]"
+syntax: "SELECT [LABEL name] [CASE expression]; WHEN expression [, expression]... [;] THEN [;] instruction ... [OTHERWISE [instructions]] END [name]"
 ansi: "6.3.2.17, 8.3.24"
 rexxref: "Keyword Instructions > SELECT"
 deviations: [39]
@@ -45,6 +45,35 @@ f: say 'f called'; return 1
 ```output
 medium
 after
+```
+
+r[instr.select.then]
+A WHEN accepts null clauses between its expression and its THEN, and after the
+THEN, just as an IF does: a line end, a semicolon, blank lines and comments
+there neither end the WHEN nor take the place of its instruction. The first
+SELECT below has a THEN on a later line than its WHEN, and a semicolon and a
+comment before it. The second has a null clause after the THEN.
+
+```rexx
+select
+  when 0
+  then say 'no'
+  when 1; /* c */
+
+  then say 'yes'
+  when 1;; then say 'not reached'
+  otherwise say 'other'
+end
+select
+  when 1 then
+    ;
+    say 'branch'
+end
+```
+
+```output
+yes
+branch
 ```
 
 ## The test of a WHEN
