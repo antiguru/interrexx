@@ -16,10 +16,14 @@ strings only, and blanks matter only in where they separate tokens.
 r[lex.characters.bytes]
 The text of a program is read as bytes, with no decoding. A character in a
 string or in a comment is one byte, so a character that UTF-8 writes as two
-bytes is [two characters](r:conv.string.chars) in a string, and every byte
-value, `'00'x` and the values from `'80'x` upward included, may appear
-there. Only the end-of-file byte of [the next rule](r:lex.characters.eof) is
-excluded in a program file.
+bytes is [two characters](r:conv.string.chars) in a string, and `'00'x` and
+the values from `'80'x` upward may appear there. In a program file, a
+comment may hold any byte except `'1A'x`, and a string any byte except
+`'1A'x` and the line-end bytes `'0A'x` and `'0D'x`, as
+[line ends](r:lex.characters.line-end) and
+[the end-of-file byte](r:lex.characters.eof) say. In the text given to
+INTERPRET a string or comment may hold any byte, as
+[its rule](r:lex.characters.interpret) says.
 
 ```rexx
 say length('é') c2x('é')
@@ -41,9 +45,12 @@ letters `A` to `Z` and `a` to `z`, the digits `0` to `9`, the marks
 and the operator and special characters
 `& ( ) * + , - / : ; < = > \ | % ~ [ ]`. Any other byte there, among them
 `#`, `$`, `@`, `^`, the backquote, the braces, `'7F'x` and the control
-characters other than the tab, the line ends and `'1A'x`, raises
-`SYNTAX 13.1`. So does every byte from `'80'x` upward other than `'AA'x`
-and `'AC'x`. The same bytes are not an error inside a string or a comment.
+characters other than the tab, raises `SYNTAX 13.1`. So does every byte from
+`'80'x` upward other than `'AA'x` and `'AC'x`. Inside a string or a comment
+none of them is an error. In a program file the line ends and `'1A'x` are
+not characters of the text but [line ends](r:lex.characters.line-end) and
+[its end](r:lex.characters.eof). In INTERPRET text they are outside the set
+[like any other control character](r:lex.characters.interpret).
 
 ```rexx
 x.1 = 'v'; a! = 1; b? = 2; c_ = 3
@@ -115,7 +122,9 @@ e: say condition('o')~code
 
 r[lex.characters.case]
 A symbol is translated to upper case when the program is read, so its
-letters may be written in either case. The same holds for the keywords of
+letters may be written in either case. A number is a symbol and is only
+translated, not normalised: `1e3` becomes `1E3`, not `1000`. The same holds
+for the keywords of
 an instruction, for labels and for the names of variables. The characters of
 a string are never translated.
 
@@ -126,6 +135,7 @@ SAY 'Abc'
 x.Y = 1
 say X.y
 say 'abc' == 'ABC'
+say 1e3 1.5e2 .5e1
 signal LaBel
 say 'skipped'
 label: say 'at the label'
@@ -136,6 +146,7 @@ Val Val Val
 Abc
 1
 0
+1E3 1.5E2 .5E1
 at the label
 ```
 
@@ -171,8 +182,10 @@ a b
 r[lex.characters.line-end]
 In a program file, a line ends at a line feed (`'0A'x`), at a carriage
 return (`'0D'x`), or at a carriage return followed by a line feed, which is
-one line end. The last line need not end. This book does not specify the
-handling of a carriage return in the string given to INTERPRET.
+one line end. The last line need not end. A line end inside a string is the
+fault `SYNTAX 6.2` or `6.3`, and a comment may hold line ends. The text
+given to INTERPRET has no line ends, as
+[its rule](r:lex.characters.interpret) says.
 
 ```rexx
 f = 'spec-lex-lines.tmp'
@@ -194,8 +207,8 @@ d
 r[lex.characters.eof]
 In a program file, the byte `'1A'x` ends the program: it and every byte
 after it are not read, even inside a string or a comment, so a string or
-comment still open at that byte is unmatched. This book does not specify the
-byte `'1A'x` in the string given to INTERPRET.
+comment still open at that byte is unmatched. The byte also ends a clause
+that it follows directly.
 
 ```rexx
 f = 'spec-lex-eof.tmp'
@@ -208,4 +221,67 @@ call sysfiledelete f
 
 ```output
 a
+```
+
+```rexx
+f = 'spec-lex-eof2.tmp'
+call sysfiledelete f
+call charout f, "say 'a" || '1a'x || "b'" || '0a'x
+call charout f
+call (f)
+call sysfiledelete f
+```
+
+```output rc=250
+```
+
+```rexx
+f = 'spec-lex-eof3.tmp'
+call sysfiledelete f
+call charout f, "say 'a'" || '1a'x || "say 'b'" || '0a'x
+call charout f
+call (f)
+call sysfiledelete f
+```
+
+```output
+a
+```
+
+r[lex.characters.interpret]
+The text given to INTERPRET is not a file and has no lines. In it the bytes
+`'0A'x`, `'0D'x` and `'1A'x` are not line ends and not an end of text.
+Outside a string or a comment they are outside the
+[character set](r:lex.characters.set) and raise `SYNTAX 13.1`, as does any
+other control character. Inside a string or a comment they are ordinary
+characters, so a string there may hold them and a line comment runs to the
+end of the text. A string or comment that is still open at the end of the
+text is unmatched.
+
+```rexx
+lf = '0a'x
+say length('a' || lf || 'b')
+interpret "say 'a" || lf || "b'"
+interpret "say 1 /* x" || lf || "y */ + 1"
+interpret "say 2 -- c" || lf || "say 3"
+signal on syntax name a
+interpret "say 1" || lf || "say 2"
+a: say condition('o')~code
+signal on syntax name b
+interpret "say 1" || '0d'x || "say 2"
+b: say condition('o')~code
+signal on syntax name c
+interpret "say 1" || '1a'x
+c: say condition('o')~code
+```
+
+```output
+3
+a
+b
+2
+2
+13.1
+13.1
+13.1
 ```

@@ -1,7 +1,7 @@
 ---
 element: "Literals"
 kind: concept
-ansi: "6.2.1.2"
+ansi: "6.2.2, 6.2.1.1"
 rexxref: "General Concepts > Structure and General Syntax > Tokens"
 ---
 
@@ -27,14 +27,14 @@ In a program file a string cannot contain a line end.
 say 'It''s' "say ""hi""" 'say "hi"' "it's"
 say length('''') length("""") length('''''')
 say 'a  b' '  lead' 'trail  '||'|'
-say 'ABC abc' '-- no' '/* no */'
+say 'ABC abc'
 ```
 
 ```output
 It's say "hi" say "hi" it's
 1 1 2
 a  b   lead trail  |
-ABC abc -- no /* no */
+ABC abc
 ```
 
 r[lex.literals.null]
@@ -51,7 +51,9 @@ say length('') length("") '['||''||']'
 
 r[lex.literals.unmatched]
 A string whose closing quote mark is not found before the end of the line is
-an error. It raises `SYNTAX 6.2` for a string opened with `'` and
+an error. In the text given to INTERPRET the end of the text takes the place
+of the end of the line, as [the rule on its text](r:lex.characters.interpret)
+says. It raises `SYNTAX 6.2` for a string opened with `'` and
 `SYNTAX 6.3` for one opened with `"`. The fault is lexical, so it is found
 when the program is read, as [the chapter](r:lex.index.read-first) says. A
 string in a program file never goes on into the next line.
@@ -177,13 +179,13 @@ multiple of eight, zeros are taken before the first one. A binary string
 with no digits is the null string.
 
 ```rexx
-say c2x('1'b) c2x('11110000'b) c2x("10110000"B) c2x('1111'b)
+say c2x('11'b) c2x('10100110'b) c2x("01110001"B) c2x('1101'b)
 say c2x('1000000000'b) c2x('1111 0000 1111'b)
 say length(''b) length(""B)
 ```
 
 ```output
-01 F0 B0 0F
+03 A6 71 0D
 0200 0F0F
 0 0
 ```
@@ -198,7 +200,7 @@ raises `SYNTAX 15.6`, and a separator at the start or the end raises
 `SYNTAX 15.2`.
 
 ```rexx
-say c2x('101 1101'b) c2x('1 0000 1010'b) c2x('10000 10101010'b)
+say c2x('1 0110'b) c2x('110 11001100'b) c2x('1 0011 0111'b)
 interpret "say c2x('1" || '09'x || "0000'b)"
 signal on syntax name a
 interpret "say '1 1'b"
@@ -215,7 +217,7 @@ d: say condition('o')~code
 ```
 
 ```output
-5D 010A 10AA
+16 06CC 0137
 10
 15.6
 15.6
@@ -284,15 +286,18 @@ The letter after the closing quote mark is the suffix of a hexadecimal or
 binary string only when no symbol character follows it. The suffix `x` or
 `X`, or `b` or `B`, with a symbol character after it, or a blank before it,
 is a symbol or the start of one, and the quoted text before it is a plain
-string.
+string. A comment between the closing quote mark and the letter has the same
+effect, as it ends the string.
 
 ```rexx
 x = 'v'
 say '41'x '41' x '41'xx '41'x1 c2x('1'b) '1' b '1'bb
+say '41'/**/x
 ```
 
 ```output
 A 41 v 41XX 41X1 01 1 B 1BB
+41v
 ```
 
 r[lex.literals.adjacent]
@@ -313,16 +318,18 @@ A string that is directly followed by `(`, with no blank between, is the
 name of a function and not a value. The name is the characters of the string
 as written, with no change of case, so the name of a built-in function is
 found only when it is written in upper case. With a blank before the `(`
-the string is a value, and the parentheses enclose a term of their own.
+the string is a value, and the parentheses enclose a term of their own. A
+comment between the string and the `(` does not matter, as for a symbol that
+names a function.
 
 ```rexx
-say 'ABS'(-3) 'ABS' (-3)
+say 'ABS'(-3) 'ABS' (-3) 'ABS'/**/(-3) abs/**/(-3)
 signal on syntax name e
 say 'abs'(-3)
 e: say condition('o')~code
 ```
 
 ```output
-3 ABS -3
+3 ABS -3 3 3
 43.1
 ```

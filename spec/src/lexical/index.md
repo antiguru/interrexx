@@ -14,32 +14,34 @@ comments and strings are written, and where one token ends and the next
 begins. The meaning of a clause, and of the expressions inside it, is the
 business of the chapters that follow.
 
-A token belongs to one of these classes: a literal string, a hexadecimal
-string, a binary string, a symbol, a number, an operator character or a
-special character. Blanks and comments sit between tokens and are not tokens
-themselves. The pages of this chapter take the classes in turn:
+Every token is a string in quotes, a symbol or number, or a single
+operator or special character, and strings carry an optional radix suffix
+that makes them hexadecimal or binary. Blanks and comments sit between
+tokens and are not tokens themselves. These pages cover the level of
+characters and literals:
 
 * [Characters](characters.md): the characters a program may use, case, blanks
   and line ends.
 * [Comments](comments.md): block comments, nesting and line comments.
 * [Literals](literals.md): strings, hexadecimal strings and binary strings.
-* Symbols and numbers, operator characters and special characters, and the
-  clause level (clause ends, labels, continuation) have pages of their own.
 
 r[lex.index.read-first]
-A program is read in full before any clause of it runs. A fault in the
-lexical form of the text, such as an unmatched quote or comment delimiter
-(`SYNTAX 6.1`, `6.2` and `6.3`), a character outside the
-[character set](r:lex.characters.set) (`SYNTAX 13.1`) or a malformed
-hexadecimal or binary string (`SYNTAX 15.1` to `15.6`), is raised before the
-first clause runs, so the program produces no output and ends with the exit
-code `256` minus the error number. The text given to INTERPRET is read when
-the INTERPRET instruction runs, so the same fault there is an ordinary
-condition that a trap can handle, and the instructions before it in the
-string never run.
+A program is read in full before any clause of it runs, so a fault anywhere
+in the text, even after an `exit` or inside a routine that is never called,
+is raised before the first clause runs. A fault in the lexical form of the
+text is an unmatched quote or comment delimiter (`SYNTAX 6.1`, `6.2` and
+`6.3`), a character outside the [character set](r:lex.characters.set)
+(`SYNTAX 13.1`) or a malformed hexadecimal or binary string
+(`SYNTAX 15.1` to `15.6`). The program then produces no output and its
+process exit status is the negated error number, which a shell shows as
+`256` minus that number: 243 for 13.1. The empty `rc=` block shows the
+status and that no clause ran, but not the subcode, so the second example
+names it. The text given to INTERPRET is read when the INTERPRET instruction
+runs, so the same fault there is an ordinary condition that a trap can
+handle, and the instructions before it in the string never run.
 
 ```rexx
-say 'before'
+say 'before'; exit
 say 1 #
 ```
 
@@ -59,21 +61,34 @@ before
 13.1
 ```
 
+```rexx
+signal on syntax name e
+say 'before'
+interpret "say 'x'; say 1 #"
+say 'not reached'
+e: say condition('o')~code
+```
+
+```output
+before
+13.1
+```
+
 r[lex.index.token-end]
 A token ends at the first character that cannot be part of it. A string
 ends at its closing quote, a symbol at the first character that is not a
 symbol character, and an operator character is a token of its own or
-joins a following operator character. Blanks are needed only where two
-tokens would otherwise read as one, so `1+2` and `1 + 2` are the same three
-tokens, and a string may touch the symbol after it.
+joins a following operator character, also across blanks and comments.
+Blanks are needed only where two tokens would otherwise read as one, so
+`1+2` and `1 + 2` are the same three tokens. A string may also
+[touch the symbol after it](r:lex.literals.adjacent).
 
 ```rexx
-y = 'v'
 say 1+2 1 + 2
-say 'x'y 'p'q'r'
+say 1 | | 2 1 |/**/| 2
 ```
 
 ```output
 3 3
-xv pQr
+12 12
 ```
