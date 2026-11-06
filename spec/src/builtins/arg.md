@@ -254,10 +254,10 @@ return
 
 r[bif.arg.option.array]
 With the option `A`, ARG answers an array of the arguments from argument `n`
-on. Index 1 holds argument `n`, index 2 argument `n + 1`, and so on, up to the
-last argument, so the array has as many places as there are arguments from
-`n` on. An argument that was omitted leaves its index without an item. The
-array has no places when `n` is greater than the number of arguments.
+on. The item at index `i` is argument `n + i - 1`, for every `i` up to the
+number of arguments from `n` on, and an index whose argument was omitted has no
+item. The array has no places when `n` is greater than the number of
+arguments.
 
 ```rexx
 call show 'a', , 'c', , 'e'
@@ -292,7 +292,10 @@ a method, the arguments of the message; for a program, those it was started
 with. When a routine returns, the caller's arguments are what ARG reports
 again. A routine does not see its caller's arguments, whether or not it is
 declared with PROCEDURE. INTERPRET runs in the routine that holds it, so ARG
-there reports that routine's arguments.
+there reports that routine's arguments. A routine that a CALL ON trap starts as
+a handler has one argument, the condition object (see
+[CONDITION](r:bif.condition.object)); a SIGNAL ON handler continues in the
+routine that holds its label, and so sees that routine's arguments.
 
 ```rexx
 say 'program' arg() '['arg(1)']'
@@ -304,6 +307,15 @@ call inner 'i1'
 call plain 'p1'
 say 'outer again' arg() arg(1) arg(2)
 interpret 'say "interpreted" arg() arg(2)'
+call on user foo name hu
+call raiser
+signal on syntax name hs
+x = 1 + 'a'
+hs: say 'signal handler' arg() arg(1)
+return
+raiser: procedure
+raise user foo return
+hu: say 'call handler' arg() arg(1)~class arg(2, 'E')
 return
 inner: procedure
 say 'inner' arg() arg(1) '['arg(2)']'
@@ -320,6 +332,8 @@ inner 1 i1 []
 plain 1 p1 []
 outer again 2 o1 o2
 interpreted 2 o2
+call handler 1 The Directory class 0
+signal handler 2 o1
 ```
 
 r[bif.arg.method]

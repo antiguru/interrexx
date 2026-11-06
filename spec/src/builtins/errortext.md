@@ -25,7 +25,7 @@ signal on syntax name a
 say errortext()
 a: say condition('o')~code
 signal on syntax name b
-say errortext(16, 'S')
+say errortext(26, 'S')
 b: say condition('o')~code
 signal on syntax name c
 say errortext(, )
@@ -44,18 +44,19 @@ d: say condition('o')~code
 
 r[bif.errortext.n]
 `n` is a whole number that passes the
-[whole-number rules](r:conv.whole.form), so a number such as `16.0`, `1.6e1`,
-`' 16 '` or `016` is 16. Its value must be in the range 0 to 99: a whole number
+[whole-number rules](r:conv.whole.form), so a number such as `26.0`, `2.6e1`,
+`' 26 '` or `026` is 26. Its value must be in the range 0 to 99: a whole number
 outside it raises `SYNTAX 40.903`, `-0` is 0, and a string that is not a whole
 number, the null string included, raises `SYNTAX 40.12`, as does a number
 whose magnitude is [too large](r:conv.whole.digits). The caller's NUMERIC
-DIGITS plays no part. The form is checked before the range.
+DIGITS plays no part. The form is checked before the range, so a number that
+is both out of range and not whole, such as 100.5, raises `SYNTAX 40.12`.
 
 ```rexx
 numeric digits 1
-say errortext(16) '/' errortext(16.0) '/' errortext(' 16 ') '/' errortext('016'),
-    '/' errortext(1.6e1) '/' errortext(99)
-say '['errortext(-0)']'
+say errortext(26) '/' errortext(26.0) '/' errortext(' 26 ') '/' errortext('026'),
+    '/' errortext(2.6e1) '/' errortext(99)
+say '['errortext('-0')']'
 signal on syntax name a
 say errortext(100)
 a: say condition('o')~code
@@ -74,16 +75,20 @@ e: say condition('o')~code
 signal on syntax name f
 say errortext(1e30)
 f: say condition('o')~code
+signal on syntax name g
+say errortext(100.5)
+g: say condition('o')~code
 ```
 
 ```output
-Label not found. / Label not found. / Label not found. / Label not found. / Label not found. / Translation error.
+Invalid whole number. / Invalid whole number. / Invalid whole number. / Invalid whole number. / Invalid whole number. / Translation error.
 []
 40.903
 40.903
 40.12
 40.12
 40.903
+40.12
 40.12
 ```
 
@@ -170,7 +175,7 @@ do i = 0 to 99
   if errortext(i) == '' then none = none i
 end
 say strip(none)
-say length(errortext(0)) length(errortext(60)) length(errortext(95))
+say length(errortext(0)) length(errortext(77)) length(errortext(95))
 ```
 
 ```output

@@ -154,12 +154,21 @@ After a trap has caught a condition, the option `D` answers the description
 string that the condition carries, or the null string when it carries none. A
 user condition carries what the RAISE instruction's DESCRIPTION gave, and a
 NOVALUE condition the name of the variable, in capital letters. A SYNTAX
-condition carries no description string.
+condition that the interpreter raises because of an error carries no
+description string; one that the RAISE instruction raises carries what its
+DESCRIPTION gave, and none when it has no DESCRIPTION, whether or not it has
+an ADDITIONAL.
 
 ```rexx
 signal on syntax name s
 x = 1 + 'a'
 s: say '['condition('D')']'
+signal on syntax name r
+call rs
+r: say '['condition('D')']'
+signal on syntax name q
+call rq
+q: say '['condition('D')']'
 signal on novalue name n
 y = unset + 1
 n: say '['condition('D')']'
@@ -170,9 +179,13 @@ raiser: procedure
 raise user foo description 'a note' return
 u: say '['condition('D')']'
 return
+rs: raise syntax 40.1 description 'dd' return
+rq: raise syntax 40.1 additional ('ad') return
 ```
 
 ```output
+[]
+[dd]
 []
 [UNSET]
 [a note]
@@ -180,8 +193,9 @@ return
 
 r[bif.condition.extra]
 After a trap has caught a SYNTAX condition, the option `E` answers the subcode
-of the error number: the part after the period, as `12` for `40.12`. After
-any other condition it answers the null string.
+of the error number: the part after the period, as `12` for `40.12`. An error
+number raised without a subcode, as `RAISE SYNTAX 40` does, has the subcode 0
+and the code `40.0`. After any other condition `E` answers the null string.
 
 ```rexx
 signal on syntax name s
@@ -193,12 +207,18 @@ t: say condition('E') condition('O')~code
 signal on novalue name n
 y = unset + 1
 n: say '['condition('E')']'
+signal on syntax name z
+call rz
+z: say condition('E') condition('O')~code
+exit
+rz: raise syntax 40 return
 ```
 
 ```output
 1 41.1
 924 93.924
 []
+0 40.0
 ```
 
 r[bif.condition.additional]
@@ -266,9 +286,12 @@ OFF
 r[bif.condition.object]
 After a trap has caught a condition, the option `O` answers a directory that
 holds the information of the condition, the same information as the other
-options answer, and more. Its entries `CONDITION`, `DESCRIPTION`, `INSTRUCTION`
-and `ADDITIONAL` equal what `C`, `D`, `I` and `A` answer, and the directory is
-not the condition itself: changing it changes nothing that CONDITION answers.
+options answer, and more. Its entries `CONDITION`, `DESCRIPTION` and `INSTRUCTION` equal what `C`, `D`
+and `I` answer, and so does `ADDITIONAL` when the condition carries additional
+information. When it carries none, as with NOVALUE, the directory has no
+`ADDITIONAL` entry, and `~additional` answers `.nil` as for any absent entry,
+which is also what `A` answers. The directory is not the condition itself:
+changing it changes nothing that CONDITION answers.
 
 ```rexx
 signal on syntax name s
@@ -278,11 +301,16 @@ say o~class (o~condition == condition('C')) (o~description == condition('D')),
     (o~instruction == condition('I')) (o~additional == condition('A'))
 o~condition = 'changed'
 say condition('C') condition('O')~condition
+signal on novalue name n
+y = unset + 1
+n: o = condition('O')
+say o~hasIndex('ADDITIONAL') (o~additional == .nil) (condition('A') == .nil)
 ```
 
 ```output
 The Directory class 1 1 1 1
 SYNTAX SYNTAX
+0 1 1
 ```
 
 ## How long the information lasts

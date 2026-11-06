@@ -154,15 +154,18 @@ b: say condition('o')~code
 r[bif.sourceline.which]
 SOURCELINE reads the program that holds the code that calls it. An internal
 routine, a method, a `::ROUTINE` and an INTERPRET string read the program that
-holds them. A routine made from other source
-text reads that text, which has one line for each item of the array it was made
-from, an empty item included.
+holds them; so does code in a required package, which reads that package's
+source and not the requiring program's. A routine or package made from other
+source text reads that text, which has one line for each item of the array it
+was made from, an empty item included.
 
 ```rexx
 say show() rt() .box~new~m
 interpret 'say sourceline()'
 r = .routine~new('other', .array~of('say sourceline()', '', 'say sourceline(1)', ''))
 r~call
+pk = .package~new('pk', .array~of('::routine pr public', 'return sourceline() sourceline(1)'))
+say pk~findRoutine('PR')~call
 exit
 show: return sourceline()
 ::routine rt
@@ -173,10 +176,11 @@ return sourceline()
 ```
 
 ```output
-11 11 11
-11
+13 13 13
+13
 4
 say sourceline()
+2 ::routine pr public
 ```
 
 > **Note.** The ANSI draft (9.5.8) defines SOURCELINE the same way, and raises
