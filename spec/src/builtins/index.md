@@ -1499,9 +1499,9 @@ CHAROUT and LINEOUT never close a standard stream. A call of either that gives
 neither a string nor a start or line, and either no stream name or the name of
 a standard stream, writes nothing, answers 0 and does nothing else: the later
 output of the program is written as usual. ooRexx closes the standard stream
-for such a call, the standard output or the standard error, and the later
-output to it is lost; which forms of the call do so varies from program to
-program.
+for such a call, the standard output or the standard error, and output written
+to it, before or after the call, can be lost; which forms of the call do so
+varies from program to program.
 
 ```rexx
 say 'one'

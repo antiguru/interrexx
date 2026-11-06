@@ -1058,8 +1058,7 @@ After a write, the write position is just after the last character, wherever
 the write was asked to go. ooRexx differs there: it moves the position, and
 the write goes after the last character as any other does; the write position
 it reports afterwards is the one that a CHAROUT start named, or that a `SEEK`
-set, moved past the characters written, and after a LINEOUT that names a line
-it is just after the last character.
+set, moved past the characters written.
 
 ```rexx
 f = 'spec-stream-dev79.tmp'

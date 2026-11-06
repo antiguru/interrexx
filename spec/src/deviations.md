@@ -513,9 +513,7 @@ a SEEK answers 0, and a CHAROUT or LINEOUT naming a position there writes
 nothing, all NOTREADY. ooRexx moves the position there, and the write goes
 after the last character as any other does. After a write, the write position
 reported is just after the last character. ooRexx reports the position that
-a CHAROUT start named, or that a SEEK set, moved past the characters written;
-after a LINEOUT that names a line it reports the position just after the last
-character.
+a CHAROUT start named, or that a SEEK set, moved past the characters written.
 
 ## 80. First SEEK of an unopened transient stream
 
@@ -628,9 +626,9 @@ answers `1E-7`, and after a change to NUMERIC FORM ENGINEERING it answers
 CHAROUT and LINEOUT never close a standard stream. A call of either that gives
 no string, on a standard stream, writes nothing and does nothing else, and the
 later output of the program is written as usual. ooRexx closes the standard
-stream for such a call, the standard output or the standard error, and the
-later output to it is lost; which forms of the call do so varies from program
-to program.
+stream for such a call, the standard output or the standard error, and output
+written to it, before or after the call, can be lost; which forms of the call
+do so varies from program to program.
 
 ## 99. Reading the standard output or error
 
