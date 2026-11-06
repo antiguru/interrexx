@@ -4,7 +4,7 @@ kind: instruction
 syntax: "INTERPRET expression"
 ansi: "6.3.2.62, 8.3.10"
 rexxref: "Keyword Instructions > INTERPRET"
-deviations: [76]
+deviations: [51, 76]
 ---
 
 # INTERPRET
@@ -29,11 +29,11 @@ expression is an ordinary [expression](r:expr.index.value), so a text is
 often built from pieces.
 
 ```rexx
-data = 'FRED'
-interpret data '= 4'
-say fred
-interpret 'x = 1; y = x + 1'
-say x y
+slot = 'total'
+interpret slot '= 6 * 7'
+say total
+interpret 'p = 1; q = p + 1'
+say p q
 interpret 'say' 1 + 1
 interpret 'do 2; say "loop"; end'
 interpret 'interpret "z = 9"'
@@ -41,7 +41,7 @@ say z
 ```
 
 ```output
-4
+42
 1 2
 2
 loop
@@ -66,11 +66,21 @@ say 'nothing happened'
 signal on syntax name e
 interpret 1 / 0
 e: say condition('o')~code
+call try 'interpret'
+exit
+try:
+  signal on syntax name e2
+  interpret arg(1)
+  say 'ok' arg(1)
+  return
+e2: say condition('o')~code '<=' arg(1)
+  return
 ```
 
 ```output
 nothing happened
 42.3
+35.912 <= interpret
 ```
 
 ```rexx
@@ -173,12 +183,47 @@ first
 34.1 <= say "first"; if 2 then nop
 ```
 
+r[instr.interpret.lines]
+The text has no line ends. A line feed or a carriage return in it, which is
+what [a program file](r:lex.index.read-first) would read as the end of a
+line, raises `SYNTAX 13.1` when the text is read, and so does a result that
+the conversion makes into several lines, such as an `Array`. A `--` comment
+therefore runs to the end of the whole text and hides what follows it, even
+after a semicolon, and a comma at the very end of the text is accepted.
+
+```rexx
+call try 'say 1' || '0a'x || 'say 2'
+call try 'say 1' || '0d'x || 'say 2'
+call try 'say 3 -- c; say 4'
+call try 'say 5,'
+call try 'interpret .array~of("say 6", "say 7")'
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  say 'ok' arg(1)
+  return
+e: say condition('o')~code
+  return
+```
+
+```output
+13.1
+13.1
+3
+ok say 3 -- c; say 4
+5
+ok say 5,
+13.1
+```
+
 r[instr.interpret.complete]
 Every DO, IF and SELECT that the text opens must end inside it, and the text
-may not hold the end of a construct that began outside it. A DO with no END
-raises `SYNTAX 14.5`, and an IF with nothing after its THEN raises `14.3`. An
-END with no construct to end raises `10.1`, including an END that would close
-a loop around the INTERPRET. A THEN, an ELSE, a WHEN and an OTHERWISE with no
+may not hold the end of a construct that began outside it. A simple DO with no
+END raises `SYNTAX 14.1`, a SELECT with no END `14.2`, and a loop with no END
+`14.5`. An IF with no THEN raises `18.1`, a THEN with no instruction after it
+`14.3` and an ELSE with none `14.4`. An END with no construct to end raises
+`10.1`, including an END that would close a loop around the INTERPRET. A THEN, an ELSE, a WHEN and an OTHERWISE with no
 IF or SELECT before it raise `8.1`, `8.2`, `9.1` and `9.2`, in that order.
 Complete constructs run as they do in a program.
 
@@ -191,8 +236,13 @@ do 2
   interpret 'end'
 end
 outer: say condition('o')~code
+call try 'do; say 1'
+call try 'select; when 1 then say 1'
 call try 'do 2'
+call try 'do i = 1 to 2; say 1'
+call try 'if 1'
 call try 'if 1 then'
+call try 'if 1 then say 1; else'
 call try 'end'
 call try 'then say 1'
 call try 'else say 1'
@@ -214,8 +264,13 @@ a
 t
 o
 10.1
+14.1 <= do; say 1
+14.2 <= select; when 1 then say 1
 14.5 <= do 2
+14.5 <= do i = 1 to 2; say 1
+18.1 <= if 1
 14.3 <= if 1 then
+14.4 <= if 1 then say 1; else
 10.1 <= end
 8.1 <= then say 1
 8.2 <= else say 1
@@ -315,7 +370,9 @@ loop of the code around the INTERPRET is out of reach: the instruction raises
 `SYNTAX 28.1` for a LEAVE and `28.2` for an ITERATE with no name, and `28.3`
 and `28.4` when the instruction names a loop, even in the body of a loop. A
 simple DO group is not a loop. A PROCEDURE in the text raises `SYNTAX 17.1`,
-even when the INTERPRET is the first instruction of the routine.
+even when the INTERPRET is the first instruction of the routine, and an EXPOSE
+raises `99.908` and a REPLY `99.924` when the text is read, so that no clause
+of the text runs.
 
 ```rexx
 signal on syntax name e1
@@ -350,8 +407,11 @@ loop 2
 ```rexx
 call try 'do 3; if 1 then leave; end; say "after leave"'
 call try 'do k = 1 to 2; interpret "iterate k"; say "k" k; end'
+call try 'do i = 1 to 2; interpret "leave i"; end'
 call try 'do; leave; end'
 call try 'iterate'
+call try 'say "first"; expose x'
+call try 'say "first"; reply 1'
 exit
 try:
   signal on syntax name e
@@ -366,8 +426,11 @@ e: say condition('o')~code '<=' arg(1)
 after leave
 ok do 3; if 1 then leave; end; say "after leave"
 28.4 <= do k = 1 to 2; interpret "iterate k"; say "k" k; end
+28.3 <= do i = 1 to 2; interpret "leave i"; end
 28.1 <= do; leave; end
 28.2 <= iterate
+99.908 <= say "first"; expose x
+99.924 <= say "first"; reply 1
 ```
 
 ## Errors
@@ -425,4 +488,21 @@ say c~code (c~package == .context~package)
 
 ```output
 35.1 1
+```
+
+r[instr.interpret.deviation.51]
+Inside the text, `.RS` and `.CONTEXT~RS` answer the same value: the return
+code that a command in the text has just set. In ooRexx the method answers
+the value that the caller had before the INTERPRET until the text ends, and
+`.RS` answers the new value at once.
+
+```rexx
+'true'
+interpret '"false"; say .rs .context~rs'
+say .rs .context~rs
+```
+
+```output
+1 1
+1 1
 ```

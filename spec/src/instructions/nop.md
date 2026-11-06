@@ -72,10 +72,10 @@ a compound
 r[instr.nop.error]
 Anything after NOP in its clause, other than the end of the clause, raises
 `SYNTAX 21.901`: a symbol, a number, a string, a parenthesis or a keyword
-such as THEN. In a program file this is found when the program is read, so no
-clause runs, not even one before the NOP, and the exit code is 235, which is
-256 minus 21. In the text of INTERPRET it is raised when the clause is
-translated.
+such as THEN. [A program file raises it when the program is
+read](r:lex.index.read-first), so no clause runs, and the exit code is 235.
+The text of INTERPRET raises it [as it does any error found in
+reading](r:instr.interpret.whole).
 
 ```rexx
 say 'before'

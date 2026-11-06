@@ -4,6 +4,7 @@ kind: instruction
 syntax: "SAY [expression]"
 ansi: "6.3.2.81, 8.3.23"
 rexxref: "Keyword Instructions > SAY"
+deviations: [40, 98]
 ---
 
 # SAY
@@ -122,7 +123,9 @@ null name or none](r:bif.index.stream.std) when it writes. The line end is the
 only thing SAY adds, so text that a CHAROUT call left unfinished on the
 current line is followed by the SAY text on that same line, and a SAY is
 followed by CHAROUT text on the next line. The text a program writes this
-way appears in the order the program wrote it.
+way appears in the order the program wrote it. The standard output is also
+what `.OUTPUT` denotes by default, and what SAY does when a program has
+redirected `.OUTPUT` is not specified here.
 
 ```rexx
 call charout , 'p'
@@ -233,4 +236,51 @@ say 1 +
 ```
 
 ```output rc=221
+```
+
+## Deviations
+
+r[instr.say.deviation.40]
+SAY and the builtins that write to the standard output share one stream, and
+the text of all of them appears in the order the program wrote it. A standard
+output that is a pipe or a file is buffered, as [Deviation
+40](../deviations.md) says, and it is handed over before a read, before a
+command and at exit. ooRexx writes each line at once, so text still buffered
+when the process is killed or crashes is lost here and is not lost there.
+
+```rexx
+say 'one'
+call charout , 'two'
+call lineout , ' three'
+say 'four'
+```
+
+```output
+one
+two three
+four
+```
+
+r[instr.say.deviation.98]
+After a close of the standard output (see [the stream lifetime
+rule](r:bif.index.stream.lifetime.deviation.98)), SAY writes its line as
+usual, and the output is opened again. In ooRexx the line does not
+appear at once, and what is written after the last close, flush or open is
+lost. SAY raises no `NOTREADY` condition in either, whatever the state of the
+standard output, so the trap in the example does not run.
+
+```rexx
+say 'one'
+call stream 'stdout', 'c', 'close'
+signal on notready name nr
+say 'two'
+say 'three'
+exit
+nr: say 'notready'
+```
+
+```output
+one
+two
+three
 ```

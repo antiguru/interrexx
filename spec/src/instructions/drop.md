@@ -71,11 +71,13 @@ a T.2 T.3
 ```
 
 r[instr.drop.stem]
-A stem symbol names the stem. DROP removes its default and the value of every
-compound variable that it had, so that each variable of the stem has its
-derived name as value, until the stem or the variable is assigned again.
-The simple variable that has the stem's name is another variable and does not
-change, as [the separation rule](r:expr.variables.separate) says.
+A stem symbol names the stem. DROP makes the symbol refer to a new stem that
+has no default and no values, so that each variable of the stem has its
+derived name as value, until the stem or the variable is assigned again. The
+former stem object is not changed: any other reference to it, such as a
+variable that holds the stem as a value, still sees its default and its
+values. The simple variable that has the stem's name is another variable and
+does not change, as [the separation rule](r:expr.variables.separate) says.
 
 ```rexx
 s = 'simple'
@@ -91,6 +93,22 @@ say s.1 s.2 s.3
 S. S.1 S.X S.ZZZ LIT
 simple
 S.1 two S.3
+```
+
+```rexx
+a.1 = 'x'; a.2 = 'y'
+held = a.
+drop a.
+say held[1] held[2] held~items
+say a.1 a.2 a.~items
+a.3 = 'z'
+say held~items a.~items
+```
+
+```output
+x y 2
+A.1 A.2 0
+2 1
 ```
 
 ## Order
@@ -119,42 +137,83 @@ LIT LIT VAR
 ## The list form
 
 r[instr.drop.list]
-A name in parentheses is not dropped. Its value is taken as a list of names
-separated by blanks, and DROP drops each of them as if it had been written in
-the clause, in upper case, from left to right. The names may be simple
-symbols, stem symbols or compound symbols with a tail that is a constant, as
-written. The list may be empty or hold only blanks, and then nothing is
-dropped. The parentheses hold one name and no list holds parentheses itself.
+A name in parentheses is not dropped. Its value is converted to a string, as
+[the conversion rule](r:conv.string.object) says for an object, and the
+string is a list of names separated by
+[whitespace](r:conv.string.whitespace). DROP drops each name of the list as
+if it had been written in the clause, in upper case, from left to right, and
+a name may be a simple symbol, a stem symbol or a compound symbol. The list
+may be empty or hold only whitespace, and then nothing is dropped. The
+parentheses hold one name and no list holds parentheses itself. Blanks may
+stand inside the parentheses, and a name may precede them without a blank. A
+list that names the variable which holds it drops that variable with the
+others.
 
 ```rexx
-names = 'c d Eee s. t.1'
-c = 1; d = 2; eee = 3; f = 4
+tab = '09'x
+set = 'alpha' || tab || 'Beta' 's.' 't.1'
+alpha = 1; beta = 2; gamma = 3
 s. = 'dflt'; t.1 = 'one'; t.2 = 'two'
-drop (names) f
-say symbol('c') symbol('d') symbol('eee') symbol('f') symbol('names')
+drop gamma (set)
+say symbol('alpha') symbol('beta') symbol('gamma') symbol('set')
 say s.1 t.1 t.2
 empty = ''; blank = '   '
 drop (empty) (blank)
 say 'nothing dropped' symbol('empty') symbol('blank')
-list = 'x y'; x = 1; y = 2
-drop x (list) y
-say symbol('x') symbol('y') symbol('list')
+arr = .array~of('m n'); m = 1; n = 2
+drop (arr)
+say symbol('m') symbol('n')
+ref = 'ref r2'; r2 = 1
+drop (ref)
+say symbol('ref') symbol('r2')
+w = 'o'; o = 1; o2 = 2; w2 = 'o2'
+drop ( w ) (w2)
+say symbol('o') symbol('o2')
+p3 = 'o3'; o3 = 1
+drop o(p3)
+say symbol('o3')
 ```
 
 ```output
-LIT LIT LIT LIT VAR
+LIT LIT LIT VAR
 S.1 T.1 two
 nothing dropped VAR VAR
-LIT LIT VAR
+LIT LIT
+LIT LIT
+LIT LIT
+LIT
+```
+
+r[instr.drop.list.tail]
+The tail of a compound symbol in the list is replaced by the value that the
+variable has when DROP reaches the name, as it is in a compound symbol that is
+written in the clause, so a name that precedes it in the list changes what it
+drops.
+
+```rexx
+j = 2; a.1 = 'one'; a.2 = 'two'
+list = 'a.j'
+drop (list)
+say symbol('a.1') symbol('a.2')
+i = 1; b.1 = 'x'; b.2 = 'y'
+list = 'i b.i'
+drop (list)
+say symbol('i') symbol('b.1') symbol('b.2')
+```
+
+```output defect=#99
+VAR LIT
+LIT VAR VAR
 ```
 
 r[instr.drop.list.error]
 A name in a list that is not a variable symbol raises a `SYNTAX` error when
 DROP reaches the list: `31.2` for a name that starts with a digit, `31.3` for
 one that starts with a period, and `20.928` for any other text in a name's
-place, such as a parenthesis, a semicolon or a sign. DROP checks the whole
-list before it drops any name of it, so a name that precedes the faulty one in
-the list is not dropped.
+place, such as a parenthesis, a semicolon or a sign, and for a name of more
+than 250 characters, counted over the whole compound symbol with its
+periods. DROP checks the whole list before it drops any name of it, so a name
+that precedes the faulty one in the list is not dropped.
 
 ```rexx
 c = 1; d = 2
@@ -185,12 +244,30 @@ e: say condition('o')~code '<=' arg(1)
 VAR VAR
 ```
 
+```rexx
+signal on syntax name s
+l = copies('a', 250)
+drop (l)
+say 'ok 250'
+l = copies('a', 251)
+drop (l)
+say 'ok 251'
+exit
+s: say condition('o')~code length(l)
+```
+
+```output defect=#100
+ok 250
+20.928 251
+```
+
 ## Exposed variables
 
 r[instr.drop.exposed]
 A variable that a PROCEDURE EXPOSE or an EXPOSE has made visible is dropped in
-the scope that owns it: DROP of the name unsets the original variable, so the
-caller of the routine or the other methods of the object find it unset. A name
+the scope that owns it: DROP of the name unsets the variable of the exposing
+scope, so the caller of the routine or the other methods of the object find it
+unset. A name
 that is not exposed names a variable of the routine or the method, and DROP
 leaves any variable of the caller with that name as it was. The same holds for
 the names in a list.
@@ -231,15 +308,15 @@ back
 
 r[instr.drop.syntax]
 A DROP that has no operand, an operand that is not a variable symbol or a name
-in parentheses, or a malformed parenthesis, raises a `SYNTAX` error when the
-program is read, so that no clause of the program runs and the exit code is
-256 minus the error number. The codes are `20.901` for a missing operand, for
-a string, a message, a comma, a sign or an `=` where a symbol should be, and
-for a `)` with no `(`; `20.906` for an empty or doubled parenthesis; `46.1`
-for two names inside one parenthesis; `46.901` for a parenthesis that is not
-closed; and `31.2` or `31.3` for a name that starts with a digit or with a
-period, written plainly or in parentheses. In the text of INTERPRET the same
-errors are raised when the text is translated, before any clause of it runs.
+in parentheses, or a malformed parenthesis, raises a `SYNTAX` error that [a
+program file raises when it is read](r:lex.index.read-first). The codes are
+`20.901` for a missing operand, for a string, a message, a comma, a sign or an
+`=` where a symbol should be, and for a `)` with no `(`; `20.906` for an empty
+or doubled parenthesis; `46.1` for two names inside one parenthesis; `46.901`
+for a parenthesis that is not closed; and `31.2` or `31.3` for a name that
+starts with a digit or with a period, written plainly or in parentheses. The
+text of INTERPRET raises them as [it does for any error found in
+reading](r:instr.interpret.whole), which the last example shows.
 
 ```rexx
 say 'before'
