@@ -21,13 +21,13 @@ page](../numbers/comparison.md).
 r[expr.comparison.operators]
 The normal comparison operators are `=` `\=` `<>` `><` `<` `>` `<=` `>=` `\<`
 and `\>`. The strict ones are `==` `\==` `<<` `>>` `<<=` `>>=` `\<<` and
-`\>>`. Each answers the string `1` or the string `0`. The comparisons rank
-[below the concatenation and above `&`](r:expr.index.precedence), normal and
-strict ones together. Some of them are spelled in more than one way: `\=`,
-`<>` and `><` are one operator, which is true when the operands are not equal,
-`<=` and `\>` are one, and so are `>=` and `\<`. The strict operators pair up
-the same way, as `\==` is the opposite of `==`, `<<=` is `\>>` and `>>=` is
-`\<<`.
+`\>>`, all of them tokens of [the operator set](r:lex.operators.set). Each
+answers the string `1` or the string `0`. The comparisons rank [below the
+concatenation and above `&`](r:expr.index.precedence), normal and strict ones
+together. Some of them are spelled in more than one way: `\=`, `<>` and `><`
+are one operator, which is true when the operands are not equal, `<=` and `\>`
+are one, and so are `>=` and `\<`. The strict operators pair up the same way,
+as `\==` is the opposite of `==`, `<<=` is `\>>` and `>>=` is `\<<`.
 
 ```rexx
 say (3 = 3) (3 \= 3) (3 <> 4) (3 >< 4) (3 < 4) (3 > 4)
@@ -52,9 +52,9 @@ the spellings above have more than one form. A `\` that does not start one of
 these operators is a [logical prefix](r:expr.logical.prefix). A comparison
 operator that stands where its first operand should be, as in `(= 1)`, raises
 `SYNTAX 35.1`. A program file with that error runs no clause and exits with
-`256` minus the error number, as the second example shows, and the text of an
-INTERPRET instruction raises it as an ordinary condition, as the last one
-shows.
+`256` minus the error number, as [the read-first rule](r:lex.index.read-first)
+says and the second example shows, and the text of an INTERPRET instruction
+raises it as an ordinary condition, as the last one shows.
 
 ```rexx
 say (1 \= 2) (1 \== 1) (1 \< 2) (1 \>> 2)

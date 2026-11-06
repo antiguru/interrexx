@@ -17,19 +17,19 @@ the value of each form, with the value of one that nothing has been assigned
 to, and the way a compound symbol becomes a name.
 
 r[expr.variables.value]
-A variable symbol has the value that the variable was last assigned. A
-simple or compound variable that has never been assigned, or that has been
-dropped, is unset, and the value of its symbol is the name of the symbol, in
-upper case, or for a compound symbol its
-[derived name](r:expr.variables.compound). [The SYMBOL
-function](r:bif.symbol.result) tells the two states apart: it answers `VAR`
-for a variable that has a value and `LIT` for one that has none. Reading an
-unset variable is what the NOVALUE condition reports when it is enabled, and
-the conditions chapter specifies it. A stem symbol is never unset in this
-sense, because its value is a `Stem` in every state, as
-[the stem rule](r:expr.variables.stem) says: reading one that was never
-assigned raises no NOVALUE, and SYMBOL answers `LIT` for it only until it has
-been read, after which it, and a dropped stem symbol, answer `VAR`.
+A variable symbol has the value that the variable was last assigned. A simple
+or compound variable that has never been assigned, or that has been dropped,
+is unset, and the value of its symbol is the name of the symbol, in upper
+case, or for a compound symbol its [derived name](r:expr.variables.compound).
+[The SYMBOL function](r:bif.symbol.result) tells the two states apart: it
+answers `VAR` for a variable that has a value and `LIT` for one that has none.
+Reading an unset variable is what the NOVALUE condition reports when it is
+enabled, and the conditions chapter specifies it. A stem symbol is never unset
+in this sense, because its value is a `Stem` in every state, as [the stem
+rule](r:expr.variables.stem) says: reading one that was never assigned raises
+no NOVALUE, and what SYMBOL answers for a stem symbol, which depends on
+whether it has been referred to, is specified with [the
+function](r:bif.symbol.stem).
 
 ```rexx
 say foo symbol('foo')

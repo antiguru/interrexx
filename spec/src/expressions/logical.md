@@ -93,9 +93,8 @@ Both operands of `&`, `|` and `&&` are evaluated, from left to right, before
 either is checked, so no operator stops early. A function call in the right
 operand runs even when the left operand has already decided the answer, and an
 error in the right operand is raised before a left operand that is not a
-logical value is found out. The check then goes from left to right, so that
-for two bad operands the left one is the one the error names, as the message
-of the last example shows.
+logical value is found out. Two bad operands raise the same error as one, so
+the order in which they are checked is not specified.
 
 ```rexx
 say (0 & f(1)) (1 | f(2)) (1 && f(3))
@@ -126,27 +125,17 @@ f 4
 1 | "y" => 34.901
 ```
 
-```rexx
-signal on syntax name e
-say "x" | "y"
-e: say condition('o')~message
-```
-
-```output
-Logical value must be exactly "0" or "1"; found "x".
-```
-
 r[expr.logical.prefix]
 The prefix `\` takes the one term after it, as [the prefix
 rule](r:expr.index.prefix) says, so `\ 1 = 1` is `(\ 1) = 1`, and a comparison
 to be negated is put in parentheses. A `\` with no term after it raises
 `SYNTAX 35.901`. The character is an operator only in front of a term or as
-the first character of a comparison operator, so an infix `\` such as in
-`1 \ 1` raises `SYNTAX 35.1`. The sign may be written `'AA'x` or `'AC'x`, as
-[the not rule](r:lex.operators.not) says. Both errors are found when the
-program is read, so a program file with one of them exits with `256` minus the
-error number before it runs a clause, and the text of an INTERPRET instruction
-raises them as ordinary conditions.
+the first character of a comparison operator, so an infix `\` such as in `1 \
+1` raises `SYNTAX 35.1`. The sign may be written `'AA'x` or `'AC'x`, as [the
+not rule](r:lex.operators.not) says. Both errors are found when the program is
+read, so a program file with one of them [exits with `256` minus the error
+number](r:lex.index.read-first) before it runs a clause, and the text of an
+INTERPRET instruction raises them as ordinary conditions.
 
 ```rexx
 say (\ 1 = 1) (\ (1 = 1)) (\ 0 > 1) (\ \ 0 = 0)

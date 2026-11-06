@@ -262,8 +262,8 @@ of a line is a [continuation](r:lex.clauses.continuation) and takes the line
 end with it, in a program file and in the text of an INTERPRET instruction
 alike, so it is never an operator without a right operand and no example can
 show that error for `-`. The error is found when the program is read, so a
-program file with such an error runs no clause and exits with `256` minus the
-error number.
+program file with such an error runs no clause and [exits with `256` minus the
+error number](r:lex.index.read-first).
 
 ```rexx
 say 'not reached'

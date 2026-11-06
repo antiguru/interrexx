@@ -8,12 +8,12 @@ deviations: [53]
 
 # Numeric comparison
 
-A comparison operator compares two values, and the language has two ways to
-do it: as numbers or as text. This page says when the operator compares
-numbers, how two numbers compare under NUMERIC DIGITS and NUMERIC FUZZ, and
-which condition a comparison can raise. What the operators are called and how
-text is compared, with its blank padding and its order of characters, belongs
-to the expressions chapter.
+A comparison operator compares two values, and the language has two ways to do
+it: as numbers or as text. This page says when the operator compares numbers,
+how two numbers compare under NUMERIC DIGITS and NUMERIC FUZZ, and which
+condition a comparison can raise. What the operators are called and how text
+is compared, with its blank padding and its order of characters, belongs to
+[the expressions chapter](../expressions/comparison.md).
 
 ## Numbers or text
 
@@ -25,7 +25,7 @@ exponent is out of [range](r:num.limits.not-number) is not a number, so it
 compares as text. A strict comparison, which is `==`, `<<`, `>>` and the
 operators made from them, always compares as text, so it tells two numbers of
 equal value apart when their written forms differ. No comparison raises an
-error for an operand that is not a number.
+error for a string that is not a number.
 
 ```rexx
 say (1 = 1.0) (1 == 1.0) ('1e2' = 100) ('1e2' == 100) (' 7 ' = 7) (' 7 ' == 7)
@@ -52,8 +52,8 @@ precision, counted from the higher first digit of the two, and the values need
 not be exactly equal. The difference is taken as the rule for `-` computes it
 and its range is not checked, so a comparison raises no `SYNTAX 42.901` or
 `SYNTAX 42.902` and an overflow of the difference does not change the answer.
-Zero is equal to zero in any
-form, and no number is equal to zero except zero, however small it is.
+Zero is equal to zero in any form, and no number is equal to zero except zero,
+however small it is.
 
 ```rexx
 say (1.000000001 = 1) (1.00000001 = 1) (1 < 1.00000001) (1 > 1.000000001)

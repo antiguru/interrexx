@@ -8,15 +8,15 @@ deviations: [53]
 
 # Arithmetic
 
-The arithmetic operators are the infix `+`, `-`, `*`, `/`, `%`, `//` and
-`**`, and the prefix `+` and `-`. Each reads its operands as numbers, works
-to the precision that NUMERIC DIGITS sets, and answers a new number. This
-page says how many digits an operation looks at in its operands, how it
-rounds, what each operator answers, and which errors an operation raises.
-How an answer is written is the business of [the formats page](formats.md),
-the size limits of [the limits page](limits.md), and the settings of [the
-settings page](settings.md). Where the operators stand in an expression is
-left to the expressions chapter.
+The arithmetic operators are the infix `+`, `-`, `*`, `/`, `%`, `//` and `**`,
+and the prefix `+` and `-`. Each reads its operands as numbers, works to the
+precision that NUMERIC DIGITS sets, and answers a new number. This page says
+how many digits an operation looks at in its operands, how it rounds, what
+each operator answers, and which errors an operation raises. How an answer is
+written is the business of [the formats page](formats.md), the size limits of
+[the limits page](limits.md), and the settings of [the settings
+page](settings.md). Where the operators stand in an expression is left to [the
+expressions chapter](../expressions/arithmetic.md).
 
 ## Operands and precision
 
@@ -459,7 +459,7 @@ operand as it was written, whichever operator produced the condition. ooRexx
 does not check the divisor when the dividend is zero and answers `0`. It
 describes the operand of `*`, `/`, `%`, `//` and `**` and the operand of a
 prefix operator by its value, written as [the notation
-rule](r:bif.index.num.sci) writes a result under the settings in force, with
+rule](r:bif.index.num.write) writes a result under the settings in force, with
 every digit kept and none rounded, so `1234.50` becomes `1.23450E+3`. An
 operand whose last digit stands at the units is written without an exponent
 however wide it is. It keeps the text as written for the operands of `+`, `-`

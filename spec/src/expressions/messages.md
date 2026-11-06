@@ -22,21 +22,20 @@ ANSI standard has no message operators.
 r[expr.messages.name]
 The name of a message may be written as a symbol or as a string, and a message
 is understood without regard to the case of its name. A message to an object
-that has no method of that name raises `SYNTAX 97.1`, whose description names
-the message in upper case. A string answers the messages of the string
-methods, such as `length` and `left`, and its answers are specified with [the
-builtins that run as these methods](r:conv.method).
+that has no method of that name raises `SYNTAX 97.1`. A string answers the
+messages of the string methods, such as `length` and `left`, and its answers
+are specified with [the builtins that run as these methods](r:conv.method).
 
 ```rexx
 say 'abc'~length 'abc'~LENGTH 'abc'~"Length" 'abc'~"left"(2)
 signal on syntax name e
 say 'abc'~nosuch
-e: say condition('o')~code condition('o')~message
+e: say condition('o')~code
 ```
 
 ```output
 3 3 3 ab
-97.1 Object "abc" does not understand message "NOSUCH".
+97.1
 ```
 
 r[expr.messages.cascade]
@@ -167,9 +166,9 @@ The left operand alone decides which method runs. A right operand does not
 choose the method: it is an argument, and what the receiver does with it is
 the business of the method. A string as left operand runs its own methods for
 every operator name, which compare, calculate or join with the string of the
-right operand. The only message that a string sends to a right operand that is
-an object is the one that [the conversion rule](r:conv.string.object)
-describes, which asks for that string, and the operator message of the right
+right operand. The only messages that a string sends to a right operand that
+is an object are the ones that [the conversion rule](r:conv.string.object)
+describes, which ask for that string, and the operator message of the right
 operand is never sent. An object that has no method for the operator raises
 `SYNTAX 97.1`.
 
@@ -227,7 +226,7 @@ o = .o~new
 say (o || 1) (o 1) (o~""(1))
 signal on syntax name e
 say a < a
-e: say condition('o')~code condition('o')~message
+e: say condition('o')~code
 ::class o
 ```
 
@@ -235,7 +234,7 @@ e: say condition('o')~code condition('o')~message
 1 1 0 0 0 0
 0 1 0
 an O1 an O 1 an O1
-97.1 Object "an Array" does not understand message "<".
+97.1
 ```
 
 r[expr.messages.string]

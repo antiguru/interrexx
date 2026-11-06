@@ -109,19 +109,19 @@ g
 
 r[lex.clauses.label]
 A clause that holds only a symbol or a string and a colon is a label. Blanks
-and comments may stand before the colon, and the colon implies a semicolon,
-so another clause, or another label, may follow on the same line. A label
-does nothing when it is reached. A symbol label is read in upper case, and a
-string label keeps its characters as written, so a label written as a
-lower-case string is not found by a name that is written as a symbol. Any
-kind of [symbol](r:lex.symbols.kinds) is a label, a number and a symbol that
-starts with a period included. When two labels have the same name, the first
-is the one that is found. The colon makes a label before it can make an
-assignment, so `x: = 3` is the label `x` followed by the clause `= 3`, which
-raises `SYNTAX 35.1` when the program is read, so that the program produces
-no output and ends with the exit code 221. A label inside a DO, IF or
-SELECT body raises `SYNTAX 47.2`, `47.3` or `47.4` when the program is read,
-and a label in the text given to INTERPRET raises `SYNTAX 47.1`.
+and comments may stand before the colon, and the colon implies a semicolon, so
+another clause, or another label, may follow on the same line. A label does
+nothing when it is reached. A symbol label is read in upper case, and a string
+label keeps its characters as written, so a label written as a lower-case
+string is not found by a name that is written as a symbol. Any kind of
+[symbol](r:lex.symbols.kinds) is a label, a number and a symbol that starts
+with a period included. When two labels have the same name, the first is the
+one that is found. The colon makes a label before it can make an assignment,
+so `x: = 3` is the label `x` followed by the clause `= 3`, which raises
+`SYNTAX 35.1` when the program is read, so that the program produces no output
+and [ends](r:lex.index.read-first) with the exit code 221. A label inside a
+DO, IF or SELECT body raises `SYNTAX 47.2`, `47.3` or `47.4` when the program
+is read, and a label in the text given to INTERPRET raises `SYNTAX 47.1`.
 
 ```rexx
 go : /* c */ say 'a'
@@ -287,17 +287,16 @@ return
 ## What a clause is
 
 r[lex.clauses.kinds]
-A clause that is not a null clause or a label is an assignment, an
-instruction or a command, and the first tokens decide which. If the first
-token is a symbol and the second is `=`, the clause is an
+A clause that is not a null clause or a label is an assignment, an instruction
+or a command, and the first tokens decide which. If the first token is a
+symbol and the second is `=`, the clause is an
 [assignment](r:lex.clauses.assignment). Otherwise, if the first token is a
-symbol that is an [instruction keyword](r:lex.clauses.keyword), the clause
-is that instruction. A clause whose first token is a symbol and whose second
+symbol that is an [instruction keyword](r:lex.clauses.keyword), the clause is
+that instruction. A clause whose first token is a symbol and whose second
 token is `==` raises `SYNTAX 35.1` when the program is read, and so does a
-clause of the form `term[...] ==` or `term~name ==`. A clause of the
-form `term[...] = expression` or `term~name = expression` is a message
-assignment, which the expressions chapter specifies. Any other clause is a
-[command](r:lex.clauses.command).
+clause of the form `term[...] ==` or `term~name ==`. A clause of the form
+`term[...] = expression` or `term~name = expression` is a message assignment
+and not a command. Any other clause is a [command](r:lex.clauses.command).
 
 ```rexx
 signal on failure name f
@@ -346,11 +345,11 @@ x == 1
 ```
 
 r[lex.clauses.assignment]
-A clause whose first token is a symbol and whose second token is `=` is an
-assignment, whatever the symbol is, so the names of instructions and the
-keywords THEN, ELSE and OTHERWISE can be variables. Blanks and comments may
-stand around the `=`. The expression is everything after it up to the end of
-the clause, and an empty one raises `SYNTAX 35.918`.
+A clause is an assignment when its first token is a symbol and its second is
+`=`, whatever the symbol is, so the names of instructions and the keywords
+THEN, ELSE and OTHERWISE can be variables. Blanks and comments may stand
+around the `=`. The expression is everything after it up to the end of the
+clause, and an empty one raises `SYNTAX 35.918`.
 
 ```rexx
 say = 3; say say

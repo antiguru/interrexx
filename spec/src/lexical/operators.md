@@ -10,11 +10,12 @@ rexxref: "General Concepts > Structure and General Syntax > Tokens"
 An operator character is one that can be part of an operator, and a special
 character is one that stands alone as a token, such as a parenthesis. Both
 kinds end the token before them, so no blank is needed beside them. Several
-operators are written with two or three characters, and the characters of
-one operator may be spread over blanks and comments. This page gives the
-operators as tokens, the way characters are joined into them, and the way
-blanks next to these characters are treated. What an operator computes is
-the business of the numbers and expressions chapters.
+operators are written with two or three characters, and the characters of one
+operator may be spread over blanks and comments. This page gives the operators
+as tokens, the way characters are joined into them, and the way blanks next to
+these characters are treated. What an operator computes is the business of
+[the numbers](../numbers/arithmetic.md) and [the
+expressions](../expressions/index.md) chapters.
 
 r[lex.operators.set]
 The operators are these tokens. The arithmetic operators are `+` `-` `*`

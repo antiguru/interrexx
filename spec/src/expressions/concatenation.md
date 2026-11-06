@@ -56,14 +56,14 @@ say x /**/ x
 ```
 
 r[expr.concatenation.operator]
-The operator `||` concatenates the two terms with no blank, and blanks
-around it are dropped. A line end ends the clause even after the operator,
-so a `||` at the end of a line without a
-[continuation](r:lex.clauses.continuation) leaves it without a right operand
-and raises `SYNTAX 35.1`. The second example shows that in a program file,
-which exits with `256` minus the error number, and the third shows it in the
-text of an INTERPRET instruction, where the end of the text ends the clause
-and the error is an ordinary condition.
+The operator `||` concatenates the two terms with no blank, and blanks around
+it are dropped. A line end ends the clause even after the operator, so a `||`
+at the end of a line without a [continuation](r:lex.clauses.continuation)
+leaves it without a right operand and raises `SYNTAX 35.1`. The second example
+shows that in a program file, which [exits with `256` minus the error
+number](r:lex.index.read-first), and the third shows it in the text of an
+INTERPRET instruction, where the end of the text ends the clause and the error
+is an ordinary condition.
 
 ```rexx
 say 'a' || 'b' 'c'||'d'
@@ -114,12 +114,11 @@ say (1 || 2 = 12) (1 2 = '1 2')
 
 r[expr.concatenation.operands]
 The operands are joined as they are, so a number is not put into its normal
-form, and `1.50 || 2.0` is `1.502.0`. An operand that is an object other
-than a string is replaced by a string first, on either side of the operator,
-by [the conversion rule](r:conv.string.object): its `MAKESTRING` method when
-it has one, and its `STRING` method otherwise, with `SYNTAX 97.2` for one that
-is private. The result is a `String` also when an operand is an instance of a
-subclass of `String`, and that operand contributes its own characters.
+form, and `1.50 || 2.0` is `1.502.0`. An operand that is an object other than
+a string is replaced by a string first, on either side of the operator, by
+[the conversion rule](r:conv.string.object). The result is a `String` also
+when an operand is an instance of a subclass of `String`, and that operand
+contributes its own characters.
 
 ```rexx
 say 1.50 || 2.0 007 || 7

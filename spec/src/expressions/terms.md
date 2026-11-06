@@ -138,11 +138,12 @@ before
 
 r[expr.terms.paren]
 An expression in parentheses is a term whose value is the value of the
-expression. It may be the receiver of a message, as in `(1 + 2)~length`,
-and a parenthesis that follows another term with no blank between them is
-a second term, which is concatenated to the first without a blank, as
-[the abuttal rule](r:expr.concatenation.abuttal) says. A pair of parentheses
-with nothing between them is not a term and raises `SYNTAX 35.1`.
+expression. It may be the receiver of a message, as in `(1 + 2)~length`, and a
+parenthesis that follows another term with no blank between them is a second
+term, which is concatenated to the first without a blank, as [the abuttal
+rule](r:expr.concatenation.abuttal) says. A pair of parentheses with nothing
+between them is not a term and raises `SYNTAX 35.1`, as [the syntax
+rule](r:expr.index.syntax) says.
 
 ```rexx
 say (1 + 2)~length (4)(5)
@@ -157,18 +158,18 @@ e: say condition('o')~code
 ```
 
 r[expr.terms.message]
-A message term is a term followed by `~` and the name of a message, written
-as a symbol or a string and optionally followed by `(` and arguments with no
+A message term is a term followed by `~` and the name of a message, written as
+a symbol or a string and optionally followed by `(` and arguments with no
 blank between them. The name is used in upper case, whichever way it is
 written, so `'length'` and `length` are one message. Its value is what the
-receiver answers to the message.
-Message terms chain, each applying to the value of the one before it, and a
-subscript `[ ]` after a term sends the message `[]` to it. A `~~` instead of
-a `~` discards the answer and has the receiver as its value. The messages
-that a string answers to are the string methods, such as
+receiver answers to the message. Message terms chain, each applying to the
+value of the one before it, and a subscript `[ ]` after a term sends the
+message `[]` to it. A `~~` instead of a `~` discards the answer and has the
+receiver as its value, as [the cascade rule](r:expr.messages.cascade) says.
+The messages that a string answers to are the string methods, such as
 [`length`](r:bif.length.result), and the messages to every other class are
-specified with that class. The chapter's `messages` page treats the operators
-as messages and does not repeat the term syntax.
+specified with that class. [The messages page](messages.md) treats the
+operators as messages and does not repeat the term syntax.
 
 ```rexx
 x = 'abc'

@@ -9,12 +9,12 @@ rexxref: "General Concepts > Structure and General Syntax > Tokens"
 
 A symbol is a token written without quotes from letters, digits and a few
 marks. It plays one of three roles: a name for a variable, a constant whose
-value is its own text, or a name that the environment of the program
-resolves. Which role a symbol plays follows from its first character and
-from where its periods are, not from anything around it. This page gives the
-characters of a symbol, the three roles, and the limit on its length. What a
-variable holds, and how a compound symbol is turned into a name when the
-program runs, belongs to the expressions chapter.
+value is its own text, or a name that the environment of the program resolves.
+Which role a symbol plays follows from its first character and from where its
+periods are, not from anything around it. This page gives the characters of a
+symbol, the three roles, and the limit on its length. What a variable holds,
+and how a compound symbol is turned into a name when the program runs, belongs
+to [the variables page](../expressions/variables.md).
 
 r[lex.symbols.chars]
 A symbol is a run of symbol characters: the letters `A` to `Z` and `a` to
@@ -86,6 +86,7 @@ is used in arithmetic.
 ```rexx
 say 1e+3 + 0
 say 5.e-1 + 0 .5E2 + 0 12E+0 + 1
+say (2x9e)(+4)
 call try '2x9e+4'
 call try '4..1e+2'
 call try '..e+5'
@@ -97,19 +98,20 @@ try:
   signal on syntax name bad
   interpret 'say' arg(1) '+ 0'
   return
-bad: say condition('o')~message
+bad: say arg(1) '=>' condition('o')~code
   return
 ```
 
 ```output
 1000
 0.5 50 13
-Nonnumeric value ("2X9E") used in arithmetic operation.
-Nonnumeric value ("4..1E") used in arithmetic operation.
-Nonnumeric value ("..E") used in arithmetic operation.
-Nonnumeric value ("1E") used in arithmetic operation.
-Nonnumeric value ("1E") used in arithmetic operation.
-Nonnumeric value ("1.2.3") used in arithmetic operation.
+2X9E4
+2x9e+4 => 41.1
+4..1e+2 => 41.1
+..e+5 => 41.1
+1e+3.5 => 41.1
+1e+3a => 41.1
+1.2.3 => 41.1
 ```
 
 r[lex.symbols.variable]
