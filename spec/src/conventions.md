@@ -49,16 +49,44 @@ say c2x(upper('61007a'x))
 
 r[conv.string.object]
 An argument that a page calls a string and that is an object other than a
-string is replaced by the answer of its `STRING` method, and the builtin
-works on that answer. When the answer is not a string either, see
-[Deviation 30](r:conv.string.deviation.30).
+string is replaced by a string, and the builtin works on that string. When
+the object has a public `MAKESTRING` method that answers a string, the
+replacement is that answer, as for an `Array` or a `MutableBuffer`. When the
+object has no `MAKESTRING` method, the replacement is the answer of its
+public `STRING` method; when that answer is not a string either, see
+[Deviation 30](r:conv.string.deviation.30). A `MAKESTRING` or `STRING` method
+that is private is not one the replacement can use: the call raises
+`SYNTAX 97.2`. This book does not specify the replacement when `MAKESTRING`
+answers an object other than a string, including an instance of a subclass
+of `String`, or for an object whose class defines its own `REQUEST` method.
 
 ```rexx
-say upper(.object~new) length(.array~of(1, 2))
+say upper(.object~new) upper(.both~new) upper(.mutablebuffer~new('mb'))
+say c2x(.array~of(1, 2)) length(.array~of(1, 2)~string)
+signal on syntax name a
+say upper(.hidden~new)
+a: say condition('o')~code
+signal on syntax name b
+say upper(.hiddenstr~new)
+b: say condition('o')~code
+::class both
+::method makestring
+  return 'made'
+::method string
+  return 'told'
+::class hidden
+::method makestring private
+  return 'secret'
+::class hiddenstr
+::method string private
+  return 'secret'
 ```
 
 ```output
-AN OBJECT 3
+AN OBJECT MADE MB
+310A32 8
+97.2
+97.2
 ```
 
 r[conv.string.whitespace]
@@ -97,8 +125,9 @@ y
 
 ## Whole-number arguments
 
-> **Note.** Position and length arguments are whole numbers. The two rules below say
-> which strings a whole-number argument accepts and what value it then has.
+> **Note.** Position and length arguments are whole numbers. The two rules
+> below say which strings a whole-number argument accepts and what value it
+> then has.
 
 r[conv.whole.form]
 A whole-number argument must be a string of this form: optional whitespace;
@@ -237,12 +266,12 @@ a: say condition('o')~code
 93.923
 ```
 
-> **Note.** These two codes follow from the reference manual: a builtin of this kind
-> sends a String message, the range of a position or length is checked by
-> that method, and an incorrect call to a method is error 93, whose subcodes
-> 924 and 923 are the position and length cases. The ANSI draft (9.2.1),
-> which has no such methods, raises 40.14 for a position and 40.13 for a
-> length.
+> **Note.** These two codes follow from the reference manual: a builtin of
+> this kind sends a String message, the range of a position or length is
+> checked by that method, and an incorrect call to a method is error 93, whose
+> subcodes 924 and 923 are the position and length cases. The ANSI draft
+> (9.2.1), which has no such methods, raises 40.14 for a position and 40.13
+> for a length.
 
 ## Pad arguments
 
@@ -347,12 +376,12 @@ f: say condition('o')~code
 93.924
 ```
 
-> **Note.** The range checks come last because they belong to the String method, which
-> runs only once the call has been made. The reference manual does not say
-> that the function call checks the form of its arguments, under error 40,
-> before it sends the message; that part matches ooRexx. The
-> ANSI draft (9.2.1) checks each argument's form and range together, one
-> argument at a time.
+> **Note.** The range checks come last because they belong to the String
+> method, which runs only once the call has been made. The reference manual
+> does not say that the function call checks the form of its arguments, under
+> error 40, before it sends the message; that part matches ooRexx. The ANSI
+> draft (9.2.1) checks each argument's form and range together, one argument
+> at a time.
 
 ## Errors and results
 

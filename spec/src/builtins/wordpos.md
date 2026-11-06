@@ -64,13 +64,13 @@ say wordpos('a', 'a b a') wordpos('a', 'a b a', ) wordpos('a', 'a b a', 2)
 
 r[bif.wordpos.result]
 When `phrase` has at least one word, let `m` be the number of its words.
-WORDPOS then returns the smallest word number `k`, with `k` at least
-`start`, such that `string` has a word `k + m - 1` and, for each `i` from 1
-to `m`, word `k + i - 1` of `string` is equal under `==` to word `i` of
-`phrase`. When there is no such `k`, the result is `0`. A phrase with no
-words is the case of [its own rule](r:bif.wordpos.empty-phrase). The answer
-is [written as a count](r:bif.index.count.answer), and whether it is a new object
-is [not specified](r:bif.index.count.answer.deviation.4).
+WORDPOS then returns the smallest word number `k`, with `k` at least `start`,
+such that `string` has a word `k + m - 1` and, for each `i` from 1 to `m`,
+word `k + i - 1` of `string` is equal under `==` to word `i` of `phrase`. When
+there is no such `k`, the result is `0`. A phrase with no words is the case of
+[its own rule](r:bif.wordpos.empty-phrase). The answer is [written as a
+count](r:bif.index.count.answer), and whether it is a new object is [not
+specified](r:bif.index.count.answer.deviation.4).
 
 ```rexx
 s = 'one two three two three four'
@@ -148,9 +148,9 @@ say wordpos('four five', s) wordpos('three four five', s) wordpos('x y', 'x')
 ```
 
 r[bif.wordpos.past-end]
-When `start` is greater than the number of words in `string`, the result
-is `0`, for every `start` that passes its check. A `start` equal to the number of words
-searches the last word alone.
+When `start` is greater than the number of words in `string`, the result is
+`0`, for every `start` that passes its check. A `start` equal to the number of
+words searches the last word alone.
 
 ```rexx
 s = 'one two three two three four'
@@ -190,7 +190,7 @@ say wordpos('a', '') wordpos('a', '  ' || '09'x, 1)
 0 0
 ```
 
-> **Note.** The ANSI draft (9.3.28) defines WORDPOS by comparing the phrase, with its
-> whitespace reduced to single blanks, against each run of the same number
-> of words of the string, reduced the same way, from `start` on. That gives
-> the answers above.
+> **Note.** The ANSI draft (9.3.28) defines WORDPOS by comparing the phrase,
+> with its whitespace reduced to single blanks, against each run of the same
+> number of words of the string, reduced the same way, from `start` on. That
+> gives the answers above.

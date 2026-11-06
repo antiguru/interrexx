@@ -272,11 +272,10 @@ fn problem(path: &Path, line: usize, message: String) -> Problem {
 /// checks `interrexx_spec::load` makes, then that every rule has an example or a
 /// cited test, that every citation names a rule, that every example's output
 /// and exit code are what its page says, that deviations agree with rules and
-/// the Deviations table, and that rule links resolve. The table and citations
-/// are read from `repo`.
-fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
+/// the Deviations table, and that rule links resolve. The table is read from
+/// `repo`; `cited` is every citation the checked tree is held to.
+fn check(spec_root: &Path, repo: &Path, cited: &Citations) -> Vec<Problem> {
     let (pages, mut problems) = interrexx_spec::load(spec_root);
-    let cited = citations(repo);
 
     let defined: BTreeSet<&str> = pages
         .iter()
@@ -298,7 +297,7 @@ fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
     }
 
     // 4: a citation names a rule.
-    for (id, places) in &cited {
+    for (id, places) in cited {
         if !defined.contains(id.as_str()) {
             for (path, line) in places {
                 problems.push(problem(
@@ -310,7 +309,13 @@ fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
         }
     }
 
-    // 5: examples run.
+    // 5: examples run. The examples of every check in this process share its API
+    // service, whose queues and registrations are global, so the checks take
+    // turns.
+    static EXAMPLES: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _turn = EXAMPLES
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let run_dir = Scratch::new("run");
     for page in &pages {
         for example in &page.examples {
@@ -378,14 +383,117 @@ fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
     problems
 }
 
+/// Points this process's API connection at a service of its own, so the
+/// examples that use external data queues never reach the user's service, and
+/// starts a watcher that stops that service and removes its directory once this
+/// process has ended. The directory is directly under the temp directory, so the
+/// service's socket path does not depend on where the checkout is; a temp
+/// directory long enough to put that path past the platform's limit is an
+/// error. The daemon is built first when the target directory lacks it.
+///
+/// # Panics
+/// If the socket path is too long or the daemon cannot be built; every later
+/// call panics with the same message.
+fn private_service() {
+    static CHOSEN: std::sync::OnceLock<Result<(), String>> = std::sync::OnceLock::new();
+    let chosen = CHOSEN.get_or_init(|| {
+        let dir = std::env::temp_dir().join(format!("interrexx-spec-api-{}", std::process::id()));
+        let socket = interrexx_rxapi::transport::unix::socket_path(
+            &dir,
+            interrexx_rxapi::message::wire::PROTOCOL_VERSION,
+        );
+        // A Unix socket address holds 108 bytes, the last of them a NUL.
+        if socket.as_os_str().len() > 107 {
+            return Err(format!(
+                "the API service's socket path {} is longer than 107 bytes: \
+                 set TMPDIR to a shorter directory",
+                socket.display()
+            ));
+        }
+        let daemon = Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi");
+        if !daemon.is_file() {
+            build_daemon(&daemon)?;
+        }
+        interrexx::use_api_service(&dir, &daemon);
+        let _ = Command::new("sh")
+            .arg("-c")
+            .arg(
+                "while kill -0 \"$0\" 2>/dev/null; do sleep 1; done; \
+                 REXX_API_DIR=\"$1\" \"$2\" --stop >/dev/null 2>&1; rm -rf \"$1\"",
+            )
+            .arg(std::process::id().to_string())
+            .arg(&dir)
+            .arg(&daemon)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+        Ok(())
+    });
+    if let Err(message) = chosen {
+        panic!("{message}");
+    }
+}
+
+/// Builds `interrexx-rxapi`'s `rxapi` binary to `daemon`, the path of a binary
+/// in a profile directory of a target directory, with that profile and target
+/// directory. Cargo's lock on the target directory makes test processes that
+/// build it at the same time wait for each other.
+///
+/// # Errors
+/// If `daemon` is not in a profile directory of a target directory, cargo
+/// cannot run, or the build fails or leaves no file at `daemon`; the message
+/// of a failed build holds cargo's standard error.
+fn build_daemon(daemon: &Path) -> Result<(), String> {
+    let in_target = daemon
+        .parent()
+        .and_then(|p| Some((p.parent()?, p.file_name()?.to_str()?)));
+    let Some((target_dir, profile)) = in_target else {
+        return Err(format!(
+            "{} is not in a profile directory of a target directory",
+            daemon.display()
+        ));
+    };
+    let profile = if profile == "debug" { "dev" } else { profile };
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    let output = Command::new(&cargo)
+        .args([
+            "build",
+            "--locked",
+            "-p",
+            "interrexx-rxapi",
+            "--bin",
+            "rxapi",
+        ])
+        .args(["--profile", profile])
+        .arg("--target-dir")
+        .arg(target_dir)
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .stdin(std::process::Stdio::null())
+        .output()
+        .map_err(|e| format!("running {}: {e}", Path::new(&cargo).display()))?;
+    if output.status.success() && daemon.is_file() {
+        return Ok(());
+    }
+    Err(format!(
+        "building {} failed ({}):\n{}",
+        daemon.display(),
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    ))
+}
+
 /// Runs one example in process with an empty standard input, bounded as the
 /// corpus runs are. `None` when stdout is exactly the output block (its lines,
-/// each followed by one `\n`) and the exit code is `rc`.
+/// each followed by one `\n`) and the exit code is `rc`. An example marked
+/// `defect=#N` is the reverse: a mismatch is expected, and a match is reported
+/// so the marker is removed.
 fn run_example(
     page: &interrexx_spec::Page,
     example: &interrexx_spec::Example,
     directory: &Path,
 ) -> Option<String> {
+    private_service();
     let name = format!("{}:{}", page.path.display(), example.line);
     let invocation = interrexx::Invocation::none()
         .with_directory(directory.to_path_buf())
@@ -399,7 +507,16 @@ fn run_example(
         ));
     }
     let actual = String::from_utf8_lossy(&outcome.stdout);
-    if actual == example.output && outcome.exit_code == example.rc {
+    let matches = actual == example.output && outcome.exit_code == example.rc;
+    if let Some(issue) = example.defect {
+        return matches.then(|| {
+            format!(
+                "example under `{}`: defect #{issue} no longer reproduces: remove the marker",
+                example.rule
+            )
+        });
+    }
+    if matches {
         return None;
     }
     let mut message = format!(
@@ -502,18 +619,25 @@ fn page_with_example(rexx: &str, output: &str) -> String {
     format!("r[bif.t.one]\nA rule.\n\n```rexx\n{rexx}\n```\n\n```output{output}\n```\n")
 }
 
-/// The problems for a tree holding the one example, checked against the real
-/// repository (whose citations and Deviations table it reads).
+/// The problems for a tree holding the one example, checked as
+/// [`check_fixture`] checks.
 fn check_example(rexx: &str, output: &str) -> Vec<Problem> {
     let scratch = Scratch::new("example");
     let root = tree_with_page(&scratch, &page_with_example(rexx, output));
-    check(&root, &repo_root())
+    check_fixture(&root)
+}
+
+/// [`check`] of a fixture tree against the real repository's Deviations
+/// table, held to no citations: the repository's citations name rules of the
+/// specification, which a fixture tree does not hold.
+fn check_fixture(spec_root: &Path) -> Vec<Problem> {
+    check(spec_root, &repo_root(), &Citations::new())
 }
 
 #[test]
 fn the_specification_holds() {
     let repo = repo_root();
-    let problems = check(&repo.join("spec"), &repo);
+    let problems = check(&repo.join("spec"), &repo, &citations(&repo));
     assert!(
         problems.is_empty(),
         "the specification has {} problem(s):\n{}",
@@ -540,7 +664,7 @@ fn a_seeded_defect_is_caught() {
          r[bif.seeded.wrong]\nSee [nothing](r:bif.nope).\n\n\
          ```rexx\nsay 'a'\n```\n\n```output\nb\n```\n",
     );
-    let problems = check(&copy, &repo);
+    let problems = check(&copy, &repo, &citations(&repo));
     let text = render(&problems);
     assert_eq!(
         problems.len(),
@@ -679,6 +803,32 @@ fn the_exit_code_is_compared() {
 }
 
 #[test]
+fn a_defect_example_that_still_fails_is_accepted() {
+    let ok = check_example("say 'a'", " defect=#7\nb");
+    assert!(ok.is_empty(), "{}", render(&ok));
+    let rc = check_example("exit 4", " defect=#7 rc=3");
+    assert!(rc.is_empty(), "{}", render(&rc));
+}
+
+#[test]
+fn a_defect_example_that_now_passes_is_reported() {
+    let bad = check_example("say 'a'", " defect=#7\na");
+    assert_eq!(bad.len(), 1, "{}", render(&bad));
+    assert!(
+        bad[0].message.contains("defect #7 no longer reproduces"),
+        "{}",
+        bad[0].message
+    );
+}
+
+#[test]
+fn a_malformed_defect_marker_is_reported() {
+    let bad = check_example("say 'a'", " defect=7\na");
+    assert_eq!(bad.len(), 1, "{}", render(&bad));
+    assert!(bad[0].message.contains("defect=#N"), "{}", bad[0].message);
+}
+
+#[test]
 fn a_missing_final_newline_is_a_mismatch_shown_on_both_sides() {
     // The block `x` means "x\n"; this program writes "x" with no newline.
     let problems = check_example("call charout , 'x'", "\nx");
@@ -707,11 +857,12 @@ fn deviations_match_rules_and_the_table() {
     write(
         &root.join("src/builtins/t.md"),
         "---\nelement: T\nkind: builtin\ndeviations: [1, 5, 999]\n---\n\n\
+         ## Deviations\n\n\
          r[bif.t.deviation.1]\nRule.\n\n```rexx\nnop\n```\n\n```output\n```\n\n\
          r[bif.t.deviation.2]\nRule.\n\n```rexx\nnop\n```\n\n```output\n```\n\n\
          r[bif.t.deviation.5]\nRule.\n\n```rexx\nnop\n```\n\n```output\n```\n",
     );
-    let problems = check(&root, &repo_root());
+    let problems = check_fixture(&root);
     let text = render(&problems);
     assert_eq!(problems.len(), 4, "{text}");
     assert!(
@@ -860,8 +1011,9 @@ fn an_example_the_oracle_answers_differently_is_reported_unless_a_deviation() {
     let root = tree_with_front(
         &scratch,
         "deviations: [1]\n",
-        "r[bif.t.deviation.1]\nA rule.\n\n```rexx\nsay 1/3\n```\n\n```output\nx\n```\n\n\
-         r[bif.t.two]\nA rule.\n\n```rexx\nexit 2\n```\n\n```output\n```\n",
+        "r[bif.t.two]\nA rule.\n\n```rexx\nexit 2\n```\n\n```output\n```\n\n\
+         ## Deviations\n\n\
+         r[bif.t.deviation.1]\nA rule.\n\n```rexx\nsay 1/3\n```\n\n```output\nx\n```\n",
     );
     let problems = oracle_disagreements(&root, &oracle);
     assert_eq!(problems.len(), 1, "{}", render(&problems));
@@ -876,10 +1028,16 @@ fn an_example_the_oracle_answers_differently_is_reported_unless_a_deviation() {
         problems[0].message
     );
 
+    // A defect marker is not an oracle exemption: the wrong body is reported.
+    let root = tree_with_page(&scratch, &page_with_example("say 1/3", " defect=#7\nx"));
+    let problems = oracle_disagreements(&root, &oracle);
+    assert_eq!(problems.len(), 1, "{}", render(&problems));
+
     // Under a deviation rule the page does not list, it is reported.
     let root = tree_with_page(
         &scratch,
-        "r[bif.t.deviation.1]\nA rule.\n\n```rexx\nsay 1/3\n```\n\n```output\nx\n```\n",
+        "## Deviations\n\n\
+         r[bif.t.deviation.1]\nA rule.\n\n```rexx\nsay 1/3\n```\n\n```output\nx\n```\n",
     );
     let problems = oracle_disagreements(&root, &oracle);
     assert_eq!(problems.len(), 1, "{}", render(&problems));
@@ -893,8 +1051,13 @@ fn an_example_the_oracle_answers_differently_is_reported_unless_a_deviation() {
 #[test]
 fn only_a_listed_deviation_rule_is_exempt_from_the_oracle() {
     let page = |deviations: &str, rule: &str| {
+        let heading = if rule.contains(".deviation.") {
+            "## Deviations\n\n"
+        } else {
+            ""
+        };
         let text = format!(
-            "---\nelement: T\nkind: builtin\n{deviations}---\n\n\
+            "---\nelement: T\nkind: builtin\n{deviations}---\n\n{heading}\
              r[{rule}]\nA rule.\n\n```rexx\nnop\n```\n\n```output\n```\n"
         );
         interrexx_spec::parse_page(Path::new("builtins/t.md"), &text)
@@ -907,6 +1070,15 @@ fn only_a_listed_deviation_rule_is_exempt_from_the_oracle() {
     assert!(!exempt("", "bif.t.deviation.1"));
     assert!(!exempt("deviations: [2]\n", "bif.t.deviation.1"));
     assert!(!exempt("deviations: [1]\n", "bif.t.one"));
+    // A defect marker does not exempt an example from the oracle.
+    let marked = interrexx_spec::parse_page(
+        Path::new("builtins/t.md"),
+        "---\nelement: T\nkind: builtin\n---\n\n\
+         r[bif.t.one]\nA rule.\n\n```rexx\nnop\n```\n\n```output defect=#7\n```\n",
+    )
+    .expect("the page parses");
+    assert_eq!(marked.examples[0].defect, Some(7));
+    assert!(!exempt_from_the_oracle(&marked, &marked.examples[0]));
     // An ID that only contains `.deviation.` is not a deviation rule at all:
     // the page does not parse, so no example of it reaches the oracle.
     assert!(page("deviations: [1]\n", "bif.t.deviation.pending").is_err());

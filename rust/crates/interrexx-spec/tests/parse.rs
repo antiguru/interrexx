@@ -50,6 +50,85 @@ fn output_rc_is_read() {
 }
 
 #[test]
+fn output_defect_is_read_and_combines_with_rc() {
+    let text = page_text().replace("```output\n", "```output defect=#12 rc=1\n");
+    let e = &parse(&text).unwrap().examples[0];
+    assert_eq!((e.defect, e.rc), (Some(12), 1));
+    let text = page_text().replace("```output\n", "```output rc=1 defect=#12\n");
+    let e = &parse(&text).unwrap().examples[0];
+    assert_eq!((e.defect, e.rc), (Some(12), 1));
+    assert_eq!(parse(&page_text()).unwrap().examples[0].defect, None);
+}
+
+#[test]
+fn a_malformed_defect_is_a_problem() {
+    for bad in [
+        "defect=12",
+        "defect=#",
+        "defect=#x",
+        "defect=#1a",
+        "defect=",
+        "defect=#-1",
+    ] {
+        let text = page_text().replace("```output\n", &format!("```output {bad}\n"));
+        assert!(parse(&text).is_err(), "{bad}");
+    }
+}
+
+#[test]
+fn a_duplicate_output_option_is_a_problem() {
+    for dup in [
+        "defect=#1 defect=#2",
+        "defect=#1 defect=#1",
+        "rc=1 rc=2",
+        "rc=0 rc=0",
+    ] {
+        let text = page_text().replace("```output\n", &format!("```output {dup}\n"));
+        assert!(parse(&text).is_err(), "{dup}");
+    }
+}
+
+fn escaped_page(output: &str, options: &str) -> String {
+    page_text().replace("```output\nbc\n", &format!("```output {options}\n{output}"))
+}
+
+#[test]
+fn an_escaped_output_block_is_decoded() {
+    let text = escaped_page("\\a[] 0\n\\x07\\x41\\\\a\n", "escaped");
+    assert_eq!(
+        parse(&text).unwrap().examples[0].output,
+        "\u{7}[] 0\n\u{7}A\\a\n"
+    );
+    let text = escaped_page("\\a\n", "defect=#3 escaped rc=2");
+    let e = &parse(&text).unwrap().examples[0];
+    assert_eq!((e.output.as_str(), e.defect, e.rc), ("\u{7}\n", Some(3), 2));
+}
+
+#[test]
+fn a_backslash_in_an_unmarked_output_block_is_text() {
+    let text = escaped_page("\\a\\x07\n", "");
+    assert_eq!(parse(&text).unwrap().examples[0].output, "\\a\\x07\n");
+}
+
+#[test]
+fn a_bad_escape_is_a_problem_at_its_line() {
+    for bad in ["\\n", "\\x7", "\\x80", "\\xg0", "\\x+7", "\\", "ok\\"] {
+        let text = escaped_page(&format!("fine\n{bad}\n"), "escaped");
+        let found = problems(&text);
+        assert_eq!(found.len(), 1, "{bad}: {found:?}");
+        assert_eq!(found[0].0, 18, "{bad}: {found:?}");
+    }
+}
+
+#[test]
+fn a_duplicate_escaped_option_is_a_problem() {
+    let text = escaped_page("x\n", "escaped escaped");
+    let found = problems(&text);
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0], (16, "duplicate `escaped` option".to_string()));
+}
+
+#[test]
 fn an_empty_output_block_is_the_empty_string() {
     let text = page_text().replace("bc\n```\n", "```\n");
     assert_eq!(parse(&text).unwrap().examples[0].output, "");
@@ -149,6 +228,11 @@ fn prefixes_name_the_page() {
     assert_eq!(p("parsing/x.md").as_deref(), Some("parse.x."));
     assert_eq!(p("conditions/x.md").as_deref(), Some("cond.x."));
     assert_eq!(p("classes/x.md").as_deref(), Some("class.x."));
+    assert_eq!(p("lexical/x.md").as_deref(), Some("lex.x."));
+    assert_eq!(p("numbers/x.md").as_deref(), Some("num.x."));
+    assert_eq!(p("directives/x.md").as_deref(), Some("dir.x."));
+    assert_eq!(p("rexxutil/x.md").as_deref(), Some("util.x."));
+    assert_eq!(p("environment/x.md").as_deref(), Some("env.x."));
     assert_eq!(p("conventions.md").as_deref(), Some("conv."));
     assert_eq!(p("intro.md"), None);
     assert_eq!(p("other/x.md"), None);
@@ -277,6 +361,34 @@ fn a_near_miss_rule_marker_is_reported() {
 }
 
 #[test]
+fn a_rule_marker_continuing_a_block_quote_is_reported() {
+    // FRONT is lines 1-6; the marker is line 12, after the quote's last line.
+    for quote in ["> **Note.** A note.", ">"] {
+        let text = format!("{FRONT}\nr[bif.a.b]\nText.\n\n{quote}\nr[bif.c.d]\nMore.\n");
+        let p = problems(&text);
+        assert_eq!(p.len(), 1, "{quote:?}: {p:?}");
+        assert_eq!(p[0].0, 12, "{quote:?}");
+        assert!(p[0].1.contains("block quote"), "{p:?}");
+    }
+    // A lazy continuation line keeps the quote open for the marker under it.
+    let text = format!("{FRONT}\nr[bif.a.b]\nText.\n\n> A note\nlazy.\nr[bif.c.d]\nMore.\n");
+    let p = problems(&text);
+    assert!(
+        p.iter().any(|(l, m)| *l == 13 && m.contains("block quote")),
+        "{p:?}"
+    );
+    // A blank line, a heading or a fence ends the quote.
+    for between in ["\n\n", "\n## Heading\n", "\n```text\nx\n```\n"] {
+        let text = format!("{FRONT}\nr[bif.a.b]\nText.\n\n> A note.{between}r[bif.c.d]\nMore.\n");
+        assert!(
+            problems(&text).is_empty(),
+            "{between:?}: {:?}",
+            problems(&text)
+        );
+    }
+}
+
+#[test]
 fn deviation_numbers_are_read_only_from_a_final_deviation_segment() {
     assert_eq!(deviation_number("bif.substr.deviation.4"), Some(4));
     assert_eq!(deviation_number("bif.count.answer.deviation.90"), Some(90));
@@ -306,7 +418,60 @@ fn a_deviation_segment_not_ending_in_a_number_is_reported() {
         assert_eq!(p[0].0, 8);
         assert!(p[0].1.contains("deviation"), "{p:?}");
     }
-    assert!(problems(&format!("{FRONT}\nr[bif.x.deviation.4]\nText.\n")).is_empty());
+    assert!(
+        problems(&format!(
+            "{FRONT}\n## Deviations\n\nr[bif.x.deviation.4]\nText.\n"
+        ))
+        .is_empty()
+    );
+}
+
+#[test]
+fn deviation_rules_stand_under_a_final_deviations_heading() {
+    const DEV: &str = "r[bif.a.deviation.4]\nDev.\n";
+    const PLAIN: &str = "r[bif.a.b]\nText.\n";
+    // FRONT is lines 1-6 and line 7 is blank, so a body starts at line 8.
+    let found = |body: &str| problems(&format!("{FRONT}\n{body}"));
+    for good in [
+        format!(
+            "{PLAIN}\n## Deviations\n\n{DEV}\n### Detail\n\nr[bif.a.deviation.5]\nDev.\n\n\
+             > **Note.** Last.\n"
+        ),
+        PLAIN.to_string(),
+    ] {
+        assert!(found(&good).is_empty(), "{good:?}: {:?}", found(&good));
+    }
+    for (body, lines, word) in [
+        (format!("{PLAIN}\n{DEV}"), vec![11], "not under"),
+        (
+            format!("{PLAIN}\n## Deviations\n"),
+            vec![11],
+            "no deviation rule",
+        ),
+        (
+            format!("{DEV}\n## Deviations\n\n{PLAIN}"),
+            vec![8, 13],
+            "deviation",
+        ),
+        (
+            format!("## Deviations\n\n{DEV}\n## Later\n"),
+            vec![13],
+            "ends the page",
+        ),
+        (
+            format!("## Deviations\n\n{DEV}\n## Deviations\n"),
+            vec![13],
+            "second",
+        ),
+    ] {
+        let p = found(&body);
+        let at: Vec<usize> = p.iter().map(|(l, _)| *l).collect();
+        assert_eq!(at, lines, "{body:?}: {p:?}");
+        assert!(p.iter().all(|(_, m)| m.contains(word)), "{body:?}: {p:?}");
+    }
+    // Only a builtin page is held to the layout.
+    let chapter = "---\nelement: \"Chapter\"\nkind: chapter\n---\n\nr[bif.a.deviation.4]\nDev.\n";
+    assert!(problems(chapter).is_empty(), "{:?}", problems(chapter));
 }
 
 #[test]

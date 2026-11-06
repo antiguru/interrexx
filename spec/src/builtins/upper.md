@@ -156,19 +156,19 @@ say '['upper('')']' '['upper('', 3, 2)']'
 
 ## Deviations
 
-> **Note.** An argument whose `STRING` method answers an object that is not a string
-> falls under [Deviation 30](r:conv.string.deviation.30), as it does for
-> every builtin.
+> **Note.** An argument whose `STRING` method answers an object that is not a
+> string falls under [Deviation 30](r:conv.string.deviation.30), as it does
+> for every builtin.
 
 r[bif.upper.deviation.4]
-interrexx does not specify whether the result of UPPER is the same object
-as another string of equal value: as `string` itself, when no character of
-it changes, as in `upper(s)` for an `s` with no lowercase letter, or as an
-equal string produced some other way, such as the literal `'GHIJ'` beside
+interrexx does not specify whether the answer of UPPER is the same object as
+another string of equal value: as `string` itself, when no character of it
+changes, as in `upper(s)` for an `s` with no lowercase letter, or as an equal
+string produced some other way, such as the literal `'GHIJ'` beside
 `upper('gh' || 'ij')`. Through `identityHash`, or as a key of an
-`IdentityTable` or `IdentitySet`, the answer may be either, and a program
-can rely only on the value, which is equal under `==`. ooRexx differs:
-it often answers a new object where interrexx answers the existing one.
+`IdentityTable` or `IdentitySet`, the answer may be either, and a program can
+rely only on the value, which is equal under `==`. ooRexx differs: it often
+answers a new object where interrexx answers the existing one.
 
 ```rexx
 s = 'PQ' || 'RS'

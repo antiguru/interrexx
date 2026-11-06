@@ -361,8 +361,10 @@ these.
 ## 54. CHARS and LINES on a transient stream
 
 CHARS and LINES on a transient stream ask how much input waits and consume
-none. ooRexx reads a byte to test and loses it, and with `/dev/null` as
-standard input its LINES answers 1 where interrexx answers 0.
+none. With `/dev/null` as standard input, which holds nothing, ooRexx answers
+1 to some of these questions where interrexx answers 0. With an empty pipe, a
+pipe that holds data, or a file as standard input it answers as interrexx does,
+and no character is lost.
 
 ## 55. A stream opened WRITE
 
@@ -372,7 +374,7 @@ for reading and writing.
 
 ## 56. Line positions
 
-A line position is counted in line ends from the current position, whatever
+A line position is counted in line ends from the start of the data, whatever
 an earlier operation left. ooRexx counts from a line number it tracks, which
 a character operation resets.
 
@@ -502,10 +504,11 @@ object's `==`. ooRexx compares identity first and sends nothing.
 
 ## 79. APPEND write positions
 
-On a stream opened APPEND, the write position cannot be moved into the file
-as it was when opened: such a SEEK answers 0, and a CHAROUT or LINEOUT
-naming a position there writes nothing, all NOTREADY. ooRexx moves the
-position, and a LINEOUT naming a line writes there.
+On a stream opened APPEND, every write goes after the last character, and
+the write position cannot be moved into the file as it was when opened: such
+a SEEK answers 0, and a CHAROUT or LINEOUT naming a position there writes
+nothing, all NOTREADY. ooRexx moves the position there, and the write goes
+after the last character as any other does.
 
 ## 80. First SEEK of an unopened transient stream
 

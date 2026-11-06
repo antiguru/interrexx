@@ -140,15 +140,14 @@ say c2x(subword('a'||'0a'x||'b c', 1, 1)) c2x(subword('a'||'0d'x||' b', 1, 1))
 ## Deviations
 
 r[bif.subword.deviation.4]
-interrexx does not specify whether the result of SUBWORD is the same object
-as another string of equal value: as `string` itself, when the call returns
-all of it unchanged as `subword(w, 1)` does for a `w` with no whitespace
-around its words, or as an equal string produced some other way, such as
-the literal `'a b'` beside `subword('a b c', 1, 2)`. Through
-`identityHash`, or as a key of an `IdentityTable` or `IdentitySet`, the
-answer may be either, and a program can rely only on the value, which is
-equal under `==`. ooRexx differs: it often answers a new object where
-interrexx answers the existing one.
+interrexx does not specify whether the answer of SUBWORD is the same object as
+another string of equal value: as `string` itself, when the call returns all
+of it unchanged as `subword(w, 1)` does for a `w` with no whitespace around
+its words, or as an equal string produced some other way, such as the literal
+`'a b'` beside `subword('a b c', 1, 2)`. Through `identityHash`, or as a key
+of an `IdentityTable` or `IdentitySet`, the answer may be either, and a
+program can rely only on the value, which is equal under `==`. ooRexx differs:
+it often answers a new object where interrexx answers the existing one.
 
 ```rexx
 w = 'a' || ' b'

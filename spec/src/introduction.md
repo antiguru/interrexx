@@ -33,23 +33,24 @@ another definition of Rexx differs; it never adds to or changes a rule.
 
 ## Terms
 
-**ooRexx.** The open-source C++ implementation of Object Rexx, version 5. interrexx is
-written to run ooRexx programs, and the book's examples are also run on
-ooRexx to measure where the two agree.
+**ooRexx.** The open-source C++ implementation of Object Rexx, version 5.
+interrexx is written to run ooRexx programs, and the book's examples are also
+run on ooRexx to measure where the two agree.
 
 **Deviation.** A declared difference between interrexx and ooRexx, numbered in
-[the Deviations chapter](deviations.md). A page lists in its front matter the deviations that
-touch its element, and states each as a rule whose identifier ends
-`deviation.N`. Every example on which interrexx and ooRexx answer
+[the Deviations chapter](deviations.md). A page lists in its front matter the
+deviations that touch its element, and states each as a rule whose identifier
+ends `deviation.N`; a builtin's page puts these rules under a Deviations
+heading at its end. Every example on which interrexx and ooRexx answer
 differently belongs to such a rule; any other difference is a defect.
 
 **String method.** A method of the `String` class. Many builtins run as one, as
 [the conventions](r:conv.method) define.
 
-**Identity.** Whether two values are the same object, as opposed to equal strings. It
-is observable only through `identityHash` and the identity collections
-(`IdentityTable`, `IdentitySet`), and the book says where it is not
-specified.
+**Identity.** Whether two values are the same object, as opposed to equal
+strings. It is observable only through `identityHash` and the identity
+collections (`IdentityTable`, `IdentitySet`), and the book says where it is
+not specified.
 
 ## Reading a rule
 
@@ -60,11 +61,13 @@ An identifier names the page that holds its rule, so a reader of the raw
 Markdown finds any rule from its identifier alone. The first word names the
 chapter: `bif` for built-in functions in `builtins/`, `instr` for
 `instructions/`, `expr` for `expressions/`, `parse` for `parsing/`, `cond`
-for `conditions/` and `class` for `classes/`. The second word is the page's
-file name: `bif.substr.pad` is in `builtins/substr.md`, and the rules for a
-whole chapter, such as `bif.index.call.count`, are in its `index.md`. The
-conventions are one page, `conventions.md`, and every `conv.` rule is there.
-The checker rejects a rule on any other page.
+for `conditions/`, `class` for `classes/`, `lex` for `lexical/`, `num` for
+`numbers/`, `dir` for `directives/`, `util` for `rexxutil/` and `env` for
+`environment/`. The second word is the page's file name: `bif.substr.pad` is
+in `builtins/substr.md`, and the rules for a whole chapter, such as
+`bif.index.call.count`, are in its `index.md`. The conventions are one page,
+`conventions.md`, and every `conv.` rule is there. The checker rejects a rule
+on any other page.
 
 Identifiers never change and are never reused. Other pages refer to a rule by
 that identifier, and so do comments in the test sources: a test that
@@ -78,6 +81,18 @@ standard output. When the program ends with a non-zero exit code, the output
 is marked with that code. The checker runs every example with an empty
 standard input and compares the output byte for byte, so an example is
 evidence, not decoration. An example belongs to the rule above it.
+
+An output marked `defect=#N` (combinable with the exit code, as in
+`output defect=#12 rc=1`) is an example interrexx fails today because of open
+issue N. The output shown is still the specified one, and the checker accepts
+the mismatch on interrexx; when the example starts to pass, it reports that
+the marker is to be removed.
+
+An output marked `escaped` (combinable with the other markers) writes a
+character that cannot be shown as itself with an escape: `\a` or `\x07` is the
+bell character, `\xNN` is the ASCII character of code `NN` in hexadecimal,
+and `\\` is a backslash. The checker decodes the escapes before it compares,
+and any other backslash in such a block is an error.
 
 ## Sources
 
