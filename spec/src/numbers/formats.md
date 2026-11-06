@@ -2,7 +2,7 @@
 element: "Number formats"
 kind: concept
 ansi: "7.4.10"
-rexxref: "Numbers and Arithmetic > Numbers > Exponential Notation"
+rexxref: "Numbers and Arithmetic > Exponential Notation"
 ---
 
 # Number formats
@@ -22,8 +22,9 @@ Every result of an arithmetic operator, the prefix operators `+` and `-`
 included, is a number that is [rounded](r:bif.index.num.round) to NUMERIC
 DIGITS significant digits and then [written](r:bif.index.num.write) with
 NUMERIC DIGITS as the trigger value, in the NUMERIC FORM in force when the
-operation runs. The result of the integer division `%` and of the remainder
-`//` is written the same way.
+operation runs, which is the form of the operation and not the form that the
+operands were written under. The result of the integer division `%` and of
+the remainder `//` is written the same way.
 
 ```rexx
 numeric digits 4
@@ -32,12 +33,19 @@ say (12345 + 1) (-12345 - 1) (2 * 0.00000123) (1 / 7) (22 / 7) (3 ** 15),
 say (+0.00012345) (-98765.4)
 numeric form engineering
 say (12345 + 1) (-12345 - 1) (2 * 0.00000123) (1 / 7000000) (3 ** 15)
+numeric digits 9
+x = 1e11 + 0
+say x (x + 0) (x * 1) (-x) (x / 1) (x ** 1)
+numeric form scientific
+say x (x + 0) (x * 1) (-x) (x / 1) (x ** 1)
 ```
 
 ```output
 1.235E+4 -1.235E+4 0.00000246 0.1429 3.143 1.435E+7 3 2
 0.0001235 -9.877E+4
 12.35E+3 -12.35E+3 0.00000246 142.9E-9 14.35E+6
+100E+9 100E+9 100E+9 -100E+9 100E+9 100E+9
+100E+9 1E+11 1E+11 -1E+11 1E+11 1E+11
 ```
 
 r[num.formats.operand]
@@ -125,7 +133,7 @@ say (100000000 * 10) (1e9 + 0) (3e9 * 1) (1000000000 * 3)
 ```
 
 r[num.formats.trailing]
-The zeros after the decimal point of a result of `+`, `-` or `*` are the
+The zeros after the decimal point of a result of `+`, `-`, `*` or `//` are the
 zeros that its digits include, and they are kept. A result of `/` or `**`
 has the zeros that end its digits removed after rounding, so no zero ends its
 decimal places, and none ends the digits before the exponent when it is
@@ -137,7 +145,7 @@ not of this page.
 ```rexx
 say (1.25 + 1.75) (9.5 - 0.5) (1.5 * 4) (4.50 + 0)
 say (7.50 / 2.5) (9.0 / 3) (5.0 ** 2) (0.5 ** 2) (7.5 / 3)
-say (0.10 * 0.10) (2.5 * 2.5) (0.5 * 0.2)
+say (0.10 * 0.10) (2.5 * 2.5) (0.5 * 0.2) (7.50 // 2) (10.00 // 3.0)
 say (10000000000 + 0) (10000000000 / 1) (1.0 / 1) (100 / 1) (5.00 ** 1)
 say (1000000000 * 1) (1000000000 / 1) (2000000000 / 2) (4000000000 / 4)
 numeric digits 3
@@ -147,7 +155,7 @@ say (1500 + 0) (1500 / 1) (1.20 + 0) (1.20 / 1) (1.20 * 1) (1.20 ** 1)
 ```output
 3.00 9.0 6.0 4.50
 3 3 25 0.25 2.5
-0.0100 6.25 0.10
+0.0100 6.25 0.10 1.50 1.00
 1.00000000E+10 1E+10 1 100 5
 1.00000000E+9 1E+9 1E+9 1E+9
 1.50E+3 1.5E+3 1.20 1.2 1.20 1.2
@@ -156,13 +164,12 @@ say (1500 + 0) (1500 / 1) (1.20 + 0) (1.20 / 1) (1.20 * 1) (1.20 ** 1)
 ## Plain and exponential notation
 
 r[num.formats.plain]
-A result is written in plain notation when its digits before the point
-number at most NUMERIC DIGITS, or, for a magnitude below 1, when its digits
-after the point number at most twice NUMERIC DIGITS, as the
-[writing rule](r:bif.index.num.write) says. The sign and the point are not
-counted, and the zeros between the point and the first nonzero digit are. The
-count is made on the rounded result, so a result that rounds up into a new
-digit before the point can move from plain to exponential notation.
+A result is written in plain or exponential notation by [the writing
+rule](r:bif.index.num.write), with NUMERIC DIGITS as its trigger value. The
+sign and the point are not counted, and the zeros between the point and the
+first nonzero digit are. The count is made on the rounded result, so a result
+that rounds up into a new digit before the point can move from plain to
+exponential notation.
 
 ```rexx
 say (0.000003 * 2) (0.000003 * 0.5) (0.0000000001 * 1) (0.00000000001 * 1)
@@ -191,12 +198,12 @@ say (9 + 0) (10 + 0) (0.01 * 1) (0.001 * 1) (0.5 + 0) (0.05 * 1) (0.005 * 1)
 
 r[num.formats.engineering]
 Under NUMERIC FORM ENGINEERING a number that is written in plain notation is
-written exactly as under SCIENTIFIC. A number in exponential notation
-has an exponent that is a multiple of 3, so that its integer part has one to
-three digits, and the digits are extended with zeros when there are too few to
-reach the point, even beyond NUMERIC DIGITS. Under both forms the same
-numbers have the same exponent when it is already a multiple of 3. The form
-that counts is the one in force when the result is written.
+written exactly as under SCIENTIFIC. A number in exponential notation is
+written as [the notation rule](r:bif.index.num.sci) gives it, and the zeros
+that extend its digits to the point can make it longer than NUMERIC DIGITS.
+Under both forms the same numbers have the same exponent when it is already a
+multiple of 3. The form that counts is the one in force when the result is
+written.
 
 ```rexx
 say (1e11 + 0) (12345678901 + 0) (1.5e11 + 0) (1e-11 * 1) (1e12 + 0)

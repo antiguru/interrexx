@@ -1,7 +1,7 @@
 ---
 element: "Number limits"
 kind: concept
-ansi: "4.2, 7, 7.4.10"
+ansi: "4.2, 7.4, 7.4.10"
 rexxref: "Numbers and Arithmetic > Arithmetic Errors"
 ---
 
@@ -11,21 +11,21 @@ A number has no limit on its digits but a limit on its exponent: every
 nonzero number must lie within a fixed range of powers of ten, and every
 result that leaves the range is an error and never a wrapped or flushed
 value. This page gives the range, what a string outside it is, and the
-conditions that arithmetic raises when a result leaves it. It also separates
-this range from the smaller limit that a whole-number argument has.
+conditions that `+`, `-`, `*`, `/` and `**` raise when a result leaves it.
+The integer division and the remainder have [their own
+conditions](r:num.arithmetic.integer). The page also separates this range
+from the smaller limit that a whole-number argument has.
 
 ## The exponent range
 
 r[num.limits.range]
-A nonzero number is within the range when three things hold: the digits that
-follow its `E`, read without the sign, have a value of at most 999999999; its
-first nonzero digit stands at a power of ten of at most 999999999; and its
-last written digit stands at a power of ten of at least -999999999. The last
-written digit counts whether or not it is zero, so the zeros that end a
-number after the point count, and a number with a long fraction reaches
-the lower bound sooner than its exponent says. Leading zeros of the exponent
-do not count. The builtins use [the same range](r:bif.index.num.limit). This
-book does not specify a zero written with an exponent above 999999999.
+A nonzero number is within the range under the three conditions of
+[the builtin rule](r:bif.index.num.limit), which the arithmetic operators
+apply in the same way. The page adds two points about the last written digit:
+it counts whether or not it is zero, so the zeros that end a number after the
+point count, and a number with a long fraction reaches the lower bound sooner
+than its exponent says. Leading zeros of the exponent do not count toward its
+value.
 
 ```rexx
 say datatype('1e999999999', 'N') datatype('1e-999999999', 'N'),
@@ -46,8 +46,9 @@ say (12345e-999999999 + 0) (0.0000001e999999999 + 0)
 ```
 
 r[num.limits.not-number]
-A string whose exponent is out of range does not have the form of a number,
-whatever its other characters. DATATYPE with type `N` answers `0` for it, an
+A string whose exponent is out of range has [the form of a
+number](r:num.index.form) but is not a number, whatever its other
+characters. DATATYPE with type `N` answers `0` for it, an
 arithmetic operator raises `SYNTAX 41.1`, and a number argument of a builtin
 raises `SYNTAX 93.943`, as [the use rule](r:num.index.use) says of every
 string that is not a number. A comparison raises no error: it treats such a
@@ -107,12 +108,15 @@ say datatype('1.00000e-999999998', 'N') datatype('1.00e-999999997', 'N')
 ## Overflow and underflow
 
 r[num.limits.overflow]
-A result of `+`, `-`, `*` or `/` whose first digit stands at a power of ten
-above 999999999 raises `SYNTAX 42.901`, and no value results. The test is made
-on the result after it is [rounded](r:bif.index.num.round) to NUMERIC DIGITS,
-so a result that carries into a digit above the range when it is rounded
-raises it too. The operands may all be in range and the result still out of
-it.
+A result of `+`, `-`, `*` or `/`, or of the prefix `+` or `-`, whose first
+digit stands at a power of ten above 999999999 raises `SYNTAX 42.901`, and no
+value results. The test is made on the result after it is
+[rounded](r:bif.index.num.round) to NUMERIC DIGITS, so a result that carries
+into a digit above the range when it is rounded raises it too. The operands
+may all be in range and the result still out of it. A prefix operator can
+only overflow, because its rounding shortens the digits and never moves them
+below the range, and a prefix operator on an operand that is out of range
+raises `SYNTAX 41.1` for the operand.
 
 ```rexx
 signal on syntax name a
@@ -135,6 +139,17 @@ say (1e999999999 * 9) (1e999999999 + 1e999999999) (99949e999999995 + 0)
 say (1.0004e999999999 + 0)
 numeric digits 9
 say (9.99999999e999999999 + 4e999999990) (9.99999999e999999999 + 5e999999989)
+signal on syntax name f
+say -9.9999999995e999999999
+f: say condition('o')~code
+signal on syntax name g
+say +9.9999999995e999999999
+g: say condition('o')~code
+numeric digits 1
+signal on syntax name h
+say -9.5e999999999
+h: say condition('o')~code
+say (-9.4e999999999) (+9.4e999999999)
 ```
 
 ```output
@@ -146,6 +161,10 @@ say (9.99999999e999999999 + 4e999999990) (9.99999999e999999999 + 5e999999989)
 9E+999999999 2E+999999999 9.99E+999999999
 1.00E+999999999
 9.99999999E+999999999 9.99999999E+999999999
+42.901
+42.901
+42.901
+-9E+999999999 9E+999999999
 ```
 
 r[num.limits.underflow]
@@ -200,11 +219,17 @@ say (-1e999999999 + 1e999999999) (0e5 + 0)
 ```
 
 r[num.limits.power]
-A power whose result is out of range raises `SYNTAX 42.1`, whether the result
-is too large or too small, where the four operators above raise `42.901` or
-`42.902`. A power whose result is in range raises nothing, the largest and
-the smallest included. What other errors a power raises belongs to the
-arithmetic rules.
+A power raises `SYNTAX 42.1` when [the pre-test of the power
+rule](r:num.arithmetic.power.error) refuses it, and that test can refuse a
+power whose value is within the range. A power that passes the test raises
+`SYNTAX 42.901` or `SYNTAX 42.902`, as the four operators above do, when its
+result is out of range, and raises nothing when its result is within the
+range, the largest and the smallest included. Only the result decides: an
+intermediate value of the computation that is out of range raises nothing
+when the result is in range. The powers of the second example pass the
+pre-test and have results within the range, although the base to the positive
+exponent has its last digit below the range, and interrexx raises `SYNTAX
+42.902` for that intermediate value.
 
 ```rexx
 signal on syntax name a
@@ -216,6 +241,9 @@ b: say condition('o')~code
 signal on syntax name c
 say 1e500000000 ** -2
 c: say condition('o')~code
+signal on syntax name d
+say 99 ** 600000000
+d: say condition('o')~code
 say (1e300000000 ** 3) (1e-300000000 ** 3) (1e999999999 ** 1),
     (1e999999999 ** -1)
 ```
@@ -224,15 +252,29 @@ say (1e300000000 ** 3) (1e-300000000 ** 3) (1e999999999 ** 1),
 42.1
 42.1
 42.1
+42.901
 1E+900000000 1E-900000000 1E+999999999 1E-999999999
+```
+
+```rexx
+say 1.1e-333333333 ** -3
+say 1.01e-333333333 ** -3
+say 1.1e-499999999 ** -2
+```
+
+```output defect=#95
+7.51314801E+999999998
+9.70590148E+999999998
+8.26446281E+999999997
 ```
 
 > **Note.** The ANSI draft (4.2 and 7.4.10) requires an exponent limit of at
 > least 999999999, as here, and raises `SYNTAX 42.1` for every overflow and
 > `42.2` for every underflow, and `41.7` for an operand whose exponent is out
 > of range. ooRexx, which this book follows, raises 42.901 and 42.902 for
-> overflow and underflow of the four operators above, 42.1 for a power, and
-> 41.1 for an operand.
+> overflow and underflow of the four operators above and of a power that
+> passes the pre-test, 42.1 for a power that fails it, and 41.1 for an
+> operand.
 
 ## Whole-number limits
 

@@ -1,8 +1,8 @@
 ---
 element: "Numbers"
 kind: chapter
-ansi: "6.2.2.35, 7"
-rexxref: "Numbers and Arithmetic > Numbers"
+ansi: "6.2.2.35, 7.4"
+rexxref: "Numbers and Arithmetic"
 ---
 
 # Numbers
@@ -55,20 +55,18 @@ NUM NUM CHAR
 ```
 
 r[num.index.form]
-A string is a number when it consists of these parts in this order. First
-comes optional whitespace, then an optional sign, `+` or `-`, which may be
-followed by whitespace. Next come the digits `0` to `9`, with at most one
-period before, among or after them and at least one digit in all, and last an
-optional exponent, which is `E` or `e` directly after the digits, then an
-optional sign, then one or more digits, with nothing between those parts.
-Optional whitespace may end the string. [Whitespace](r:conv.string.whitespace)
-is blanks and horizontal tabs only, so no other control character may stand
-anywhere in a number, and no whitespace may stand between two digits, before
-the `E`, or inside the exponent.
+A string has the form of a number when it has [the whole-number
+form](r:conv.whole.form), which is a number's form as well. This page adds
+what the whitespace of that form is and where it may not stand.
+[Whitespace](r:conv.string.whitespace) is blanks and horizontal tabs only, so
+no other control character may stand anywhere in a number. It may stand at
+either end and after the sign, and no whitespace may stand between two
+digits, before the `E`, or inside the exponent.
 
 ```rexx
 say datatype(' 7.25 ', 'N') datatype('+ 0.5', 'N'),
     datatype('-' || '09'x || '12', 'N') datatype('3.', 'N'),
+    datatype('1.e3', 'N'),
     datatype('.8', 'N') datatype('6E2', 'N') datatype('0.4e+3', 'N'),
     datatype('2e-0', 'N') datatype('00', 'N')
 say datatype('', 'N') datatype(' ', 'N') datatype('.', 'N'),
@@ -82,20 +80,19 @@ say datatype('0b101', 'N') datatype('1,5', 'N') datatype('1_000', 'N'),
 ```
 
 ```output
-1 1 1 1 1 1 1 1 1
+1 1 1 1 1 1 1 1 1 1
 0 0 0 0 0 0 0 0 0 0
 0 0 0 0 0 0 0 0 0 0
 ```
 
-> **Note.** The same form is the form of a [whole-number
-> argument](r:conv.whole.form), which has a further condition on its value,
-> and the form that DATATYPE tests with type `N`, as
-> [its rule](r:bif.datatype.number) says. A number written without quotes
-> in a program is a constant symbol, and
+> **Note.** The form is also the one that DATATYPE tests with type `N`, as
+> [its rule](r:bif.datatype.number) says, and a [whole-number
+> argument](r:conv.whole.digits) has a further condition on its value. A
+> number written without quotes in a program is a constant symbol, and
 > [the symbol rules](r:lex.symbols.number) say which constant symbols have
 > this form. A number out of the range of
 > [exponents](r:num.limits.range) has the form but is not a number. The ANSI
-> draft (6.2.2.35 and 7) allows blanks only as whitespace, where ooRexx also
+> draft (6.2.2.35 and 7.4) allows blanks only as whitespace, where ooRexx also
 > allows the tab.
 
 r[num.index.value]
@@ -122,11 +119,17 @@ say ('1e2' = '100') ('1e2' = '1e+2') ('5e-1' = '0.5')
 r[num.index.use]
 An operation that needs a number checks its operand against
 [the form](r:num.index.form) when it runs, and the error depends on the
-operation. An operand of an arithmetic operator that is not a number raises
-`SYNTAX 41.1`, the null string and a string of only whitespace included. A
-[number argument](r:bif.index.num.arg) of a builtin raises `SYNTAX 93.943`
-for the same strings, and a [whole-number argument](r:conv.whole.form) raises
-`SYNTAX 40.12`. A string that is not used as a number is never checked.
+operation. An operand of an arithmetic operator that is a string and not a
+number raises `SYNTAX 41.1`, the null string and a string of only whitespace
+included. A [number argument](r:bif.index.num.arg) of a builtin raises
+`SYNTAX 93.943` for the same strings, and a [whole-number
+argument](r:conv.whole.form) raises `SYNTAX 40.12`. A string that is not used
+as a number is never checked. A left operand that is not a string does not
+reach this check, because an operator is a message to its left operand: an
+object that does not understand the message raises `SYNTAX 97.1`, and the
+expressions chapter specifies the messages. A right operand that is an object
+is [replaced by its string](r:conv.string.object) first, so it is a number
+when that string is one, and raises `SYNTAX 41.1` when it is not.
 
 ```rexx
 signal on syntax name a
@@ -148,6 +151,16 @@ signal on syntax name f
 say 5 + ' '
 f: say condition('o')~code
 say length('seven') 'seven' || 3
+say 1 + .mutablebuffer~new('5')
+signal on syntax name g
+say 1 + .nil
+g: say condition('o')~code
+signal on syntax name h
+say .mutablebuffer~new('5') + 1
+h: say condition('o')~code
+signal on syntax name i
+say -.nil
+i: say condition('o')~code
 ```
 
 ```output
@@ -158,4 +171,8 @@ say length('seven') 'seven' || 3
 41.1
 41.1
 5 seven3
+6
+41.1
+97.1
+97.1
 ```
