@@ -36,11 +36,12 @@ strings, and [its template list](r:parse.multiple.comma) is on the last page.
 r[parse.index.elements]
 A template holds these elements, in any order and number. A target is a
 variable symbol of any of the three forms, a message term that can stand on
-the left of an assignment, or a period. A trigger is a string in quotes, an
-expression in parentheses, or a position: a whole number, or a sign or `=`
-followed by a whole number or by an expression in parentheses. A comma ends
-the template and begins the next one. Any other token, an operator character
-for one, is a syntax error, and [the pattern
+the left of an assignment, or a period. A trigger is a [string
+literal](r:lex.literals.string), a hex or binary literal included, an
+expression in parentheses, or a position: a whole number, or one of the
+characters `+`, `-`, `=`, `>` and `<` followed by a whole number or by an
+expression in parentheses. A comma ends the template and begins the next
+one. Any other token is a syntax error, and [the pattern
 page](r:parse.patterns.syntax) describes it.
 
 ```rexx
@@ -83,31 +84,46 @@ alpha|beta;gamma|delta|
 r[parse.index.order]
 The interpreter evaluates the source before it assigns anything, so a target
 that is also the variable of the source does not change what is parsed. It
-then goes through the template from left to right, and assigns each target,
-and evaluates each parenthesized trigger, at the moment it reaches it. A
-pattern or a position therefore sees the values that earlier targets of the
-same template have just received, and so does the tail of a compound symbol
-that is a target. When the same variable appears as a target twice, the later
+then works through the template one piece at a time, from left to right. For
+each piece it first finds the trigger that ends it, evaluating the
+expression of that trigger if it is a parenthesized one, and only then
+assigns the targets of the piece, left to right. An expression in a trigger
+therefore sees the values that the targets of the earlier pieces have
+received, but the old values of the targets of the piece that the trigger
+itself ends. The tail of a compound symbol that is a target is evaluated
+when that target is assigned, so it sees the targets before it in its own
+piece too. When the same variable appears as a target twice, the later
 assignment is the one that remains.
 
 ```rexx
 u = 'ef'
 parse value 'ab,cd,ab,ef' with u ',' v ',' (u) w
 say u v w
+n = 2
+parse value '5 abcdef' with n =(n) v
+say n'|'v
+n = 2
+parse value '5 abcdef' with n ' ' =(n) v
+say n'|'v
 text = 'one two three'
 parse var text first text
 say first'|'text
 i = 1
 parse value 'p,2,r' with a.i ',' i ',' a.i
 say a.1 i a.2
+parse value '3 x' with i b.i
+say b.3
 parse value 'm n' with k k
 say '['k']'
 ```
 
 ```output
 ab cd ,ef
+5| abcdef
+5|cdef
 one|two three
 p 2 r
+x
 [n]
 ```
 

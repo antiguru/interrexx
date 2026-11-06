@@ -2,7 +2,7 @@
 element: "Several strings and case"
 kind: concept
 ansi: "8.3.17"
-rexxref: "Parsing > Advanced Topics in Parsing > Parsing Several Strings"
+rexxref: "Parsing > Advanced Topics in Parsing > Parsing Several Strings, Parsing > Using UPPER, LOWER, and CASELESS"
 ---
 
 # Several strings and case
@@ -41,9 +41,9 @@ ab|cd|||ij| kl mn
 
 r[parse.multiple.single]
 A source of any other kind, such as a VALUE or a VAR, is one string. Its first
-template parses it, and each later template parses the null string, so each
-target of a later template receives the null string and a later pattern
-finds nothing.
+template parses it. A template with no string left to parse, whether it
+follows such a source or the last argument, parses the null string, so each
+target of it receives the null string and a pattern in it finds nothing.
 
 ```rexx
 parse value 'ab cd ef' with u v, w y, z
@@ -59,10 +59,10 @@ one two||
 ```
 
 r[parse.multiple.counts]
-When there are more templates than strings, the extra templates parse the null
-string. When there are more strings than templates, the extra strings are
-ignored. A template that is missing, for example the one before a leading
-comma, assigns [nothing](r:parse.templates.empty).
+A source string with no template after the last comma is not parsed, and no
+variable sees it. A template that is missing, for example the one before a
+leading comma, assigns [nothing](r:parse.templates.empty) and still uses up
+its string.
 
 ```rexx
 call one 'ab', 'cd', 'ef'
@@ -179,3 +179,6 @@ Alpha-BETA-
 x z
 AB-|
 ```
+
+> **Note.** The ANSI draft (8.3.17) has the option UPPER and no other: it has
+> neither LOWER nor CASELESS, which ooRexx adds and this book follows.

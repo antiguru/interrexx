@@ -2,7 +2,7 @@
 element: "Templates"
 kind: concept
 ansi: "8.3.17"
-rexxref: "Parsing > Simple Templates for Parsing into Words"
+rexxref: "Parsing > Simple Templates for Parsing into Words, Parsing > The Period as a Placeholder, Parsing > Parse with Message Terms Assignments"
 ---
 
 # Templates
@@ -20,8 +20,9 @@ Each target of a piece, except the last, receives one word of it. To find
 the word, the parse skips the whitespace at the start of what remains of the
 piece, takes the characters up to the next whitespace character or the end,
 and then removes one whitespace character after the word, if there is one.
-[Whitespace](r:conv.string.whitespace) is the blank and the horizontal tab,
-and no other character, so a line feed can be part of a word.
+A word is what [the builtins](r:bif.index.words.split) call one, and
+[whitespace](r:conv.string.whitespace) is as the conventions define it, so a
+line feed can be part of a word.
 
 ```rexx
 s = '  alpha   beta'||'09'x||'gamma delta  '
@@ -98,10 +99,10 @@ say '['u']'
 ## The period
 
 r[parse.templates.period]
-A period used as a target is a placeholder. It takes its place in the
-sequence of targets as a variable would, so it receives the next word, or the
-rest of the piece when it is the last, but it assigns nothing, and the word
-or the rest it received is lost. A period at the end of a template is the
+A period stands where a variable could and discards what that variable would
+receive. It takes its place in the sequence of targets as a variable would,
+so it consumes the next word, or the rest of the piece when it is the last,
+and assigns nothing. A period at the end of a template is the
 usual way to ignore the surplus of the source.
 
 ```rexx
@@ -122,29 +123,47 @@ blue amber
 ## Targets
 
 r[parse.templates.targets]
-A target is a variable symbol or a message term. A simple symbol and a
-compound symbol are assigned like the left side of an
+A [target](r:parse.index.elements) that is a simple symbol or a compound
+symbol is assigned like the left side of an
 [assignment](r:instr.assignment.value), and the tail of a compound symbol
 is evaluated when the assignment is made, as [the order
 rule](r:parse.index.order) says. A stem symbol is a target too, and assigning
 to it [gives the stem that value as its default](r:expr.variables.stem), so
 that every compound variable of the stem has the value at once. A message
-term, such as `arr[2]` or `obj~attr`, receives its value as a [message
-assignment](r:instr.message.assign) does, by sending the assignment message.
+term, such as `slots[2]` or `obj~attr`, receives its value as a [message
+assignment](r:instr.message.assign) does, by sending the assignment message
+with the value as its argument. The answer of that message is discarded, and
+unlike the instruction a parse does not set `RESULT`. The receiver and the
+arguments of the message are evaluated when the target is assigned, and so
+see the targets assigned before it.
 
 ```rexx
 parse value 'p q r' with s. t
 say s.1 s.any t
-arr = .array~new
-d = .directory~new
-n = 1
-parse value '1 one two 3 4' with n arr[n] arr[n + 1] d~three d~four
-say n arr[1] arr[2] d~three d~four
+slots = .array~new
+k = 1
+parse value '3 red blue' with k slots[k] slots[k + 1]
+say k slots[3] slots[4]
+result = 'untouched'
+reg = .directory~new
+box = .cell~new
+parse value 'n:7 s:9' with 'n:' reg['north'] ' s:' box~amount
+say reg['north'] box~amount result
+exit
+::class cell
+::method 'amount='
+  expose amount
+  use arg amount
+  return 'answered'
+::method amount
+  expose amount
+  return amount
 ```
 
 ```output
 p p q r
-1 one two 3 4
+3 red blue
+7 9 untouched
 ```
 
 r[parse.templates.empty]

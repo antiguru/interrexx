@@ -2,7 +2,7 @@
 element: "Patterns"
 kind: concept
 ansi: "8.3.17"
-rexxref: "Parsing > Templates Containing String Patterns"
+rexxref: "Parsing > Templates Containing String Patterns, Parsing > Templates Containing Positional (Numeric) Patterns, Parsing > Parsing with Variable Patterns, Parsing > Advanced Topics in Parsing > Combining String and Positional Patterns"
 ---
 
 # Patterns
@@ -24,13 +24,14 @@ break. Positions count as [the convention](r:conv.position.origin) says, from
 ## Strings
 
 r[parse.patterns.string]
-A string in quotes finds the first place, at or after the point where the
-piece begins, where its characters occur in the source, comparing each
-character exactly as it is, so case matters. The break is the span of that
-occurrence: the piece ends just before it and the next piece begins just
-after it, and the matched characters belong to no piece. An occurrence at the
-very beginning of the piece leaves an empty piece before it, and an empty
-piece gives its targets the null string.
+A [string literal](r:lex.literals.string), or a [hex](r:lex.literals.hex) or
+[binary](r:lex.literals.bin) literal, finds the first place, at or after the
+point where the piece begins, where its characters occur in the source,
+comparing each character exactly as it is, so case matters. The break is the
+span of that occurrence: the piece ends just before it and the next piece
+begins just after it, and the matched characters belong to no piece. An
+occurrence at the very beginning of the piece leaves an empty piece before it,
+and an empty piece gives its targets the null string.
 
 ```rexx
 parse value 'id=42;tag=blue' with key '=' val
@@ -57,8 +58,8 @@ r[parse.patterns.string.missing]
 When the string does not occur, and when it is the null string, which never
 matches, the break lies at the end of the source. The piece before it runs
 to the end, and the next piece begins there, so each target after the pattern
-receives the null string, as does each target of a source that is itself
-null. A later string cannot match either.
+receives the null string, as [for a null source](r:parse.templates.fewer)
+does each target. A later string cannot match either.
 
 ```rexx
 parse value 'alpha beta' with u ',' v
@@ -101,14 +102,16 @@ c
 ## Variable patterns
 
 r[parse.patterns.variable]
-An expression in parentheses is evaluated when the template reaches it,
-which is after the assignment of the targets before it, and its value is a
-string trigger as [the string rule](r:parse.patterns.string) describes. The
-value is used as the string that it is, so a value that looks like a number
-is still the characters to find, and a value that is the null string is the
-null string, which [never matches](r:parse.patterns.string.missing). The
-expression may be as long as any expression, with operators and function
-calls.
+An expression in parentheses is evaluated when the template reaches the end
+of the piece that it ends, which is after the targets of the earlier pieces
+are assigned and [before the targets of that piece are](r:parse.index.order).
+Its value is a string trigger as [the string rule](r:parse.patterns.string)
+describes. A value that is an object and not a string is replaced by its
+string, as [the conventions](r:conv.string.object) say. The value is used as
+the string that it is, so a value that looks like a number is still the
+characters to find, and a value that is the null string is the null string,
+which [never matches](r:parse.patterns.string.missing). The expression may be
+as long as any expression, with operators and function calls.
 
 ```rexx
 sep = ','; n = 4; none = ''
@@ -122,6 +125,12 @@ parse value 'ab,cd,ef' with u (none) v
 say '['u']['v']'
 parse value 'ab,cd,ef' with u (left(sep, 1) || 'c') v
 say u'|'v
+sep = '-'
+parse value ',ab,cd' with sep (sep) rest  /* still the old '-' */
+say '['sep']['rest']'
+sep = '-'
+parse value ',ab,cd' with sep 2 (sep) rest  /* now the comma */
+say '['sep']['rest']'
 ```
 
 ```output
@@ -130,7 +139,27 @@ abc|efg
 [abcdefg][]
 [ab,cd,ef][]
 ab|d,ef
+[,ab,cd][]
+[,][cd]
 ```
+
+```rexx
+mark = .dash~new
+parse value 'ab--cd' with u (mark) v
+say u'|'v
+exit
+::class dash
+::method makestring
+  return '--'
+```
+
+```output
+ab|cd
+```
+
+> **Note.** The ANSI draft (6.3.2.71) allows only a variable symbol in the
+> parentheses of a variable pattern, and nothing else. ooRexx, and this
+> book, take any expression.
 
 ## Positions
 
@@ -241,17 +270,99 @@ ab|abcdefghij
 abcdefghij|abcdefghij
 ```
 
+r[parse.patterns.length]
+A `>` or `<` followed by a whole number, or by an expression in parentheses,
+puts a point relative to the start of the previous break, which is the same
+start that [a sign](r:parse.patterns.relative) uses. The number is checked as
+[for any position](r:parse.patterns.number). `>n` and `<n` are the two
+length patterns, and the next two rules describe them.
+
+```rexx
+n = 2
+parse value 'abcdefghij' with u > 3 v < (n) w
+say u'|'v'|'w
+```
+
+```output
+abc|bc|bcdefghij
+```
+
+r[parse.patterns.length.after]
+`>n` puts the point `n` characters after the start of the previous break,
+limited to the end of the source, and it is the same as `+n` for every `n`
+above 0. At 0 they differ: the piece before `>0` ends at once, where the
+previous break starts, so it is empty, and the next piece begins there, while
+`+0` makes the preceding piece run to the end of the source.
+
+```rexx
+parse value 'abcdefghij' with u >3 v >3 w
+say u'|'v'|'w
+parse value 'abcdefghij' with u 'c' v >0 w
+say '['u']['v']['w']'
+parse value 'abcdefghij' with u 'c' v +0 w
+say '['u']['v']['w']'
+parse value 'abcdefghij' with u >20 v
+say '['u']['v']'
+n = 2
+parse value 'abcdefghij' with u 'f' near <(n) rest >(n) last
+say u'|'near'|'rest'|'last
+```
+
+```output
+abc|def|ghij
+[ab][][cdefghij]
+[ab][cdefghij][cdefghij]
+[abcdefghij][]
+abcde|de|de|fghij
+```
+
+r[parse.patterns.length.before]
+`<n` puts the point `n` characters before the start of the previous break,
+limited to position 1, and it does not leave the targets before it the piece
+that the earlier triggers gave them. Those targets receive the `n` characters
+that lie just before the start of the previous break, or the characters from
+position 1 when fewer lie there, and the next piece begins at the point. So
+`<n` reads again the text before the break that precedes it. It is not the
+same as `-n`, which leaves the preceding piece to run to the end of the
+source. When no break precedes it, the start is position 1 and the targets
+before `<n` receive the null string.
+
+```rexx
+parse value 'abcdefghij' with u 'f' near <3 rest
+say u'|'near'|'rest
+parse value 'abcdefghij' with u 5 near <9 rest
+say u'|'near'|'rest
+parse value 'abcdefghij' with u 5 near <0 rest
+say u'|'near'|'rest
+parse value 'abcdefghij' with u <2 v
+say '['u']['v']'
+parse value 'abcdefghij' with u 5 near -3 rest
+say u'|'near'|'rest
+```
+
+```output
+abcde|cde|cdefghij
+abcd|abcd|abcdefghij
+abcd||efghij
+[][abcdefghij]
+abcd|efghij|bcdefghij
+```
+
+> **Note.** The ANSI draft has no `>` or `<` pattern: they are an addition
+> of ooRexx, which this book follows.
+
 r[parse.patterns.number]
 The number of a position is a constant written in the template, or the value
-of an expression in parentheses after a sign or `=`. Blanks may separate the
-sign or `=` from the number or the parenthesis. A constant may be any number
-whose value is whole, such as `03`, `4.0` or `1e1`, and one that is not, such
-as `3.5`, raises `SYNTAX 26.4` when the clause runs. An expression's value is
-taken with the current [NUMERIC DIGITS](r:num.settings.digits): it must be
-a whole number that is not negative and has no more digits than that
-setting, or the parse raises the same error. A fraction, text, the null
-string and a negative value all raise it; the direction of a relative position
-is the sign in the template.
+of an expression in parentheses after a sign, `=`, `>` or `<`. Blanks may
+separate the sign, `=`, `>` or `<` from the number or the parenthesis. The
+number, whether constant or expression, must be whole: a constant may be
+written in any form whose value is whole, such as `03`, `4.0` or `1e1`, and
+`3.5` is not. It must have no more digits than the current [NUMERIC
+DIGITS](r:num.settings.digits) allows, so `1e9` is accepted only when that
+setting is at least 10, and it must not be negative. A number that fails any
+of these checks raises `SYNTAX 26.4` when the clause runs. A fraction, text,
+the null string and a negative value of an expression all raise it; the
+direction of a relative position is the sign in the template.
 
 ```rexx
 parse value 'abcdefghij' with u 03 v 4.0 w 1e1 y
@@ -268,6 +379,13 @@ call try -2, 'abcdefghij'
 numeric digits 3
 call try 999, 'abcdefghij'
 call try 1000, 'abcdefghij'
+call lit 'u 999 v'
+call lit 'u 1000 v'
+call lit 'u 1e3 v'
+call lit 'u +3.5 v'
+call lit 'u >1000 v'
+numeric digits 12
+call lit 'u 1e9 v'
 exit
 try:
   signal on syntax name e
@@ -276,6 +394,13 @@ try:
   say p 'ok' u'|'v
   return
 e: say p condition('o')~code
+  return
+lit:
+  signal on syntax name e2
+  interpret 'parse value "abcdefghij" with' arg(1)
+  say arg(1) 'ok'
+  return
+e2: say arg(1) condition('o')~code
   return
 ```
 
@@ -289,16 +414,25 @@ ab 26.4
 -2 26.4
 999 ok abcdefghij|
 1000 26.4
+u 999 v ok
+u 1000 v 26.4
+u 1e3 v 26.4
+u +3.5 v 26.4
+u >1000 v 26.4
+u 1e9 v ok
 ```
 
 ## Errors in the template
 
 r[parse.patterns.syntax]
 A template is checked when the program is read. A token that cannot be part
-of a template, such as an operator character, raises `SYNTAX 38.1`, and a
-sign or `=` that is followed by neither a number nor an opening parenthesis
-raises `SYNTAX 38.2`. A program file that holds either does not run at all,
-and its exit code is 218. The text of INTERPRET raises the same error
+of a template, such as `*`, `||`, `>>` or `>=`, raises `SYNTAX 38.1`. A sign,
+`=`, `>` or `<` followed by any token other than a number or an opening
+parenthesis, a comma or a symbol among them, raises `SYNTAX 38.2`, and one
+that is the last token of the clause raises `SYNTAX 38.901`. (A `-` that ends
+a line is a [continuation](r:lex.clauses.continuation) and not a template
+token.) A program file that holds any of these does not run at all, and its
+exit code is 218. The text of INTERPRET raises the same error
 [when it is read](r:instr.interpret.whole).
 
 ```rexx
@@ -318,12 +452,27 @@ parse value 'abc' with u * v
 ```
 
 ```rexx
+say 'never shown'
+parse value 'abc' with u >
+```
+
+```output rc=218
+```
+
+```rexx
 call try 'u * v'
 call try 'u || v'
+call try 'u >> v'
 call try 'u =n v'
 call try 'u + v'
+call try 'u > v'
+call try 'u < , v'
 call try 'u 3 = v'
 call try 'u + (1) v'
+call try 'u >(1) v'
+call try 'u +'
+call try 'u 3 ='
+call try 'u <'
 exit
 try:
   signal on syntax name e
@@ -337,8 +486,15 @@ e: say condition('o')~code '<=' arg(1)
 ```output
 38.1 <= u * v
 38.1 <= u || v
+38.1 <= u >> v
 38.2 <= u =n v
 38.2 <= u + v
+38.2 <= u > v
+38.2 <= u < , v
 38.2 <= u 3 = v
 ok u + (1) v
+ok u >(1) v
+38.901 <= u +
+38.901 <= u 3 =
+38.901 <= u <
 ```
