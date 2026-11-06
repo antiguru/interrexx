@@ -171,10 +171,15 @@ r[num.limits.underflow]
 A result of `+`, `-`, `*` or `/` whose last digit stands at a power of ten
 below -999999999 raises `SYNTAX 42.902`, and no value results: a result that
 is too small is never replaced by zero. The last digit is that of the
-result as rounded and written, so a division whose digits run on can
-underflow when its first digit is still in range. The test follows the
+result rounded to NUMERIC DIGITS digits, taken before the zeros that end a
+division or power result are removed. The test is therefore not made on the
+written result: `1 / 9.99999999e999999998` is written `1E-999999999` when it
+answers, yet under DIGITS 2 to 12 the rounded value, such as `1.0` for DIGITS
+2, ends at -1000000000 and the division raises. A division whose digits run on
+can underflow when its first digit is still in range. The test follows the
 rounding, so a result whose exact value would end below the range survives
-when rounding to few digits removes the digits that fall below it.
+when rounding to few digits removes the digits that fall below it: under
+DIGITS 1 the same division answers.
 
 ```rexx
 signal on syntax name a
@@ -189,9 +194,18 @@ c: say condition('o')~code
 signal on syntax name d
 say 1 / 3e999999999
 d: say condition('o')~code
+signal on syntax name e
+say 1 / 9.99999999e999999998
+e: say condition('o')~code
+numeric digits 2
+signal on syntax name f
+say 1 / 9.99999999e999999998
+f: say condition('o')~code
+numeric digits 9
 say (1e-999999998 / 10) (1e-999999990 / 3) (1e-999999999 * 1)
 numeric digits 1
-say (1.5e-999999998 * 0.1) (1.4e-999999998 * 0.1) (1e-999999998 / 3)
+say (1.5e-999999998 * 0.1) (1.4e-999999998 * 0.1) (1e-999999998 / 3),
+    (1 / 9.99999999e999999998)
 ```
 
 ```output
@@ -199,8 +213,10 @@ say (1.5e-999999998 * 0.1) (1.4e-999999998 * 0.1) (1e-999999998 / 3)
 42.902
 42.902
 42.902
+42.902
+42.902
 1E-999999999 3.33333333E-999999991 1E-999999999
-2E-999999999 1E-999999999 3E-999999999
+2E-999999999 1E-999999999 3E-999999999 1E-999999999
 ```
 
 r[num.limits.zero]
@@ -224,7 +240,13 @@ rule](r:num.arithmetic.power.error) refuses it, and that test can refuse a
 power whose value is within the range. A power that passes the test raises
 `SYNTAX 42.901` or `SYNTAX 42.902`, as the four operators above do, when its
 result is out of range, and raises nothing when its result is within the
-range, the largest and the smallest included. Only the result decides: an
+range, the largest and the smallest included. The result is the value rounded
+to NUMERIC DIGITS digits, as [the underflow rule](r:num.limits.underflow)
+tests it, so `9.99999999e999999998 ** -1` raises `42.902` under DIGITS 9
+although its written result `1E-999999999` is within the range. The code is
+that of the result, except that a base raised to a positive exponent that
+overflows gives `42.901` even when the exponent is negative and the result is
+too small: `11 ** -999999999` raises `42.901`, not `42.902`. Only the result decides: an
 intermediate value of the computation that is out of range raises nothing
 when the result is in range. The powers of the second example pass the
 pre-test and have results within the range, although the base to the positive
@@ -244,6 +266,12 @@ c: say condition('o')~code
 signal on syntax name d
 say 99 ** 600000000
 d: say condition('o')~code
+signal on syntax name e
+say 11 ** -999999999
+e: say condition('o')~code
+signal on syntax name f
+say 9.99999999e999999998 ** -1
+f: say condition('o')~code
 say (1e300000000 ** 3) (1e-300000000 ** 3) (1e999999999 ** 1),
     (1e999999999 ** -1)
 ```
@@ -253,6 +281,8 @@ say (1e300000000 ** 3) (1e-300000000 ** 3) (1e999999999 ** 1),
 42.1
 42.1
 42.901
+42.901
+42.902
 1E+900000000 1E-900000000 1E+999999999 1E-999999999
 ```
 
