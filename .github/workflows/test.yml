@@ -35,6 +35,11 @@ jobs:
           tool: nextest@0.9.150
       - name: Cargo nextest
         run: cargo nextest run --locked --workspace --profile ci
+      - name: Spec examples against the oracle
+        if: success() || failure()
+        env:
+          REXX_SPEC_ORACLE: "1"
+        run: cargo nextest run --locked -p interrexx --test spec --profile ci
       - name: Cargo doc tests
         if: success() || failure()
         run: cargo test --locked --workspace --doc
