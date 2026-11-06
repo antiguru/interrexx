@@ -180,9 +180,10 @@ r[bif.lines.deviation.54]
 LINES of the standard input, or of any other transient stream, answers
 whether input waits to be read, 0 for none and otherwise a positive number
 that is not specified, and consumes none. When the input is empty, as it is
-for the examples of this book, the answer is 0. ooRexx reads a character
-to find out, which the program then misses, and with an empty standard input
-it answers 1.
+for the examples of this book, the answer is 0. ooRexx answers 1 to some of
+these questions when the standard input is `/dev/null`, which holds no
+line. For an empty pipe, a pipe that holds data, and a file, it answers as
+this rule says.
 
 ```rexx
 say lines() lines('stdin') lines(, 'C')

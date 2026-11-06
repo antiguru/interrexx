@@ -1408,6 +1408,11 @@ when the call gave none. The condition is not an error: when it is not trapped, 
 a `CALL ON` trap returns, the call goes on and answers what its page says.
 A trap by `SIGNAL ON NOTREADY` abandons the clause that raised it, like
 any other condition.
+Reading the standard output or the standard error by name, with CHARIN or
+LINEIN and a count that is not 0, is a read the stream does not allow and
+raises NOTREADY too; `condition('D')` is `STDOUT` or `STDERR`, whatever the
+spelling of the name, with or without the colon. CHARS and LINES of them raise
+nothing and answer 0.
 
 ```rexx
 f = 'spec-streams-nr.tmp'
@@ -1434,6 +1439,22 @@ return
 NOTREADY spec-streams-nr.tmp ab
 STDIN
 STDIN
+```
+
+```rexx
+call on notready name std
+x = charin('stdout')
+x = linein('Stderr:')
+say chars('stdout') lines('stderr')
+exit
+std: say condition('c') condition('d')
+return
+```
+
+```output defect=#82
+NOTREADY STDOUT
+NOTREADY STDERR
+0 0
 ```
 
 r[bif.index.stream.line-end]
@@ -1509,9 +1530,10 @@ r[bif.index.stream.value]
 The value of a start, a count or a line number is its number rounded to 20
 significant digits; when the first digit dropped is 5 or more, the magnitude
 rounds up, otherwise down. The caller's NUMERIC DIGITS setting plays no part.
-If the rounded value has a fractional part other than zero, or its magnitude
-is more than 2\*\*63 - 1, which is 9223372036854775807, the argument raises
-`SYNTAX 40.12`; otherwise its value is that integer. This is not the rule of
+If the rounded value has a fractional part other than zero, or is more than
+2\*\*63 - 1, which is 9223372036854775807, or is less than -2\*\*63, which is
+-9223372036854775808, the argument raises `SYNTAX 40.12`; otherwise its value
+is that integer. This is not the rule of
 [the conventions](r:conv.whole.digits), which rounds to 18 digits and refuses
 10\*\*18 and more.
 
