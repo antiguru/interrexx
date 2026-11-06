@@ -62,18 +62,23 @@ abcxyz ab0123456789cd
 ```
 
 r[bif.xrange.default]
-A call with no arguments, or only omitted ones, selects every character: it
-is the range from `'00'x` to `'FF'x`, 256 characters in ascending order of
-code. The same holds for any group whose start and end are both omitted.
+A call whose [argument count](r:bif.index.call.count) is 0, such as
+`xrange()` or `xrange(, )`, reads no group by
+[the groups rule](r:bif.xrange.groups) and selects every character instead:
+the range from `'00'x` to `'FF'x`, 256 characters in ascending order of
+code. A group whose start and end are both omitted selects the same 256
+characters, but only when an argument that is not omitted comes after it;
+omitted places after the last such argument start no group, so they add
+nothing to a call that has one.
 
 ```rexx
 say c2x(left(xrange(), 4)) length(xrange()) length(xrange(, ))
-say length(xrange('digit', , )) length(xrange('digit', , , ))
+say length(xrange('digit', , )) length(xrange('digit', , , )) length(xrange('digit', , , 'a'))
 ```
 
 ```output
 00010203 256 256
-10 10
+10 10 425
 ```
 
 ## Ranges
@@ -81,10 +86,11 @@ say length(xrange('digit', , )) length(xrange('digit', , , ))
 r[bif.xrange.range]
 When the code of `start` is not above the code of `end`, a range selects
 the character with the code of `start`, the one with the code of `end`, and
-every character whose code lies between them, from the lowest code up. A start equal to the end selects that one
-character. An omitted `start` is `'00'x`, and an omitted `end`, or an end
-the call has no argument for, is `'FF'x`. A `start` and an `end` are
-single characters, as [the groups rule](r:bif.xrange.groups) reads them.
+every character whose code lies between them, from the lowest code up. A
+start equal to the end selects that one character. An omitted `start` is
+`'00'x`, and an omitted `end`, or an end the call has no argument for, is
+`'FF'x`. A `start` and an `end` are single characters, as
+[the groups rule](r:bif.xrange.groups) reads them.
 
 ```rexx
 say xrange('m', 'q') xrange('k', 'k')
