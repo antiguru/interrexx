@@ -18,17 +18,18 @@ the end.
 
 A value is checked against the form each time an operation needs a number,
 and no check or conversion happens before that. The pages of this chapter
-that exist so far are:
+are:
 
 * [Formats](formats.md): how an arithmetic result is written, with
   significant digits, zeros, exponential notation and engineering notation.
 * [Limits](limits.md): the range of exponents, overflow and underflow, and
   the limits that whole numbers have.
-
-Three pages are still to come: arithmetic, which gives the operators and
-NUMERIC DIGITS rounding; settings, which gives NUMERIC DIGITS, FUZZ and FORM
-and their scope; and comparison, which says when two values are compared as
-numbers.
+* [Arithmetic](arithmetic.md): the operators, the rounding to NUMERIC DIGITS,
+  integer division, powers and the errors of each.
+* [Settings](settings.md): NUMERIC DIGITS, FUZZ and FORM, how a program
+  changes them and which part of the program a change reaches.
+* [Comparison](comparison.md): when two values compare as numbers, and how
+  NUMERIC FUZZ widens equality.
 
 ## What a number is
 
