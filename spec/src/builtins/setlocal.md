@@ -144,8 +144,10 @@ e0
 r[bif.setlocal.return]
 When a `::routine` or a method ends with saves of its own outstanding, the
 oldest of them is put back: the code that called it sees the current
-directory and the environment variables as they were when the `::routine` or
-the method made its first outstanding save. The return of an internal routine
+directory of that save, and each environment variable the save held has the
+value it held, as [an ENDLOCAL](r:bif.endlocal.restore) would give. A
+variable the program created after the save keeps its value, as
+[ENDLOCAL](r:bif.endlocal.scope) says. The return of an internal routine
 puts nothing back, by [the rule above](r:bif.setlocal.owner). What the end of
 the program does with saves outstanding is not specified.
 
@@ -153,11 +155,13 @@ the program does with saves outstanding is not specified.
 call value 'SPEC_SETLOCAL_B', 'before', 'ENVIRONMENT'
 here = directory()
 call r
-say value('SPEC_SETLOCAL_B',, 'ENVIRONMENT') (directory() == here)
+say value('SPEC_SETLOCAL_B',, 'ENVIRONMENT') (directory() == here),
+    value('SPEC_SETLOCAL_N',, 'ENVIRONMENT')
 exit
 ::routine r
 call setlocal
 call value 'SPEC_SETLOCAL_B', 'inside', 'ENVIRONMENT'
+call value 'SPEC_SETLOCAL_N', 'new', 'ENVIRONMENT'
 call directory '/'
 say value('SPEC_SETLOCAL_B',, 'ENVIRONMENT') directory()
 return
@@ -165,7 +169,7 @@ return
 
 ```output
 inside /
-before 1
+before 1 new
 ```
 
 ```rexx

@@ -123,7 +123,9 @@ fn a_bad_escape_is_a_problem_at_its_line() {
 #[test]
 fn a_duplicate_escaped_option_is_a_problem() {
     let text = escaped_page("x\n", "escaped escaped");
-    assert_eq!(problems(&text).len(), 1);
+    let found = problems(&text);
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(found[0], (16, "duplicate `escaped` option".to_string()));
 }
 
 #[test]

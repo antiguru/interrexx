@@ -71,6 +71,9 @@ from 37 to 32767 and the duration from 0 to 60000. An argument that is not in
 that form, whose rounded value has a fractional part other than zero, that
 is out of its range, or that is the null string raises `SYNTAX 88.907`, and
 so does an object whose string value fails these checks, such as `.nil`.
+A rounded value whose magnitude is 10\*\*18 or more is not a whole number for
+this purpose, whichever sign it has: it fails the form check, which comes
+before the range checks, as [the order rule](r:bif.beep.order) shows.
 
 ```rexx
 signal on syntax name a
@@ -135,11 +138,13 @@ say 'done'
 ```
 
 r[bif.beep.order]
-A call with two arguments checks the frequency first and the duration next,
-each for being present and a whole number, and only then checks the ranges:
-a frequency that is not a whole number is reported before a missing
-duration, and a missing duration before a frequency out of range. A third
-argument is reported before an argument out of range. When a call has a
+A call with no third argument checks the frequency first and the duration
+next, each for being present and a whole number, and only then checks the
+ranges: a frequency that is not a whole number is reported before a missing
+duration, and a missing duration before a frequency out of range. A
+frequency of magnitude 10\*\*18 or more is not a whole number, so it is
+reported before a missing duration, while a frequency below that magnitude
+that is out of range is reported after it. A third argument is reported before an argument out of range. When a call has a
 third argument and also a frequency or duration that is missing or not a
 whole number, which of the two errors it raises is not specified.
 
@@ -159,6 +164,18 @@ d: say condition('o')~code
 signal on syntax name e
 x = beep(100, 60001, 1)
 e: say condition('o')~code
+signal on syntax name f
+x = beep(1E18, )
+f: say condition('o')~code
+signal on syntax name g
+x = beep(999999999999999999, )
+g: say condition('o')~code
+signal on syntax name h
+x = beep('-1E18')
+h: say condition('o')~code
+signal on syntax name i
+x = beep(36)
+i: say condition('o')~code
 ```
 
 ```output
@@ -167,6 +184,10 @@ e: say condition('o')~code
 88.901
 88.922
 88.922
+88.907
+88.901
+88.907
+88.901
 ```
 
 ## The result
