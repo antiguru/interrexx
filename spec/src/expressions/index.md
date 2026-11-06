@@ -24,10 +24,11 @@ The pages of this chapter are:
 * [Concatenation](concatenation.md): the blank, the abuttal and `||`.
 
 The operators that compute are described in four more pages of this chapter.
-The `arithmetic` page covers `+` `-` `*` `/` `%` `//` and `**`, the
-`comparison` page the normal and strict comparisons, the `logical` page `&`
-`|` `&&` and prefix `\`, and the `messages` page the message operators `~`
-and `~~`, with the rule that every operator is a message. The characters of
+The [arithmetic](arithmetic.md) page covers `+` `-` `*` `/` `%` `//` and
+`**`, the [comparison](comparison.md) page the normal and strict comparisons,
+the [logical](logical.md) page `&` `|` `&&` and prefix `\`, and the
+[messages](messages.md) page the message operators `~` and `~~`, with the
+rule that every operator is a message. The characters of
 the operators and the way a program is cut into tokens are in the
 [lexical chapter](../lexical/index.md), and the numbers that arithmetic works
 on are in the [numbers chapter](../numbers/index.md).
