@@ -272,11 +272,10 @@ fn problem(path: &Path, line: usize, message: String) -> Problem {
 /// checks `interrexx_spec::load` makes, then that every rule has an example or a
 /// cited test, that every citation names a rule, that every example's output
 /// and exit code are what its page says, that deviations agree with rules and
-/// the Deviations table, and that rule links resolve. The table and citations
-/// are read from `repo`.
-fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
+/// the Deviations table, and that rule links resolve. The table is read from
+/// `repo`; `cited` is every citation the checked tree is held to.
+fn check(spec_root: &Path, repo: &Path, cited: &Citations) -> Vec<Problem> {
     let (pages, mut problems) = interrexx_spec::load(spec_root);
-    let cited = citations(repo);
 
     let defined: BTreeSet<&str> = pages
         .iter()
@@ -298,7 +297,7 @@ fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
     }
 
     // 4: a citation names a rule.
-    for (id, places) in &cited {
+    for (id, places) in cited {
         if !defined.contains(id.as_str()) {
             for (path, line) in places {
                 problems.push(problem(
@@ -595,33 +594,25 @@ fn page_with_example(rexx: &str, output: &str) -> String {
     format!("r[bif.t.one]\nA rule.\n\n```rexx\n{rexx}\n```\n\n```output{output}\n```\n")
 }
 
-/// The problems for a tree holding the one example, checked against the real
-/// repository (whose citations and Deviations table it reads).
+/// The problems for a tree holding the one example, checked as
+/// [`check_fixture`] checks.
 fn check_example(rexx: &str, output: &str) -> Vec<Problem> {
     let scratch = Scratch::new("example");
     let root = tree_with_page(&scratch, &page_with_example(rexx, output));
     check_fixture(&root)
 }
 
-/// [`check`] of a fixture tree against the real repository, without the
-/// problems of the repository's citations: they name the specification's
-/// rules, which a fixture tree does not hold.
+/// [`check`] of a fixture tree against the real repository's Deviations
+/// table, held to no citations: the repository's citations name rules of the
+/// specification, which a fixture tree does not hold.
 fn check_fixture(spec_root: &Path) -> Vec<Problem> {
-    let repo = repo_root();
-    check(spec_root, &repo)
-        .into_iter()
-        .filter(|p| {
-            !(p.path.starts_with(&repo)
-                && p.message
-                    .ends_with("which is not a rule in the specification"))
-        })
-        .collect()
+    check(spec_root, &repo_root(), &Citations::new())
 }
 
 #[test]
 fn the_specification_holds() {
     let repo = repo_root();
-    let problems = check(&repo.join("spec"), &repo);
+    let problems = check(&repo.join("spec"), &repo, &citations(&repo));
     assert!(
         problems.is_empty(),
         "the specification has {} problem(s):\n{}",
@@ -648,7 +639,7 @@ fn a_seeded_defect_is_caught() {
          r[bif.seeded.wrong]\nSee [nothing](r:bif.nope).\n\n\
          ```rexx\nsay 'a'\n```\n\n```output\nb\n```\n",
     );
-    let problems = check(&copy, &repo);
+    let problems = check(&copy, &repo, &citations(&repo));
     let text = render(&problems);
     assert_eq!(
         problems.len(),
