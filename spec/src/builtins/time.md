@@ -260,8 +260,9 @@ The informats H, M, S, F and T read a count: hours, minutes or seconds since
 midnight, or the number of microseconds or seconds that F and T
 [write](r:bif.time.out.stamp). The string may have any form of a number, such
 as `5`, ` 5 `, `+5`, `5.0` and `5e0`, and NUMERIC DIGITS does not apply. A
-string whose value is a whole number is accepted, however many leading or
-trailing zeros it has. A string whose value is not a whole number raises
+string whose value is a whole number is read as that number, however many
+leading or trailing zeros it has, and the number must be in the range given
+below. A string whose value is not a whole number raises
 `SYNTAX 40.19` when it has at most nine significant digits for H, M and S, or
 at most 18 for F and T, its significant digits being those from the first digit
 that is not 0 to the last digit that is not 0. This book does not specify

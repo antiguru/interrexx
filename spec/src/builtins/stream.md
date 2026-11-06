@@ -294,7 +294,8 @@ which is where a stream that is open for writing and neither `APPEND` nor
 position cannot be moved into the data that the file held when it was opened,
 by `SEEK` or by a start or line that a write gives; see
 [Deviation 79](r:bif.stream.deviation.79). A position at the end of that data,
-or past it, is allowed. `REPLACE` empties the file and begins the write
+or past it, is allowed, but a write still goes after the last character.
+`REPLACE` empties the file and begins the write
 position at its start. An option may be shortened as far as to `REA`, `W`,
 `BO`, `AP` and `REP`, and its case does not matter. A word that is given
 twice, two of `READ`, `WRITE` and `BOTH`, `READ` with `APPEND` or `REPLACE`,
@@ -492,8 +493,9 @@ reading and writing has both set to the answer; which of the two positions a
 `+` or `-` then counts from is not specified. `CHAR` counts characters and is
 the default; for `LINE` see [the next rule](r:bif.stream.seek.line). A position
 past the end of the data is allowed: a read there finds nothing, and a write
-there [fills the gap](r:bif.charout.start); a stream opened `APPEND` has
-[a limit](r:bif.stream.deviation.79) on the write position. A stream that is
+there [fills the gap](r:bif.charout.start), except on a stream opened
+`APPEND`, where [a write goes after the last character](r:bif.stream.deviation.79)
+wherever the write position is. A stream that is
 not open is opened by `SEEK`; when it cannot be, `SEEK` answers 0, raises
 [NOTREADY](r:bif.index.stream.notready), leaves the state `ERROR`, and creates
 nothing. An offset that is not a whole number or an option that is not one of
@@ -968,12 +970,14 @@ NOTREADY:EOF
 ```
 
 r[bif.stream.deviation.79]
-On a stream opened `APPEND`, the write position cannot be moved into the data
-that the file held when it was opened: a `SEEK` of it there answers 0, and a
-CHAROUT or LINEOUT that names a position there writes nothing, all of them
-`NOTREADY`. A position at the end of that data or past it is allowed. ooRexx
-moves the position, but what a CHAROUT with a start or a LINEOUT with a line
-writes goes after the last character.
+On a stream opened `APPEND`, every write goes after the last character,
+wherever the write position has been set: a position past the end leaves no
+gap, and a position in data written since the stream was opened does not
+overwrite it. The write position cannot be moved into the data that the file
+held when it was opened: a `SEEK` of it there answers 0, and a CHAROUT or
+LINEOUT that names a position there writes nothing, all of them `NOTREADY`.
+ooRexx differs only there: it moves the position, and the write goes after
+the last character as any other does.
 
 ```rexx
 f = 'spec-stream-dev79.tmp'
@@ -988,6 +992,7 @@ say n stream(f, 'c', 'query position write')
 say charout(f, 'Y', 1)
 say n
 say stream(f, 'c', 'seek 9 write') charout(f, 'Z', 9)
+say stream(f, 'c', 'seek 20 write') charout(f, 'W') charout(f, 'V', 10) n
 call stream f, 'c', 'close'
 say charin(f, 1, 100)
 call sysfiledelete f
@@ -1003,5 +1008,6 @@ READY:
 1
 2
 9 0
-abcdefghZ
+20 0 0 2
+abcdefghZWV
 ```

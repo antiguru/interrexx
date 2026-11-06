@@ -504,11 +504,11 @@ object's `==`. ooRexx compares identity first and sends nothing.
 
 ## 79. APPEND write positions
 
-On a stream opened APPEND, the write position cannot be moved into the file
-as it was when opened: such a SEEK answers 0, and a CHAROUT or LINEOUT
-naming a position there writes nothing, all NOTREADY. ooRexx moves the
-position, but what a CHAROUT with a start or a LINEOUT with a line writes
-goes after the last character.
+On a stream opened APPEND, every write goes after the last character, and
+the write position cannot be moved into the file as it was when opened: such
+a SEEK answers 0, and a CHAROUT or LINEOUT naming a position there writes
+nothing, all NOTREADY. ooRexx moves the position there, and the write goes
+after the last character as any other does.
 
 ## 80. First SEEK of an unopened transient stream
 

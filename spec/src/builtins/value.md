@@ -343,6 +343,7 @@ call value 'T14F_PROBE', .nil, e
 address system 'printf "[%s]\n" "$T14F_PROBE"'
 call value 'T14F_PROBE', '', e
 address system 'printf "[%s]\n" "${T14F_PROBE+set}"'
+call value 'T14F_PROBE', .nil, e
 ```
 
 ```output

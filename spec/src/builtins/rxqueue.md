@@ -30,10 +30,11 @@ sending the message `RXQUEUE` to a string raises `SYNTAX 97.1`. The
 [call rules](r:bif.index.call.count) hold for the number of arguments, with the
 fewest and the most depending on the option, which the rules below give:
 a call with no argument, or with only omitted places, raises `SYNTAX 40.3`; a
-call whose first argument is omitted but has a second raises `SYNTAX 40.5`.
-The checks come in this order. First the number of arguments is checked
-against the bounds that hold for every function: an `option`, and at most
-two arguments. Then the [first character of `option`](r:bif.rxqueue.option)
+call of at most two arguments whose first is omitted but whose second is
+present raises `SYNTAX 40.5`. The checks come in this order. First the
+number of arguments is checked against the bounds that hold for every
+function: at most two arguments, so that `rxqueue(, 'a', 'b')` raises
+`SYNTAX 40.4`, and then an `option`. Then the [first character of `option`](r:bif.rxqueue.option)
 is checked, then the number of arguments against the bounds of the function
 it picks, and last [`queuename`](r:bif.rxqueue.name).
 
@@ -59,6 +60,9 @@ f: say condition('o')~code
 signal on syntax name g
 say rxqueue(, 'a b')
 g: say condition('o')~code
+signal on syntax name h
+say rxqueue(, 'a', 'b')
+h: say condition('o')~code
 signal off syntax
 say rxqueue('Get', )
 ```
@@ -71,6 +75,7 @@ say rxqueue('Get', )
 40.904
 40.4
 40.5
+40.4
 SESSION
 ```
 

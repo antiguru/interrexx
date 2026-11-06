@@ -164,7 +164,8 @@ say directory('/usr' || '00'x || '/spec-directory-none') directory()
 
 > **Note.** The example makes the directory without permission under a
 > temporary directory of its own, and makes its own directory current again
-> before it restores the permission and removes both.
+> before it restores the permission and removes both. It assumes a user other
+> than root, whom the missing permission does not keep out of the directory.
 
 ```rexx
 here = directory()

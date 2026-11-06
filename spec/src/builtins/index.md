@@ -291,9 +291,9 @@ A0 A1 A0
 r[bif.index.bit.pad.check]
 A `pad` that is present is checked as [a pad](r:conv.pad) whether or not the
 call needs it: a `pad` that is not one character long raises `SYNTAX 40.23`
-even when the operands are equally long or both null, so that no character
-of it would be used, and the null string is not a pad, as [an empty argument](r:conv.arg.empty) is not
-omitted.
+even when the operands are equally long or both null, where no character of
+it would be used. The null string is not a pad, as
+[an empty argument](r:conv.arg.empty) is not omitted.
 
 ```rexx
 signal on syntax name a
@@ -609,10 +609,9 @@ r[bif.index.conv.signed.write]
 When D2C or D2X is given an `n`, the answer is exactly `n` units long. It
 is the number's remainder on division by 256\*\*`n` in D2C and 16\*\*`n` in
 D2X, a remainder that is never negative, written with `'00'x` units (`0`
-digits in D2X) on its left to make `n` units. A small negative number
-therefore has `'FF'x` units (`F` digits in D2X) on its left, and for a
-number that needs more than `n` units the leftmost ones are lost, so -257
-with an `n` of 1 is `'FF'x`. An `n` of 0 answers the null string.
+digits in D2X) on its left to make `n` units. For a number that needs more
+than `n` units the leftmost ones are lost, so -257 with an `n` of 1 is
+`'FF'x`. An `n` of 0 answers the null string.
 Without an `n`, a non-negative number is written in as few units as it
 takes, and at least one, so that no `'00'x` (or `0`) stands on its left
 unless the number is 0; a negative number raises `SYNTAX 93.927`.
@@ -646,8 +645,9 @@ r[bif.index.conv.decimal]
 The decimal argument of D2C and D2X is a [string](r:conv.string.object)
 written as a Rexx number, with optional whitespace around it and after its
 sign, a period and an exponent, whose value is a whole number of at most
-NUMERIC DIGITS digits; leading zeros and zeros after the point are not
-counted, and zeros at the end of the whole part are.
+NUMERIC DIGITS digits, the digits counted being those of the value written
+as a whole number with no leading zero: `'1.0E9'`, `'1E9'` and `'1000000000'`
+all have ten, and `'0001.000'` has one.
 Each of these raises `SYNTAX 93.929` in D2C and `SYNTAX 93.928` in D2X: a
 string that is not a number, the null string among them; a number with a
 nonzero fractional part, when it is written with no more digits than
@@ -675,7 +675,10 @@ numeric digits 3
 signal on syntax name e
 say d2c(1000)
 e: say condition('o')~code
-say d2x(999) d2x('1E2') d2x('-0')
+signal on syntax name f
+say d2x('1.0E3')
+f: say condition('o')~code
+say d2x(999) d2x('1E2') d2x('-0') d2x('0099.90E1')
 ```
 
 ```output
@@ -685,7 +688,8 @@ say d2x(999) d2x('1E2') d2x('-0')
 93.929
 93.928
 93.929
-3E7 64 0
+93.928
+3E7 64 0 3E7
 ```
 
 r[bif.index.conv.decimal.order]
