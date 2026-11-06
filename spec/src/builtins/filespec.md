@@ -20,14 +20,21 @@ specified.
 ## Arguments
 
 r[bif.filespec.args]
-`option` and `filespec` are [strings](r:conv.string.null), and both are
-required. FILESPEC does not run as a String method: sending the message
-`FILESPEC` to a string raises `SYNTAX 97.1`. It does not follow the [call
-rules](r:bif.index.call.count) for the number of arguments: a required
-argument that is omitted, or that is past the end of the call, raises
-`SYNTAX 88.901`; a third argument raises `SYNTAX 88.922`; and an argument
-that is an object with no string value, such as `.nil`, raises
-`SYNTAX 88.909`. A trailing omitted place adds nothing to the count.
+`option` is a string whose first character picks the piece, as [the next
+rule](r:bif.filespec.option) says, and `filespec` is a
+[string](r:conv.string.null); both are required. FILESPEC does not run as a
+String method: sending the message `FILESPEC` to a string raises
+`SYNTAX 97.1`. It does not follow the [call rules](r:bif.index.call.count)
+for the number of arguments: a required argument that is omitted, or that is
+past the end of the call, raises `SYNTAX 88.901`, and a third argument raises
+`SYNTAX 88.922`. A trailing omitted place adds nothing to the count.
+An argument that is an object other than a string is replaced by the answer
+of its `MAKESTRING` method, as [for the other builtins](r:conv.string.object),
+but FILESPEC does not fall back to the `STRING` method: an object with no
+`MAKESTRING` method, such as `.nil`, raises `SYNTAX 88.909`, whatever its
+`STRING` method answers. When a call has a third argument and also an
+argument that is omitted or not a string, which of the two errors it raises
+is not specified.
 
 ```rexx
 signal on syntax name a
@@ -48,7 +55,14 @@ e: say condition('o')~code
 signal on syntax name f
 say 'a/b'~filespec('N')
 f: say condition('o')~code
-say filespec('N', 'a/b', )
+signal on syntax name g
+say filespec('N', .told~new)
+g: say condition('o')~code
+signal off syntax
+say filespec('N', 'a/b', ) filespec(.array~of('N'), .mutablebuffer~new('a/b'))
+::class told
+::method string
+  return 'a/b'
 ```
 
 ```output
@@ -58,7 +72,8 @@ say filespec('N', 'a/b', )
 88.922
 88.909
 97.1
-b
+88.909
+b b
 ```
 
 r[bif.filespec.option]
@@ -67,7 +82,9 @@ characters after it are ignored. The pieces are `Drive`, `Extension`,
 `Location`, `Name` and `Path`, so the first character is one of `D`, `E`,
 `L`, `N` and `P`. Any other first character, and the null string, raises
 `SYNTAX 40.904`. A blank is a character: it does not pick a piece, and
-nothing strips it.
+nothing strips it. The checks of [the arguments](r:bif.filespec.args) come
+first, so a call with a wrong `option` and a wrong argument raises the
+error of the argument.
 
 ```rexx
 f = '/usr/lib/libm.so'
@@ -83,6 +100,15 @@ b: say condition('o')~code
 signal on syntax name c
 say filespec(' N', f)
 c: say condition('o')~code
+signal on syntax name d
+say filespec('X', .nil)
+d: say condition('o')~code
+signal on syntax name e
+say filespec('X', f, 'x')
+e: say condition('o')~code
+signal on syntax name g
+say filespec('X')
+g: say condition('o')~code
 ```
 
 ```output
@@ -92,6 +118,9 @@ libm.so libm.so libm.so
 40.904
 40.904
 40.904
+88.909
+88.922
+88.901
 ```
 
 ## The pieces
@@ -122,8 +151,11 @@ r[bif.filespec.name]
 `Name` is the part of `filespec` after its last slash. It is the whole of
 `filespec` when there is no slash, and the null string when `filespec` ends
 in a slash. A name of periods, such as `.` or `..`, is a name like another.
-The path and the name together are `filespec`, with nothing lost between
-them.
+A `'00'x` ends `filespec`: every piece is taken from the characters before
+the first `'00'x`, and the characters from it on are part of no piece. A line
+feed, a tab and every other character are ordinary characters. The path and
+the name together are `filespec` up to its first `'00'x`, with nothing lost
+between them.
 
 ```rexx
 say '[' || filespec('N', '/usr/lib/libm.so') || ']' '[' || filespec('N', 'libm.so') || ']'
@@ -135,6 +167,9 @@ do s over .array~of('/a/b.c', 'a//b', '/', '', 'a/', ' a/b ')
   r = r (filespec('P', s) || filespec('N', s) == s)
 end
 say strip(r)
+s = 'x/y.v' || '00'x || '/z.w'
+say '[' || filespec('P', s) || ']' '[' || filespec('N', s) || ']' '[' || filespec('E', s) || ']'
+say filespec('N', 'a/b' || '0a'x || 'c') == 'b' || '0a'x || 'c'
 ```
 
 ```output
@@ -143,6 +178,8 @@ say strip(r)
 [.] [..]
 [z w] [x y/]
 1 1 1 1 1 1
+[x/] [y.v] [v]
+1
 ```
 
 r[bif.filespec.extension]

@@ -31,6 +31,11 @@ sending the message `RXQUEUE` to a string raises `SYNTAX 97.1`. The
 fewest and the most depending on the option, which the rules below give:
 a call with no argument, or with only omitted places, raises `SYNTAX 40.3`; a
 call whose first argument is omitted but has a second raises `SYNTAX 40.5`.
+The checks come in this order. First the number of arguments is checked
+against the bounds that hold for every function: an `option`, and at most
+two arguments. Then the [first character of `option`](r:bif.rxqueue.option)
+is checked, then the number of arguments against the bounds of the function
+it picks, and last [`queuename`](r:bif.rxqueue.name).
 
 ```rexx
 signal on syntax name a
@@ -42,6 +47,18 @@ b: say condition('o')~code
 signal on syntax name c
 say 'Get'~rxqueue
 c: say condition('o')~code
+signal on syntax name d
+say rxqueue('X', 'a', 'b')
+d: say condition('o')~code
+signal on syntax name e
+say rxqueue('X', 'a b')
+e: say condition('o')~code
+signal on syntax name f
+say rxqueue('Get', 'a b')
+f: say condition('o')~code
+signal on syntax name g
+say rxqueue(, 'a b')
+g: say condition('o')~code
 signal off syntax
 say rxqueue('Get', )
 ```
@@ -50,6 +67,10 @@ say rxqueue('Get', )
 40.3
 40.5
 97.1
+40.4
+40.904
+40.4
+40.5
 SESSION
 ```
 
@@ -141,7 +162,7 @@ say n rxqueue('Delete', n)
 r[bif.rxqueue.case]
 The case of a queue name plays no part: the service keeps the name in upper
 case, and finds a queue by it. The names that `Get` and `Set` answer are in upper
-case.  `Create` answers a name it created as it was given.
+case. `Create` answers a name it created as it was given.
 
 ```rexx
 n = rxqueue('Create', 'spec_rxqueue_Mixed')
@@ -185,8 +206,8 @@ r[bif.rxqueue.create]
 `Create` makes a queue and answers its name. With a `queuename` that no queue
 has, the queue gets that name and the answer is the name as it was given. When
 a queue of that name exists already, the queue is made under a name that the
-service picks, and the answer is that name; the answer of `Create` is
-therefore always the name of a queue that exists, and it is a new one. Without
+service picks, and the answer is that name; unless `queuename` is `SESSION`,
+the answer of `Create` is therefore always the name of a new queue. Without
 a `queuename` the service picks the name too. The form of a name the service
 picks is not specified, but it is a valid queue name, it is not `SESSION` and
 no existing queue has it. The name `SESSION` makes no queue, and the answer is

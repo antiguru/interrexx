@@ -28,10 +28,16 @@ r[bif.directory.args]
 DIRECTORY does not run as a String method: sending the message `DIRECTORY`
 to a string raises `SYNTAX 97.1`. It does not follow the [call
 rules](r:bif.index.call.count) for the number of arguments: a second
-argument raises `SYNTAX 88.922`, even when the first is omitted, and an
-argument that is an object with no string value, such as `.nil`, raises
-`SYNTAX 88.909`. A trailing omitted place adds nothing to the count, so
-`DIRECTORY(,)` is a call without an argument.
+argument raises `SYNTAX 88.922`, even when the first is omitted. A trailing
+omitted place adds nothing to the count, so `DIRECTORY(,)` is a call without
+an argument.
+An argument that is an object other than a string is replaced by the answer
+of its `MAKESTRING` method, as [for the other builtins](r:conv.string.object),
+but DIRECTORY does not fall back to the `STRING` method: an object with no
+`MAKESTRING` method, such as `.nil` or `.object~new`, raises `SYNTAX 88.909`,
+whatever its `STRING` method answers. When a call has a second argument and
+a first that is not a string, which of the two errors it raises is not
+specified.
 
 ```rexx
 here = directory()
@@ -47,8 +53,12 @@ c: say condition('o')~code
 signal on syntax name d
 say '/'~directory
 d: say condition('o')~code
+signal on syntax name e
+say directory(.object~new)
+e: say condition('o')~code
 signal off syntax
 say (directory(,) == here) (directory() == here)
+say directory(.array~of('/')) directory(.mutablebuffer~new('/usr'))
 ```
 
 ```output
@@ -56,7 +66,9 @@ say (directory(,) == here) (directory() == here)
 88.922
 88.909
 97.1
+88.909
 1 1
+/ /usr
 ```
 
 ## The result
@@ -66,18 +78,31 @@ A call without an argument answers the full name of the current directory
 and changes nothing. The name is absolute: it starts with a slash, it has no
 component of one or two periods, no run of slashes and no slash at the end,
 except that the name of the root directory is the single slash. Symbolic
-links in it are resolved.
+links in it are resolved. What a call answers after the current directory
+has been removed is not specified.
 
 ```rexx
 here = directory()
 say left(here, 1) (directory() == here) (pos('//', here) = 0) (pos('/./', here || '/') = 0)
 call directory '/'
 say directory()
+address system 'mktemp -d' with output stem t.
+base = directory(t.1)
+call sysmkdir base || '/real'
+address system 'ln -s real' base || '/link'
+say directory(base || '/link') == base || '/real'
+call directory '/'
+address system 'rm' base || '/link'
+call sysrmdir base || '/real'
+call sysrmdir base
+say sysisfiledirectory(base)
 ```
 
 ```output
 / 1 1 1
 /
+1
+0
 ```
 
 r[bif.directory.set]
@@ -116,30 +141,58 @@ r[bif.directory.fail]
 A call with an argument answers the null string, and leaves the current
 directory as it was, when the argument does not name a directory that can be
 made the current one: a name that no file has, a name that is a file other
-than a directory, and the null string. The null string is a name, not an
-omitted argument, so it does not ask for the current directory. A name is
-taken as written: blanks at its start or end are part of it.
+than a directory, a directory the program has no permission to enter, and
+the null string. The null string is a name, not an omitted argument, so it
+does not ask for the current directory. A name is taken as written: blanks
+at its start or end are part of it. A `'00'x` ends the name: the characters
+after it play no part.
 
 ```rexx
 here = directory()
 say '[' || directory('/spec-directory-none') || ']' '[' || directory('') || ']'
 say '[' || directory('/dev/null') || ']' '[' || directory(' /') || ']' '[' || directory('/ ') || ']'
 say directory() == here
+say directory('/usr' || '00'x || '/spec-directory-none') directory()
 ```
 
 ```output
 [] []
 [] [] []
 1
+/usr /usr
+```
+
+> **Note.** The example makes the directory without permission under a
+> temporary directory of its own, and makes its own directory current again
+> before it restores the permission and removes both.
+
+```rexx
+here = directory()
+address system 'mktemp -d' with output stem t.
+base = directory(t.1)
+call directory here
+d = base || '/locked'
+call sysmkdir d
+address system 'chmod 000' d
+say '[' || directory(d) || ']' (directory() == here)
+call directory here
+address system 'chmod 755' d
+call sysrmdir d
+call sysrmdir base
+say sysisfiledirectory(base)
+```
+
+```output defect=#83
+[] 1
+0
 ```
 
 r[bif.directory.home]
 An argument that is `~` alone, or that starts with `~/`, has that `~` replaced
 by the value of the environment variable `HOME`, and the result is taken as
-above. When `HOME` has no value, has the null string as its value or names no
-directory, the call answers the null string and changes nothing. A `~` that
-is followed by anything else, such as `~user`, is not replaced: it is the
-first component of a relative name.
+above. When `HOME` has the null string as its value, does not start with a
+slash or names no directory, the call answers the null string and changes
+nothing. What the call does when `HOME` has no value is not specified.
 
 ```rexx
 call value 'HOME', '/', 'ENVIRONMENT'
@@ -148,15 +201,49 @@ call value 'HOME', '/spec-directory-none', 'ENVIRONMENT'
 say '[' || directory('~') || ']' directory()
 call value 'HOME', '', 'ENVIRONMENT'
 say '[' || directory('~') || ']' directory()
-call value 'HOME', '/', 'ENVIRONMENT'
-say '[' || directory('~spec-directory-none') || ']' directory()
+call value 'HOME', 'usr', 'ENVIRONMENT'
+call directory '/'
+say '[' || directory('~') || ']' '[' || directory('~/lib') || ']' directory()
 ```
 
 ```output
 / /usr / /tmp
 [] /tmp
 [] /tmp
-[] /tmp
+[] [] /
+```
+
+r[bif.directory.user]
+An argument that starts with `~` followed by a name, such as `~user` or
+`~user/lib`, has the `~` and the name, up to the first slash or the end,
+replaced by the home directory of the user of that name, as the system's
+user database gives it; `HOME` plays no part. When no user has that name, or
+that user's home directory cannot be made the current one, the call answers
+the null string and changes nothing, even when the current directory holds a
+directory called `~user`. The name `./~user` reaches that directory.
+
+```rexx
+here = directory()
+address system 'mktemp -d' with output stem t.
+base = directory(t.1)
+call value 'HOME', base, 'ENVIRONMENT'
+home = directory('~' || userid())
+say (home \== '') (home \== base) (directory() == home)
+call directory base
+call sysmkdir base || '/~spec_directory_nouser'
+say '[' || directory('~spec_directory_nouser') || ']' (directory() == base)
+say directory('./~spec_directory_nouser') == base || '/~spec_directory_nouser'
+call directory here
+call sysrmdir base || '/~spec_directory_nouser'
+call sysrmdir base
+say sysisfiledirectory(base)
+```
+
+```output
+1 1 1
+[] 1
+1
+0
 ```
 
 ## What the current directory affects

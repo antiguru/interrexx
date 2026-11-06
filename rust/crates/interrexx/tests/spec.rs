@@ -310,7 +310,13 @@ fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
         }
     }
 
-    // 5: examples run.
+    // 5: examples run. The examples of every check in this process share its API
+    // service, whose queues and registrations are global, so the checks take
+    // turns.
+    static EXAMPLES: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _turn = EXAMPLES
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let run_dir = Scratch::new("run");
     for page in &pages {
         for example in &page.examples {
@@ -378,16 +384,20 @@ fn check(spec_root: &Path, repo: &Path) -> Vec<Problem> {
     problems
 }
 
-/// Points this process's API connection at a service of its own below the
-/// target directory, so the examples that use external data queues never reach
-/// the user's service, and starts a watcher that stops that service and removes
-/// its directory once this process has ended.
+/// Points this process's API connection at a service of its own, so the
+/// examples that use external data queues never reach the user's service, and
+/// starts a watcher that stops that service and removes its directory once this
+/// process has ended. The directory is directly under the temp directory, so the
+/// service's socket path stays within the platform's limit wherever the
+/// checkout is. The daemon is built first when the target directory lacks it.
 fn private_service() {
     static CHOSEN: std::sync::Once = std::sync::Once::new();
     CHOSEN.call_once(|| {
-        let dir =
-            Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("spec-api-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("interrexx-spec-api-{}", std::process::id()));
         let daemon = Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi");
+        if !daemon.is_file() {
+            build_daemon(&daemon);
+        }
         interrexx::use_api_service(&dir, &daemon);
         let _ = Command::new("sh")
             .arg("-c")
@@ -403,6 +413,50 @@ fn private_service() {
             .stderr(std::process::Stdio::null())
             .spawn();
     });
+}
+
+/// Builds `interrexx-rxapi`'s `rxapi` binary to `daemon`, the path of a binary
+/// in a profile directory of a target directory, with that profile and target
+/// directory. Cargo's lock on the target directory makes test processes that
+/// build it at the same time wait for each other.
+///
+/// # Panics
+/// If cargo cannot run, or the build fails or leaves no file at `daemon`; the
+/// message holds cargo's standard error.
+fn build_daemon(daemon: &Path) {
+    let profile_dir = daemon.parent().expect("a binary is in a profile directory");
+    let target_dir = profile_dir
+        .parent()
+        .expect("a profile directory is in a target directory");
+    let profile = match profile_dir.file_name().and_then(|n| n.to_str()) {
+        Some("debug") => "dev",
+        Some(name) => name,
+        None => panic!("no profile name in {}", profile_dir.display()),
+    };
+    let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+    let output = Command::new(&cargo)
+        .args([
+            "build",
+            "--locked",
+            "-p",
+            "interrexx-rxapi",
+            "--bin",
+            "rxapi",
+        ])
+        .args(["--profile", profile])
+        .arg("--target-dir")
+        .arg(target_dir)
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .stdin(std::process::Stdio::null())
+        .output()
+        .unwrap_or_else(|e| panic!("running {}: {e}", Path::new(&cargo).display()));
+    assert!(
+        output.status.success() && daemon.is_file(),
+        "building {} failed ({}):\n{}",
+        daemon.display(),
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 /// Runs one example in process with an empty standard input, bounded as the
@@ -546,7 +600,21 @@ fn page_with_example(rexx: &str, output: &str) -> String {
 fn check_example(rexx: &str, output: &str) -> Vec<Problem> {
     let scratch = Scratch::new("example");
     let root = tree_with_page(&scratch, &page_with_example(rexx, output));
-    check(&root, &repo_root())
+    check_fixture(&root)
+}
+
+/// [`check`] of a fixture tree against the real repository, without the
+/// problems of the repository's citations: they name the specification's
+/// rules, which a fixture tree does not hold.
+fn check_fixture(spec_root: &Path) -> Vec<Problem> {
+    let repo = repo_root();
+    check(spec_root, &repo)
+        .into_iter()
+        .filter(|p| {
+            !(p.path.starts_with(&repo)
+                && p.message.ends_with("which is not a rule in the specification"))
+        })
+        .collect()
 }
 
 #[test]
@@ -776,7 +844,7 @@ fn deviations_match_rules_and_the_table() {
          r[bif.t.deviation.2]\nRule.\n\n```rexx\nnop\n```\n\n```output\n```\n\n\
          r[bif.t.deviation.5]\nRule.\n\n```rexx\nnop\n```\n\n```output\n```\n",
     );
-    let problems = check(&root, &repo_root());
+    let problems = check_fixture(&root);
     let text = render(&problems);
     assert_eq!(problems.len(), 4, "{text}");
     assert!(
