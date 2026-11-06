@@ -154,8 +154,7 @@ C2D undoes D2C. For a non-negative whole number with at most NUMERIC DIGITS
 digits, C2D of the answer of D2C without an `n` is the number. When both calls
 are given the same `n` it holds as well for every whole number from
 -128\*256\*\*(`n`-1) up to 128\*256\*\*(`n`-1)-1, the numbers that `n`
-characters
-hold as a signed number, the negative ones included.
+characters hold as a signed number, the negative ones included.
 
 ```rexx
 say c2d(d2c(300)) c2d(d2c(0)) c2d(d2c(65535)) c2d(d2c(300, 4), 4) c2d(d2c(-300, 4), 4)
@@ -171,10 +170,9 @@ say c2d(d2c(127, 1), 1) c2d(d2c(-128, 1), 1) c2d(d2c(128, 1), 1)
 
 r[bif.d2c.deviation.4]
 interrexx does not specify whether the answer of D2C is the same object as
-another string of equal value, as
-[the shared rule](r:bif.index.conv.deviation.4)
-says for every conversion function. A program can rely only on the value,
-which is equal under `==`.
+another string of equal value, as [the shared
+rule](r:bif.index.conv.deviation.4) says for every conversion function. A
+program can rely only on the value, which is equal under `==`.
 
 ```rexx
 say (d2c(97) == 'a') (d2c(0, 0) == '') (d2c(98, 1) == 'b')

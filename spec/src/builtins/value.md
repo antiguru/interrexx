@@ -131,10 +131,9 @@ anywhere in it, one with a character that is not a symbol character and one of
 more than 250 characters, raises `SYNTAX 40.26`. It is read in uppercase, so
 it names the same variable in either case, and the name of a compound variable
 has the parts of its tail replaced by the values of the variables they name,
-as the
-[compound rule of SYMBOL](r:bif.symbol.compound) says. An object other than a
-string is replaced by a string, as [a string argument](r:conv.string.object)
-says.
+as the [compound rule of SYMBOL](r:bif.symbol.compound) says. An object other
+than a string is replaced by a string, as [a string
+argument](r:conv.string.object) says.
 
 ```rexx
 idx = 3
@@ -247,8 +246,7 @@ A `name` that ends at its first period is a stem. Read, it answers the stem
 object, which the program uses as it does the stem. Given a `newvalue`, it
 gives every compound variable of the stem that value, those assigned before
 included, as the assignment `stem. = value` does. Both are references to the
-stem, as for
-[SYMBOL](r:bif.symbol.stem).
+stem, as for [SYMBOL](r:bif.symbol.stem).
 
 ```rexx
 s.1 = 'own'

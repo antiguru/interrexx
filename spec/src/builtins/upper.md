@@ -157,9 +157,8 @@ say '['upper('')']' '['upper('', 3, 2)']'
 ## Deviations
 
 > **Note.** An argument whose `STRING` method answers an object that is not a
-> string
-> falls under [Deviation 30](r:conv.string.deviation.30), as it does for
-> every builtin.
+> string falls under [Deviation 30](r:conv.string.deviation.30), as it does
+> for every builtin.
 
 r[bif.upper.deviation.4]
 interrexx does not specify whether the result of UPPER is the same object

@@ -106,12 +106,11 @@ g: say condition('o')~code
 ```
 
 > **Note.** The reference manual names error 93.915 for a method option that
-> is not
-> one of those allowed. The ANSI draft (9.3.20) reads `option` the same way,
-> by its first character in either case, but raises 40.21 for a null option
-> and 40.28 for any other bad one, where ooRexx raises 93.915; and it makes
-> `chars` one character, where ooRexx takes the characters of `chars` as a
-> set, as [the rule below](r:bif.strip.chars) says.
+> is not one of those allowed. The ANSI draft (9.3.20) reads `option` the same
+> way, by its first character in either case, but raises 40.21 for a null
+> option and 40.28 for any other bad one, where ooRexx raises 93.915; and it
+> makes `chars` one character, where ooRexx takes the characters of `chars` as
+> a set, as [the rule below](r:bif.strip.chars) says.
 
 r[bif.strip.chars]
 `chars` is the set of unwanted characters: the characters it holds, in any
@@ -201,9 +200,8 @@ say '['strip('  a  ', 'L', )']' '['strip('  a  ', , )']' '['strip('xxaxx', , 'x'
 ## Deviations
 
 > **Note.** An argument whose `STRING` method answers an object that is not a
-> string
-> falls under [Deviation 30](r:conv.string.deviation.30), as it does for
-> every builtin.
+> string falls under [Deviation 30](r:conv.string.deviation.30), as it does
+> for every builtin.
 
 r[bif.strip.deviation.4]
 interrexx does not specify whether the result of STRIP is the same object

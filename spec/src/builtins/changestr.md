@@ -222,6 +222,6 @@ say (changestr('x', s, 'y') == s) (changestr('', s, 'y') == 'banana')
 ```
 
 > **Note.** The ANSI draft (9.3.4) has no `count` argument; it replaces every
-> occurrence,
-> searching from the end of the previous one, which gives the rules above for
-> the call without `count`. The `count` argument and its checks follow ooRexx.
+> occurrence, searching from the end of the previous one, which gives the
+> rules above for the call without `count`. The `count` argument and its
+> checks follow ooRexx.

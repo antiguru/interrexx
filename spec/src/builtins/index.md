@@ -93,9 +93,8 @@ b: say condition('o')~code
 
 r[bif.index.call.order.count-before-missing]
 A call whose argument count is wrong raises the
-[too-few](r:bif.index.call.too-few)
-or [too-many](r:bif.index.call.too-many) error even when it also omits a
-[required argument](r:bif.index.call.missing).
+[too-few](r:bif.index.call.too-few) or [too-many](r:bif.index.call.too-many)
+error even when it also omits a [required argument](r:bif.index.call.missing).
 
 ```rexx
 signal on syntax name a
@@ -154,9 +153,8 @@ d: say condition('o')~code
 ```
 
 > **Note.** The ANSI draft (9.2.1) checks the arguments from left to right,
-> raising
-> 40.5 at an omitted required argument before it reaches the ones after it,
-> and makes the range checks only once every argument is present.
+> raising 40.5 at an omitted required argument before it reaches the ones
+> after it, and makes the range checks only once every argument is present.
 
 ## Words
 
@@ -181,10 +179,9 @@ two 610A000C62
 ```
 
 > **Note.** The ANSI draft (9.3.26 and the other word builtins) separates
-> words by a
-> set of blank characters that it leaves to the configuration: the blank and
-> any others the configuration names. ooRexx fixes that set as the blank and
-> the horizontal tab, and so does this book.
+> words by a set of blank characters that it leaves to the configuration: the
+> blank and any others the configuration names. ooRexx fixes that set as the
+> blank and the horizontal tab, and so does this book.
 
 r[bif.index.words.number]
 Where a word builtin's page calls an argument a word number, that argument
@@ -210,13 +207,12 @@ e: say condition('o')~code
 ## Answers that are counts
 
 r[bif.index.count.answer]
-A builtin whose page links this rule answers a count: of characters, of
-words or of occurrences, or a position, which counts characters or words up
-to the one it names. Such a builtin writes it as a whole
-number in decimal digits only: no sign, no leading zero, no period and no
-exponent, and `0`
-for zero. The caller's NUMERIC DIGITS setting plays no part, so the answer
-is exact however many digits it has.
+A builtin whose page links this rule answers a count: of characters, of words
+or of occurrences, or a position, which counts characters or words up to the
+one it names. Such a builtin writes it as a whole number in decimal digits
+only: no sign, no leading zero, no period and no exponent, and `0` for zero.
+The caller's NUMERIC DIGITS setting plays no part, so the answer is exact
+however many digits it has.
 
 ```rexx
 numeric digits 3
@@ -234,8 +230,7 @@ say verify(copies('a', 1200) || 'b', 'a') verify(copies('a', 1300), '', 'N', 123
 ```
 
 > **Note.** The reference manual does not say how these answers are written or
-> whether
-> NUMERIC DIGITS applies to them; this rule matches ooRexx.
+> whether NUMERIC DIGITS applies to them; this rule matches ooRexx.
 
 r[bif.index.count.answer.deviation.4]
 interrexx does not specify whether the answer of a builtin that answers a
@@ -374,8 +369,8 @@ say c2x(bitxor('ab', 'a', ' ')) c2x(bitor('a', 'ab', ' '))
 r[bif.index.bit.string2-default]
 An omitted `string2` is the null string, and a `string2` given as the null
 string behaves the same. The answer is then `string1` itself when `pad` is
-omitted, and with
-a `pad` it is each character of `string1` combined with `pad`.
+omitted, and with a `pad` it is each character of `string1` combined with
+`pad`.
 
 ```rexx
 say c2x(bitand('abc')) c2x(bitor('abc', '')) c2x(bitxor('abc', , 'ff'x))
@@ -423,10 +418,10 @@ say (bitor(s) == s) (bitand('', s) == 'abcd') (bitand('a', 'a') == 'a')
 ## Conversion functions
 
 > **Note.** B2X, C2D, C2X, D2C, D2X, X2B, X2C and X2D convert between the
-> characters
-> of a string, a number written in decimal, and a string of hexadecimal or
-> binary digits. The rules below are the ones that more than one of them
-> follows; a function's page links the ones it uses and states the rest.
+> characters of a string, a number written in decimal, and a string of
+> hexadecimal or binary digits. The rules below are the ones that more than
+> one of them follows; a function's page links the ones it uses and states the
+> rest.
 
 r[bif.index.conv.digits]
 In an argument that is a [string](r:conv.string.object) of binary digits,
@@ -551,10 +546,9 @@ f: say condition('o')~code
 
 > **Note.** The reference manual says whitespace may not lead or trail, and
 > that groups are at 4-digit boundaries for binary strings and at byte
-> boundaries for
-> hexadecimal ones. When a string has more than one of the faults above
-> (such as a non-digit and a misplaced gap), this book does not say which of
-> the errors is raised; the examples above have one fault each.
+> boundaries for hexadecimal ones. When a string has more than one of the
+> faults above (such as a non-digit and a misplaced gap), this book does not
+> say which of the errors is raised; the examples above have one fault each.
 
 r[bif.index.conv.length]
 Where a conversion function takes a length `n`, it is an optional
@@ -806,19 +800,19 @@ say (d2c(97) == 'a') (c2d('') == 0) (c2d(s) == 13873)
 ## Numbers
 
 > **Note.** ABS, SIGN, TRUNC, FORMAT, MAX and MIN take a number as their first
-> argument, which is
-> the receiver when they run as String methods. The rules below say which
-> strings are numbers, how a number is rounded to NUMERIC DIGITS, and how a
-> result is written; the pages link to them instead of restating them.
+> argument, which is the receiver when they run as String methods. The rules
+> below say which strings are numbers, how a number is rounded to NUMERIC
+> DIGITS, and how a result is written; the pages link to them instead of
+> restating them.
 
 r[bif.index.num.arg]
-The number argument must be a string of the
-[whole-number form](r:conv.whole.form),
-which is also the form of a Rexx number, but its value need not be whole. Any
-other string raises `SYNTAX 93.943`, the null string and a string of only
-whitespace among them. An argument that is an object other than a string is
-first [replaced by a string](r:conv.string.object), as any string argument
-is, and that string must be a number.
+The number argument must be a string of the [whole-number
+form](r:conv.whole.form), which is also the form of a Rexx number, but its
+value need not be whole. Any other string raises `SYNTAX 93.943`, the null
+string and a string of only whitespace among them. An argument that is an
+object other than a string is first [replaced by a
+string](r:conv.string.object), as any string argument is, and that string must
+be a number.
 
 ```rexx
 say abs(' + 2.50E1 ') abs('.5') abs('5.') abs('-' || '09'x || ' 7')
@@ -1020,15 +1014,15 @@ The arguments of a call that takes a list of numbers are each a
 [number](r:bif.index.num.arg) that the call checks before it compares
 anything: first the receiver, which raises `SYNTAX 93.943` when it is not a
 number, and then the other arguments in order, the first one that is not a
-number raising `SYNTAX 93.904`. This includes a number outside the
-[exponent range](r:bif.index.num.limit), which for a later argument raises
-93.904 where the receiver, and the other builtins, raise 93.943. The list
-has no upper limit on its length. Its argument count is checked by the
-[builtin call rules](r:bif.index.call.count), with one required argument and
-no most, so a call with no arguments raises
-`SYNTAX 40.3` and no call raises `SYNTAX 40.4`; an omitted first argument
-raises `SYNTAX 40.5`. This book does not specify the error of a function
-call that omits an argument after the first but passes one after it.
+number raising `SYNTAX 93.904`. This includes a number outside the [exponent
+range](r:bif.index.num.limit), which for a later argument raises 93.904 where
+the receiver, and the other builtins, raise 93.943. The list has no upper
+limit on its length. Its argument count is checked by the [builtin call
+rules](r:bif.index.call.count), with one required argument and no most, so a
+call with no arguments raises `SYNTAX 40.3` and no call raises `SYNTAX 40.4`;
+an omitted first argument raises `SYNTAX 40.5`. This book does not specify the
+error of a function call that omits an argument after the first but passes one
+after it.
 
 ```rexx
 say max(31,7,-4,19,22,-8,0,13,5,26,-15,9,17,2,28,-1,11,24,6,3,20,14,-9,25,12),
@@ -1077,16 +1071,15 @@ i: say condition('o')~code
 
 r[bif.index.num.pick]
 A call that picks one number from a list [rounds](r:bif.index.num.round) every
-number to NUMERIC DIGITS digits first, then takes the first as the
-candidate and goes through the others in order, replacing the candidate by
-that number when the call's own test between the candidate and that number
-holds. The
-call answers the candidate, [written](r:bif.index.num.write) as that rule
-says with NUMERIC DIGITS as the trigger. The test compares the two rounded
-numbers as the `<` and `>` operators do, so two numbers that NUMERIC FUZZ makes
-equal are equal here: the candidate stays, and the answer has its written
-form, the number of its decimal places included. So a call whose list has
-only one number answers that number rounded and written.
+number to NUMERIC DIGITS digits first, then takes the first as the candidate
+and goes through the others in order, replacing the candidate by that number
+when the call's own test between the candidate and that number holds. The call
+answers the candidate, [written](r:bif.index.num.write) as that rule says with
+NUMERIC DIGITS as the trigger. The test compares the two rounded numbers as
+the `<` and `>` operators do, so two numbers that NUMERIC FUZZ makes equal are
+equal here: the candidate stays, and the answer has its written form, the
+number of its decimal places included. So a call whose list has only one
+number answers that number rounded and written.
 
 ```rexx
 numeric digits 3
@@ -1109,8 +1102,7 @@ say max(1.04, 1.09) min(1.04, 1.09)
 ## Date and time
 
 > **Note.** DATE and TIME answer the current date or time, or convert a date
-> or a
-> time from one format to another. The rules here hold for both.
+> or a time from one format to another. The rules here hold for both.
 
 r[bif.index.dt.letter]
 Where an argument of DATE or TIME names an option or a format, only its first
@@ -1185,8 +1177,7 @@ e: say condition('o')~code
 ```
 
 > **Note.** The ANSI draft (9.8.1, 9.8.5) raises `SYNTAX 40.19` for an
-> `informat` that
-> has no `string`; ooRexx raises 40.5, and so does this book.
+> `informat` that has no `string`; ooRexx raises 40.5, and so does this book.
 
 r[bif.index.dt.stamp]
 A clause has one moment, whatever DATE and TIME are asked in it: the clock is
@@ -1300,15 +1291,15 @@ one two three four
 
 r[bif.index.stream.transient]
 A standard stream that is connected to a pipe is transient: it has no
-positions. A start or line number given to a transient
-stream raises `SYNTAX 93.958`, whatever its value: after the checks of
-[the argument rule](r:bif.index.stream.args) on the argument count, the form
-of the arguments and the count, and in place of that rule's check that the
-start is 1 or more. What CHAROUT does with a start that it is given together
-with the name `STDIN`, a write to the standard input, is not specified. The
-examples of this book run with a pipe as standard input and
-as standard output. What a standard stream that is connected to anything else
-does with a start is not specified either.
+positions. A start or line number given to a transient stream raises `SYNTAX
+93.958`, whatever its value: after the checks of [the argument
+rule](r:bif.index.stream.args) on the argument count, the form of the
+arguments and the count, and in place of that rule's check that the start is 1
+or more. What CHAROUT does with a start that it is given together with the
+name `STDIN`, a write to the standard input, is not specified. The examples of
+this book run with a pipe as standard input and as standard output. What a
+standard stream that is connected to anything else does with a start is not
+specified either.
 
 ```rexx
 signal on syntax name a
@@ -1333,16 +1324,14 @@ d: say condition('o')~code
 ```
 
 r[bif.index.stream.open]
-A stream builtin opens its stream when it first uses it, and the program
-does no opening of its own. A file is opened for reading and for writing, each
-as far as the file allows; an operation that the file does not allow has the
+A stream builtin opens its stream when it first uses it, and the program does
+no opening of its own. A file is opened for reading and for writing, each as
+far as the file allows; an operation that the file does not allow has the
 NOTREADY outcome that its page gives. A file that does not exist is created by
-a write, and a read of it creates nothing:
-it finds no characters and raises the
-[NOTREADY condition](r:bif.index.stream.notready).
-A stream just opened has its read position at the first character and its
-write position after the last, so a write adds to the data a file already
-holds.
+a write, and a read of it creates nothing: it finds no characters and raises
+the [NOTREADY condition](r:bif.index.stream.notready). A stream just opened
+has its read position at the first character and its write position after the
+last, so a write adds to the data a file already holds.
 
 ```rexx
 f = 'spec-streams-open.tmp'
@@ -1426,15 +1415,13 @@ for it is the name of the stream, and `condition('C')` is `NOTREADY`. For a
 file the name is the one the call gave, in its spelling. For the standard
 input it is `STDIN`, whatever the spelling of the name in the call and also
 when the call gave none. The condition is not an error: when it is not
-trapped, or after
-a `CALL ON` trap returns, the call goes on and answers what its page says.
-A trap by `SIGNAL ON NOTREADY` abandons the clause that raised it, like
-any other condition.
-Reading the standard output or the standard error by name, with CHARIN or
-LINEIN and a count that is not 0, is a read the stream does not allow and
-raises NOTREADY too; `condition('D')` is `STDOUT` or `STDERR`, whatever the
-spelling of the name, with or without the colon. CHARS and LINES of them raise
-nothing and answer 0.
+trapped, or after a `CALL ON` trap returns, the call goes on and answers what
+its page says. A trap by `SIGNAL ON NOTREADY` abandons the clause that raised
+it, like any other condition. Reading the standard output or the standard
+error by name, with CHARIN or LINEIN and a count that is not 0, is a read the
+stream does not allow and raises NOTREADY too; `condition('D')` is `STDOUT` or
+`STDERR`, whatever the spelling of the name, with or without the colon. CHARS
+and LINES of them raise nothing and answer 0.
 
 ```rexx
 f = 'spec-streams-nr.tmp'
@@ -1511,17 +1498,17 @@ call sysfiledelete f
 ```
 
 r[bif.index.stream.args]
-A start, a count and a line number are
-[whole-number arguments](r:conv.whole.form) with the
-[value](r:bif.index.stream.value) that the next rule gives; they are not checked
-as the position and length arguments of [the String methods](r:conv.method) are.
-The call is checked in this order. The count of arguments comes first, by
-the [call rules](r:bif.index.call.count). Then the form and the value of every
-such argument, from left to right, raise `SYNTAX 40.12`. Then a count that is
+A start, a count and a line number are [whole-number
+arguments](r:conv.whole.form) with the [value](r:bif.index.stream.value) that
+the next rule gives; they are not checked as the position and length arguments
+of [the String methods](r:conv.method) are. The call is checked in this order.
+The count of arguments comes first, by the [call
+rules](r:bif.index.call.count). Then the form and the value of every such
+argument, from left to right, raise `SYNTAX 40.12`. Then a count that is
 negative raises `SYNTAX 88.907`, and a count that the builtin's page does not
 allow raises the error that page names. Last, a
-[start](r:bif.index.stream.start)
-or line number that is below 1 raises `SYNTAX 93.907`.
+[start](r:bif.index.stream.start) or line number that is below 1 raises
+`SYNTAX 93.907`.
 
 ```rexx
 f = 'spec-streams-args.tmp'

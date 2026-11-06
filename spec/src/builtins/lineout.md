@@ -19,13 +19,11 @@ stream.
 r[bif.lineout.args]
 `name` is a [string](r:conv.string.null) that names the stream; when it is
 omitted or null, the [standard output](r:bif.index.stream.std) is written.
-`string` is a string too. `line` is a line number: a
-[whole-number argument](r:bif.index.stream.args) whose
-[value](r:bif.index.stream.value) the stream rules give, and a
-[valid start](r:bif.index.stream.start). LINEOUT is not a String method. It
-takes three arguments at the most, by the
-[call rules](r:bif.index.call.too-many),
-and none is required.
+`string` is a string too. `line` is a line number: a [whole-number
+argument](r:bif.index.stream.args) whose [value](r:bif.index.stream.value) the
+stream rules give, and a [valid start](r:bif.index.stream.start). LINEOUT is
+not a String method. It takes three arguments at the most, by the [call
+rules](r:bif.index.call.too-many), and none is required.
 
 ```rexx
 f = 'spec-lineout-args.tmp'
@@ -150,11 +148,10 @@ call sysfiledelete f
 58590A6465660A4D4E4F505152535455560A
 ```
 
-> **Note.** The first write puts `XY` and a line feed over `abc`, so that `def`
-> is now line 2 and `ghi` line 3. The second write puts its ten letters and a
-> line
-> feed over `ghi` and `jkl` and their line ends, and goes on three characters
-> past them.
+> **Note.** The first write puts `XY` and a line feed over `abc`, so that
+> `def` is now line 2 and `ghi` line 3. The second write puts its ten letters
+> and a line feed over `ghi` and `jkl` and their line ends, and goes on three
+> characters past them.
 
 r[bif.lineout.line.end]
 A `line` that is past the last line of the data, one more than the number of
@@ -338,13 +335,12 @@ READY:
 ```
 
 r[bif.lineout.deviation.56]
-A `line` counts from the start of the data, as
-[the line rule](r:bif.lineout.line)
-says, by the line ends that are there, whichever operation touched the stream
-before. ooRexx counts from a line
-number that it tracks, which an operation on characters resets: a LINEOUT
-that gives a line past the last one then writes past the end of the data,
-and the characters between are `'00'x`.
+A `line` counts from the start of the data, as [the line
+rule](r:bif.lineout.line) says, by the line ends that are there, whichever
+operation touched the stream before. ooRexx counts from a line number that it
+tracks, which an operation on characters resets: a LINEOUT that gives a line
+past the last one then writes past the end of the data, and the characters
+between are `'00'x`.
 
 ```rexx
 f = 'spec-lineout-dev56.tmp'

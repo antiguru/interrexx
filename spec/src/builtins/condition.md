@@ -288,12 +288,12 @@ r[bif.condition.object]
 After a trap has caught a condition, the option `O` answers a directory that
 holds the information of the condition, the same information as the other
 options answer, and more. Its entries `CONDITION`, `DESCRIPTION` and
-`INSTRUCTION` equal what `C`, `D`
-and `I` answer, and so does `ADDITIONAL` when the condition carries additional
-information. When it carries none, as with NOVALUE, the directory has no
-`ADDITIONAL` entry, and `~additional` answers `.nil` as for any absent entry,
-which is also what `A` answers. The directory is not the condition itself:
-changing it changes nothing that CONDITION answers.
+`INSTRUCTION` equal what `C`, `D` and `I` answer, and so does `ADDITIONAL`
+when the condition carries additional information. When it carries none, as
+with NOVALUE, the directory has no `ADDITIONAL` entry, and `~additional`
+answers `.nil` as for any absent entry, which is also what `A` answers. The
+directory is not the condition itself: changing it changes nothing that
+CONDITION answers.
 
 ```rexx
 signal on syntax name s
@@ -425,6 +425,6 @@ caller USER FOO
 
 > **Note.** The ANSI draft (9.5.3) has the options `C`, `D`, `E`, `I` and `S`
 > only, and says every answer is null when no condition has been trapped.
-> ooRexx adds `A`, `O` and `R`, and interrexx follows
-> ooRexx. The conditions chapter lists every condition, the information each
-> carries, and the traps that catch them.
+> ooRexx adds `A`, `O` and `R`, and interrexx follows ooRexx. The conditions
+> chapter lists every condition, the information each carries, and the traps
+> that catch them.

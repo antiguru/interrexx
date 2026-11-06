@@ -201,7 +201,6 @@ say c~rc errortext(c~rc) (errortext(c~rc) == c~errortext)
 ```
 
 > **Note.** The ANSI draft (9.5.5) gives ERRORTEXT a second argument, `S`,
-> that selects the
-> standard English text. ooRexx takes one argument only, and so does
-> interrexx: a second argument raises `SYNTAX 40.4`. The texts are those of
-> ooRexx's message catalogue, in English.
+> that selects the standard English text. ooRexx takes one argument only, and
+> so does interrexx: a second argument raises `SYNTAX 40.4`. The texts are
+> those of ooRexx's message catalogue, in English.

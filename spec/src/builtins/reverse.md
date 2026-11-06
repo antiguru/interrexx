@@ -83,8 +83,8 @@ number is, as it is written, and the result is a string of those characters
 and nothing more: a sign, a period or an exponent moves like any other
 character. A quoted literal keeps its spelling; an unquoted one is a symbol,
 so its exponent letter is `E` whatever the source wrote. When `string` is an
-object other than a string, it is
-[replaced by its string](r:conv.string.object).
+object other than a string, it is [replaced by its
+string](r:conv.string.object).
 
 ```rexx
 say reverse(123) reverse(-1.50) reverse(.object~new) reverse(1e3) reverse('1e3')
@@ -118,5 +118,5 @@ say (reverse(s) == 'cba') (reverse(reverse(s)) == s) (reverse('') == '')
 ```
 
 > **Note.** The ANSI draft (9.3.17) builds the result one character at a time,
-> putting
-> each character in front of those before it, which gives the string above.
+> putting each character in front of those before it, which gives the string
+> above.

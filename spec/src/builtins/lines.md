@@ -110,10 +110,9 @@ e 1
 f 0
 ```
 
-> **Note.** After `c` is read, the rest of its line, `d` and the line end, still
-> counts as one line, so the count stays 2. The next three characters are `d`
-> and
-> the two characters of the line end.
+> **Note.** After `c` is read, the rest of its line, `d` and the line end,
+> still counts as one line, so the count stays 2. The next three characters
+> are `d` and the two characters of the line end.
 
 r[bif.lines.nothing]
 LINES neither reads nor moves anything: the read position and the write

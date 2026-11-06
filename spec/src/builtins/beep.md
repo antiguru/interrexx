@@ -141,13 +141,13 @@ r[bif.beep.order]
 A call with no third argument checks the frequency first and the duration
 next, each for being present and a whole number, and only then checks the
 ranges: a frequency that is not a whole number is reported before a missing
-duration, and a missing duration before a frequency out of range. A
-frequency of magnitude 10\*\*18 or more is not a whole number, so it is
-reported before a missing duration, while a frequency below that magnitude
-that is out of range is reported after it. A third argument is reported before
-an argument out of range. When a call has a
-third argument and also a frequency or duration that is missing or not a
-whole number, which of the two errors it raises is not specified.
+duration, and a missing duration before a frequency out of range. A frequency
+of magnitude 10\*\*18 or more is not a whole number, so it is reported before
+a missing duration, while a frequency below that magnitude that is out of
+range is reported after it. A third argument is reported before an argument
+out of range. When a call has a third argument and also a frequency or
+duration that is missing or not a whole number, which of the two errors it
+raises is not specified.
 
 ```rexx
 signal on syntax name a

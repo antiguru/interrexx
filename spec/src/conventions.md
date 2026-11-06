@@ -126,8 +126,8 @@ y
 ## Whole-number arguments
 
 > **Note.** Position and length arguments are whole numbers. The two rules
-> below say
-> which strings a whole-number argument accepts and what value it then has.
+> below say which strings a whole-number argument accepts and what value it
+> then has.
 
 r[conv.whole.form]
 A whole-number argument must be a string of this form: optional whitespace;
@@ -267,12 +267,11 @@ a: say condition('o')~code
 ```
 
 > **Note.** These two codes follow from the reference manual: a builtin of
-> this kind
-> sends a String message, the range of a position or length is checked by
-> that method, and an incorrect call to a method is error 93, whose subcodes
-> 924 and 923 are the position and length cases. The ANSI draft (9.2.1),
-> which has no such methods, raises 40.14 for a position and 40.13 for a
-> length.
+> this kind sends a String message, the range of a position or length is
+> checked by that method, and an incorrect call to a method is error 93, whose
+> subcodes 924 and 923 are the position and length cases. The ANSI draft
+> (9.2.1), which has no such methods, raises 40.14 for a position and 40.13
+> for a length.
 
 ## Pad arguments
 
@@ -378,12 +377,11 @@ f: say condition('o')~code
 ```
 
 > **Note.** The range checks come last because they belong to the String
-> method, which
-> runs only once the call has been made. The reference manual does not say
-> that the function call checks the form of its arguments, under error 40,
-> before it sends the message; that part matches ooRexx. The
-> ANSI draft (9.2.1) checks each argument's form and range together, one
-> argument at a time.
+> method, which runs only once the call has been made. The reference manual
+> does not say that the function call checks the form of its arguments, under
+> error 40, before it sends the message; that part matches ooRexx. The ANSI
+> draft (9.2.1) checks each argument's form and range together, one argument
+> at a time.
 
 ## Errors and results
 

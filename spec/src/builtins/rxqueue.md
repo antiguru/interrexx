@@ -26,18 +26,17 @@ be deleted.
 
 r[bif.rxqueue.args]
 `option` is a string and is required. RXQUEUE does not run as a String method:
-sending the message `RXQUEUE` to a string raises `SYNTAX 97.1`. The
-[call rules](r:bif.index.call.count) hold for the number of arguments, with the
-fewest and the most depending on the option, which the rules below give:
-a call with no argument, or with only omitted places, raises `SYNTAX 40.3`; a
+sending the message `RXQUEUE` to a string raises `SYNTAX 97.1`. The [call
+rules](r:bif.index.call.count) hold for the number of arguments, with the
+fewest and the most depending on the option, which the rules below give: a
+call with no argument, or with only omitted places, raises `SYNTAX 40.3`; a
 call of at most two arguments whose first is omitted but whose second is
-present raises `SYNTAX 40.5`. The checks come in this order. First the
-number of arguments is checked against the bounds that hold for every
-function: at most two arguments, so that `rxqueue(, 'a', 'b')` raises
-`SYNTAX 40.4`, and then an `option`. Then the
-[first character of `option`](r:bif.rxqueue.option)
-is checked, then the number of arguments against the bounds of the function
-it picks, and last [`queuename`](r:bif.rxqueue.name).
+present raises `SYNTAX 40.5`. The checks come in this order. First the number
+of arguments is checked against the bounds that hold for every function: at
+most two arguments, so that `rxqueue(, 'a', 'b')` raises `SYNTAX 40.4`, and
+then an `option`. Then the [first character of `option`](r:bif.rxqueue.option)
+is checked, then the number of arguments against the bounds of the function it
+picks, and last [`queuename`](r:bif.rxqueue.name).
 
 ```rexx
 signal on syntax name a
@@ -168,8 +167,7 @@ say n rxqueue('Delete', n)
 r[bif.rxqueue.case]
 The case of a queue name plays no part: the service keeps the name in upper
 case, and finds a queue by it. The names that `Get` and `Set` answer are in
-upper
-case. `Create` answers a name it created as it was given.
+upper case. `Create` answers a name it created as it was given.
 
 ```rexx
 n = rxqueue('Create', 'spec_rxqueue_Mixed')

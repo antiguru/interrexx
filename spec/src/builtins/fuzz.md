@@ -82,12 +82,11 @@ b: say condition('o')~code digits() fuzz()
 ```
 
 r[bif.fuzz.default]
-The default of a package is 0 unless a `::OPTIONS` directive of
-the package names another value with its `FUZZ` keyword. Where it does, that
-value is the setting at
-the start of the program, the setting at the start of each of its
-`::ROUTINE` routines and methods, and the setting that the NUMERIC
-FUZZ instruction without an expression returns to.
+The default of a package is 0 unless a `::OPTIONS` directive of the package
+names another value with its `FUZZ` keyword. Where it does, that value is the
+setting at the start of the program, the setting at the start of each of its
+`::ROUTINE` routines and methods, and the setting that the NUMERIC FUZZ
+instruction without an expression returns to.
 
 ```rexx
 say 'start' fuzz()

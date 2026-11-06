@@ -14,13 +14,11 @@ those of [the word rule](r:bif.index.words.split).
 ## Arguments
 
 r[bif.wordlength.method]
-WORDLENGTH is a builtin that runs as a String method, and `string`, its
-first argument, is the receiver. `string` is a
-[string](r:conv.string.null) and `n` is a
-[word number](r:bif.index.words.number). The arguments are checked in the
-[order](r:conv.check.order) the conventions give, and the argument count
-by the [builtin call rules](r:bif.index.call.count): both are required and two
-is
+WORDLENGTH is a builtin that runs as a String method, and `string`, its first
+argument, is the receiver. `string` is a [string](r:conv.string.null) and `n`
+is a [word number](r:bif.index.words.number). The arguments are checked in the
+[order](r:conv.check.order) the conventions give, and the argument count by
+the [builtin call rules](r:bif.index.call.count): both are required and two is
 the most.
 
 ```rexx
@@ -49,13 +47,12 @@ d: say condition('o')~code
 
 r[bif.wordlength.result]
 When `string` has a word `n`, WORDLENGTH returns the number of
-[characters](r:conv.string.chars) in that word, which is
-`LENGTH(WORD(string, n))`. Whitespace around the word does not count, and a
-character that [the word rule](r:bif.index.words.split) places inside a word,
-such as a line feed, counts as one. The answer is
-[written as a count](r:bif.index.count.answer), and whether it is a new object
-is
-[not specified](r:bif.index.count.answer.deviation.4).
+[characters](r:conv.string.chars) in that word, which is `LENGTH(WORD(string,
+n))`. Whitespace around the word does not count, and a character that [the
+word rule](r:bif.index.words.split) places inside a word, such as a line feed,
+counts as one. The answer is [written as a count](r:bif.index.count.answer),
+and whether it is a new object is [not
+specified](r:bif.index.count.answer.deviation.4).
 
 ```rexx
 say wordlength('red  green blue', 2) wordlength('  abc  ', 1),

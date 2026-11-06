@@ -201,8 +201,7 @@ Type `X` answers `1` when the string is a string of hexadecimal digits, as
 conversion function would raise an error for the string, `X` answers `0`:
 whitespace in the string only where [the group rule](r:bif.index.conv.groups)
 allows a gap, so that every group after the first has an even count of digits;
-no
-whitespace at the start or the end; and a character that is neither a digit
+no whitespace at the start or the end; and a character that is neither a digit
 nor whitespace. The null string is a string of hexadecimal digits, while a
 string of only whitespace is not. A string with an odd number of digits is
 hexadecimal when it has no gap.
@@ -228,9 +227,8 @@ same allowances as `X`: whitespace only where [the group
 rule](r:bif.index.conv.groups) allows a gap, so that every group after the
 first has a count of digits that is a multiple of four, none at the start or
 the end, and no other character. The null string is a string of binary digits,
-a string of only
-whitespace is not. A string with a count of digits that is not a multiple of
-four is binary when it has no gap.
+a string of only whitespace is not. A string with a count of digits that is
+not a multiple of four is binary when it has no gap.
 
 ```rexx
 say datatype('0101', 'B') datatype('1 0101', 'B') datatype('11111 1111', 'B'),
@@ -288,12 +286,11 @@ say datatype('0', 'O') datatype('1', 'O') datatype('10', 'O') datatype('01', 'O'
 r[bif.datatype.symbol]
 Type `S` answers `1` when the string is a symbol that
 [SYMBOL](r:bif.symbol.result) does not call `BAD`: it has at least one
-character, and each is a letter, a digit, or one of `.`, `!`, `?` and `_`,
-and it has at most 250 characters; a longer string is not a symbol, whatever
-its characters. The other characters are not symbol characters, among them
-`$`, `@`, `#`, whitespace and the null character. Case does not matter, and
-the string is
-not translated or looked up as a variable.
+character, and each is a letter, a digit, or one of `.`, `!`, `?` and `_`, and
+it has at most 250 characters; a longer string is not a symbol, whatever its
+characters. The other characters are not symbol characters, among them `$`,
+`@`, `#`, whitespace and the null character. Case does not matter, and the
+string is not translated or looked up as a variable.
 
 ```rexx
 say datatype('abc', 'S') datatype('A.b', 'S') datatype('5', 'S') datatype('.', 'S'),

@@ -147,8 +147,7 @@ r[bif.qualify.deviation.34]
 In every name interrexx qualifies, each `..` removes exactly the one component
 before it, however the component was written. ooRexx removes none after a
 doubled slash and two after a component that starts with a period, so its
-answer can
-name a different file.
+answer can name a different file.
 
 ```rexx
 say qualify('/a//..') qualify('/a//../b') qualify('/a/.b/../c')

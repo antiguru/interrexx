@@ -199,9 +199,8 @@ say translate('secret', , , '*') translate('secret', , , '*', 3, 2)
 ```
 
 > **Note.** The ANSI draft (9.3.23) uppercases whenever both tables are
-> omitted and
-> ignores `pad` then. This page follows ooRexx, where the reference manual
-> says a given pad replaces the whole string.
+> omitted and ignores `pad` then. This page follows ooRexx, where the
+> reference manual says a given pad replaces the whole string.
 
 r[bif.translate.tablei.empty]
 When `tablei` is given as the null string, no character is found in it, and
@@ -217,8 +216,7 @@ abc abc abc
 ```
 
 > **Note.** This holds however the null string was produced, which ooRexx does
-> not
-> do: see [Deviation 94](r:bif.translate.deviation.94).
+> not do: see [Deviation 94](r:bif.translate.deviation.94).
 
 r[bif.translate.past-end]
 When `pos` is greater than `LENGTH(string)`, no character is translated and
@@ -300,15 +298,14 @@ say (translate(s, '', '') == s) (translate('mn' || 'op') == 'MNOP')
 ```
 
 r[bif.translate.deviation.94]
-A `tablei` given as the null string is an
-[empty table](r:bif.translate.tablei.empty)
-whether it was written as `''` or answered by an expression, such as
-`LEFT(s, 0)`, `COPIES(s, 0)` or `STRIP` of a string of blanks. ooRexx
-differs: a null string that some of its builtins answer counts as given, so
-it does not uppercase, but it is searched as if it were the
-[default `tablei`](r:bif.translate.tablei.default), so every character of
-the run is translated. There `translate('abc', , LEFT('abc', 0))` answers
-three blanks. The same holds for the String method's `tablei`. A null
+A `tablei` given as the null string is an [empty
+table](r:bif.translate.tablei.empty) whether it was written as `''` or
+answered by an expression, such as `LEFT(s, 0)`, `COPIES(s, 0)` or `STRIP` of
+a string of blanks. ooRexx differs: a null string that some of its builtins
+answer counts as given, so it does not uppercase, but it is searched as if it
+were the [default `tablei`](r:bif.translate.tablei.default), so every
+character of the run is translated. There `translate('abc', , LEFT('abc', 0))`
+answers three blanks. The same holds for the String method's `tablei`. A null
 `tableo` produced the same way agrees on both.
 
 ```rexx

@@ -50,8 +50,7 @@ r[bif.length.result]
 LENGTH returns the number of characters in `string`, which is its
 [length](r:conv.string.chars) in bytes. The null string has length 0. The
 answer is [written as a count](r:bif.index.count.answer), and whether it is a
-new
-object is [not specified](r:bif.length.deviation.4).
+new object is [not specified](r:bif.length.deviation.4).
 
 ```rexx
 say length('hello') length('hi there') length('')
@@ -122,6 +121,5 @@ say (length(h) == n) (length(h) == '1234') (length(h) == length(h))
 ```
 
 > **Note.** The ANSI draft (9.3.14) defines LENGTH as the number of characters
-> in the
-> argument and adds an error for an argument that is not a character string,
-> which cannot occur here: every value is a string.
+> in the argument and adds an error for an argument that is not a character
+> string, which cannot occur here: every value is a string.

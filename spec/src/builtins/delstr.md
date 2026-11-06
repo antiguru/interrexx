@@ -73,8 +73,7 @@ say '['delstr('fghij')']' '['delstr('fghij', )']' delstr('fghij', , 2)
 ```
 
 > **Note.** The ANSI draft (9.3.9) requires `n`. The reference manual and
-> ooRexx make it
-> optional, with the default above.
+> ooRexx make it optional, with the default above.
 
 r[bif.delstr.length.default]
 When `length` is omitted, it is as if it were large enough to reach the end

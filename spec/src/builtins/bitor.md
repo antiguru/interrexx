@@ -75,11 +75,10 @@ abc FFFFFF
 ## Deviations
 
 r[bif.bitor.deviation.4]
-interrexx does not specify whether the answer of BITOR is the same object
-as another string of equal value, as
-[the shared rule](r:bif.index.bit.deviation.4)
-says for every bit-by-bit function. A program can rely only on the value,
-which is equal under `==`.
+interrexx does not specify whether the answer of BITOR is the same object as
+another string of equal value, as [the shared
+rule](r:bif.index.bit.deviation.4) says for every bit-by-bit function. A
+program can rely only on the value, which is equal under `==`.
 
 ```rexx
 say (bitor('ab', 'ab') == 'ab') (bitor('x', , '00'x) == 'x')

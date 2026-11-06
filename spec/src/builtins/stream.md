@@ -91,9 +91,8 @@ as asked. `NOTREADY` is that of an open stream whose last read or write could
 not do all it was asked to, at the end of the data for example. `ERROR` is
 that of a stream whose last read or write failed, such as a read of a name
 that could not be opened, or a write to a stream that was opened for reading
-only.
-The state belongs to the one stream: an operation on another changes nothing
-in it.
+only. The state belongs to the one stream: an operation on another changes
+nothing in it.
 
 ```rexx
 a = 'spec-stream-state-a.tmp'
@@ -132,10 +131,9 @@ ERROR
 
 r[bif.stream.change]
 Opening a stream, and every read, write, and `SEEK` or `POSITION` that
-succeeds, leave it `READY`, or `NOTREADY` when a read or write could not do
-it all, and a read or write that fails leaves `ERROR`. `CLOSE` leaves it
-`UNKNOWN`.
-`FLUSH` and `QUERY` leave the state as it was.
+succeeds, leave it `READY`, or `NOTREADY` when a read or write could not do it
+all, and a read or write that fails leaves `ERROR`. `CLOSE` leaves it
+`UNKNOWN`. `FLUSH` and `QUERY` leave the state as it was.
 
 ```rexx
 f = 'spec-stream-change.tmp'
@@ -235,18 +233,17 @@ call sysfiledelete f
 r[bif.stream.open.result]
 `OPEN` opens the stream and answers `READY:`. If it cannot, it answers
 `ERROR:` and the host's number for the failure, and raises
-[NOTREADY](r:bif.index.stream.notready). A name that is a directory,
-or is in a directory that does not exist, cannot be opened, and the stream is
-then not open: its state is `UNKNOWN`. With no option the stream is opened
-for reading and writing, and the `OPEN` of a file that does not allow both
-fails, where a read alone would open it. A file that
-does not exist is created by `OPEN`, unless it is opened for reading only.
-What follows `OPEN` is a list of options,
-[the next rules](r:bif.stream.open.mode)
-give them. The words `SHARED`, `SHAREREAD`, `SHAREWRITE` and `NOBUFFER` are
-accepted, and what they do is not specified; so are their shortenings as far as
-`SHARER`, `SHAREW` and `NOB`. Any other word in the list raises `SYNTAX 93.0`,
-a shortening of `SHARED` among them.
+[NOTREADY](r:bif.index.stream.notready). A name that is a directory, or is in
+a directory that does not exist, cannot be opened, and the stream is then not
+open: its state is `UNKNOWN`. With no option the stream is opened for reading
+and writing, and the `OPEN` of a file that does not allow both fails, where a
+read alone would open it. A file that does not exist is created by `OPEN`,
+unless it is opened for reading only. What follows `OPEN` is a list of
+options, [the next rules](r:bif.stream.open.mode) give them. The words
+`SHARED`, `SHAREREAD`, `SHAREWRITE` and `NOBUFFER` are accepted, and what they
+do is not specified; so are their shortenings as far as `SHARER`, `SHAREW` and
+`NOB`. Any other word in the list raises `SYNTAX 93.0`, a shortening of
+`SHARED` among them.
 
 ```rexx
 f = 'spec-stream-open.tmp'
@@ -287,8 +284,7 @@ UNKNOWN UNKNOWN
 ```
 
 > **Note.** The numbers are those of a Unix-like system: 2 for a file that
-> does not
-> exist, and 21 for a directory. Another host may count differently.
+> does not exist, and 21 for a directory. Another host may count differently.
 
 r[bif.stream.open.mode]
 The options of `OPEN` say what the stream is for and where it begins. `READ`
@@ -377,19 +373,17 @@ READY: READY
 ```
 
 r[bif.stream.open.binary]
-The option `BINARY RECLENGTH n` opens the stream as a stream of records of
-`n` characters, `n` being 1 or more: its lines are not delimited by line ends
-but are consecutive `n` characters, whatever they are. The words may be
-shortened
-as far as to `BI` and `REC`. A line end in the data is
-data. [LINEIN](r:bif.linein.result) answers a record, and the last record may
-be short. [LINES](r:bif.lines.count) counts records.
-[LINEOUT](r:bif.lineout.result)
-writes its string and then blanks up to the end of the record that the write
-position is in, with no line end; a string that is longer than the rest of that
-record raises `SYNTAX 93.0` and writes nothing, and the stream stays `READY`.
-The option `BINARY` without `RECLENGTH` is not specified, and neither is
-`BINARY RECLENGTH` without `n`.
+The option `BINARY RECLENGTH n` opens the stream as a stream of records of `n`
+characters, `n` being 1 or more: its lines are not delimited by line ends but
+are consecutive `n` characters, whatever they are. The words may be shortened
+as far as to `BI` and `REC`. A line end in the data is data.
+[LINEIN](r:bif.linein.result) answers a record, and the last record may be
+short. [LINES](r:bif.lines.count) counts records.
+[LINEOUT](r:bif.lineout.result) writes its string and then blanks up to the
+end of the record that the write position is in, with no line end; a string
+that is longer than the rest of that record raises `SYNTAX 93.0` and writes
+nothing, and the stream stays `READY`. The option `BINARY` without `RECLENGTH`
+is not specified, and neither is `BINARY RECLENGTH` without `n`.
 
 ```rexx
 f = 'spec-stream-binary.tmp'
@@ -488,26 +482,25 @@ READY: 4 4
 
 r[bif.stream.seek]
 `SEEK` sets a position of the stream and answers the new one. `POSITION` is
-the same command. After the word there is an offset, and then options in
-any order. The offset is a whole number, which may have a prefix: `=` or no
-prefix for a position counted from the start of the data, 1 being its first
+the same command. After the word there is an offset, and then options in any
+order. The offset is a whole number, which may have a prefix: `=` or no prefix
+for a position counted from the start of the data, 1 being its first
 character; `<` for a position counted back from the end, `<0` being the one
 past the last character; `+` and `-` for a position counted forward or back
 from the read position with `READ`, and from the write position with `WRITE`
-(see [Deviation 49](r:bif.stream.deviation.49)). `READ` sets the read position,
-`WRITE` the write position, and when neither is given a stream open for
-reading and writing has both set to the answer; which of the two positions a
-`+` or `-` then counts from is not specified. `CHAR` counts characters and is
-the default; for `LINE` see [the next rule](r:bif.stream.seek.line). A position
-past the end of the data is allowed: a read there finds nothing, and a write
-there [fills the gap](r:bif.charout.start), except on a stream opened
-`APPEND`, where
-[a write goes after the last character](r:bif.stream.deviation.79)
-wherever the write position is. A stream that is
-not open is opened by `SEEK`; when it cannot be, `SEEK` answers 0, raises
-[NOTREADY](r:bif.index.stream.notready), leaves the state `ERROR`, and creates
-nothing. An offset that is not a whole number or an option that is not one of
-these raises `SYNTAX 93.0`, and a missing offset `SYNTAX 93.903`.
+(see [Deviation 49](r:bif.stream.deviation.49)). `READ` sets the read
+position, `WRITE` the write position, and when neither is given a stream open
+for reading and writing has both set to the answer; which of the two positions
+a `+` or `-` then counts from is not specified. `CHAR` counts characters and
+is the default; for `LINE` see [the next rule](r:bif.stream.seek.line). A
+position past the end of the data is allowed: a read there finds nothing, and
+a write there [fills the gap](r:bif.charout.start), except on a stream opened
+`APPEND`, where [a write goes after the last
+character](r:bif.stream.deviation.79) wherever the write position is. A stream
+that is not open is opened by `SEEK`; when it cannot be, `SEEK` answers 0,
+raises [NOTREADY](r:bif.index.stream.notready), leaves the state `ERROR`, and
+creates nothing. An offset that is not a whole number or an option that is not
+one of these raises `SYNTAX 93.0`, and a missing offset `SYNTAX 93.903`.
 
 ```rexx
 f = 'spec-stream-seek.tmp'
@@ -552,10 +545,10 @@ call sysfiledelete f
 93.903
 ```
 
-> **Note.** The data is `0123456789`. The character written after
-> `seek 2 write` is `W`,
-> in place of the `1`, as the hex string shows. The position `<2` is the one two
-> characters back from the end of the data, the character `8`.
+> **Note.** The data is `0123456789`. The character written after `seek 2
+> write` is `W`, in place of the `1`, as the hex string shows. The position
+> `<2` is the one two characters back from the end of the data, the character
+> `8`.
 
 r[bif.stream.seek.line]
 With `LINE`, the offset counts [lines](r:bif.index.stream.line-end) and not
@@ -599,11 +592,11 @@ r[bif.stream.query.position]
 stream open for reading and writing answers its read position, and one open
 for one thing the position that it has. The option `CHAR` counts characters
 and is the default; `LINE` counts lines, and the answer is the number of the
-line
-that the position is in. Each option may be shortened to its first letter. The
-option `SYS` may be given alone, and what it answers is not specified. A
-stream that is not open has no positions, and the answer is the null string.
-What `QUERY POSITION` answers for a standard stream is not specified.
+line that the position is in. Each option may be shortened to its first
+letter. The option `SYS` may be given alone, and what it answers is not
+specified. A stream that is not open has no positions, and the answer is the
+null string. What `QUERY POSITION` answers for a standard stream is not
+specified.
 
 ```rexx
 f = 'spec-stream-qpos.tmp'
@@ -636,11 +629,11 @@ READY: 1
 
 r[bif.stream.query.exists]
 `QUERY EXISTS` answers the full name of the file, as
-[QUALIFY](r:bif.qualify.relative)
-makes it, if it exists, and the null string if not. A directory is not a file
-for it, and the answer for one is the null string. It does not create the
-file, and it does not depend on the stream being open. For a standard stream
-the answer is its name: `STDIN`, `STDOUT` or `STDERR`.
+[QUALIFY](r:bif.qualify.relative) makes it, if it exists, and the null string
+if not. A directory is not a file for it, and the answer for one is the null
+string. It does not create the file, and it does not depend on the stream
+being open. For a standard stream the answer is its name: `STDIN`, `STDOUT` or
+`STDERR`.
 
 ```rexx
 f = 'spec-stream-exists.tmp'
@@ -765,14 +758,12 @@ call sysfiledelete f
 
 r[bif.stream.query.words]
 The word after `QUERY` is `EXISTS`, `SIZE`, `STREAMTYPE`, `TIMESTAMP`,
-`DATETIME`,
-`HANDLE` or `POSITION`, in either case. It may be shortened to any of its
-leading letters, as far as to its first letter for `EXISTS`, `HANDLE`,
-`TIMESTAMP` and
-`DATETIME`, to `SI` for `SIZE`, to `ST` for `STREAMTYPE` and to `P` for
-`POSITION`; what a shorter word answers is not specified. A `QUERY` with no word
-is not specified. A word that is none of them, and words after it that the query
-does not take, raise `SYNTAX 93.0`.
+`DATETIME`, `HANDLE` or `POSITION`, in either case. It may be shortened to any
+of its leading letters, as far as to its first letter for `EXISTS`, `HANDLE`,
+`TIMESTAMP` and `DATETIME`, to `SI` for `SIZE`, to `ST` for `STREAMTYPE` and
+to `P` for `POSITION`; what a shorter word answers is not specified. A `QUERY`
+with no word is not specified. A word that is none of them, and words after it
+that the query does not take, raise `SYNTAX 93.0`.
 
 ```rexx
 f = 'spec-stream-words.tmp'
@@ -822,10 +813,9 @@ READY READY READY READY:
 
 r[bif.stream.deviation.35]
 The names `HANDLE:0`, `HANDLE:1` and `HANDLE:2` denote the standard input,
-output
-and error streams, and read and write them; a `HANDLE:` stream with any other
-descriptor is refused when it is created. In ooRexx a `HANDLE:` stream never
-reaches its descriptor: reads see end of file, and writes crash.
+output and error streams, and read and write them; a `HANDLE:` stream with any
+other descriptor is refused when it is created. In ooRexx a `HANDLE:` stream
+never reaches its descriptor: reads see end of file, and writes crash.
 
 ```rexx
 call charout 'HANDLE:1', 'hello '
@@ -843,8 +833,7 @@ r[bif.stream.deviation.49]
 On a stream open for reading and writing, a relative `SEEK` with `READ` moves
 from the read position, and one with `WRITE` from the write position, whatever
 operation came before. ooRexx counts from a position that it tracks, which can
-be
-the other one.
+be the other one.
 
 ```rexx
 f = 'spec-stream-dev49.tmp'
@@ -907,10 +896,8 @@ READY:
 
 r[bif.stream.deviation.57]
 `QUERY POSITION ... LINE` answers the line that the position is in, and 0 for
-the
-write position of a stream open for reading only. ooRexx answers a line number
-it
-tracks.
+the write position of a stream open for reading only. ooRexx answers a line
+number it tracks.
 
 ```rexx
 f = 'spec-stream-dev57.tmp'
@@ -966,8 +953,8 @@ READY:
 
 r[bif.stream.deviation.62]
 A read that finds nothing at the end of the data leaves the stream `NOTREADY`
-with the
-description `NOTREADY:EOF`. ooRexx leaves `ERROR:0` after a `CHARIN` of nothing.
+with the description `NOTREADY:EOF`. ooRexx leaves `ERROR:0` after a `CHARIN`
+of nothing.
 
 ```rexx
 f = 'spec-stream-dev62.tmp'

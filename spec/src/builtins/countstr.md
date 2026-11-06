@@ -49,13 +49,12 @@ d: say condition('o')~code
 
 r[bif.countstr.result]
 COUNTSTR scans `haystack` from its first character to its last. At each
-position where `needle` occurs, it counts one and continues with the
-character after the occurrence, so no character takes part in two counted
-occurrences; where it does not occur, it continues with the next character.
-The result is the number counted. It is
-[written as a count](r:bif.index.count.answer),
-and whether it is a new object is
-[not specified](r:bif.index.count.answer.deviation.4).
+position where `needle` occurs, it counts one and continues with the character
+after the occurrence, so no character takes part in two counted occurrences;
+where it does not occur, it continues with the next character. The result is
+the number counted. It is [written as a count](r:bif.index.count.answer), and
+whether it is a new object is [not
+specified](r:bif.index.count.answer.deviation.4).
 
 ```rexx
 say countstr('7', '707707') countstr('QQ', 'R0QQQ0') countstr('ab', 'xabyabab'),
@@ -108,7 +107,6 @@ say countstr('a', 'aA') countstr('1', '1.01 1') countstr(' ', 'a b  c'),
 ```
 
 > **Note.** The ANSI draft (9.3.7) defines COUNTSTR by repeated POS searches,
-> each
-> starting after the end of the previous match, and does not mention the
+> each starting after the end of the previous match, and does not mention the
 > case of a null needle, for which POS answers 0. The reference manual defines
 > it only as the count of occurrences that do not overlap.

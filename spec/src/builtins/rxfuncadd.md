@@ -23,11 +23,11 @@ Which libraries a program can name beyond `rxmath` is not specified.
 > registration that a program makes can be removed only by that program. The
 > examples that leave one behind drop it before they end, so they leave
 > nothing behind and do not depend on registrations of other names. Making a
-> function of a library such as `rxmath` available is not a
-> registration: it lasts until the program ends and nothing removes it, so
-> each example picks a function of that library that no other example on
-> this page uses. A registration is shared with programs that are not part of
-> the examples, and what they register or drop is not specified.
+> function of a library such as `rxmath` available is not a registration: it
+> lasts until the program ends and nothing removes it, so each example picks a
+> function of that library that no other example on this page uses. A
+> registration is shared with programs that are not part of the examples, and
+> what they register or drop is not specified.
 
 ## Arguments
 
@@ -137,15 +137,15 @@ say rxcalctan(0)
 ```
 
 r[bif.rxfuncadd.procedure]
-When `module` names a library that
-[can be found](r:bif.rxfuncadd.unknown-library)
-and provides its functions as a package, as `rxmath` does, `procedure` is not
-consulted: it may be omitted, may be the null string, or may name anything,
-and the answer depends only on `name`. A `name` that the library does not
-provide, which is the case of an unknown entry point, answers `1`, and
-registers nothing, so the name is not available afterwards. Whether a library
-that can be found but does not provide its functions as a package can be
-loaded, and what `procedure` means for it, is not specified.
+When `module` names a library that [can be
+found](r:bif.rxfuncadd.unknown-library) and provides its functions as a
+package, as `rxmath` does, `procedure` is not consulted: it may be omitted,
+may be the null string, or may name anything, and the answer depends only on
+`name`. A `name` that the library does not provide, which is the case of an
+unknown entry point, answers `1`, and registers nothing, so the name is not
+available afterwards. Whether a library that can be found but does not provide
+its functions as a package can be loaded, and what `procedure` means for it,
+is not specified.
 
 ```rexx
 say rxfuncadd('RxCalcSinH', 'rxmath', '')

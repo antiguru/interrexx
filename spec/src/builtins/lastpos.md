@@ -95,18 +95,18 @@ say lastpos('b', 'banana', 6) lastpos('b', 'banana', 6, ) lastpos('b', 'banana',
 ## The result
 
 r[bif.lastpos.result]
-Let `n` be the length of `haystack` and `m` the length of `needle`. Let `e`
-be `start`, or `n` when `start` is omitted or greater than `n`. The characters
-that the search covers are those at the positions from `e - length + 1`
-(or from 1, when that is less, or when `length` is omitted) through `e`; this
-is the window, and it holds
-no characters when `length` is 0. When `m` is at least 1, LASTPOS returns the
-greatest position `k` such that the `m` characters of `haystack` from
-position `k` on all lie in the window and are equal under `==` to `needle`.
-When there is no such `k`, the result is `0`. A `needle` with no characters
-is the case of [its own rule](r:bif.lastpos.empty-needle). The answer is
-[written as a count](r:bif.index.count.answer), and whether it is a new object
-is [not specified](r:bif.lastpos.deviation.4).
+Let `n` be the length of `haystack` and `m` the length of `needle`. Let `e` be
+`start`, or `n` when `start` is omitted or greater than `n`. The characters
+that the search covers are those at the positions from `e - length + 1` (or
+from 1, when that is less, or when `length` is omitted) through `e`; this is
+the window, and it holds no characters when `length` is 0. When `m` is at
+least 1, LASTPOS returns the greatest position `k` such that the `m`
+characters of `haystack` from position `k` on all lie in the window and are
+equal under `==` to `needle`. When there is no such `k`, the result is `0`. A
+`needle` with no characters is the case of [its own
+rule](r:bif.lastpos.empty-needle). The answer is [written as a
+count](r:bif.index.count.answer), and whether it is a new object is [not
+specified](r:bif.lastpos.deviation.4).
 
 ```rexx
 say lastpos('/', 'a/b/c') lastpos('/', 'abc') lastpos('ana', 'banana'),
@@ -123,10 +123,9 @@ say lastpos('x', copies('x', 1234) || 'y')
 r[bif.lastpos.window]
 An occurrence is found only when all of it lies in the window: a `start`
 before the end of an occurrence hides it, even when the occurrence begins at
-or before `start`, and one that begins before the window is not found.
-A `length` that would reach before the first character is cut off there, and
-`start`
-is limited to `n` before `length` is applied.
+or before `start`, and one that begins before the window is not found. A
+`length` that would reach before the first character is cut off there, and
+`start` is limited to `n` before `length` is applied.
 
 ```rexx
 say lastpos('an', 'banana', 5) lastpos('an', 'banana', 4) lastpos('an', 'banana', 3),
@@ -242,9 +241,8 @@ say (lastpos('x', h, n) == n) (lastpos('x', h) == '1234') (lastpos('x', h) == la
 ```
 
 > **Note.** The ANSI draft (9.3.12) has no `length` argument, and defines
-> LASTPOS by
-> comparing the needle with each stretch of the haystack of its length that
-> ends at or before `start`, working backward. It does not limit `start` to
-> the length of the haystack: it reads the places past the end as blanks, so a
-> needle of only blanks can be found there. ooRexx limits `start` first, as this
-> book does.
+> LASTPOS by comparing the needle with each stretch of the haystack of its
+> length that ends at or before `start`, working backward. It does not limit
+> `start` to the length of the haystack: it reads the places past the end as
+> blanks, so a needle of only blanks can be found there. ooRexx limits `start`
+> first, as this book does.

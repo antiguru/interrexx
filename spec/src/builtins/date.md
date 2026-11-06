@@ -118,10 +118,9 @@ Four options write a whole number. B writes the number of days from 1 January
 number divided by 7 is 0 for a Monday and 6 for a Sunday. D writes the number
 of the day in its year, from 1. F writes the number of microseconds from the
 start of 1 January 0001 to the start of the day, and T the number of seconds
-from the start of 1 January 1970, negative before it. A number is written
-with no sign unless it is negative, no leading zero, point or exponent,
-however many
-digits it has: the setting of NUMERIC DIGITS plays no part. Arithmetic on
+from the start of 1 January 1970, negative before it. A number is written with
+no sign unless it is negative, no leading zero, point or exponent, however
+many digits it has: the setting of NUMERIC DIGITS plays no part. Arithmetic on
 such a number is subject to NUMERIC DIGITS like any other.
 
 ```rexx
@@ -145,10 +144,10 @@ say date('F', '2 Jan 0001') + 0
 
 r[bif.date.calendar]
 A date is valid for the year 1 to the year 9999. A year is a leap year, with a
-29 February, when it is divisible by 4 but not by 100, or when it is
-divisible by 400. A string names a valid date only when its day exists in its
-month of that year, and the days of the year number 366 in a leap year and 365
-in another.
+29 February, when it is divisible by 4 but not by 100, or when it is divisible
+by 400. A string names a valid date only when its day exists in its month of
+that year, and the days of the year number 366 in a leap year and 365 in
+another.
 
 ```rexx
 say date('S', '29 Feb 2000') date('S', '29 Feb 1904') date('S', '29 Feb 2024')
@@ -251,22 +250,20 @@ f: say condition('o')~code
 
 r[bif.date.in.number]
 The informats B, F and T read a count: the number of days, of microseconds or
-of seconds that B, F and T [write](r:bif.date.out.counts). The string may
-have any form of a number, such as `5`, ` 5 `, `+5`, `5.0` and `5e0`, and
-NUMERIC
-DIGITS does not apply. A string whose value is a whole number is read as
-that number, however many leading or trailing zeros it has, and the number
-must be in the range given below. A string whose value is not a
-whole number raises `SYNTAX 40.19` when it has at most nine significant digits
-for B, or at most 18 for F and T, its significant digits being those from the
-first digit that is not 0 to the last digit that is not 0. This book does not
-specify whether a string with more significant digits, whose value is not a
-whole number, is accepted, nor what it then reads as. B must be from 0 to
-3652058, F from 0 to 315537897599999999, and T from -62135596800 to
-253402300799, which are 1 January 0001 to 31 December 9999. A count of F or T
-that falls inside a day reads as that day. The informat D is read in the same
-way, [as the
-day of the current year](r:bif.date.in.day).
+of seconds that B, F and T [write](r:bif.date.out.counts). The string may have
+any form of a number, such as `5`, ` 5 `, `+5`, `5.0` and `5e0`, and NUMERIC
+DIGITS does not apply. A string whose value is a whole number is read as that
+number, however many leading or trailing zeros it has, and the number must be
+in the range given below. A string whose value is not a whole number raises
+`SYNTAX 40.19` when it has at most nine significant digits for B, or at most
+18 for F and T, its significant digits being those from the first digit that
+is not 0 to the last digit that is not 0. This book does not specify whether a
+string with more significant digits, whose value is not a whole number, is
+accepted, nor what it then reads as. B must be from 0 to 3652058, F from 0 to
+315537897599999999, and T from -62135596800 to 253402300799, which are 1
+January 0001 to 31 December 9999. A count of F or T that falls inside a day
+reads as that day. The informat D is read in the same way, [as the day of the
+current year](r:bif.date.in.day).
 
 ```rexx
 say date('S', '5', 'B') date('S', ' 5 ', 'B') date('S', '+5', 'B') date('S', '5.0', 'B'),
@@ -369,11 +366,11 @@ d: say condition('o')~code
 
 r[bif.date.in.century]
 A date read with E, O or U has a year of two digits. Its year is the one that
-ends in those digits and falls in the 100 years that start 50 years before
-the current year: the current year less 50 is the earliest, and the current
-year plus 49 the latest. The current year is that of the
-[moment](r:bif.index.dt.stamp)
-of the clause. Every other informat gives the year in full.
+ends in those digits and falls in the 100 years that start 50 years before the
+current year: the current year less 50 is the earliest, and the current year
+plus 49 the latest. The current year is that of the
+[moment](r:bif.index.dt.stamp) of the clause. Every other informat gives the
+year in full.
 
 ```rexx
 ok = 1
@@ -502,11 +499,10 @@ f: say condition('o')~code
 ```
 
 r[bif.date.sep.out]
-The output separator `osep` replaces the separator that the format `option` has
-by default, which is a blank for N, a `/` for E, O and U, a `-` for I and none
-for S. It
-applies to E, I, N, O, S and U, and not to the other options. The null string
-gives a format with no separator.
+The output separator `osep` replaces the separator that the format `option`
+has by default, which is a blank for N, a `/` for E, O and U, a `-` for I and
+none for S. It applies to E, I, N, O, S and U, and not to the other options.
+The null string gives a format with no separator.
 
 ```rexx
 d = '5 Mar 2024'
@@ -581,8 +577,8 @@ r[bif.date.sep.in.informat]
 An `isep` with an `informat` that separators do not apply to, B, D, F, L, M, T
 or W, raises `SYNTAX 40.44`, as does an `osep` with an `option` of the same
 seven letters, or with a first character that names no format at all. An
-`isep` with an `informat` whose first character names no
-format is the [letter error](r:bif.date.in.letter), `SYNTAX 40.904`.
+`isep` with an `informat` whose first character names no format is the [letter
+error](r:bif.date.in.letter), `SYNTAX 40.904`.
 
 ```rexx
 signal on syntax name a
@@ -627,17 +623,13 @@ h: say condition('o')~code
 r[bif.date.order]
 A call is checked in this order, and the first failure is the one raised: the
 [argument count](r:bif.index.call.count); a missing `string` that an
-`informat` or `isep`
-needs ([40.5](r:bif.index.dt.convert)); an `osep` with an `option` that
-[does not apply it](r:bif.date.sep.in.informat); the form of `osep`; an `isep`
-with an
-`informat` that does not apply it; the form of `isep`
-([40.43](r:bif.date.sep.char));
-the letter of `informat`; the string itself (`40.19`, or `40.44` with an
-`isep`); and,
-last, the letter of `option`. So an `option` that is not a letter is raised
-only when
-the rest of the call is right.
+`informat` or `isep` needs ([40.5](r:bif.index.dt.convert)); an `osep` with an
+`option` that [does not apply it](r:bif.date.sep.in.informat); the form of
+`osep`; an `isep` with an `informat` that does not apply it; the form of
+`isep` ([40.43](r:bif.date.sep.char)); the letter of `informat`; the string
+itself (`40.19`, or `40.44` with an `isep`); and, last, the letter of
+`option`. So an `option` that is not a letter is raised only when the rest of
+the call is right.
 
 ```rexx
 signal on syntax name a
@@ -686,6 +678,5 @@ j: say condition('o')~code
 ```
 
 > **Note.** The ANSI draft (9.8.1) has neither separators nor the options F,
-> I, L and T.
-> The reference manual does not give the order of the checks; this rule
-> matches ooRexx.
+> I, L and T. The reference manual does not give the order of the checks; this
+> rule matches ooRexx.

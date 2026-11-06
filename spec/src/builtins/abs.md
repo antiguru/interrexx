@@ -48,11 +48,10 @@ d: say condition('o')~code
 
 r[bif.abs.result]
 ABS returns the number [rounded](r:bif.index.num.round) to NUMERIC DIGITS
-digits with its sign removed, and [written](r:bif.index.num.write) in plain
-or scientific notation as that rule says, with NUMERIC DIGITS as the
-trigger. So the result has the value of the number when it is not negative,
-and the
-value of its negation when it is.
+digits with its sign removed, and [written](r:bif.index.num.write) in plain or
+scientific notation as that rule says, with NUMERIC DIGITS as the trigger. So
+the result has the value of the number when it is not negative, and the value
+of its negation when it is.
 
 ```rexx
 say abs('45.6') abs(' -0.809') abs('-1.500') abs('+4') abs('-1E2')

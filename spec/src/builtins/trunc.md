@@ -56,12 +56,11 @@ say trunc(7.9) trunc(7.9, ) trunc(7.9, 0)
 
 r[bif.trunc.errors]
 The checks run in this order, and the first that fails is raised: the
-[form](r:conv.whole.form) and [value](r:conv.whole.digits) of `n`, which
-raise `SYNTAX 40.12`; that `number` is a [number](r:bif.index.num.arg),
-`SYNTAX 93.943`; and last that `n` is not negative, `SYNTAX 93.906`. `n` is
-a whole-number argument, so the [null string](r:conv.arg.empty) raises 40.12
-and `-0` is 0. A string that is not a number is therefore raised even when `n`
-is
+[form](r:conv.whole.form) and [value](r:conv.whole.digits) of `n`, which raise
+`SYNTAX 40.12`; that `number` is a [number](r:bif.index.num.arg), `SYNTAX
+93.943`; and last that `n` is not negative, `SYNTAX 93.906`. `n` is a
+whole-number argument, so the [null string](r:conv.arg.empty) raises 40.12 and
+`-0` is 0. A string that is not a number is therefore raised even when `n` is
 negative, and a negative `n` is raised only for a number that is valid.
 
 ```rexx

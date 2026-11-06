@@ -15,17 +15,15 @@ the inserted string to a given length, and answers the combined string.
 ## Arguments
 
 r[bif.insert.method]
-INSERT is a builtin that runs as a String method, and `target`, its
-second argument, is the receiver; `new`, `n`, `length` and `pad` become
-the message's arguments, in that order. `new` and `target` are
+INSERT is a builtin that runs as a String method, and `target`, its second
+argument, is the receiver; `new`, `n`, `length` and `pad` become the message's
+arguments, in that order. `new` and `target` are
 [strings](r:conv.string.null), `n` is a [whole number](r:conv.whole.form) of
-the kind
-[the next rule](r:bif.insert.n.check) describes, `length` is a
-[length](r:conv.length.check), and `pad` is a
-[pad](r:conv.pad). The arguments are checked in the
-[order](r:conv.check.order) the conventions give, and the argument count by
-the [builtin call rules](r:bif.index.call.count): two are required and five
-is the most.
+the kind [the next rule](r:bif.insert.n.check) describes, `length` is a
+[length](r:conv.length.check), and `pad` is a [pad](r:conv.pad). The arguments
+are checked in the [order](r:conv.check.order) the conventions give, and the
+argument count by the [builtin call rules](r:bif.index.call.count): two are
+required and five is the most.
 
 ```rexx
 say insert('123', 'abc', 1) 'abc'~insert('123', 1) '|' 'abc'~insert('123', 1, 2, '.')
@@ -61,11 +59,10 @@ a123bc a123bc | a12bc
 
 r[bif.insert.n.check]
 In INSERT, `n` is a [whole-number argument](r:conv.whole.digits) whose value
-must not be negative. A negative value raises `SYNTAX 93.906`. An `n` of 0
-is allowed, and so is `-0`, which is 0. The check is a range check, and falls
-with those of
-[the conventions](r:conv.check.order), from left to right with the check of
-`length`.
+must not be negative. A negative value raises `SYNTAX 93.906`. An `n` of 0 is
+allowed, and so is `-0`, which is 0. The check is a range check, and falls
+with those of [the conventions](r:conv.check.order), from left to right with
+the check of `length`.
 
 ```rexx
 say insert('X', 'abc', 0) insert('X', 'abc', '-0')

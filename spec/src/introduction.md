@@ -34,26 +34,23 @@ another definition of Rexx differs; it never adds to or changes a rule.
 ## Terms
 
 **ooRexx.** The open-source C++ implementation of Object Rexx, version 5.
-interrexx is
-written to run ooRexx programs, and the book's examples are also run on
-ooRexx to measure where the two agree.
+interrexx is written to run ooRexx programs, and the book's examples are also
+run on ooRexx to measure where the two agree.
 
 **Deviation.** A declared difference between interrexx and ooRexx, numbered in
 [the Deviations chapter](deviations.md). A page lists in its front matter the
-deviations that
-touch its element, and states each as a rule whose identifier ends
-`deviation.N`; a builtin's page puts these rules under a Deviations heading
-at its end. Every example on which interrexx and ooRexx answer
+deviations that touch its element, and states each as a rule whose identifier
+ends `deviation.N`; a builtin's page puts these rules under a Deviations
+heading at its end. Every example on which interrexx and ooRexx answer
 differently belongs to such a rule; any other difference is a defect.
 
 **String method.** A method of the `String` class. Many builtins run as one, as
 [the conventions](r:conv.method) define.
 
 **Identity.** Whether two values are the same object, as opposed to equal
-strings. It
-is observable only through `identityHash` and the identity collections
-(`IdentityTable`, `IdentitySet`), and the book says where it is not
-specified.
+strings. It is observable only through `identityHash` and the identity
+collections (`IdentityTable`, `IdentitySet`), and the book says where it is
+not specified.
 
 ## Reading a rule
 
