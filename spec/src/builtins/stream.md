@@ -240,8 +240,9 @@ fails, where a read alone would open it. A file that
 does not exist is created by `OPEN`, unless it is opened for reading only.
 What follows `OPEN` is a list of options, [the next rules](r:bif.stream.open.mode)
 give them. The words `SHARED`, `SHAREREAD`, `SHAREWRITE` and `NOBUFFER` are
-accepted, and what they do is not specified; any other word in the list raises
-`SYNTAX 93.0`.
+accepted, and what they do is not specified; so are their shortenings as far as
+`SHARER`, `SHAREW` and `NOB`. Any other word in the list raises `SYNTAX 93.0`,
+a shortening of `SHARED` among them.
 
 ```rexx
 f = 'spec-stream-open.tmp'
@@ -288,7 +289,8 @@ r[bif.stream.open.mode]
 The options of `OPEN` say what the stream is for and where it begins. `READ`
 opens it for reading only, `WRITE` for writing only, and `BOTH`, which is the
 default, for both. `APPEND` puts the write position after the last character,
-where every stream has it when it is opened, and keeps it there: the write
+which is where a stream that is open for writing and neither `APPEND` nor
+`REPLACE` has it as well, and keeps it there: the write
 position cannot be moved into the data that the file held when it was opened,
 by `SEEK` or by a start or line that a write gives; see
 [Deviation 79](r:bif.stream.deviation.79). A position at the end of that data,
@@ -378,7 +380,8 @@ be short. [LINES](r:bif.lines.count) counts records. [LINEOUT](r:bif.lineout.res
 writes its string and then blanks up to the end of the record that the write
 position is in, with no line end; a string that is longer than the rest of that
 record raises `SYNTAX 93.0` and writes nothing, and the stream stays `READY`.
-The option `BINARY` without `RECLENGTH` is not specified.
+The option `BINARY` without `RECLENGTH` is not specified, and neither is
+`BINARY RECLENGTH` without `n`.
 
 ```rexx
 f = 'spec-stream-binary.tmp'
@@ -969,7 +972,8 @@ On a stream opened `APPEND`, the write position cannot be moved into the data
 that the file held when it was opened: a `SEEK` of it there answers 0, and a
 CHAROUT or LINEOUT that names a position there writes nothing, all of them
 `NOTREADY`. A position at the end of that data or past it is allowed. ooRexx
-moves the position, and a LINEOUT that names a line writes there.
+moves the position, but what a CHAROUT with a start or a LINEOUT with a line
+writes goes after the last character.
 
 ```rexx
 f = 'spec-stream-dev79.tmp'
