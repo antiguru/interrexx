@@ -1,8 +1,8 @@
 ---
 element: "Message instructions"
 kind: concept
-ansi: "6.3.2"
-rexxref: "General Concepts > Clauses and Instructions > Message Instructions"
+rexxref: "General Concepts > Clauses and Instructions > Message Instructions; General Concepts > Message Instructions"
+deviations: [36]
 ---
 
 # Message instructions
@@ -24,12 +24,11 @@ r[instr.message.clause]
 A clause is a message instruction when it is a single message term: a term
 followed by one or more messages or subscripts, with no operator or other
 term after the last of them. The term in front may be a symbol, a string, a
-function call, a class name or an expression in parentheses. The message is
-sent exactly as it is in an expression. A clause that is only a function
-call, a string or an expression in parentheses is a [command](command.md), and
-so is one with an operator after the message, because the whole expression
-is then not a message term. A message instruction does not set `RC`, and a
-command does not set `RESULT`.
+function call, a class name or an expression in parentheses. The message goes
+to the receiver by the same steps as in an expression. [The kinds
+rule](r:instr.index.kinds) says which other clauses are
+[commands](command.md), among them one with an operator after the message. A
+message instruction does not set `RC`, and a command does not set `RESULT`.
 
 ```rexx
 address system
@@ -119,7 +118,9 @@ of the expression first and the values of the index expressions after it,
 and the brackets may hold no expression at all. When the message has its own
 arguments, as in `term~name(a) = expression`, the value comes first and the
 arguments follow. The answer of the message is treated as for any message
-instruction, so it is assigned to `RESULT`, or `RESULT` is dropped.
+instruction, so it is assigned to `RESULT`, or `RESULT` is dropped. A `~~`
+in front of the name has no effect on that, so `RESULT` never holds the
+receiver after a message assignment.
 
 ```rexx
 o = .rec~new
@@ -149,6 +150,28 @@ y= got 3 9 7 8
 B LIT
 []= got 3 12|10|11
 []= got 1 13||
+```
+
+```rexx
+o = .rec~new
+result = 'old'
+o~~x = 6
+say 'A' symbol('result') result
+o~~y = 6
+say 'B' symbol('result') result
+::class rec
+::method 'x='
+  say 'x= got' arg(1)
+::method 'y='
+  say 'y= got' arg(1)
+  return 'yv'
+```
+
+```output
+x= got 6
+A LIT RESULT
+y= got 6
+B VAR yv
 ```
 
 r[instr.message.assign.order]
@@ -189,7 +212,9 @@ r[instr.message.assign.extended]
 An extended assignment on a message term, such as `term~name += expression`
 or `term[i] ||= expression`, sends two messages: the term is read with `name`
 or `[]`, the operator is applied to the answer and the value of the
-expression, and the result is set with `name=` or `[]=`. The receiver term is
+expression, and the result is set with `name=` or `[]=`. The read is the
+message term as written, so with `~~` it answers the receiver and the
+operator is applied to the receiver itself. The receiver term is
 evaluated twice, both times before the read. The argument expressions of a
 subscript are evaluated once for the read and a second time, after the
 expression, for the assignment, so a term or an argument that has an effect
@@ -228,6 +253,24 @@ eval String 2
 []= got 1003
 ```
 
+```rexx
+o = .rec~new
+o~x += 1
+signal on syntax name e
+o~~x += 1
+e: say condition('o')~code
+::class rec
+::method 'x='
+  say 'x= got' arg(1)
+::method 'x'
+  return 10
+```
+
+```output
+x= got 11
+97.1
+```
+
 ## Errors
 
 r[instr.message.error]
@@ -236,8 +279,8 @@ A message instruction whose receiver does not understand the message raises
 whose name ends in an equal sign. A message assignment with no expression
 after the `=` raises `SYNTAX 35.1`, not the `35.918` of an assignment to a
 variable. A message operator with no name raises `SYNTAX 19.909`, as [the
-expression rules](r:expr.index.syntax) say. A string understands no `[]=`
-and no name that ends in an equal sign.
+expression rules](r:expr.index.syntax) say. A string understands no `[]=`, so
+a subscript assignment on one raises `97.1`.
 
 ```rexx
 o = .rec~new
@@ -267,4 +310,38 @@ o~ => 19.909
 'abc'~foo = 1 => 97.1
 'abc'[1] = 1 => 97.1
 o~x += 1 => 97.1
+```
+
+r[instr.message.error.read]
+In a program file, a message assignment with no expression is found when the
+program is read, as [the expression rules](r:expr.index.syntax) say of any
+expression that cannot be read. The program writes nothing and exits with
+221.
+
+```rexx
+say 'before'
+o = .rec~new
+o~x =
+::class rec
+```
+
+```output rc=221
+```
+
+## Deviations
+
+r[instr.message.deviation.36]
+A message assignment of `objectName=` to a string is refused and ends the
+program with exit code 120, because a string is value-based, as [Deviation
+36](../deviations.md) says. ooRexx accepts the assignment and gives the
+name to the string.
+
+```rexx
+say 'before'
+'abc'~objectName = 'n'
+say 'after'
+```
+
+```output rc=120
+before
 ```

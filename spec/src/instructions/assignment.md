@@ -2,7 +2,7 @@
 element: "Assignments"
 kind: concept
 ansi: "6.3.2.8, 8.3.3"
-rexxref: "General Concepts > Clauses and Instructions > Assignments"
+rexxref: "General Concepts > Clauses and Instructions > Assignments; General Concepts > Assignments and Symbols; General Concepts > Assignments and Symbols > Extended Assignments"
 ---
 
 # Assignments
@@ -106,8 +106,8 @@ An assignment to a stem symbol gives the stem a new default value, and every
 compound variable of the stem that had its own value loses it, as [the stem
 rule](r:expr.variables.stem) says. The expression is evaluated first, so it
 can still read the compound variables that the assignment is about to
-discard. The simple variable that has the stem's name is another variable and
-does not change.
+discard. The simple variable that has the stem's name does not change, as
+[the separation rule](r:expr.variables.separate) says.
 
 ```rexx
 s.1 = 'x'; s.2 = 'y'; s = 'simple'
@@ -122,8 +122,8 @@ x y x y x y x y simple
 r[instr.assignment.compound]
 An assignment to a compound symbol sets the one variable that [its derived
 name](r:expr.variables.compound) names. It leaves the default of the stem and
-every other compound variable as they were, so a variable that has been
-assigned keeps its value when the stem's default is read for another tail.
+every other compound variable as they were, so [the default
+rule](r:expr.variables.default) still gives the other tails the default.
 
 ```rexx
 k = 'TWO'
@@ -297,10 +297,14 @@ x -= "a" => 41.1
 ```
 
 r[instr.assignment.extended.stem]
-When the target of an extended assignment is a stem symbol, the string value
-of the stem is the left operand, and the result is assigned to the stem as
-any assignment to a stem symbol does. A stem that has no default value has the
-name of the stem as its string value, which no arithmetic operator accepts.
+When the target of an extended assignment is a stem symbol, the value of the
+symbol is the left operand, and the result is assigned to the stem as any
+assignment to a stem symbol does. The value is a `Stem` object, which passes
+an operator message that it does not define on to its default value, so the
+operator is in effect applied to that value and runs as that value's own
+method when it has one. A stem that has no default has its name as the value
+the operator meets, which no arithmetic operator accepts. A default that does
+not understand the operator raises `97.1`.
 
 ```rexx
 s. = 5
@@ -315,4 +319,27 @@ e: say condition('o')~code
 ```output
 6 6 6
 41.1
+```
+
+```rexx
+s. = .t~new
+s.1 = 'one'
+s. += 1
+say s. s.1
+w. = .array~of(1)
+signal on syntax name e
+w. += 1
+e: say condition('o')~code
+::class t
+::method '+'
+  say 'plus called with' arg(1)
+  return 'summed'
+::method string
+  return 'tstring'
+```
+
+```output
+plus called with 1
+summed summed
+97.1
 ```

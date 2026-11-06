@@ -25,13 +25,12 @@ The pages of this chapter are:
 * [Commands](command.md): an expression sent to the current environment,
   and the return code that comes back.
 
-The keyword instructions are ADDRESS, ARG, CALL, DO, [DROP](drop.md), EXIT,
-EXPOSE, FORWARD, GUARD, IF, [INTERPRET](interpret.md), ITERATE, LEAVE, LOOP,
-[NOP](nop.md), NUMERIC, [OPTIONS](options.md), PARSE, PROCEDURE, PULL, PUSH,
-QUEUE, RAISE, REPLY, RETURN, [SAY](say.md), SELECT, SIGNAL, TRACE and USE. The words THEN, ELSE, WHEN, OTHERWISE and END are
-not instructions: they are parts of IF, SELECT and DO. The directives, which
-start with two colons, are not instructions either, and their own chapter
-specifies them.
+[The keyword rule](r:instr.index.keywords) below lists the keyword
+instructions, with a link on each name whose page exists. The lexical chapter
+calls a keyword instruction simply an instruction, and this chapter says
+keyword instruction wherever the other three kinds are also in play. The
+directives, which start with two colons, are not instructions, and their own
+chapter specifies them.
 
 ## Kinds of instruction
 
@@ -39,15 +38,17 @@ r[instr.index.kinds]
 A clause that is not a null clause, a label or a directive is an
 instruction of one of four kinds: an assignment, a message instruction, a
 keyword instruction or a command. [The lexical
-rule](r:lex.clauses.kinds) decides which from the first tokens of the clause,
-so a symbol followed by `=` is an assignment before any keyword is looked at.
-A clause that is a single message term, with nothing after it, is a message
-instruction. A clause of the form `term~name = expression` or
+rule](r:lex.clauses.kinds) decides assignments, keyword instructions and
+message assignments from the first tokens of the clause, so a symbol followed
+by `=` is an assignment before any keyword is looked at. This rule decides the
+rest. A clause that is a single message term, with nothing after it, is a
+message instruction. A clause of the form `term~name = expression` or
 `term[...] = expression` is a message instruction too, the one that [the
 message page](message.md) calls a message assignment. A clause that begins
 with a keyword and is not an assignment is a keyword instruction. Every
 other clause is a command, which includes a clause that holds only a
-function call, a string, or a parenthesized expression.
+function call, a string, or a parenthesized expression, and a message term
+that an operator or another term follows.
 
 ```rexx
 address system
@@ -68,13 +69,18 @@ keyword
 ```
 
 r[instr.index.keywords]
-A clause that is not an assignment and whose first token is one of the
-keyword instruction names is that instruction, whatever the case of the
-name. A name that is not on that list starts no keyword instruction. A
-clause that begins with such a name is a command, so that the name is
-evaluated as an expression like any other symbol. The names of directives
-and of builtin functions are not keywords: `endlocal` as a clause is a
-command, and so are `class` and `method` without colons.
+The keyword instruction names are ADDRESS, ARG, CALL, DO, [DROP](drop.md),
+EXIT, EXPOSE, FORWARD, GUARD, IF, [INTERPRET](interpret.md), ITERATE, LEAVE,
+LOOP, [NOP](nop.md), NUMERIC, [OPTIONS](options.md), PARSE, PROCEDURE, PULL,
+PUSH, QUEUE, RAISE, REPLY, RETURN, [SAY](say.md), SELECT, SIGNAL, TRACE and
+USE. A clause that is not an assignment and whose first token is one of these
+names is that instruction, whatever the case of the name. A name that is not
+on the list starts no keyword instruction. A clause that begins with such a
+name is a command, so that the name is evaluated as an expression like any
+other symbol. The names of directives and of builtin functions are not
+keywords: `endlocal` as a clause is a command, and so are `class` and
+`method` without colons. The words THEN, ELSE, END, WHEN and OTHERWISE are
+the exception, and [the next rule](r:instr.index.parts) covers them.
 
 ```rexx
 address nosuch
@@ -103,4 +109,35 @@ push 1 => instruction
 endlocal => command ENDLOCAL
 class => command CLASS
 method => command METHOD
+```
+
+r[instr.index.parts]
+The words THEN, ELSE, WHEN, OTHERWISE and END are not instructions: they are
+parts of IF, SELECT and DO, and the pages of those instructions say where each
+may stand. A clause that begins with one of them where its construct does not
+expect it is not a command either. It raises a `SYNTAX` error: `8.1` for
+THEN, `8.2` for ELSE, `9.1` for WHEN, `9.2` for OTHERWISE and `10.1` for END.
+
+```rexx
+call try 'then'
+call try 'else'
+call try 'when 1'
+call try 'otherwise'
+call try 'end'
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  say arg(1) '=> ok'
+  return
+e: say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output
+then => 8.1
+else => 8.2
+when 1 => 9.1
+otherwise => 9.2
+end => 10.1
 ```

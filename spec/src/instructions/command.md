@@ -2,15 +2,16 @@
 element: "Commands"
 kind: concept
 ansi: "6.3.2.10, 8.3.5"
-rexxref: "General Concepts > Clauses and Instructions > Commands"
+rexxref: "General Concepts > Clauses and Instructions > Commands; General Concepts > Commands to External Environments > Commands"
+deviations: [40]
 ---
 
 # Commands
 
-A command is a clause that is an expression and nothing else. The
-interpreter evaluates the expression, takes the resulting string as a command
-and sends it to an environment outside the program, which runs it and answers
-with a return code. This page specifies what is sent, where the return code
+A command hands work to something outside the program. The clause is a
+bare expression, and the interpreter works out its value as a string and
+sends that string to an environment, which runs it and answers with a return
+code. This page specifies what is sent, where the return code
 goes and what else a command leaves behind. Which clauses are commands is
 decided by [the lexical rules](r:lex.clauses.command). Which environment is
 current, how the ADDRESS instruction changes it and what the environments are
@@ -30,7 +31,8 @@ is sent to the current environment. Symbols in it are replaced by their
 values, and a symbol that has none contributes its own name in upper case, so
 a word that is meant as it is must be a string. The whole value is one
 command string: the blanks between its parts are the single blanks that the
-expression joined them with.
+expression joined them with. The string may be null, and a null string is sent
+like any other.
 
 ```rexx
 address system
@@ -47,6 +49,21 @@ f: say condition('d')
 one 2
 two
 ECHO THREE
+```
+
+```rexx
+address system
+''
+say 'A' rc .rs
+address nosuch
+signal on failure name f
+''
+f: say 'B' condition('c') rc .rs
+```
+
+```output
+A 0 0
+B FAILURE 30 -1
 ```
 
 r[instr.command.string]
@@ -93,8 +110,10 @@ r[instr.command.rc]
 When the environment has run a command, the variable `RC` is assigned the
 return code it answered, also when that is 0, and the new value replaces
 whatever `RC` held, an assignment of the program included. Until the first
-command, `RC` has no value. Clauses that are not commands leave `RC` as it
-was.
+command, `RC` has no value. No instruction other than a command assigns `RC`
+on its own account. A trapped condition sets it as [the error
+rule](r:conv.error.name) and the conditions chapter say, so a trapped
+`SYNTAX` error sets it to the error number.
 
 ```rexx
 address system
@@ -110,6 +129,9 @@ say rc
 say rc
 .array~new~items
 say rc
+signal on syntax name s
+x = 1 / 0
+s: say rc
 ```
 
 ```output
@@ -119,6 +141,7 @@ LIT RC
 mine
 2
 2
+42
 ```
 
 r[instr.command.scope]
@@ -190,6 +213,59 @@ say .rs
 -1
 ```
 
+r[instr.command.status.scope]
+`.RS` follows a different rule from `RC`. A routine that the program calls by
+its label starts with the `.RS` of its caller, with or without PROCEDURE, and
+the commands it runs change only its own `.RS`, so the caller's value is the
+same on return, where a routine without PROCEDURE shares `RC`. A method starts
+with no `.RS` and sets its own. An INTERPRET instruction shares the `.RS` of
+the code that ran it.
+
+```rexx
+address system
+'exit 3'
+say 'A' .rs rc
+call hidden
+say 'B' .rs rc
+interpret "say 'I' .rs; 'exit 0'; say 'I' .rs"
+say 'C' .rs rc
+say 'D' .o~new~go
+call plain
+say 'E' .rs rc
+exit
+hidden: procedure
+  say 'hidden' .rs rc
+  'exit 5'
+  say 'hidden' .rs rc
+  return
+plain:
+  say 'plain' .rs rc
+  address nosuch
+  'exit 0'
+  say 'plain' .rs rc
+  return
+::class o
+::method go
+  say 'method' .rs
+  'exit 4'
+  return .rs
+```
+
+```output
+A 1 3
+hidden 1 RC
+hidden 1 5
+B 1 3
+I 1
+I 0
+C 0 0
+method .RS
+D 1
+plain 0 0
+plain -1 30
+E 0 30
+```
+
 ## Conditions
 
 r[instr.command.conditions]
@@ -211,4 +287,27 @@ caught: say 'trapped' rc condition('c')
 ```output
 went on 3
 trapped 4 ERROR
+```
+
+## Deviations
+
+r[instr.command.deviation.40]
+The examples of this page write with `say` between commands and show their
+output in program order. That holds because a standard output that is a pipe
+or a file is handed over before a command is sent, as [Deviation
+40](../deviations.md) says. A program that relies on the order of its own
+output and a command's output in one stream gets it from the hand-over and
+not from each line being written at once.
+
+```rexx
+address system
+say 'one'
+'echo two'
+say 'three'
+```
+
+```output
+one
+two
+three
 ```
