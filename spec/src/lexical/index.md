@@ -17,13 +17,17 @@ business of the chapters that follow.
 Every token is a string in quotes, a symbol or number, or a single
 operator or special character, and strings carry an optional radix suffix
 that makes them hexadecimal or binary. Blanks and comments sit between
-tokens and are not tokens themselves. These pages cover the level of
-characters and literals:
+tokens and are not tokens themselves. The chapter has these pages:
 
 * [Characters](characters.md): the characters a program may use, case, blanks
   and line ends.
 * [Comments](comments.md): block comments, nesting and line comments.
 * [Literals](literals.md): strings, hexadecimal strings and binary strings.
+* [Symbols](symbols.md): the characters of a symbol, constant, simple, stem
+  and compound symbols, and environment symbols.
+* [Operators](operators.md): special characters and how operator tokens form.
+* [Clauses](clauses.md): where a clause ends, null clauses, labels and
+  continuation.
 
 r[lex.index.read-first]
 A program is read in full before any clause of it runs, so a fault anywhere
