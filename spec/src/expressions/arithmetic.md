@@ -181,10 +181,12 @@ r[expr.arithmetic.zero]
 A divisor of zero in `/`, `%` or `//` raises `SYNTAX 42.3`, as [the zero
 rule](r:num.arithmetic.zero) says. The value of `0 ** 0` is `1`, and a zero
 base with a negative exponent raises `SYNTAX 42.903`, as [the power
-rule](r:num.arithmetic.power.error) says. A result that is too large raises
-`SYNTAX 42.901`, as [the overflow rule](r:num.limits.overflow) says, and an
-operand with more digits than NUMERIC DIGITS raises the condition that [the
-lost digits rule](r:num.arithmetic.lostdigits) describes.
+rule](r:num.arithmetic.power.error) says. A result of `+`, `-`, `*`, `/` or a
+prefix operator that is too large raises `SYNTAX 42.901`, as [the overflow
+rule](r:num.limits.overflow) says; the errors of `**` are those of [the power
+rule](r:num.arithmetic.power.error). An operand with more digits than NUMERIC
+DIGITS raises the condition that [the lost digits
+rule](r:num.arithmetic.lostdigits) describes.
 
 ```rexx
 call try '7 / 0'

@@ -212,13 +212,12 @@ makestring called
 r[expr.messages.default]
 Every object understands the equality messages `=`, `\=`, `==`, `\==`, `<>`
 and `><`, and the messages `||`, one blank and the null string, whatever its
-class. The
-equality messages answer whether the receiver and the argument are the same
-object by default, though a class may define its own, as the string class
-does. The three joining messages join the string value of the receiver to the
-string value of the argument. Every other operator message, which means the
-arithmetic ones, the logical ones and the ordering ones, normal and strict, is
-understood only by a class that defines it.
+class. The equality messages answer whether the receiver and the argument are
+the same object by default, though a class may define its own, as the string
+class does. The three joining messages join the string value of the receiver
+to the string value of the argument. Every other operator message, which means
+the arithmetic ones, the logical ones and the ordering ones, normal and
+strict, is understood only by a class that defines it.
 
 ```rexx
 a = .array~new
