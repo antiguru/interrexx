@@ -225,8 +225,10 @@ call answer `1`, and `name`, unless it is already available, is
 nonetheless registered: [RXFUNCQUERY](rxfuncquery.md) answers `0` for it
 afterwards. The function cannot be called, and the attempt raises `SYNTAX
 43.1`. The registration is the kind that
-[RXFUNCDROP](rxfuncdrop.md) removes. What it records of `procedure` is not
-observable and not specified.
+[RXFUNCDROP](rxfuncdrop.md) removes. When another program holds a
+registration of the name, [the repeat rule](r:bif.rxfuncadd.repeat) says what
+the call does instead. What it records of `procedure` is not observable and
+not specified.
 
 ```rexx
 say rxfuncquery('spec_rxfuncadd_gone')

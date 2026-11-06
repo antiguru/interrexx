@@ -59,7 +59,12 @@ it could not find](r:bif.rxfuncadd.unknown-library) is removed, and the answer i
 name is compared without regard to case, as
 [RXFUNCQUERY](rxfuncquery.md) does. Afterwards the name is no longer
 available, and a call of it raises `SYNTAX 43.1` as that of any unknown
-function does. The answer is written as the digit `0` or `1`.
+function does. The answer is written as the digit `0` or `1`. This rule and
+[the next but one](r:bif.rxfuncdrop.one-at-a-time) hold when no other program
+has called RXFUNCADD for the name. When a second program has also called it,
+what the program that registered the name first gets from its calls of
+RXFUNCDROP, and whether the name stays available, is not specified; the second
+program's side is in [RXFUNCADD's repeat rule](r:bif.rxfuncadd.repeat).
 
 ```rexx
 call rxfuncadd 'spec_rxfuncdrop_one', 'no_such_library_spec', 'p'
