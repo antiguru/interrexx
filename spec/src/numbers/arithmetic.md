@@ -22,13 +22,13 @@ left to the expressions chapter.
 
 r[num.arithmetic.operand]
 Each operand of an arithmetic operator must be a [number](r:num.index.form),
-and both are checked before the operator does anything else. A string that is
-not a number raises `SYNTAX 41.1` for an operand on either side and for the
-operand of a prefix operator, so a bad operand wins over a zero divisor or any
-other error that the operator would otherwise find. The right operand of `**`
-is the exception: it is the exponent and is checked by
-[its own rule](r:num.arithmetic.exponent). A string whose exponent is out of
-[range](r:num.limits.not-number) is not a number either.
+and a string that is not one raises `SYNTAX 41.1`, as [the use
+rule](r:num.index.use) says. Both operands, and the operand of a prefix
+operator, are checked before the operator does anything else, so a bad operand
+wins over a zero divisor or any other error that the operator would otherwise
+find. The right operand of `**` is the exception: it is the exponent and is
+checked by [its own rule](r:num.arithmetic.exponent). A string whose exponent
+is out of [range](r:num.limits.not-number) is not a number either.
 
 ```rexx
 signal on syntax name a
@@ -81,9 +81,10 @@ r[num.arithmetic.cut]
 Before `*`, `/`, `%` or `//` uses an operand that has more than DIGITS plus
 one significant digits, it cuts the operand to its first DIGITS plus one
 digits, counted from the first nonzero digit. The cut drops the later digits
-and does not round them, so the extra digit is only a guard that the final
-rounding looks at. The two products and the two quotients below therefore
-differ from the exact ones, which would round to 4, 4, 1.0 and 0.32.
+and does not round them, and the one digit kept beyond DIGITS is the one that
+decides the rounding of the result. The two products and the two quotients
+below therefore differ from the exact ones, which would round to 4, 4, 1.0 and
+0.32.
 
 ```rexx
 numeric digits 1
@@ -171,9 +172,8 @@ say (1 / 3) (2 / 3) (22 / 7) (1 / 80000) (12345 / 100) (1 / 800000000)
 r[num.arithmetic.zero]
 A zero divisor raises `SYNTAX 42.3` for `/`, `%` and `//`, whatever the
 dividend is, zero included. A divisor is zero when it is a number of value
-zero, whatever its written form. The operands are checked as
-[numbers](r:num.arithmetic.operand) first, so the error is `41.1` when one of
-them is not.
+zero, whatever its written form. The [operand
+check](r:num.arithmetic.operand) comes first, as the last example shows.
 
 ```rexx
 signal on syntax name a
@@ -362,8 +362,9 @@ A result of `+`, `-`, `*` or `/` that is out of the exponent range raises the
 errors that [the limits page](limits.md) gives, `SYNTAX 42.901` for an
 overflow and `SYNTAX 42.902` for an underflow, and the integer division
 operators raise [the errors above](r:num.arithmetic.integer) for a result that
-is too wide. No operator answers a value outside the range, and none answers a
-rounded-off zero for a result that is too small.
+is too wide. No operator answers a value outside the range, and [the underflow
+rule](r:num.limits.underflow) says that a result that is too small is not
+replaced by zero.
 
 ```rexx
 signal on syntax name a
@@ -394,7 +395,12 @@ the zeros that start the operand do not. An operand of value zero has no
 digits. The condition is raised for the left operand first and only after both
 operands were found to be numbers, and the builtins raise no such condition.
 When the condition is not trapped the operation goes on with the digits it
-has, cut as the [cut rule](r:num.arithmetic.cut) says.
+has, cut as the [cut rule](r:num.arithmetic.cut) says. When the condition is
+trapped, this book does not specify which comes first: the condition for a
+wide left operand, or an error from the checks of the right operand, which are
+`SYNTAX 42.3` for a zero divisor of `/`, `%` and `//` ([the zero
+rule](r:num.arithmetic.zero)) and `SYNTAX 26.8` for the exponent of `**` ([the
+exponent rule](r:num.arithmetic.exponent)).
 
 ```rexx
 numeric digits 3
@@ -441,8 +447,10 @@ A divisor that is wider than NUMERIC DIGITS raises LOSTDIGITS even when the
 dividend is zero, and the description of the condition is the text of the
 operand as it was written, whichever operator produced the condition. ooRexx
 does not check the divisor when the dividend is zero and answers `0`. It
-describes an operand that went through a prefix operator by its value, as a
-number without an exponent.
+describes the operand of `*`, `/`, `%`, `//` and `**` and the operand of a
+prefix operator by its value, written in plain notation without leading zeros,
+a plus sign, a trailing point, surrounding blanks or an exponent, and it keeps
+the text as written for the operands of `+`, `-` and the comparisons.
 
 ```rexx
 numeric digits 3
@@ -453,9 +461,13 @@ z = '1.234E3'
 signal on lostdigits name b
 say -z
 b: say condition('d')
+signal on lostdigits name c
+say z * 1
+c: say condition('d')
 ```
 
 ```output
 1.234
+1.234E3
 1.234E3
 ```

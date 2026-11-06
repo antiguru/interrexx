@@ -46,9 +46,13 @@ Two numbers compare as the sign of their difference. The difference is the one
 that [the rule for `-`](r:num.arithmetic.addsub) gives, calculated at NUMERIC
 DIGITS minus NUMERIC FUZZ digits, and the numbers are equal when it is zero,
 the first is the lesser when it is negative and the greater when it is
-positive. So two numbers are equal when they agree in their first digits, as
-many as the precision keeps counted from the higher first digit of the two,
-and not when their values are exactly equal. Zero is equal to zero in any
+positive. So the numbers are equal when that difference vanishes in the
+rounding, which tolerates a small difference in the digits beyond the
+precision, counted from the higher first digit of the two, and the values need
+not be exactly equal. The difference is taken as the rule for `-` computes it
+and its range is not checked, so a comparison raises no `SYNTAX 42.901` or
+`SYNTAX 42.902` and an overflow of the difference does not change the answer.
+Zero is equal to zero in any
 form, and no number is equal to zero except zero, however small it is.
 
 ```rexx
@@ -56,6 +60,7 @@ say (1.000000001 = 1) (1.00000001 = 1) (1 < 1.00000001) (1 > 1.000000001)
 say (123456789 = 123456790) (1234567890 = 1234567891),
     (1234567890 = 1234567895)
 say (0 = -0) (0 = 0.00) (0 < 1e-999999999) (1e-999999999 = 0)
+say (9e999999999 > -9e999999999) (9e999999999 = -9e999999999)
 numeric digits 3
 say (1234 = 1233) (1234 < 1233) (1234 <= 1233) (1234 \= 1233) (1234 == 1233)
 say (1234 = 1240) (1234 = 1250) (1234 < 1250) (1234 < 1260)
@@ -67,6 +72,7 @@ say (1000 = 1004) (1000 = 1005) (100 = 100.4) (100 = 100.5),
 1 0 1 0
 0 1 0
 1 1 1 0
+1 0
 1 0 1 0 0
 0 0 1 1
 1 0 1 0 1
@@ -75,14 +81,14 @@ say (1000 = 1004) (1000 = 1005) (100 = 100.4) (100 = 100.5),
 ## Fuzz
 
 r[num.comparison.fuzz]
-NUMERIC FUZZ lowers the precision of a numeric comparison by that many
-digits, so that numbers that agree in their first DIGITS minus FUZZ digits are
-equal. It acts on comparisons alone: arithmetic still works at NUMERIC
-DIGITS. Equality under a fuzz is not transitive, since each pair is judged by
-the difference of the two and not through a third number. The builtins that
-pick one of several numbers use [the same
-test](r:bif.index.num.pick), and a strict comparison is unaffected because
-it compares text.
+NUMERIC FUZZ widens the tolerance of [the comparison
+rule](r:num.comparison.numeric): each unit of it lets a difference ten times
+as large vanish in the rounding. It acts on comparisons alone: arithmetic
+still works at NUMERIC DIGITS. Equality under a fuzz is not transitive, since
+each pair is judged by the difference of the two and not through a third
+number. The builtins that pick one of several numbers use [the same
+test](r:bif.index.num.pick), and a strict comparison is unaffected because it
+compares text.
 
 ```rexx
 numeric digits 3
