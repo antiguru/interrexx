@@ -40,6 +40,29 @@ c: say condition('o')~code
 93.943
 ```
 
+r[bif.min.omitted]
+Sent as a message, MIN raises `SYNTAX 93.903` when an argument is omitted
+and a later argument is passed, whether the omitted place is the first
+argument after the receiver or a later one. Omitted places after the last
+number passed are no arguments at all. (This is the message form only; the
+error of the same mistake in a function call is not specified by this book.)
+
+```rexx
+say (4)~min(2,,)
+signal on syntax name a
+say (1)~min(,3)
+a: say condition('o')~code
+signal on syntax name b
+say (5)~min(2,,3)
+b: say condition('o')~code
+```
+
+```output
+2
+93.903
+93.903
+```
+
 ## The result
 
 r[bif.min.result]
@@ -51,7 +74,7 @@ digits and [written](r:bif.index.num.write) in plain or scientific notation,
 and its sign is kept.
 
 ```rexx
-say min(12, 6, 7, 9) min(-7, -3, -4.3) min('+2', '1E1', '09')
+say min(15, 4, 8, 11) min(-9, -2, -6.5) min('+2', '1E1', '09')
 say min(' 0.0 ', '-0.000') min(-0.5)
 numeric digits 3
 say min(123456, 5) min(0.01234, 0.01233) min(-1000, -999.9)
@@ -60,7 +83,7 @@ say min(123456, 1234567) min(-123456, -5)
 ```
 
 ```output
-6 -7 2
+4 -9 2
 0 -0.5
 5 0.0123 -1.00E+3
 123E+3 -123E+3
@@ -86,8 +109,7 @@ say min(1.234, 1.236) min(1.2349, 1.2351)
 r[bif.min.fuzz]
 Numbers that NUMERIC FUZZ makes equal are equal to MIN, which then answers
 the earlier of them, as the [list rule](r:bif.index.num.pick) says. With
-NUMERIC FUZZ 0, the setting at the start of a program, only numbers of the
-same value are equal.
+NUMERIC FUZZ 0, the default, only numbers of the same value are equal.
 
 ```rexx
 numeric digits 3

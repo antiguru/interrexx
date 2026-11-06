@@ -40,6 +40,29 @@ c: say condition('o')~code
 93.943
 ```
 
+r[bif.max.omitted]
+Sent as a message, MAX raises `SYNTAX 93.903` when an argument is omitted
+and a later argument is passed, whether the omitted place is the first
+argument after the receiver or a later one. Omitted places after the last
+number passed are no arguments at all. (This is the message form only; the
+error of the same mistake in a function call is not specified by this book.)
+
+```rexx
+say (4)~max(2,,)
+signal on syntax name a
+say (1)~max(,3)
+a: say condition('o')~code
+signal on syntax name b
+say (1)~max(2,,3)
+b: say condition('o')~code
+```
+
+```output
+4
+93.903
+93.903
+```
+
 ## The result
 
 r[bif.max.result]
@@ -51,7 +74,7 @@ and [written](r:bif.index.num.write) in plain or scientific notation, and its
 sign is kept.
 
 ```rexx
-say max(12, 6, 7, 9) max(-7, -3, -4.3) max('+2', '1E1', '09')
+say max(15, 4, 8, 11) max(-9, -2, -6.5) max('+2', '1E1', '09')
 say max(' 0.0 ', '-0.000') max(-0.5)
 numeric digits 3
 say max(123456, 5) max(0.01234, 0.01233) max(1000, 999.9)
@@ -60,7 +83,7 @@ say max(123456, 5) max(-123456, -1234567)
 ```
 
 ```output
-12 -3 10
+15 -2 10
 0 -0.5
 1.23E+5 0.0123 1.00E+3
 123E+3 -123E+3
@@ -86,8 +109,7 @@ say max(1.234, 1.236) max(1.2349, 1.2351)
 r[bif.max.fuzz]
 Numbers that NUMERIC FUZZ makes equal are equal to MAX, which then answers
 the earlier of them, as the [list rule](r:bif.index.num.pick) says. With
-NUMERIC FUZZ 0, the setting at the start of a program, only numbers of the
-same value are equal.
+NUMERIC FUZZ 0, the default, only numbers of the same value are equal.
 
 ```rexx
 numeric digits 3
