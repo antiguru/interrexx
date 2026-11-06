@@ -477,7 +477,7 @@ fn the_oracles_daemon_stops_with_its_test_process() {
         .stderr(Stdio::null())
         .spawn()
         .expect("the child runs");
-    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("oracle-runtime-{}", child.id()));
+    let dir = std::env::temp_dir().join(format!("orc-{}", child.id()));
     let status = child.wait_with_output().expect("the child ends").status;
     assert!(status.success(), "the child's oracle run failed");
     let stopped = (0..100).any(|_| {
