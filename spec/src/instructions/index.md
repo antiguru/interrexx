@@ -67,11 +67,13 @@ keyword
 ```
 
 r[instr.index.keywords]
-The keyword instruction names are [ADDRESS](address.md), ARG, [CALL](call.md),
+The keyword instruction names are [ADDRESS](address.md), [ARG](arg.md),
+[CALL](call.md),
 [DO](do.md), [DROP](drop.md), [EXIT](exit.md), EXPOSE, FORWARD, GUARD, [IF](if.md),
 [INTERPRET](interpret.md), [ITERATE](iterate.md), [LEAVE](leave.md),
 [LOOP](loop.md), [NOP](nop.md), [NUMERIC](numeric.md), [OPTIONS](options.md),
-PARSE, [PROCEDURE](procedure.md), PULL, PUSH, QUEUE, RAISE, REPLY,
+[PARSE](parse.md), [PROCEDURE](procedure.md), [PULL](pull.md),
+[PUSH](push.md), [QUEUE](queue.md), RAISE, REPLY,
 [RETURN](return.md), [SAY](say.md), [SELECT](select.md),
 [SIGNAL](signal.md), [TRACE](trace.md) and USE. A clause that is not
 an assignment and whose first token is one of these names is that instruction,
