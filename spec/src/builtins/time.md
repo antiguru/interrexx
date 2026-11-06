@@ -106,10 +106,10 @@ r[bif.time.out.stamp]
 Two options write a count that includes the date. F writes the number of
 microseconds since the start of 1 January 0001, and T the number of seconds
 since the start of 1 January 1970, which is negative before it. T is F
-divided by 1000000, rounded down, less 62135596800. The string of a conversion
-has no date, so its date is 1 January 0001: F is then the time of day in
-microseconds, and T is that time of day in seconds less 62135596800, a negative
-number. NUMERIC DIGITS plays no part in how they are written.
+divided by 1000000, rounded down, less 62135596800. A string read with the
+informat C, H, L, M, N or S has no date, so its date is 1 January 0001: F is
+then the time of day in microseconds, and T is that time of day in seconds less
+62135596800, a negative number. NUMERIC DIGITS plays no part in how they are written.
 
 ```rexx
 say time('F', '00:00:00') time('F', '00:00:01') time('F', '23:59:59.999999', 'L')
@@ -159,8 +159,10 @@ The current time of every format is that of the local time zone, and the
 option O writes how far that zone is from UTC: a whole number of microseconds,
 positive east of UTC and negative to the west, and less than a day. F and T are
 local like the rest: the UTC reading of F is `F - O`. A call that gives O
-with a `string` reads the string as usual and answers the same offset. This book
-does not specify which time zone a program runs in.
+with a `string` reads the string as usual and answers the same offset, except
+with the [informat O](r:bif.time.in.offset), whose answer is the offset that
+the string gives. This book does not specify which time zone a program runs in,
+nor whether that zone can change while the program runs.
 
 ```rexx
 numeric digits 20
@@ -168,6 +170,7 @@ o = time('O')
 say datatype(o, 'W') (abs(o) < 86400000000) (time('O') == time('O', '12:00:00')),
     (time('T') == time('F') % 1000000 - 62135596800) (time('S') == time('T') // 86400)
 say time('O', '00:00:00') == time('O', '23:59:59.5', 'L')
+say time('O', '7200000000', 'O') time('O', '-7200000000', 'O') time('O', '0', 'O')
 signal on syntax name a
 say time('O', 'noon')
 a: say condition('o')~code
@@ -176,6 +179,7 @@ a: say condition('o')~code
 ```output
 1 1 1 1 1
 1
+7200000000 -7200000000 0
 40.19
 ```
 
@@ -254,11 +258,16 @@ l: say condition('o')~code
 r[bif.time.in.number]
 The informats H, M, S, F and T read a count: hours, minutes or seconds since
 midnight, or the number of microseconds or seconds that F and T
-[write](r:bif.time.out.stamp). The string may have any form of a number
-whose value is a whole number, such as `5`, ` 5 `, `+5`, `5.0` and `5e0`, and
-the number of digits it has plays no part in whether it is accepted; NUMERIC
-DIGITS does not apply. H must be from 0 to 23, M from 0 to 1439 and S from 0 to
-86399. F must be from 0 to 315537897599999999 and T from -62135596800 to
+[write](r:bif.time.out.stamp). The string may have any form of a number, such
+as `5`, ` 5 `, `+5`, `5.0` and `5e0`, and NUMERIC DIGITS does not apply. A
+string whose value is a whole number is accepted, however many leading or
+trailing zeros it has. A string whose value is not a whole number raises
+`SYNTAX 40.19` when it has at most nine significant digits for H, M and S, or
+at most 18 for F and T, its significant digits being those from the first digit
+that is not 0 to the last digit that is not 0. This book does not specify
+whether a string with more significant digits, whose value is not a whole
+number, is accepted, nor what it then reads as. H must be from 0 to 23, M from
+0 to 1439 and S from 0 to 86399. F must be from 0 to 315537897599999999 and T from -62135596800 to
 253402300799, which are the instants from 1 January 0001 to 31 December 9999.
 An F or T names a date and a time, and a format other than F or T keeps only the
 time of day; F and T keep both.
@@ -267,11 +276,24 @@ time of day; F and T keep both.
 say time('N', '5', 'H') time('N', ' 5 ', 'H') time('N', '+5', 'H') time('N', '5.0', 'H') time('N', '5e0', 'H')
 say time('N', '23', 'H') time('N', '61', 'M') time('N', '1439', 'M') time('N', '3661', 'S') time('N', '86399', 'S')
 say time('N', '86399999999', 'F') time('N', '86400000000', 'F') time('N', '172800000000', 'F')
-say time('N', '0', 'T') time('N', '-1', 'T') time('N', '86400', 'T') time('N', '1480003888', 'T')
+say time('N', '0', 'T') time('N', '-1', 'T') time('N', '86400', 'T') time('N', '1709643909', 'T')
 say time('F', '86400000001', 'F') time('T', '-1', 'T') time('T', '62135596799999999', 'F')
 say time('F', '1', 'T') time('F', '86400', 'T') time('F', '-86400', 'T')
+say time('N', '5.' || copies('0', 30), 'H') time('N', copies('0', 30) || '5', 'S') time('N', '0.5e1', 'M')
 numeric digits 3
-say time('N', '63326132161828000', 'F') time('F', '63326132161828000', 'F')
+say time('N', '63845240709000000', 'F') time('F', '63845240709000000', 'F')
+signal on syntax name j
+say time('N', '22.9999999', 'H')
+j: say condition('o')~code
+signal on syntax name k
+say time('N', '1438.99999', 'M')
+k: say condition('o')~code
+signal on syntax name l
+say time('N', '1.00000000000000001', 'F')
+l: say condition('o')~code
+signal on syntax name m
+say time('N', '-1.0000000000000001', 'T')
+m: say condition('o')~code
 signal on syntax name a
 say time('N', '24', 'H')
 a: say condition('o')~code
@@ -305,10 +327,15 @@ i: say condition('o')~code
 05:00:00 05:00:00 05:00:00 05:00:00 05:00:00
 23:00:00 01:01:00 23:59:00 01:01:01 23:59:59
 23:59:59 00:00:00 00:00:00
-00:00:00 23:59:59 00:00:00 16:11:28
+00:00:00 23:59:59 00:00:00 13:05:09
 86400000001 -1 -1
 62135596801000000 62135683200000000 62135510400000000
-08:16:01 63326132161828000
+05:00:00 00:00:05 00:05:00
+13:05:09 63845240709000000
+40.19
+40.19
+40.19
+40.19
 40.19
 40.19
 40.19
@@ -340,24 +367,33 @@ say time('N', '5', 'H') time('N', '90', 'M') time('F', '2', 'H') time('F', '2', 
 ```
 
 r[bif.time.in.offset]
-The informat O reads a whole number of microseconds, in the forms that the
-[other counts](r:bif.time.in.number) accept, as an offset from UTC. The
+The informat O reads a whole number of microseconds, as the informats F and T
+[read](r:bif.time.in.number) their counts, as an offset from UTC. The
 answer is the current time in a zone that far from UTC, as of the
 [moment](r:bif.index.dt.stamp) of the clause: with the offset of the local zone,
-the current local time. This book does not specify the range of the offset.
+the current local time. Every offset from -86400000000 to 86400000000, a day
+either way, is accepted; this book does not specify how much further the range
+of the offset goes.
 
 ```rexx
 numeric digits 20
 say (time('F', time('O'), 'O') == time('F')) (time('N', time('O'), 'O') == time('N')),
     (time('F', 3600000000, 'O') - time('F', 0, 'O') == 3600000000),
     (time('T', -7200000000, 'O') - time('T', 0, 'O') == -7200)
+say (time('F', 86400000000, 'O') - time('F', 0, 'O') == 86400000000),
+    (time('F', -86400000000, 'O') - time('F', 0, 'O') == -86400000000)
 signal on syntax name a
 say time('N', '13:05:09', 'O')
 a: say condition('o')~code
+signal on syntax name b
+say time('N', '3600000000.5', 'O')
+b: say condition('o')~code
 ```
 
 ```output
 1 1 1 1
+1 1
+40.19
 40.19
 ```
 
@@ -420,15 +456,16 @@ numeric digits 3
 x = time('E')
 call syssleep 0.3
 e = time('E')
-say datatype(e, 'N') (e >= 0.25) (e < 100) length(e) - pos('.', e) left(e, 2)
+say datatype(e, 'N') (e >= 0.25) verify(e, '0123456789.') countstr('.', e) (pos('.', e) > 1),
+    (length(e) - pos('.', e)) (left(e, 1) \== '0' | pos('.', e) == 2)
 call syssleep 1.1
 e = time('E')
-say (e >= 1.35) (e < 100) length(e) - pos('.', e) pos('.', e) verify(e, '0123456789.')
+say (e >= 1.35) verify(e, '0123456789.') countstr('.', e) (length(e) - pos('.', e)) (left(e, 1) \== '0')
 ```
 
 ```output
-1 1 1 6 0.
-1 1 6 2 0
+1 1 0 1 1 6 1
+1 0 1 6 1
 ```
 
 r[bif.time.elapsed.reset]
@@ -438,17 +475,19 @@ counts from the moment of this call.
 ```rexx
 x = time('R')
 call syssleep 0.4
+parse value resets() with a b
+m = time('E')
+/* m counts on through the label's reset; without the reset, b would include a */
+say (a >= 0.35) (b >= 0.35) (a + b < m + 0.2)
+exit
+resets:
 a = time('R')
-b = time('E')
-say (a >= 0.35) (b < a)
 call syssleep 0.4
-c = time('E')
-say (c >= 0.35) (c < 100)
+return a time('E')
 ```
 
 ```output
-1 1
-1 1
+1 1 1
 ```
 
 r[bif.time.elapsed.clause]
@@ -459,11 +498,16 @@ the next clause and not for the calls after it in the same clause.
 ```rexx
 x = time('R')
 call syssleep 0.3
-a = time('E') time('E') time('R') time('E') time('R')
+parse value readings() with a '|' b
+m = time('E')
 say words(a) (word(a, 1) >= 0.25) (word(a, 1) == word(a, 2)) (word(a, 1) == word(a, 3)),
     (word(a, 1) == word(a, 4)) (word(a, 1) == word(a, 5))
-b = time('E')
-say b < word(a, 1)
+/* m counts on through the label's reset; without the reset, b would include word(a, 1) */
+say word(a, 1) + b < m + 0.2
+exit
+readings:
+a = time('E') time('E') time('R') time('E') time('R')
+return a '|' time('E')
 ```
 
 ```output
@@ -490,11 +534,16 @@ say 'main' kind(time('E'))
 say 'routine' kind(outside())
 say 'method' kind(.o~new~m)
 say 'start' kind(.o~new~start('m')~result)
-interpret 'y = time("R")'
-say 'interpret' kind(time('E'))
+parse value interpreted() with y e
+m = time('E')
+/* m counts on through the label's reset; if INTERPRET had a clock of its own, e would include y */
+say 'interpret' kind(y) (y + e < m + 0.2)
 exit
 starter: return time('R')
 inside: v = time('E'); z = time('R'); return v
+interpreted:
+interpret 'y = time("R")'
+return y time('E')
 kind: procedure
 parse arg v
 if v >= 0.25 then return 'inherited'
@@ -513,7 +562,7 @@ main inherited
 routine fresh
 method fresh
 start fresh
-interpret fresh
+interpret inherited 1
 ```
 
 r[bif.time.elapsed.convert]

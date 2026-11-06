@@ -90,8 +90,7 @@ r[bif.date.out.names]
 Three options write a name. M writes the full English name of the month, W
 the full English name of the day of the week, and L writes the day without a
 leading zero, the full name of the month and the year in four digits,
-separated by blanks. Both names begin with a capital letter, and the week
-begins on Monday.
+separated by blanks. Both names begin with a capital letter.
 
 ```rexx
 list = ''
@@ -251,9 +250,14 @@ f: say condition('o')~code
 r[bif.date.in.number]
 The informats B, F and T read a count: the number of days, of microseconds or
 of seconds that B, F and T [write](r:bif.date.out.counts). The string may
-have any form of a number whose value is a whole number, such as `5`, ` 5 `,
-`+5`, `5.0` and `5e0`, and the number of digits it has plays no part in whether
-it is accepted; NUMERIC DIGITS does not apply. B must be from 0 to
+have any form of a number, such as `5`, ` 5 `, `+5`, `5.0` and `5e0`, and NUMERIC
+DIGITS does not apply. A string whose value is a whole number is accepted,
+however many leading or trailing zeros it has. A string whose value is not a
+whole number raises `SYNTAX 40.19` when it has at most nine significant digits
+for B, or at most 18 for F and T, its significant digits being those from the
+first digit that is not 0 to the last digit that is not 0. This book does not
+specify whether a string with more significant digits, whose value is not a
+whole number, is accepted, nor what it then reads as. B must be from 0 to
 3652058, F from 0 to 315537897599999999, and T from -62135596800 to
 253402300799, which are 1 January 0001 to 31 December 9999. A count of F or T
 that falls inside a day reads as that day. The informat D is read in the same way, [as the
@@ -263,10 +267,23 @@ day of the current year](r:bif.date.in.day).
 say date('S', '5', 'B') date('S', ' 5 ', 'B') date('S', '+5', 'B') date('S', '5.0', 'B'),
     date('S', '5e0', 'B') date('S', '000005', 'B')
 say date('S', '0', 'B') date('S', '3652058', 'B')
-say date('S', '86399999999', 'F') date('S', '86400000000', 'F') date('S', '63630372300000000', 'F')
-say date('S', '-1', 'T') date('S', '86399', 'T') date('S', '86400', 'T') date('S', '1480003888', 'T')
+say date('S', '86399999999', 'F') date('S', '86400000000', 'F') date('S', '63845193600000000', 'F')
+say date('S', '-1', 'T') date('S', '86399', 'T') date('S', '86400', 'T') date('S', '1709643909', 'T')
+say date('S', '5.' || copies('0', 30), 'B') date('S', copies('0', 30) || '5', 'B') date('S', '5000e-3', 'B')
 numeric digits 3
-say date('S', '63630372300000000', 'F') date('S', '1480003888', 'T')
+say date('S', '63845193600000000', 'F') date('S', '1709643909', 'T')
+signal on syntax name h
+say date('S', '1.99999999', 'B')
+h: say condition('o')~code
+signal on syntax name i
+say date('S', '1.5000000000000', 'B')
+i: say condition('o')~code
+signal on syntax name j
+say date('S', '1.00000000000000001', 'F')
+j: say condition('o')~code
+signal on syntax name k
+say date('S', '1709643909.00000001', 'T')
+k: say condition('o')~code
 signal on syntax name a
 say date('S', '3652059', 'B')
 a: say condition('o')~code
@@ -293,9 +310,14 @@ g: say condition('o')~code
 ```output
 00010106 00010106 00010106 00010106 00010106 00010106
 00010101 99991231
-00010101 00010102 20170514
-19691231 19700101 19700102 20161124
-20170514 20161124
+00010101 00010102 20240305
+19691231 19700101 19700102 20240305
+00010106 00010106 00010106
+20240305 20240305
+40.19
+40.19
+40.19
+40.19
 40.19
 40.19
 40.19
@@ -307,14 +329,15 @@ g: say condition('o')~code
 
 r[bif.date.in.day]
 The informat D reads a number from 1 to the number of days of the current year
-(366 in a leap year, 365 in another), in any form that the informat B accepts,
-as the day of that year. The year is that of the [moment](r:bif.index.dt.stamp)
+(366 in a leap year, 365 in another), read as the informat B
+[reads](r:bif.date.in.number) its count, nine significant digits included, as
+the day of that year. The year is that of the [moment](r:bif.index.dt.stamp)
 of the clause. A number outside that range raises `SYNTAX 40.19`.
 
 ```rexx
-y = left(date('S'), 4)
-say (date('S', '1', 'D') == y || '0101') (date('S', '32', 'D') == y || '0201'),
-    (date('S', '365', 'D') == y || '1231' | date('S', '365', 'D') == y || '1230')
+say (date('S', '1', 'D') == left(date('S'), 4) || '0101'),
+    (date('S', '32', 'D') == left(date('S'), 4) || '0201'),
+    (date('S', '365', 'D') == left(date('S'), 4) || '1231' | date('S', '365', 'D') == left(date('S'), 4) || '1230')
 say (date('N', ' 1 ', 'D') == date('N', '1', 'D')) (date('E', '1.0', 'D') == date('E', '1', 'D'))
 signal on syntax name a
 say date('S', '0', 'D')
@@ -325,11 +348,15 @@ b: say condition('o')~code
 signal on syntax name c
 say date('S', '1 Jan', 'D')
 c: say condition('o')~code
+signal on syntax name d
+say date('S', '1.99999999', 'D')
+d: say condition('o')~code
 ```
 
 ```output
 1 1 1
 1 1
+40.19
 40.19
 40.19
 40.19
@@ -343,13 +370,13 @@ year plus 49 the latest. The current year is that of the [moment](r:bif.index.dt
 of the clause. Every other informat gives the year in full.
 
 ```rexx
-y = left(date('S'), 4)
 ok = 1
 do n = 0 to 99
   yy = right(n, 2, 0)
-  r = left(date('S', yy || '/01/01', 'O'), 4)
-  ok = ok & (r >= y - 50) & (r <= y + 49) & (right(r, 2) == yy)
-  ok = ok & (left(date('S', '01/01/' || yy, 'E'), 4) == r) & (left(date('S', '01/01/' || yy, 'U'), 4) == r)
+  r = left(date('S', yy || '/01/01', 'O'), 4) left(date('S', '01/01/' || yy, 'E'), 4),
+      left(date('S', '01/01/' || yy, 'U'), 4) left(date('S'), 4)
+  parse var r o e u y
+  ok = ok & (o >= y - 50) & (o <= y + 49) & (right(o, 2) == yy) & (e == o) & (u == o)
 end
 say ok
 ```
@@ -427,12 +454,15 @@ d: say condition('o')~code
 
 r[bif.date.sep.char]
 A separator, `osep` or `isep`, is the null string or a single character
-that is neither a letter nor a digit. A blank is a separator, and so is `$`.
-Any other value raises `SYNTAX 40.43`.
+that is neither one of the 52 ASCII letters nor one of the ten digits. A blank
+is a separator, and so are `$`, `'00'x` and `'E9'x`. Any other value raises
+`SYNTAX 40.43`.
 
 ```rexx
 say date('S', '5 Mar 2024', 'N', '$') date('S', '5 Mar 2024', 'N', ' ') date('S', '5 Mar 2024', 'N', '')
 say date('S', '5$Mar$2024', 'N', , '$') date('S', '5Mar2024', 'N', , '')
+say date('S', '5' || '00'x || 'Mar' || '00'x || '2024', 'N', , '00'x),
+    date('S', '5' || 'E9'x || 'Mar' || 'E9'x || '2024', 'N', , 'E9'x) c2x(date('S', '5 Mar 2024', 'N', 'E9'x))
 signal on syntax name a
 say date('S', '5 Mar 2024', 'N', 'x')
 a: say condition('o')~code
@@ -448,11 +478,16 @@ d: say condition('o')~code
 signal on syntax name e
 say date('S', '5--Mar--2024', 'N', , '--')
 e: say condition('o')~code
+signal on syntax name f
+say date('S', '5 Mar 2024', 'N', 'C3A9'x)
+f: say condition('o')~code
 ```
 
 ```output
 2024$03$05 2024 03 05 20240305
 20240305 20240305
+20240305 20240305 32303234E93033E93035
+40.43
 40.43
 40.43
 40.43
@@ -536,9 +571,10 @@ e: say condition('o')~code
 ```
 
 r[bif.date.sep.in.informat]
-An `isep` with an `informat` that does not apply separators, B, D, F or T,
-raises `SYNTAX 40.44`, as does an `osep` with an `option` that does not apply
-them: B, D, F, L, M, T or W, or a first character that names no format at all.
+An `isep` with an `informat` that separators do not apply to, B, D, F, L, M, T
+or W, raises `SYNTAX 40.44`, as does an `osep` with an `option` of the same
+seven letters, or with a first character that names no format at all. An `isep` with an `informat` whose first character names no
+format is the [letter error](r:bif.date.in.letter), `SYNTAX 40.904`.
 
 ```rexx
 signal on syntax name a
@@ -556,6 +592,15 @@ d: say condition('o')~code
 signal on syntax name e
 say date('X', '5 Mar 2024', 'N', '-')
 e: say condition('o')~code
+signal on syntax name f
+say date('S', '5-Mar-2024', 'L', , '-')
+f: say condition('o')~code
+signal on syntax name g
+say date('S', '5-Mar-2024', 'W', , '-')
+g: say condition('o')~code
+signal on syntax name h
+say date('S', '5-Mar-2024', 'Q', , '-')
+h: say condition('o')~code
 ```
 
 ```output
@@ -564,6 +609,9 @@ e: say condition('o')~code
 40.44
 40.44
 40.44
+40.44
+40.44
+40.904
 ```
 
 ## The order of the checks

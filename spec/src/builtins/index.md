@@ -1134,7 +1134,8 @@ A call of DATE or TIME with a `string` is a conversion: it reads `string` in
 the format that `informat` names (N when `informat` is omitted) and answers
 it in the format that `option` names (N when `option` is omitted). A
 conversion does not ask the clock, except where a page says it does. A
-`string` that is not valid in `informat` raises `SYNTAX 40.19`. An
+`string` that is not valid in `informat` raises `SYNTAX 40.19`, or the code
+that its page gives, as DATE does [with an `isep`](r:bif.date.sep.in). An
 `informat` with no `string` raises `SYNTAX 40.5`, since a call that omits
 `string` asks for the current value and has nothing to read.
 
@@ -1152,6 +1153,9 @@ c: say condition('o')~code
 signal on syntax name d
 say date('S', '2000-02-29')
 d: say condition('o')~code
+signal on syntax name e
+say date('S', '2000-02-29', 'N', , '-')
+e: say condition('o')~code
 ```
 
 ```output
@@ -1160,18 +1164,19 @@ d: say condition('o')~code
 40.5
 40.19
 40.19
+40.44
 ```
 
 > **Note.** The ANSI draft (9.8.1, 9.8.5) raises `SYNTAX 40.19` for an `informat` that
 > has no `string`; ooRexx raises 40.5, and so does this book.
 
 r[bif.index.dt.stamp]
-The first call of DATE or TIME in a clause reads the clock, and every other
-call of either in that clause answers from the same reading: the dates and
-times, the offset from UTC, and the elapsed time of the TIME clock all
-belong to one moment, however long the clause takes to run. A clause that
-continues over several lines is one clause. The next clause reads the clock
-again.
+A clause has one moment, whatever DATE and TIME are asked in it: the clock is
+read at the first call of either, and every later call in the clause answers
+for that moment. The dates and times, the offset from UTC, and the elapsed
+time of the TIME clock all belong to it, however long the clause takes to run.
+A clause that continues over several lines is one clause. The next clause
+reads the clock again.
 
 ```rexx
 a = time('F') syssleep(0.1) time('F')
