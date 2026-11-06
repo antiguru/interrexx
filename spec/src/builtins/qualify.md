@@ -2,6 +2,7 @@
 element: QUALIFY
 kind: builtin
 syntax: "QUALIFY(name)"
+ansi: "9.7.7"
 rexxref: "Functions > Built-in Functions > QUALIFY"
 deviations: [34]
 ---
@@ -50,14 +51,20 @@ say (qualify(12) == p || '12')
 1
 ```
 
+> **Note.** The ANSI draft (9.7.7) takes `name` as an optional argument; ooRexx
+> requires it, and so does this rule.
+
 ## The result
 
 r[bif.qualify.relative]
-A name that does not begin with a slash is relative to the current
-directory: QUALIFY answers the current directory, a slash and the name. The
-name is not looked up, so the answer is the same whether or not the file
-exists, and QUALIFY creates nothing. A name with a blank in it, or one
-that is a number, is a name like any other.
+A name that does not begin with a slash or with `~` is relative to the
+current directory: QUALIFY answers the current directory, a slash and the
+name. The name is not looked up, so the answer is the same whether or not
+the file exists, and QUALIFY creates nothing. A name with a blank in it, or
+one that is a number, is a name like any other, and so is one that has a `~`
+anywhere but first. What QUALIFY answers for a name that begins with `~` is
+not specified, but it is not relative: the example shows that the answer is
+not the current directory and the name.
 
 ```rexx
 p = directory() || '/'
@@ -65,6 +72,8 @@ say (qualify('spec-qualify-none.tmp') == p || 'spec-qualify-none.tmp')
 say (qualify('a b/c d') == p || 'a b/c d')
 say (qualify('.a') == p || '.a') (qualify('a.') == p || 'a.') (qualify('..a') == p || '..a')
 say stream('spec-qualify-none.tmp', 'c', 'query exists') == ''
+say (qualify('a/~') == p || 'a/~') (qualify('./~') == p || '~')
+say (qualify('~') \== p || '~') (qualify('~/x') \== p || '~/x')
 ```
 
 ```output
@@ -72,6 +81,8 @@ say stream('spec-qualify-none.tmp', 'c', 'query exists') == ''
 1
 1 1 1
 1
+1 1
+1 1
 ```
 
 r[bif.qualify.absolute]

@@ -20,7 +20,8 @@ r[bif.lineout.args]
 `name` is a [string](r:conv.string.null) that names the stream; when it is
 omitted or null, the [standard output](r:bif.index.stream.std) is written.
 `string` is a string too. `line` is a line number: a
-[whole-number argument](r:bif.index.stream.args) and a
+[whole-number argument](r:bif.index.stream.args) whose
+[value](r:bif.index.stream.value) the stream rules give, and a
 [valid start](r:bif.index.stream.start). LINEOUT is not a String method. It
 takes three arguments at the most, by the [call rules](r:bif.index.call.too-many),
 and none is required.
@@ -149,7 +150,7 @@ call sysfiledelete f
 
 > **Note.** The first write puts `XY` and a line feed over `abc`, so that `def`
 > is now line 2 and `ghi` line 3. The second write puts its ten letters and a line
-> feed over `ghi` and `jkl` and their line ends, and go on three characters past them.
+> feed over `ghi` and `jkl` and their line ends, and goes on three characters past them.
 
 r[bif.lineout.line.end]
 A `line` that is past the last line of the data, one more than the number of
@@ -214,7 +215,8 @@ r[bif.lineout.close]
 When both `string` and `line` are omitted, LINEOUT closes the stream and
 answers 0, as [CHAROUT given only a name](r:bif.charout.close) does. A
 file that does not exist is created by it, and the characters written are in
-the file afterwards.
+the file afterwards. Whether the call closes the standard output is
+[not specified](r:bif.index.stream.lifetime).
 
 ```rexx
 f = 'spec-lineout-close.tmp'
@@ -239,8 +241,11 @@ r[bif.lineout.fail]
 When the stream cannot be written, LINEOUT writes nothing, answers 1 and
 raises NOTREADY. That is the case when the name cannot be opened for writing,
 as a name in a directory that does not exist, or a directory; when the
-stream was opened for reading only; and when the name is `STDIN`. A `line` is
-not checked then (see [the start rule](r:bif.index.stream.start)).
+stream was opened for reading only; and when the name is `STDIN` and a
+`string` is given. For a name that cannot be opened, a `line` is not checked
+(see [the start rule](r:bif.index.stream.start)). What a `line` does together
+with the name `STDIN` is [not specified](r:bif.index.stream.transient), and so
+is a call with that name and neither a `string` nor a `line`.
 
 ```rexx
 f = 'spec-lineout-fail.tmp'
@@ -281,8 +286,9 @@ READY: 3
 
 r[bif.lineout.std]
 Without a `name`, LINEOUT writes to the standard output, and with the name
-`STDERR` to the standard error. A `line` for a standard stream that is
-[transient](r:bif.index.stream.transient) raises `SYNTAX 93.958`.
+`STDERR` to the standard error. A `line` for the standard output or the
+standard error, when it is [transient](r:bif.index.stream.transient), raises
+`SYNTAX 93.958`.
 
 ```rexx
 call lineout , 'a'
@@ -328,8 +334,9 @@ READY:
 ```
 
 r[bif.lineout.deviation.56]
-A `line` counts from the start of the data by the line ends that are there,
-whichever operation touched the stream before. ooRexx counts from a line
+A `line` counts from the start of the data, as [the line rule](r:bif.lineout.line)
+says, by the line ends that are there, whichever operation touched the stream
+before. ooRexx counts from a line
 number that it tracks, which an operation on characters resets: a LINEOUT
 that gives a line past the last one then writes past the end of the data,
 and the characters between are `'00'x`.
