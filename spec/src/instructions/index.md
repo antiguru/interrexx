@@ -25,10 +25,10 @@ The pages of this chapter are:
 * [Commands](command.md): an expression sent to the current environment,
   and the return code that comes back.
 
-The keyword instructions are ADDRESS, ARG, CALL, DO, DROP, EXIT, EXPOSE,
-FORWARD, GUARD, IF, INTERPRET, ITERATE, LEAVE, LOOP, NOP, NUMERIC, OPTIONS,
-PARSE, PROCEDURE, PULL, PUSH, QUEUE, RAISE, REPLY, RETURN, SAY, SELECT,
-SIGNAL, TRACE and USE. The words THEN, ELSE, WHEN, OTHERWISE and END are
+The keyword instructions are ADDRESS, ARG, CALL, DO, [DROP](drop.md), EXIT,
+EXPOSE, FORWARD, GUARD, IF, [INTERPRET](interpret.md), ITERATE, LEAVE, LOOP,
+[NOP](nop.md), NUMERIC, [OPTIONS](options.md), PARSE, PROCEDURE, PULL, PUSH,
+QUEUE, RAISE, REPLY, RETURN, [SAY](say.md), SELECT, SIGNAL, TRACE and USE. The words THEN, ELSE, WHEN, OTHERWISE and END are
 not instructions: they are parts of IF, SELECT and DO. The directives, which
 start with two colons, are not instructions either, and their own chapter
 specifies them.
