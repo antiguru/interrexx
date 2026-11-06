@@ -9,8 +9,8 @@ rexxref: "Keyword Instructions > ITERATE"
 # ITERATE
 
 ITERATE ends the current pass of a loop and starts the next one. The rest of
-the block does not run for that pass, and control goes to the loop as if the
-interpreter had reached the END of the block. Without a name it acts on the
+the block does not run for that pass. The loop then does the work that ends a
+pass: the step, the tests, and the next pass. Without a name it acts on the
 innermost loop that is running, and with a name on the loop that has that
 name, which can be one further out. This page specifies what the next pass
 begins with, which loops a name can select, and the errors. It describes
@@ -24,9 +24,9 @@ ITERATE does what the END of the block does. A controlled loop steps its
 variable and runs its end tests, a WHILE phrase is tested before the next
 pass, and an UNTIL phrase is tested at once, so an ITERATE can end the loop
 when the UNTIL holds. A COUNTER variable counts the next pass as usual. If the
-selected loop is not the innermost, the loops inside it end, as with a LEAVE,
-and the control variable of an ended loop keeps its value. The clauses after
-the ITERATE do not run in the pass that it ends.
+selected loop is not the innermost, every block open inside it is closed
+first, and the control variables of those blocks keep their values. The
+clauses after the ITERATE do not run in the pass that it ends.
 
 ```rexx
 do i = 1 to 3
@@ -120,10 +120,9 @@ do 2; if 1 then iterate; say "skipped"; end; say "ok" => ok
 
 r[instr.iterate.name]
 `ITERATE name` selects the innermost running loop whose name is `name`. The
-naming rules are those of [LEAVE](r:instr.leave.name): the label when there is
-one, otherwise the control variable, compared without regard to case and with
-no substitution in a compound symbol. When no running loop has the name,
-ITERATE raises `SYNTAX 28.4`. A name that is not a symbol raises `SYNTAX
+names are those of [the LABEL rule](r:instr.do.label). When no running loop
+has the name, ITERATE raises `SYNTAX 28.4`. A name that is not a symbol raises
+`SYNTAX
 20.908`, and data after the name `SYNTAX 21.908`.
 
 ```rexx

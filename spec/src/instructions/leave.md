@@ -65,11 +65,11 @@ out
 ## Which block it selects
 
 r[instr.leave.target]
-A LEAVE with no name selects the innermost block that is a repetitive loop
-and is running. A simple group, which is a DO with no repetitor, and a SELECT
-are not loops, so an unnamed LEAVE passes over them and selects the loop
-around them, and raises `SYNTAX 28.1` when it has none. A group or a SELECT
-whose label a LEAVE names can be left, as can a loop.
+A LEAVE with no name selects the innermost block that is a repetitive loop and
+is running. A simple group, which is a DO with no repetitor, and a SELECT are
+not loops, so an unnamed LEAVE passes over them and selects the loop around
+them, and raises `SYNTAX 28.1` when it has none. A group or a SELECT whose
+label a LEAVE names can be left, as can a loop.
 
 ```rexx
 do 2
@@ -119,16 +119,12 @@ select; when 1 then leave; end => 28.1
 ```
 
 r[instr.leave.name]
-`LEAVE name` selects the innermost running block whose name is `name`. The
-name of a block is its label when it has a LABEL phrase and otherwise the
-control variable of a controlled loop or an OVER loop. A block with no label
-and no control variable has no name. The comparison ignores case, and a
-compound symbol matches by its text with no substitution for the tail. A loop
-that has a label is not found by the name of its control variable. The name
-must be a plain symbol, and the instruction takes nothing after it: a name
-that is not a symbol raises `SYNTAX 20.907` and extra data `21.907`. When no
-running block has the name, LEAVE raises `SYNTAX 28.3`. When two running
-blocks have the same name, the innermost is selected.
+`LEAVE name` selects the innermost running block whose
+[name](r:instr.do.label) is `name`. The name must be a plain symbol, and the
+instruction takes nothing after it: a name that is not a symbol raises
+`SYNTAX 20.907` and extra data `21.907`. When no running block has the name,
+LEAVE raises `SYNTAX 28.3`. When two running blocks have the same name, the
+innermost is selected.
 
 ```rexx
 do i = 1 to 3

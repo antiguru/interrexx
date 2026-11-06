@@ -14,7 +14,8 @@ and the block ends at the same END. The one difference is the clause that
 has nothing after the keyword: a DO with nothing is a group that runs once,
 and a LOOP with nothing is a loop that never ends by itself. This page states
 that difference and the places where the keyword matters. The standard
-defines DO only, so LOOP is an addition of ooRexx.
+defines DO only, so LOOP is an addition of ooRexx, and the `ansi` citation
+of this page names the sections of DO.
 
 ## What LOOP is
 

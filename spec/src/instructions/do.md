@@ -69,12 +69,14 @@ r[instr.do.count]
 evaluated once, when the DO is reached, and its value is the number of passes,
 so a later assignment to a variable of the expression changes nothing. The
 value must be a whole number that is not negative. It may be written with a
-decimal point or an exponent when that is its value, and it may have at most
-NUMERIC DIGITS digits when written without an exponent. Any other value
-raises `SYNTAX 26.2`. A count of zero runs no pass and does not raise an
-error. When LOSTDIGITS is trapped, a count written with more than DIGITS
-digits raises that condition before the error, as [the lost-digits
-rule](r:num.arithmetic.lostdigits) describes for an operand.
+decimal point or an exponent when that is its value, and it must be below 10
+to the power of NUMERIC DIGITS however it is written: at DIGITS 5, `9.9999e4`
+is a count and `1e5` is not. No count may reach 10 to the power of 18,
+whatever DIGITS is. Any other value raises `SYNTAX 26.2`. A count of zero runs
+no pass and does not raise an error. When LOSTDIGITS is trapped, a count
+written with more than DIGITS digits raises that condition before the error,
+as [the lost-digits rule](r:num.arithmetic.lostdigits) describes for an
+operand.
 
 ```rexx
 n = 3
@@ -94,6 +96,10 @@ call try 'do "x"; end'
 call try 'do ""; end'
 call try 'numeric digits 5; do 12345; leave; end'
 call try 'numeric digits 5; do 123456; leave; end'
+call try 'numeric digits 5; do 9.9999e4; leave; end'
+call try 'numeric digits 5; do 1e5; leave; end'
+call try 'numeric digits 20; do 999999999999999999; leave; end'
+call try 'numeric digits 20; do 1000000000000000000; leave; end'
 signal on lostdigits name wide
 numeric digits 5
 do 123456
@@ -121,6 +127,10 @@ do "x"; end => 26.2
 do ""; end => 26.2
 numeric digits 5; do 12345; leave; end => ok
 numeric digits 5; do 123456; leave; end => 26.2
+numeric digits 5; do 9.9999e4; leave; end => ok
+numeric digits 5; do 1e5; leave; end => 26.2
+numeric digits 20; do 999999999999999999; leave; end => ok
+numeric digits 20; do 1000000000000000000; leave; end => 26.2
 LOSTDIGITS 123456
 ```
 
@@ -175,7 +185,8 @@ once, and only after all of them does it assign the initial value to the
 control variable. A phrase therefore sees the variables as they were before
 the loop, even `name` itself, and nothing the block does to a variable of a
 phrase affects the loop. A missing STEP is 1. A missing LIMIT means that no
-limit ends the loop, and a missing COUNT means that no count does.
+limit ends the loop, and a missing COUNT means that no count does. A control
+variable written as a string is not specified.
 
 ```rexx
 do i = f('init', 1) to f('to', 3) by f('by', 1) for f('for', 5)
@@ -241,13 +252,12 @@ The interpreter checks each value when it has evaluated that expression, and
 before it evaluates the next, so the first fault in the written order is the
 one that is reported. The initial value, the LIMIT and the STEP must be
 [numbers](r:num.index.form), and the first that is not raises `SYNTAX 41.1`.
-The COUNT must be a whole number that is not negative and has at most
-NUMERIC DIGITS digits, as [the count rule](r:instr.do.count) says, and raises
-`SYNTAX 26.3` when it is not. The initial value is taken as the prefix `+`
-would answer it, so it is [rounded and written](r:num.arithmetic.prefix) like
-the result of an operation: blanks go, an exponent is written out as a result
-would show it, and the digits are cut to NUMERIC DIGITS, but a trailing zero
-after the point stays.
+The COUNT must be a value that [the count rule](r:instr.do.count) accepts, and
+raises `SYNTAX 26.3` when it is not. The initial value is taken as the prefix
+`+` would answer it, so it is [rounded and written](r:num.arithmetic.prefix)
+like the result of an operation: blanks go, an exponent is written out as a
+result would show it, and the digits are cut to NUMERIC DIGITS, but a trailing
+zero after the point stays.
 
 ```rexx
 call try 'do i = "a" to "b"; end'
@@ -506,8 +516,8 @@ m n
 ```
 
 r[instr.do.over.error]
-The expression must answer a message `MAKEARRAY` with an Array. An object
-that has no such method, or whose method answers something else, raises
+The expression must answer a message `MAKEARRAY` with an Array. An object that
+has no such method, or whose method answers something else, raises
 `SYNTAX 98.913`. A FOR phrase may follow the expression, and its count is
 checked as for a count loop, with `SYNTAX 26.3`. A TO or a BY phrase after the
 FOR raises `SYNTAX 25.927`, as [Deviation 38](r:instr.do.deviation.38) says.
@@ -546,12 +556,12 @@ do e over a for -1; end => 26.3
 r[instr.do.with]
 `DO WITH INDEX name ITEM name OVER expression` runs the block once for each
 entry of a collection, and assigns the index and the item of the entry. The
-two phrases come in either order, and either may be left out. The loop sends
-the value of the expression the message `SUPPLIER` and walks the Supplier that
-comes back, assigning the index first and the item after it, so that a
-variable named by both ends up holding the item. The entries are taken when
-the loop starts. A FOR phrase limits the number of entries as it does in an
-OVER loop. A phrase repeated raises `SYNTAX 27.902`, a WITH without OVER
+two phrases come in either order, and one or both may be left out. The loop
+sends the value of the expression the message `SUPPLIER` and walks the
+Supplier that comes back, assigning the index first and the item after it, so
+that a variable named by both ends up holding the item. The entries are taken
+when the loop starts. A FOR phrase limits the number of entries as it does in
+an OVER loop. A phrase repeated raises `SYNTAX 27.902`, a WITH without OVER
 raises `SYNTAX 27.904`, an object that does not answer `SUPPLIER` raises
 `SYNTAX 97.1`, and an answer that is not a Supplier raises `SYNTAX 98.994`.
 
@@ -568,6 +578,9 @@ do with index ix over a
 end
 do with index i item i over a
   say 'same' i
+end
+do with over a
+  say 'bare'
 end
 b = .array~of(1, 2)
 do with item it over b
@@ -604,6 +617,9 @@ index 3
 same x
 same y
 same z
+bare
+bare
+bare
 it 1
 it 2
 3
@@ -641,6 +657,10 @@ do i = 1 to 5 while i < 3
   say 'wi' i
 end
 say 'i' i
+do e over .array~of(1, 2, 3) while e < 3
+  say 'w' e
+end
+say 'e' e
 do 2 while 1, 1
   say 'list'
 end
@@ -668,6 +688,9 @@ w 3
 wi 1
 wi 2
 i 3
+w 1
+w 2
+e 3
 list
 list
 do while 2; end => 34.3
@@ -694,6 +717,10 @@ do i = 1 to 5 until t(i)
   say 'tail' i
 end
 say 'i' i
+do e over .array~of(1, 2, 3) until e = 2
+  say 'u' e
+end
+say 'e' e
 call try 'do until 2; end'
 call try 'do until 1, 2; nop; end'
 exit
@@ -718,6 +745,9 @@ body 3
 tail 3
 test 3
 i 3
+u 1
+u 2
+e 2
 do until 2; end => 34.4
 do until 1, 2; nop; end => 34.6
 ```
@@ -726,12 +756,14 @@ do until 1, 2; nop; end => 34.6
 
 r[instr.do.counter]
 A COUNTER phrase names a variable that holds the number of the current pass.
-The variable is set to zero when the loop starts, and to 1, 2, and so on at
-the start of each pass, once the tests have decided that the pass runs. A
-test of WHILE therefore sees the number of the previous pass. An assignment to
-the variable in the block does not disturb the count, which the loop keeps
-itself, so the next pass sets the variable again. After the loop the variable
-holds the number of passes begun. The phrase belongs to a loop and not to a
+The variable is set to zero before the expressions of the repetitor are
+evaluated, so they can read it, and then to 1, 2, and so on at the start of
+each pass, once the tests have decided that the pass runs. A test of WHILE
+therefore sees the number of the previous pass. An assignment to the variable
+in the block does not disturb the count, which the loop keeps itself, so the
+next pass sets the variable again. After the loop the variable holds the value
+that the last pass left in it: the number of that pass unless the block
+assigned the variable. The phrase belongs to a loop and not to a
 simple group, and a COUNTER on a DO with nothing else raises `SYNTAX 27.905`.
 The name may be a compound symbol, and it comes before any repetitor.
 
@@ -752,6 +784,13 @@ do counter c i = 1 to 3
   say c
 end
 say 'c' c
+do counter c i = 1 to 3
+  if i = 3 then c = 100
+end
+say 'c' c
+c = 'old'
+do counter c i = f(c) to f(c) + 1
+end
 do counter c.1 2
   say 'comp' c.1
 end
@@ -761,6 +800,7 @@ end
 call try 'do counter c; end'
 exit
 t: say 'test' arg(1); return arg(1)
+f: say 'f sees' arg(1); return 1
 try:
   signal on syntax name e
   interpret arg(1)
@@ -787,6 +827,9 @@ c 0
 100
 100
 c 100
+c 100
+f sees 0
+f sees 0
 comp 1
 comp 2
 1 p
@@ -798,15 +841,18 @@ do counter c; end => 27.905
 ## Labels and the end of a block
 
 r[instr.do.label]
-A LABEL phrase gives the block a name that LEAVE, ITERATE and END can use. The
-name is a symbol, which the interpreter compares to the names in those clauses
-without regard to case and without working out the tail of a compound symbol.
-The phrase works on every form, a simple group included. It comes before any
-repetitor, and in either order with COUNTER. A LABEL phrase does not create a
-label for CALL or SIGNAL. Once a block has a LABEL, the name of its control
-variable no longer names it, so LEAVE, ITERATE and END have to use the label.
-A LABEL with no symbol after it raises `SYNTAX 20.918`. When two active blocks
-have the same name, the name means the innermost.
+A LABEL phrase gives the block a name that LEAVE, ITERATE and END can use, and
+this rule owns what the name of a block is. The name is the label when the
+block has a LABEL phrase, and otherwise the control variable of a controlled
+loop or of an OVER loop. A block with neither has no name. The interpreter
+compares a name to the names in those clauses without regard to case, and a
+compound symbol matches by its text, without working out the tail. Once a
+block has a LABEL, the name of its control variable no longer names it, so
+LEAVE, ITERATE and END have to use the label. When two active blocks have the
+same name, the name means the innermost. The phrase works on every form, a
+simple group included. It comes before any repetitor, and in either order with
+COUNTER. A LABEL phrase does not create a label for CALL or SIGNAL. A LABEL
+with no symbol after it, or with a string there, raises `SYNTAX 20.918`.
 
 ```rexx
 do label outer i = 1 to 2
@@ -825,6 +871,7 @@ end x
 call try 'do label a i = 1 to 2; end i'
 call try 'do label a i = 1 to 2; leave i; end'
 call try 'do label; end'
+call try 'do label "q" 2; end'
 call try 'do label a; say "simple"; end a'
 signal on syntax name s
 do label g
@@ -852,6 +899,7 @@ outer reached
 do label a i = 1 to 2; end i => 10.2
 do label a i = 1 to 2; leave i; end => 28.3
 do label; end => 20.918
+do label "q" 2; end => 20.918
 simple
 do label a; say "simple"; end a => ok
 in
@@ -860,16 +908,15 @@ in
 
 r[instr.do.end]
 END closes the nearest DO or LOOP that is still open. It may be followed by
-one symbol, which has to name the block: the label when there is a LABEL
-phrase, and otherwise the control variable of a controlled loop or of an OVER
-loop. The comparison ignores case, and for a compound symbol it compares the
-text, so `s.k` closes only `s.k` and not `s.j`. A symbol after the END of a
-block that has no name, which includes a count, `FOREVER`, a bare condition, a
-WITH loop and a loop that has only COUNTER, raises `SYNTAX 10.3`. A symbol
-that does not match raises `SYNTAX 10.2`, and an END with no open block raises
-`SYNTAX 10.1`. A DO with no END raises `SYNTAX 14.1` as a simple group and
-`14.5` as a loop. All four are found when the program is read, so no clause of
-the program runs.
+one symbol, which has to be [the name of the block](r:instr.do.label), so
+`s.k` closes only `s.k` and not `s.j`. A symbol after the END of a block that
+has no name, which includes a count, `FOREVER`, a bare condition, a WITH loop
+and a loop that has only COUNTER, raises `SYNTAX 10.3`. A symbol that does not
+match raises `SYNTAX 10.2`, and an END with no open block raises
+`SYNTAX 10.1`. A token after END that is not a symbol raises `SYNTAX 20.909`,
+and a second token after the symbol `21.909`. A DO with no END raises
+`SYNTAX 14.1` as a simple group and `14.5` as a loop. All of these are found
+when the program is read, so no clause of the program runs.
 
 ```rexx
 say 'before'
@@ -891,6 +938,10 @@ call try 'do with item it over .array~of(1); end it'
 call try 'do counter c 1; end c'
 call try 'do label a 1; end b'
 call try 'do 1; end; end'
+call try 'do 2; leave; end "x"'
+call try 'do 2; leave; end (x)'
+call try 'do i = 1 to 2; end i j'
+call try 'do i = 1 to 2; end .i'
 call try 'do; say "open"'
 call try 'do 2; say "open"'
 exit
@@ -915,6 +966,10 @@ do with item it over .array~of(1); end it => 10.3
 do counter c 1; end c => 10.3
 do label a 1; end b => 10.2
 do 1; end; end => 10.1
+do 2; leave; end "x" => 20.909
+do 2; leave; end (x) => 20.909
+do i = 1 to 2; end i j => 21.909
+do i = 1 to 2; end .i => 10.2
 do; say "open" => 14.1
 do 2; say "open" => 14.5
 ```
@@ -923,17 +978,21 @@ do 2; say "open" => 14.5
 
 r[instr.do.syntax]
 Errors in the shape of the clause are found when the program is read, so a
-program with one runs no clause at all, in the way that [the INTERPRET
-rule](r:instr.interpret.whole) states for text. A TO, BY, FOR, INDEX or ITEM
-phrase given twice raises `SYNTAX 27.902`, an unwanted word after FOREVER
-`27.901`, a WHILE and an UNTIL together `27.1`, a WITH with no OVER `27.904`,
-and a COUNTER on a simple group `27.905`. A missing expression raises
-`SYNTAX 35.904` after the `=`, `35.905` after BY, `35.906` after TO and
-`35.907` after FOR. A LABEL with no symbol raises `SYNTAX 20.918` and a
-COUNTER with no symbol `20.934`. Anything that follows a COUNTER or LABEL
-phrase out of its place is part of the expression before it, so that the
-errors of that expression are raised instead. The errors of a value, `26.2`,
-`26.3` and `41.1`, are raised when the clause runs.
+program with one runs no clause at all, as [the read-first
+rule](r:lex.index.read-first) says. The text of an INTERPRET is read in the
+same way, as [the INTERPRET rule](r:instr.interpret.whole) says. A TO, BY,
+FOR, INDEX or ITEM phrase given twice raises `SYNTAX 27.902`, an unwanted word
+after FOREVER `27.901`, a WHILE and an UNTIL together `27.1`, a WITH with no
+OVER `27.904`, and a COUNTER on a simple group `27.905`. A missing expression
+raises `SYNTAX 35.904` after the `=`, `35.905` after BY, `35.906` after TO and
+`35.907` after FOR, `35.911` after OVER, and `35.929` after WHILE or UNTIL. A
+LABEL with no symbol raises `SYNTAX 20.918`, a COUNTER with no symbol
+`20.934`, and an INDEX or ITEM with no symbol `20.929`. A control or COUNTER
+name that starts with a digit raises `31.2`, and one that starts with a period
+`31.3`. Anything that follows a COUNTER or LABEL phrase out of its place is
+part of the expression before it, so that the errors of that expression are
+raised instead. The errors of a value, `26.2`, `26.3` and `41.1`, are raised
+when the clause runs.
 
 ```rexx
 say 'before'
@@ -956,6 +1015,16 @@ call try 'do i = 1 to by; end'
 call try 'do i = 1 to 2 by; end'
 call try 'do i = 1 for; end'
 call try 'do i =; end'
+call try 'do e over; end'
+call try 'do with index i over; end'
+call try 'do while; end'
+call try 'do until; end'
+call try 'do i = 1 to 2 while; end'
+call try 'do with index; end'
+call try 'do with item "i" over .array~of(1); end'
+call try 'do .x = 1 to 2; end'
+call try 'do 1 = 1 to 2; end'
+call try 'do counter 1 2; end'
 call try 'do counter; end'
 call try 'do 2 label a; end'
 call try 'do i = 1 to 2 counter c; end'
@@ -975,6 +1044,16 @@ do i = 1 to by; end => 35.906
 do i = 1 to 2 by; end => 35.905
 do i = 1 for; end => 35.907
 do i =; end => 35.904
+do e over; end => 35.911
+do with index i over; end => 35.911
+do while; end => 35.929
+do until; end => 35.929
+do i = 1 to 2 while; end => 35.929
+do with index; end => 20.929
+do with item "i" over .array~of(1); end => 20.929
+do .x = 1 to 2; end => 31.3
+do 1 = 1 to 2; end => 31.2
+do counter 1 2; end => 31.2
 do counter; end => 20.934
 do 2 label a; end => 26.2
 do i = 1 to 2 counter c; end => 41.1
@@ -1005,12 +1084,17 @@ say seen~items seen~sort~makeString('l', ' ')
 ```
 
 r[instr.do.deviation.25]
-When the TO test or the direction test of a controlled loop sends a
-comparison message to an object, the loop reads the answer as it reads a
-WHILE. The answer `1` ends the loop, `0` lets it go on, and any other answer
-raises `SYNTAX 34.901`. ooRexx ends the loop only when the answer is the
-`.true` object itself, and goes on for every other answer, a computed `1`
-included, so a loop that ends here can run for ever there.
+When the TO test or the direction test of a controlled loop sends a comparison
+message to an object, the loop reads the answer as it reads a WHILE. The
+answer `1` ends the loop, `0` lets it go on, and any other answer raises
+`SYNTAX 34.901`. ooRexx ends the loop only when the answer is the `.true`
+object itself, and goes on for every other answer, a computed `1` included, so
+a loop that ends here can run for ever there. The direction test is the
+message `<` that the loop sends to the step, and a computed `1` there marks a
+negative step for interrexx and a positive one for ooRexx. The first example
+shows the TO test, the second the answer `x`, and the third the direction
+test, where interrexx ends the loop before the first pass and ooRexx runs four
+passes.
 
 ```rexx
 do i = .num~new(1) to 3
@@ -1041,6 +1125,60 @@ compare 3 3
 pass 3
 compare 4 3
 finished
+```
+
+```rexx
+signal on syntax name e
+do i = .num~new(1, 'x') to 3
+  say 'never'
+end
+say 'unreached'
+e: say 'error' condition('o')~code
+::class num
+::attribute v
+::method init
+  expose v ans
+  use arg v, ans
+::method '+'
+  expose v ans
+  if arg() = 0 then return self
+  return .num~new(v + arg(1), ans)
+::method '>'
+  expose v ans
+  return ans
+```
+
+```output
+error 34.901
+```
+
+```rexx
+do i = .num~new(1) to 3 by .num~new(1, 1)
+  say 'pass' i~v
+  if i~v > 3 then leave
+end
+say 'finished' i~v
+::class num
+::attribute v
+::method init
+  expose v ans
+  use arg v, ans
+  if arg() < 2 then ans = .nil
+::method '+'
+  expose v ans
+  if arg() = 0 then return self
+  return .num~new(v + arg(1)~v)
+::method '>'
+  expose v ans
+  return (v > arg(1)) + 0
+::method '<'
+  expose v ans
+  if ans \== .nil then return ans
+  return (v < arg(1)) + 0
+```
+
+```output
+finished 1
 ```
 
 r[instr.do.deviation.26]
@@ -1105,14 +1243,23 @@ do with item e over .array~of(1) for 1 by 2; end => 25.927
 r[instr.do.deviation.47]
 A repetition count or a FOR count that has more digits than NUMERIC DIGITS
 raises `SYNTAX 26.2` for the first and `26.3` for the second, or the
-LOSTDIGITS condition first when that is trapped. ooRexx runs the loop for
-the counts in the example below, which are written as numbers, and where its
-own limit lies is not specified.
+LOSTDIGITS condition first when that is trapped. ooRexx refuses such a count
+too while NUMERIC DIGITS is below 9. At 9 or more it runs the loop when the
+count is an unquoted integer literal of at most 18 digits, written without a
+sign, a leading zero, a decimal point or an exponent, or the value of such a
+literal carried unchanged through variables and arguments. A quoted string, a
+computed value, and a literal in any other form that is wider than DIGITS are
+refused there as they are here, and so is every count of 10 to the power of
+18 or more.
 
 ```rexx
 call try 'do 4294967296; leave; end'
 call try 'do i = 1 for 1000000000; leave; end'
 call try 'do 999999999; leave; end'
+call try 'n = 4294967296; do n; leave; end'
+call try 'do "4294967296"; leave; end'
+call try 'do 4294967296 + 0; leave; end'
+call try 'numeric digits 8; do 4294967296; leave; end'
 exit
 try:
   signal on syntax name e
@@ -1127,4 +1274,8 @@ e: say arg(1) '=>' condition('o')~code
 do 4294967296; leave; end => 26.2
 do i = 1 for 1000000000; leave; end => 26.3
 do 999999999; leave; end => ok
+n = 4294967296; do n; leave; end => 26.2
+do "4294967296"; leave; end => 26.2
+do 4294967296 + 0; leave; end => 26.2
+numeric digits 8; do 4294967296; leave; end => 26.2
 ```
