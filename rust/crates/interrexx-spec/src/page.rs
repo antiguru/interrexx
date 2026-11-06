@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::front_matter::{self, FrontMatter};
+use crate::front_matter::{self, FrontMatter, Kind};
 use crate::{Problem, is_rule_id};
 
 /// A rule: the `r[ID]` line and the paragraph under it.
@@ -91,6 +91,9 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
     // Inside a block quote's paragraph: Markdown continues it on any later text
     // line until a blank line, a fence or a heading, with or without a `>`.
     let mut in_quote = false;
+    let mut deviations_heading = None;
+    // The `#` and `##` headings below the Deviations heading.
+    let mut headings_after = Vec::new();
     let mut err = |line: usize, message: String| {
         problems.push(Problem {
             path: path.to_path_buf(),
@@ -159,6 +162,17 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
         let quote_line = text.trim_start().starts_with('>');
         let lazy = in_quote && !quote_line;
         in_quote = quote_line || (in_quote && !text.starts_with('#'));
+
+        if text == DEVIATIONS_HEADING {
+            if deviations_heading.is_some() {
+                err(line, format!("a second `{DEVIATIONS_HEADING}` heading"));
+            }
+            deviations_heading.get_or_insert(line);
+        } else if deviations_heading.is_some()
+            && (text.starts_with("# ") || text.starts_with("## "))
+        {
+            headings_after.push(line);
+        }
 
         if let Some(inner) = text.strip_prefix("r[").and_then(|t| t.strip_suffix(']')) {
             if lazy {
@@ -234,6 +248,9 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
             ),
         );
     }
+    if front.as_ref().is_some_and(|f| f.kind == Kind::Builtin) {
+        deviations_section(&rules, deviations_heading, &headings_after, &mut err);
+    }
 
     match front {
         Some(front) if problems.is_empty() => Ok(Page {
@@ -244,6 +261,66 @@ pub fn parse_page(path: &Path, text: &str) -> Result<Page, Vec<Problem>> {
             links,
         }),
         _ => Err(problems),
+    }
+}
+
+const DEVIATIONS_HEADING: &str = "## Deviations";
+
+/// Report where a builtin page's deviation rules break its layout: they stand
+/// under one `## Deviations` heading, which ends the page (no `#` or `##`
+/// heading follows it) and holds no other rule, and a page without deviation
+/// rules has no such heading. `heading` is that heading's line and `after` the
+/// lines of the headings below it.
+fn deviations_section(
+    rules: &[Rule],
+    heading: Option<usize>,
+    after: &[usize],
+    err: &mut impl FnMut(usize, String),
+) {
+    let is_deviation = |r: &&Rule| deviation_number(&r.id).is_some();
+    let Some(heading) = heading else {
+        if let Some(first) = rules.iter().find(is_deviation) {
+            err(
+                first.line,
+                format!(
+                    "deviation rule `{}` is not under a `{DEVIATIONS_HEADING}` heading",
+                    first.id
+                ),
+            );
+        }
+        return;
+    };
+    if !rules.iter().any(|r| is_deviation(&r)) {
+        err(
+            heading,
+            format!("`{DEVIATIONS_HEADING}` heading on a page with no deviation rule"),
+        );
+    }
+    for rule in rules {
+        match (is_deviation(&rule), rule.line > heading) {
+            (true, false) => err(
+                rule.line,
+                format!(
+                    "deviation rule `{}` is above the `{DEVIATIONS_HEADING}` heading",
+                    rule.id
+                ),
+            ),
+            (false, true) => err(
+                rule.line,
+                format!(
+                    "rule `{}` is under the `{DEVIATIONS_HEADING}` heading but is not a \
+                     deviation",
+                    rule.id
+                ),
+            ),
+            _ => {}
+        }
+    }
+    for line in after {
+        err(
+            *line,
+            format!("a heading follows `{DEVIATIONS_HEADING}`, which ends the page"),
+        );
     }
 }
 

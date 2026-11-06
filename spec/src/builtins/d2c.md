@@ -166,6 +166,8 @@ say c2d(d2c(127, 1), 1) c2d(d2c(-128, 1), 1) c2d(d2c(128, 1), 1)
 127 -128 -128
 ```
 
+## Deviations
+
 r[bif.d2c.deviation.4]
 interrexx does not specify whether the answer of D2C is the same object as
 another string of equal value, as [the shared rule](r:bif.index.conv.deviation.4)

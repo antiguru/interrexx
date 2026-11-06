@@ -92,6 +92,8 @@ say (x2c(c2x(s)) == s) (x2c(c2x('')) == '')
 1 1
 ```
 
+## Deviations
+
 r[bif.c2x.deviation.4]
 interrexx does not specify whether the answer of C2X is the same object as
 another string of equal value, as [the shared rule](r:bif.index.conv.deviation.4)

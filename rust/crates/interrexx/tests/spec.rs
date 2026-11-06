@@ -844,6 +844,7 @@ fn deviations_match_rules_and_the_table() {
     write(
         &root.join("src/builtins/t.md"),
         "---\nelement: T\nkind: builtin\ndeviations: [1, 5, 999]\n---\n\n\
+         ## Deviations\n\n\
          r[bif.t.deviation.1]\nRule.\n\n```rexx\nnop\n```\n\n```output\n```\n\n\
          r[bif.t.deviation.2]\nRule.\n\n```rexx\nnop\n```\n\n```output\n```\n\n\
          r[bif.t.deviation.5]\nRule.\n\n```rexx\nnop\n```\n\n```output\n```\n",
@@ -997,8 +998,9 @@ fn an_example_the_oracle_answers_differently_is_reported_unless_a_deviation() {
     let root = tree_with_front(
         &scratch,
         "deviations: [1]\n",
-        "r[bif.t.deviation.1]\nA rule.\n\n```rexx\nsay 1/3\n```\n\n```output\nx\n```\n\n\
-         r[bif.t.two]\nA rule.\n\n```rexx\nexit 2\n```\n\n```output\n```\n",
+        "r[bif.t.two]\nA rule.\n\n```rexx\nexit 2\n```\n\n```output\n```\n\n\
+         ## Deviations\n\n\
+         r[bif.t.deviation.1]\nA rule.\n\n```rexx\nsay 1/3\n```\n\n```output\nx\n```\n",
     );
     let problems = oracle_disagreements(&root, &oracle);
     assert_eq!(problems.len(), 1, "{}", render(&problems));
@@ -1021,7 +1023,8 @@ fn an_example_the_oracle_answers_differently_is_reported_unless_a_deviation() {
     // Under a deviation rule the page does not list, it is reported.
     let root = tree_with_page(
         &scratch,
-        "r[bif.t.deviation.1]\nA rule.\n\n```rexx\nsay 1/3\n```\n\n```output\nx\n```\n",
+        "## Deviations\n\n\
+         r[bif.t.deviation.1]\nA rule.\n\n```rexx\nsay 1/3\n```\n\n```output\nx\n```\n",
     );
     let problems = oracle_disagreements(&root, &oracle);
     assert_eq!(problems.len(), 1, "{}", render(&problems));
@@ -1035,8 +1038,13 @@ fn an_example_the_oracle_answers_differently_is_reported_unless_a_deviation() {
 #[test]
 fn only_a_listed_deviation_rule_is_exempt_from_the_oracle() {
     let page = |deviations: &str, rule: &str| {
+        let heading = if rule.contains(".deviation.") {
+            "## Deviations\n\n"
+        } else {
+            ""
+        };
         let text = format!(
-            "---\nelement: T\nkind: builtin\n{deviations}---\n\n\
+            "---\nelement: T\nkind: builtin\n{deviations}---\n\n{heading}\
              r[{rule}]\nA rule.\n\n```rexx\nnop\n```\n\n```output\n```\n"
         );
         interrexx_spec::parse_page(Path::new("builtins/t.md"), &text)

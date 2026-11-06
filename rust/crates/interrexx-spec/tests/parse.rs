@@ -418,7 +418,60 @@ fn a_deviation_segment_not_ending_in_a_number_is_reported() {
         assert_eq!(p[0].0, 8);
         assert!(p[0].1.contains("deviation"), "{p:?}");
     }
-    assert!(problems(&format!("{FRONT}\nr[bif.x.deviation.4]\nText.\n")).is_empty());
+    assert!(
+        problems(&format!(
+            "{FRONT}\n## Deviations\n\nr[bif.x.deviation.4]\nText.\n"
+        ))
+        .is_empty()
+    );
+}
+
+#[test]
+fn deviation_rules_stand_under_a_final_deviations_heading() {
+    const DEV: &str = "r[bif.a.deviation.4]\nDev.\n";
+    const PLAIN: &str = "r[bif.a.b]\nText.\n";
+    // FRONT is lines 1-6 and line 7 is blank, so a body starts at line 8.
+    let found = |body: &str| problems(&format!("{FRONT}\n{body}"));
+    for good in [
+        format!(
+            "{PLAIN}\n## Deviations\n\n{DEV}\n### Detail\n\nr[bif.a.deviation.5]\nDev.\n\n\
+             > **Note.** Last.\n"
+        ),
+        PLAIN.to_string(),
+    ] {
+        assert!(found(&good).is_empty(), "{good:?}: {:?}", found(&good));
+    }
+    for (body, lines, word) in [
+        (format!("{PLAIN}\n{DEV}"), vec![11], "not under"),
+        (
+            format!("{PLAIN}\n## Deviations\n"),
+            vec![11],
+            "no deviation rule",
+        ),
+        (
+            format!("{DEV}\n## Deviations\n\n{PLAIN}"),
+            vec![8, 13],
+            "deviation",
+        ),
+        (
+            format!("## Deviations\n\n{DEV}\n## Later\n"),
+            vec![13],
+            "ends the page",
+        ),
+        (
+            format!("## Deviations\n\n{DEV}\n## Deviations\n"),
+            vec![13],
+            "second",
+        ),
+    ] {
+        let p = found(&body);
+        let at: Vec<usize> = p.iter().map(|(l, _)| *l).collect();
+        assert_eq!(at, lines, "{body:?}: {p:?}");
+        assert!(p.iter().all(|(_, m)| m.contains(word)), "{body:?}: {p:?}");
+    }
+    // Only a builtin page is held to the layout.
+    let chapter = "---\nelement: \"Chapter\"\nkind: chapter\n---\n\nr[bif.a.deviation.4]\nDev.\n";
+    assert!(problems(chapter).is_empty(), "{:?}", problems(chapter));
 }
 
 #[test]

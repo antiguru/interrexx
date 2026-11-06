@@ -191,6 +191,8 @@ say x2d(d2x(7, 1), 1) x2d(d2x(-8, 1), 1) x2d(d2x(8, 1), 1)
 7 -8 -8
 ```
 
+## Deviations
+
 r[bif.d2x.deviation.4]
 interrexx does not specify whether the answer of D2X is the same object as
 another string of equal value, as

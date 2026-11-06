@@ -125,6 +125,8 @@ say b2x(101) b2x(1111) b2x(0) b2x(0001)
 5 F 0 1
 ```
 
+## Deviations
+
 r[bif.b2x.deviation.4]
 interrexx does not specify whether the answer of B2X is the same object as
 another string of equal value, as [the shared rule](r:bif.index.conv.deviation.4)

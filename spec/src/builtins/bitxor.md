@@ -76,6 +76,8 @@ say c2x(bitxor('a0'x, , 'ff'x)) c2x(bitxor('abc', 'a', 'ff'x))
 5F 009D9C
 ```
 
+## Deviations
+
 r[bif.bitxor.deviation.4]
 interrexx does not specify whether the answer of BITXOR is the same object
 as another string of equal value, as [the shared rule](r:bif.index.bit.deviation.4)

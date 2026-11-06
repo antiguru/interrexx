@@ -137,6 +137,8 @@ say c2x(x2c('a5f0')) c2x(x2c('00 Ff')) c2x(x2c('a5f')) '['c2x(x2c(''))']'
 A5F0 00FF 0A5F []
 ```
 
+## Deviations
+
 r[bif.x2c.deviation.4]
 interrexx does not specify whether the answer of X2C is the same object as
 another string of equal value, as

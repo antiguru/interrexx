@@ -271,6 +271,8 @@ say d2x(x2d('00ff')) d2x(x2d('aB 12')) d2x(x2d('0')) d2x(x2d(''))
 FF AB12 0 0
 ```
 
+## Deviations
+
 r[bif.x2d.deviation.4]
 interrexx does not specify whether the answer of X2D is the same object as
 another string of equal value, as

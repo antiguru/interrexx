@@ -72,6 +72,8 @@ say bitor('abc', , '00'x) c2x(bitor('abc', , 'ff'x))
 abc FFFFFF
 ```
 
+## Deviations
+
 r[bif.bitor.deviation.4]
 interrexx does not specify whether the answer of BITOR is the same object
 as another string of equal value, as [the shared rule](r:bif.index.bit.deviation.4)

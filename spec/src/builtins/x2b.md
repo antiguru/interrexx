@@ -120,6 +120,8 @@ say b2x(x2b('a5f')) b2x(x2b('00 Ff')) '['b2x(x2b(''))']'
 A5F 00FF []
 ```
 
+## Deviations
+
 r[bif.x2b.deviation.4]
 interrexx does not specify whether the answer of X2B is the same object as
 another string of equal value, as

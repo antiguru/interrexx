@@ -299,6 +299,8 @@ a: say condition('o')~code
 40.28
 ```
 
+## Deviations
+
 r[bif.xrange.deviation.4]
 interrexx does not specify whether the answer of XRANGE is the same object
 as another string of equal value, such as the literal `'a'` beside the answer

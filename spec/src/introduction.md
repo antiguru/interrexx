@@ -40,7 +40,8 @@ ooRexx to measure where the two agree.
 **Deviation.** A declared difference between interrexx and ooRexx, numbered in
 [the Deviations chapter](deviations.md). A page lists in its front matter the deviations that
 touch its element, and states each as a rule whose identifier ends
-`deviation.N`. Every example on which interrexx and ooRexx answer
+`deviation.N`; a builtin's page puts these rules under a Deviations heading
+at its end. Every example on which interrexx and ooRexx answer
 differently belongs to such a rule; any other difference is a defect.
 
 **String method.** A method of the `String` class. Many builtins run as one, as
