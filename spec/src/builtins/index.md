@@ -1227,3 +1227,291 @@ return time('F')
 1 0
 1 0
 ```
+
+## Streams
+
+> **Note.** The input and output builtins read and write streams. A stream is a
+> source of characters, a destination for them, or both: a file, or one of the
+> three standard streams. The rules here hold for every stream builtin; the
+> pages link to them instead of restating them. The examples keep their files
+> in the current directory under names of their own, and delete them.
+
+r[bif.index.stream.name]
+A stream builtin names its stream with a string, its `name` argument. For a
+file the name is the file's name, taken from the current directory when it
+is not absolute. While the stream is open, a name always denotes the same
+stream, whichever stream builtin it is given to, so what one builtin writes
+another reads.
+
+```rexx
+f = 'spec-streams-name.tmp'
+call sysfiledelete f
+call lineout f, 'first'
+call charout f, 'second'
+say linein(f) '/' charin(f, , 3)
+call sysfiledelete f
+```
+
+```output
+first / sec
+```
+
+r[bif.index.stream.std]
+The names `STDIN`, `STDOUT` and `STDERR` denote the standard input, output
+and error streams, each with a colon after it or without one and with its
+letters in any case. A null string or an omitted `name` denotes the default
+stream of the builtin: the standard input for a builtin that reads, the
+standard output for a builtin that writes.
+
+```rexx
+call charout 'stdout', 'one '
+call charout 'Stdout:', 'two '
+call charout , 'three '
+call charout '', 'four'
+say
+say '['charin()']' '['charin('')']' '['charin('Stdin:')']' '['linein()']'
+```
+
+```output
+one two three four
+[] [] [] []
+```
+
+> **Note.** The examples run with an empty standard input, so every read of it
+> ends at once.
+
+r[bif.index.stream.transient]
+A standard stream that is connected to a pipe is transient: it has no
+positions. A start or line number given to a transient
+stream raises `SYNTAX 93.958`, whatever its value, and after the checks of
+[the argument rule](r:bif.index.stream.args) that come before it. The examples
+of this book run with a pipe as standard input and as standard output. What
+a standard stream that is connected to anything else does with a start is
+not specified.
+
+```rexx
+signal on syntax name a
+say charin(, 1)
+a: say condition('o')~code
+signal on syntax name b
+say linein(, 0)
+b: say condition('o')~code
+signal on syntax name c
+say charout(, 'x', 5)
+c: say condition('o')~code
+signal on syntax name d
+say charin(, 0, -1)
+d: say condition('o')~code
+```
+
+```output
+93.958
+93.958
+93.958
+88.907
+```
+
+r[bif.index.stream.open]
+A stream builtin opens its stream when it first uses it, and the program
+does no opening of its own. A file is opened for reading and writing. A file
+that does not exist is created by a write, and a read of it creates nothing:
+it finds no characters and raises the [NOTREADY condition](r:bif.index.stream.notready).
+A stream just opened has its read position at the first character and its
+write position after the last, so a write adds to the data a file already
+holds.
+
+```rexx
+f = 'spec-streams-open.tmp'
+call sysfiledelete f
+say '['charin(f)']' (stream(f, 'c', 'query exists') == '')
+call charout f, 'abc'
+call charout f
+call charout f, 'def'
+say charin(f, 1, 6) (stream(f, 'c', 'query exists') \== '')
+call sysfiledelete f
+```
+
+```output
+[] 1
+abcdef 1
+```
+
+r[bif.index.stream.positions]
+A file that is open has two positions in it, counted in characters from 1:
+the read position, where the next read starts, and the write position,
+where the next write starts. A read moves the read position past what it
+read and leaves the write position where it was; a write moves the write
+position past what it wrote and leaves the read position where it was. A
+start (or line number) that a call gives sets the position that the call
+uses, before it reads or writes. A write at a position inside the data
+replaces the characters there.
+
+```rexx
+f = 'spec-streams-pos.tmp'
+call sysfiledelete f
+call charout f, 'abc'
+say charin(f, , 1)
+call charout f, 'd'
+say charin(f, , 3)
+call charout f, 'XY', 2
+call charout f, 'Z'
+say charin(f, 1, 4)
+call sysfiledelete f
+```
+
+```output
+a
+bcd
+aXYZ
+```
+
+r[bif.index.stream.lifetime]
+A stream stays open, with its positions, until the program closes it or
+ends. Closing is done by [CHAROUT given only a name](r:bif.charout.close).
+The next use of a closed name opens the stream again: the read position is
+at the start and the write position at the end of the data, and the
+characters written before the close are in the file.
+
+```rexx
+f = 'spec-streams-life.tmp'
+call sysfiledelete f
+call charout f, 'abc'
+say charin(f, , 2) charin(f)
+call charout f
+say charin(f)
+call charout f, 'd'
+call charout f
+say charin(f, 1, 9)
+call sysfiledelete f
+```
+
+```output
+ab c
+a
+abcd
+```
+
+r[bif.index.stream.notready]
+A call that cannot read, or write, as many characters as it was asked to
+raises the NOTREADY condition. That happens at the end of the data, when the
+stream cannot be opened, and when a write fails. `condition('D')` in a trap
+for it is the stream's name as the call gave it, and `condition('C')` is
+`NOTREADY`. The condition is not an error: when it is not trapped, or after
+a `CALL ON` trap returns, the call goes on and answers what its page says.
+A trap by `SIGNAL ON NOTREADY` abandons the clause that raised it, like
+any other condition.
+
+```rexx
+f = 'spec-streams-nr.tmp'
+call sysfiledelete f
+call charout f, 'ab'
+call charout f
+x = charin(f, 1, 5)
+say '[' || x || ']'
+signal on notready name trapped
+x = charin(f)
+say 'not reached'
+trapped: say condition('c') condition('d') x
+call sysfiledelete f
+```
+
+```output
+[ab]
+NOTREADY spec-streams-nr.tmp ab
+```
+
+r[bif.index.stream.line-end]
+A line of a stream ends at the first line feed (`'0a'x`) after its start.
+When the character before that line feed is a carriage return (`'0d'x`), the
+carriage return belongs to the line end as well. The line end is not part of
+the line. Every other character is part of the line, a carriage return
+included when no line feed follows it directly. The last line of a stream
+may have no line end. Everything that counts the characters of a stream
+counts a line end as the one or two characters it is.
+
+```rexx
+f = 'spec-streams-eol.tmp'
+call sysfiledelete f
+call charout f, 'a' || '0a'x || 'b' || '0d0a'x || 'c' || '0d'x || 'd' || '0d0d0a'x || 'e'
+call charout f
+say chars(f)
+do 4
+  say c2x(linein(f))
+end
+say chars(f)
+call sysfiledelete f
+```
+
+```output
+12
+61
+62
+630D640D
+65
+0
+```
+
+r[bif.index.stream.args]
+A start, a count and a line number are
+[whole-number arguments](r:conv.whole.form); they are not checked as the
+position and length arguments of [the String methods](r:conv.method) are.
+The call is checked in this order. The count of arguments comes first, by
+the [call rules](r:bif.index.call.count). Then the form of every such
+argument, from left to right, raises `SYNTAX 40.12`. Then a count that is
+negative raises `SYNTAX 88.907`, and a count that the builtin's page does not
+allow raises the error that page names. Last, a [start](r:bif.index.stream.start)
+or line number that is below 1 raises `SYNTAX 93.907`.
+
+```rexx
+f = 'spec-streams-args.tmp'
+call charout f, 'abc'
+signal on syntax name a
+say charin(f, 0, 'x')
+a: say condition('o')~code
+signal on syntax name b
+say charin(f, 0, -1)
+b: say condition('o')~code
+signal on syntax name c
+say charin(f, 0, 1)
+c: say condition('o')~code
+signal on syntax name d
+say charin(f, 1, -1)
+d: say condition('o')~code
+call charout f
+call sysfiledelete f
+```
+
+```output
+40.12
+88.907
+93.907
+88.907
+```
+
+r[bif.index.stream.start]
+A start, or line number, below 1 raises `SYNTAX 93.907`, and `-0` is 0.
+A start is checked once the stream is open. For a stream that cannot be
+opened it is not checked: the call has the NOTREADY outcome that its page
+gives for such a stream.
+
+```rexx
+f = 'spec-streams-start.tmp'
+call sysfiledelete f
+call charout f, 'abc'
+signal on syntax name a
+say charin(f, '-0', 1)
+a: say condition('o')~code
+signal on syntax name b
+say charout(f, 'x', 0)
+b: say condition('o')~code
+signal off syntax
+say '['charin('spec-no-dir/x', 0)']' charout('spec-no-dir/x', 'xy', 0)
+call charout f
+call sysfiledelete f
+```
+
+```output
+93.907
+93.907
+[] 2
+```
