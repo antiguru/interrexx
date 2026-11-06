@@ -46,7 +46,13 @@ fn c_rxsock_directory(build: &std::path::Path) -> std::path::PathBuf {
     std::fs::create_dir_all(&directory).expect("an instrument directory");
     let link = directory.join("librxsockc.so");
     if std::fs::read_link(&link).is_err() {
-        let staged = directory.join(format!(".librxsockc.{:?}", std::thread::current().id()));
+        // A thread id is unique only within a process, and nextest runs each test in a
+        // process of its own, so the staged name carries the process id too.
+        let staged = directory.join(format!(
+            ".librxsockc.{}.{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
         let _ = std::fs::remove_file(&staged);
         std::os::unix::fs::symlink(build.join("librxsock.so"), &staged)
             .expect("a link to librxsock.so");
