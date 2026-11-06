@@ -1,7 +1,7 @@
 ---
 element: "Message operators"
 kind: concept
-rexxref: "Terms, Expressions, and Operators > Operators"
+rexxref: "General Concepts > Terms, Expressions, and Operators > Operators"
 ---
 
 # Message operators

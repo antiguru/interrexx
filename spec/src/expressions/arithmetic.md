@@ -2,7 +2,7 @@
 element: "Arithmetic operators"
 kind: concept
 ansi: "7.4.2, 7.4.3, 7.4.4, 7.4.5"
-rexxref: "Terms, Expressions, and Operators > Operators > Arithmetic"
+rexxref: "General Concepts > Terms, Expressions, and Operators > Operators > Arithmetic"
 ---
 
 # Arithmetic operators

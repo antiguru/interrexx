@@ -2,7 +2,7 @@
 element: "Logical operators"
 kind: concept
 ansi: "7.4.2, 7.4.8, 7.4.9"
-rexxref: "Terms, Expressions, and Operators > Operators > Logical"
+rexxref: "General Concepts > Terms, Expressions, and Operators > Operators > Logical"
 ---
 
 # Logical operators

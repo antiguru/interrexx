@@ -22,16 +22,15 @@ The pages of this chapter are:
 * [Variables](variables.md): simple, stem and compound variables, and the
   value of a symbol that has none.
 * [Concatenation](concatenation.md): the blank, the abuttal and `||`.
+* [Arithmetic](arithmetic.md): `+` `-` `*` `/` `%` `//` and `**`.
+* [Comparison](comparison.md): the normal and strict comparisons.
+* [Logical](logical.md): `&` `|` `&&` and prefix `\`.
+* [Messages](messages.md): the message operators `~` and `~~`, and the rule
+  that every operator is a message.
 
-The operators that compute are described in four more pages of this chapter.
-The [arithmetic](arithmetic.md) page covers `+` `-` `*` `/` `%` `//` and
-`**`, the [comparison](comparison.md) page the normal and strict comparisons,
-the [logical](logical.md) page `&` `|` `&&` and prefix `\`, and the
-[messages](messages.md) page the message operators `~` and `~~`, with the
-rule that every operator is a message. The characters of
-the operators and the way a program is cut into tokens are in the
-[lexical chapter](../lexical/index.md), and the numbers that arithmetic works
-on are in the [numbers chapter](../numbers/index.md).
+The characters of the operators and the way a program is cut into tokens are
+in the [lexical chapter](../lexical/index.md), and the numbers that arithmetic
+works on are in the [numbers chapter](../numbers/index.md).
 
 ## Precedence
 

@@ -2,7 +2,7 @@
 element: "Comparison operators"
 kind: concept
 ansi: "7.4.7"
-rexxref: "Terms, Expressions, and Operators > Operators > Comparison"
+rexxref: "General Concepts > Terms, Expressions, and Operators > Operators > Comparison"
 ---
 
 # Comparison operators
