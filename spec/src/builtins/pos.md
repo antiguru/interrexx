@@ -4,7 +4,6 @@ kind: builtin
 syntax: "POS(needle, haystack [, start [, length]])"
 ansi: "9.3.16"
 rexxref: "Functions > Built-in Functions > POS (Position)"
-deviations: [4]
 ---
 
 # POS
@@ -95,15 +94,14 @@ r[bif.pos.result]
 Let `n` be the length of `haystack` and `m` the length of `needle`. The
 characters that the search covers are those at the positions from `start`
 through `start + length - 1` (through `n` when `length` is omitted), and at no
-position beyond `n`; this is the
-window, and it holds no characters when `start` is greater than `n` or
-`length` is 0. When `m` is at least 1, POS returns the smallest position `k`
-such that the `m` characters of `haystack` from position `k` on all lie in
-the window and are equal under `==` to `needle`. When there is no such `k`,
-the result is `0`. A `needle` with no characters is the case of
-[its own rule](r:bif.pos.empty-needle). The answer is
-[written as a count](r:bif.index.count.answer), and whether it is a new object
-is [not specified](r:bif.pos.deviation.4).
+position beyond `n`; this is the window, and it holds no characters when
+`start` is greater than `n` or `length` is 0. When `m` is at least 1, POS
+returns the smallest position `k` such that the `m` characters of `haystack`
+from position `k` on all lie in the window and are equal under `==` to
+`needle`. When there is no such `k`, the result is `0`. A `needle` with no
+characters is the case of [its own rule](r:bif.pos.empty-needle). The answer
+is [written as a count](r:bif.index.count.answer), and whether it is a new
+object is [not specified](r:bif.index.count.answer.deviation.4).
 
 ```rexx
 say pos('ter', 'winter') pos('q', 'winter') pos('i', 'winter'),
@@ -231,27 +229,6 @@ say pos(1, 'a1') pos('.', 3.14) pos('an Object', .object~new)
 
 ```output
 2 2 1
-```
-
-## Deviations
-
-r[bif.pos.deviation.4]
-interrexx does not specify whether the result of POS is the same object as
-another string of equal value: as an equal number the program already holds,
-such as the `start` argument of a call that answers it, or a literal such as
-`'1235'`, or the equal answer of another call. Through `identityHash`, or as a
-key of an `IdentityTable` or `IdentitySet`, the answer may be either, and a
-program can rely only on the value, which is equal under `==`. ooRexx differs:
-it often answers a new object where interrexx answers the existing one.
-
-```rexx
-h = copies('x', 1234) || 'y'
-n = 1234 + 1
-say (pos('y', h, n) == n) (pos('y', h) == '1235') (pos('y', h) == pos('y', h, 2))
-```
-
-```output
-1 1 1
 ```
 
 > **Note.** The ANSI draft (9.3.16) has no `length` argument, and defines POS by

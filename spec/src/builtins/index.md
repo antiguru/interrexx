@@ -8,9 +8,11 @@ deviations: [4]
 
 # Built-in functions
 
-This chapter has a page for each builtin function, and each page specifies
-the function call. The rules here hold for every builtin call; the pages
-link to them, and to the [conventions](../conventions.md), instead of
+This chapter has a page for each builtin function, and each page specifies the
+function call. The rules here hold for every builtin call, except that a
+builtin whose page links [the native call rule](r:bif.index.call.native)
+follows that rule in place of the rules for the number of arguments. The pages
+link to these rules, and to the [conventions](../conventions.md), instead of
 restating them.
 
 A page's syntax line names the arguments in order. A name in square
@@ -155,6 +157,52 @@ d: say condition('o')~code
 > **Note.** The ANSI draft (9.2.1) checks the arguments from left to right,
 > raising 40.5 at an omitted required argument before it reaches the ones
 > after it, and makes the range checks only once every argument is present.
+
+r[bif.index.call.native]
+A builtin whose page links this rule does not follow the rules above for the
+number of arguments, from [too few](r:bif.index.call.too-few) to [the order of
+their errors](r:bif.index.call.order.missing-before-values); its errors for
+them are of the 88.9xx family. A required argument that is omitted, whether
+the call stops short of it or leaves its place empty, raises `SYNTAX 88.901`.
+An argument past the last one on the syntax line raises `SYNTAX 88.922`, even
+when the arguments before it are omitted. As [for the other
+builtins](r:bif.index.call.count), a trailing omitted place adds nothing to
+the count. An argument that such a page calls a string and that is an object
+other than a string is replaced by the answer of its `MAKESTRING` method, as
+[for the other builtins](r:conv.string.object), but there is no fallback to
+the `STRING` method: an object with no `MAKESTRING` method raises
+`SYNTAX 88.909`, whatever its `STRING` method answers. When a call has an
+argument past the last one on the syntax line and also an argument that is
+omitted or that is to be a string and has no `MAKESTRING` method, which of the
+two errors it raises is not specified.
+
+```rexx
+signal on syntax name a
+say filespec('N')
+a: say condition('o')~code
+signal on syntax name b
+say filespec('N', , )
+b: say condition('o')~code
+signal on syntax name c
+say directory(, 'x')
+c: say condition('o')~code
+signal on syntax name d
+say filespec('N', .told~new)
+d: say condition('o')~code
+signal off syntax
+say filespec('E', 'x/y.z', , ) filespec('N', .mutablebuffer~new('p/q'))
+::class told
+::method string
+  return 'a/b'
+```
+
+```output
+88.901
+88.901
+88.922
+88.909
+z q
+```
 
 ## Words
 
@@ -1020,9 +1068,10 @@ the receiver, and the other builtins, raise 93.943. The list has no upper
 limit on its length. Its argument count is checked by the [builtin call
 rules](r:bif.index.call.count), with one required argument and no most, so a
 call with no arguments raises `SYNTAX 40.3` and no call raises `SYNTAX 40.4`;
-an omitted first argument raises `SYNTAX 40.5`. This book does not specify the
-error of a function call that omits an argument after the first but passes one
-after it.
+an omitted first argument raises `SYNTAX 40.5`. A function call that omits an
+argument after the first but passes one after it raises `SYNTAX 40.5` too, as
+Deviation 53 says for [MAX](r:bif.max.deviation.53) and
+[MIN](r:bif.min.deviation.53).
 
 ```rexx
 say max(31,7,-4,19,22,-8,0,13,5,26,-15,9,17,2,28,-1,11,24,6,3,20,14,-9,25,12),
@@ -1247,10 +1296,10 @@ return time('F')
 
 r[bif.index.stream.name]
 A stream builtin names its stream with a string, its `name` argument. For a
-file the name is the file's name, taken from the current directory when it
-is not absolute. While the stream is open, a name always denotes the same
-stream, whichever stream builtin it is given to, so what one builtin writes
-another reads.
+file the name is the file's name, taken from the current directory when it is
+not absolute (see [Deviation 34](r:bif.stream.deviation.34)). While the stream
+is open, a name always denotes the same stream, whichever stream builtin it is
+given to, so what one builtin writes another reads.
 
 ```rexx
 f = 'spec-streams-name.tmp'
@@ -1291,15 +1340,16 @@ one two three four
 
 r[bif.index.stream.transient]
 A standard stream that is connected to a pipe is transient: it has no
-positions. A start or line number given to a transient stream raises `SYNTAX
-93.958`, whatever its value: after the checks of [the argument
+positions. A start or line number given to a transient stream raises
+`SYNTAX 93.958`, whatever its value: after the checks of [the argument
 rule](r:bif.index.stream.args) on the argument count, the form of the
 arguments and the count, and in place of that rule's check that the start is 1
 or more. What CHAROUT does with a start that it is given together with the
 name `STDIN`, a write to the standard input, is not specified. The examples of
 this book run with a pipe as standard input and as standard output. What a
 standard stream that is connected to anything else does with a start is not
-specified either.
+specified either. Named transient streams, such as FIFOs and devices, are not
+specified in this chapter.
 
 ```rexx
 signal on syntax name a

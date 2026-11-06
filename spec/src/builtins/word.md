@@ -102,15 +102,14 @@ say c2x(word('x' || '0d'x || ' y', 1)) c2x(word('p q' || '0a'x || 'r', 2))
 ## Deviations
 
 r[bif.word.deviation.4]
-interrexx does not specify whether the result of WORD is the same object as
-another string of equal value: as `string` itself, when the call returns
-all of it unchanged as `word(s, 1)` does for an `s` that is one word with
-no whitespace around it, or as an equal string produced some other way,
-such as the literal `'abc'` beside `word('abc def', 1)`. Through
-`identityHash`, or as a key of an `IdentityTable` or `IdentitySet`, the
-answer may be either, and a program can rely only on the value, which is
-equal under `==`. ooRexx differs: it often answers a new object where
-interrexx answers the existing one.
+interrexx does not specify whether the answer of WORD is the same object as
+another string of equal value: as `string` itself, when the call returns all
+of it unchanged as `word(s, 1)` does for an `s` that is one word with no
+whitespace around it, or as an equal string produced some other way, such as
+the literal `'abc'` beside `word('abc def', 1)`. Through `identityHash`, or as
+a key of an `IdentityTable` or `IdentitySet`, the answer may be either, and a
+program can rely only on the value, which is equal under `==`. ooRexx differs:
+it often answers a new object where interrexx answers the existing one.
 
 ```rexx
 s = 'ab' || 'c'

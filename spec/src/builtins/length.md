@@ -4,7 +4,6 @@ kind: builtin
 syntax: "LENGTH(string)"
 ansi: "9.3.14"
 rexxref: "Functions > Built-in Functions > LENGTH"
-deviations: [4]
 ---
 
 # LENGTH
@@ -50,7 +49,7 @@ r[bif.length.result]
 LENGTH returns the number of characters in `string`, which is its
 [length](r:conv.string.chars) in bytes. The null string has length 0. The
 answer is [written as a count](r:bif.index.count.answer), and whether it is a
-new object is [not specified](r:bif.length.deviation.4).
+new object is [not specified](r:bif.index.count.answer.deviation.4).
 
 ```rexx
 say length('hello') length('hi there') length('')
@@ -97,27 +96,6 @@ say length(1/3)
 5 2 1 9
 7 5
 11
-```
-
-## Deviations
-
-r[bif.length.deviation.4]
-interrexx does not specify whether the result of LENGTH is the same object as
-another string of equal value: as an equal number the program already holds,
-or a literal such as `'1234'`, or the equal answer of another call. Through
-`identityHash`, or as a key of an `IdentityTable` or `IdentitySet`, the answer
-may be either, and a program can rely only on the value, which is equal under
-`==`. ooRexx differs: it often answers a new object where interrexx answers
-the existing one.
-
-```rexx
-h = copies('x', 1234)
-n = 1233 + 1
-say (length(h) == n) (length(h) == '1234') (length(h) == length(h))
-```
-
-```output
-1 1 1
 ```
 
 > **Note.** The ANSI draft (9.3.14) defines LENGTH as the number of characters

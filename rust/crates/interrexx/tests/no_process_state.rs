@@ -93,7 +93,11 @@ fn nested_saves_are_taken_back_innermost_first() {
         call directory here\n\
         say endlocal() value('SPEC_ENDLOCAL_NESTED',, 'ENVIRONMENT') directory()\n\
         say endlocal() value('SPEC_ENDLOCAL_NESTED',, 'ENVIRONMENT') (directory() == here)\n\
-        say endlocal()\n";
+        say endlocal()\n\
+        call directory '/'\n";
+    let process_dir = std::env::current_dir().expect("the process has a current directory");
+    // The program ends in `/`, so a write reaching the process would show.
+    assert_ne!(process_dir, Path::new("/"));
     let outcome = interrexx::run_program(
         "/nonexistent/program.rex",
         program.to_vec(),
@@ -105,4 +109,8 @@ fn nested_saves_are_taken_back_innermost_first() {
     );
     assert_eq!(outcome.exit_code, 0);
     assert!(std::env::var_os("SPEC_ENDLOCAL_NESTED").is_none());
+    assert_eq!(
+        std::env::current_dir().expect("the process has a current directory"),
+        process_dir
+    );
 }

@@ -153,13 +153,13 @@ say trunc(-0.5) trunc(-0.5, 2) trunc(-0.001, 2) trunc(-0.001, 3),
 ## Deviations
 
 r[bif.trunc.deviation.4]
-interrexx does not specify whether the result of TRUNC is the same object as
+interrexx does not specify whether the answer of TRUNC is the same object as
 another string of equal value: as `number` itself, when the call leaves it
 unchanged, or as an equal string produced some other way. Through
-`identityHash`, or as a key of an `IdentityTable` or `IdentitySet`, the
-answer may be either, and a program can rely only on the value, which is
-equal under `==`. ooRexx differs: it answers the argument itself in a case
-where interrexx may answer an equal new string.
+`identityHash`, or as a key of an `IdentityTable` or `IdentitySet`, the answer
+may be either, and a program can rely only on the value, which is equal under
+`==`. ooRexx differs: it answers the argument itself in a case where interrexx
+may answer an equal new string.
 
 ```rexx
 s = '12' || '5'

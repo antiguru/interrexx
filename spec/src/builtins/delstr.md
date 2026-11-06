@@ -149,14 +149,13 @@ say c2x(delstr('61000962'x, 2, 1)) c2x(delstr('c3a9'x, 2))
 ## Deviations
 
 r[bif.delstr.deviation.4]
-interrexx does not specify whether the result of DELSTR is the same object
-as another string of equal value: as `string` itself, when the call deletes
+interrexx does not specify whether the answer of DELSTR is the same object as
+another string of equal value: as `string` itself, when the call deletes
 nothing, as `delstr(s, length(s) + 1)` does, or as an equal string produced
 some other way, such as the literal `'abc'`. Through `identityHash`, or as a
 key of an `IdentityTable` or `IdentitySet`, the answer may be either, and a
-program can rely only on the value, which is equal under `==`. ooRexx
-differs: it often answers a new object where interrexx answers the existing
-one.
+program can rely only on the value, which is equal under `==`. ooRexx differs:
+it often answers a new object where interrexx answers the existing one.
 
 ```rexx
 s = 'ab' || 'c'

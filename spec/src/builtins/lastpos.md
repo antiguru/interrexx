@@ -4,7 +4,6 @@ kind: builtin
 syntax: "LASTPOS(needle, haystack [, start [, length]])"
 ansi: "9.3.12"
 rexxref: "Functions > Built-in Functions > LASTPOS (Last Position)"
-deviations: [4]
 ---
 
 # LASTPOS
@@ -106,7 +105,7 @@ equal under `==` to `needle`. When there is no such `k`, the result is `0`. A
 `needle` with no characters is the case of [its own
 rule](r:bif.lastpos.empty-needle). The answer is [written as a
 count](r:bif.index.count.answer), and whether it is a new object is [not
-specified](r:bif.lastpos.deviation.4).
+specified](r:bif.index.count.answer.deviation.4).
 
 ```rexx
 say lastpos('/', 'a/b/c') lastpos('/', 'abc') lastpos('ana', 'banana'),
@@ -217,27 +216,6 @@ say lastpos(1, '1a1') lastpos('.', 3.14) lastpos('an Object', .object~new)
 
 ```output
 3 2 1
-```
-
-## Deviations
-
-r[bif.lastpos.deviation.4]
-interrexx does not specify whether the result of LASTPOS is the same object as
-another string of equal value: as an equal number the program already holds,
-such as the `start` argument of a call that answers it, or a literal such as
-`'1234'`, or the equal answer of another call. Through `identityHash`, or as a
-key of an `IdentityTable` or `IdentitySet`, the answer may be either, and a
-program can rely only on the value, which is equal under `==`. ooRexx differs:
-it often answers a new object where interrexx answers the existing one.
-
-```rexx
-h = copies('x', 1234) || 'y'
-n = 1233 + 1
-say (lastpos('x', h, n) == n) (lastpos('x', h) == '1234') (lastpos('x', h) == lastpos('x', h, n))
-```
-
-```output
-1 1 1
 ```
 
 > **Note.** The ANSI draft (9.3.12) has no `length` argument, and defines

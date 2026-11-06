@@ -201,15 +201,20 @@ bnn []
 bnna
 ```
 
+> **Note.** The ANSI draft (9.3.4) has no `count` argument; it replaces every
+> occurrence, searching from the end of the previous one, which gives the
+> rules above for the call without `count`. The `count` argument and its
+> checks follow ooRexx.
+
 ## Deviations
 
 r[bif.changestr.deviation.4]
-interrexx does not specify whether the result of CHANGESTR is the same
-object as another string of equal value: as `haystack` itself, when the call
-replaces nothing, or as an equal string produced some other way, such as the
-literal `'banana'`. Through `identityHash`, or as a key of an `IdentityTable`
-or `IdentitySet`, the answer may be either, and a program can rely only on
-the value, which is equal under `==`. ooRexx differs: it often answers a new
+interrexx does not specify whether the answer of CHANGESTR is the same object
+as another string of equal value: as `haystack` itself, when the call replaces
+nothing, or as an equal string produced some other way, such as the literal
+`'banana'`. Through `identityHash`, or as a key of an `IdentityTable` or
+`IdentitySet`, the answer may be either, and a program can rely only on the
+value, which is equal under `==`. ooRexx differs: it often answers a new
 object where interrexx answers the existing one.
 
 ```rexx
@@ -220,8 +225,3 @@ say (changestr('x', s, 'y') == s) (changestr('', s, 'y') == 'banana')
 ```output
 1 1
 ```
-
-> **Note.** The ANSI draft (9.3.4) has no `count` argument; it replaces every
-> occurrence, searching from the end of the previous one, which gives the
-> rules above for the call without `count`. The `count` argument and its
-> checks follow ooRexx.

@@ -97,16 +97,20 @@ say reverse(1/3)
 33333.0
 ```
 
+> **Note.** The ANSI draft (9.3.17) builds the result one character at a time,
+> putting each character in front of those before it, which gives the string
+> above.
+
 ## Deviations
 
 r[bif.reverse.deviation.4]
-interrexx does not specify whether the result of REVERSE is the same object
-as another string of equal value: as `string` itself, when the reversal leaves
-it unchanged as it does for the null string, or as an equal string produced
-some other way, such as the literal `'cba'`. Through `identityHash`, or as a
-key of an `IdentityTable` or `IdentitySet`, the answer may be either, and a
-program can rely only on the value, which is equal under `==`. ooRexx differs:
-it often answers a new object where interrexx answers the existing one.
+interrexx does not specify whether the answer of REVERSE is the same object as
+another string of equal value: as `string` itself, when the reversal leaves it
+unchanged as it does for the null string, or as an equal string produced some
+other way, such as the literal `'cba'`. Through `identityHash`, or as a key of
+an `IdentityTable` or `IdentitySet`, the answer may be either, and a program
+can rely only on the value, which is equal under `==`. ooRexx differs: it
+often answers a new object where interrexx answers the existing one.
 
 ```rexx
 s = 'a' || 'bc'
@@ -116,7 +120,3 @@ say (reverse(s) == 'cba') (reverse(reverse(s)) == s) (reverse('') == '')
 ```output
 1 1 1
 ```
-
-> **Note.** The ANSI draft (9.3.17) builds the result one character at a time,
-> putting each character in front of those before it, which gives the string
-> above.

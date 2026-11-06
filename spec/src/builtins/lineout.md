@@ -240,13 +240,14 @@ call sysfiledelete f
 
 r[bif.lineout.fail]
 When the stream cannot be written, LINEOUT writes nothing, answers 1 and
-raises NOTREADY. That is the case when the name cannot be opened for writing,
-as a name in a directory that does not exist, or a directory; when the
-stream was opened for reading only; and when the name is `STDIN` and a
-`string` is given. For a name that cannot be opened, a `line` is not checked
-(see [the start rule](r:bif.index.stream.start)). What a `line` does together
-with the name `STDIN` is [not specified](r:bif.index.stream.transient), and so
-is a call with that name and neither a `string` nor a `line`.
+raises [NOTREADY](r:bif.index.stream.notready). That is the case when the name
+cannot be opened for writing, as a name in a directory that does not exist, or
+a directory; when the stream was opened for reading only; and when the name is
+`STDIN` and a `string` is given. For a name that cannot be opened, a `line` is
+not checked (see [the start rule](r:bif.index.stream.start)). What a `line`
+does together with the name `STDIN` is [not
+specified](r:bif.index.stream.transient), and so is a call with that name and
+neither a `string` nor a `line`.
 
 ```rexx
 f = 'spec-lineout-fail.tmp'

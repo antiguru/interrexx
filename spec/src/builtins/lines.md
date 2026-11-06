@@ -141,9 +141,9 @@ one 1 1 two
 
 r[bif.lines.missing]
 A name that cannot be opened for reading, a file that does not exist or a
-directory for example, has no lines: LINES answers 0, raises NOTREADY and
-creates no file. LINES raises no condition at the end of the data of a
-stream that is open.
+directory for example, has no lines: LINES answers 0, raises
+[NOTREADY](r:bif.index.stream.notready) and creates no file. LINES raises no
+condition at the end of the data of a stream that is open.
 
 ```rexx
 n = 0

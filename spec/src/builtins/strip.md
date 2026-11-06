@@ -204,14 +204,14 @@ say '['strip('  a  ', 'L', )']' '['strip('  a  ', , )']' '['strip('xxaxx', , 'x'
 > for every builtin.
 
 r[bif.strip.deviation.4]
-interrexx does not specify whether the result of STRIP is the same object
-as another string of equal value: as `string` itself, when nothing is
-stripped, as in `strip(s)` for an `s` with no whitespace at either end, or
-as an equal string produced some other way, such as the literal `'ab'`
-beside `strip('  ab')`. Through `identityHash`, or as a key of an
-`IdentityTable` or `IdentitySet`, the answer may be either, and a program
-can rely only on the value, which is equal under `==`. ooRexx differs: it
-often answers a new object where interrexx answers the existing one.
+interrexx does not specify whether the answer of STRIP is the same object as
+another string of equal value: as `string` itself, when nothing is stripped,
+as in `strip(s)` for an `s` with no whitespace at either end, or as an equal
+string produced some other way, such as the literal `'ab'` beside
+`strip(' ab')`. Through `identityHash`, or as a key of an `IdentityTable` or
+`IdentitySet`, the answer may be either, and a program can rely only on the
+value, which is equal under `==`. ooRexx differs: it often answers a new
+object where interrexx answers the existing one.
 
 ```rexx
 s = 'p' || 'q'

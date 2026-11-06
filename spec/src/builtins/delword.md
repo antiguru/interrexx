@@ -174,8 +174,8 @@ say '['delword('a b c d', 2, 2)']' '['delword('a b c d', 2, 3)']' '['delword('a 
 ## Deviations
 
 r[bif.delword.deviation.4]
-interrexx does not specify whether the result of DELWORD is the same object
-as another string of equal value: as `string` itself, when the call deletes
+interrexx does not specify whether the answer of DELWORD is the same object as
+another string of equal value: as `string` itself, when the call deletes
 nothing, as `delword(s, 99)` does, or as an equal string produced some other
 way, such as the literal `'a b'`. Through `identityHash`, or as a key of an
 `IdentityTable` or `IdentitySet`, the answer may be either, and a program can

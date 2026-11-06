@@ -4,7 +4,6 @@ kind: builtin
 syntax: "WORDS(string)"
 ansi: "9.3.29"
 rexxref: "Functions > Built-in Functions > WORDS"
-deviations: [4]
 ---
 
 # WORDS
@@ -107,26 +106,6 @@ say words(.object~new) words(.object~new~string)
 > word numbers `k`, counting from 1, for which `SUBWORD(string, k)` is not the
 > null string; it is 0 when there is no word. This counts the same words.
 
-## Deviations
-
 > **Note.** An argument whose `STRING` method answers an object that is not a
 > string falls under [Deviation 30](r:conv.string.deviation.30), as it does
 > for every builtin.
-
-r[bif.words.deviation.4]
-interrexx does not specify whether the result of WORDS is the same object as
-another string of equal value: as an equal number the program already holds,
-or a literal such as `'3'`, or the equal answer of another call. Through
-`identityHash`, or as a key of an `IdentityTable` or `IdentitySet`, the answer
-may be either, and a program can rely only on the value, which is equal under
-`==`. ooRexx differs: it often answers a new object where interrexx answers
-the existing one.
-
-```rexx
-n = words('a b') + 1
-say (words('a b c') == n) (words('a b c') == '3') (words('x y') == words('p q'))
-```
-
-```output
-1 1 1
-```

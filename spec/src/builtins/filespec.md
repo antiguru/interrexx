@@ -24,17 +24,9 @@ r[bif.filespec.args]
 rule](r:bif.filespec.option) says, and `filespec` is a
 [string](r:conv.string.null); both are required. FILESPEC does not run as a
 String method: sending the message `FILESPEC` to a string raises
-`SYNTAX 97.1`. It does not follow the [call rules](r:bif.index.call.count)
-for the number of arguments: a required argument that is omitted, or that is
-past the end of the call, raises `SYNTAX 88.901`, and a third argument raises
-`SYNTAX 88.922`. A trailing omitted place adds nothing to the count.
-An argument that is an object other than a string is replaced by the answer
-of its `MAKESTRING` method, as [for the other builtins](r:conv.string.object),
-but FILESPEC does not fall back to the `STRING` method: an object with no
-`MAKESTRING` method, such as `.nil`, raises `SYNTAX 88.909`, whatever its
-`STRING` method answers. When a call has a third argument and also an
-argument that is omitted or not a string, which of the two errors it raises
-is not specified.
+`SYNTAX 97.1`. It follows [the native call rule](r:bif.index.call.native),
+both for the number of arguments and for an argument that is an object other
+than a string, such as `.nil`.
 
 ```rexx
 signal on syntax name a

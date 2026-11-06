@@ -151,12 +151,12 @@ call sysfiledelete f
 
 r[bif.charout.fail]
 When the stream cannot be written, CHAROUT writes nothing, answers the number
-of characters of `string`, and raises NOTREADY. That is the case when the name
-cannot be opened for writing, as a name in a directory that does not exist, or
-a directory, and when the name is `STDIN`. For a name that cannot be opened, a
-`start` is not checked (see [the start rule](r:bif.index.stream.start)). What
-a `start` does together with the name `STDIN` is [not
-specified](r:bif.index.stream.transient).
+of characters of `string`, and raises [NOTREADY](r:bif.index.stream.notready).
+That is the case when the name cannot be opened for writing, as a name in a
+directory that does not exist, or a directory, and when the name is `STDIN`.
+For a name that cannot be opened, a `start` is not checked (see [the start
+rule](r:bif.index.stream.start)). What a `start` does together with the name
+`STDIN` is [not specified](r:bif.index.stream.transient).
 
 ```rexx
 n = 0

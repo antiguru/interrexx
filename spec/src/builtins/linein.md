@@ -202,10 +202,10 @@ return
 r[bif.linein.end]
 When `count` is 1 and the read position is at the end of the data, or `line`
 names a line that the stream does not have, LINEIN returns the null string and
-raises NOTREADY. The text after a final line end is not a line: line `n + 1` of
-a stream of `n` lines is such a line number, whether or not the last line has
-a line end. A stream with no characters has no line. The read position is then
-at the end of the data.
+raises [NOTREADY](r:bif.index.stream.notready). The text after a final line
+end is not a line: line `n + 1` of a stream of `n` lines is such a line
+number, whether or not the last line has a line end. A stream with no
+characters has no line. The read position is then at the end of the data.
 
 ```rexx
 f = 'spec-linein-end.tmp'
@@ -285,8 +285,9 @@ return
 ```
 
 r[bif.linein.stdin]
-Without a `name`, LINEIN reads a line of the standard input. At the end of
-the input it returns the null string and raises NOTREADY.
+Without a `name`, LINEIN reads a line of the standard input. At the end of the
+input it returns the null string and raises
+[NOTREADY](r:bif.index.stream.notready).
 
 ```rexx
 call on notready name nr

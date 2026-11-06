@@ -4,7 +4,7 @@ kind: builtin
 syntax: "STREAM(name [, operation [, command]])"
 ansi: "9.7.8"
 rexxref: "Functions > Built-in Functions > STREAM"
-deviations: [35, 49, 55, 57, 59, 62, 79]
+deviations: [34, 35, 49, 55, 57, 59, 62, 74, 79]
 ---
 
 # STREAM
@@ -291,17 +291,18 @@ The options of `OPEN` say what the stream is for and where it begins. `READ`
 opens it for reading only, `WRITE` for writing only, and `BOTH`, which is the
 default, for both. `APPEND` puts the write position after the last character,
 which is where a stream that is open for writing and neither `APPEND` nor
-`REPLACE` has it as well, and keeps it there: the write
-position cannot be moved into the data that the file held when it was opened,
-by `SEEK` or by a start or line that a write gives; see
-[Deviation 79](r:bif.stream.deviation.79). A position at the end of that data,
-or past it, is allowed, but a write still goes after the last character.
-`REPLACE` empties the file and begins the write
-position at its start. An option may be shortened as far as to `REA`, `W`,
-`BO`, `AP` and `REP`, and its case does not matter. A word that is given
-twice, two of `READ`, `WRITE` and `BOTH`, `READ` with `APPEND` or `REPLACE`,
-and `APPEND` with `REPLACE` raise `SYNTAX 93.0`. A stream for reading only
-refuses a write: it fails, and the state is `ERROR`.
+`REPLACE` has it as well, and keeps it there: the write position cannot be
+moved into the data that the file held when it was opened, by `SEEK` or by a
+start or line that a write gives; see [Deviation
+79](r:bif.stream.deviation.79). A position at the end of that data, or past
+it, is allowed, but a write still goes after the last character. On a file
+that the stream can only write, see [Deviation 74](r:bif.stream.deviation.74).
+`REPLACE` empties the file and begins the write position at its start. An
+option may be shortened as far as to `REA`, `W`, `BO`, `AP` and `REP`, and its
+case does not matter. A word that is given twice, two of `READ`, `WRITE` and
+`BOTH`, `READ` with `APPEND` or `REPLACE`, and `APPEND` with `REPLACE` raise
+`SYNTAX 93.0`. A stream for reading only refuses a write: it fails, and the
+state is `ERROR`.
 
 ```rexx
 f = 'spec-stream-mode.tmp'
@@ -596,7 +597,8 @@ line that the position is in. Each option may be shortened to its first
 letter. The option `SYS` may be given alone, and what it answers is not
 specified. A stream that is not open has no positions, and the answer is the
 null string. What `QUERY POSITION` answers for a standard stream is not
-specified.
+specified, and nor is the write position of a stream opened `APPEND` once a
+write on it has named a start.
 
 ```rexx
 f = 'spec-stream-qpos.tmp'
@@ -629,11 +631,11 @@ READY: 1
 
 r[bif.stream.query.exists]
 `QUERY EXISTS` answers the full name of the file, as
-[QUALIFY](r:bif.qualify.relative) makes it, if it exists, and the null string
-if not. A directory is not a file for it, and the answer for one is the null
-string. It does not create the file, and it does not depend on the stream
-being open. For a standard stream the answer is its name: `STDIN`, `STDOUT` or
-`STDERR`.
+[QUALIFY](r:bif.qualify.relative) makes it (see [Deviation
+34](r:bif.stream.deviation.34)), if it exists, and the null string if not. A
+directory is not a file for it, and the answer for one is the null string. It
+does not create the file, and it does not depend on the stream being open. For
+a standard stream the answer is its name: `STDIN`, `STDOUT` or `STDERR`.
 
 ```rexx
 f = 'spec-stream-exists.tmp'
@@ -811,6 +813,32 @@ READY READY READY READY:
 
 ## Deviations
 
+r[bif.stream.deviation.34]
+In a stream's name, as in every name interrexx qualifies, each `..` removes
+exactly the one component before it, however the component was written, so
+`.b/../c` names the file `c` beside the directory `.b`. ooRexx removes none
+after a doubled slash and two after a component that starts with a period, so
+its stream can be a different file.
+
+```rexx
+address system 'mktemp -d' with output stem t.
+base = t.1
+call sysmkdir base || '/.b'
+f = base || '/c'
+call charout f, 'abc'
+call charout f
+g = base || '/.b/../c'
+say (stream(g, 'c', 'query exists') == f) chars(g) charin(g, 1, 3)
+call stream g, 'c', 'close'
+call sysfiledelete f
+call sysrmdir base || '/.b'
+call sysrmdir base
+```
+
+```output
+1 3 abc
+```
+
 r[bif.stream.deviation.35]
 The names `HANDLE:0`, `HANDLE:1` and `HANDLE:2` denote the standard input,
 output and error streams, and read and write them; a `HANDLE:` stream with any
@@ -974,6 +1002,36 @@ READY:
 NOTREADY:EOF
 ```
 
+r[bif.stream.deviation.74]
+A stream opened `APPEND` on a file it can only write writes every line at the
+file's current end, after what another writer appended since the stream was
+opened. ooRexx writes at the end as it was when the stream was opened,
+overwriting what another writer appended meanwhile.
+
+```rexx
+f = 'spec-stream-dev74.tmp'
+call sysfiledelete f
+call lineout f, 'one'
+call lineout f
+address system 'chmod 200' f
+call stream f, 'c', 'open write append'
+address system 'printf "two\n" >>' f
+call lineout f, 'three'
+call lineout f
+address system 'chmod 600' f
+do while lines(f) > 0
+  say linein(f)
+end
+call stream f, 'c', 'close'
+call sysfiledelete f
+```
+
+```output
+one
+two
+three
+```
+
 r[bif.stream.deviation.79]
 On a stream opened `APPEND`, every write goes after the last character,
 wherever the write position has been set: a position past the end leaves no
@@ -981,8 +1039,8 @@ gap, and a position in data written since the stream was opened does not
 overwrite it. The write position cannot be moved into the data that the file
 held when it was opened: a `SEEK` of it there answers 0, and a CHAROUT or
 LINEOUT that names a position there writes nothing, all of them `NOTREADY`.
-ooRexx differs only there: it moves the position, and the write goes after
-the last character as any other does.
+ooRexx differs there: it moves the position, and the write goes after the last
+character as any other does.
 
 ```rexx
 f = 'spec-stream-dev79.tmp'

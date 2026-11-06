@@ -387,16 +387,29 @@ fn check(spec_root: &Path, repo: &Path, cited: &Citations) -> Vec<Problem> {
 /// examples that use external data queues never reach the user's service, and
 /// starts a watcher that stops that service and removes its directory once this
 /// process has ended. The directory is directly under the temp directory, so the
-/// service's socket path stays within the platform's limit wherever the
-/// checkout is. The daemon is built first when the target directory lacks it.
+/// service's socket path does not depend on where the checkout is; a temp
+/// directory long enough to put that path past the platform's limit is an
+/// error. The daemon is built first when the target directory lacks it.
 ///
 /// # Panics
-/// If the daemon cannot be built; every later call panics with the same
-/// message.
+/// If the socket path is too long or the daemon cannot be built; every later
+/// call panics with the same message.
 fn private_service() {
     static CHOSEN: std::sync::OnceLock<Result<(), String>> = std::sync::OnceLock::new();
     let chosen = CHOSEN.get_or_init(|| {
         let dir = std::env::temp_dir().join(format!("interrexx-spec-api-{}", std::process::id()));
+        let socket = interrexx_rxapi::transport::unix::socket_path(
+            &dir,
+            interrexx_rxapi::message::wire::PROTOCOL_VERSION,
+        );
+        // A Unix socket address holds 108 bytes, the last of them a NUL.
+        if socket.as_os_str().len() > 107 {
+            return Err(format!(
+                "the API service's socket path {} is longer than 107 bytes: \
+                 set TMPDIR to a shorter directory",
+                socket.display()
+            ));
+        }
         let daemon = Path::new(env!("CARGO_BIN_EXE_rexx")).with_file_name("rxapi");
         if !daemon.is_file() {
             build_daemon(&daemon)?;

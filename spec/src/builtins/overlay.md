@@ -120,14 +120,14 @@ characters from position `n`, and the result is longer than `target` when
 the run reaches past its end.
 
 ```rexx
-say '['overlay(' ', 'abcdef', 3)']' '['overlay('#', 'abcdef', 2, 3)']' '['overlay('zz', 'wxyz', 4)']'
+say '['overlay(' ', 'uvwxyz', 4)']' '['overlay('#', 'uvwxyz', 2, 3)']' '['overlay('zz', 'wxyz', 4)']'
 say overlay('45', 'ab', 4, 5, '*') overlay('xyz', 'abc', 1, 2)
 say '['overlay('xyz', 'abc', 2, 5)']'
 say overlay('xyz', 'abc', 3) overlay('x', 'abc', 4) overlay('abc', 'abc', 2, 0)
 ```
 
 ```output
-[ab def] [a#  ef] [wxyzz]
+[uvw yz] [u#  yz] [wxyzz]
 ab*45*** xyc
 [axyz  ]
 abxyz abcx abc
@@ -240,14 +240,13 @@ say length(overlay('X', 'abc', 1, 1234))
 ## Deviations
 
 r[bif.overlay.deviation.4]
-interrexx does not specify whether the result of OVERLAY is the same object
-as another string of equal value: as `target` itself, when the call returns
-all of it unchanged as `overlay('', s)` does, or as an equal string produced
-some other way, such as the literal `'abc'`. Through `identityHash`, or as
-a key of an `IdentityTable` or `IdentitySet`, the answer may be either, and
-a program can rely only on the value, which is equal under `==`. ooRexx
-differs: it often answers a new object where interrexx answers the existing
-one.
+interrexx does not specify whether the answer of OVERLAY is the same object as
+another string of equal value: as `target` itself, when the call returns all
+of it unchanged as `overlay('', s)` does, or as an equal string produced some
+other way, such as the literal `'abc'`. Through `identityHash`, or as a key of
+an `IdentityTable` or `IdentitySet`, the answer may be either, and a program
+can rely only on the value, which is equal under `==`. ooRexx differs: it
+often answers a new object where interrexx answers the existing one.
 
 ```rexx
 s = 'ab' || 'c'

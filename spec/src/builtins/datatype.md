@@ -172,12 +172,12 @@ say datatype('1234567890', '9') datatype('1234567890', 'W')
 ```
 
 r[bif.datatype.internal]
-Type `I` answers `1` when the string is acceptable as a
-[whole-number argument](r:conv.whole.digits) of a builtin: its number, rounded
-to 18 significant digits, is a whole number below 10\*\*18 in magnitude. The
-caller's NUMERIC DIGITS setting plays no part, so `I` can answer `1` for a
-number that `W` finds too large for the current setting, and `0` for a number
-that `W` finds whole because of rounding to a short setting.
+Type `I` answers `1` when the string is acceptable as a whole-number argument,
+as [the conventions' rule](r:conv.whole.digits) gives it (stream positions and
+BEEP have their own rules). The caller's NUMERIC DIGITS setting plays no part
+in that rule, so `I` can answer `1` for a number that `W` finds too large for
+the current setting, and `0` for a number that `W` finds whole because of
+rounding to a short setting.
 
 ```rexx
 say datatype('123456789012345678', 'I') datatype('1000000000000000000', 'I'),

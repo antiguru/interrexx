@@ -71,8 +71,9 @@ ab 4
 
 r[bif.chars.missing]
 A name that cannot be opened for reading, a file that does not exist or a
-directory for example, has no characters: CHARS answers 0, raises NOTREADY
-and creates no file. CHARS raises no condition at the end of the data.
+directory for example, has no characters: CHARS answers 0, raises
+[NOTREADY](r:bif.index.stream.notready) and creates no file. CHARS raises no
+condition at the end of the data.
 
 ```rexx
 n = 0

@@ -299,6 +299,13 @@ a: say condition('o')~code
 40.28
 ```
 
+> **Note.** The ANSI draft (9.3.30) takes two arguments, `start` and `end`,
+> checks each present one as a pad and raises `SYNTAX 40.23` when it is not
+> one character long, the null string included; an omitted one is the lowest
+> or highest character. It has no class names and no further groups; those are
+> ooRexx's, and so is `SYNTAX 40.28` for an argument that starts a group and
+> is neither one character long nor a class name.
+
 ## Deviations
 
 r[bif.xrange.deviation.4]
@@ -317,10 +324,3 @@ say (xrange('a', 'a') == 'a') (xrange('a', 'b') == 'ab') (xrange('digit') == xra
 ```output
 1 1 1
 ```
-
-> **Note.** The ANSI draft (9.3.30) takes two arguments, `start` and `end`,
-> checks each present one as a pad and raises `SYNTAX 40.23` when it is not
-> one character long, the null string included; an omitted one is the lowest
-> or highest character. It has no class names and no further groups; those
-> are ooRexx's, and so is `SYNTAX 40.28` for an argument that starts a group
-> and is neither one character long nor a class name.

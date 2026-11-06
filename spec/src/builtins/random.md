@@ -224,9 +224,9 @@ r[bif.random.seed.check]
 A `seed` must not be negative: a negative seed raises `SYNTAX 40.13`. This
 check comes after the checks of the form of all three arguments, and before
 those of the range of the numbers. A seed of 0 is a seed like any other, and
-`-0` is 0. A seed is any [whole-number argument](r:conv.whole.digits)
-that is not negative, so it is below 10\*\*18, and the sequence is the same
-for it on every run. A seed of 10\*\*18 or more raises `SYNTAX 40.12`.
+`-0` is 0. A seed is any [whole-number argument](r:conv.whole.digits) that is
+not negative, and the sequence is the same for it on every run. A seed that
+rule refuses as too large raises `SYNTAX 40.12`, as it says.
 
 ```rexx
 say random(,, 0) random(,, -0) random(,, '+0')

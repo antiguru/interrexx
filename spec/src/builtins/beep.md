@@ -23,15 +23,12 @@ standard output when no tone can be sounded.
 ## Arguments
 
 r[bif.beep.args]
-Both arguments are required. BEEP does not run as a String method: sending
-the message `BEEP` to a string raises `SYNTAX 97.1`. It does not follow the
-[call rules](r:bif.index.call.count) for the number of arguments, because
-its errors are the 88.9xx family. An argument that is missing, whether the
-call stops short of it or leaves its place empty, raises `SYNTAX 88.901`,
-and a third argument raises `SYNTAX 88.922`. A trailing omitted place adds
-nothing to the count, so `BEEP(100, 0, )` is a call with two arguments. The
-null string is not an omitted argument; it is a value that
-[fails the checks below](r:bif.beep.range).
+Both arguments are required. BEEP does not run as a String method: sending the
+message `BEEP` to a string raises `SYNTAX 97.1`. For the number of arguments
+it follows [the native call rule](r:bif.index.call.native), so
+`BEEP(100, 0, )` is a call with two arguments. The null string is not an
+omitted argument; it is a value that [fails the checks
+below](r:bif.beep.range).
 
 ```rexx
 signal on syntax name a
@@ -65,15 +62,17 @@ done
 r[bif.beep.range]
 `frequency` and `duration` are whole numbers in the [form](r:conv.whole.form)
 that rule gives. The value of each is its number rounded to 20 significant
-digits, whatever the NUMERIC DIGITS setting; when the first digit dropped is
-5 or more, the magnitude rounds up, otherwise down. The frequency must be
-from 37 to 32767 and the duration from 0 to 60000. An argument that is not in
-that form, whose rounded value has a fractional part other than zero, that
-is out of its range, or that is the null string raises `SYNTAX 88.907`, and
-so does an object whose string value fails these checks, such as `.nil`.
-A rounded value whose magnitude is 10\*\*18 or more is not a whole number for
-this purpose, whichever sign it has: it fails the form check, which comes
-before the range checks, as [the order rule](r:bif.beep.order) shows.
+digits, whatever the NUMERIC DIGITS setting; when the first digit dropped is 5
+or more, the magnitude rounds up, otherwise down. This is not the rule of [the
+conventions](r:conv.whole.digits), which rounds to 18 digits and raises
+`SYNTAX 40.12`. The frequency must be from 37 to 32767 and the duration from 0
+to 60000. An argument that is not in that form, whose rounded value has a
+fractional part other than zero, that is out of its range, or that is the null
+string raises `SYNTAX 88.907`, and so does an object whose string value fails
+these checks, such as `.nil`. A rounded value whose magnitude is 10\*\*18 or
+more is not a whole number for this purpose, whichever sign it has: it fails
+the form check, which comes before the range checks, as [the order
+rule](r:bif.beep.order) shows.
 
 ```rexx
 signal on syntax name a
@@ -146,8 +145,8 @@ of magnitude 10\*\*18 or more is not a whole number, so it is reported before
 a missing duration, while a frequency below that magnitude that is out of
 range is reported after it. A third argument is reported before an argument
 out of range. When a call has a third argument and also a frequency or
-duration that is missing or not a whole number, which of the two errors it
-raises is not specified.
+duration that is not a whole number, which of the two errors it raises is not
+specified, as it is for [one that is missing](r:bif.index.call.native).
 
 ```rexx
 signal on syntax name a

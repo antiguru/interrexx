@@ -95,13 +95,13 @@ say abs('-1.235') abs('1.235') abs('-1.2349') abs('9996') abs('-0.9995')
 ## Deviations
 
 r[bif.abs.deviation.4]
-interrexx does not specify whether the result of ABS is the same object as
+interrexx does not specify whether the answer of ABS is the same object as
 another string of equal value: as `number` itself, when the call leaves it
 unchanged, or as an equal string produced some other way. Through
-`identityHash`, or as a key of an `IdentityTable` or `IdentitySet`, the
-answer may be either, and a program can rely only on the value, which is
-equal under `==`. ooRexx differs: it answers the argument itself in a case
-where interrexx may answer an equal new string.
+`identityHash`, or as a key of an `IdentityTable` or `IdentitySet`, the answer
+may be either, and a program can rely only on the value, which is equal under
+`==`. ooRexx differs: it answers the argument itself in a case where interrexx
+may answer an equal new string.
 
 ```rexx
 s = '12' || '5'
