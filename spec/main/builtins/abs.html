@@ -177,7 +177,7 @@
 <pre><code>ABS(number)
 </code></pre>
 <p class="references">ANSI: 9.4.1; rexxref: Functions &gt; Built-in Functions &gt; ABS (Absolute Value)</p>
-<p class="deviations">Deviations: D4</p>
+<p class="deviations">Deviations: D4, D97</p>
 <p>ABS answers the magnitude of a number: the number without its minus sign,
 rounded to NUMERIC DIGITS digits.</p>
 <h2 id="arguments"><a class="header" href="#arguments">Arguments</a></h2>
@@ -251,6 +251,19 @@ may answer an equal new string.</p>
 say (abs(s) == s) (abs('125') == '125') (abs(-s) == s)
 </code></pre>
 <pre><code class="language-output">1 1 1
+</code></pre>
+<div class="rule" id="r-bif.abs.deviation.97"><a href="#r-bif.abs.deviation.97">[bif.abs.deviation.97]</a></div>
+<p>ABS writes its answer in the NUMERIC FORM in force at the call, as <a href="#r-bif.abs.result">the
+result rule</a> says, also for a string that was converted to
+a number under the other form before. ooRexx may answer such a string as it
+was written.</p>
+<pre><code class="language-rexx">numeric digits 3
+say abs('0.0000001')
+numeric form engineering
+say abs('0.0000001')
+</code></pre>
+<pre><code class="language-output">1E-7
+100E-9
 </code></pre>
 
                     </main>

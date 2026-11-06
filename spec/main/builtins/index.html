@@ -175,13 +175,15 @@
                     <main>
                         <h1 id="built-in-functions"><a class="header" href="#built-in-functions">Built-in functions</a></h1>
 <p class="references">ANSI: 9.2.1; rexxref: Functions &gt; Built-in Functions</p>
-<p class="deviations">Deviations: D4</p>
+<p class="deviations">Deviations: D4, D98, D99, D101</p>
 <p>This chapter has a page for each builtin function, and each page specifies the
 function call. The rules here hold for every builtin call, except that a
 builtin whose page links <a href="#r-bif.index.call.native">the native call rule</a>
-follows that rule in place of the rules for the number of arguments. The pages
-link to these rules, and to the <a href="../conventions.html">conventions</a>, instead of
-restating them.</p>
+follows that rule in place of the rules for the number of arguments, and
+also for the <a href="../conventions.html#r-conv.string.object">conversion</a> of an object that is not a
+string, which has no fallback to <code>STRING</code> there. The pages link to these
+rules, and to the <a href="../conventions.html">conventions</a>, instead of restating
+them.</p>
 <p>A page's syntax line names the arguments in order. A name in square
 brackets is an optional argument; every other argument is required. The
 number of names on the line is the most arguments the builtin takes, and
@@ -303,10 +305,11 @@ the count. An argument that such a page calls a string and that is an object
 other than a string is replaced by the answer of its <code>MAKESTRING</code> method, as
 <a href="../conventions.html#r-conv.string.object">for the other builtins</a>, but there is no fallback to
 the <code>STRING</code> method: an object with no <code>MAKESTRING</code> method raises
-<code>SYNTAX 88.909</code>, whatever its <code>STRING</code> method answers. When a call has an
-argument past the last one on the syntax line and also an argument that is
-omitted or that is to be a string and has no <code>MAKESTRING</code> method, which of the
-two errors it raises is not specified.</p>
+<code>SYNTAX 88.909</code>, whatever its <code>STRING</code> method answers. As for the other
+builtins, the count comes first: a call that has an argument past the last
+one on the syntax line raises 88.922 even when an argument before it is
+omitted or fails its own check (see <a href="#r-bif.index.call.native.deviation.101">Deviation
+101</a>).</p>
 <pre><code class="language-rexx">signal on syntax name a
 say filespec('N')
 a: say condition('o')~code
@@ -330,6 +333,34 @@ say filespec('E', 'x/y.z', , ) filespec('N', .mutablebuffer~new('p/q'))
 88.922
 88.909
 z q
+</code></pre>
+<div class="rule" id="r-bif.index.call.native.deviation.101"><a href="#r-bif.index.call.native.deviation.101">[bif.index.call.native.deviation.101]</a></div>
+<p>A builtin that follows the native call rule checks the count of its arguments
+before the arguments themselves, as <a href="#r-bif.index.call.order.count-before-values">the other
+builtins</a> do: a call that has an
+argument past the last one on the syntax line raises <code>SYNTAX 88.922</code> even when
+an argument before it is omitted, is an object with no <code>MAKESTRING</code> method, or
+fails a check that its page gives. ooRexx reports an omitted argument, an
+object with no <code>MAKESTRING</code> method and an argument that is not a whole number
+before the count, and the count before an argument's value: an option it does
+not allow or a number out of range.</p>
+<pre><code class="language-rexx">signal on syntax name a
+say filespec(, 'a/b', 'c')
+a: say condition('o')~code
+signal on syntax name b
+say filespec('N', .nil, 'c')
+b: say condition('o')~code
+signal on syntax name c
+say directory(.nil, 'x')
+c: say condition('o')~code
+signal on syntax name d
+say beep('x', 0, 1)
+d: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">88.922
+88.922
+88.922
+88.922
 </code></pre>
 <h2 id="words"><a class="header" href="#words">Words</a></h2>
 <div class="rule" id="r-bif.index.words.split"><a href="#r-bif.index.words.split">[bif.index.words.split]</a></div>
@@ -1291,8 +1322,10 @@ positions. A start or line number given to a transient stream raises
 <code>SYNTAX 93.958</code>, whatever its value: after the checks of <a href="#r-bif.index.stream.args">the argument
 rule</a> on the argument count, the form of the
 arguments and the count, and in place of that rule's check that the start is 1
-or more. What CHAROUT does with a start that it is given together with the
-name <code>STDIN</code>, a write to the standard input, is not specified. The examples of
+or more. CHAROUT given the name <code>STDIN</code> and a start is the exception: the
+start is not checked beyond its form, and the call <a href="charout.html#r-bif.charout.fail">fails as any write to the
+standard input does</a>, with NOTREADY and the number of
+characters it did not write as its answer. The examples of
 this book run with a pipe as standard input and as standard output. What a
 standard stream that is connected to anything else does with a start is not
 specified either. Named transient streams, such as FIFOs and devices, are not
@@ -1366,9 +1399,8 @@ ends. <a href="charout.html#r-bif.charout.close">CHAROUT given only a name</a> c
 pages of the other stream builtins name their forms. The next use of a closed
 name opens the stream again: the read position is at the start and the write
 position at the end of the data, and the characters written before the close
-are in the file. Whether a CHAROUT or LINEOUT call that gives no string, and
-either no stream name or the name of the standard output, closes the standard
-output, and what the later output of the program does then, is not specified.</p>
+are in the file. CHAROUT and LINEOUT never close a standard stream, as
+<a href="#r-bif.index.stream.lifetime.deviation.98">Deviation 98</a> says.</p>
 <pre><code class="language-rexx">f = 'spec-streams-life.tmp'
 call sysfiledelete f
 call charout f, 'abc'
@@ -1384,6 +1416,25 @@ call sysfiledelete f
 a
 abcd
 </code></pre>
+<div class="rule" id="r-bif.index.stream.lifetime.deviation.98"><a href="#r-bif.index.stream.lifetime.deviation.98">[bif.index.stream.lifetime.deviation.98]</a></div>
+<p>CHAROUT and LINEOUT never close a standard stream. A call of either that gives
+neither a string nor a start or line, and either no stream name or the name of
+a standard stream, writes nothing, answers 0 and does nothing else: the later
+output of the program is written as usual. ooRexx closes the standard stream
+for such a call, the standard output or the standard error, and output written
+to it, before or after the call, can be lost; which forms of the call do so
+varies from program to program.</p>
+<pre><code class="language-rexx">say 'one'
+call charout
+say charout('STDOUT') lineout('stdout:') charout('') lineout()
+call lineout 'stdout'
+call charout 'stderr'
+say 'two'
+</code></pre>
+<pre><code class="language-output">one
+0 0 0 0
+two
+</code></pre>
 <div class="rule" id="r-bif.index.stream.notready"><a href="#r-bif.index.stream.notready">[bif.index.stream.notready]</a></div>
 <p>A call that cannot read, or write, as many characters as it was asked to
 raises the NOTREADY condition. That happens at the end of the data, when the
@@ -1396,9 +1447,10 @@ trapped, or after a <code>CALL ON</code> trap returns, the call goes on and answ
 its page says. A trap by <code>SIGNAL ON NOTREADY</code> abandons the clause that raised
 it, like any other condition. Reading the standard output or the standard
 error by name, with CHARIN or LINEIN and a count that is not 0, is a read the
-stream does not allow and raises NOTREADY too; <code>condition('D')</code> is <code>STDOUT</code> or
-<code>STDERR</code>, whatever the spelling of the name, with or without the colon. CHARS
-and LINES of them raise nothing and answer 0.</p>
+stream does not allow, whatever the stream is connected to, and raises
+NOTREADY too (see <a href="#r-bif.index.stream.notready.deviation.99">Deviation 99</a>);
+<code>condition('D')</code> is <code>STDOUT</code> or <code>STDERR</code>, whatever the spelling of the name,
+with or without the colon. CHARS and LINES of them raise nothing and answer 0.</p>
 <pre><code class="language-rexx">f = 'spec-streams-nr.tmp'
 call sysfiledelete f
 call charout f, 'ab'
@@ -1433,6 +1485,23 @@ return
 <pre><code class="language-output defect=#82">NOTREADY STDOUT
 NOTREADY STDERR
 0 0
+</code></pre>
+<div class="rule" id="r-bif.index.stream.notready.deviation.99"><a href="#r-bif.index.stream.notready.deviation.99">[bif.index.stream.notready.deviation.99]</a></div>
+<p>A read of the standard output or the standard error reads nothing and raises
+NOTREADY whatever the stream is connected to, a file that is open for reading
+as well as for writing included. ooRexx reads from such a stream when it is
+open for reading, and answers the characters it finds there.</p>
+<pre><code class="language-rexx">call on notready name std
+say '[' || charin('Stdout', , 2) || ']'
+say '[' || linein('stderr:') || ']'
+exit
+std: say condition('d')
+return
+</code></pre>
+<pre><code class="language-output defect=#82">[]
+STDOUT
+[]
+STDERR
 </code></pre>
 <div class="rule" id="r-bif.index.stream.line-end"><a href="#r-bif.index.stream.line-end">[bif.index.stream.line-end]</a></div>
 <p>A line of a stream ends at the first line feed (<code>'0a'x</code>) after its start.

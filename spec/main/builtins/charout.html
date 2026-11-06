@@ -272,8 +272,9 @@ answers 0. The characters written are in the stream afterwards, and its
 <a href="index.html#r-bif.index.stream.lifetime">next use</a> opens it afresh. CHAROUT opens a stream
 that is not open in order to close it, so on a file that does not exist
 this creates it; the same is true of every call of CHAROUT, even one that
-writes nothing. Whether the call closes the standard output is
-<a href="index.html#r-bif.index.stream.lifetime">not specified</a>.</p>
+writes nothing. The call closes no standard stream: on one it writes nothing
+and answers 0, as <a href="index.html#r-bif.index.stream.lifetime.deviation.98">Deviation 98</a>
+says.</p>
 <pre><code class="language-rexx">f = 'spec-charout-close.tmp'
 call sysfiledelete f
 say stream(f, 'c', 'query exists') == ''
@@ -295,8 +296,10 @@ of characters of <code>string</code>, and raises <a href="index.html#r-bif.index
 That is the case when the name cannot be opened for writing, as a name in a
 directory that does not exist, or a directory, and when the name is <code>STDIN</code>.
 For a name that cannot be opened, a <code>start</code> is not checked (see <a href="index.html#r-bif.index.stream.start">the start
-rule</a>). What a <code>start</code> does together with the name
-<code>STDIN</code> is <a href="index.html#r-bif.index.stream.transient">not specified</a>.</p>
+rule</a>). Nor is a <code>start</code> given with the name
+<code>STDIN</code> checked beyond its form, whatever its value (see <a href="index.html#r-bif.index.stream.transient">the transient
+rule</a>): the call fails in the same way, and
+without a <code>string</code> it answers 0.</p>
 <pre><code class="language-rexx">n = 0
 call on notready name nr
 x = charout('spec-charout-nodir/x.tmp', 'abc')
@@ -312,6 +315,21 @@ return
 <pre><code class="language-output">3 1
 5 2
 1 3
+</code></pre>
+<pre><code class="language-rexx">n = 0
+call on notready name nr
+say charout('stdin', 'a', 0) n
+say charout('STDIN:', 'abc', -1) n
+say charout('stdin', , 1) n
+say n
+exit
+nr: n = n + 1
+return
+</code></pre>
+<pre><code class="language-output defect=#91">1 0
+3 1
+0 2
+3
 </code></pre>
 <h2 id="the-standard-streams"><a class="header" href="#the-standard-streams">The standard streams</a></h2>
 <div class="rule" id="r-bif.charout.std"><a href="#r-bif.charout.std">[bif.charout.std]</a></div>

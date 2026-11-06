@@ -177,7 +177,7 @@
 <pre><code>STREAM(name [, operation [, command]])
 </code></pre>
 <p class="references">ANSI: 9.7.8; rexxref: Functions &gt; Built-in Functions &gt; STREAM</p>
-<p class="deviations">Deviations: D34, D35, D49, D55, D57, D59, D62, D74, D79</p>
+<p class="deviations">Deviations: D34, D35, D49, D55, D57, D59, D62, D74, D79, D100</p>
 <p>STREAM asks a <a href="index.html#r-bif.index.stream.name">stream</a> for its state, describes the
 state, or carries out a command on the stream: opening and closing it,
 moving its positions, and asking about the file behind it. The other stream
@@ -551,7 +551,9 @@ READY:
 <p><code>CLOSE</code> closes the stream and answers <code>READY:</code>; its state is then <code>UNKNOWN</code>.
 The characters written are in the file, and the next use of the name
 <a href="index.html#r-bif.index.stream.lifetime">opens the stream afresh</a>. A stream that is not
-open has nothing to close, and the answer is the null string.</p>
+open has nothing to close, and the answer is the null string. What <code>CLOSE</code>
+does to a standard stream, and to the later output written to it, is not
+specified.</p>
 <pre><code class="language-rexx">f = 'spec-stream-close.tmp'
 call sysfiledelete f
 say '['stream(f, 'c', 'close')']' stream(f)
@@ -592,8 +594,9 @@ past the last character; <code>+</code> and <code>-</code> for a position counte
 from the read position with <code>READ</code>, and from the write position with <code>WRITE</code>
 (see <a href="#r-bif.stream.deviation.49">Deviation 49</a>). <code>READ</code> sets the read
 position, <code>WRITE</code> the write position, and when neither is given a stream open
-for reading and writing has both set to the answer; which of the two positions
-a <code>+</code> or <code>-</code> then counts from is not specified. <code>CHAR</code> counts characters and
+for reading and writing has both set to the answer, and a <code>+</code> or <code>-</code> then
+counts from the read position (see <a href="#r-bif.stream.deviation.49">Deviation 49</a>).
+<code>CHAR</code> counts characters and
 is the default; for <code>LINE</code> see <a href="#r-bif.stream.seek.line">the next rule</a>. A
 position past the end of the data is allowed: a read there finds nothing, and
 a write there <a href="charout.html#r-bif.charout.start">fills the gap</a>, except on a stream opened
@@ -688,9 +691,11 @@ and is the default; <code>LINE</code> counts lines, and the answer is the number
 line that the position is in. Each option may be shortened to its first
 letter. The option <code>SYS</code> may be given alone, and what it answers is not
 specified. A stream that is not open has no positions, and the answer is the
-null string. What <code>QUERY POSITION</code> answers for a standard stream is not
-specified, and nor is the write position of a stream opened <code>APPEND</code> once a
-write on it has named a start.</p>
+null string; so is the answer for a standard stream that is
+<a href="index.html#r-bif.index.stream.transient">transient</a> (see <a href="#r-bif.stream.deviation.100">Deviation
+100</a>). On a stream opened <code>APPEND</code>, the write
+position after a write is just after the last character, wherever the write
+was asked to go (see <a href="#r-bif.stream.deviation.79">Deviation 79</a>).</p>
 <pre><code class="language-rexx">f = 'spec-stream-qpos.tmp'
 call sysfiledelete f
 call charout f, 'ab' || '0a'x || 'cd' || '0a'x || 'ef'
@@ -899,8 +904,10 @@ READY []
 <div class="rule" id="r-bif.stream.deviation.49"><a href="#r-bif.stream.deviation.49">[bif.stream.deviation.49]</a></div>
 <p>On a stream open for reading and writing, a relative <code>SEEK</code> with <code>READ</code> moves
 from the read position, and one with <code>WRITE</code> from the write position, whatever
-operation came before. ooRexx counts from a position that it tracks, which can
-be the other one.</p>
+operation came before. One with neither option moves from the read position.
+ooRexx counts from a position that it tracks, which can be the other one: with
+neither option, the position that the last read, write or <code>SEEK</code> used, and the
+write position when there has been none since the stream was opened.</p>
 <pre><code class="language-rexx">f = 'spec-stream-dev49.tmp'
 call sysfiledelete f
 call lineout f, 'ab'
@@ -912,6 +919,11 @@ say stream(f, 'c', 'seek +1 read') stream(f, 'c', 'query position read')
 say stream(f, 'c', 'open')
 x = charin(f, , 3)
 say stream(f, 'c', 'seek +1 write') stream(f, 'c', 'query position read')
+say stream(f, 'c', 'open')
+say stream(f, 'c', 'seek +2') stream(f, 'c', 'query position write')
+x = charin(f, , 2)
+call charout f, 'X'
+say stream(f, 'c', 'seek -1') stream(f, 'c', 'query position write')
 call stream f, 'c', 'close'
 call sysfiledelete f
 </code></pre>
@@ -919,6 +931,9 @@ call sysfiledelete f
 2 2
 READY:
 11 4
+READY:
+3 3
+4 4
 </code></pre>
 <div class="rule" id="r-bif.stream.deviation.55"><a href="#r-bif.stream.deviation.55">[bif.stream.deviation.55]</a></div>
 <p>A stream opened <code>WRITE</code> reads nothing: a read fails and the state is <code>ERROR</code>,
@@ -1048,8 +1063,11 @@ gap, and a position in data written since the stream was opened does not
 overwrite it. The write position cannot be moved into the data that the file
 held when it was opened: a <code>SEEK</code> of it there answers 0, and a CHAROUT or
 LINEOUT that names a position there writes nothing, all of them <code>NOTREADY</code>.
-ooRexx differs there: it moves the position, and the write goes after the last
-character as any other does.</p>
+After a write, the write position is just after the last character, wherever
+the write was asked to go. ooRexx differs there: it moves the position, and
+the write goes after the last character as any other does; the write position
+it reports afterwards is the one that a CHAROUT start named, or that a <code>SEEK</code>
+set, moved past the characters written.</p>
 <pre><code class="language-rexx">f = 'spec-stream-dev79.tmp'
 call sysfiledelete f
 call charout f, 'abcdefgh'
@@ -1063,6 +1081,8 @@ say charout(f, 'Y', 1)
 say n
 say stream(f, 'c', 'seek 9 write') charout(f, 'Z', 9)
 say stream(f, 'c', 'seek 20 write') charout(f, 'W') charout(f, 'V', 10) n
+say stream(f, 'c', 'query position write') charout(f, 'U', 100),
+    stream(f, 'c', 'query position write')
 call stream f, 'c', 'close'
 say charin(f, 1, 100)
 call sysfiledelete f
@@ -1077,7 +1097,18 @@ return
 2
 9 0
 20 0 0 2
-abcdefghZWV
+12 0 13
+abcdefghZWVU
+</code></pre>
+<div class="rule" id="r-bif.stream.deviation.100"><a href="#r-bif.stream.deviation.100">[bif.stream.deviation.100]</a></div>
+<p><code>QUERY POSITION</code> of a standard stream that is
+<a href="index.html#r-bif.index.stream.transient">transient</a> answers the null string, with any
+option, because a transient stream has no position. ooRexx answers 1.</p>
+<pre><code class="language-rexx">say '[' || stream('stdin', 'c', 'query position') || ']',
+    '[' || stream('stdout', 'c', 'query position write') || ']',
+    '[' || stream('stderr', 'c', 'query position read line') || ']'
+</code></pre>
+<pre><code class="language-output">[] [] []
 </code></pre>
 
                     </main>

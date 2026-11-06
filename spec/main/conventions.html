@@ -207,14 +207,17 @@ say c2x(upper('61007a'x))
 <p>An argument that a page calls a string and that is an object other than a
 string is replaced by a string, and the builtin works on that string. When
 the object has a public <code>MAKESTRING</code> method that answers a string, the
-replacement is that answer, as for an <code>Array</code> or a <code>MutableBuffer</code>. When the
-object has no <code>MAKESTRING</code> method, the replacement is the answer of its
-public <code>STRING</code> method; when that answer is not a string either, see
-<a href="#r-conv.string.deviation.30">Deviation 30</a>. A <code>MAKESTRING</code> or <code>STRING</code> method
-that is private is not one the replacement can use: the call raises
-<code>SYNTAX 97.2</code>. This book does not specify the replacement when <code>MAKESTRING</code>
-answers an object other than a string, including an instance of a subclass
-of <code>String</code>, or for an object whose class defines its own <code>REQUEST</code> method.</p>
+replacement is that answer, as for an <code>Array</code> or a <code>MutableBuffer</code>. An
+instance of a subclass of <code>String</code> is a string here, as it is when it is
+passed directly: when <code>MAKESTRING</code> answers one, that instance is the
+replacement. When the object has no <code>MAKESTRING</code> method, the replacement is
+the answer of its public <code>STRING</code> method; when that answer is not a string
+either, see <a href="#r-conv.string.deviation.30">Deviation 30</a>. A builtin whose page
+links <a href="builtins/index.html#r-bif.index.call.native">the native call rule</a> has no such fallback to
+<code>STRING</code>, as that rule says. A <code>MAKESTRING</code> or <code>STRING</code> method that is private
+is not one the replacement can use: the call raises <code>SYNTAX 97.2</code>. This book
+does not specify the replacement when <code>MAKESTRING</code> answers an object that is
+not a string, or for an object whose class defines its own <code>REQUEST</code> method.</p>
 <pre><code class="language-rexx">say upper(.object~new) upper(.both~new) upper(.mutablebuffer~new('mb'))
 say c2x(.array~of(1, 2)) length(.array~of(1, 2)~string)
 signal on syntax name a
@@ -239,6 +242,14 @@ b: say condition('o')~code
 310A32 8
 97.2
 97.2
+</code></pre>
+<pre><code class="language-rexx">say upper(.mk~new) upper(.strsub~new('abc'))
+::class strsub subclass string
+::class mk
+::method makestring
+  return .strsub~new('ss')
+</code></pre>
+<pre><code class="language-output defect=#89">SS ABC
 </code></pre>
 <div class="rule" id="r-conv.string.whitespace"><a href="#r-conv.string.whitespace">[conv.string.whitespace]</a></div>
 <p>Whitespace is the blank, <code>'20'x</code>, and the horizontal tab, <code>'09'x</code>, and no

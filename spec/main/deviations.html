@@ -400,7 +400,10 @@ manual describes, buffered or not: a write starts at the write position, and
 a relative SEEK moves from the position it names. ooRexx tracks a stale
 position on a buffered stream, so a write can land on bytes the program never
 named, and on an unbuffered stream its relative and from-the-end seeks land
-elsewhere.</p>
+elsewhere. A relative SEEK that names neither position, on a stream open for
+reading and writing, counts from the read position. ooRexx counts it from the
+position that the last read, write or SEEK used, and from the write position
+when there has been none since the stream was opened.</p>
 <h2 id="50-a-trace-line-that-cannot-be-delivered"><a class="header" href="#50-a-trace-line-that-cannot-be-delivered">50. A trace line that cannot be delivered</a></h2>
 <p>When the trace destination refuses a line, the same condition as ooRexx's is
 raised, but some clauses may do their own work first. ooRexx raises it
@@ -517,7 +520,9 @@ object's <code>==</code>. ooRexx compares identity first and sends nothing.</p>
 the write position cannot be moved into the file as it was when opened: such
 a SEEK answers 0, and a CHAROUT or LINEOUT naming a position there writes
 nothing, all NOTREADY. ooRexx moves the position there, and the write goes
-after the last character as any other does.</p>
+after the last character as any other does. After a write, the write position
+reported is just after the last character. ooRexx reports the position that
+a CHAROUT start named, or that a SEEK set, moved past the characters written.</p>
 <h2 id="80-first-seek-of-an-unopened-transient-stream"><a class="header" href="#80-first-seek-of-an-unopened-transient-stream">80. First SEEK of an unopened transient stream</a></h2>
 <p>The first SEEK of a transient stream that nothing has opened raises
 <code>93.958</code>, as any positioning of a transient stream does. ooRexx answers 1.</p>
@@ -582,6 +587,37 @@ returns) names interrexx, its version, the ooRexx version it follows and its
 licence. The <code>MathLoadFuncs</code> banner names the library and interrexx's version.
 Neither prints ooRexx's product line, copyright or licence lines.
 <code>PARSE VERSION</code> and <code>RexxInfo</code> are unchanged.</p>
+<h2 id="97-abs-under-a-changed-numeric-form"><a class="header" href="#97-abs-under-a-changed-numeric-form">97. ABS under a changed NUMERIC FORM</a></h2>
+<p>ABS writes its answer in the current NUMERIC FORM, whatever form was in force
+when the same string was converted to a number before. ooRexx may answer such
+a string as it was written: under NUMERIC DIGITS 3, <code>abs('0.0000001')</code>
+answers <code>1E-7</code>, and after a change to NUMERIC FORM ENGINEERING it answers
+<code>0.0000001</code> where interrexx answers <code>100E-9</code>.</p>
+<h2 id="98-charout-and-lineout-never-close-a-standard-stream"><a class="header" href="#98-charout-and-lineout-never-close-a-standard-stream">98. CHAROUT and LINEOUT never close a standard stream</a></h2>
+<p>CHAROUT and LINEOUT never close a standard stream. A call of either that gives
+no string, on a standard stream, writes nothing and does nothing else, and the
+later output of the program is written as usual. ooRexx closes the standard
+stream for such a call, the standard output or the standard error, and output
+written to it, before or after the call, can be lost; which forms of the call
+do so varies from program to program.</p>
+<h2 id="99-reading-the-standard-output-or-error"><a class="header" href="#99-reading-the-standard-output-or-error">99. Reading the standard output or error</a></h2>
+<p>A read of the standard output or the standard error, by CHARIN or LINEIN with
+a count that is not 0, reads nothing and raises NOTREADY, whatever the stream
+is connected to. ooRexx reads from such a stream when it is open for reading
+as well, as a file opened for reading and writing is, and then answers the
+characters there.</p>
+<h2 id="100-query-position-of-a-standard-stream"><a class="header" href="#100-query-position-of-a-standard-stream">100. QUERY POSITION of a standard stream</a></h2>
+<p><code>QUERY POSITION</code> of a transient standard stream answers the null string,
+because a transient stream has no position. ooRexx answers 1.</p>
+<h2 id="101-argument-checks-of-the-native-builtins"><a class="header" href="#101-argument-checks-of-the-native-builtins">101. Argument checks of the native builtins</a></h2>
+<p>DIRECTORY, FILESPEC, BEEP and the RexxUtil file functions, such as
+SysFileDelete, check their arguments in the order that every other builtin
+follows, the ANSI order: the count of arguments first, so that an argument
+past the last one raises <code>SYNTAX 88.922</code> before an omitted or wrong argument
+is reported. ooRexx reports an omitted argument, an object with no
+<code>MAKESTRING</code> method and an argument that is not a whole number before the
+count, and the count before an argument's value: an option it does not allow
+or a number out of range.</p>
 
                     </main>
 
