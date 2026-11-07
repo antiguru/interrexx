@@ -203,15 +203,13 @@ one two
 ## The list form
 
 r[instr.expose.list]
-A name in parentheses is exposed as a name outside them is, and then its
-value is read as a list of further names. The value is split at
-[whitespace](r:conv.string.whitespace), and each word is exposed as if it
-had been written in the clause, as a simple, stem or compound symbol. A
-list that is empty or all whitespace exposes nothing, and the variable
-that holds the list is exposed in either case. The rules of [the list
-form of PROCEDURE](r:instr.procedure.list) hold for the rest, and so does
-[the DROP list rule](r:instr.drop.list) for the string that stands for the
-value.
+A name in parentheses is read as [the list form of
+PROCEDURE](r:instr.procedure.list) reads it, with [the string value of the
+DROP list](r:instr.drop.list), and what differs in a method is the target: the
+variable that holds the list is exposed first, so it is an object variable and
+the list is its value in the object, and each word of the list names an object
+variable. A list that is empty or all whitespace exposes the variable that
+holds it and nothing else.
 
 ```rexx
 o = .box~new

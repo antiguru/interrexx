@@ -29,7 +29,8 @@ because the caller passed fewer arguments or left that position empty, is
 dropped, so a variable it had before is unset. An argument beyond the last
 target is ignored. The clause may run again, and it reads the arguments the
 call was made with, not the current values of the variables. A target can be a
-simple symbol, a compound symbol or a stem symbol.
+simple symbol, a compound symbol or a stem symbol, or it can be left empty,
+which skips its argument and sets nothing.
 
 ```rexx
 call show 1, 2, 3
@@ -61,23 +62,51 @@ Array 2 Mixed Case 13
 ```
 
 ```rexx
-k = 'K'
-call fill 'v1', 'v2'
-say c.1 c.K
+call skip 'v1', 'v2'
+say symbol('a') symbol('b') b
 exit
-fill:
-  use arg c.1, c.k
+skip:
+  use arg , b
   return
 ```
 
 ```output
+LIT VAR v2
+```
+
+r[instr.use.compound]
+The tail of a compound target is resolved when that target is filled, with the
+values its variables have at that moment, as for [an
+assignment](r:expr.variables.compound) to the symbol. A target to the left
+that set a variable of the tail therefore counts. The argument is stored
+under the resulting name.
+
+```rexx
+k = 5
+call fill 'v1', 'v2'
+say c.1 c.5
+call chain 7, 'second'
+say d.7
+exit
+fill:
+  use arg c.1, c.k
+  return
+chain:
+  use arg t, d.t
+  return
+```
+
+```output defect=#108
 v1 v2
+second
 ```
 
 r[instr.use.stem]
 A stem symbol as a target receives the argument as the stem. When the caller
 passed a stem, as in `call s st.`, the target is that stem, not a copy, so
-the routine's assignments to it are the caller's.
+the routine's assignments to it are the caller's. When the argument is not a
+stem, the target is a new stem that has the argument as its default value, as
+[assigning a value to a stem](r:expr.variables.stem) does.
 
 ```rexx
 st.1 = 'one'
@@ -94,6 +123,19 @@ change: procedure
 ```output
 one
 one two
+```
+
+```rexx
+call plain 'str'
+exit
+plain:
+  use arg s.
+  say s.1 s.xyz s.~class~id
+  return
+```
+
+```output
+str str Stem
 ```
 
 r[instr.use.message]
@@ -137,8 +179,9 @@ it is the caller's, and an assignment changes the caller's variable. The
 target needs a reference as its argument, and a plain value raises `SYNTAX
 88.928`. The argument must not be omitted, which raises `SYNTAX 88.931`. The
 alias name must not be a variable of the routine that has a value, or the
-clause raises `SYNTAX 98.995`. This book
-does not specify a reference term anywhere else, nor the form with `>`.
+clause raises `SYNTAX 98.995`. A default after a reference target raises
+`SYNTAX 99.950` when the program is read. This book does not specify a
+reference term anywhere else, nor the form with `>`.
 
 ```rexx
 v = 'orig'
@@ -174,6 +217,13 @@ changed
 1 args => 88.928
 0 args => 88.931
 1 args => 98.995
+```
+
+```rexx
+use arg <x = 1
+```
+
+```output rc=157
 ```
 
 r[instr.use.default]
@@ -227,13 +277,14 @@ r[instr.use.strict]
 USE STRICT ARG fills the targets as USE ARG does, after it has checked the
 number of arguments. A target with no default is required, and a target with
 a default is optional, so the number of arguments passed must not be smaller
-than the number of required targets, which raises `SYNTAX 40.3`, and must not
-be greater than the number of targets, which raises `SYNTAX 40.4`. The count
-is the number of arguments passed, in the sense of [the ARG
-builtin](r:bif.arg.count), so a position left empty counts. A required
-position that is left empty raises `SYNTAX 40.5`. A required target may follow
-an optional one: the count must still reach it. Without a target the clause
-demands no argument at all.
+than the number of required targets, and must not be greater than the number
+of targets. A position that is left empty counts, but trailing positions left
+empty do not, in the sense of [the ARG builtin](r:bif.arg.count). A required
+position that is left empty is a third fault. In a program, an internal
+routine or an external routine the three faults raise `SYNTAX 40.3`, `40.4`
+and `40.5`; in a method they raise `SYNTAX 93.901`, `93.902` and `93.903`. A
+required target may follow an optional one: the count must still reach it.
+Without a target the clause demands no argument at all.
 
 ```rexx
 call s
@@ -272,6 +323,37 @@ e: say arg() 'args =>' condition('o')~code
 1 args => 40.4
 2 args => 40.3
 3 ok 1 2 3
+```
+
+```rexx
+o = .m~new
+call try 'none'
+call try 'three'
+call try 'trailing'
+call try 'empty'
+exit
+try:
+  signal on syntax name e
+  select
+    when arg(1) = 'none' then say o~m
+    when arg(1) = 'three' then say o~m(1, 2, 3)
+    when arg(1) = 'trailing' then say o~m(1, , )
+    otherwise say o~m(, 'x')
+  end
+  return
+e: say condition('o')~code
+  return
+::class m
+::method m
+  use strict arg a, b = 'B'
+  return 'ok' arg() a b
+```
+
+```output
+93.901
+93.902
+ok 1 1 B
+93.903
 ```
 
 r[instr.use.ellipsis]
@@ -323,8 +405,9 @@ USE LOCAL reverses the division of a method's variables. With it every
 variable of the method is an object variable, as if it were exposed, except
 the names the clause lists, which are the method's own. A listed name can be
 a simple or a stem symbol; a stem lists every compound variable of it. The
-special variables `RC`, `RESULT`, `SIGL`, `SELF` and `SUPER` stay local in any
-case. A USE LOCAL with no name leaves only these local. [The EXPOSE
+special variables `RC`, `RESULT`, `SIGL`, `SELF` and `SUPER` are never object
+variables, whatever USE LOCAL lists. A USE LOCAL with no name leaves only
+these local. [The EXPOSE
 rule](r:instr.expose.object) says what an object variable is.
 
 ```rexx
@@ -358,7 +441,7 @@ VAR object
 ```
 
 r[instr.use.local.place]
-USE LOCAL must be the first instruction of a method, with only directives,
+USE LOCAL must be the first instruction of a method, with only
 comments and null clauses before it. Any other instruction before it, a label,
 a USE ARG, an EXPOSE or a second USE LOCAL included, and a position inside a
 DO or an IF, raise `SYNTAX 99.910` when the program is read. An EXPOSE after

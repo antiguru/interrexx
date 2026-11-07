@@ -124,11 +124,11 @@ ran after
 r[instr.guard.when]
 With WHEN the instruction waits until its condition holds. While it waits it
 does not hold the guard, so other activities run methods of the object, and
-the condition is evaluated again after another activity has assigned or
-dropped an object variable that it names; when it is evaluated at other times
-is not specified. The guard is taken again before each evaluation. When the
-condition is true, GUARD ON WHEN goes on with the guard held, and GUARD OFF
-WHEN goes on without it. A condition that is true at once does not wait.
+the condition is tried again once another activity changes or unsets one of
+the object variables it reads; when it is tried at other times is not
+specified. The guard is taken again before each evaluation. When the condition
+is true, GUARD ON WHEN goes on with the guard held, and GUARD OFF WHEN goes on
+without it. A condition that is true at once does not wait.
 
 ```rexx
 c = .gate~new
@@ -253,7 +253,8 @@ r[instr.guard.when.exposed]
 The condition must name at least one variable that the method has exposed,
 as a simple symbol or as a stem symbol of its own EXPOSE, or that is
 an object variable because of USE LOCAL; a compound symbol exposed by its
-name is not enough. Otherwise the condition has nothing to wait for, and the
+name is not enough, and neither is a name that only a parenthesised list
+supplies, the variable holding the list included. Otherwise the condition has nothing to wait for, and the
 program raises `SYNTAX 99.913` when it is read. This holds for GUARD OFF WHEN
 as well. The example creates methods from source text, so that the error is
 raised at the call.
@@ -268,6 +269,8 @@ call try 'expose x.1; guard on when x.1'
 call try 'use local y; guard on when y'
 call try 'guard on when 1'
 call try 'expose x; guard off when y'
+call try 'expose (lst); guard on when x'
+call try 'expose (lst); guard on when lst'
 exit
 try:
   signal on syntax name e
@@ -288,6 +291,8 @@ expose x.1; guard on when x.1 => 99.913
 use local y; guard on when y => 99.913
 guard on when 1 => 99.913
 expose x; guard off when y => 99.913
+expose (lst); guard on when x => 99.913
+expose (lst); guard on when lst => 99.913
 ```
 
 > **Note.** A WHEN condition that stays false, while no other activity is

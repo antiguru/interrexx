@@ -75,10 +75,14 @@ LIT
 
 r[instr.reply.guard]
 A method that holds its object's guard when it replies keeps it on the new
-activity, so the continuation still has exclusive use of the object variables,
-and a guarded method that another activity sends to the object waits until
-the continuation has ended, as [the exclusion rule](r:instr.guard.exclusion)
-of GUARD says.
+activity, when its call is the only one on its activity that holds the guard
+of the object. The continuation then has exclusive use of the object
+variables, and a guarded method that another activity sends to the object
+waits until the continuation has ended, as [the exclusion
+rule](r:instr.guard.exclusion) of GUARD says. When a guarded method of the
+same object has called the replying method on that activity, it still holds
+the guard after the reply, and the continuation takes the guard again before
+its first clause runs, which waits until that method has given it up.
 
 ```rexx
 log = .array~new
@@ -112,11 +116,53 @@ replied
 continued probe
 ```
 
+```rexx
+log = .array~new
+o = .outer~new(log)
+m = o~start('a')
+do until o~inB; end
+o~release
+m~result
+o~waitDone
+do l over log; say l; end
+::class outer
+::method init
+  expose log go inb done
+  use arg log
+  go = .false; inb = .false; done = .false
+::method a
+  expose log go
+  x = self~b
+  log~append('A after b got' x)
+  do until go; end
+  log~append('A end')
+::method b
+  expose log inb done
+  inb = .true
+  reply 'r'
+  log~append('B cont')
+  done = .true
+::method release unguarded
+  expose go
+  go = .true
+::method inB unguarded
+  expose inb
+  return inb
+::method waitDone unguarded
+  expose done
+  guard on when done
+```
+
+```output
+A after b got r
+A end
+B cont
+```
+
 ## After the REPLY
 
 r[instr.reply.once]
-A method can execute one REPLY for each call. A second REPLY raises
-`SYNTAX 98.935`. A RETURN with an expression after a REPLY raises
+One REPLY is allowed in a call; a second raises `SYNTAX 98.935`. A RETURN with an expression after a REPLY raises
 `SYNTAX 98.936`, and an EXIT with an expression `SYNTAX 98.937`, because the
 value has nowhere to go. A RETURN or an EXIT without an expression ends the
 continuation, and the method is over. These errors arise in the continuation,
@@ -132,7 +178,7 @@ do m over .array~of('twice', 'retval', 'exitval', 'plain', 'plainexit')
   o~go
   o~wait
 end
-say log~makeString('l', '|')
+do l over log; say l; end
 say o~lost
 say 'main continues'
 exit
@@ -197,7 +243,16 @@ oops: log~append('exitval' condition('o')~code)
 ```
 
 ```output
-twice got one|twice 98.935|retval got one|retval 98.936|exitval got one|exitval 98.937|plain got one|plain continued|plainexit got one|plainexit continued
+twice got one
+twice 98.935
+retval got one
+retval 98.936
+exitval got one
+exitval 98.937
+plain got one
+plain continued
+plainexit got one
+plainexit continued
 lost answer
 main continues
 ```
@@ -229,7 +284,9 @@ r[instr.reply.method]
 REPLY works in the code of a method, anywhere among its own clauses, in a DO,
 an IF or a SELECT as well. In the main program, in a routine of a `::ROUTINE`
 directive and in an internal routine, including one that a method calls, it
-raises `SYNTAX 99.919` when it runs. The text of an INTERPRET raises `SYNTAX
+raises `SYNTAX 99.919` when it runs. The handler of a CALL ON is an internal
+routine, so a REPLY there raises `SYNTAX 99.919` too; the handler of a SIGNAL
+ON is not, and a REPLY there is plain. The text of an INTERPRET raises `SYNTAX
 99.924` when the INTERPRET runs, so no clause of the text runs.
 
 ```rexx
@@ -275,18 +332,52 @@ routine => 99.919
 second round
 ```
 
+```rexx
+o = .box~new
+say 'result:' o~callon
+say o~signalon
+::class box
+::method callon
+  signal on syntax name s
+  call on notready name h
+  x = linein('/nonexistent/dir/file')
+  return 'method continued'
+h:
+  say 'in call on handler'
+  reply 'from call on handler'
+  say 'not reached'
+  return
+s: say 'trapped' condition('o')~code
+  return 'trapped answer'
+::method signalon
+  signal on notready name h
+  x = linein('/nonexistent/dir/file')
+  return 'not reached'
+h:
+  reply 'from signal on handler'
+  return
+```
+
+```output
+in call on handler
+trapped 99.919
+result: method continued
+from signal on handler
+```
+
 ## Deviations
 
 r[instr.reply.deviation.15]
-A REPLY executed inside a loop that interrexx does not flatten, such as a
-DO group that has a label and no repetition (`DO LABEL blk`), is refused:
-interrexx ends the program with exit code 120 and a message on standard error
-that says it is not implemented. ooRexx continues the method on a new
-thread, as the rules above describe. The same holds for the same REPLY inside
-a nested DO of that group. The REPLY in the text of an INTERPRET is the plain
-rule of [the placement rule](r:instr.reply.method), and raises `SYNTAX 99.924`
-on both. The handler of a CALL ON is an internal routine, so a REPLY there is
-misplaced, as the same rule says.
+A REPLY inside a DO group that has a label and no repetition (`DO LABEL blk`),
+at any depth within it, is refused: interrexx ends the program with exit code
+120 and a message on standard error that says it is not implemented. A group
+nested in it, a loop in it and a SELECT or an IF in it are inside it as well,
+and the group may itself stand in any other DO, loop, SELECT or IF. ooRexx
+continues the method on a new thread, as the rules above describe. Every other
+form runs as those rules describe on both: a group without a label, a loop
+with or without a label, a SELECT and an IF. The REPLY in the text of an
+INTERPRET and the one in a CALL ON handler are not part of this deviation;
+[the placement rule](r:instr.reply.method) covers them on both.
 
 ```rexx
 o = .rep~new

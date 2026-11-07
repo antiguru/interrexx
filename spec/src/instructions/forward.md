@@ -23,9 +23,10 @@ r[instr.forward.options]
 The options may come in any order, and each may be given once. TO gives the
 object that receives the message, and without it the receiver is the object
 that received the original message. MESSAGE gives the name of the message,
-which is made upper case, and without it the name is the one of the original
-message. ARGUMENTS gives the arguments, and ARRAY gives them as a list of
-expressions in parentheses, and without both the arguments are the ones the
+which is its string value made upper case, and without it the name is the one
+of the original message. ARGUMENTS gives the arguments, and ARRAY gives them
+as a list of expressions in parentheses, where an expression left out is an
+argument that is left empty, and without both the arguments are the ones the
 original message had. CLASS gives a class at which the search for the method
 starts, so that the methods of the classes below it are passed over, and
 without it the search starts at the class of the receiver. CONTINUE is
@@ -70,7 +71,7 @@ say f~noArgs('k')
   forward to (t) message 'recv' arguments (.array~of('A1', 'A2', 'A3'))
 ::method withArray
   expose t
-  forward to (t) message 'recv' array ('R1', 'R2')
+  forward to (t) message 'recv' array ('R1', , 'R3')
 ::method noArgs
   expose t
   forward to (t) message 'recv' array ()
@@ -81,8 +82,32 @@ hello 2 x y
 hello 2 p q
 hello 2 p q
 3 1=A1 2=A2 3=A3
-2 1=R1 2=R2
+3 1=R1 2=- 3=R3
 0
+```
+
+```rexx
+t = .target~new
+call try 'hello'
+call try .nil
+exit
+try:
+  signal on syntax name e
+  say arg(1) '=>' t~fwd(arg(1))
+  return
+e: say arg(1) '=>' condition('o')~code
+  return
+::class target
+::method hello
+  return 'hello'
+::method fwd
+  use arg name
+  forward message (name)
+```
+
+```output
+hello => hello
+The NIL object => 97.1
 ```
 
 r[instr.forward.original]
@@ -94,8 +119,8 @@ that USE ARG filled does not change what is forwarded. When no receiver is
 given, the message goes to the object itself, so a name or a class that
 differs from the original is needed to stop the message from coming back to
 the method. A FORWARD that sends the same message to the same object with the
-same class again, and does not end, is a loop that this book does not
-specify.
+same class again sends the original message unchanged, so the method runs
+again and forwards again; what happens then is not specified.
 
 ```rexx
 d = .derived~new
@@ -133,15 +158,17 @@ r[instr.forward.arguments]
 The value of ARGUMENTS is turned into the list of arguments by sending it the
 message `MAKEARRAY`, so an array supplies its items, an empty array no
 argument, and an item that is missing in an array is an argument that is left
-empty. A string without line ends is one argument, a string of several lines
-has one argument for each line, and a list supplies its items. A value that
-cannot be made into an array raises `SYNTAX 98.946`.
+empty. A string that is not null and has no line ends is one argument, the
+null string supplies none, a string of several lines has one argument for each
+line, and a list supplies its items. A value that cannot be made into an array
+raises `SYNTAX 98.946`.
 
 ```rexx
 t = .target~new
 call try 'array', .array~of(1,,3)
 call try 'empty', .array~new
 call try 'string', 'a b c'
+call try 'null', ''
 call try 'lines', 'x'||'0a'x||'y'
 call try 'list', .list~of(1, 2)
 call try 'nil', .nil
@@ -169,6 +196,7 @@ e: say arg(1) '=>' condition('o')~code
 array => 3 1=1 2=- 3=3
 empty => 0
 string => 1 1=a b c
+null => 0
 lines => 2 1=x 2=y
 list => 2 1=1 2=2
 nil => 98.946
@@ -178,9 +206,10 @@ object => 98.946
 r[instr.forward.class]
 CLASS is the class at which the search for the method starts, so a method
 of the receiver's own class, or of a class between, is passed over when the
-class named is above it. The class must be a class of the
-receiver: the class of the receiver itself or one of its superclasses. A class
-of the program that the receiver does not belong to raises `SYNTAX 93.957`,
+class named is above it. The class must be one that the receiver is an
+instance of: the class of the receiver itself, one of its superclasses or a
+mixin class that it inherits. A class of the program that the receiver does
+not belong to raises `SYNTAX 93.957`,
 and a value that is not a class raises `SYNTAX 88.914`. A common use is
 `forward class (super)` to run the method that the running one overrides.
 
@@ -193,6 +222,7 @@ call try 'unrel'
 call try 'selfcls'
 call try 'supcls'
 call try 'strcls'
+call try 'mixcls'
 exit
 try:
   signal on syntax name e
@@ -208,7 +238,10 @@ e: say arg(1) '=>' condition('o')~code
   return 'base name' arg(1) self~class~id
 ::method hello
   return 'base hello'
-::class derived subclass base
+::class mix mixinclass object
+::method hi
+  return 'mix hi'
+::class derived subclass base inherit mix
 ::method name
   forward class (super)
   say 'never printed'
@@ -227,6 +260,8 @@ e: say arg(1) '=>' condition('o')~code
   forward class (.base) message 'hello'
 ::method strcls
   forward class ('base') message 'hello'
+::method mixcls
+  forward class (.mix) message 'hi'
 ```
 
 ```output
@@ -237,6 +272,7 @@ unrel => 93.957
 selfcls => derived hello
 supcls => base hello
 strcls => 88.914
+mixcls => mix hi
 ```
 
 ## What comes back
@@ -277,7 +313,7 @@ r[instr.forward.continue]
 With CONTINUE the running method does not end: it goes on with the clause
 after the FORWARD when the forwarded message has been answered. The answer is
 assigned to `RESULT`, and when the message has no answer `RESULT` is dropped,
-as after a message instruction. A condition that the forwarded message raises
+as after [a message instruction](r:instr.message.result). A condition that the forwarded message raises
 is raised in the running method, where a trap can see it. The running method
 returns its own value, as any method does.
 
