@@ -26,11 +26,10 @@ are ARG, LINEIN, PULL, SOURCE, VALUE, VAR and VERSION. Keywords are not case
 sensitive. What is parsed is the string value of what the source gives; a
 value that is not a string becomes one [as the conversion
 rule](r:conv.string.object) says. The first token after the keywords starts
-the template list, so in
-`parse var s with` the word `with` is a variable of the template, and so is
-`upper` in `parse arg upper`. A template list may be empty, and then the
-instruction [assigns nothing](r:parse.templates.empty) but still obtains its
-source.
+the template list, so in `parse var s with` the word `with` is a variable of
+the template, and so is `upper` in `parse arg upper`. A template list may be
+empty, and then the instruction
+[assigns nothing](r:parse.templates.empty) but still obtains its source.
 
 ```rexx
 parse var word word2
@@ -259,8 +258,8 @@ parses its string value; the string value of a stem is
 [the stem rule's](r:expr.variables.stem). The variable is only read: it
 changes only if it is also a target of the template, and the
 [order of work](r:parse.index.order) says that its old value is the one
-parsed. A variable with no value is treated
-like any other [use of such a variable](r:expr.variables.value): its
+parsed. A variable with no value is treated like any other
+[use of such a variable](r:expr.variables.value): its
 name is the source, or the `NOVALUE` condition is raised if it is enabled,
 with the name as its description, and then nothing is assigned. A compound
 symbol is replaced by its derived name first.
@@ -388,8 +387,9 @@ parse numeric a => 25.12
 
 r[instr.parse.deviation.77]
 The string value of a stem is its default value's, and NOSTRING is raised,
-naming the stem, only when the default has none, so a stem that holds
-compound variables and no default parses as its own name. ooRexx raises
+with the default's description, only when the default has no string value,
+so a stem that holds compound variables and no default parses as its own
+name. ooRexx raises
 NOSTRING for every stem used as a source.
 
 ```rexx

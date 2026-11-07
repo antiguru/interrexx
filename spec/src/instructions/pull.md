@@ -24,8 +24,8 @@ r[instr.pull.short]
 followed by the same list. The line is made upper case before the template
 sees it, as [the case conversion](r:parse.multiple.convert) defines, so the
 patterns of the template are written in upper case, and the case of the line
-that was in the queue is not kept. A PULL with no template
-still takes the line out of the queue and assigns nothing.
+that was in the queue is not kept. A PULL with no template still takes the
+line out of the queue and assigns nothing.
 
 ```rexx
 q = rxqueue('Create', 'spec_instr_pull_short')
