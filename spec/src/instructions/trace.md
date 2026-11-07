@@ -58,9 +58,12 @@ r[instr.trace.form.value]
 setting, with the same choice by first letter. A value that is not a string is
 converted as [a string argument](r:conv.string.object) says, and `.nil` is not
 a setting. VALUE may be left out when the expression starts with a
-parenthesis, or with an operator character other than `+` and `-`, so
-`TRACE (expression)` is the same instruction; the expression is then the rest
-of the clause, as it is after VALUE. A null value is the setting `N`. The
+parenthesis, or with an operator character other than `+`, `-`, `=` and `~`,
+so `TRACE (expression)` is the same instruction; the expression is then the
+rest of the clause, as it is after VALUE. `TRACE = expression` is an
+assignment to the variable `TRACE`, and `TRACE~name` a message instruction, as
+[the kinds rule](r:instr.index.kinds) says; neither sets a trace setting.
+A null value is the setting `N`. The
 expression ends the clause, so `TRACE VALUE 'l' 'x'` takes the value `l x`,
 which is the setting `L`.
 
@@ -93,6 +96,8 @@ L
 call try "trace (r) || 'x'"
 call try "trace ('r') 'x'"
 call try "trace \'r'"
+call try "trace = 'r'"
+call try "trace~length"
 call try "trace value .array~of('r')"
 call try "trace value .array~new"
 call try "trace value .nil"
@@ -110,6 +115,8 @@ e: say arg(1) condition('o')~code
 trace (r) || 'x' set R
 trace ('r') 'x' set R
 trace \'r' 34.901
+trace = 'r' set N
+trace~length set N
 trace value .array~of('r') set R
 trace value .array~new set N
 trace value .nil 24.1
@@ -168,7 +175,8 @@ other, so `1.5` raises `SYNTAX 24.1`, as does `.5`. A sign directly after
 TRACE, followed by one symbol or string, makes a signed number of it: a whole
 number raises `SYNTAX 24.901`, and any other operand raises `SYNTAX 26.7`.
 A parenthesis after the sign raises `SYNTAX 35.1`, and data after the number
-raises `SYNTAX 21.906`.
+raises `SYNTAX 21.906`. A sign alone is no number: `TRACE -` is the bare
+form, and `TRACE +` and a second sign after the first raise `SYNTAX 35.1`.
 
 ```rexx
 call try '5'
@@ -207,6 +215,9 @@ call try "trace -'r'"
 call try 'trace -3.5'
 call try 'trace -(3)'
 call try 'trace -3 x'
+call try 'trace -'
+call try 'trace +'
+call try 'trace - -3'
 exit
 try: procedure
   signal on syntax name e
@@ -224,6 +235,9 @@ trace -'r' 26.7
 trace -3.5 26.7
 trace -(3) 35.1
 trace -3 x 21.906
+trace - set
+trace + 35.1
+trace - -3 35.1
 ```
 
 r[instr.trace.invalid]
@@ -688,19 +702,20 @@ lines carry `>>>`, the final value of an expression, a value that a `PARSE`,
 `ARG`, `PULL` or `USE` instruction took from its source, and the value that a
 routine returns to its caller; a message instruction and a message assignment
 write no value line. The flag `>K>` marks, under `R` and `I`, the value of a
-keyword's expression in `DO`, `NUMERIC`, `PARSE`, `SIGNAL VALUE` and `TRACE`
-with a value, and a redirection of an `ADDRESS` command; it is shown as the
-keyword and its value. `ADDRESS VALUE` and `OPTIONS` write only `>>>`. The
-`+++` line of a command is the other kind of line of this setting. The flags
-that follow belong to `I` alone. `>L>` is a literal and `>V>` the value of a
+keyword's expression in `DO`, `NUMERIC`, `PARSE`, `RAISE`, `FORWARD`, `GUARD`,
+`SIGNAL VALUE` and `TRACE` with a value, and a redirection of an `ADDRESS`
+command; it is shown as the keyword and its value. `ADDRESS VALUE` and
+`OPTIONS` write only `>>>`. `>R>` is a variable reference that `USE ARG` took,
+shown as `"V" => "W"`, and is written under `R` and `I`. The `+++` line of a
+command is the other kind of line of this setting. The other flags belong to
+`I` alone. `>L>` is a literal and `>V>` the value of a
 variable, shown as `NAME => "value"`. `>C>` is a compound variable whose tail
 was substituted, shown as the substituted name, as in `S.K => "S.1"`, `>E>` an
 environment symbol, and `>N>` a symbol qualified by a namespace, shown as
 `NS:C => "The C class"`. `>O>` is the result of a binary operator and `>P>`
 that of a prefix operator, each shown as the operator and its result, `>F>`
 the result of a function call and `>M>` that of a message, shown as the name
-and the result, and `>A>` an argument of a call or of a message. `>R>` is a
-variable reference that `USE ARG` took, shown as `"V" => "W"`. `>=>` is an
+and the result, and `>A>` an argument of a call or of a message. `>=>` is an
 assignment, shown as `NAME <= "value"`, and `>.>` a value that a placeholder
 period of a template took. Names are shown in upper case.
 
@@ -783,6 +798,38 @@ sub: use arg a, b
        >>>     "3"
        >>>   "3"
      5 *-* exit
+```
+
+```rexx
+.traceoutput~destination(.output)
+x = .array~new
+v = 4
+trace r
+x~append(1)
+x[1] = 2
+call sub >v
+signal on syntax name e
+raise syntax 93.900 description 'd' additional 'ad'
+e: exit
+sub: use arg >w
+  return
+```
+
+```output
+     5 *-* x~append(1)
+     6 *-* x[1] = 2
+     7 *-* call sub >v
+    11 *-*   sub:
+    11 *-*   use arg >w
+       >R>     "V" => "W"
+    12 *-*   return
+     8 *-* signal on syntax name e
+     9 *-* raise syntax 93.900 description 'd' additional 'ad'
+       >K>   "SYNTAX" => "93.900"
+       >K>   "DESCRIPTION" => "d"
+       >K>   "ADDITIONAL" => "ad"
+    10 *-* e:
+    10 *-* exit
 ```
 
 ```rexx
