@@ -40,8 +40,8 @@ program then produces no output, and the interpreter exits with the negated
 error number, so that the exit status is `256` minus the error number: 243 for
 13.1. The text given to INTERPRET is read when the [INTERPRET
 instruction](r:instr.interpret.whole) runs, so the same fault there is an
-ordinary condition that a trap can handle, and the instructions before it in
-the string never run.
+ordinary [SYNTAX](r:cond.syntax.raise) condition that a trap can handle, and
+the instructions before it in the string never run.
 
 ```rexx
 say 'before'; exit

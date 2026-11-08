@@ -24,11 +24,17 @@ The pages of this chapter are:
 * [Condition information](information.md): the condition object, the
   variables `RC` and `SIGL`, and how an error reaches the caller of the code
   that raised it.
+* [SYNTAX](syntax.md), [ERROR and FAILURE](error.md), [HALT](halt.md),
+  [NOVALUE](novalue.md), [NOSTRING](nostring.md), [NOMETHOD](nomethod.md),
+  [NOTREADY](notready.md) and [LOSTDIGITS](lostdigits.md): one page for each
+  condition, with when it is raised, what it carries and which traps answer
+  it.
+* [USER conditions](user.md): the conditions that a program names itself.
+* [Error numbers](errors.md): the numbers of the SYNTAX conditions and what
+  each means.
 
-The conditions themselves are specified one per page, named here in plain
-text: SYNTAX, ERROR, FAILURE, HALT, NOVALUE, NOSTRING, NOMETHOD, NOTREADY,
-LOSTDIGITS and the user conditions. The RAISE instruction, which raises a
-condition on purpose, has a page of its own among the instructions. The
+The [RAISE](../instructions/raise.md) instruction, which raises a condition on
+purpose, has a page of its own among the instructions. The
 [CONDITION](../builtins/condition.md) builtin owns what a program reads back
 from a trapped condition, and this chapter links its rules.
 

@@ -281,12 +281,13 @@ caller trapped 42.3
 
 r[instr.reply.method]
 REPLY works in the code of a method, anywhere among its own clauses, in a DO,
-an IF or a SELECT as well. In the main program, in a routine of a `::ROUTINE`
-directive and in an internal routine, including one that a method calls, it
-raises `SYNTAX 99.919` when it runs. The handler of a CALL ON is an internal
-routine, so a REPLY there raises `SYNTAX 99.919` too; the handler of a SIGNAL
-ON is not, and a REPLY there is plain. The text of an INTERPRET raises `SYNTAX
-99.924` when the INTERPRET runs, so no clause of the text runs.
+an IF or a SELECT as well. In the main program, in a routine of a
+[`::ROUTINE`](r:dir.routine.create) directive and in an internal routine,
+including one that a method calls, it raises `SYNTAX 99.919` when it runs. The
+handler of a CALL ON is an internal routine, so a REPLY there raises
+`SYNTAX 99.919` too; the handler of a SIGNAL ON is not, and a REPLY there is
+plain. The text of an INTERPRET raises `SYNTAX 99.924` when the INTERPRET
+runs, so no clause of the text runs.
 
 ```rexx
 o = .box~new

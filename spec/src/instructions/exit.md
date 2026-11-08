@@ -10,10 +10,10 @@ rexxref: "Keyword Instructions > EXIT"
 
 EXIT ends the program at once, however many routines, loops and INTERPRET
 texts it is in, and the value of its expression is the program's value. In a
-method or in a routine of a `::ROUTINE` directive it ends only that unit, as
-RETURN would. This page specifies where EXIT stops, the end of the program as
-an implied EXIT, what the expression is, and how the value of the main
-program becomes the exit code of the process.
+method or in a routine of a [`::ROUTINE`](r:dir.routine.create) directive it
+ends only that unit, as RETURN would. This page specifies where EXIT stops,
+the end of the program as an implied EXIT, what the expression is, and how the
+value of the main program becomes the exit code of the process.
 
 ## Where it stops
 
@@ -141,11 +141,11 @@ b LIT
 r[instr.exit.value]
 The expression is evaluated when the EXIT runs, with the variables and the
 settings of the code that holds it. An error in it is raised before the
-program ends, and a trap for the condition handles it as it would anywhere
-else. EXIT without an expression has no value. Several expressions separated
-by commas give an Array, as [for RETURN](r:instr.return.list) does, so that a
-method which exits with two of them answers an Array, and the main program
-has an Array for its value.
+program ends, and [a trap for the condition](r:cond.traps.choice) handles it
+as it would anywhere else. EXIT without an expression has no value. Several
+expressions separated by commas give an Array, as [for
+RETURN](r:instr.return.list) does, so that a method which exits with two of
+them answers an Array, and the main program has an Array for its value.
 
 ```rexx
 signal on syntax name e

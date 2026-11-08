@@ -15,9 +15,10 @@ there was a save to take back and `0` when there was none.
 > **Note.** The examples use names that start with `SPEC_ENDLOCAL` for the
 > environment variables they change. Each example takes at most one save
 > back, counting the one that the reference implementation puts back at the
-> end of a `::routine`, a method or the program, because that implementation
-> can fail in a program that takes a save back a second time. The rule on
-> nested saves therefore has no example; a test of interrexx backs it.
+> end of a [`::routine`](r:dir.routine.create), a method or the program,
+> because that implementation can fail in a program that takes a save back a
+> second time. The rule on nested saves therefore has no example; a test of
+> interrexx backs it.
 
 ## Arguments
 

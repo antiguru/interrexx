@@ -57,11 +57,11 @@ d: say condition('o')~code
 r[bif.rxfuncquery.answer]
 The answer is `0` for a name that is available: a function the interpreter
 provides from the start, such as `SysSleep`, a function of a library that
-[RXFUNCADD](rxfuncadd.md) or a `::requires` directive with the `LIBRARY`
-keyword has loaded, and a name that [RXFUNCADD](rxfuncadd.md) has registered.
-The answer is `1` for every other name, such as a name that was never
-registered. The null string is a name like any other. The answer is written as
-the digit `0` or `1`.
+[RXFUNCADD](rxfuncadd.md) or a [`::requires`](r:dir.requires.library)
+directive with the `LIBRARY` keyword has loaded, and a name that
+[RXFUNCADD](rxfuncadd.md) has registered. The answer is `1` for every other
+name, such as a name that was never registered. The null string is a name like
+any other. The answer is written as the digit `0` or `1`.
 
 ```rexx
 say rxfuncquery('SysSleep')

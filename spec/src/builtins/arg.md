@@ -293,10 +293,11 @@ with. When a routine returns, the caller's arguments are what ARG reports
 again. A routine does not see its caller's arguments, whether or not it is
 declared with [PROCEDURE](r:instr.procedure.scope).
 [INTERPRET](r:instr.interpret.scope) runs in the routine that holds it, so ARG
-there reports that routine's arguments. A routine that a CALL ON trap starts
-as a handler has one argument, the condition object (see
-[CONDITION](r:bif.condition.object)); a SIGNAL ON handler continues in the
-routine that holds its label, and so sees that routine's arguments.
+there reports that routine's arguments. A routine that a [CALL ON
+trap](r:cond.traps.call) starts as a handler has one argument, the condition
+object (see [CONDITION](r:bif.condition.object)); a [SIGNAL
+ON](r:cond.traps.signal) handler continues in the routine that holds its
+label, and so sees that routine's arguments.
 
 ```rexx
 say 'program' arg() '['arg(1)']'
@@ -341,9 +342,9 @@ r[bif.arg.method]
 In a method, ARG reports the arguments of the message that ran it, counted
 as for a [routine](r:bif.arg.count): omitted places at the end add nothing,
 and an omitted place before a later argument counts. A routine that the
-method calls has its own arguments. A `::ROUTINE` directive gives a routine
-that is called like any other, and a routine and a method with the same
-arguments see the same ARG answers.
+method calls has its own arguments. A [`::ROUTINE`](r:dir.routine.create)
+directive gives a routine that is called like any other, and a routine and a
+method with the same arguments see the same ARG answers.
 
 ```rexx
 o = .box~new

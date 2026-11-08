@@ -303,11 +303,11 @@ expose (lst); guard on when lst => 99.913
 
 r[instr.guard.method]
 GUARD works in the code of a method. In the main program, in a routine of a
-`::ROUTINE` directive and in an internal routine, including one that a method
-calls, it raises `SYNTAX 99.911` when it runs. In a method it may stand
-anywhere in the method's own clauses, inside a DO, an IF or a SELECT as well.
-The text of an INTERPRET raises `SYNTAX 99.912` when the INTERPRET runs, so
-none of its clauses run.
+[`::ROUTINE`](r:dir.routine.create) directive and in an internal routine,
+including one that a method calls, it raises `SYNTAX 99.911` when it runs. In
+a method it may stand anywhere in the method's own clauses, inside a DO, an IF
+or a SELECT as well. The text of an INTERPRET raises `SYNTAX 99.912` when the
+INTERPRET runs, so none of its clauses run.
 
 ```rexx
 o = .box~new

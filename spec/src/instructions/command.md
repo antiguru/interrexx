@@ -113,8 +113,8 @@ whatever `RC` held, an assignment of the program included. Until the first
 command or the first trapped condition that sets it, `RC` has no value. No
 instruction other than a command assigns `RC` on its own account. A trapped
 `SYNTAX`, `ERROR` or `FAILURE` condition sets it as [the error
-rule](r:conv.error.name) and the conditions chapter say, so a trapped `SYNTAX`
-error sets it to the error number.
+rule](r:conv.error.name) and [the conditions chapter](../conditions/index.md)
+say, so a trapped `SYNTAX` error sets it to the error number.
 
 ```rexx
 address system
@@ -183,14 +183,15 @@ D 5 4
 
 r[instr.command.status]
 The environment symbol `.RS` holds the status of the last command: `0` when
-the command raised neither ERROR nor FAILURE, `1` when it raised ERROR and
-`-1` when it raised FAILURE. It holds a value only after a command has run,
-and before that it is an [environment symbol](r:lex.symbols.environment) that
-finds no object, so its value is its own characters. Which return codes and
-which environments raise the two conditions is part of
-the conditions chapter and of the environment chapter. For the environment
-`system`, `exit 3` is an error and a command that is not sent to an existing
-environment is a failure.
+the command raised neither [ERROR](r:cond.error.raise) nor
+[FAILURE](r:cond.error.failure), `1` when it raised ERROR and `-1` when it
+raised FAILURE. It holds a value only after a command has run, and before that
+it is an [environment symbol](r:lex.symbols.environment) that finds no object,
+so its value is its own characters. Which return codes and which environments
+raise the two conditions is part of [the conditions
+chapter](../conditions/index.md) and of the environment chapter. For the
+environment `system`, `exit 3` is an error and a command that is not sent to
+an existing environment is a failure.
 
 ```rexx
 say .rs
@@ -219,8 +220,9 @@ r[instr.command.status.scope]
 its label starts with the `.RS` of its caller, with or without PROCEDURE, and
 the commands it runs change only its own `.RS`, so the caller's value is the
 same on return, where a routine without PROCEDURE shares `RC`. A method, and a
-routine of a `::routine` directive, starts with no `.RS` and sets its own. An
-INTERPRET instruction shares the `.RS` of the code that ran it.
+routine of a [`::routine`](r:dir.routine.create) directive, starts with no
+`.RS` and sets its own. An INTERPRET instruction shares the `.RS` of the code
+that ran it.
 
 ```rexx
 address system
@@ -270,10 +272,11 @@ E 0 30
 ## Conditions
 
 r[instr.command.conditions]
-A command can raise the conditions ERROR and FAILURE, which a program traps
-with `SIGNAL ON` or `CALL ON` as the conditions chapter specifies. When
-neither is trapped, the clause ends and the program goes on with the next
-clause, whatever the return code was.
+A command can raise the conditions [ERROR](r:cond.error.raise) and
+[FAILURE](r:cond.error.failure), which a program traps with `SIGNAL ON` or
+`CALL ON` as [the traps rule](r:cond.traps.choice) specifies. When neither is
+trapped, the clause ends and the program goes on with the next clause,
+whatever the return code was.
 
 ```rexx
 address system

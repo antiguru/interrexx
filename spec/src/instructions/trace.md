@@ -609,13 +609,14 @@ work: procedure
 r[instr.trace.setting.commands]
 A command is shown by `A`, `R` and `I` with the rest of the clauses, and three
 more settings show commands and nothing else. `C` shows each command before it
-runs. `E` shows a command that raised `ERROR` or `FAILURE`, `F` shows one that
-raised `FAILURE`, and `N` shows what `F` shows. A shown command is followed by
-a line with the flag `>>>` that holds the command string that was sent, and by
-a line with the flag `+++` that holds `RC(n)` and the return code, when the
-command raised one of the two conditions; the return code is 30 when the
-environment does not exist. Which commands raise the conditions is specified
-with [the commands page](r:instr.command.status).
+runs. `E` shows a command that raised [`ERROR`](r:cond.error.raise) or
+[`FAILURE`](r:cond.error.failure), `F` shows one that raised `FAILURE`, and
+`N` shows what `F` shows. A shown command is followed by a line with the flag
+`>>>` that holds the command string that was sent, and by a line with the flag
+`+++` that holds `RC(n)` and the return code, when the command raised one of
+the two conditions; the return code is 30 when the environment does not exist.
+Which commands raise the conditions is specified with [the commands
+page](r:instr.command.status).
 
 ```rexx
 .traceoutput~destination(.output)
@@ -966,7 +967,7 @@ f:
 r[instr.trace.indent.signal]
 A SIGNAL sets the level to zero, so the clauses after it are shown from the
 left margin, also when the SIGNAL stood in a DO group or in a called routine.
-A condition that SIGNAL ON traps does the same.
+A condition that [SIGNAL ON](r:cond.traps.signal) traps does the same.
 
 ```rexx
 .traceoutput~destination(.output)

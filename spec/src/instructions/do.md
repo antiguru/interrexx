@@ -73,10 +73,10 @@ decimal point or an exponent when that is its value, and it must be below 10
 to the power of NUMERIC DIGITS however it is written: at DIGITS 5, `9.9999e4`
 is a count and `1e5` is not. No count may reach 10 to the power of 18,
 whatever DIGITS is. Any other value raises `SYNTAX 26.2`. A count of zero runs
-no pass and does not raise an error. When LOSTDIGITS is trapped, a count
-written with more than DIGITS digits raises that condition before the error,
-if any, as [the lost-digits rule](r:num.arithmetic.lostdigits) describes for
-an operand.
+no pass and does not raise an error. When
+[LOSTDIGITS](r:cond.lostdigits.information) is trapped, a count written with
+more than DIGITS digits raises that condition before the error, if any, as
+[the lost-digits rule](r:num.arithmetic.lostdigits) describes for an operand.
 
 ```rexx
 n = 3

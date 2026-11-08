@@ -107,10 +107,10 @@ at helper
 ```
 
 r[instr.return.unit]
-RETURN in a method or in a routine that a `::ROUTINE` directive defines ends
-that method or routine and hands the value to whoever sent the message or
-made the call, whatever the program as a whole is doing. A message
-instruction stores the value in `RESULT` as [the message
+RETURN in a method or in a routine that a [`::ROUTINE`](r:dir.routine.create)
+directive defines ends that method or routine and hands the value to whoever
+sent the message or made the call, whatever the program as a whole is doing. A
+message instruction stores the value in `RESULT` as [the message
 rule](r:instr.message.result) says, and a message that has no value and is
 used as a term raises `SYNTAX 91.999`, as [the cascade
 rule](r:expr.messages.cascade) says. A CALL of the routine stores the value

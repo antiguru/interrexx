@@ -89,11 +89,12 @@ ENGINEERING
 ```
 
 r[bif.form.default]
-The default of a package is `SCIENTIFIC` unless a `::OPTIONS` directive of the
-package names another value with its `FORM` keyword. Where it does, that value
-is the setting at the start of the program, the setting at the start of each
-of its `::ROUTINE` routines and methods, and the setting that the NUMERIC FORM
-instruction without an expression returns to.
+The default of a package is `SCIENTIFIC` unless a
+[`::OPTIONS`](r:dir.options.numeric) directive of the package names another
+value with its `FORM` keyword. Where it does, that value is the setting at the
+start of the program, the setting at the start of each of its
+[`::ROUTINE`](r:dir.routine.create) routines and methods, and the setting that
+the NUMERIC FORM instruction without an expression returns to.
 
 ```rexx
 say 'start' form()

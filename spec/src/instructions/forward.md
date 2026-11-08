@@ -405,9 +405,10 @@ method trapped 97.1
 r[instr.forward.method]
 FORWARD works in the code of a method, anywhere among its own clauses, in a
 DO, an IF or a SELECT as well. In the main program, in a routine of a
-`::ROUTINE` directive and in an internal routine, including one that a method
-calls, it raises `SYNTAX 98.947` when it runs. The text of an INTERPRET raises
-`SYNTAX 99.923` when the INTERPRET runs, so no clause of the text runs.
+[`::ROUTINE`](r:dir.routine.create) directive and in an internal routine,
+including one that a method calls, it raises `SYNTAX 98.947` when it runs. The
+text of an INTERPRET raises `SYNTAX 99.923` when the INTERPRET runs, so no
+clause of the text runs.
 
 ```rexx
 o = .box~new

@@ -113,11 +113,12 @@ say (100 = 104) (1.00 = 1.04)
 
 r[num.comparison.lostdigits]
 When a normal comparison compares two numbers, an operand with more digits
-than NUMERIC DIGITS minus NUMERIC FUZZ raises the LOSTDIGITS condition. The
-digits are counted as [the arithmetic rule](r:num.arithmetic.lostdigits)
-counts them, and the condition is raised for the left operand first. A strict
-comparison raises nothing, and neither does a comparison of text. When the
-condition is not trapped the comparison goes on and gives its answer.
+than NUMERIC DIGITS minus NUMERIC FUZZ raises the
+[LOSTDIGITS](r:cond.lostdigits.information) condition. The digits are counted
+as [the arithmetic rule](r:num.arithmetic.lostdigits) counts them, and the
+condition is raised for the left operand first. A strict comparison raises
+nothing, and neither does a comparison of text. When the condition is not
+trapped the comparison goes on and gives its answer.
 
 ```rexx
 numeric digits 3

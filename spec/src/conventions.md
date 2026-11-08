@@ -438,10 +438,11 @@ interrexx does not convert an argument whose `STRING` method answers an
 object that is not a string, such as a `Directory`. When a builtin receives
 such an argument where its page calls for a string, interrexx ends the
 program with exit code 120 and a message that this is not implemented,
-after raising `NOSTRING` when a trap for it is set. ooRexx reads the
-answer as a string, and what it does then depends on the builtin: `UPPER`
-ends the program with Error 5, `LENGTH` answers an unrelated number, and `STRIP`
-crashes the interpreter. A program can rely on none of these answers.
+after raising [`NOSTRING`](r:cond.nostring.raise) when a trap for it is set.
+ooRexx reads the answer as a string, and what it does then depends on the
+builtin: `UPPER` ends the program with Error 5, `LENGTH` answers an unrelated
+number, and `STRIP` crashes the interpreter. A program can rely on none of
+these answers.
 
 ```rexx
 o = .weird~new

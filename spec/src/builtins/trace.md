@@ -167,9 +167,10 @@ r[bif.trace.scope]
 The setting belongs to the code that is running, not to the program. An
 internal routine, one that the program calls by its label, starts with the
 caller's setting, and the caller has its own back when the routine returns,
-whatever the routine set. A method, and a `::ROUTINE`, starts with `N`
-whatever the caller's setting is, and its setting is lost on return as well.
-Code run by INTERPRET shares the setting of the code that runs it.
+whatever the routine set. A method, and a [`::ROUTINE`](r:dir.routine.create),
+starts with `N` whatever the caller's setting is, and its setting is lost on
+return as well. Code run by INTERPRET shares the setting of the code that runs
+it.
 
 ```rexx
 call trace 'E'

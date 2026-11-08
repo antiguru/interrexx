@@ -266,8 +266,9 @@ After a close of the standard output (see [the stream lifetime
 rule](r:bif.index.stream.lifetime.deviation.98)), SAY writes its line as
 usual, and the output is opened again. In ooRexx the line does not
 appear at once, and what is written after the last close, flush or open is
-lost. SAY raises no `NOTREADY` condition in either, whatever the state of the
-standard output, so the trap in the example does not run.
+lost. SAY raises no [`NOTREADY`](r:cond.notready.information) condition in
+either, whatever the state of the standard output, so the trap in the example
+does not run.
 
 ```rexx
 say 'one'

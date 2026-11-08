@@ -274,9 +274,9 @@ A sequence belongs to the code that runs it. A program, its internal routines
 or as functions, and the code it runs with
 [INTERPRET](r:instr.interpret.scope) all draw from one sequence: a seed given
 in any of them applies to all of them. Each run of a method, each run of a
-routine declared with `::ROUTINE`, and each message sent with START has a
-sequence of its own that begins unseeded. Its draws and its seeds leave the
-caller's sequence as it was.
+routine declared with [`::ROUTINE`](r:dir.routine.create), and each message
+sent with START has a sequence of its own that begins unseeded. Its draws and
+its seeds leave the caller's sequence as it was.
 
 ```rexx
 x = random(,, 5)

@@ -102,9 +102,9 @@ say (condition('A') == .nil) (condition('O') == .nil)
 r[bif.condition.name]
 After a trap has caught a condition, the option `C` answers the name of the
 condition in capital letters: for a SYNTAX error `SYNTAX`, for an unset
-variable under NOVALUE `NOVALUE`. For a user condition raised by the RAISE
-instruction, it answers `USER`, a blank and the name of the condition in
-capital letters.
+variable under [NOVALUE](r:cond.novalue.raise) `NOVALUE`. For a user condition
+raised by the [RAISE instruction](r:instr.raise.form), it answers `USER`, a
+blank and the name of the condition in capital letters.
 
 ```rexx
 signal on syntax name s
@@ -153,12 +153,12 @@ CALL
 r[bif.condition.description]
 After a trap has caught a condition, the option `D` answers the description
 string that the condition carries, or the null string when it carries none. A
-user condition carries what the RAISE instruction's DESCRIPTION gave, and a
-NOVALUE condition the name of the variable, in capital letters. A SYNTAX
-condition that the interpreter raises because of an error carries no
-description string; one that the RAISE instruction raises carries what its
-DESCRIPTION gave, and none when it has no DESCRIPTION, whether or not it has
-an ADDITIONAL.
+user condition carries what the RAISE instruction's
+[DESCRIPTION](r:instr.raise.description) gave, and a NOVALUE condition the
+name of the variable, in capital letters. A SYNTAX condition that the
+interpreter raises because of an error carries no description string; one that
+the RAISE instruction raises carries what its DESCRIPTION gave, and none when
+it has no DESCRIPTION, whether or not it has an ADDITIONAL.
 
 ```rexx
 signal on syntax name s
@@ -195,8 +195,9 @@ rq: raise syntax 40.1 additional ('ad') return
 r[bif.condition.extra]
 After a trap has caught a SYNTAX condition, the option `E` answers the subcode
 of the error number: the part after the period, as `12` for `40.12`. An error
-number raised without a subcode, as `RAISE SYNTAX 40` does, has the subcode 0
-and the code `40.0`. After any other condition `E` answers the null string.
+number raised without a subcode, as [`RAISE SYNTAX 40`](r:instr.raise.number)
+does, has the subcode 0 and the code `40.0`. After any other condition `E`
+answers the null string.
 
 ```rexx
 signal on syntax name s
@@ -225,8 +226,9 @@ rz: raise syntax 40 return
 r[bif.condition.additional]
 After a trap has caught a condition, the option `A` answers the additional
 information object the condition carries, and `.nil` when it carries none. A
-user condition carries what the RAISE instruction's ADDITIONAL gave, as the
-object itself, and not a string made from it.
+user condition carries what the RAISE instruction's
+[ADDITIONAL](r:instr.raise.additional) gave, as the object itself, and not a
+string made from it.
 
 ```rexx
 signal on novalue name n
@@ -376,9 +378,10 @@ The information belongs to the code that holds it. An internal routine, a
 routine that [CALL](r:instr.call.run) or a function call reaches by its label,
 starts with a copy of the information of the code that called it, and what it
 does to the copy, a trap that catches a condition in it or the option `R`, is
-not seen by the caller. A `::ROUTINE`, a method and a routine made from other
-source text start with none. [INTERPRET](r:instr.interpret.scope) runs in the
-code that holds it, and shares its information.
+not seen by the caller. A [`::ROUTINE`](r:dir.routine.create), a method and a
+routine made from other source text start with none.
+[INTERPRET](r:instr.interpret.scope) runs in the code that holds it, and
+shares its information.
 
 ```rexx
 call on user foo name u

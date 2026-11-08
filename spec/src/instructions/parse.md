@@ -115,10 +115,10 @@ PARSE LINEIN reads the next line from the default input stream, as the
 builtin [LINEIN](r:bif.linein.stdin) does with no stream name, and parses it.
 It never takes a line from the external data queue, even when the queue holds
 lines, and it leaves the queue as it was. At the end of the input the source
-is the null string, and the `NOTREADY` condition is raised with the
-description `STDIN`; when no trap is set that ends nothing, and the
-instruction completes with the null string. The standard input of the
-examples is empty.
+is the null string, and the [`NOTREADY`](r:cond.notready.information)
+condition is raised with the description `STDIN`; when no trap is set that
+ends nothing, and the instruction completes with the null string. The standard
+input of the examples is empty.
 
 ```rexx
 q = rxqueue('Create', 'spec_instr_parse_linein')
@@ -175,11 +175,11 @@ running code was started: `COMMAND` for the program itself, and also for an
 internal routine, since it runs in the program, `SUBROUTINE` for a routine
 or a program started with CALL, `FUNCTION` for one that was called as a
 function, and `METHOD` for a method. Any other start, such as the prolog of
-a package that a `::REQUIRES` directive loads, is not specified. The rest of
-the string is the name of the file or package that holds the code, which may
-itself contain blanks; for code that comes from a file it is the name that
-`.context~package~name` gives, and for a method or routine made from source
-text it is the name given when it was made.
+a package that a [`::REQUIRES`](r:dir.requires.create) directive loads, is not
+specified. The rest of the string is the name of the file or package that
+holds the code, which may itself contain blanks; for code that comes from a
+file it is the name that `.context~package~name` gives, and for a method or
+routine made from source text it is the name given when it was made.
 
 ```rexx
 parse source sys how file
@@ -260,9 +260,9 @@ changes only if it is also a target of the template, and the
 [order of work](r:parse.index.order) says that its old value is the one
 parsed. A variable with no value is treated like any other
 [use of such a variable](r:expr.variables.value): its
-name is the source, or the `NOVALUE` condition is raised if it is enabled,
-with the name as its description, and then nothing is assigned. A compound
-symbol is replaced by its derived name first.
+name is the source, or the [`NOVALUE`](r:cond.novalue.raise) condition is
+raised if it is enabled, with the name as its description, and then nothing is
+assigned. A compound symbol is replaced by its derived name first.
 
 ```rexx
 t = 'one two three'
@@ -385,10 +385,10 @@ parse numeric a => 25.12
 ## Deviations
 
 r[instr.parse.deviation.77]
-The string value of a stem is its default value's, and NOSTRING is raised,
-with the default's description, only when the default has no string value,
-so a stem that holds compound variables and no default parses as its own
-name. ooRexx raises
+The string value of a stem is its default value's, and
+[NOSTRING](r:cond.nostring.raise) is raised, with the default's description,
+only when the default has no string value, so a stem that holds compound
+variables and no default parses as its own name. ooRexx raises
 NOSTRING for every stem used as a source.
 
 ```rexx

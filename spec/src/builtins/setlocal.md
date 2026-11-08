@@ -23,9 +23,9 @@ inherit. Variables of the program itself are not among them.
 > started in, so they do not depend on what the program starts with. A program
 > that calls SETLOCAL and no ENDLOCAL leaves nothing for the other examples to
 > see. Each example takes at most one save back, counting the one that the
-> reference implementation puts back at the end of a `::routine`, a method or
-> the program, because that implementation can fail in a program that takes a
-> save back a second time.
+> reference implementation puts back at the end of a
+> [`::routine`](r:dir.routine.create), a method or the program, because that
+> implementation can fail in a program that takes a save back a second time.
 
 ## Arguments
 

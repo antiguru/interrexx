@@ -1539,8 +1539,9 @@ for it is the name of the stream, and `condition('C')` is `NOTREADY`. For a
 file the name is the one the call gave, in its spelling. For the standard
 input it is `STDIN`, whatever the spelling of the name in the call and also
 when the call gave none. The condition is not an error: when it is not
-trapped, or after a `CALL ON` trap returns, the call goes on and answers what
-its page says. A trap by `SIGNAL ON NOTREADY` abandons the clause that raised
+trapped, or after a [`CALL ON`](r:cond.notready.call) trap returns, the call
+goes on and answers what its page says. A trap by
+[`SIGNAL ON NOTREADY`](r:cond.notready.signal) abandons the clause that raised
 it, like any other condition. Reading the standard output or the standard
 error by name, with CHARIN or LINEIN and a count that is not 0, is a read the
 stream does not allow, whatever the stream is connected to, and raises

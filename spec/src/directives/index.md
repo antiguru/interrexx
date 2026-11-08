@@ -20,11 +20,20 @@ REQUIRES, RESOURCE and ROUTINE. The pages of this chapter are:
   the order in which the classes of a package come into being.
 * [::METHOD](method.md): a method of a class, the options that set its access
   and its kind, and a method that belongs to no class.
+* [::ATTRIBUTE](attribute.md): the methods that read and write an attribute.
+* [::CONSTANT](constant.md): a constant of a class or of the package.
+* [::ROUTINE](routine.md): a routine of the package and whether other
+  packages see it.
+* [::REQUIRES](requires.md): the program or library that a package needs.
+* [::OPTIONS](options.md): the settings that the code of a package starts
+  with.
+* [::RESOURCE](resource.md): a block of text that the package holds as data.
+* [::ANNOTATE](annotate.md): the annotations on a class, a method or a
+  routine.
 
-The directives that have no page yet are named in plain text where a rule
-needs them. The classes that the directives create are objects too, and what
-their own methods do is specified in the classes chapter. This chapter says
-only what a directive makes and what the options on it mean.
+The classes that the directives create are objects too, and what their own
+methods do is specified in the classes chapter. This chapter says only what a
+directive makes and what the options on it mean.
 
 A note on the examples. A directive cannot be run by INTERPRET, and a fault in
 one of them ends a program file before it writes anything. Where an example

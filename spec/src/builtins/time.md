@@ -545,8 +545,9 @@ code that [INTERPRET](r:instr.interpret.scope) runs in it. A routine of the
 same program that [CALL](r:instr.call.run) or a function call runs, a label of
 the program, begins with a copy of its caller's clock as it stands at the
 call, running if the caller's is and not started if not, and what it does to
-its copy is not seen by the caller. A `::ROUTINE`, a method and a message sent
-with START each begin with no clock, which their first call of E or R starts.
+its copy is not seen by the caller. A [`::ROUTINE`](r:dir.routine.create), a
+method and a message sent with START each begin with no clock, which their
+first call of E or R starts.
 
 ```rexx
 call starter

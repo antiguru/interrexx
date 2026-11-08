@@ -184,9 +184,10 @@ say length(errortext(0)) length(errortext(77)) length(errortext(95))
 ```
 
 r[bif.errortext.condition]
-The text of a number is the text that a `SYNTAX` condition of that major
-number carries as its `ERRORTEXT` entry, so `ERRORTEXT(n)` for the number
-`rc` of a trapped syntax error is the same string as the condition's own.
+The text of a number is the text that a [`SYNTAX`](r:cond.syntax.code)
+condition of that major number carries as its `ERRORTEXT` entry, so
+`ERRORTEXT(n)` for the number `rc` of a trapped syntax error is the same
+string as the condition's own.
 
 ```rexx
 signal on syntax name h
