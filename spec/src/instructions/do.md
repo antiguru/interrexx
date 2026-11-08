@@ -648,11 +648,11 @@ and after the item of an OVER or WITH loop was assigned, so the expression
 sees the control variable of the pass that it guards. A WHILE that is false
 the first time runs no pass. The expression must be a [logical
 value](r:expr.logical.value), and a value that is not `0` or `1` raises
-`SYNTAX 34.3`. The list form `WHILE a, b` is true when every expression is,
-and it evaluates them from left to right and stops at the first that is false,
-so the rest are not evaluated. An expression of the list that is evaluated and
-is not `0` or `1` raises `SYNTAX 34.6`. WHILE and UNTIL cannot both appear in
-one clause, and the attempt raises `SYNTAX 27.1`.
+`SYNTAX 34.3`. The list form `WHILE a, b` follows [the list rule of
+IF](r:instr.if.list): the expressions are evaluated from left to right up to
+the first that is false, and an expression that is evaluated and is not `0` or
+`1` raises `SYNTAX 34.6`. WHILE and UNTIL cannot both appear in one clause,
+and the attempt raises `SYNTAX 27.1`.
 
 ```rexx
 n = 0
