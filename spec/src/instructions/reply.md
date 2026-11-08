@@ -162,13 +162,13 @@ B cont
 ## After the REPLY
 
 r[instr.reply.once]
-One REPLY is allowed in a call; a second raises `SYNTAX 98.935`. A RETURN with an expression after a REPLY raises
-`SYNTAX 98.936`, and an EXIT with an expression `SYNTAX 98.937`, because the
-value has nowhere to go. A RETURN or an EXIT without an expression ends the
-continuation, and the method is over. These errors arise in the continuation,
-so a trap in the method sees them. An error that no trap handles ends the
-continuation only, with its message on standard error: the caller has the
-answer already, and the program goes on.
+One REPLY is allowed in a call; a second raises `SYNTAX 98.935`. A RETURN with
+an expression after a REPLY raises `SYNTAX 98.936`, and an EXIT with an
+expression `SYNTAX 98.937`, because the value has nowhere to go. A RETURN or
+an EXIT without an expression ends the continuation, and the method is over.
+These errors arise in the continuation, so a trap in the method sees them. An
+error that no trap handles ends the continuation only, with its message on
+standard error: the caller has the answer already, and the program goes on.
 
 ```rexx
 log = .array~new

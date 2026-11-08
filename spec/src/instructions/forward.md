@@ -110,6 +110,62 @@ hello => hello
 The NIL object => 97.1
 ```
 
+r[instr.forward.nullname]
+A message name that is the null string is accepted, whether it is written as a
+literal such as `('')` or comes from a variable that holds the null string.
+The message with that name takes exactly one argument and answers the string
+value of the receiver followed by the string value of that argument. A FORWARD
+that sends it with no argument raises `SYNTAX 93.903`, and one that sends it
+with two or more raises `93.902`, so the literal and the variable behave alike
+and only the number of arguments decides. Because the forwarding method has
+ended, a trap in the method does not see the error: the sender of the original
+message does. With CONTINUE the method is still running, and its own trap
+sees it. The arguments are those that [the rule for the original
+message](r:instr.forward.original) names unless ARGUMENTS or ARRAY gives
+others.
+
+```rexx
+call try '.box~new~lit'
+call try ".box~new~lit('a')"
+call try ".box~new~var('b')"
+call try ".box~new~lit('a', 'b')"
+call try '.box~new~var'
+call try ".box~new~later('c')"
+call try ".box~new~later('c', 'd')"
+call try '.box~new~later'
+exit
+try:
+  signal on syntax name e
+  interpret 'say arg(1) "=>" 'arg(1)
+  return
+e: say arg(1) '=>' condition('o')~code
+  return
+::class box
+::method string
+  return 'B'
+::method lit
+  forward message ('')
+::method var
+  s = ''
+  forward message (s)
+::method later
+  signal on syntax name e
+  forward message ('') continue
+  return 'after' result
+e: return 'in method' condition('o')~code
+```
+
+```output
+.box~new~lit => 93.903
+.box~new~lit('a') => Ba
+.box~new~var('b') => Bb
+.box~new~lit('a', 'b') => 93.902
+.box~new~var => 93.903
+.box~new~later('c') => after Bc
+.box~new~later('c', 'd') => in method 93.902
+.box~new~later => in method 93.903
+```
+
 r[instr.forward.original]
 When the arguments are not given, the forwarded message carries the
 arguments that the original message had when the method was entered, in
@@ -313,9 +369,9 @@ r[instr.forward.continue]
 With CONTINUE the running method does not end: it goes on with the clause
 after the FORWARD when the forwarded message has been answered. The answer is
 assigned to `RESULT`, and when the message has no answer `RESULT` is dropped,
-as after [a message instruction](r:instr.message.result). A condition that the forwarded message raises
-is raised in the running method, where a trap can see it. The running method
-returns its own value, as any method does.
+as after [a message instruction](r:instr.message.result). A condition that the
+forwarded message raises is raised in the running method, where a trap can see
+it. The running method returns its own value, as any method does.
 
 ```rexx
 d = .d~new

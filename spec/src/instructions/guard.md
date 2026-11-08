@@ -250,14 +250,14 @@ passed
 ```
 
 r[instr.guard.when.exposed]
-The condition must name at least one variable that the method has exposed,
-as a simple symbol or as a stem symbol of its own EXPOSE, or that is
-an object variable because of USE LOCAL; a compound symbol exposed by its
-name is not enough, and neither is a name that only a parenthesised list
-supplies, the variable holding the list included. Otherwise the condition has nothing to wait for, and the
-program raises `SYNTAX 99.913` when it is read. This holds for GUARD OFF WHEN
-as well. The example creates methods from source text, so that the error is
-raised at the call.
+The condition must name at least one variable that the method has exposed, as
+a simple symbol or as a stem symbol of its own EXPOSE, or that is an object
+variable because of USE LOCAL; a compound symbol exposed by its name is not
+enough, and neither is a name that stands only inside the parentheses or only
+in the list they hold. Otherwise the condition has nothing to wait for, and
+the program raises `SYNTAX 99.913` when it is read. This holds for GUARD OFF
+WHEN as well. The example creates methods from source text, so that the error
+is raised at the call.
 
 ```rexx
 call try 'expose x; guard on when x'
