@@ -108,6 +108,7 @@ call keep
 say 'went on'
 exit
 n: say 'novalue' condition('d')
+  exit
 keep: procedure expose (names)
   return
 ```
@@ -229,7 +230,7 @@ quiet:
 ```
 
 ```output
-trap ABE 9
+trap ABE 10
 back
 quiet went on ABF
 back again
