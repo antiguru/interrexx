@@ -539,12 +539,13 @@ name of the library and optionally one more word, the entry in it. A missing
 operand, or one that is not a string, raises `SYNTAX 19.905`. A string that
 does not have that form, whose first word is another word, or that has no
 library name or more than two words after LIBRARY, raises `99.917`; both are
-found when the program is read. A library that cannot be loaded raises
-`SYNTAX 98.903` as soon as the directive is read. It therefore comes before
-every fault raised when the package is installed and before a fault found when
-a later directive is read, while a fault found when an earlier directive is
-read comes first. A clause after the directive that is not a null clause
-raises `99.936`. How a library is searched for, and which routine of it the
+found when the program is read. A clause after the directive that is not a
+null clause raises `99.936`. A library that cannot be loaded raises
+`SYNTAX 98.903` when the directive's section ends, which is before the next
+directive is read. It therefore comes before every fault raised when the
+package is installed and before a fault found when a later directive is read,
+while a fault found when an earlier directive is read comes first, and a
+clause in the section raises `99.936` and not `98.903`. How a library is searched for, and which routine of it the
 method runs, are not specified here. With ATTRIBUTE the library is not looked
 for, as [the attribute rule](r:dir.method.attribute) says.
 
@@ -558,6 +559,7 @@ call try '::method m external library'
 call try '::method m external ""'
 call try '::method m external "library"'
 call try '::method m external "library spec_no_such_lib_xyz"', '::frob x'
+call try '::method m external "library spec_no_such_lib_xyz"', 'say 1'
 call try '::class a subclass spec_no_such_super_xyz', -
   '::method m external "library spec_no_such_lib_xyz"'
 call try '::frob x', '::method m external "library spec_no_such_lib_xyz"'
@@ -582,6 +584,7 @@ e: say strip(arg(1) arg(2)) '=>' condition('o')~code
 ::method m external "" => 99.917
 ::method m external "library" => 99.917
 ::method m external "library spec_no_such_lib_xyz" ::frob x => 98.903
+::method m external "library spec_no_such_lib_xyz" say 1 => 99.936
 ::class a subclass spec_no_such_super_xyz ::method m external "library spec_no_such_lib_xyz" => 98.903
 ::frob x ::method m external "library spec_no_such_lib_xyz" => 99.916
 ```
