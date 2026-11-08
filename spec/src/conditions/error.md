@@ -112,18 +112,18 @@ and again 7
 
 r[cond.error.failure]
 A command raises FAILURE, and not ERROR, when it could not be run. That is the
-case when the current environment does not exist, as [the status
-rule](r:instr.command.status) says, whatever the command is. On a POSIX host
-it is also the case when the return code is `127`, in the command
+case when the current environment does not exist, as
+[the status rule](r:instr.command.status) says, whatever the command is. On a
+POSIX host it is also the case when the return code is `127`, in the command
 environments `system`, `command`, `sh`, `bash` and `path`, whether the command
 was not found or exited with that code. Whether other environments of a host
-do the same is not specified. No other return code is a failure: `126`
-raises ERROR, and so does a negative one, which is not the failure of classic
-Rexx here. Both wait for the clause to end, and the record
-has the return code in `RC`, the command string as its description, and `.RS`
-is `-1`. A trap for ERROR does not answer a FAILURE as such, so it needs the
-fallback of [the next rule](r:cond.error.fallback), and a trap for FAILURE
-does not answer an ERROR.
+do the same is not specified. No other return code is a failure: `126` raises
+ERROR, and so does a negative one, which is not the failure of classic Rexx
+here. FAILURE, like ERROR, waits for the clause to end, and its record has the
+return code in `RC`, the command string as its description, and `.RS` is `-1`.
+A trap for ERROR does not answer a FAILURE as such, so it needs the fallback
+of [the next rule](r:cond.error.fallback), and a trap for FAILURE does not
+answer an ERROR.
 
 ```rexx
 address system

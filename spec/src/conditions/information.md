@@ -88,24 +88,23 @@ are [the entries that the object rule of CONDITION](r:bif.condition.object)
 names. `PACKAGE` is the package that holds the code that raised the condition,
 and `PROGRAM` its name. `POSITION` is the number of the line on which the
 clause that raised the condition starts, in that code, and a NOTREADY that the
-interpreter raised has none. `PROPAGATED` is `1` for a condition that
-came to the code that answers it from another level and `0` for one that was
-answered where it was raised, as [the propagated
-rule](r:cond.information.propagated) specifies. `STACKFRAMES` and
-`TRACEBACK` are lists with one item for each active level of code at that
+interpreter raised has none. `PROPAGATED` is `1` when the condition left the
+level that raised it and `0` otherwise, as
+[the propagated rule](r:cond.information.propagated) specifies. `STACKFRAMES`
+and `TRACEBACK` are lists with one item for each active level of code at that
 time, the main program's included, and the text of a traceback line is not
 specified. `ADDITIONAL` is present for a SYNTAX, NOMETHOD, NOSTRING or
 NOTREADY that the interpreter raised. A condition that a RAISE instruction
 raised has `POSITION`, and has `ADDITIONAL` exactly when the instruction gave
-one, whatever the name of the condition, as [the options rule of
-RAISE](r:instr.raise.additional) says. The exception is a SYNTAX, which always
-has an `ADDITIONAL` array, empty when the instruction gave none, as [the
-SYNTAX rule of RAISE](r:instr.raise.syntax) says. SYNTAX adds `CODE`, the
-error number with its subcode as `41.1`, `RC`, its major number, `ERRORTEXT`,
-the text of the error that the `ERRORTEXT` builtin answers for `RC`, and
-`MESSAGE`, the text with the details of this occurrence. ERROR and FAILURE
-have `RC`, the return code of the command. The texts of the messages are not
-specified, and the entry `RESULT` is not specified here.
+one, whatever the name of the condition, as
+[the options rule of RAISE](r:instr.raise.additional) says. The exception is a
+SYNTAX, which always has an `ADDITIONAL` array, empty when the instruction
+gave none, as [the SYNTAX rule of RAISE](r:instr.raise.syntax) says. SYNTAX
+adds `CODE`, the error number with its subcode as `41.1`, `RC`, its major
+number, `ERRORTEXT`, the text of the error that the `ERRORTEXT` builtin
+answers for `RC`, and `MESSAGE`, the text with the details of this occurrence.
+ERROR and FAILURE have `RC`, the return code of the command. The texts of the
+messages are not specified, and the entry `RESULT` is not specified here.
 
 ```rexx
 address system

@@ -975,9 +975,11 @@ switched the trap on, and an internal routine that has it on from its caller,
 handle their own RAISE SYNTAX. When that trap is `OFF`, the condition goes up
 to the caller as [the propagation rule](r:cond.information.propagate) says,
 and the caller sees `POSITION` as the line of the RAISE, `SIGL` as the line of
-its own clause and `PROPAGATED` as `1`. The SYNTAX that an unanswered HALT or
-NOMETHOD becomes is raised in the same way. With EXIT the SYNTAX is raised in
-the unit that holds the RAISE, as [the exit rule](r:instr.raise.exit) says.
+its own clause and `PROPAGATED` as `1`, as
+[the propagated rule](r:cond.information.propagated) says. The SYNTAX that an
+unanswered HALT or NOMETHOD becomes is raised in the same way. With EXIT the
+SYNTAX is raised in the unit that holds the RAISE, as
+[the exit rule](r:instr.raise.exit) says.
 
 ```rexx
 call go 'plain'

@@ -1500,19 +1500,20 @@ aXYZ
 
 r[bif.index.stream.lifetime]
 A stream stays open, with its positions, until the program closes it or ends.
-The streams of a call of a method end with the call, and what the call wrote
-to a stream that it did not close is not specified. [CHAROUT given only a
-name](r:bif.charout.close) closes a stream; the pages of the other stream
-builtins name their forms. The next use of a closed name opens the stream
-again: the read position is at the start and the write position at the end of
-the data, and the characters written before the close are in the file. A
-standard stream is closed in the same way, by [`CLOSE`](r:bif.stream.close)
-and by CHAROUT or LINEOUT given neither a string nor a start or line: its
-state is then `UNKNOWN`, and the next stream builtin that reads from it,
-writes to it, counts what is left in it (CHARS or LINES) or opens it opens it
-again on the same input or output, so that later reads and writes carry on.
-ooRexx differs, as [Deviation 98](r:bif.index.stream.lifetime.deviation.98)
-says.
+The streams that a call of a method opened are closed when the call returns,
+so what the call wrote is in the file then. What it wrote to a name that the
+code which called it also has open is not specified.
+[CHAROUT given only a name](r:bif.charout.close) closes a stream; the pages of
+the other stream builtins name their forms. The next use of a closed name
+opens the stream again: the read position is at the start and the write
+position at the end of the data, and the characters written before the close
+are in the file. A standard stream is closed in the same way, by
+[`CLOSE`](r:bif.stream.close) and by CHAROUT or LINEOUT given neither a string
+nor a start or line: its state is then `UNKNOWN`, and the next stream builtin
+that reads from it, writes to it, counts what is left in it (CHARS or LINES)
+or opens it opens it again on the same input or output, so that later reads
+and writes carry on. ooRexx differs, as
+[Deviation 98](r:bif.index.stream.lifetime.deviation.98) says.
 
 ```rexx
 f = 'spec-streams-life.tmp'
@@ -1531,6 +1532,22 @@ call sysfiledelete f
 ab c
 a
 abcd
+```
+
+```rexx
+f = 'spec-streams-method.tmp'
+call sysfiledelete f
+.spec_writer~new~w(f)
+say 'size after call' stream(f, 'C', 'QUERY SIZE')
+call sysfiledelete f
+::class spec_writer
+::method w
+  use arg f
+  call lineout f, 'from method'
+```
+
+```output defect=#122
+size after call 12
 ```
 
 r[bif.index.stream.lifetime.deviation.98]
