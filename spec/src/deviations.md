@@ -501,8 +501,9 @@ running package. ooRexx names another package object.
 ## 77. The string value of a stem
 
 In every position that requires a string, a stem's string value is its
-default value's, and NOSTRING, naming the stem, is raised only when that has
-none. ooRexx raises NOSTRING for every stem there.
+default value's, and NOSTRING is raised, with the default's description, only
+when the default has no string value. ooRexx raises NOSTRING for every stem
+there.
 
 ## 78. Hash lookup of the identical index
 
