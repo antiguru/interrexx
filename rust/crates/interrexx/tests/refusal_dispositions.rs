@@ -4,9 +4,10 @@
 //! to have a row in `corpus/refusal-dispositions.tsv`, saying why it stays:
 //! GUARD (no program reaches it; the record names
 //! the probes that tried), DEVIATION (matching the oracle is wrong; the record
-//! cites an `oracle-crashes.txt` entry or an active Deviation), or LIMIT (a
+//! cites an `oracle-crashes.txt` entry or an active Deviation), LIMIT (a
 //! design limit; the record cites the deviation or the design document that
-//! licenses it). A `Loud` struct literal outside a constructor has no name to
+//! licenses it), or DEFECT (a known interrexx defect; the record cites the
+//! issue that tracks its fix as `issue #N`). A `Loud` struct literal outside a constructor has no name to
 //! key a row on, so it is refused.
 
 #[path = "support/deviations.rs"]
@@ -16,8 +17,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// The three dispositions.
-const KINDS: &[&str] = &["GUARD", "DEVIATION", "LIMIT"];
+/// The dispositions.
+const KINDS: &[&str] = &["GUARD", "DEVIATION", "LIMIT", "DEFECT"];
 
 /// One committed row.
 #[derive(Debug)]
@@ -274,6 +275,11 @@ fn deviation_citations(record: &str, active: &BTreeSet<u32>) -> (bool, Vec<Strin
     })
 }
 
+/// Whether `record` cites an issue as `issue #N`.
+fn issue_citations(record: &str) -> bool {
+    citations(record, "issue #", |_| true).0
+}
+
 fn citations(record: &str, marker: &str, exists: impl Fn(&str) -> bool) -> (bool, Vec<String>) {
     let mut any = false;
     let mut missing = Vec::new();
@@ -366,6 +372,10 @@ fn problems(
             )),
             "LIMIT" if !(deviation || path) => found.push(format!(
                 "{}: a LIMIT cites the Deviation or the design document that licenses it",
+                row.constructor
+            )),
+            "DEFECT" if !issue_citations(&row.record) => found.push(format!(
+                "{}: a DEFECT cites the issue that tracks its fix",
                 row.constructor
             )),
             _ => {}
@@ -556,7 +566,7 @@ fn hostemu() -> Loud {
 plain\tGUARD\tprobe p1
 none\tDEVIATION\toracle-crashes.txt entry 6
 mutant_self\tLIMIT\tDeviation 20
-mixed\tGUARD\tprobe p5
+mixed\tDEFECT\tissue #101
 hostemu\tGUARD\tprobe p6
 ";
     assert!(
@@ -570,7 +580,7 @@ plain\tGUARD\tprobe p1
 none\tDEVIATION\toracle-crashes.txt entry 7
 gone\tGUARD\tprobe p2
 hostemu\tREHOME\t\"the row's text\"
-mixed\tGUARD\tprobe p3
+mixed\tDEFECT\tprobe p3
 mutant_self\tLIMIT\tDeviation 21
 ";
     let found = problems(&sites, &literals, &parse_table(wrong), &documents);
@@ -583,6 +593,7 @@ mutant_self\tLIMIT\tDeviation 21
         "gone: a row with no constructor",
         "hostemu: kind \"REHOME\" is not one of",
         "mutant_self: cites Deviation 21, which does not exist",
+        "mixed: a DEFECT cites the issue",
     ];
     for needle in expect {
         assert!(

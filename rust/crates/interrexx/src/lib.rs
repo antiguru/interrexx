@@ -981,7 +981,7 @@ impl Loud {
     }
 
     /// A `REPLY` with Rust frames between its method body's driver and
-    /// itself, which cannot move to a new activity (Deviation 15).
+    /// itself, which cannot move to a new activity (issue #101).
     fn immovable_reply() -> Loud {
         Loud {
             message: owned_message("a REPLY its method body runs on a nested Rust frame"),

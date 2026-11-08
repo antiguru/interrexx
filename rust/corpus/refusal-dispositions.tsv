@@ -13,6 +13,8 @@
 #   DEVIATION  matching the oracle is wrong; the record cites an oracle-crashes.txt entry or
 #              an active Deviation of spec/src/deviations.md.
 #   LIMIT      a design limit; the record cites the Deviation or design document licensing it.
+#   DEFECT     a known interrexx defect; the record cites the issue that tracks its fix as
+#              `issue #N`.
 #
 binary_operator	GUARD	internal inconsistency: every Operator belongs to a family of Interp::apply_binary (census class d-guard)
 call_op_off_its_node	GUARD	compiler invariant. Reached once, by a concatenation in a non-first call argument; that repro answers `ok` now
@@ -30,7 +32,7 @@ fork_child	DEVIATION	Deviation 42: SysFork, whose forked child cannot continue w
 frame_without_executable	GUARD	the probes reached this site only on a library routine's frame, which answers its Routine object (rust/corpus/lang/stackframe_library_routine_executable.rex, rust/corpus/lang/stackframe_merged_library_executable.rex) and refused on no other frame
 handle_descriptor	DEVIATION	Deviation 35: a HANDLE: stream on a descriptor other than 0, 1 or 2 needs unsafe to adopt; the oracle's HANDLE: stream never reaches its descriptor (crates/interrexx/tests/stream_handle.rs)
 hash_collection_without_store	DEVIATION	oracle-crashes.txt entry 50: the oracle dies on a hash class instance Class~new builds with .Class as the scope; the other hash.rs refusals (the condition object, a subclass whose INIT does not forward, the package tables) answer before this site
-immovable_reply	LIMIT	Deviation 15
+immovable_reply	DEFECT	issue #101: a REPLY inside a DO LABEL group with no repetitor runs on a nested Rust frame, which cannot move to a new activity
 instruction	GUARD	every InstructionKind executes (tests/owners.rs: INSTRUCTION_TAGS are all in scope, EXPECTED_OUT_OF_SCOPE is empty); each site is a match arm for a kind its caller routes elsewhere (census d-guard)
 internal_routine	GUARD	every row of the internal-package routine table has a body: interrexx tests/internal_routines.rs every_internal_routine_row_runs
 interpreter_table_copy	GUARD	a sweep found no such receiver, since every native_instance caller builds another class and .environment, .local, .methods and .routines are instance stores
