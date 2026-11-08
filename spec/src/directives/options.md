@@ -22,14 +22,16 @@ r[dir.options.syntax]
 The words after `::OPTIONS` are options. An option is a keyword, in any case,
 followed by its value, except PROLOG and NOPROLOG, which stand alone. Any
 number of options may be written in any order, on one directive or on several.
-The options are processed in text order, so an option written again replaces
-the earlier one and options of different directives add up. A directive with
-no option does nothing. A word that is no keyword of an option, which a
-second value after a keyword also is, raises `SYNTAX 25.924`. The directive
-takes no code of its own: a clause after it that is not a null clause raises
-`SYNTAX 99.916`, as [the section rule](r:dir.index.section) says. The faults
-are found when the program is read, so a program file with one writes nothing
-and exits with 256 minus the error number, 231 for `25.924`.
+When an option of one kind occurs twice, in one directive or in two, the one
+that stands later in the text wins, and options of different kinds all stay
+in force. A directive with no option does nothing. A word that is no keyword
+of an option, which a second value after a keyword also is, raises
+`SYNTAX 25.924`. The directive takes no code of its own: a clause after it
+that is not a null clause raises `SYNTAX 99.916`, as [the section
+rule](r:dir.index.section) says. The faults are found when the program is
+read, so [as the read rule says](r:lex.index.read-first) a program file with
+one writes nothing and exits with 256 minus the error number, 231 for
+`25.924`.
 
 ```rexx
 src = .array~of('say digits() fuzz() form()', -
@@ -373,11 +375,15 @@ TRACE sets the tracing setting that the prolog, every routine and every method
 of the package start with. Its value is a word that the [TRACE
 instruction](r:instr.trace.form.name) accepts, chosen by its first letter, so
 that `Off` and `O` are alike, and a letter that is not valid raises `SYNTAX
-24.1`. A missing value raises `19.919`. The directive is stricter than the
-instruction in one respect: a number is not a setting and raises `24.1`. The
-setting is what `TRACE()` returns when the code starts, and a TRACE
-instruction changes it for the running code only, as [the scope
-rule](r:instr.trace.scope) says.
+24.1`, which a string with a blank before the letter does too. A missing
+value, a sign and a parenthesis raise `19.919`. The empty string is accepted
+and starts the code with `N`. The directive is stricter than the instruction
+in one respect: a number is not a setting and raises `24.1`. The setting is
+what `TRACE()` returns when the code starts, and a TRACE instruction changes
+it for the running code only, as [the scope rule](r:instr.trace.scope) says.
+A question mark before the letter is accepted, and what interactive tracing
+does belongs to the TRACE instruction. What `TRACE()` returns when the code
+starts after a question mark with no letter after it is not specified.
 
 ```rexx
 call try 'o'
@@ -387,6 +393,11 @@ call try 'N'
 call try '"n"'
 call try 'x'
 call try '3'
+call try '""'
+call try '-1'
+call try '+'
+call try '(n)'
+call try '" n"'
 call try ''
 exit
 try:
@@ -415,6 +426,12 @@ start N
 changed N N N
 trace x => 24.1
 trace 3 => 24.1
+start N
+changed N N N
+trace -1 => 19.919
+trace + => 19.919
+trace (n) => 19.919
+trace " n" => 24.1
 trace  => 19.919
 ```
 
@@ -428,11 +445,14 @@ answers raise a SYNTAX condition instead, with these codes: `98.970` for
 ERROR, `98.971` for FAILURE, `98.972` for LOSTDIGITS, `98.973` for NOSTRING,
 `98.974` for NOTREADY and `98.986` for NOVALUE. The clause that raised it ends
 there as [the SYNTAX rule](r:cond.syntax.raise) says, and `RC` is 98 in the
-trap that catches it. Without a trap the program ends with the error report
-and the exit status 158. A FAILURE that SYNTAX turns into an error is not
-passed on to the ERROR trap, as the second example shows. A missing value or a
-string raises `SYNTAX 20.929` and any other symbol `25.927`, both when the
-program is read.
+trap that catches it. Without a trap the program ends as [the rule for an
+untrapped SYNTAX](r:cond.index.syntax) says, with exit status 158. A FAILURE
+raised as SYNTAX is not passed on to the ERROR trap, as the second example
+shows. A FAILURE that no trap answers is answered as ERROR, as [the fallback
+rule](r:cond.error.fallback) says, so with ERROR SYNTAX it raises `98.970`
+when FAILURE is left at CONDITION, as the third example shows. A missing value
+or a string raises `SYNTAX 20.929` and any other symbol `25.927`, both when
+the program is read.
 
 ```rexx
 call try 'error'
@@ -490,6 +510,19 @@ syntax 98.971 98
 ```
 
 ```rexx
+signal on syntax name e
+address nosuchenv 'echo x'
+say 'went on' rc
+exit
+e: say 'syntax' condition('o')~code
+::options error syntax
+```
+
+```output
+syntax 98.970
+```
+
+```rexx
 address system 'exit 3'
 say 'not reached'
 ::options error syntax
@@ -533,9 +566,15 @@ while the trap instructions have left the condition alone: a SIGNAL or CALL
 instruction that turns the trap of the condition `ON` or `OFF`, or the trap of
 ANY, ends the option for that condition for the rest of the routine or method
 in which it ran, so that an `OFF` condition is
-[ignored](r:cond.index.untrapped) again. An internal routine takes this state
-from its caller. A `::ROUTINE` and a method start without the state, and the
-option applies there afresh. A SYNTAX condition that the option raises is an
+[ignored](r:cond.index.untrapped) again. A CALL instruction does so for ERROR,
+FAILURE and NOTREADY, the conditions that CALL can trap, and CALL ON or OFF of
+ANY does so for these three only: for LOSTDIGITS, NOSTRING and NOVALUE the
+option stays in force. An internal routine takes this state from its caller,
+and the instructions that it runs end the option for its own code only, so
+that its caller still has the state it had when the routine returns. A SIGNAL
+or CALL in the text of an INTERPRET ends the option for the code that runs the
+INTERPRET. A `::ROUTINE` and a method start without the state, and the option
+applies there afresh. A SYNTAX condition that the option raises is an
 ordinary one, which SIGNAL ON SYNTAX answers.
 
 ```rexx
@@ -549,6 +588,11 @@ call try 7
 call try 8
 call try 9
 call try 10
+call try 11
+call try 12
+call try 13
+call try 14
+call try 15
 exit
 try:
   which = arg(1)
@@ -566,6 +610,18 @@ try:
     when which = 8 then call inner
     when which = 9 then do; signal off novalue; call inner; end
     when which = 10 then do; signal off novalue; call routine10; end
+    when which = 11 then do; call off any; say 'eleven' unset11; end
+    when which = 12 then do; call off any; address system 'exit 3'; end
+    when which = 13 then do; call inner13; say 'thirteen' unset13; end
+    when which = 14 then do
+      interpret 'signal off novalue'
+      say 'fourteen' unset14
+    end
+    when which = 15 then do
+      signal on any name t
+      numeric digits 3
+      say 12345 + 0
+    end
   end
   say which 'went on'
   return
@@ -576,6 +632,8 @@ tc: say which 'call trap' condition('c')
 e: say which 'syntax' condition('o')~code
   return
 inner: say 'inner' unset8
+  return
+inner13: signal off novalue
   return
 ::routine routine10
   say 'routine' unset10
@@ -598,6 +656,12 @@ five UNSET5
 inner UNSET8
 9 went on
 10 syntax 98.986
+11 syntax 98.986
+12 went on
+13 syntax 98.986
+fourteen UNSET14
+14 went on
+15 trap LOSTDIGITS
 ```
 
 r[dir.options.condition.all]
@@ -641,14 +705,17 @@ nothing went on
 ## The prolog option
 
 r[dir.options.prolog]
-PROLOG and NOPROLOG say whether the prolog of the package runs when the
-package is not the program that was started: PROLOG, the default, runs it and
-NOPROLOG leaves it out, so that a package of routines and classes can be
-required without its start-up code. The last of the two in text order is
-used. The installation of the package is not affected, so its routines and
-classes exist all the same. The program that was started
-runs its prolog whatever the option says. Loading the text of a package with
-the `Package` class follows the same rule, as the example shows.
+PROLOG and NOPROLOG say whether the prolog of the package runs when another
+package requires it: PROLOG, the default, runs it and NOPROLOG leaves it out,
+so that a package of routines and classes can be required without its
+start-up code. The last of the two in text order is used. The installation of
+the package is not affected, so its routines and classes exist all the same.
+The program that was started runs its prolog whatever the option says.
+Loading the text of a package with the `Package` class follows the same rule
+as a requirement, as the first example shows. The option acts on a package
+that is required or loaded as a package only: a file that a program calls as
+an external routine runs its code from the start, whatever the option says,
+as the second example shows.
 
 ```rexx
 f = 'spec-dir-options-pro1.tmp'
@@ -691,4 +758,23 @@ say 'this prolog runs'
 
 ```output
 this prolog runs
+```
+
+```rexx
+f = 'spec-dir-options-pro3.tmp'
+call sysfiledelete f
+call lineout f, 'say "prolog of the file" arg(1)'
+call lineout f, 'return "answer"'
+call lineout f, '::options noprolog'
+call lineout f
+call (f) 'x'
+say 'result' result
+call (f) 'y'
+call sysfiledelete f
+```
+
+```output
+prolog of the file x
+result answer
+prolog of the file y
 ```

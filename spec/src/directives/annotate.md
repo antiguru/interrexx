@@ -1,7 +1,7 @@
 ---
 element: "::ANNOTATE"
 kind: directive
-syntax: "::ANNOTATE PACKAGE | CLASS name | METHOD name | ATTRIBUTE name | CONSTANT name | ROUTINE name  {annotation value}..."
+syntax: "::ANNOTATE PACKAGE | CLASS name | METHOD name | ATTRIBUTE name | CONSTANT name | ROUTINE name {annotation value}..."
 rexxref: "Directives > ::ANNOTATE"
 ---
 
@@ -29,7 +29,9 @@ raises `SYNTAX 20.924`, a word that is no kind `25.928`, and a missing target
 name `19.925`. The directive takes no code: a clause after it that is not a
 null clause raises `SYNTAX 99.916`, as [the section rule](r:dir.index.section)
 says, so that the directive ends the code of the method or routine before it.
-These faults are found when the program is read.
+These faults are found when the program is read, so [as the read
+rule says](r:lex.index.read-first) a program file with one writes nothing and
+exits with 256 minus the error number, 236 for `20.924`.
 
 ```rexx
 call try '::annotate'
@@ -67,10 +69,10 @@ e: say src~makestring('l', ' / ') '=>' condition('o')~code
 
 ```rexx
 say 'before'
-::annotate package a
+::annotate
 ```
 
-```output rc=237
+```output rc=236
 ```
 
 r[dir.annotate.value]
@@ -82,7 +84,8 @@ text: a string as written and a symbol in upper case, which includes a number
 that is written as a symbol such as `1e3`. A sign before a number is kept and
 joined to it, also when a blank stands between them, and the number is kept as
 written. A symbol may hold periods, as `.abc` and `a.b` do. A value in
-parentheses, or a sign before a sign, raises `19.923`. A list with an
+parentheses raises `19.923`, and so does a sign before anything but a
+number: before a sign, a string or a symbol that is no number. A list with an
 unpaired word raises `19.924`.
 A name given twice, in one directive or in several, keeps the value that comes
 last in text order, and the other names are kept. The names and values do not
@@ -94,17 +97,17 @@ a = p~annotations
 do name over a~allindexes~sort
   say name '=' '['a[name]']'
 end
-::annotate package author "B. Fox" year 2024 neg -5 plus +3.5 spaced - 7
+::annotate package maint "Q. Rivera" year 2024 neg -5 plus +3.5 spaced - 7
 ::annotate package sym abc env .abc dotted a.b num 007 exp 1e3 empty ""
-::annotate package year 2025 Author 'it''s'
+::annotate package year 2025 Maint 'it''s'
 ```
 
 ```output
-AUTHOR = [it's]
 DOTTED = [A.B]
 EMPTY = []
 ENV = [.ABC]
 EXP = [1E3]
+MAINT = [it's]
 NEG = [-5]
 NUM = [007]
 PLUS = [+3.5]
@@ -118,6 +121,8 @@ call try '::annotate package "a" b'
 call try '::annotate package a b+c'
 call try '::annotate package a (b)'
 call try '::annotate package a ++5'
+call try '::annotate package a -b'
+call try '::annotate package a +"x"'
 call try '::annotate package a'
 call try '::annotate package a b c'
 call try '::annotate package a b c d'
@@ -141,6 +146,8 @@ e: say src~makestring('l', ' / ') '=>' condition('o')~code
 ::annotate package a b+c => 20.919
 ::annotate package a (b) => 19.923
 ::annotate package a ++5 => 19.923
+::annotate package a -b => 19.923
+::annotate package a +"x" => 19.923
 ::annotate package a => 19.924
 ::annotate package a b c => 19.924
 ::annotate package a b c d => ok
@@ -220,7 +227,12 @@ attribute that ::ATTRIBUTE or the ATTRIBUTE option of ::METHOD declared and
 no other method, and the annotation is attached to both of the methods of the
 attribute that exist. CONSTANT finds a constant. An element is not found by
 the wrong kind word, and the error is `SYNTAX 99.945`. A name that holds an
-equals sign has to be written as a string.
+equals sign has to be written as a string. A method that was declared with the
+CLASS option, and an attribute that was, are found in the same way as the
+others. When a class has an instance method and a class method of one name,
+the annotation goes to the instance method, whichever of the two directives
+comes first, and the class method has none. A class method is annotated when
+no instance method has the name.
 
 ```rexx
 call try '::class k', '::attribute m', '::annotate attribute m a b'
@@ -266,6 +278,30 @@ e: say src~makestring('l', ' / ') '=>' condition('o')~code
 ::routine r / ::annotate package r a b => 19.924
 ```
 
+```rexx
+c = .k
+say 'instance m' c~method('M')~annotation('V')
+say 'class m' c~instancemethod('M')~annotation('V')
+say 'class n' c~instancemethod('N')~annotation('V')
+say 'class attribute' c~instancemethod('CA')~annotation('V') -
+  c~instancemethod('CA=')~annotation('V')
+::class k
+::method m
+::method m class
+::method n class
+::attribute ca class
+::annotate method m v one
+::annotate method n v two
+::annotate attribute ca v three
+```
+
+```output
+instance m ONE
+class m The NIL object
+class n TWO
+class attribute THREE THREE
+```
+
 ## Reading the annotations
 
 r[dir.annotate.read]
@@ -282,7 +318,7 @@ annotations. A copy of an annotated routine or method keeps its annotations.
 
 ```rexx
 p = .context~package
-say 'package' p~annotation('author') p~annotations~items
+say 'package' p~annotation('maint') p~annotations~items
 say 'class' .k~annotation('X') .k~annotation('y') .k~annotations~items
 say 'sub' .sub~annotations~items
 m = .k~method('M')
@@ -294,7 +330,7 @@ say 'constant' .k~method('C')~annotation('P')
 r = p~findroutine('R')
 say 'routine' r~annotation('p') r~copy~annotation('P') r~annotations~items
 say 'none' (p~annotation('nothing') == .nil)
-::annotate package author "B. Fox"
+::annotate package maint "Q. Rivera"
 ::class k
 ::method m
 ::attribute at
@@ -310,7 +346,7 @@ say 'none' (p~annotation('nothing') == .nil)
 ```
 
 ```output
-package B. Fox 1
+package Q. Rivera 1
 class 1 3 2
 sub 0
 method KV MX 2

@@ -30,29 +30,29 @@ when its first characters are the delimiter, wherever the line goes on after
 them, and a line that has the delimiter after a blank, or in another case, is
 data. The delimiter line is not part of the data, and the clause that follows
 it is the first clause after the resource. A semicolon after the directive
-ends the directive clause, and the text after the semicolon on that line is
-ignored. A comment may follow the directive.
+ends the directive clause, and what follows it on that line is dropped and
+never becomes a clause. A comment may follow the directive.
 
 ```rexx
-a = .resources~cat
+a = .resources~tune
 say a~items
 do line over a
   say '['line']'
 end
 say .resources~dflt~items .resources~sym~items .resources~str~items -
   .resources~semi~items
-::resource cat end "-"
-La nuit, tous les chats
----------------
+::resource tune end "="
+Hold the line
+=====
 ::resource dflt
 line one
  ::END indented is data
 ::end lowercase is data
 ::END text after the delimiter is ignored
-::resource sym end ANONYMOUS
+::resource sym end STOPHERE
 a
-Anonymous is data
-ANONYMOUS and the rest of the line is ignored
+Stophere is data
+STOPHEREX is the delimiter line
 ::resource str end "end of it" -- a comment
 x
 end of it
@@ -63,7 +63,7 @@ e
 
 ```output
 1
-[La nuit, tous les chats]
+[Hold the line]
 3 2 1 1
 ```
 
@@ -317,12 +317,15 @@ The environment symbol `.RESOURCES` holds the resources of the package whose
 code reads it. It is a collection indexed by the resource names in upper case,
 and each item is an array of the lines of that resource. It is there from the
 start of the prolog, and in every routine and method of the package. A package
-with no ::RESOURCE has no `.RESOURCES`, and the symbol has its own text as
-value. The index is looked up exactly, so that `.resources['GREY']` finds the
-resource named `grey` and `.resources['grey']` finds nothing. The collection
-is each package's own: the resources of a required package are not in the
-`.RESOURCES` of the package that requires it, and the other way round, so that
-a routine of the required package reads its own.
+with no ::RESOURCE has no `.RESOURCES`, and the symbol has [its own text as
+value](r:lex.symbols.environment). The index is looked up exactly, so that
+`.resources['COBALT']` finds the resource named `cobalt` and
+`.resources['cobalt']` finds nothing. The collection is each package's own:
+the resources of a required package are not in the `.RESOURCES` of the
+package that requires it, and the other way round, so that a routine of the
+required package reads its own. The arrays are shared by all code of the
+package: an item that one routine changes, or an array that it extends, is
+changed for every later read, in any routine or method of the package.
 
 ```rexx
 say 'none:' .resources
@@ -356,4 +359,27 @@ none: .RESOURCES
 lib: 1 INLIB
 main: 2
 second: 2
+```
+
+```rexx
+.resources~tags[1] = 'changed'
+call show 'prolog'
+.resources~tags~append('third')
+call show 'prolog'
+say .box~new~m
+exit
+show: say arg(1) .resources~tags~items .resources~tags[1]; return
+::class box
+::method m
+  return 'method' .resources~tags~items .resources~tags[1]
+::resource tags
+first
+second
+::END
+```
+
+```output
+prolog 2 changed
+prolog 3 changed
+method 3 changed
 ```
