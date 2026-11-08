@@ -96,13 +96,15 @@ time, the main program's included, and the text of a traceback line is not
 specified. `ADDITIONAL` is present for a SYNTAX, NOMETHOD, NOSTRING or
 NOTREADY that the interpreter raised. A condition that a RAISE instruction
 raised has `POSITION`, and has `ADDITIONAL` exactly when the instruction gave
-one, whatever the name of the condition, as the RAISE page specifies. SYNTAX
-adds `CODE`, the error number with its subcode as
-`41.1`, `RC`, its major number, `ERRORTEXT`, the text of the error that the
-`ERRORTEXT` builtin answers for `RC`, and `MESSAGE`, the text with the details
-of this occurrence. ERROR and FAILURE have `RC`, the return code of the
-command. The texts of the messages are not specified, and the entry `RESULT`
-is not specified here.
+one, whatever the name of the condition, as [the options rule of
+RAISE](r:instr.raise.additional) says. The exception is a SYNTAX, which always
+has an `ADDITIONAL` array, empty when the instruction gave none, as [the
+SYNTAX rule of RAISE](r:instr.raise.syntax) says. SYNTAX adds `CODE`, the
+error number with its subcode as `41.1`, `RC`, its major number, `ERRORTEXT`,
+the text of the error that the `ERRORTEXT` builtin answers for `RC`, and
+`MESSAGE`, the text with the details of this occurrence. ERROR and FAILURE
+have `RC`, the return code of the command. The texts of the messages are not
+specified, and the entry `RESULT` is not specified here.
 
 ```rexx
 address system
@@ -195,6 +197,27 @@ h2: say arg(1)~condition arg(1)~hasindex('ADDITIONAL') arg(1)~rc
 1 0 []
 1 1 [d]
 ERROR 1 3
+```
+
+```rexx
+signal on syntax name s
+call r
+s: o = condition('o')
+say o~hasindex('ADDITIONAL') o~additional~items
+call on user foo name h
+call r2
+exit
+h: say arg(1)~hasindex('ADDITIONAL')
+  return
+::routine r
+  raise syntax 40.1 return
+::routine r2
+  raise user foo return
+```
+
+```output
+1 0
+0
 ```
 
 r[cond.information.object.values]
@@ -430,10 +453,14 @@ caller goes on
 
 r[cond.information.propagate.only]
 Only a SYNTAX condition is passed on. Any other condition is answered or
-ignored in the level that raised it, so a trap of the level above does not
-see it. A HALT or NOMETHOD that nothing answers becomes a SYNTAX condition
-first, as [the untrapped rule](r:cond.index.untrapped) says, and that one is
-passed on.
+ignored in the level that raised it, by the trap states that level has, so a
+trap that the level above set for itself does not see it. An internal routine
+has a copy of the trap states of its caller, as [the scope
+rule](r:cond.traps.scope) says, so a trap that its caller switched on does
+answer a condition raised in the routine, and it does so in the routine, not
+in the caller. A HALT or NOMETHOD that nothing answers becomes a SYNTAX
+condition first, as [the untrapped rule](r:cond.index.untrapped) says, and
+that one is passed on.
 
 ```rexx
 signal on novalue name nv
@@ -451,4 +478,29 @@ er: say 'er in main'; return
 
 ```output
 main r done
+```
+
+```rexx
+signal on novalue name nv
+address system
+call on error name er
+say 'main' r()
+say 'after'
+exit
+nv: say 'nv' sigl; return 'from nv'
+er: say 'er' sigl rc; return
+r:
+  'exit 3'
+  say 'back in r'
+  x = unsetvar
+  say 'not reached'
+  return 'r done'
+```
+
+```output
+er 10 3
+back in r
+nv 12
+main from nv
+after
 ```

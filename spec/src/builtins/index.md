@@ -1334,8 +1334,12 @@ r[bif.index.stream.name]
 A stream builtin names its stream with a string, its `name` argument. For a
 file the name is the file's name, taken from the current directory when it is
 not absolute (see [Deviation 34](r:bif.stream.deviation.34)). While the stream
-is open, a name always denotes the same stream, whichever stream builtin it is
-given to, so what one builtin writes another reads.
+is open, a name denotes the same stream, whichever stream builtin it is given
+to, so what one builtin writes another reads. This holds in the main program
+and in the routines of a program, and in one call of a method. Each call of a
+method has streams of its own, so a name that the method uses is not the
+stream that the main program, a routine or another call of the method uses
+under that name.
 
 ```rexx
 f = 'spec-streams-name.tmp'
@@ -1348,6 +1352,33 @@ call sysfiledelete f
 
 ```output
 first / sec
+```
+
+```rexx
+f = 'spec-streams-name2.tmp'
+call sysfiledelete f
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f, 'three'
+call stream f, 'C', 'CLOSE'
+say 'main' linein(f)
+o = .o~new
+say 'call 1' o~two(f)
+say 'call 2' o~two(f)
+say 'main' linein(f)
+call stream f, 'C', 'CLOSE'
+call sysfiledelete f
+::class o
+::method two
+  use arg f
+  return linein(f) linein(f)
+```
+
+```output
+main one
+call 1 one two
+call 2 one two
+main two
 ```
 
 r[bif.index.stream.std]
@@ -1536,11 +1567,13 @@ A call that cannot read, or write, as many characters as it was asked to
 raises the NOTREADY condition. That happens at the end of the data, when the
 stream cannot be opened, and when a write fails. `condition('D')` in a trap
 for it is the name of the stream, and `condition('C')` is `NOTREADY`. For a
-file the name is the one the call gave, in its spelling. For the standard
-input it is `STDIN`, whatever the spelling of the name in the call and also
-when the call gave none. The condition is not an error: when it is not
-trapped, or after a [`CALL ON`](r:cond.notready.call) trap returns, the call
-goes on and answers what its page says. A trap by
+file the name is the spelling that the first call to name the stream gave. A
+later call that names the same file in another way, such as `./x` for `x` or
+an absolute path, gets that spelling again, until a `CLOSE` ends the stream.
+For the standard input it is `STDIN`, whatever the spelling of the name in the
+call and also when the call gave none. The condition is not an error: when it
+is not trapped, or after a [`CALL ON`](r:cond.notready.call) trap returns, the
+call goes on and answers what its page says. A trap by
 [`SIGNAL ON NOTREADY`](r:cond.notready.signal) abandons the clause that raised
 it, like any other condition. Reading the standard output or the standard
 error by name, with CHARIN or LINEIN and a count that is not 0, is a read the
@@ -1574,6 +1607,28 @@ return
 NOTREADY spec-streams-nr.tmp ab
 STDIN
 STDIN
+```
+
+```rexx
+call on notready name h
+f = 'spec-streams-nr2.tmp'
+x = linein('./'f, 1, 1)
+x = linein(f, 1, 1)
+x = linein(directory()'/'f, 1, 1)
+call stream f, 'C', 'CLOSE'
+x = linein(f, 1, 1)
+x = linein('./'f, 1, 1)
+exit
+h: say condition('d')
+return
+```
+
+```output
+./spec-streams-nr2.tmp
+./spec-streams-nr2.tmp
+./spec-streams-nr2.tmp
+spec-streams-nr2.tmp
+spec-streams-nr2.tmp
 ```
 
 ```rexx

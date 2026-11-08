@@ -224,10 +224,16 @@ inner done
 ```
 
 r[instr.leave.error]
-A LEAVE raises its errors when it runs, and not when the program is read, so
-the clauses before it run, and a LEAVE that no path reaches raises nothing. A
-LEAVE outside any block that it could select raises `SYNTAX 28.1`, and a named
-one raises `SYNTAX 28.3`.
+A LEAVE outside any block that it could select raises `SYNTAX 28.1`, and a
+named one raises `SYNTAX 28.3`. These are raised when the LEAVE runs, so the
+clauses before it run, and a LEAVE that no path reaches raises nothing. The
+two faults in the form of the clause, a name that is not a symbol (`SYNTAX
+20.907`) and data after the name (`SYNTAX 21.907`, whatever the name is and
+whether or not a block has it), are found when the program is read instead.
+No clause of the program runs then, even one before the LEAVE or a LEAVE that
+no path reaches, and the exit code is 236 or 235. In the text of an INTERPRET
+the same faults are ordinary SYNTAX conditions, as [the name
+rule](r:instr.leave.name) shows.
 
 ```rexx
 say 'before'
@@ -239,4 +245,22 @@ leave
 ```output rc=228
 before
 unreached leave is no error
+```
+
+```rexx
+say 'before'
+if 0 then leave x y
+say 'unreached'
+```
+
+```output rc=235
+```
+
+```rexx
+say 'before'
+if 0 then leave 'x'
+say 'unreached'
+```
+
+```output rc=236
 ```

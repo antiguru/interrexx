@@ -172,8 +172,8 @@ E -9 1
 ```
 
 r[cond.error.fallback]
-A FAILURE that its own trap and the ANY trap do not answer is answered as an
-ERROR by the ERROR trap, when that is on, as [the untrapped
+The FAILURE of a command that its own trap and the ANY trap do not answer is
+answered as an ERROR by the ERROR trap, when that is on, as [the untrapped
 rule](r:cond.index.untrapped) and [the choice rule](r:cond.traps.choice) also
 say. The condition is then ERROR for everything that reads it:
 `CONDITION('C')` answers `ERROR`, and the record holds the same return code
@@ -181,7 +181,11 @@ and command string. `.RS` stays `-1`, because the command failed. A FAILURE
 trap that was switched off explicitly does not prevent this. An ANY trap that
 is on answers the FAILURE under its own name, so the ERROR trap is reached
 only when neither of the two is on. When no trap of the three is on, the
-FAILURE is ignored and nothing else is raised.
+FAILURE is ignored and nothing else is raised. A FAILURE that the RAISE
+instruction raised does not fall back: when its own trap and the ANY trap do
+not answer it, it is ignored, and the ERROR trap does not see it, as [the
+untrapped rule of RAISE](r:instr.raise.untrapped) says. The second example
+shows both.
 
 ```rexx
 address system
@@ -214,4 +218,24 @@ FAILURE trap FAILURE 127
 a 127
 ignored 127 -1
 ANY FAILURE 127
+```
+
+```rexx
+address system
+call on error name h
+call r1
+say 'raise failure ignored'
+call r2
+call r3
+exit
+r1: raise failure 5 return
+r2: raise error 6 return
+r3: 'exit 127'; return
+h: say 'h' condition('c') rc; return
+```
+
+```output
+raise failure ignored
+h ERROR 6
+h ERROR 127
 ```

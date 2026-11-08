@@ -112,16 +112,18 @@ off again OFF
 r[cond.index.untrapped]
 When a condition is raised and neither its trap nor the ANY trap is `ON` or
 `DELAY`, ERROR, FAILURE, LOSTDIGITS, NOSTRING, NOTREADY, NOVALUE and the user
-conditions are ignored: the clause goes on as if nothing had happened, and
-the trap stays `OFF`. The exception is a FAILURE that neither its trap nor
-ANY answers: it is raised as ERROR, and the ERROR trap answers it when that
-trap is `ON` or `DELAY`. HALT and NOMETHOD are not ignored. An untrapped HALT
-raises `SYNTAX 4.1` instead, and an untrapped NOMETHOD `SYNTAX 97.1`, and
-that SYNTAX condition is raised at the same place, so a SYNTAX trap catches
-it with `CONDITION('C')` answering `SYNTAX`. An ANY trap catches HALT and
-NOMETHOD before they would become SYNTAX, so the program sees their own names
-then. SYNTAX itself is not ignored, and [the next rule](r:cond.index.syntax)
-says what it does.
+conditions are ignored: the clause goes on as if nothing had happened, and the
+trap stays `OFF`. The exception is the FAILURE of a command that neither its
+trap nor ANY answers, which [the fallback rule](r:cond.error.fallback) says
+the ERROR trap answers; a FAILURE that RAISE raised is ignored like the rest.
+HALT and NOMETHOD are not ignored. An untrapped HALT raises `SYNTAX 4.1`
+instead, and an untrapped NOMETHOD `SYNTAX 97.1`, or `SYNTAX 97.2` when the
+message went to a private method that its sender may not run, as [the NOMETHOD
+rule](r:cond.nomethod.untrapped) says. That SYNTAX condition is raised at the
+same place, so a SYNTAX trap catches it with `CONDITION('C')` answering
+`SYNTAX`. An ANY trap catches HALT and NOMETHOD before they would become
+SYNTAX, so the program sees their own names then. SYNTAX itself is not
+ignored, and [the next rule](r:cond.index.syntax) says what it does.
 
 ```rexx
 address system
@@ -160,6 +162,24 @@ ignored 1.23E+4 []
 SYNTAX 4.1 4
 SYNTAX 97.1 97
 HALT
+NOMETHOD
+```
+
+```rexx
+signal on syntax name s
+x = .o~new~hidden
+s: say condition('c') condition('o')~code rc
+signal off syntax
+signal on any name a
+x = .o~new~hidden
+a: say condition('c')
+::class o
+::method hidden private
+  return 1
+```
+
+```output
+SYNTAX 97.2 97
 NOMETHOD
 ```
 
