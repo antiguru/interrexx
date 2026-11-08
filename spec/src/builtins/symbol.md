@@ -164,13 +164,13 @@ VAR LIT
 r[bif.symbol.stem]
 A symbol that ends at its first period is a stem. A stem is `LIT` until the
 program refers to the stem or to a compound variable of it, and `VAR` from
-then on, also after the stem is dropped. A reference is an assignment, a
-read, a DROP of the stem or of a compound variable of it, or a call of SYMBOL
-that names a compound variable of it; a call that names the stem itself is
-not a reference. After an assignment to the whole stem, a compound variable
-of it that was never assigned or dropped is `VAR`, because it has the value
-given to the stem. A compound variable that was dropped, and every compound
-variable of a dropped stem, holds no value and is `LIT`.
+then on, also after the stem is dropped. A reference is an assignment, a read,
+a [DROP](r:instr.drop.stem) of the stem or of a compound variable of it, or a
+call of SYMBOL that names a compound variable of it; a call that names the
+stem itself is not a reference. After an assignment to the whole stem, a
+compound variable of it that was never assigned or dropped is `VAR`, because
+it has the value given to the stem. A compound variable that was dropped, and
+every compound variable of a dropped stem, holds no value and is `LIT`.
 
 ```rexx
 say symbol('a.')
@@ -203,9 +203,10 @@ VAR
 ## Scope
 
 r[bif.symbol.scope]
-SYMBOL looks at the variables that the routine or method running it can
-see. A routine called with a PROCEDURE instruction sees none of its caller's
-variables, except the ones it EXPOSEs; a method sees an object variable only
+SYMBOL looks at the variables that the routine or method running it can see. A
+routine called with a [PROCEDURE instruction](r:instr.procedure.scope) sees
+none of its caller's variables, except the ones it
+[EXPOSEs](r:instr.procedure.expose); a method sees an object variable only
 once it exposes it, and the variable is `VAR` only when it holds a value.
 
 ```rexx
@@ -247,9 +248,9 @@ LIT LIT / LIT LIT / VAR / VAR LIT
 ```
 
 r[bif.symbol.result-var]
-The variable `RESULT` is `VAR` after a CALL of a routine that returned a
-value and `LIT` after a CALL of one that returned none, as the instruction
-sets or drops it.
+The variable `RESULT` is `VAR` after a [CALL](r:instr.call.result) of a
+routine that returned a value and `LIT` after a CALL of one that returned
+none, as the instruction sets or drops it.
 
 ```rexx
 call none

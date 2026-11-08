@@ -27,11 +27,9 @@ DO OVER on a stem visits its tails in an order this book does not specify.
 ooRexx visits them in an order fixed by its internal storage, which is
 neither insertion nor sorted order.
 
-## 2. Expression size limit
+## 2. Withdrawn
 
-An expression of more than 100,000 terms at one level raises `SYNTAX 11.1`.
-ooRexx evaluates such expressions until it crashes, a little above that
-size. Nested parentheses and nested calls raise 11.1 on both.
+interrexx evaluates an expression of any number of terms at one level.
 
 ## 3. Withdrawn
 
@@ -109,11 +107,9 @@ An activity waiting inside a nested construct, such as INTERPRET, for
 something only an activity suspended beneath it can provide is refused, exit
 code 120. ooRexx runs each activity on its own thread and completes.
 
-## 15. REPLY inside a nested construct
+## 15. Withdrawn
 
-A REPLY executed inside a loop that is not flattened, an INTERPRET or a
-CALL ON handler is refused, exit code 120. ooRexx continues the method on a
-new thread.
+A REPLY inside a labelled DO group is a known defect of interrexx, #101.
 
 ## 16. Blocking operations hold every activity
 
@@ -315,8 +311,12 @@ clears or pads a record when LINEOUT positions or closes.
 ## 47. A DO count wider than NUMERIC DIGITS
 
 A DO repetitor or FOR count wider than NUMERIC DIGITS raises `26.2` or
-`26.3`, or LOSTDIGITS first when that is trapped. ooRexx runs the loop when
-the count is written as a number.
+`26.3`, or LOSTDIGITS first when that is trapped. ooRexx refuses such a count
+too while NUMERIC DIGITS is below 9. At 9 or more it runs the loop when the
+count is an unquoted integer literal of at most 18 digits, written without a
+sign, a leading zero, a decimal point or an exponent, or that literal's own
+value carried unchanged through variables, arguments, returns and
+collections.
 
 ## 48. Writing to a transient stream
 
@@ -349,8 +349,10 @@ it answers the caller's earlier value until the INTERPRET ends.
 
 ## 52. An ADDRESS target that fails
 
-An output target whose write raises a condition raises `42.3` whatever the
-command's return code. ooRexx raises it only when the command answers 0.
+When a write to an output or error redirection target raises a condition,
+that condition is raised whatever return code the command answered. ooRexx
+raises it only when the command answered 0, and otherwise ends the clause
+with the return code as if every write had succeeded.
 
 ## 53. Numeric rules from the reference manual
 
@@ -433,8 +435,9 @@ for SYNTAX.
 
 ## 66. Frame name for a 16.1 inside INTERPRET
 
-For a SIGNAL to a missing label inside INTERPRET, the PROGRAM stack frame
-keeps the program's name. ooRexx reports it empty.
+When a condition occurs in INTERPRET text and the SIGNAL ON trap for it names
+a label that does not exist, the one PROGRAM frame of the 16.1 condition keeps
+the program's name. ooRexx reports that frame's name as the null string.
 
 ## 67. The line a started message's error names
 
@@ -497,8 +500,9 @@ running package. ooRexx names another package object.
 ## 77. The string value of a stem
 
 In every position that requires a string, a stem's string value is its
-default value's, and NOSTRING, naming the stem, is raised only when that has
-none. ooRexx raises NOSTRING for every stem there.
+default value's, and NOSTRING is raised, with the default's description, only
+when the default has no string value. ooRexx raises NOSTRING for every stem
+there.
 
 ## 78. Hash lookup of the identical index
 
@@ -661,3 +665,10 @@ is reported. ooRexx reports an omitted argument, an object with no
 `MAKESTRING` method and an argument that is not a whole number before the
 count, and the count before an argument's value: an option it does not allow
 or a number out of range.
+
+## 102. LOSTDIGITS before the right operand's errors
+
+When LOSTDIGITS is trapped, a wide operand of an arithmetic operator raises it
+before the operator raises `SYNTAX 42.3` for a zero divisor or `SYNTAX 26.8`
+for an exponent that is not a whole number, as the ANSI standard orders the
+operations. ooRexx raises the error for the right operand first.

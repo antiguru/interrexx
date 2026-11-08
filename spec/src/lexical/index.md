@@ -30,18 +30,18 @@ between tokens and are not tokens themselves. The chapter has these pages:
   continuation.
 
 r[lex.index.read-first]
-A program is read in full before any clause of it runs, so a fault anywhere
-in the text, even after an `exit` or inside a routine that is never called,
-is raised before the first clause runs. A fault in the lexical form of the
-text is an unmatched quote or comment delimiter (`SYNTAX 6.1`, `6.2` and
-`6.3`), a character outside the [character set](r:lex.characters.set)
-(`SYNTAX 13.1`) or a malformed hexadecimal or binary string (`SYNTAX 15.1`
-to `15.6`). The program then produces no output, and the interpreter exits
-with the negated error number, so that the exit status is `256` minus the
-error number: 243 for 13.1. The text given to INTERPRET is read when the
-INTERPRET instruction runs, so the same fault there is an ordinary condition
-that a trap can handle, and the instructions before it in the string never
-run.
+A program is read in full before any clause of it runs, so a fault anywhere in
+the text, even after an `exit` or inside a routine that is never called, is
+raised before the first clause runs. A fault in the lexical form of the text
+is an unmatched quote or comment delimiter (`SYNTAX 6.1`, `6.2` and `6.3`), a
+character outside the [character set](r:lex.characters.set) (`SYNTAX 13.1`) or
+a malformed hexadecimal or binary string (`SYNTAX 15.1` to `15.6`). The
+program then produces no output, and the interpreter exits with the negated
+error number, so that the exit status is `256` minus the error number: 243 for
+13.1. The text given to INTERPRET is read when the [INTERPRET
+instruction](r:instr.interpret.whole) runs, so the same fault there is an
+ordinary condition that a trap can handle, and the instructions before it in
+the string never run.
 
 ```rexx
 say 'before'; exit

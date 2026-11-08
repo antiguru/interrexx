@@ -53,8 +53,9 @@ these operators is a [logical prefix](r:expr.logical.prefix). A comparison
 operator that stands where its first operand should be, as in `(= 1)`, raises
 `SYNTAX 35.1`. A program file with that error runs no clause and exits with
 `256` minus the error number, as [the read-first rule](r:lex.index.read-first)
-says and the second example shows, and the text of an INTERPRET instruction
-raises it as an ordinary condition, as the last one shows.
+says and the second example shows, and the text of an [INTERPRET
+instruction](r:instr.interpret.whole) raises it as an ordinary condition, as
+the last one shows.
 
 ```rexx
 say (1 \= 2) (1 \== 1) (1 \< 2) (1 \>> 2)

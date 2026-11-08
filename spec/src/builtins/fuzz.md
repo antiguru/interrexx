@@ -113,14 +113,15 @@ reset 2 2 2
 
 r[bif.fuzz.scope]
 The setting belongs to the routine or method that is running. An internal
-routine, which CALL or a function call reaches by its label, starts with the
-setting in force at the call, and the caller's setting is unchanged when it
-returns, whatever it set meanwhile. A routine of a `::ROUTINE` directive,
-public or private, a method (also one that another method sends the message
-to), and an external routine in another file all start with the
-[default](r:bif.fuzz.default) of their own package, whatever the setting of the
-caller. The NUMERIC instruction in an INTERPRET string changes the setting of
-the running routine, and the change stays after the INTERPRET.
+routine, which [CALL](r:instr.call.run) or a function call reaches by its
+label, starts with the setting in force at the call, and the caller's setting
+is unchanged when it returns, whatever it set meanwhile. A routine of a
+`::ROUTINE` directive, public or private, a method (also one that another
+method sends the message to), and an external routine in another file all
+start with the [default](r:bif.fuzz.default) of their own package, whatever
+the setting of the caller. The [NUMERIC instruction](r:instr.numeric.value) in
+an [INTERPRET](r:instr.interpret.scope) string changes the setting of the
+running routine, and the change stays after the INTERPRET.
 
 ```rexx
 numeric fuzz 2

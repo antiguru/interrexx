@@ -270,12 +270,13 @@ f: say condition('o')~code
 
 r[bif.random.scope]
 A sequence belongs to the code that runs it. A program, its internal routines
-(the ones that a label starts), whether called with CALL or as
-functions, and the code it runs with INTERPRET all draw from one sequence: a
-seed given in any of them applies to all of them. Each run of a method, each
-run of a routine declared with `::ROUTINE`, and each message sent with START
-has a sequence of its own that begins unseeded. Its draws and its seeds
-leave the caller's sequence as it was.
+(the ones that a label starts), whether called with [CALL](r:instr.call.run)
+or as functions, and the code it runs with
+[INTERPRET](r:instr.interpret.scope) all draw from one sequence: a seed given
+in any of them applies to all of them. Each run of a method, each run of a
+routine declared with `::ROUTINE`, and each message sent with START has a
+sequence of its own that begins unseeded. Its draws and its seeds leave the
+caller's sequence as it was.
 
 ```rexx
 x = random(,, 5)
@@ -316,10 +317,10 @@ main continues: 670
 ```
 
 r[bif.random.scope.reply]
-A method that continues after a REPLY instruction goes on with the sequence
-that the method had when it replied: a seed it gave before the REPLY
-applies to the numbers it draws after it. The sequence of the caller, which
-carries on at the same time, is not touched by the continuation.
+A method that continues after a [REPLY instruction](r:instr.reply.early) goes
+on with the sequence that the method had when it replied: a seed it gave
+before the REPLY applies to the numbers it draws after it. The sequence of the
+caller, which carries on at the same time, is not touched by the continuation.
 
 ```rexx
 x = random(,, 5)

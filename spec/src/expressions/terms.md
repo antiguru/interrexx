@@ -118,8 +118,8 @@ b: say condition('o')~code
 
 r[expr.terms.call.result]
 A call in an expression must return a value. A routine that returns with a
-`RETURN` that has no expression raises `SYNTAX 44.1` when the call is a
-term.
+[`RETURN`](r:instr.return.routine) that has no expression raises `SYNTAX 44.1`
+when the call is a term.
 
 ```rexx
 signal on syntax name e

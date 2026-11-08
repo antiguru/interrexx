@@ -88,10 +88,10 @@ say value('x', , 'Environment') '/' value('x', , '')
 r[bif.value.local]
 When `selector` is omitted, VALUE works on the variables that the routine or
 method running it can see, as [SYMBOL](r:bif.symbol.scope) does: a routine
-with PROCEDURE sees none of its caller's variables except the ones it
-EXPOSEs, and a method sees an object variable once it exposes it. VALUE does
-not expose a variable: what it reads or assigns is not an object variable
-unless the method exposed it.
+with [PROCEDURE](r:instr.procedure.scope) sees none of its caller's variables
+except the ones it [EXPOSEs](r:instr.procedure.expose), and a method sees an
+object variable once it exposes it. VALUE does not expose a variable: what it
+reads or assigns is not an object variable unless the method exposed it.
 
 ```rexx
 g = 'caller'

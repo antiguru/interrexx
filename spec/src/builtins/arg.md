@@ -287,13 +287,14 @@ n=6 size 0 items 0 |
 
 r[bif.arg.scope]
 ARG answers for the routine, method or program whose code is running: for an
-internal or external routine, the arguments of the call that started it; for
-a method, the arguments of the message; for a program, those it was started
+internal or external routine, the arguments of the call that started it; for a
+method, the arguments of the message; for a program, those it was started
 with. When a routine returns, the caller's arguments are what ARG reports
 again. A routine does not see its caller's arguments, whether or not it is
-declared with PROCEDURE. INTERPRET runs in the routine that holds it, so ARG
-there reports that routine's arguments. A routine that a CALL ON trap starts as
-a handler has one argument, the condition object (see
+declared with [PROCEDURE](r:instr.procedure.scope).
+[INTERPRET](r:instr.interpret.scope) runs in the routine that holds it, so ARG
+there reports that routine's arguments. A routine that a CALL ON trap starts
+as a handler has one argument, the condition object (see
 [CONDITION](r:bif.condition.object)); a SIGNAL ON handler continues in the
 routine that holds its label, and so sees that routine's arguments.
 

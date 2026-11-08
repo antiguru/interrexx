@@ -11,8 +11,9 @@ rexxref: "Functions > Built-in Functions > QUEUED"
 QUEUED answers how many lines the current external data queue holds. It
 takes no line out of the queue and puts none in.
 
-The external data queue is a list of lines kept outside the program, where
-the QUEUE and PUSH instructions put lines and the PULL and PARSE PULL
+The external data queue is a list of lines kept outside the program, where the
+[QUEUE](r:instr.queue.fifo) and [PUSH](r:instr.push.lifo) instructions put
+lines and the [PULL](r:instr.pull.source) and [PARSE PULL](r:instr.parse.pull)
 instructions take them out. A program has one current queue at a time, which
 [RXQUEUE](rxqueue.md) names and changes. The queue called `SESSION` is the
 current queue when a program starts.
@@ -57,10 +58,11 @@ say queued(,) == queued()
 
 r[bif.queued.count]
 QUEUED answers the number of lines in the current queue, written as [a
-count](r:bif.index.count.answer). Every QUEUE or PUSH instruction adds one
-line, and a line that is the null string is a line. Reading a line with PULL,
-PARSE PULL or `LINEIN('QUEUE:')` removes it, and a queue with no line left
-answers `0`.
+count](r:bif.index.count.answer). Every [QUEUE](r:instr.queue.fifo) or
+[PUSH](r:instr.push.lifo) instruction adds one line, and a line that is the
+null string is a line. Reading a line with [PULL](r:instr.pull.source), [PARSE
+PULL](r:instr.parse.pull) or `LINEIN('QUEUE:')` removes it, and a queue with
+no line left answers `0`.
 
 ```rexx
 q = rxqueue('Create', 'spec_queued_count')

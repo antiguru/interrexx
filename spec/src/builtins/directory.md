@@ -243,10 +243,10 @@ say sysisfiledirectory(base)
 ## What the current directory affects
 
 r[bif.directory.effect]
-A change of the current directory is seen by everything that takes a
-relative name afterwards: QUALIFY puts the new directory in front of a
-relative name, a stream builtin opens a relative file name in it, and a
-command started with ADDRESS runs in it.
+A change of the current directory is seen by everything that takes a relative
+name afterwards: QUALIFY puts the new directory in front of a relative name, a
+stream builtin opens a relative file name in it, and a command started with
+[ADDRESS](r:instr.address.command) runs in it.
 
 ```rexx
 call directory '/'

@@ -132,8 +132,9 @@ O
 ```
 
 r[bif.trace.instruction]
-While interactive tracing is on, the TRACE instruction changes nothing; the
-TRACE function does, and a call that turns interactive tracing off lets the
+While interactive tracing is on, the [TRACE
+instruction](r:instr.trace.form.interactive) changes nothing; the TRACE
+function does, and a call that turns interactive tracing off lets the
 instruction work again. Without interactive tracing, the instruction and the
 function change the same setting.
 
@@ -256,7 +257,7 @@ R
 ```
 
 > **Note.** The ANSI draft (9.5.9) flips the interactive tracing once for each
-> question mark in front of a letter, from whatever it was; ooRexx sets it from
-> whether the count is odd, and the rule follows ooRexx. The reference manual
-> allows a number in the TRACE instruction and not in the function, which
-> matches the rule above.
+> question mark in front of a letter, from whatever it was; ooRexx sets it
+> from whether the count is odd, and the rule follows ooRexx. The reference
+> manual allows a number in the [TRACE instruction](r:instr.trace.number) and
+> not in the function, which matches the rule above.

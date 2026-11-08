@@ -62,8 +62,8 @@ at the end of a line without a [continuation](r:lex.clauses.continuation)
 leaves it without a right operand and raises `SYNTAX 35.1`. The second example
 shows that in a program file, which [exits with `256` minus the error
 number](r:lex.index.read-first), and the third shows it in the text of an
-INTERPRET instruction, where the end of the text ends the clause and the error
-is an ordinary condition.
+[INTERPRET instruction](r:instr.interpret.lines), where the end of the text
+ends the clause and the error is an ordinary condition.
 
 ```rexx
 say 'a' || 'b' 'c'||'d'

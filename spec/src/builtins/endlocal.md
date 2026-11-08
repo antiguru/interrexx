@@ -58,9 +58,9 @@ called SETLOCAL is in this state.
 
 > **Note.** In the reference implementation, a call with no save outstanding
 > crashes the interpreter when SETLOCAL has been called earlier by the same
-> program, `::routine` or method, its internal routines and INTERPRET
-> included. It is specified here as it is before the first SETLOCAL, and the
-> example does not go beyond that.
+> program, `::routine` or method, its internal routines and
+> [INTERPRET](r:instr.interpret.scope) included. It is specified here as it is
+> before the first SETLOCAL, and the example does not go beyond that.
 
 ```rexx
 here = directory()
@@ -77,14 +77,13 @@ say (directory() == here) value('SPEC_ENDLOCAL_A',, 'ENVIRONMENT')
 r[bif.endlocal.restore]
 A call when a save is outstanding takes the most recent one back and answers
 `1`. The current directory is then the directory of the save, and each
-environment variable that the save held has the value it held; the
-environment variables that the program changed in between are therefore
-undone, and so is a null-string value given to one of them. The call can be
-in an internal routine or in code that INTERPRET runs, as
-[the owner of a save](r:bif.setlocal.owner) allows. A call in a `::routine`
-or a method does not see the saves of the code that called it: with no save
-of its own outstanding it answers `0`, and the caller's save stays
-outstanding.
+environment variable that the save held has the value it held; the environment
+variables that the program changed in between are therefore undone, and so is
+a null-string value given to one of them. The call can be in an internal
+routine or in code that [INTERPRET](r:instr.interpret.scope) runs, as [the
+owner of a save](r:bif.setlocal.owner) allows. A call in a `::routine` or a
+method does not see the saves of the code that called it: with no save of its
+own outstanding it answers `0`, and the caller's save stays outstanding.
 
 ```rexx
 here = directory()

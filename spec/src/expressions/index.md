@@ -136,16 +136,16 @@ say (7 - (2 - 1)) ((7 - 2) - 1)
 
 r[expr.index.syntax]
 An expression that cannot be read raises a `SYNTAX` error: a `(` with no
-matching `)` raises `36.901`, a `)` with no `(` raises `37.2`, and an
-infix operator without the operand it needs, which includes an empty pair of
+matching `)` raises `36.901`, a `)` with no `(` raises `37.2`, and an infix
+operator without the operand it needs, which includes an empty pair of
 parentheses, raises `35.1`. A prefix operator without an operand raises
-`35.901` instead, as [the arithmetic](r:expr.arithmetic.missing) and
-[the logical](r:expr.logical.prefix) rules say, and a message operator
-without a message name raises `19.909`. The fault is found when the program
-is read, before any clause of it runs, so the program writes nothing and exits
-with `256` minus the error number, as [the read rule](r:lex.index.read-first)
-says. In the text of an INTERPRET instruction the same errors are ordinary
-conditions that a trap can handle.
+`35.901` instead, as [the arithmetic](r:expr.arithmetic.missing) and [the
+logical](r:expr.logical.prefix) rules say, and a message operator without a
+message name raises `19.909`. The fault is found when the program is read,
+before any clause of it runs, so the program writes nothing and exits with
+`256` minus the error number, as [the read rule](r:lex.index.read-first) says.
+In the text of an [INTERPRET instruction](r:instr.interpret.whole) the same
+errors are ordinary conditions that a trap can handle.
 
 ```rexx
 say 'not reached'
@@ -265,4 +265,34 @@ n: say 'term' arg(1); return arg(1)
 ```output
 term 1
 41.1
+```
+
+## Nesting
+
+r[expr.index.nesting]
+Nesting has a limit that this book does not fix, and a program that goes past
+it raises `SYNTAX 11.1`. The limit applies to parentheses nested inside one
+another, which raise the error when the text is read, and to routine calls
+nested inside one another, which raise it when the call that goes too deep is
+made. Many terms side by side at one level are not nesting and have no such
+limit. Parentheses nested 100,000 deep and calls nested 1,000,000 deep both
+raise the error.
+
+```rexx
+signal on syntax name a
+interpret 'x =' copies('(', 100000) 1 copies(')', 100000)
+a: say condition('o')~code
+signal on syntax name b
+say deep(1000000)
+b: say condition('o')~code
+exit
+deep: procedure
+  arg n
+  if n = 0 then return 0
+  return deep(n - 1)
+```
+
+```output
+11.1
+11.1
 ```

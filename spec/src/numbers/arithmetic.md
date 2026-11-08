@@ -3,7 +3,7 @@ element: "Arithmetic"
 kind: concept
 ansi: "7.4.2, 7.4.3, 7.4.4, 7.4.5, 7.4.10"
 rexxref: "Numbers and Arithmetic > Arithmetic"
-deviations: [53]
+deviations: [53, 102]
 ---
 
 # Arithmetic
@@ -404,12 +404,12 @@ the zeros that start the operand do not. An operand of value zero has no
 digits. The condition is raised for the left operand first and only after both
 operands were found to be numbers, and the builtins raise no such condition.
 When the condition is not trapped the operation goes on with the digits it
-has, cut as the [cut rule](r:num.arithmetic.cut) says. When the condition is
-trapped, this book does not specify which comes first: the condition for a
-wide left operand, or an error from the checks of the right operand, which are
-`SYNTAX 42.3` for a zero divisor of `/`, `%` and `//` ([the zero
-rule](r:num.arithmetic.zero)) and `SYNTAX 26.8` for an exponent of `**` that
-is a number but not a whole number of at most DIGITS digits ([the exponent
+has, cut as the [cut rule](r:num.arithmetic.cut) says. Both
+operands are checked for lost digits before the operator looks at their
+values, so a wide left operand raises LOSTDIGITS before `SYNTAX 42.3` for a
+zero divisor of `/`, `%` and `//` ([the zero rule](r:num.arithmetic.zero))
+and before `SYNTAX 26.8` for an exponent of `**` that is a number but not a
+whole number of at most DIGITS digits ([the exponent
 rule](r:num.arithmetic.exponent)).
 
 ```rexx
@@ -487,4 +487,27 @@ d: say condition('d')
 1.234E3
 1.234E3
 1234.5
+```
+
+r[num.arithmetic.deviation.102]
+When LOSTDIGITS is trapped, an operand that is wider than NUMERIC DIGITS
+raises it before the operator checks a zero divisor or an exponent that is
+not a whole number. ooRexx checks the right operand first and raises
+`SYNTAX 42.3` or `SYNTAX 26.8` instead.
+
+```rexx
+numeric digits 3
+signal on lostdigits name a
+signal on syntax name a
+say 1234 / 0
+a: say condition('c')
+signal on lostdigits name b
+signal on syntax name b
+say 1234 ** 0.5
+b: say condition('c')
+```
+
+```output
+LOSTDIGITS
+LOSTDIGITS
 ```
