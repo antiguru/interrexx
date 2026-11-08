@@ -91,7 +91,7 @@ x = "abc"~substr(0)        93.924 93
 r[cond.errors.form]
 The numbers below usually name a fault in the form of the text, and some of
 them also have subcodes that are raised by values when the clause runs, such
-as 7.3, 25.11 and 31.2.
+as 7.3 and 31.2.
 * 6, unfinished literal or comment: `say 'a` 6.2, `/* open` 6.1;
   [rule](r:lex.index.read-first).
 * 7, SELECT with no usable branch: `select; say 1; end` 7.2, `select; end`
@@ -101,7 +101,7 @@ as 7.3, 25.11 and 31.2.
   [rule](r:instr.if.else).
 * 9, WHEN or OTHERWISE outside SELECT: `when 1 then nop` 9.1, `otherwise nop`
   9.2; [rule](r:instr.select.otherwise).
-* 10, END that closes nothing: `end` 10.1, `do; end x` 10.3;
+* 10, END out of place: `end` 10.1, `do; end x` 10.3;
   [rule](r:instr.do.end).
 * 13, foreign character: `say 1 #` 13.1, `x = 1 ^ 2` 13.1;
   [rule](r:lex.characters.set).
@@ -121,7 +121,7 @@ as 7.3, 25.11 and 31.2.
   `parse foo x` 25.12, `numeric 1` 25.15; [rule](r:instr.numeric.form.error).
 * 27, clashing DO parts: `do forever x` 27.901, `do i=1 to 2 until 1 while 1`
   27.1; [rule](r:instr.do.syntax).
-* 30, over-long symbol: `copies('a', 251) '= 1'` 30.1;
+* 30, over-long symbol: `x = 1` where `x` is a symbol of 251 characters 30.1;
   [rule](r:lex.symbols.length).
 * 31, constant used as a variable: `1x = 2` 31.2, `drop 1a` 31.2,
   `parse value 'x' with .a` 31.3, `x = '1a'; drop (x)` 31.2;
@@ -181,7 +181,7 @@ call try "parse foo x"
 call try "numeric 1"
 call try "do forever x"
 call try "do i=1 to 2 until 1 while 1"
-call try copies('a', 251) '= 1', 'copies(''a'', 251) ''= 1'''
+call try copies('a', 251) '= 1', '(251 a) = 1'
 call try "1x = 2"
 call try "drop 1a"
 call try "parse value 'x' with .a"
@@ -247,7 +247,7 @@ parse foo x                                  25.12
 numeric 1                                    25.15
 do forever x                                 27.901
 do i=1 to 2 until 1 while 1                  27.1
-copies('a', 251) '= 1'                       30.1
+(251 a) = 1                                  30.1
 1x = 2                                       31.2
 drop 1a                                      31.2
 parse value 'x' with .a                      31.3
@@ -305,9 +305,10 @@ cause, at the clause that meets it.
   [rule](r:expr.terms.call.result).
 
 > The number 29 has no rule, and the length at which it is raised is not
-> specified. The number 45 has no construct here, because both engines raise
-> 44 where a call that is made for a value reaches a RETURN that carries
-> none, in an internal routine, a ::ROUTINE or a program file.
+> specified. The number 45 has no construct here: a call made for a value
+> that reaches a RETURN without one raises 44, in an internal routine, a
+> ::ROUTINE or a program file, as [the call rule](r:expr.terms.call.result)
+> says.
 
 ```rexx
 call try "signal nolabelhere"
@@ -439,12 +440,12 @@ e: say condition('o')~code rc
 4.1 4
 ```
 
-### Faults of objects, directives and native code
+### Faults of messages, objects and directives
 
 r[cond.errors.objects]
-The numbers from 88 up usually name faults of messages, of objects, of
-directives and of native code.
-* 88, argument refused by native code: `x = filespec('N')` 88.901,
+The numbers from 88 up usually name faults of messages, of objects and of
+directives.
+* 88, argument value refused: `x = filespec('N')` 88.901,
   `x = .directory~new~put(1)` 88.901, `x = charin(, 0, -1)` 88.907;
   [rule](r:bif.index.call.native).
 * 89, USE target of the wrong kind: `use arg a, 'b'` 89.1, `use arg (a)` 89.1;
@@ -533,11 +534,11 @@ use local a                                  99.915
 > fault is found when the package is built.
 
 ```rexx
+call pk "::requires 'nonexistent_spec_errors_zz.rex'"
 call pk "::routine r external 'registered nonezz'"
 call pk "::routine r external 'library nonezz'"
 call pk "::class a subclass nosuchzzclass"
 call pk "::class a", "::class a"
-call pk "::requires 'nonexistent_spec_errors_zz.rex'"
 exit
 pk:
   signal on syntax name pe
@@ -553,11 +554,11 @@ pe: say left(arg(1), 44) condition('o')~code
 ```
 
 ```output
+::requires 'nonexistent_spec_errors_zz.rex'  43.901
 ::routine r external 'registered nonezz'     90.999
 ::routine r external 'library nonezz'        98.903
 ::class a subclass nosuchzzclass             98.909
 ::class a                                    99.901
-::requires 'nonexistent_spec_errors_zz.rex'  43.901
 ```
 
 > The numbers 91 and 97.2 need a class to hold the method, so their example
