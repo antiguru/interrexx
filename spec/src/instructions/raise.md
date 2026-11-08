@@ -789,12 +789,13 @@ of the unit or in INTERPRET text there, and it is the call of the internal
 routine when the RAISE is in an internal routine. The traps that the unit has
 at that level answer the condition, and a SYNTAX that they do not answer goes
 up to the caller of the unit as [the propagation
-rule](r:cond.information.propagate) says. A HALT is answered by the HALT trap
-of the caller and a NOMETHOD by its NOMETHOD trap. When the caller has no such
-trap, the condition becomes the SYNTAX that [the untrapped
-rule](r:instr.raise.untrapped) says, and that SYNTAX is raised in the unit as
-any SYNTAX of a RAISE with EXIT is. RAISE PROPAGATE with EXIT is not
-specified.
+rule](r:cond.information.propagate) says. A HALT or a NOMETHOD is answered by
+a trap of the caller, its own or the ANY trap, as [the choice
+rule](r:cond.traps.choice) says, so a CALL trap for ANY answers a HALT and
+not a NOMETHOD. When no trap of the caller answers it, the condition becomes
+the SYNTAX that [the untrapped rule](r:instr.raise.untrapped) says, and that
+SYNTAX is raised in the unit as any SYNTAX of a RAISE with EXIT is. RAISE
+PROPAGATE with EXIT is not specified.
 
 ```rexx
 call on user foo name hm
@@ -845,6 +846,40 @@ D vt
    outer trap 31
    outer goes on
 E outer plain
+```
+
+```rexx
+call on any name c
+say 'A' viahalt()
+say 'B' vianomethod()
+exit
+c: say '   caller' condition('c') sigl; return
+::routine viahalt
+  raise halt exit 'h'
+::routine vianomethod
+  signal on syntax name s
+  raise nomethod exit 'n'
+s: say '   unit' condition('o')~code; return 'unit'
+```
+
+```output
+A h
+   caller HALT 2
+   unit 97.5
+B unit
+```
+
+```rexx
+signal on any name c
+say vianomethod()
+exit
+c: say 'caller' condition('c') sigl; exit
+::routine vianomethod
+  raise nomethod exit 'n'
+```
+
+```output
+caller NOMETHOD 2
 ```
 
 ```rexx
