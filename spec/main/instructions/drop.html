@@ -1,0 +1,552 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>DROP - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html" class="active"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.26.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.27.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.28.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.29.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.30.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.31.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.32.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">8.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">8.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">8.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">8.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">8.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">8.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">8.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">8.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">8.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">8.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">8.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">8.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">8.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">8.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">8.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">8.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">8.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">8.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">8.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">8.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">8.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">8.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">8.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">8.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">8.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">8.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">8.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">8.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">8.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">8.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">8.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">8.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">8.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">8.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">8.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">8.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">8.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">8.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">8.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">8.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">8.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">8.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">8.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">8.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">8.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">8.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">8.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">8.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">8.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">8.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">8.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">8.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">8.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">8.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">8.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">8.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">8.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">8.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">8.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">8.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">8.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">8.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">8.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">8.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">8.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">8.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">8.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">8.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">8.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">8.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">8.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">8.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">8.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">8.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">8.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">8.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">8.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">8.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">8.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">8.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">8.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">8.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">8.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">8.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">9.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="drop"><a class="header" href="#drop">DROP</a></h1>
+<pre><code>DROP name | (name) [name | (name)]...
+</code></pre>
+<p class="references">ANSI: 6.3.2.59, 8.3.7; rexxref: Keyword Instructions &gt; DROP</p>
+<p class="deviations">Deviations: D70</p>
+<p>DROP returns variables to the state they had before any assignment: they have
+no value, and <a href="../expressions/variables.html#r-expr.variables.value">a reference to one</a> yields the name of
+the variable in upper case. Its operands are variable symbols, written as the
+names themselves or, in parentheses, as a variable whose value is a list of
+names. This page specifies what each kind of name drops, the order in which
+the names are processed, the list form, how DROP treats a variable that a
+routine or a method has exposed, and the errors. How a variable gets a value
+is the business of <a href="assignment.html">the assignment page</a>.</p>
+<h2 id="what-is-dropped"><a class="header" href="#what-is-dropped">What is dropped</a></h2>
+<div class="rule" id="r-instr.drop.simple"><a href="#r-instr.drop.simple">[instr.drop.simple]</a></div>
+<p>A simple symbol names one variable, and DROP leaves that variable unset. It is
+not an error to drop a variable that has no value, or a name that no earlier
+clause has used, and a name that appears more than once is dropped once. The
+special variables <code>RC</code>, <code>RESULT</code> and <code>SIGL</code> are ordinary variables here and
+can be dropped. <a href="../builtins/symbol.html#r-bif.symbol.result">The <code>SYMBOL</code> function</a> then reports
+<code>LIT</code> for a dropped name, and the interpreter sets <code>RC</code>, <code>RESULT</code> and <code>SIGL</code>
+again when the event happens that sets them.</p>
+<pre><code class="language-rexx">a = 1; b = 2; rc = 5; result = 6; sigl = 7
+say symbol('a') symbol('b') a
+drop a b nosuch a
+say symbol('a') symbol('b') a b symbol('nosuch')
+drop rc result sigl
+say rc result sigl symbol('rc')
+</code></pre>
+<pre><code class="language-output">VAR VAR 1
+LIT LIT A B LIT
+RC RESULT SIGL LIT
+</code></pre>
+<div class="rule" id="r-instr.drop.compound"><a href="#r-instr.drop.compound">[instr.drop.compound]</a></div>
+<p>A compound symbol names the variable that
+<a href="../expressions/variables.html#r-expr.variables.compound">its derived name</a> names, and DROP works the name
+out when it reaches the symbol, from the values that the tail variables have
+at that moment. It drops that variable only: the other variables of the stem
+keep their values. A dropped compound variable has its derived name as value,
+even when its stem has a <a href="../expressions/variables.html#r-expr.variables.default">default</a>.</p>
+<pre><code class="language-rexx">t.1 = 'a'; t.2 = 'b'; t.3 = 'c'
+f. = 'dflt'; f.1 = 'one'; f.2 = 'two'
+k = 2
+drop t.k f.1
+say t.1 t.2 t.3
+say f.1 f.2 f.3
+k = 3
+drop t.k
+say t.1 t.2 t.3
+</code></pre>
+<pre><code class="language-output">a T.2 c
+F.1 two dflt
+a T.2 T.3
+</code></pre>
+<div class="rule" id="r-instr.drop.stem"><a href="#r-instr.drop.stem">[instr.drop.stem]</a></div>
+<p>A stem symbol names the stem. DROP makes the symbol refer to a new stem that
+has no default and no values, so that each variable of the stem has its
+derived name as value, until the stem or the variable is assigned again. The
+former stem object is not changed: any other reference to it, such as a
+variable that holds the stem as a value, still sees its default and its
+values. The simple variable that has the stem's name is another variable and
+does not change, as <a href="../expressions/variables.html#r-expr.variables.separate">the separation rule</a> says.</p>
+<pre><code class="language-rexx">s = 'simple'
+s. = 'dflt'; s.1 = 'one'; s.x = 'ex'
+drop s.
+say s. s.1 s.x s.zzz symbol('s.1')
+say s
+s.2 = 'two'
+say s.1 s.2 s.3
+</code></pre>
+<pre><code class="language-output">S. S.1 S.X S.ZZZ LIT
+simple
+S.1 two S.3
+</code></pre>
+<pre><code class="language-rexx">a.1 = 'x'; a.2 = 'y'
+held = a.
+drop a.
+say held[1] held[2] held~items
+say a.1 a.2 a.~items
+a.3 = 'z'
+say held~items a.~items
+</code></pre>
+<pre><code class="language-output">x y 2
+A.1 A.2 0
+2 1
+</code></pre>
+<h2 id="order"><a class="header" href="#order">Order</a></h2>
+<div class="rule" id="r-instr.drop.order"><a href="#r-instr.drop.order">[instr.drop.order]</a></div>
+<p>DROP processes its names from left to right, and a name sees what the names
+before it did: when an earlier name drops a variable that the tail of a later
+compound symbol uses, the later symbol is worked out from that variable's name
+and not from its former value. The same holds for a name that is dropped
+twice, which the second mention leaves as it was.</p>
+<pre><code class="language-rexx">i = 1; a.1 = 'x'; a.2 = 'y'
+drop i a.i
+say symbol('i') symbol('a.1') symbol('a.2') symbol('a.i')
+i = 1; a.1 = 'x'; a.2 = 'y'
+drop a.i i
+say symbol('i') symbol('a.1') symbol('a.2')
+</code></pre>
+<pre><code class="language-output">LIT VAR VAR LIT
+LIT LIT VAR
+</code></pre>
+<h2 id="the-list-form"><a class="header" href="#the-list-form">The list form</a></h2>
+<div class="rule" id="r-instr.drop.list"><a href="#r-instr.drop.list">[instr.drop.list]</a></div>
+<p>A name in parentheses is not dropped. Its value is converted to a string, as
+<a href="../conventions.html#r-conv.string.object">the conversion rule</a> says for an object, and the
+string is a list of names separated by
+<a href="../conventions.html#r-conv.string.whitespace">whitespace</a>. DROP drops each name of the list as
+if it had been written in the clause, in upper case, from left to right, and
+a name may be a simple symbol, a stem symbol or a compound symbol. The list
+may be empty or hold only whitespace, and then nothing is dropped. The
+parentheses hold one name and no list holds parentheses itself. Blanks may
+stand inside the parentheses, and a name may precede them without a blank. A
+list that names the variable which holds it drops that variable with the
+others.</p>
+<pre><code class="language-rexx">tab = '09'x
+set = 'alpha' || tab || 'Beta' 's.' 't.1'
+alpha = 1; beta = 2; gamma = 3
+s. = 'dflt'; t.1 = 'one'; t.2 = 'two'
+drop gamma (set)
+say symbol('alpha') symbol('beta') symbol('gamma') symbol('set')
+say s.1 t.1 t.2
+empty = ''; blank = '   '
+drop (empty) (blank)
+say 'nothing dropped' symbol('empty') symbol('blank')
+arr = .array~of('m n'); m = 1; n = 2
+drop (arr)
+say symbol('m') symbol('n')
+ref = 'ref r2'; r2 = 1
+drop (ref)
+say symbol('ref') symbol('r2')
+w = 'o'; o = 1; o2 = 2; w2 = 'o2'
+drop ( w ) (w2)
+say symbol('o') symbol('o2')
+p3 = 'o3'; o3 = 1
+drop o(p3)
+say symbol('o3')
+</code></pre>
+<pre><code class="language-output">LIT LIT LIT VAR
+S.1 T.1 two
+nothing dropped VAR VAR
+LIT LIT
+LIT LIT
+LIT LIT
+LIT
+</code></pre>
+<div class="rule" id="r-instr.drop.list.tail"><a href="#r-instr.drop.list.tail">[instr.drop.list.tail]</a></div>
+<p>The tail of a compound symbol in the list is replaced by the value that the
+variable has when DROP reaches the name, as it is in a compound symbol that is
+written in the clause, so a name that precedes it in the list changes what it
+drops.</p>
+<pre><code class="language-rexx">j = 2; a.1 = 'one'; a.2 = 'two'
+list = 'a.j'
+drop (list)
+say symbol('a.1') symbol('a.2')
+i = 1; b.1 = 'x'; b.2 = 'y'
+list = 'i b.i'
+drop (list)
+say symbol('i') symbol('b.1') symbol('b.2')
+</code></pre>
+<pre><code class="language-output defect=#99">VAR LIT
+LIT VAR VAR
+</code></pre>
+<div class="rule" id="r-instr.drop.list.error"><a href="#r-instr.drop.list.error">[instr.drop.list.error]</a></div>
+<p>A name in a list that is not a variable symbol raises a <code>SYNTAX</code> error when
+DROP reaches the list: <code>31.2</code> for a name that starts with a digit, <code>31.3</code> for
+one that starts with a period, and <code>20.928</code> for any other text in a name's
+place, such as a parenthesis, a semicolon or a sign, and for a name of more
+than 250 characters, counted over the whole compound symbol with its
+periods. DROP checks the whole list before it drops any name of it, so a name
+that precedes the faulty one in the list is not dropped.</p>
+<pre><code class="language-rexx">c = 1; d = 2
+call try 'l = "c 3"; drop (l)'
+call try 'l = "c .x"; drop (l)'
+call try 'l = "c (d)"; drop (l)'
+call try 'l = "c d;e"; drop (l)'
+call try 'l = "c d-e"; drop (l)'
+call try 'l = 5; drop (l)'
+say symbol('c') symbol('d')
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  say 'ok' arg(1)
+  return
+e: say condition('o')~code '&lt;=' arg(1)
+  return
+</code></pre>
+<pre><code class="language-output">31.2 &lt;= l = "c 3"; drop (l)
+31.3 &lt;= l = "c .x"; drop (l)
+20.928 &lt;= l = "c (d)"; drop (l)
+20.928 &lt;= l = "c d;e"; drop (l)
+20.928 &lt;= l = "c d-e"; drop (l)
+31.2 &lt;= l = 5; drop (l)
+VAR VAR
+</code></pre>
+<pre><code class="language-rexx">signal on syntax name s
+l = copies('a', 250)
+drop (l)
+say 'ok 250'
+l = copies('a', 251)
+drop (l)
+say 'ok 251'
+exit
+s: say condition('o')~code length(l)
+</code></pre>
+<pre><code class="language-output defect=#100">ok 250
+20.928 251
+</code></pre>
+<h2 id="exposed-variables"><a class="header" href="#exposed-variables">Exposed variables</a></h2>
+<div class="rule" id="r-instr.drop.exposed"><a href="#r-instr.drop.exposed">[instr.drop.exposed]</a></div>
+<p>A variable that a PROCEDURE EXPOSE or an EXPOSE has made visible is dropped in
+the scope that owns it: DROP of the name unsets the variable of the exposing
+scope, so the caller of the routine or the other methods of the object find it
+unset. A name that is not exposed names a variable of the routine or the
+method, and DROP leaves any variable of the caller with that name as it was.
+The same holds for the names in a list.</p>
+<pre><code class="language-rexx">x = 'outer x'; y = 'outer y'; v = 'outer v'
+call drops
+say symbol('x') symbol('y') symbol('v')
+o = .box~new
+o~drop
+say o~peek
+exit
+drops: procedure expose x v
+  y = 'local y'
+  drop x y
+  list = 'v'
+  drop (list)
+return
+::class box
+::method init
+  expose n
+  n = 5
+::method drop
+  expose n
+  drop n
+  n = 'back'
+::method peek
+  expose n
+  return n
+</code></pre>
+<pre><code class="language-output">LIT VAR LIT
+back
+</code></pre>
+<h2 id="errors"><a class="header" href="#errors">Errors</a></h2>
+<div class="rule" id="r-instr.drop.syntax"><a href="#r-instr.drop.syntax">[instr.drop.syntax]</a></div>
+<p>A DROP that has no operand, an operand that is not a variable symbol or a name
+in parentheses, or a malformed parenthesis, raises a <code>SYNTAX</code> error that <a href="../lexical/index.html#r-lex.index.read-first">a
+program file raises when it is read</a>. The codes are
+<code>20.901</code> for a missing operand, for a string, a message, a comma, a sign or an
+<code>=</code> where a symbol should be, and for a <code>)</code> with no <code>(</code>; <code>20.906</code> for an empty
+or doubled parenthesis; <code>46.1</code> for two names inside one parenthesis; <code>46.901</code>
+for a parenthesis that is not closed; and <code>31.2</code> or <code>31.3</code> for a name that
+starts with a digit or with a period, written plainly or in parentheses. The
+text of INTERPRET raises them as <a href="interpret.html#r-instr.interpret.whole">it does for any error found in
+reading</a>, which the last example shows.</p>
+<pre><code class="language-rexx">say 'before'
+drop
+</code></pre>
+<pre><code class="language-output rc=236"></code></pre>
+<pre><code class="language-rexx">say 'before'
+drop 3
+</code></pre>
+<pre><code class="language-output rc=225"></code></pre>
+<pre><code class="language-rexx">say 'before'
+drop (a b)
+</code></pre>
+<pre><code class="language-output rc=210"></code></pre>
+<pre><code class="language-rexx">call try 'say "first"; drop'
+call try 'say "first"; drop "a"'
+call try 'say "first"; drop a,b'
+call try 'say "first"; drop a +b'
+call try 'say "first"; drop a = 1'
+call try 'say "first"; drop a)'
+call try 'say "first"; drop a~b'
+call try 'say "first"; drop ()'
+call try 'say "first"; drop ((a))'
+call try 'say "first"; drop (a b)'
+call try 'say "first"; drop (a'
+call try 'say "first"; drop 3'
+call try 'say "first"; drop (3)'
+call try 'say "first"; drop .a'
+call try 'say "first"; drop a.b. c..d e.1'
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  say 'ok' arg(1)
+  return
+e: say condition('o')~code '&lt;=' arg(1)
+  return
+</code></pre>
+<pre><code class="language-output">20.901 &lt;= say "first"; drop
+20.901 &lt;= say "first"; drop "a"
+20.901 &lt;= say "first"; drop a,b
+20.901 &lt;= say "first"; drop a +b
+20.901 &lt;= say "first"; drop a = 1
+20.901 &lt;= say "first"; drop a)
+20.901 &lt;= say "first"; drop a~b
+20.906 &lt;= say "first"; drop ()
+20.906 &lt;= say "first"; drop ((a))
+46.1 &lt;= say "first"; drop (a b)
+46.901 &lt;= say "first"; drop (a
+31.2 &lt;= say "first"; drop 3
+31.2 &lt;= say "first"; drop (3)
+31.3 &lt;= say "first"; drop .a
+first
+ok say "first"; drop a.b. c..d e.1
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-instr.drop.deviation.70"><a href="#r-instr.drop.deviation.70">[instr.drop.deviation.70]</a></div>
+<p>When a clause holds both parenthesised lists and other names, DROP processes
+every name and every list from left to right, so a later name sees what an
+earlier list dropped and an earlier name is dropped before a later list is
+read. ooRexx processes the parenthesised lists first, in reverse order, and
+then the other names, so a list is read before the names that precede it.</p>
+<pre><code class="language-rexx">i = 1; a.1 = 'x'; a.2 = 'y'; list = 'i'
+drop a.i (list)
+say symbol('i') symbol('a.1') symbol('a.2')
+</code></pre>
+<pre><code class="language-output">LIT LIT VAR
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../instructions/do.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../instructions/exit.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../instructions/do.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../instructions/exit.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

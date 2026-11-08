@@ -1,0 +1,894 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>ADDRESS - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html" class="active"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.26.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.27.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.28.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.29.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.30.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.31.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.32.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">8.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">8.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">8.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">8.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">8.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">8.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">8.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">8.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">8.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">8.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">8.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">8.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">8.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">8.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">8.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">8.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">8.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">8.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">8.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">8.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">8.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">8.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">8.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">8.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">8.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">8.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">8.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">8.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">8.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">8.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">8.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">8.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">8.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">8.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">8.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">8.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">8.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">8.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">8.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">8.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">8.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">8.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">8.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">8.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">8.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">8.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">8.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">8.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">8.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">8.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">8.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">8.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">8.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">8.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">8.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">8.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">8.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">8.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">8.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">8.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">8.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">8.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">8.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">8.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">8.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">8.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">8.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">8.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">8.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">8.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">8.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">8.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">8.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">8.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">8.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">8.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">8.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">8.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">8.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">8.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">8.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">8.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">8.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">8.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">9.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="address"><a class="header" href="#address">ADDRESS</a></h1>
+<pre><code>ADDRESS [name | VALUE expression | (expression)] [command] [WITH redirection]
+</code></pre>
+<p class="references">ANSI: 6.3.2.21, 8.3.1; rexxref: Keyword Instructions &gt; ADDRESS</p>
+<p class="deviations">Deviations: D52</p>
+<p>ADDRESS chooses the environment that receives the commands of a program, and
+it can also send a single command to another environment, and redirect where a
+command reads its input and writes its output. This page specifies the forms
+of the instruction and the redirections. The environment that is current, the
+name that <a href="../builtins/address.html#r-bif.address.name">the ADDRESS function</a> answers, the swap of the
+current and the previous environment and the scope of both across calls are
+specified with that function, and the page links them. What a command is, how
+it is evaluated and sent and what its return code is belong to <a href="command.html#r-instr.command.send">the commands
+page</a>. The environments that exist, other than the one
+that runs commands in the host's shell, belong to the environment chapter.</p>
+<p>The examples use the name <code>system</code> for that shell and, in a few, names of
+environments that do not exist, because the result of the instruction shows in
+the ADDRESS function.</p>
+<h2 id="the-forms"><a class="header" href="#the-forms">The forms</a></h2>
+<div class="rule" id="r-instr.address.form.name"><a href="#r-instr.address.form.name">[instr.address.form.name]</a></div>
+<p><code>ADDRESS name</code> makes <code>name</code> the current environment, and the environment that
+was current the previous one, as <a href="../builtins/address.html#r-bif.address.swap">the swap rule</a> says. The
+name is one symbol or one string, and <a href="../builtins/address.html#r-bif.address.name">the function's name
+rule</a> says which characters it has. A symbol is not
+looked up as a variable. The instruction sends no command.</p>
+<pre><code class="language-rexx">system = 'other'
+address system
+say address()
+address Foo.Bar
+say address()
+</code></pre>
+<pre><code class="language-output">SYSTEM
+FOO.BAR
+</code></pre>
+<div class="rule" id="r-instr.address.form.value"><a href="#r-instr.address.form.value">[instr.address.form.value]</a></div>
+<p><code>ADDRESS VALUE expression</code> takes the value of the expression as the name, as
+<a href="../builtins/address.html#r-bif.address.name">the function's name rule</a> says. The expression is what
+follows VALUE, up to a <code>WITH</code> that is not inside parentheses, so a variable
+named <code>with</code> cannot end it and <code>ADDRESS VALUE WITH</code> has no expression. The
+word VALUE may be left out when the expression starts with a parenthesis, so
+that <code>ADDRESS (expression)</code> is the same instruction; the expression is then
+what follows, up to that <code>WITH</code>, and not only the part in parentheses.</p>
+<pre><code class="language-rexx">x = 'dyn'
+address value x 'env'
+say '['address()']'
+address (x 'foo')
+say '['address()']'
+address (x) 'bar'
+say '['address()']'
+call try "address value 'a' with"
+call try "address value ('a' with)"
+call try "address value 'a' || with"
+call try "address value with"
+exit
+try: procedure
+  signal on syntax name e
+  interpret arg(1)
+  say arg(1) '-&gt;' '['address()']'
+  return
+e: say arg(1) '-&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">[dyn env]
+[dyn foo]
+[dyn bar]
+address value 'a' with -&gt; 20.933
+address value ('a' with) -&gt; [a WITH]
+address value 'a' || with -&gt; 35.1
+address value with -&gt; 35.914
+</code></pre>
+<div class="rule" id="r-instr.address.form.bare"><a href="#r-instr.address.form.bare">[instr.address.form.bare]</a></div>
+<p><code>ADDRESS</code> with nothing after it swaps the current and the previous
+environment, as <a href="../builtins/address.html#r-bif.address.swap">the swap rule</a> says. It sends no command.</p>
+<pre><code class="language-rexx">address first
+address second
+address
+say address()
+address value 'third' with output normal
+say address()
+address
+say address()
+</code></pre>
+<pre><code class="language-output">FIRST
+third
+FIRST
+</code></pre>
+<div class="rule" id="r-instr.address.command"><a href="#r-instr.address.command">[instr.address.command]</a></div>
+<p><code>ADDRESS name expression</code> has a symbol or a string for the name, and whatever
+follows it, up to a <code>WITH</code> that starts a redirection, is an expression. It is
+evaluated as the expression of <a href="command.html#r-instr.command.send">a command</a> is, and its
+value is sent to the named environment as one command. The current environment
+and the previous one stay as they were, so
+<a href="../builtins/address.html#r-bif.address.command">the function</a> answers the same name after the command.
+<code>RC</code> is set as <a href="command.html#r-instr.command.rc">the commands page</a> says. An error in the
+expression raises that error and sends nothing.</p>
+<pre><code class="language-rexx">address first
+address system 'exit 2'
+say rc address()
+address "system" 'exit' 1 + 2
+say rc address()
+signal on syntax name e
+address system 'exit' + 1
+e: say condition('o')~code address()
+</code></pre>
+<pre><code class="language-output">2 FIRST
+3 FIRST
+41.1 FIRST
+</code></pre>
+<h2 id="redirection"><a class="header" href="#redirection">Redirection</a></h2>
+<div class="rule" id="r-instr.address.with.syntax"><a href="#r-instr.address.with.syntax">[instr.address.with.syntax]</a></div>
+<p>A clause of the forms above may end with <code>WITH</code> and one to three redirections,
+in any order, each introduced by <code>INPUT</code>, <code>OUTPUT</code> or <code>ERROR</code> and each used at
+most once. The redirection is then one of <code>NORMAL</code>; <code>STEM</code> followed by a stem
+symbol, which ends in a period; or <code>STREAM</code> or <code>USING</code> followed by an
+expression in parentheses, a string, a constant symbol or an environment
+symbol, where STREAM names a stream. A plain variable symbol after STREAM or
+USING is not one of these. OUTPUT and ERROR may put <code>APPEND</code> or <code>REPLACE</code>
+before STEM, STREAM or USING, and replace is meant when neither is written.
+The keywords may be in any case. The word <code>WITH</code> directly after <code>ADDRESS</code> is
+the name of an environment and not the keyword, so
+<code>ADDRESS WITH OUTPUT NORMAL</code> sends the command <code>OUTPUT NORMAL</code> to the
+environment <code>WITH</code>.</p>
+<pre><code class="language-rexx">address first
+i.0 = 1
+i.1 = 'z'
+address system 'cat' with Error stem e. OUTPUT append stem o. input stem i.
+say o.0 o.1
+address with output normal
+say rc address()
+</code></pre>
+<pre><code class="language-output">1 z
+30 FIRST
+</code></pre>
+<div class="rule" id="r-instr.address.with.normal"><a href="#r-instr.address.with.normal">[instr.address.with.normal]</a></div>
+<p><code>NORMAL</code> is no redirection: the command reads and writes the program's own
+standard input, output and error, as a command does with no redirection at
+all.</p>
+<pre><code class="language-rexx">address system with output stem o.
+address system 'echo kept' with output normal
+say symbol('o.1')
+</code></pre>
+<pre><code class="language-output">kept
+LIT
+</code></pre>
+<div class="rule" id="r-instr.address.with.stem"><a href="#r-instr.address.with.stem">[instr.address.with.stem]</a></div>
+<p><code>STEM name.</code> reads or writes the lines of a stem. For input, the stem's <code>0</code>
+tail holds the number of lines and the tails <code>1</code> to that number hold them. For
+output and error, a replace clears every tail of the stem, keeps the default
+value of the stem, and then sets the tails <code>1</code> and up and the tail <code>0</code>, which
+holds the number of lines. An append keeps the stem and numbers the lines
+after the number that its <code>0</code> tail holds. A line is the text up to a line end,
+without it; a carriage return directly before a line feed is not part of the
+line, text after the last line end is a line, and an empty line is kept. An
+input line that holds a line feed is sent as it is, and the command reads it
+as two lines.</p>
+<pre><code class="language-rexx">address system 'echo a; echo; echo c d' with output stem b.
+say b.0 '['b.1']' '['b.2']' b.3
+o.0 = 3
+o.3 = 'old'
+address system 'echo m' with output stem o.
+say o.0 o.1 symbol('o.3')
+address system 'echo x; echo y &gt;&amp;2' with output stem a. error stem e.
+say a.0 a.1 e.0 e.1
+i.0 = 2
+i.1 = 'l1'
+i.2 = 'l2'
+address system 'cat' with input stem i. output stem o.
+say o.0 o.1 o.2
+o.0 = 5
+address system 'echo n' with output append stem o.
+say o.0 o.6
+address system 'printf "p\r\nq"' with output stem c.
+say c.0 c2x(c.1) c2x(c.2)
+j.0 = 1
+j.1 = 'u' || '0a'x || 'v'
+address system 'cat' with input stem j. output stem c.
+say c.0 c.1 c.2
+</code></pre>
+<pre><code class="language-output">3 [a] [] c d
+1 m LIT
+1 x 1 y
+2 l1 l2
+6 n
+2 70 71
+2 u v
+</code></pre>
+<div class="rule" id="r-instr.address.with.stem.count"><a href="#r-instr.address.with.stem.count">[instr.address.with.stem.count]</a></div>
+<p>The <code>0</code> tail of an input stem is the number of lines, a whole number of zero
+or more, in any form that <a href="../conventions.html#r-conv.whole.form">the whole-number form</a> allows
+and whose value is whole: <code>1.0</code>, <code>1e0</code>, <code>+1</code> and <code>' 1 '</code> are 1. A <code>0</code> tail
+that was not assigned raises <code>SYNTAX 98.998</code>, and the default value of the
+stem does not count as an assignment. One that is not a whole number of zero
+or more raises <code>SYNTAX 26.904</code>; so does a count too large to be a number of
+lines, such as one of twenty digits. The NUMERIC DIGITS setting plays no part,
+and the error is not the <code>SYNTAX 40.12</code> of <a href="../conventions.html#r-conv.whole.digits">the digits
+rule</a>. A count of 0 sends nothing, and a tail
+from 1 to the count that is not set sends the stem's own default value, which
+for a stem that was never assigned is the stem's name with its period. For an
+append, a <code>0</code> tail that was not assigned, or that holds only the default value
+of the stem, counts as 0; any other <code>0</code> tail is checked as for input, and
+<code>SYNTAX 26.904</code> is raised for a bad one.</p>
+<pre><code class="language-rexx">cat = "address system 'cat' with input stem j."
+o. = 'def'
+o.5 = 'five'
+address system 'echo a' with output stem o.
+say o.0 o.1 o.5 symbol('o.5') o.9
+i.0 = 2
+i.1 = 'x'
+address system 'cat' with input stem i.
+call try 'unset', "address system 'cat' with input stem j."
+call try 'abc', "j.0 = 'abc'; address system 'cat' with input stem j."
+call try 'minus', "j.0 = -1; address system 'cat' with input stem j."
+call try 'frac', "j.0 = 2.5; address system 'cat' with input stem j."
+call try 'default', "d. = 2; address system 'cat' with input stem d."
+call try 'huge', "j.0 = 99999999999999999999;" cat
+call try 'wide', "numeric digits 2; j.0 = 123;" cat "output stem w.;" ,
+  "say w.0"
+call try 'zero', "j.0 = 0; address system 'cat' with input stem j."
+t = "address system 'echo z' with output append stem m."
+call try 'bad append', "m.0 = 'xyz';" t
+call try 'blanks', "m.0 = ' 2 ';" t "; say m.3"
+call try 'unset append', t "; say m.0 m.1"
+exit
+try: procedure
+  signal on syntax name e
+  interpret arg(2)
+  say arg(1) 'ok'
+  return
+e: say arg(1) condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 a def VAR def
+x
+I.
+unset 98.998
+abc 26.904
+minus 26.904
+frac 26.904
+default 98.998
+huge 26.904
+123
+wide ok
+zero ok
+bad append 26.904
+z
+blanks ok
+1 z
+unset append ok
+</code></pre>
+<pre><code class="language-rexx">i.0 = 1.0
+i.1 = 'a'
+address system 'cat' with input stem i.
+m.0 = 1.0
+address system 'echo z' with output append stem m.
+say m.0 m.2
+</code></pre>
+<pre><code class="language-output defect=#104">a
+2 z
+</code></pre>
+<div class="rule" id="r-instr.address.with.stream"><a href="#r-instr.address.with.stream">[instr.address.with.stream]</a></div>
+<p><code>STREAM</code> names a stream by the name that the stream functions take. An output
+or error stream is written with the lines of the command, and a replace
+empties it first. A command with an input stream reads the lines of the
+stream.</p>
+<pre><code class="language-rexx">f = 'spec-address-with.tmp'
+call sysfiledelete f
+address system 'echo one' with output stream (f)
+address system 'echo two' with output append stream (f)
+say linein(f) linein(f) lines(f)
+call stream f, 'c', 'close'
+address system 'echo three' with output replace stream (f)
+say linein(f) lines(f)
+call stream f, 'c', 'close'
+address system 'cat' with input stream (f)
+call stream f, 'c', 'close'
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">one two 0
+three 0
+three
+</code></pre>
+<div class="rule" id="r-instr.address.with.using"><a href="#r-instr.address.with.using">[instr.address.with.using]</a></div>
+<p>For output and error, <code>USING</code> names the object that receives the lines. An
+ordered collection, an Array, a List, a Queue or a subclass of one, gets each
+line by the message <code>APPEND</code>, after it is emptied, by the message <code>EMPTY</code>,
+when the redirection is a replace. A RexxQueue object gets each line by the
+message <code>QUEUE</code>. A Stem object, an object of the Stem class itself and not of
+a subclass, is written as <code>STEM</code> writes a stem: a replace clears it and sets
+the tails <code>1</code> and up and <code>0</code>, and an append numbers the lines after its <code>0</code>
+tail. A stream object, an object of an OutputStream or InputOutputStream
+class (a <code>.Stream</code> among them), gets each line by <code>LINEOUT</code>; it takes neither
+<code>REPLACE</code> nor <code>APPEND</code>, and either raises <code>SYNTAX 98.997</code>. Any other object, a
+string, <code>.nil</code>, a Set, a Directory, a Bag, a MutableBuffer, an object of a
+subclass of Stem, an object of an InputStream class that is not also an
+OutputStream, and an object of a class of the program that has an <code>APPEND</code>
+method of its own, raises <code>SYNTAX 98.996</code> when the command is about to be
+sent, whether or not the command would have written anything.</p>
+<pre><code class="language-rexx">a = .array~new
+address system 'echo a1; echo a2' with output using (a)
+address system 'echo b1' with output append using (a)
+say a~items a[1] a[2] a[3]
+address system 'echo c1' with output using (a)
+say a~items a[1]
+l = .list~new
+address system 'echo l1' with output using (l)
+q = .queue~new
+address system 'echo q1' with output using (q)
+st = .stem~new
+address system 'echo p; echo q' with output using (st)
+address system 'echo s' with output append using (st)
+rq = .rexxqueue~new
+address system 'echo r1; echo r2' with output using (rq)
+say l~items q~items st[0] st[1] st[3] rq~queued rq~pull rq~pull
+</code></pre>
+<pre><code class="language-output">3 a1 a2 b1
+1 c1
+1 1 3 p s 2 r1 r2
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-address-using.tmp'
+call sysfiledelete f
+call try 'stream', ".stream~new(f)", ''
+call try 'append', ".stream~new(f)", 'append'
+call try 'replace', ".stream~new(f)", 'replace'
+call try 'string', "'text'", ''
+call try 'nil', ".nil", ''
+call try 'set', ".set~new", ''
+call try 'buffer', ".mutablebuffer~new", ''
+call try 'own', ".own~new", ''
+call try 'substem', ".substem~new", ''
+call sysfiledelete f
+exit
+try: procedure expose f
+  signal on syntax name e
+  interpret "address system 'exit 0' with output" arg(3) "using (" arg(2) ")"
+  say arg(1) 'ok'
+  return
+e: say arg(1) condition('o')~code
+  return
+::class own
+::method append
+  return 1
+::class substem subclass stem
+</code></pre>
+<pre><code class="language-output">stream ok
+append 98.997
+replace 98.997
+string 98.996
+nil 98.996
+set 98.996
+buffer 98.996
+own 98.996
+substem 98.996
+</code></pre>
+<pre><code class="language-rexx">call try ".insub~new"
+call try ".outsub~new"
+call try ".iosub~new"
+exit
+try: procedure
+  signal on syntax name e
+  interpret 'x =' arg(1)
+  address system 'echo t' with output using (x)
+  say arg(1) 'ok'
+  return
+e: say arg(1) condition('o')~code
+  return
+::class insub subclass inputstream
+::method lineout
+  return 0
+::class outsub subclass outputstream
+::method lineout
+  return 0
+::class iosub subclass inputoutputstream
+::method lineout
+  return 0
+</code></pre>
+<pre><code class="language-output defect=#106">.insub~new 98.996
+.outsub~new ok
+.iosub~new ok
+</code></pre>
+<div class="rule" id="r-instr.address.with.using.input"><a href="#r-instr.address.with.using.input">[instr.address.with.using.input]</a></div>
+<p>For input, <code>USING</code> names the source of the lines. A string is one line, and so
+is a MutableBuffer, by its string value. A Stem object, of the Stem class
+itself, is read as <code>STEM</code> reads a stem. A stream object, an object of an
+InputStream or InputOutputStream class (a <code>.Stream</code> among them), is read line
+by line until its end. Any other object that has a <code>MAKEARRAY</code> method, among
+them a List, a Queue, a Set, a Directory, a Bag, a RexxQueue and an object of
+a class of the program with such a method, gives one line for each item of the
+array that the method answers; the lines of a RexxQueue are taken from it. An
+item that is not a string is replaced by a string as <a href="../conventions.html#r-conv.string.object">the string
+argument rule</a> says. A <code>MAKEARRAY</code> that answers no
+array, any other object, and <code>.nil</code>, raise <code>SYNTAX 98.924</code> when the command is
+about to be sent.</p>
+<pre><code class="language-rexx">address system 'cat' with input using ('one') output stem o.
+say o.0 o.1
+l = .list~of('x', 'y')
+address system 'cat' with input using (l) output stem o.
+say o.0 o.1 o.2
+address system 'cat' with input using (.set~of('s')) output stem o.
+say o.0 o.1
+mb = .mutablebuffer~new('mb')
+address system 'cat' with input using (mb) output stem o.
+say o.0 o.1
+address system 'cat' with input using (.mak~new) output stem o.
+say o.0 o.1 o.2
+signal on syntax name e
+address system 'cat' with input using (.nil)
+e: say condition('o')~code
+::class mak
+::method makearray
+  return .array~of('m1', 'm2')
+</code></pre>
+<pre><code class="language-output">1 one
+2 x y
+1 s
+1 mb
+2 m1 m2
+98.924
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-address-input.tmp'
+call sysfiledelete f
+call lineout f, 'l1'
+call lineout f, 'l2'
+call stream f, 'c', 'close'
+address system 'cat' with input using (.stream~new(f)) output stem o.
+say o.0 o.1 o.2
+call sysfiledelete f
+st = .stem~new
+st['a'] = 'A'
+st[0] = 1
+st[1] = 'one'
+address system 'cat' with input using (st) output stem o.
+say o.0 o.1
+q = .rexxqueue~new
+q~queue('q1')
+q~queue('q2')
+address system 'cat' with input using (q) output stem o.
+say o.0 o.1 o.2 q~queued
+signal on syntax name e
+address system 'cat' with input using (.nomake~new)
+e: say condition('o')~code
+::class nomake
+::method makearray
+  return 'text'
+</code></pre>
+<pre><code class="language-output">2 l1 l2
+1 one
+2 q1 q2 0
+98.924
+</code></pre>
+<pre><code class="language-rexx">x = .outsub~new
+address system 'cat' with input using (x) output stem o.
+say o.0 o.1
+::class outsub subclass outputstream
+::method makearray
+  return .array~of('oa')
+</code></pre>
+<pre><code class="language-output defect=#106">1 oa
+</code></pre>
+<pre><code class="language-rexx">a = .array~of(.array~of('q', 'r'), 5, .mk~new)
+address system 'cat' with input using (a) output stem o.
+say o.0 o.1 o.2 o.3 o.4
+::class mk
+::method makestring
+  return 'viaMS'
+</code></pre>
+<pre><code class="language-output defect=#107">4 q r 5 viaMS
+</code></pre>
+<div class="rule" id="r-instr.address.with.once"><a href="#r-instr.address.with.once">[instr.address.with.once]</a></div>
+<p>A redirection written on a clause with a command applies to that command and
+to no other. The streams the clause does not name keep what they had, which
+is <a href="#r-instr.address.with.set">the setting</a> of the earlier clauses.</p>
+<pre><code class="language-rexx">address system with output stem s.
+address system 'echo x; echo y &gt;&amp;2' with error stem e.
+say s.0 s.1 e.0 e.1
+address system 'echo p'
+say s.1 symbol('e.2')
+</code></pre>
+<pre><code class="language-output">1 x 1 y
+p LIT
+</code></pre>
+<div class="rule" id="r-instr.address.with.set"><a href="#r-instr.address.with.set">[instr.address.with.set]</a></div>
+<p>A clause with a redirection and no command sets the redirection of the
+environment that it names, and makes that environment current as
+<code>ADDRESS name</code> does. The commands sent to that environment from then on use
+the setting, until another such clause names the same environment. It sets
+all three streams at once: a stream the clause does not name goes back to
+<code>NORMAL</code>. A name without <code>WITH</code> makes an environment current with the setting
+it last had, or with none when it never had one, and
+<a href="../builtins/address.html#r-bif.address.swap">the swap</a> of the current and the previous environment
+brings an environment back with its setting. The environment is the same
+whatever the case of its name. The setting of one environment does not touch
+the commands that another receives. The stem, the stream
+expression or the <code>USING</code> expression is kept as it was written and is
+evaluated again when each command is sent, in the variables of the code that
+sends it.</p>
+<pre><code class="language-rexx">address sh with output stem a.
+address system with output stem b.
+address path
+address sh
+'echo 1'
+say 'A' a.0 a.1
+address system
+'echo 2'
+say 'B' b.0 b.1
+address path with output stem p.
+address SH
+'echo 3'
+say 'C' a.0 a.1 p.0
+address
+'echo 4'
+say 'D' p.0 p.1
+address other with output stem t.
+address system
+'echo z'
+say 'E' t.0 b.1
+</code></pre>
+<pre><code class="language-output">A 1 1
+B 1 2
+C 1 3 P.0
+D 1 4
+E T.0 z
+</code></pre>
+<pre><code class="language-rexx">a = .array~new
+address system with output using (a)
+b = a
+a = .array~new
+'echo x'
+say b~items a~items
+</code></pre>
+<pre><code class="language-output">0 1
+</code></pre>
+<div class="rule" id="r-instr.address.with.error"><a href="#r-instr.address.with.error">[instr.address.with.error]</a></div>
+<p>Syntax that does not fit the forms is found when the program is read, so a
+program file with one writes nothing and ends with the return code of the
+error. The subcodes show in INTERPRET text. <code>SYNTAX 35.914</code> is VALUE with no
+expression. <code>SYNTAX 20.933</code> is WITH with nothing after it, and <code>SYNTAX 20.932</code>
+is STEM with no stem symbol. <code>SYNTAX 25.933</code> is a word that is not a type
+where the type is due, among them APPEND or REPLACE before NORMAL or before an
+input type, and the end of the clause; <code>SYNTAX 25.930</code>, <code>SYNTAX 25.931</code> and
+<code>SYNTAX 25.932</code> are INPUT, OUTPUT and ERROR named twice, and <code>SYNTAX 25.934</code>
+is a word where <code>INPUT</code>, <code>OUTPUT</code> or <code>ERROR</code> is due. <code>SYNTAX 35.935</code> is STREAM
+or USING with no expression, and <code>SYNTAX 35.1</code> is a plain variable symbol
+after either.</p>
+<pre><code class="language-rexx">say 'not run'
+address system with output foo
+</code></pre>
+<pre><code class="language-output rc=231"></code></pre>
+<pre><code class="language-rexx">say 'not run'
+address value
+</code></pre>
+<pre><code class="language-output rc=221"></code></pre>
+<pre><code class="language-rexx">call try 'address value'
+call try 'address system with'
+call try 'address system with output foo'
+call try 'address system with output replace normal'
+call try 'address system with output stem o. error'
+call try 'address system with foo normal'
+call try 'address system with output stem'
+call try 'address system with output stem o. output normal'
+call try 'address system with input normal input normal'
+call try 'address system with error normal error normal'
+call try 'address system with output stream foo'
+call try 'address system with input append stem i.'
+call try 'address system with error using'
+call try 'address system with output stem o.'
+exit
+try: procedure
+  signal on syntax name e
+  interpret arg(1)
+  say arg(1) 'ok'
+  return
+e: say arg(1) condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">address value 35.914
+address system with 20.933
+address system with output foo 25.933
+address system with output replace normal 25.933
+address system with output stem o. error 25.933
+address system with foo normal 25.934
+address system with output stem 20.932
+address system with output stem o. output normal 25.931
+address system with input normal input normal 25.930
+address system with error normal error normal 25.932
+address system with output stream foo 35.1
+address system with input append stem i. 25.933
+address system with error using 35.935
+address system with output stem o. ok
+</code></pre>
+<h2 id="scope"><a class="header" href="#scope">Scope</a></h2>
+<div class="rule" id="r-instr.address.scope"><a href="#r-instr.address.scope">[instr.address.scope]</a></div>
+<p>The redirections of <a href="#r-instr.address.with.set">the setting rule</a> have the
+scope that the current environment has, and <a href="../builtins/address.html#r-bif.address.scope.routine">the scope
+rules</a> of the function say it. An internal
+routine starts with the caller's redirections, a stem it names is the one in
+its own variables, and the caller has its own redirections back when the
+routine returns. A routine with PROCEDURE and no EXPOSE therefore fills a stem
+of its own and leaves the caller's stem as it was. A method, and a
+<code>::ROUTINE</code>, starts with none, so its commands read and write the program's
+own streams. Code run by INTERPRET shares them.</p>
+<pre><code class="language-rexx">address system with output stem o.
+call plain
+say 'A' o.0 o.1
+call inherit
+say 'B' o.0 o.1
+say .o~new~m
+say 'C' o.0 o.1
+interpret "'echo int'"
+say 'D' o.0 o.1
+call plain2
+'echo back'
+say 'E' o.0 o.1
+call hid
+say 'F' o.0 o.1
+exit
+plain:
+  'echo plain'
+  address system with output normal
+  'echo plainnormal'
+  return
+inherit: procedure expose o.
+  'echo inherit'
+  return
+hid: procedure
+  'echo h'
+  say 'hid' o.0 o.1
+  return
+plain2:
+  address system with output stem p.
+  'echo plain2'
+  return
+::class o
+::method m
+  'echo meth'
+  return 'm'
+</code></pre>
+<pre><code class="language-output">plainnormal
+A 1 plain
+B 1 inherit
+meth
+m
+C 1 inherit
+D 1 int
+E 1 back
+hid 1 h
+F 1 back
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-instr.address.deviation.52"><a href="#r-instr.address.deviation.52">[instr.address.deviation.52]</a></div>
+<p>When a write of a command's output or error raises a condition, as the message
+<code>APPEND</code> to a collection or <code>LINEOUT</code> to a stream object may, the condition is
+raised whatever return code the command answered.
+ooRexx raises it only when the command answered 0, and ends the clause with
+the return code otherwise. The example shows the interrexx output; ooRexx
+shows <code>ok 1</code>.</p>
+<pre><code class="language-rexx">signal on syntax name e
+address system 'echo x; exit 1' with output using (.bad~new)
+say 'ok' rc
+exit
+e: say 'caught' condition('o')~code rc
+::class bad subclass array
+::method append
+  raise syntax 93.900
+</code></pre>
+<pre><code class="language-output">caught 93.900 93
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../instructions/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../instructions/arg.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../instructions/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../instructions/arg.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

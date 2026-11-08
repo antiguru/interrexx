@@ -1,0 +1,615 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>CALL - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html" class="active"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.26.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.27.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.28.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.29.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.30.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.31.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.32.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">8.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">8.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">8.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">8.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">8.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">8.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">8.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">8.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">8.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">8.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">8.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">8.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">8.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">8.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">8.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">8.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">8.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">8.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">8.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">8.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">8.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">8.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">8.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">8.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">8.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">8.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">8.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">8.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">8.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">8.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">8.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">8.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">8.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">8.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">8.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">8.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">8.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">8.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">8.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">8.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">8.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">8.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">8.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">8.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">8.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">8.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">8.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">8.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">8.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">8.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">8.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">8.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">8.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">8.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">8.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">8.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">8.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">8.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">8.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">8.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">8.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">8.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">8.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">8.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">8.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">8.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">8.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">8.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">8.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">8.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">8.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">8.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">8.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">8.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">8.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">8.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">8.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">8.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">8.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">8.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">8.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">8.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">8.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">8.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">9.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="call"><a class="header" href="#call">CALL</a></h1>
+<pre><code>CALL {name | (expression)} [argument] [, [argument]]... | CALL ON condition [NAME label] | CALL OFF condition
+</code></pre>
+<p class="references">ANSI: 6.3.2.37, 8.3.4; rexxref: Keyword Instructions &gt; CALL</p>
+<p>CALL runs a routine as a subroutine and goes on with the clause after it when
+the routine returns. The routine is an internal one, which is a label of the
+same program, a built-in function, or an external routine, and the name of the
+CALL decides where the search for it looks. The routine may return a value,
+which the CALL leaves in the variable <code>RESULT</code>. The ON and OFF forms do not
+call anything: they switch the trap of a condition. This page specifies the
+arguments, the search order as far as it separates internal routines from
+built-in ones, <code>RESULT</code> and <code>SIGL</code>, and the errors. How a routine is found
+outside the program belongs to the environment chapter, and what a trap does
+when its condition occurs to the chapter on conditions.</p>
+<h2 id="running-a-routine"><a class="header" href="#running-a-routine">Running a routine</a></h2>
+<div class="rule" id="r-instr.call.run"><a href="#r-instr.call.run">[instr.call.run]</a></div>
+<p><code>CALL name</code> evaluates the arguments from left to right and runs the routine
+with them. When the routine returns, control continues with the clause after
+the CALL, whether the routine is an internal one, a built-in function or an
+external routine. The routine reads its arguments with the <a href="../builtins/arg.html#r-bif.arg.args">ARG built-in
+function</a>, the ARG and PARSE ARG instructions or USE ARG. A
+symbol that is the name is a constant, so a variable of the same
+name has no part in the call.</p>
+<pre><code class="language-rexx">hello = 'a variable'
+call hello 'x', 1 + 1
+call length 'abc'
+say 'length gave' result
+exit
+hello: say 'hello' arg() arg(1) arg(2); return
+</code></pre>
+<pre><code class="language-output">hello 2 x 2
+length gave 3
+</code></pre>
+<div class="rule" id="r-instr.call.args"><a href="#r-instr.call.args">[instr.call.args]</a></div>
+<p>The arguments are expressions separated by commas, and a position that has no
+expression is an omitted argument, which the routine sees as absent. An
+omitted argument in front of a given one counts as a position, so
+<code>call f ,, 3</code> passes three arguments of which the first two are absent. An
+omitted argument after the last given one is dropped and does not count, so
+<code>call f 1,;</code> passes one argument. A comma at the end of a line is not a
+separator but a continuation, as <a href="../lexical/clauses.html#r-lex.clauses.continuation.comma">the continuation
+rule</a> says. A parenthesis that follows the
+name directly or after a blank begins the first argument as a parenthesized
+expression, and the CALL does not read the name as a function call, so
+<code>call f(1)</code> and <code>call f (1)</code> both pass one argument, the value <code>1</code>.</p>
+<pre><code class="language-rexx">call show
+call show 1,;
+call show ,, 3
+call show , 2
+call show(1)
+call show (1)
+call show 1 2, 3
+call show a,
+  b
+exit
+show: say arg() '['arg(1)']' '['arg(2)']' 'present' arg(1, 'e') arg(2, 'e')
+return
+</code></pre>
+<pre><code class="language-output">0 [] [] present 0 0
+1 [1] [] present 1 0
+3 [] [] present 0 0
+2 [] [2] present 0 1
+1 [1] [] present 1 0
+1 [1] [] present 1 0
+2 [1 2] [3] present 1 1
+1 [A B] [] present 1 0
+</code></pre>
+<h2 id="which-routine"><a class="header" href="#which-routine">Which routine</a></h2>
+<div class="rule" id="r-instr.call.search"><a href="#r-instr.call.search">[instr.call.search]</a></div>
+<p>A name written as a symbol is read in upper case and searched in this order: a
+label of the code that holds the CALL, then a built-in function, then an
+external routine. That code is the main program, or the body of the one
+routine or method that the CALL is in, so the labels of the other parts of the
+file are not searched. A label wins over a built-in function of the same name,
+so a program can replace a built-in one. A name written as a string is used as
+it is written and is not searched among the labels at all, so the search
+starts with the built-in functions, whose names are in capitals, and goes on
+to the external routines. A string that is not in capitals therefore never
+reaches a built-in function, and a label of the same text is not found by it
+either: with the labels <code>'myLab':</code> and <code>mylab:</code>, the string <code>'myLab'</code> finds
+neither. The labels of a method are the ones that a CALL in it finds, as the
+second example shows. How
+external routines are found is the subject of the environment chapter. A name
+that nothing answers to raises <code>SYNTAX 43.1</code> when the CALL runs.</p>
+<pre><code class="language-rexx">call length 'abc'
+say 'symbol:' result
+call 'LENGTH' 'abc'
+say 'string:' result
+call ('LENGTH') 'abc'
+say 'expression:' result
+call try '"length"'
+call try '("length")'
+call try 'nosuch'
+call try '"myLab"'
+call try '"MYLAB"'
+call try '(labname)'
+call try 'mylab'
+labname = 'myLab'
+call try '(labname)'
+exit
+length: return 'label'
+'myLab': return 'string label'
+mylab: return 'symbol label'
+try:
+  signal on syntax name e
+  interpret 'call' arg(1) '"abc"'
+  say arg(1) '=&gt; ok' result
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">symbol: label
+string: 3
+expression: label
+"length" =&gt; 43.1
+("length") =&gt; 43.1
+nosuch =&gt; 43.1
+"myLab" =&gt; 43.1
+"MYLAB" =&gt; 43.1
+(labname) =&gt; 43.1
+mylab =&gt; ok symbol label
+(labname) =&gt; ok string label
+</code></pre>
+<pre><code class="language-rexx">.c~new~m
+exit
+mainlab: say 'main label'
+::class c
+::method m
+  call inner 'x'
+  say 'method' sigl result
+  signal on syntax name e
+  call mainlab
+e: say 'method' condition('o')~code
+  return
+inner: return 'inner' arg(1)
+</code></pre>
+<pre><code class="language-output">method 6 inner x
+method 43.1
+</code></pre>
+<div class="rule" id="r-instr.call.expr"><a href="#r-instr.call.expr">[instr.call.expr]</a></div>
+<p><code>CALL (expression)</code> evaluates the expression first, and the arguments after
+it, and uses the string the value converts to as the name, by <a href="../conventions.html#r-conv.string.object">the conversion
+rule</a>: the answer of its <code>MAKESTRING</code> method when it has
+one and of its <code>STRING</code> method otherwise. The name is compared as it is, so
+<code>GREET</code> matches a label in the example, <code>SUBSTR</code> the built-in function, and a
+lower-case value matches neither. Unlike a name written as a string, the value
+is searched among the labels first, so the order of <a href="#r-instr.call.search">the search
+rule</a> holds for it.</p>
+<pre><code class="language-rexx">n = 'GREET'
+call (n) 'world'
+call ('SUBSTR') 'abcdef', 3, 2
+say result
+call try '"greet"'
+call try 'n || "x"'
+call (.z~new)
+call (.y~new)
+exit
+greet: say 'hello' arg(1); return
+cms: say 'makestring'; return
+cst: say 'string'; return
+try:
+  signal on syntax name e
+  interpret 'call (' || arg(1) || ') 1'
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+::class z
+::method makestring
+  return 'CMS'
+::method string
+  return 'CST'
+::class y
+::method string
+  return 'CST'
+</code></pre>
+<pre><code class="language-output">hello world
+cd
+"greet" =&gt; 43.1
+n || "x" =&gt; 43.1
+makestring
+string
+</code></pre>
+<h2 id="what-the-call-leaves"><a class="header" href="#what-the-call-leaves">What the call leaves</a></h2>
+<div class="rule" id="r-instr.call.result"><a href="#r-instr.call.result">[instr.call.result]</a></div>
+<p>When the routine returns a value, <code>RESULT</code> is set to it, and when the routine
+returns no value, <code>RESULT</code> is dropped and is unset afterwards. This holds for
+every kind of routine, so a built-in function that answers a value sets
+<code>RESULT</code> like any other, and a routine that returns nothing drops the value
+that an earlier call left. A function call in an expression does not set it.
+Where a message instruction sets the variable, <a href="message.html#r-instr.message.result">the message
+rule</a> says.</p>
+<pre><code class="language-rexx">call giver 2
+say 'giver:' result
+call quiet
+say 'quiet:' symbol('result')
+result = 'old'
+call abs -4
+say 'abs:' result
+result = 'old'
+call quiet
+say 'quiet:' symbol('result') result
+result = 'kept'
+x = giver(1)
+say 'function:' result
+exit
+giver: return arg(1) * 21
+quiet: return
+</code></pre>
+<pre><code class="language-output">giver: 42
+quiet: LIT
+abs: 4
+quiet: LIT RESULT
+function: kept
+</code></pre>
+<div class="rule" id="r-instr.call.restore"><a href="#r-instr.call.restore">[instr.call.restore]</a></div>
+<p>The settings of an internal routine are its own. When NUMERIC settings, the
+trace setting or the default environment of ADDRESS are changed inside the
+routine, the caller has the ones it had before the CALL when the routine
+returns, whether or not the routine starts with PROCEDURE. For NUMERIC, <a href="../numbers/settings.html#r-num.settings.call">the
+scope rule</a> says it, and for the trace setting <a href="../builtins/trace.html#r-bif.trace.scope">the
+TRACE rule</a> does. The same holds for the address
+environment, which the ADDRESS page specifies, and the traps of conditions
+that the conditions chapter specifies. The routine of the example traces, and
+that trace output goes to standard error, so the output block shows only the
+standard output.</p>
+<pre><code class="language-rexx">numeric digits 5
+trace o
+address foo
+call s
+say digits() 1/3 address()
+exit
+s: numeric digits 3; trace r; address bar
+  return
+</code></pre>
+<pre><code class="language-output">5 0.33333 FOO
+</code></pre>
+<div class="rule" id="r-instr.call.sigl"><a href="#r-instr.call.sigl">[instr.call.sigl]</a></div>
+<p>A CALL of an internal routine sets <code>SIGL</code>, in the variable scope of the
+caller, to the line number of the CALL clause, which is the line where the
+clause starts when it runs over several lines. A routine that starts with
+PROCEDURE has its own scope and sees <code>SIGL</code> only if it exposes it. A CALL of a
+built-in function or of an external routine does not set it, and an external
+routine has a scope of its own that holds no <code>SIGL</code>. <a href="signal.html#r-instr.signal.sigl">The SIGNAL
+rule</a> says what SIGNAL sets.</p>
+<pre><code class="language-rexx">say 'start' sigl
+call abs 1
+say 'builtin' sigl
+call ext
+say 'external' sigl
+call sub
+say 'sub' sigl
+call psub
+call esub
+call sub 1,
+  2
+say 'two lines' sigl
+exit
+sub: say 'in sub' sigl; return
+psub: procedure
+  say 'in psub' symbol('sigl')
+  return
+esub: procedure expose sigl
+  say 'in esub' sigl
+  return
+::routine ext
+  say 'in ext' symbol('sigl')
+</code></pre>
+<pre><code class="language-output">start SIGL
+builtin SIGL
+in ext LIT
+external SIGL
+in sub 6
+sub 6
+in psub LIT
+in esub 9
+in sub 10
+two lines 10
+</code></pre>
+<h2 id="errors"><a class="header" href="#errors">Errors</a></h2>
+<div class="rule" id="r-instr.call.error"><a href="#r-instr.call.error">[instr.call.error]</a></div>
+<p>A CALL with no name raises <code>SYNTAX 19.2</code>, and a name written as a symbol with
+a colon after it raises <code>20.922</code>, because the colon form is the call of a
+routine of a namespace, which this chapter does not specify. Both are found
+when the program is read, so none of its clauses run. A routine that is not
+found raises <code>43.1</code> when the CALL runs, as the search rule says, and an error
+that a built-in function or a routine raises is raised at the CALL. A
+parenthesized name that is not closed raises <code>36.901</code>.</p>
+<pre><code class="language-rexx">say 'before'
+call
+</code></pre>
+<pre><code class="language-output rc=237"></code></pre>
+<pre><code class="language-rexx">call try 'call'
+call try 'call hello:'
+call try 'call abs'
+call try 'call (n'
+call try 'call nosuch 1'
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">call =&gt; 19.2
+call hello: =&gt; 20.922
+call abs =&gt; 40.3
+call (n =&gt; 36.901
+call nosuch 1 =&gt; 43.1
+</code></pre>
+<h2 id="on-and-off"><a class="header" href="#on-and-off">ON and OFF</a></h2>
+<div class="rule" id="r-instr.call.on"><a href="#r-instr.call.on">[instr.call.on]</a></div>
+<p><code>CALL ON condition</code> enables the trap of a condition and <code>CALL OFF condition</code>
+disables it, and neither calls a routine. The condition is ERROR, FAILURE,
+HALT or NOTREADY, or ANY, or USER followed by the name of a user condition, a
+symbol read as a constant in upper case, not a string. ON may be followed by
+<code>NAME</code> and a routine name, a symbol or a string, and the default name is the
+name of the condition. The routine is not looked for when the trap is enabled,
+so a CALL ON for a name that is not a routine is not an error then. What a
+trap does when its condition occurs belongs to the chapter on conditions. The
+conditions that only SIGNAL can trap are not accepted: NOVALUE, SYNTAX,
+LOSTDIGITS, NOMETHOD and NOSTRING raise <code>SYNTAX 25.1</code> after ON and <code>25.2</code>
+after OFF.</p>
+<pre><code class="language-rexx">do c over .array~of('error', 'failure', 'halt', 'notready', 'any')
+  interpret 'call on' c
+  interpret 'call off' c
+  say c 'on and off'
+end
+call on user foo name lbl
+call off user foo
+call on error name nolabel
+call off error
+say 'done'
+exit
+lbl: return
+</code></pre>
+<pre><code class="language-output">error on and off
+failure on and off
+halt on and off
+notready on and off
+any on and off
+done
+</code></pre>
+<div class="rule" id="r-instr.call.on.error"><a href="#r-instr.call.on.error">[instr.call.on.error]</a></div>
+<p>The errors of the ON and OFF forms are found when the program is read. A CALL
+ON with no condition raises <code>SYNTAX 20.911</code> and an OFF <code>20.912</code>, and a USER
+with no name, or with a string for the name, <code>20.915</code>. A word that is not a
+condition raises <code>25.1</code> after ON and <code>25.2</code> after OFF. A NAME with no routine
+name raises <code>19.3</code>, data after the name raises <code>21.903</code> on an ON, and any NAME
+on an OFF raises <code>21.904</code>. A word after the condition that is not NAME raises
+<code>25.914</code>.</p>
+<pre><code class="language-rexx">call try 'call on'
+call try 'call off'
+call try 'call on user'
+call try 'call on user "foo"'
+call try 'call off user "foo"'
+call try 'call on syntax'
+call try 'call off novalue'
+call try 'call on foo'
+call try 'call on error name'
+call try 'call on error name lbl extra'
+call try 'call off error name lbl'
+call try 'call on error lbl'
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">call on =&gt; 20.911
+call off =&gt; 20.912
+call on user =&gt; 20.915
+call on user "foo" =&gt; 20.915
+call off user "foo" =&gt; 20.915
+call on syntax =&gt; 25.1
+call off novalue =&gt; 25.2
+call on foo =&gt; 25.1
+call on error name =&gt; 19.3
+call on error name lbl extra =&gt; 21.903
+call off error name lbl =&gt; 21.904
+call on error lbl =&gt; 25.914
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../instructions/assignment.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../instructions/command.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../instructions/assignment.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../instructions/command.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>
