@@ -58,14 +58,14 @@ e: say condition('o')~code
 ```
 
 r[dir.method.name]
-The name of a method is a symbol or a string. A symbol names the method in
-upper case, a string names it as written, and the lookup of a method by name
-ignores case, so `::method "Mixed"` is found by `mixed` and by `MIXED`. A
-string may hold any characters, so it can name an operator method such as
-`"+"`; a symbol cannot, and a `::method` followed by something that is not a
-symbol or a string raises `SYNTAX 19.902`. A class declares one method of a
-name: a second ::METHOD of the same name, in any case, raises `SYNTAX 99.902`.
-An instance method and a class method of the same name are two methods.
+The name of a method is a symbol or a string, and [the name
+rule](r:dir.index.names) gives the name, so `::method "Mixed"` is found by
+`mixed` and by `MIXED`. A string may hold any characters, so it can name an
+operator method such as `"+"`; a symbol cannot, and a `::method` followed by
+something that is not a symbol or a string raises `SYNTAX 19.902`. A class
+declares one method of a name: a second ::METHOD of the same name, in any
+case, raises `SYNTAX 99.902`. An instance method and a class method of the
+same name are two methods.
 
 ```rexx
 o = .box~new
@@ -122,7 +122,10 @@ UNGUARDED), protection (PROTECTED, UNPROTECTED) and the kind of code
 ATTRIBUTE goes with any one keyword of the kind group. A word that is none of
 the keywords, a keyword repeated or a second keyword of one group raises
 `SYNTAX 25.902`. EXTERNAL and DELEGATE take an operand, and the other keywords
-do not. The errors of the directive are found when the program is read.
+do not. The errors of the directive are found when the program is read. A
+clause after an ATTRIBUTE method raises the error that [the attribute
+rule](r:dir.method.attribute) gives, whichever keyword of the kind group goes
+with it.
 
 ```rexx
 call try '::method m public private'
@@ -202,11 +205,15 @@ instance of SQUARE
 
 r[dir.method.access]
 PUBLIC is the default, and a public method accepts a message from any sender.
-A PRIVATE method accepts a message only from a method that runs on an instance
-of the class that declares it, a mixin class included; an instance of a
-subclass counts. The sender may be another object, so objects of one class can
-send each other private messages. A message from the prolog, from a routine,
-or from a method of an unrelated class raises `SYNTAX 97.2`. A PACKAGE method
+A PRIVATE method, an instance method or a class method, accepts a message
+only from a method whose `SELF`, the sender, is the class that declares it or
+a subclass of it, or is an instance of one of those; a class that inherits a
+mixin class counts as a subclass of it. The sender may be another
+object, so objects of one class can send each other private messages, and a
+class method of the class can send a private instance method. A message from
+the prolog, from a routine, or from a method of an unrelated class raises
+`SYNTAX 97.2`, and so does one to a private method of a subclass from a method
+of the superclass. A PACKAGE method
 accepts a message from any code of the package that declares it and from no
 other package, which raises `SYNTAX 97.3`.
 
@@ -215,8 +222,12 @@ a = .acct~new
 b = .acct~new
 c = .child~new
 say a~take(b) a~take(c) c~take(a) .mixed~new~take(.mixed~new)
+say .acct~ccall .child~cvia(a) a~clspriv
 call try 'say a~secret'
 call try 'say .other~new~take(a)'
+call try 'say .other~cvia(a)'
+call try 'say .acct~csecret'
+call try 'say a~down(c)'
 call try 'say peek(a)'
 exit
 try:
@@ -231,12 +242,29 @@ e: say arg(1) '=>' condition('o')~code
 ::class acct
 ::method secret private
   return 'secret'
+::method csecret class private
+  return 'csecret'
+::method ccall class
+  return self~csecret
+::method cvia class
+  use arg o
+  return o~secret
+::method clspriv
+  return self~class~csecret
 ::method take
   use arg o
   return o~secret
+::method down
+  use arg o
+  return o~childsecret
 ::class child subclass acct
+::method childsecret private
+  return 'childsecret'
 ::class other
 ::method take
+  use arg o
+  return o~secret
+::method cvia class
   use arg o
   return o~secret
 ::class tag mixinclass object
@@ -250,8 +278,12 @@ e: say arg(1) '=>' condition('o')~code
 
 ```output
 secret secret secret hidden
+csecret secret csecret
 say a~secret => 97.2
 say .other~new~take(a) => 97.2
+say .other~cvia(a) => 97.2
+say .acct~csecret => 97.2
+say a~down(c) => 97.2
 say peek(a) => 97.2
 ```
 
@@ -364,14 +396,18 @@ ran ran too
 r[dir.method.attribute]
 ATTRIBUTE declares two methods at once and takes no code: a method of the
 given name that returns the value of the object variable of that name, and a
-method `name=` that assigns its one argument to the variable. The access,
-guarding and protection options apply to both, and so does CLASS, which makes
-them class methods. An unset variable returns its own name in upper case. The
-first method takes no argument, and the second takes exactly one:
-`SYNTAX 93.902` for an extra argument and `93.903` for a missing one. A clause
-after the directive that is not a null clause raises `SYNTAX 99.934`, found
-when the program is read, because the directive has no section. ATTRIBUTE with
-ABSTRACT declares both methods abstract.
+method `name=` that assigns its one argument to the variable and returns no
+value, so that a message whose result is used raises `SYNTAX 91.999`. The
+object variable is named as the directive spells the name: a symbol gives it
+in upper case, and a string as written, so an attribute that a lower-case
+string declares is not the variable that an EXPOSE of the symbol names. The
+access, guarding and protection options apply to both methods, and so does
+CLASS, which makes them class methods. An unset variable returns its own name
+as spelled. The first method takes no argument, and the second takes exactly
+one: `SYNTAX 93.902` for an extra argument and `93.903` for a missing one. A
+clause after the directive that is not a null clause raises `SYNTAX 99.934`,
+found when the program is read, because the directive has no section; that
+holds for ATTRIBUTE with ABSTRACT too, which declares both methods abstract.
 
 ```rexx
 o = .box~new
@@ -384,16 +420,29 @@ say .vault~new~safe_open
 call try 'say o~size(1)'
 call try 'o~"SIZE="()'
 call try 'o~"SIZE="(1, 2)'
+call try 'x = o~"SIZE="(4)'
 call try 'say .box~new~count'
 call try 'say .vault~new~pin'
 call try '.vault~new~pin = 1'
 call try 'say .blank~new~limit'
 call try '.blank~new~limit = 1'
-src = .array~of('::class k', '::method size attribute', 'say 1')
-signal on syntax name e
-p = .package~new('spec-dir-method-attr', src)
-e: say condition('o')~code
+call pkg 'size attribute'
+call pkg 'size abstract attribute'
+o = .low~new
+say o~sz o~"Mx" o~mx
+o~set
+say o~sz
+o~sz = 7
+say o~sz o~get
 exit
+pkg:
+  signal on syntax name e3
+  src = .array~of('::class k', '::method' arg(1), 'say 1')
+  p = .package~new('spec-dir-method-attr', src)
+  say 'ok'
+  return
+e3: say arg(1) '=>' condition('o')~code
+  return
 try:
   signal on syntax name e2
   interpret arg(1)
@@ -405,6 +454,15 @@ e2: say arg(1) '=>' condition('o')~code
 ::method count attribute class
 ::class blank
 ::method limit attribute abstract
+::class low
+::method "sz" attribute
+::method "Mx" attribute
+::method set
+  expose sz
+  sz = 5
+::method get
+  expose sz
+  return sz
 ::class vault
 ::method pin attribute private
 ::method safe_open
@@ -420,17 +478,22 @@ SIZE
 say o~size(1) => 93.902
 o~"SIZE="() => 93.903
 o~"SIZE="(1, 2) => 93.902
+x = o~"SIZE="(4) => 91.999
 say .box~new~count => 97.1
 say .vault~new~pin => 97.2
 .vault~new~pin = 1 => 97.2
 say .blank~new~limit => 93.965
 .blank~new~limit = 1 => 93.965
-99.934
+size attribute => 99.934
+size abstract attribute => 99.934
+sz Mx Mx
+sz
+7 5
 ```
 
 r[dir.method.abstract]
-ABSTRACT declares a method that has no code, a place that a subclass is
-expected to fill. A message that reaches an abstract method raises
+ABSTRACT declares a method that has no code, a method a subclass declares in
+full. A message that reaches an abstract method raises
 `SYNTAX 93.965`, and a subclass that declares a method of the same name
 answers the message instead. The class that declares an abstract method is not
 itself abstract. A clause after the directive that is not a null clause raises
@@ -461,12 +524,15 @@ e: say arg(1) '=>' condition('o')~code
 r[dir.method.external]
 EXTERNAL names a method that a native library supplies, and takes no code. Its
 operand is a string whose first word is LIBRARY, in any case, followed by the
-name of the library and optionally one more word, the entry in it. Any other
-operand raises `SYNTAX 99.917` when the program is read, and a missing operand
-raises `19.905`. A library that cannot be loaded raises `SYNTAX 98.903` when
-the package is installed. A clause after the directive that is not a null
-clause raises `99.936`. How a library is searched for, and which routine of it
-the method runs, are not specified here.
+name of the library and optionally one more word, the entry in it. A missing
+operand, or one that is not a string, raises `SYNTAX 19.905`. A string that
+does not have that form, whose first word is another word, or that has no
+library name or more than two words after LIBRARY, raises `99.917`; both are
+found when the program is read. A library that cannot be loaded raises
+`SYNTAX 98.903` as soon as the directive is read, so that a fault in a
+directive after it is not reported, while a fault in one before it is. A
+clause after the directive that is not a null clause raises `99.936`. How a library is searched for, and
+which routine of it the method runs, are not specified here.
 
 ```rexx
 call try '::method m external "library spec_no_such_lib_xyz"'
@@ -474,13 +540,19 @@ call try '::method m external "Library spec_no_such_lib_xyz entry"'
 call try '::method m external "registered spec_no_such_lib_xyz"'
 call try '::method m external "library a b c"'
 call try '::method m external'
+call try '::method m external library'
+call try '::method m external ""'
+call try '::method m external "library"'
+call try '::method m external "library spec_no_such_lib_xyz"', '::frob x'
+call try '::frob x', '::method m external "library spec_no_such_lib_xyz"'
 exit
 try:
   signal on syntax name e
-  p = .package~new('spec-dir-method-ext', .array~of('::class k', arg(1)))
-  say arg(1) '=> ok'
+  p = .package~new('spec-dir-method-ext', -
+    .array~of('::class k', arg(1), arg(2)))
+  say strip(arg(1) arg(2)) '=> ok'
   return
-e: say arg(1) '=>' condition('o')~code
+e: say strip(arg(1) arg(2)) '=>' condition('o')~code
   return
 ```
 
@@ -490,6 +562,11 @@ e: say arg(1) '=>' condition('o')~code
 ::method m external "registered spec_no_such_lib_xyz" => 99.917
 ::method m external "library a b c" => 99.917
 ::method m external => 19.905
+::method m external library => 19.905
+::method m external "" => 99.917
+::method m external "library" => 99.917
+::method m external "library spec_no_such_lib_xyz" ::frob x => 98.903
+::frob x ::method m external "library spec_no_such_lib_xyz" => 99.916
 ```
 
 r[dir.method.delegate]
@@ -544,17 +621,19 @@ r[dir.method.floating]
 A ::METHOD that comes before every ::CLASS belongs to no class, and the
 package keeps it as a method object of its own. The environment symbol
 `.METHODS` holds a table of the package's floating methods, whose indexes are
-the method names in upper case. The symbol exists only in a package that has a
-floating method; for any other package it is the symbol's own text. Each
-package has its own table. A floating method may not use CLASS, which raises
-`SYNTAX 99.905`, and a name declared twice raises `99.902`, as the methods of
-a class do.
+the method names in upper case, and a lookup in it is by exact index, so
+`.methods['greet']` is the `.nil` object. The symbol exists only in a package
+that has a floating method; for any other package it is the symbol's own text.
+Each package has its own table. A floating method may not use CLASS, which
+raises `SYNTAX 99.905`, and a name declared twice raises `99.902`, as the
+methods of a class do.
 
 ```rexx
 say .methods~items
 say .methods~allindexes~sort~makearray~makestring('l', ' ')
 .box~define('GREET', .methods['GREET'])
 say .box~new~greet('world')
+say .methods['greet'] .methods['GREET']~class~id
 call try '::method m class'
 call try '::method m', '::method M'
 call try 'say .methods', '::class k', '::method m'
@@ -583,6 +662,7 @@ e: say src~makestring('l', ' / ') '=>' condition('o')~code
 2
 GREET UNUSED
 hello world
+The NIL object Method
 ::method m class => 99.905
 ::method m / ::method M => 99.902
 .METHODS

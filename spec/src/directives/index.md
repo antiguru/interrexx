@@ -40,13 +40,15 @@ instructions before the next clause of the caller.
 r[dir.index.directive]
 A clause is a directive when its first token is `::`, which may be followed
 by blanks or comments before the keyword. The keyword is not case sensitive.
-A keyword that names no directive raises `SYNTAX 99.916`, and `::` followed by
-nothing that is a symbol raises `SYNTAX 20.916`. The error is found when the
-program is read, so that a program file with such a clause writes nothing and
-exits with 256 minus the error number, 157 for 99.916, as [the reading
-rule](r:lex.index.read-first) describes for any fault of the text. A directive
-cannot be part of the text of [INTERPRET](r:instr.interpret.labels), which
-raises `SYNTAX 99.914` for it.
+A directive begins its clause at the start of a line or after a semicolon;
+after a label on the same line the `::` is read as part of an expression and
+raises `SYNTAX 35.1`. A keyword that names no directive raises
+`SYNTAX 99.916`, and `::` followed by nothing that is a symbol raises
+`SYNTAX 20.916`. The error is found when the program is read, so that a
+program file with such a clause writes nothing and exits with 256 minus the
+error number, 157 for 99.916, as [the reading rule](r:lex.index.read-first)
+describes for any fault of the text. A directive cannot be part of the text of
+[INTERPRET](r:instr.interpret.labels), which refuses it.
 
 ```rexx
 call try '::class k1'
@@ -55,6 +57,7 @@ call try '::CLASS k3'
 call try '::frob k4'
 call try '::'
 call try '::"class" k5'
+call try 'lab: ::class k6'
 exit
 try:
   signal on syntax name e
@@ -72,6 +75,7 @@ e: say arg(1) '=>' condition('o')~code
 ::frob k4 => 99.916
 :: => 20.916
 ::"class" k5 => 20.916
+lab: ::class k6 => 35.1
 ```
 
 ```rexx
@@ -148,9 +152,10 @@ r[dir.index.section]
 The clauses after a directive, up to the next directive or the end of the
 program, are that directive's section. The section is the body of the method
 or routine that the directive declares, and the directive clause itself is not
-part of it. A directive that declares no code, such as ::CLASS, takes only
-null clauses after it, comments and blank lines. Any other clause there raises
-a `SYNTAX` error found when the program is read: `99.916` after `::class`. The
+part of it. A directive that declares no code, such as ::CLASS, allows only
+comments and empty lines between it and the next directive. Any other clause
+there raises a `SYNTAX` error found when the program is read: `99.916` after
+`::class`. The
 pages of the directives that take a body or are refused one say which subcode
 their own case raises.
 
@@ -231,13 +236,21 @@ select / ::class k => 14.2
 r[dir.index.install]
 The interpreter installs a package before it runs the prolog, in four steps.
 First the ::REQUIRES directives are processed in text order wherever they
-stand, and each required package is installed and runs its own prolog before
-the next step. Then the package's routines become known and every class is
-created, in the order that [the class rule](r:dir.class.forward) gives, and
-each new class object is sent an INIT message. When all classes exist, each is
-sent an ACTIVATE message in the order of creation. Only then does the prolog
-run, so a class method that ACTIVATE runs sees every class and routine of the
-package, and the prolog sees every class already activated.
+stand, except that [the library rule](r:dir.requires.library) processes the
+LIBRARY ones before the others, and each required package is installed and
+runs its own prolog before the next step. Then the package's routines become
+known and every class is created, in the order that [the class
+rule](r:dir.class.forward) gives, and each new class object is sent an INIT
+message. When all classes exist, each is sent an ACTIVATE message in the order
+of creation. Only then does the prolog run, so a class method that ACTIVATE
+runs sees every class and routine of the package, and the prolog sees every
+class already activated.
+A class is reachable by its name, as the environment symbol that is a period
+followed by the name, once its INIT message has returned. During the INIT of
+a class the classes created before it are reachable, and the class itself and
+the classes created later are not, so that their symbols have the symbol's own
+text as value. The routines of the package are known from the start. Every
+class is reachable by the time the first ACTIVATE message is sent.
 
 ```rexx
 f = 'spec-dir-index-lib.tmp'
@@ -275,6 +288,37 @@ activate two
 prolog
 ```
 
+```rexx
+say 'prolog'
+::class a
+::method init class
+  say 'init a sees' .b r()
+  signal on syntax name e
+  say 'init a sees' .a~id
+  return
+e: say 'init a self' condition('o')~code
+::class b
+::method init class
+  say 'init b sees' .a~id
+  signal on syntax name e
+  say 'init b sees' .b~id
+  return
+e: say 'init b self' condition('o')~code
+::method activate class
+  say 'activate b sees' .a~id .b~id
+::routine r
+  return 'r'
+```
+
+```output defect=#112
+init a sees .B r
+init a self 97.1
+init b sees A
+init b self 97.1
+activate b sees A B
+prolog
+```
+
 r[dir.index.failure]
 A fault found while the package is read stops everything: nothing is
 installed and no prolog runs. A fault raised while the package is installed,
@@ -282,8 +326,11 @@ such as a class that cannot be found or a required file that does not exist,
 stops installation at that step, so that no class activates after it and the
 prolog does not run. The condition is `SYNTAX` in both cases, and a program
 file ends with 256 minus the error number as its exit status, 158 for
-`98.909`. The classes created before the fault have received their INIT
+`98.909`. The classes created before such a fault have received their INIT
 message, as the next example shows, and have received no ACTIVATE message.
+A class that names itself, directly or through the classes it names, is an
+exception: [the order rule](r:dir.class.forward) finds it before any class is
+created, so no INIT message has been sent.
 
 ```rexx
 call try '::class k public private'
