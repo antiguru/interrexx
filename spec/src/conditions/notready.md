@@ -2,7 +2,7 @@
 element: "NOTREADY"
 kind: concept
 ansi: "8.4.1"
-rexxref: "Conditions and Condition Traps > Action Taken when a Condition Is Trapped"
+rexxref: "Conditions and Condition Traps; Conditions and Condition Traps > Condition Information > Descriptive Strings; Conditions and Condition Traps > Condition Information > Additional Object Information; Conditions and Condition Traps > Action Taken when a Condition Is Trapped"
 ---
 
 # NOTREADY
@@ -25,8 +25,8 @@ The description of a NOTREADY condition is the name of the stream, spelled as
 entry is the stream object, whose string value is that name. The condition
 object has the entries that every condition has and `ADDITIONAL`, and no
 `POSITION`, `RC` or `CODE`, as [the entries rule](r:cond.information.object)
-lists them. The call that raised it has answered as its own page says by the
-time a CALL trap runs.
+lists them. The whole clause that held the call has finished
+by the time a CALL trap runs, as [the CALL trap rule](r:cond.traps.call) says.
 
 ```rexx
 f = 'spec-notready-info.tmp'
@@ -58,12 +58,12 @@ x is []
 
 r[cond.notready.call]
 NOTREADY is answered by CALL ON NOTREADY, by SIGNAL ON NOTREADY and by the ANY
-traps of both kinds. A CALL trap lets the stream call finish and calls the
-routine afterwards, and the clause that held the call goes on when the routine
-returns, with the state `DELAY` in the routine and `SIGL` the line of that
-clause, as [the CALL trap rule](r:cond.traps.call) says. The call has then
-answered what its page says, so the clause sees the same answer as it would
-without a trap.
+traps of both kinds. A CALL trap lets the stream call finish, and the
+clause that held the call finishes too. The routine is called before the next
+clause, with the state `DELAY` in the routine and `SIGL` the line of that
+clause, as [the CALL trap rule](r:cond.traps.call) says. The clause has then
+assigned what its page says the stream call answers, so the routine sees the
+assignment already made and the clause is not resumed after the routine.
 
 ```rexx
 f = 'spec-notready-call.tmp'
@@ -72,7 +72,8 @@ call lineout f, 'only line'
 call lineout f
 call on notready name h
 a = linein(f)
-b = linein(f)
+b = 'old'
+b = linein(f) || mark('second operand')
 say 'a=' || a 'b=' || b
 call off notready
 call on any name h2
@@ -80,16 +81,19 @@ c = linein(f)
 say 'c=' || c
 call sysfiledelete f
 exit
-h: say 'h' sigl condition('c') condition('s')
+mark: say 'evaluating' arg(1)
+  return '+'
+h: say 'h' sigl condition('c') condition('s') 'b=[' || b || ']'
   return
 h2: say 'h2' sigl condition('c')
   return
 ```
 
 ```output
-h 7 NOTREADY DELAY
-a=only line b=
-h2 11 NOTREADY
+evaluating second operand
+h 8 NOTREADY DELAY b=[+]
+a=only line b=+
+h2 12 NOTREADY
 c=
 ```
 
@@ -129,8 +133,6 @@ NOTREADY is raised in the code that made the stream call, and goes no further.
 A trap in the caller of a routine does not answer a NOTREADY that a stream
 call in the routine raised, as [the propagation
 rule](r:cond.information.propagate.only) says, and the routine's own traps do.
-The state of a stream belongs to the stream and not to the code that used it,
-so a read in one routine can leave the stream at its end for the next one.
 
 ```rexx
 f = 'spec-notready-scope.tmp'

@@ -1,7 +1,7 @@
 ---
 element: "USER conditions"
 kind: concept
-rexxref: "Conditions and Condition Traps > Action Taken when a Condition Is Trapped"
+rexxref: "Conditions and Condition Traps; Conditions and Condition Traps > Condition Information > Descriptive Strings; Conditions and Condition Traps > Condition Information > Additional Object Information; Conditions and Condition Traps > Action Taken when a Condition Is Trapped"
 ---
 
 # USER conditions
@@ -63,10 +63,9 @@ and SIGNAL ON USER set, and otherwise by the ANY trap, as [the choice
 rule](r:cond.traps.choice) says. Both kinds of instruction accept it, and the
 default routine or label of the trap is the name alone, `FOO` for `user foo`.
 A trap for one name does not answer another name, and a trap for `ERROR` does
-not answer `USER ERROR`. The effects of the trap are those of [CALL
-traps](r:cond.traps.call) and [SIGNAL traps](r:cond.traps.signal): the
-handler of a CALL trap runs with the state `DELAY`, and a SIGNAL trap is `OFF`
-at its label.
+not answer `USER ERROR`, as [the names rule](r:cond.index.names) says. The
+effects of the trap are those of [CALL traps](r:cond.traps.call) and [SIGNAL
+traps](r:cond.traps.signal).
 
 ```rexx
 call on user alpha
@@ -98,10 +97,10 @@ gamma USER GAMMA OFF
 
 r[cond.user.information]
 The description of a user condition is the text of the DESCRIPTION option of
-the RAISE instruction that raised it, and its `ADDITIONAL` entry is the value
-of the ADDITIONAL option. Each entry is present exactly when the instruction
-gave it, so a condition raised with neither has no description text and no
-`ADDITIONAL`. The condition object has the entries that every condition has
+the RAISE instruction that raised it, or the null string when the instruction
+gave none. Its `ADDITIONAL` entry is the value of the ADDITIONAL option, or
+the array of the ARRAY option, and is present exactly when the instruction
+gave one of them. The condition object has the entries that every condition has
 and `POSITION`, and neither `RC` nor `CODE`, as [the entries
 rule](r:cond.information.object) lists them.
 
@@ -110,20 +109,27 @@ call on user foo name h
 call r1
 call r2
 call r3
+call r4
 exit
 r1: raise user foo return
 r2: raise user foo description 'why' return
 r3: raise user foo description 'why' additional ('more') return
+r4: raise user foo array ('x', 'y') return
 h: o = condition('o')
   say '[' || condition('d') || ']' o~hasindex('ADDITIONAL'),
-      o~hasindex('POSITION') o~hasindex('RC') o~hasindex('CODE')
+      o~hasindex('POSITION') o~hasindex('RC') o~hasindex('CODE'),
+      o~hasindex('DESCRIPTION') o~description~class
+  if o~hasindex('ADDITIONAL') then say '  ' o~additional~class
   return
 ```
 
 ```output
-[] 0 1 0 0
-[why] 0 1 0 0
-[why] 1 1 0 0
+[] 0 1 0 0 1 The String class
+[why] 0 1 0 0 1 The String class
+[why] 1 1 0 0 1 The String class
+   The String class
+[] 1 1 0 0 1 The String class
+   The Array class
 ```
 
 ## When nothing traps it

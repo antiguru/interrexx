@@ -1,7 +1,7 @@
 ---
 element: "NOMETHOD"
 kind: concept
-rexxref: "Conditions and Condition Traps > Action Taken when a Condition Is Trapped"
+rexxref: "Conditions and Condition Traps; Conditions and Condition Traps > Condition Information > Descriptive Strings; Conditions and Condition Traps > Condition Information > Additional Object Information; Conditions and Condition Traps > Action Taken when a Condition Is Trapped"
 ---
 
 # NOMETHOD
@@ -16,15 +16,20 @@ traps answer it and what becomes of it when none does.
 ## When it is raised
 
 r[cond.nomethod.raise]
-NOMETHOD is raised when a message is sent to an object, the class of the
-object has no method of that name, and the class has no `UNKNOWN` method that
-takes the message instead. The message may be written with `~`, with `~~`, or
+NOMETHOD is raised when a message is sent to an object, the object has no
+method of that name that the sender may run, and the object has no `UNKNOWN`
+method that takes the message instead. A private method that is sent from
+outside its class is a method the sender may not run, so the message raises
+NOMETHOD, with the name of the method, and an `UNKNOWN` method takes it as it
+takes any lost message. The message may be written with `~`, with `~~`, or
 with a scope override such as `~name:super`, as [the information
 rule](r:cond.nomethod.information) shows, and it may be sent by the `SEND`
 method of an object. The arguments of the message are evaluated before the
 lookup, so the clause has evaluated them when the condition is raised. The
 condition is raised in the code that sent the message, and the clause ends
-there when a SIGNAL trap answers. A class with an `UNKNOWN` method raises
+there when a SIGNAL trap answers. The exception is a message that FORWARD
+sends without CONTINUE, which [the FORWARD rule](r:instr.forward.end) raises
+in the caller of the forwarding method. A class with an `UNKNOWN` method raises
 nothing, because that method receives the message. The `UNKNOWN` method and
 the way a class defines methods belong to the classes chapter.
 
@@ -144,12 +149,13 @@ r[cond.nomethod.untrapped]
 A NOMETHOD that neither its own trap nor the ANY trap answers is not ignored.
 It becomes the condition `SYNTAX 97.1` raised at the same clause, as [the
 untrapped rule](r:cond.index.untrapped) says, and a SYNTAX trap answers it
-under the name SYNTAX. Because that is a SYNTAX condition, it leaves the code
-that sent the message and goes on to its caller, as [the propagation
-rule](r:cond.information.propagate) says. So a NOMETHOD trap in the caller of
-a method does not answer a message that the method lost, and a SYNTAX trap in
-the caller does. Without any trap the program ends with exit code 159, as
-[the SYNTAX rule](r:cond.index.syntax) says.
+under the name SYNTAX. A message to a private method that the sender may not
+run becomes `SYNTAX 97.2` instead. Because that is a SYNTAX condition, it
+leaves the code that sent the message and goes on to its caller, as [the
+propagation rule](r:cond.information.propagate) says. So a NOMETHOD trap in
+the caller of a method does not answer a message that the method lost, and a
+SYNTAX trap in the caller does. Without a trap the program ends as [the SYNTAX
+rule](r:cond.index.syntax) says.
 
 ```rexx
 signal on nomethod name nm
@@ -168,6 +174,24 @@ say 'SYNTAX in main' o~code o~rc '['condition('d')']'
 
 ```output
 SYNTAX in main 97.1 97 []
+```
+
+```rexx
+signal on syntax name s
+x = .a~new~hidden
+say 'not reached'
+s: say condition('c') condition('o')~code
+say 'before'
+x = .a~new~hidden
+say 'not reached'
+::class a
+::method hidden private
+  return 'ran'
+```
+
+```output rc=159
+SYNTAX 97.2
+before
 ```
 
 ```rexx

@@ -1,8 +1,8 @@
 ---
 element: "NOSTRING"
 kind: concept
-rexxref: "Conditions and Condition Traps > Action Taken when a Condition Is Trapped"
-deviations: [77]
+rexxref: "Conditions and Condition Traps; Conditions and Condition Traps > Condition Information > Descriptive Strings; Conditions and Condition Traps > Condition Information > Additional Object Information; Conditions and Condition Traps > Action Taken when a Condition Is Trapped"
+deviations: [30, 77]
 ---
 
 # NOSTRING
@@ -21,12 +21,18 @@ which traps answer it and what a clause does when nothing does.
 r[cond.nostring.raise]
 NOSTRING is raised when a clause needs the string value of an object that is
 not a string, and the object has no `MAKESTRING` method, or has one that
-answers an object that is not a string. A string, a number and an instance of
+answers an object that is not a string. An object whose `MAKESTRING` or
+`STRING` method is private raises no NOSTRING in the clauses of the examples
+below: the message is refused, as [the conventions](r:conv.string.object) say
+for builtin arguments, and the clause raises `SYNTAX 97.2`. A string, a number and an instance of
 a subclass of `String` never raise it, and neither does an object whose
 `MAKESTRING` answers a string. The uses that raise it include the three
 concatenation operators (the explicit `||`, the abuttal and the blank), the
-operand of SAY, the source of `PARSE VALUE`, the text that INTERPRET runs, and
-an argument of a builtin function that is to be a string. Sending the message
+operand of SAY, the source of `PARSE VALUE`, the text that INTERPRET runs, an operand of an
+arithmetic or comparison operator whose left operand is a string, the tail of
+a compound variable, and an argument of a builtin function that is to be a
+string, except for the builtins that link [the native call
+rule](r:bif.index.call.native), which raise `SYNTAX 88.909` for it. Sending the message
 `STRING` to the object raises nothing, because the object is then not
 converted. Which other positions convert, such as the arguments of method
 calls, is not specified. What a builtin does with such an argument when no
@@ -72,9 +78,52 @@ cols: || abuttal blank ~string parse upper
 4 - - - - - -
 ```
 
+> The next program tries the other positions and the private methods. A
+> comparison or an arithmetic operator with the object on its left is a message
+> to the object, so the operands here stand to the right of a string.
+
+```rexx
+do j = 1 to 6
+  say probe(j)
+end
+exit
+::routine probe
+  use arg j
+  signal on syntax name s
+  signal on nostring name n
+  select
+    when j = 1 then x = 1 + .object~new
+    when j = 2 then x = ('a' = .object~new)
+    when j = 3 then do; t = .object~new; a.t = 5; end
+    when j = 4 then x = 'a' || .ps~new
+    when j = 5 then x = 'a' || .pm~new
+    when j = 6 then x = filespec('n', .object~new)
+  end
+  return j 'nothing'
+n: return j 'NOSTRING'
+s: return j 'SYNTAX' condition('o')~code
+::class ps
+::method string private
+  return 'x'
+::class pm
+::method makestring private
+  return 'x'
+```
+
+```output
+1 NOSTRING
+2 NOSTRING
+3 NOSTRING
+4 SYNTAX 97.2
+5 SYNTAX 97.2
+6 SYNTAX 88.909
+```
+
 r[cond.nostring.information]
 The description of a NOSTRING condition is the text that the `STRING` method
-of the object answers, and its `ADDITIONAL` entry is the object. The condition
+of the object answers when that is a string, and its `ADDITIONAL` entry is the
+object. When the answer is not a string, [Deviation
+30](r:cond.nostring.deviation.30) applies. The condition
 object has the entries that every condition has, `ADDITIONAL` and `POSITION`,
 and neither `RC` nor `CODE`, as [the entries
 rule](r:cond.information.object) lists them. The text is the one that the
@@ -174,8 +223,9 @@ back from r
 r[cond.nostring.untrapped]
 A NOSTRING that neither its own trap nor the ANY trap answers is ignored, as
 [the untrapped rule](r:cond.index.untrapped) says: the clause goes on and uses
-as the string value of the object the text that its `STRING` method answers.
-The directive `::OPTIONS` can turn an untrapped NOSTRING into a SYNTAX
+as the string value of the object the text that its `STRING` method answers
+when that is a string, and [Deviation 30](r:cond.nostring.deviation.30)
+applies when it is not. The directive `::OPTIONS` can turn an untrapped NOSTRING into a SYNTAX
 condition, and the page of the directive specifies that.
 
 ```rexx
@@ -229,4 +279,27 @@ n: say 'NOSTRING' '['condition('d')']' condition('o')~additional~class
 aT.
 bdflt
 NOSTRING [a PLAIN] The Stem class
+```
+
+r[cond.nostring.deviation.30]
+When the `STRING` method of an object answers an object with no string value,
+interrexx gives ooRexx's answer wherever that is defined, and elsewhere ends
+the program with exit code 120 after raising NOSTRING if it is trapped. For a
+NOSTRING raised for such an object, the description is not specified. ooRexx
+reads `.nil` as a string there, with garbage results or a crash. [The
+conventions](r:conv.string.deviation.30) state it for builtin arguments.
+
+```rexx
+signal on nostring name n
+say 'x' .weird~new
+n: say 'trapped' condition('c') condition('o')~additional~class
+x = 'a' || .weird~new
+say 'not reached'
+::class weird
+::method string
+  return .directory~new
+```
+
+```output rc=120
+trapped NOSTRING The WEIRD class
 ```
