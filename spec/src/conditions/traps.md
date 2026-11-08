@@ -259,31 +259,30 @@ before
 
 r[cond.traps.call]
 When a CALL trap answers a condition, the clause that raised it finishes
-first, so that a command has run and an assignment has been made. The state
-of the trap becomes `DELAY`, the condition is recorded, and a routine is
-called before the next clause starts. The next clause is the one after it in
-the same place, so the call is made inside a DO, a SELECT or an IF that holds
-the clause, and between the clauses of the text of an INTERPRET. When the
-clause that raised the condition ends the program, as an EXIT in the main
-program or the last clause does, or ends a routine, as a RETURN or running off
-its end does, the routine of the trap is called in the level of the caller,
-after the return and before the caller goes on. The caller goes on with the
-clause after the CALL, or with the rest of the expression of the clause that
-invoked the routine as a function. When the program ends, the routine is
-called before it does. What an EXIT inside an internal routine does with a
-pending CALL trap is not specified. The routine
-is the one that [CALL](r:instr.call.search) finds for the name of the trap,
-which is the name of the condition when there was no NAME. It gets one
-argument, the [condition object](r:cond.information.argument). The call does
-not change `RESULT`, and what the routine returns is dropped. When the routine
-returns, the trap is `ON` again, and the clause after the one that raised the
-condition runs. When the routine is an internal routine, `SIGL` is set as [a
-CALL](r:instr.call.sigl) sets it, to the line of the clause that raised the
-condition, which for a RETURN, an EXIT or a clause that ends a routine is that
-clause itself and not the CALL. A
-routine without PROCEDURE shares the variables of the caller, `RC` among them.
-When the routine is a `::ROUTINE`, a built-in function or an external routine,
-`SIGL` is not set, and it keeps the value it had.
+first, so that a command has run and an assignment has been made. The state of
+the trap becomes `DELAY`, the condition is recorded, and a routine is called
+before the next clause starts. The next clause is the one after it in the same
+place, so the call is made inside a DO, a SELECT or an IF that holds the
+clause, and between the clauses of the text of an INTERPRET. When the clause
+that raised the condition ends the program, as an EXIT in the main program or
+the last clause does, the routine of the trap is called before the program
+ends. When it is the RETURN of a routine, the routine of the trap is called
+after the value of the RETURN is computed and before the caller goes on, and
+it sees the variables of the routine that returned. The caller then goes on
+with the clause after the CALL, or with the rest of the expression of the
+clause that invoked the routine as a function. What an EXIT inside an internal
+routine does with a pending CALL trap is not specified. The routine is the one
+that [CALL](r:instr.call.search) finds for the name of the trap, which is the
+name of the condition when there was no NAME. It gets one argument, the
+[condition object](r:cond.information.argument). The call does not change
+`RESULT`, and what the routine returns is dropped. When the routine returns,
+the trap is `ON` again, and the clause after the one that raised the condition
+runs. When the routine is an internal routine, `SIGL` is set as
+[a CALL](r:instr.call.sigl) sets it, to the line of the clause that raised the
+condition, which for a RETURN or an EXIT is that clause itself and not the
+CALL. A routine without PROCEDURE shares the variables of the caller, `RC`
+among them. When the routine is a `::ROUTINE`, a built-in function or an
+external routine, `SIGL` is not set, and it keeps the value it had.
 
 ```rexx
 address system
