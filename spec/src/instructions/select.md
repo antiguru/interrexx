@@ -379,9 +379,9 @@ program that has one runs none of its clauses. A SELECT with no WHEN before
 its OTHERWISE or END raises `SYNTAX 7.1`, and another clause where a WHEN is
 required raises `7.2`. A WHEN or an OTHERWISE outside a SELECT raises the
 codes of [a part out of place](r:instr.index.parts). A WHEN with no THEN
-raises `18.2`, and an END where the instruction of a THEN should be raises
-`10.1`. A SELECT with no END raises `14.2` and one whose OTHERWISE part has no
-END `14.901`. A stray END is [a part out of place](r:instr.index.parts) too.
+raises `18.2`, and an END where the instruction of a THEN should be is
+[a part out of place](r:instr.index.parts), as is a stray END. A SELECT with
+no END raises `14.2` and one whose OTHERWISE part has no END `14.901`.
 
 ```rexx
 say 'before'
