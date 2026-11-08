@@ -38,8 +38,8 @@ expression of an option are each one term: a literal string, a constant
 symbol, an environment symbol or an expression in parentheses. A variable
 symbol is not a term here, so its value is written in parentheses. A RETURN or
 EXIT that has no expression ends the clause: any option after it is read as
-its expression. ANY is not a condition word, because [the names rule](r:cond.index.names) says
-that nothing raises it.
+its expression. ANY is not a condition word, because [the names
+rule](r:cond.index.names) says that nothing raises it.
 
 ```rexx
 call on user alpha name h
@@ -164,11 +164,11 @@ The code is the value that `RC` has in the code that answers the condition, as
 [the rule for `RC`](r:cond.information.rc) says. The `RC` entry of the
 condition object holds the code when it is a string. When the parenthesized
 expression is an object that is not a string, the variable `RC` has its string
-value, and what the entry holds is not specified. The user conditions take a name, which [the
-name rule](r:cond.user.name) specifies. HALT, LOSTDIGITS, NOMETHOD, NOSTRING,
-NOTREADY and NOVALUE take nothing, and the condition has the entries that [the
-entries rule](r:cond.information.object) lists for a condition that an
-instruction raised.
+value, and what the entry holds is not specified. The user conditions take a
+name, which [the name rule](r:cond.user.name) specifies. HALT, LOSTDIGITS,
+NOMETHOD, NOSTRING, NOTREADY and NOVALUE take nothing, and the condition has
+the entries that [the entries rule](r:cond.information.object) lists for a
+condition that an instruction raised.
 
 ```rexx
 names = 'HALT LOSTDIGITS NOMETHOD NOSTRING NOTREADY NOVALUE'
@@ -257,11 +257,16 @@ number without a point is the error of that number with the subcode 0. The
 `CODE` entry of the condition holds the number as `m.n`, and the `RC` entry
 holds the major number. A number of digits, or of digits, a point and digits,
 that no error has raises `SYNTAX 98.941`. The null string, a minus sign, a
-letter, a second point, a major number outside 1 to 99 and a subcode above 999
-raise `SYNTAX 33.904`. The text of any other form, such as a number with a
-plus sign, with blanks in it or with an exponent, is not specified. Both
-errors are raised in the code that holds the RAISE, as a SYNTAX condition is
-raised by [the SYNTAX rule](r:instr.raise.here).
+letter that is not the exponent of a number, a second point, a point with no
+digit on one side of it, a major number outside 1 to 99 and a subcode above
+999 raise `SYNTAX 33.904`. The text of any other form, such as a number with a
+plus sign, with blanks in it or with an exponent, is not specified. The error
+33.904 is a fault of the clause itself, so it is raised in the code that holds
+the RAISE, as an error found at that clause would be, whichever option ends
+the clause. The error 98.941 is a SYNTAX condition that the clause raises,
+like the condition that the clause names: it goes where [the RETURN
+rule](r:instr.raise.here) puts it, and with EXIT where [the EXIT
+rule](r:instr.raise.exit) puts it.
 
 ```rexx
 n.1 = '40'
@@ -282,7 +287,9 @@ n.15 = '4.5'
 n.16 = '-3'
 n.17 = 'abc'
 n.18 = ''
-do i = 1 to 18
+n.19 = '40.'
+n.20 = '.3'
+do i = 1 to 20
   call go n.i
 end
 exit
@@ -316,6 +323,53 @@ e: o = condition('o')
      -3 => 33.904  33
     abc => 33.904  33
         => 33.904  33
+    40. => 33.904  33
+     .3 => 33.904  33
+```
+
+> With EXIT in an internal routine, 98.941 is raised at the level of the unit,
+> as the condition that the clause names would be.
+
+```rexx
+say u('40.999')
+say u('40.3')
+exit
+::routine u
+  signal on syntax name unit
+  return il(arg(1))
+il: procedure
+  signal on syntax name inner
+  raise syntax (arg(1)) exit
+inner: say '  inner' sigl condition('o')~code; return 'inner'
+unit: say '  unit' sigl condition('o')~code; return 'unit'
+```
+
+```output
+  unit 6 98.941
+unit
+  unit 6 40.3
+unit
+```
+
+> The error 33.904 is raised in the internal routine, where the trap of the
+> internal routine answers it.
+
+```rexx
+say u('x')
+exit
+::routine u
+  signal on syntax name unit
+  return il(arg(1))
+il: procedure
+  signal on syntax name inner
+  raise syntax (arg(1)) exit
+inner: say '  inner' sigl condition('o')~code; return 'inner'
+unit: say '  unit' sigl condition('o')~code; return 'unit'
+```
+
+```output defect=#119
+  inner 8 33.904
+inner
 ```
 
 r[instr.raise.syntax]
@@ -507,9 +561,9 @@ code that holds the RAISE and with its variables, in a fixed order that does
 not depend on the order of the options: the code or the number first, then the
 DESCRIPTION expression, then the ADDITIONAL expression or the ARRAY list from
 left to right, and last the RETURN or EXIT expression. A name of a user
-condition is not evaluated. When the number of a RAISE SYNTAX is not valid, the
-error is raised as [the number rule](r:instr.raise.number) says, and whether
-the expressions after the number are evaluated first is not specified.
+condition is not evaluated. When the number of a RAISE SYNTAX is not valid,
+the error is raised as [the number rule](r:instr.raise.number) says, and
+whether the expressions after the number are evaluated first is not specified.
 
 ```rexx
 call on error name h
@@ -723,20 +777,24 @@ after outer
 r[instr.raise.exit]
 A RAISE with EXIT, which is what a clause with neither option does, ends the
 whole unit that holds it, as [EXIT](r:instr.exit.unit) does: a RAISE in an
-internal routine ends the `::ROUTINE`, the method or the main program that
-the internal routine belongs to, and so does a RAISE in the text of an
-INTERPRET in any of these. A condition other than SYNTAX is raised in the
-caller of that unit, at the clause that called the unit, and the traps of the
-unit, of its internal routines and of the code that the unit called play no
-part in the answer. The main program has no caller, and [the rule for the main
-program](r:instr.raise.main) says what happens there. A SYNTAX condition is
-raised in the unit itself, at the clause that runs at the level of the unit.
-That clause is the RAISE when it is in the code of the unit or in INTERPRET
-text there, and it is the call of the internal routine when the RAISE is in an
-internal routine. The traps that the unit has at that level answer the
-condition, and a SYNTAX that they do not answer goes up to the caller of the
-unit as [the propagation rule](r:cond.information.propagate) says. The other
-cases of RAISE with EXIT are not specified.
+internal routine ends the `::ROUTINE`, the method or the main program that the
+internal routine belongs to, and so does a RAISE in the text of an INTERPRET
+in any of these. A condition other than SYNTAX is raised in the caller of that
+unit, at the clause that called the unit, and the traps of the unit and of its
+internal routines play no part in the answer. The main program has no caller,
+and [the rule for the main program](r:instr.raise.main) says what happens
+there. A SYNTAX condition is raised in the unit itself, at the clause that
+runs at the level of the unit. That clause is the RAISE when it is in the code
+of the unit or in INTERPRET text there, and it is the call of the internal
+routine when the RAISE is in an internal routine. The traps that the unit has
+at that level answer the condition, and a SYNTAX that they do not answer goes
+up to the caller of the unit as [the propagation
+rule](r:cond.information.propagate) says. A HALT is answered by the HALT trap
+of the caller and a NOMETHOD by its NOMETHOD trap. When the caller has no such
+trap, the condition becomes the SYNTAX that [the untrapped
+rule](r:instr.raise.untrapped) says, and that SYNTAX is raised in the unit as
+any SYNTAX of a RAISE with EXIT is. RAISE PROPAGATE with EXIT is not
+specified.
 
 ```rexx
 call on user foo name hm
@@ -822,6 +880,56 @@ step: raise syntax 40.3 exit 'step'
 
 ```output
 top 2
+```
+
+```rexx
+call on halt name ch
+call h1
+signal on syntax name s
+call h2
+say 'not reached'
+exit
+ch: say 'caller halt' sigl; return
+s: say 'caller syntax' sigl condition('o')~code condition('o')~position,
+     condition('o')~propagated; exit
+::routine h1
+  signal on syntax name own
+  call il
+  say 'not reached'
+il: raise halt exit
+own: say 'h1 own' sigl; return
+::routine h2
+  call il
+il: raise nomethod exit
+```
+
+```output
+caller halt 2
+caller syntax 4 97.5 18 1
+```
+
+```rexx
+call go 'h1'
+call go 'n2'
+exit
+go: procedure
+  call (arg(1))
+  return
+::routine h1
+  signal on syntax name own
+  call il
+  say 'not reached'
+il: raise halt exit
+own: say 'h1 own' sigl condition('o')~code; return
+::routine n2
+  signal on syntax name own
+  raise nomethod array (1) exit
+own: say 'n2 own' sigl condition('o')~code; return
+```
+
+```output
+h1 own 9 4.1
+n2 own 15 97.1
 ```
 
 r[instr.raise.here]
@@ -948,15 +1056,15 @@ EXIT would, with the value of the option as the exit code, as
 main program itself, at the RAISE clause. No trap answers a condition other
 than SYNTAX there, ANY included, so it is ignored, except for an unanswered
 HALT or NOMETHOD, which becomes a SYNTAX condition as [the untrapped
-rule](r:instr.raise.untrapped) says. The same holds for a RAISE with EXIT in an
-internal routine of the main program and in INTERPRET text of the main
+rule](r:instr.raise.untrapped) says. The same holds for a RAISE with EXIT in
+an internal routine of the main program and in INTERPRET text of the main
 program: the program ends, and as [the exit rule](r:instr.raise.exit) says, a
-condition other than SYNTAX has no caller to be raised in, so no trap sees it,
-and a SYNTAX is raised in the main program at the clause that was running
-there, which is, for an internal routine, the call of it, and answered by the traps of
-the main program. A RAISE with RETURN in an internal routine of the main
-program is the case of [the caller rule](r:instr.raise.caller): the main
-program is the caller.
+condition other than SYNTAX has no caller to be raised in, so no trap sees it.
+A SYNTAX is raised in the main program at the clause that runs at the level of
+the program, which is the call of the internal routine or the INTERPRET
+clause, and the traps of the main program answer it. A RAISE with RETURN in an
+internal routine of the main program is the case of [the caller
+rule](r:instr.raise.caller): the main program is the caller.
 
 ```rexx
 call on any name ca
@@ -1016,6 +1124,20 @@ s: say 'syntax' condition('o')~code sigl condition('o')~position
 ```output
 start
 syntax 40.3 3 6
+```
+
+```rexx
+signal on syntax name s
+say 'start'
+interpret "raise syntax 23.1 exit"
+say 'not reached'
+exit
+s: say 'syntax' condition('o')~code sigl
+```
+
+```output
+start
+syntax 23.1 3
 ```
 
 ```rexx
