@@ -114,10 +114,10 @@ call try '("length")'
 call try 'nosuch'
 call try '"myLab"'
 call try '"MYLAB"'
-call try '(n)'
+call try '(labname)'
 call try 'mylab'
-n = 'myLab'
-call try '(n)'
+labname = 'myLab'
+call try '(labname)'
 exit
 length: return 'label'
 'myLab': return 'string label'
@@ -140,9 +140,9 @@ expression: label
 nosuch => 43.1
 "myLab" => 43.1
 "MYLAB" => 43.1
-(n) => 43.1
+(labname) => 43.1
 mylab => ok symbol label
-(n) => ok string label
+(labname) => ok string label
 ```
 
 ```rexx
