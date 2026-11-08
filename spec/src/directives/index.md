@@ -43,7 +43,7 @@ by blanks or comments before the keyword. The keyword is not case sensitive.
 A keyword that names no directive raises `SYNTAX 99.916`, and `::` followed by
 nothing that is a symbol raises `SYNTAX 20.916`. The error is found when the
 program is read, so that a program file with such a clause writes nothing and
-exits with the negated error number, 157 for 99.916, as [the reading
+exits with 256 minus the error number, 157 for 99.916, as [the reading
 rule](r:lex.index.read-first) describes for any fault of the text. A directive
 cannot be part of the text of [INTERPRET](r:instr.interpret.labels), which
 raises `SYNTAX 99.914` for it.
