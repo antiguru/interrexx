@@ -107,11 +107,9 @@ An activity waiting inside a nested construct, such as INTERPRET, for
 something only an activity suspended beneath it can provide is refused, exit
 code 120. ooRexx runs each activity on its own thread and completes.
 
-## 15. REPLY inside a nested construct
+## 15. Withdrawn
 
-A REPLY executed inside a loop that is not flattened or inside a CALL ON
-handler is refused, exit code 120. ooRexx continues the method on a new
-thread. A REPLY in the text of an INTERPRET raises `SYNTAX 99.924` on both.
+A REPLY inside a labelled DO group is a known defect of interrexx, #101.
 
 ## 16. Blocking operations hold every activity
 

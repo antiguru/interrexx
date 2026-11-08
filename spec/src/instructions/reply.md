@@ -3,7 +3,6 @@ element: REPLY
 kind: instruction
 syntax: "REPLY [expression]"
 rexxref: "Keyword Instructions > REPLY"
-deviations: [15]
 ---
 
 # REPLY
@@ -365,19 +364,14 @@ result: method continued
 from signal on handler
 ```
 
-## Deviations
+## REPLY in a labelled group
 
-r[instr.reply.deviation.15]
-A REPLY inside a DO group that has a label and no repetition (`DO LABEL blk`),
-at any depth within it, is refused: interrexx ends the program with exit code
-120 and a message on standard error that says it is not implemented. A group
-nested in it, a loop in it and a SELECT or an IF in it are inside it as well,
-and the group may itself stand in any other DO, loop, SELECT or IF. ooRexx
-continues the method on a new thread, as the rules above describe. Every other
-form runs as those rules describe on both: a group without a label, a loop
-with or without a label, a SELECT and an IF. The REPLY in the text of an
-INTERPRET and the one in a CALL ON handler are not part of this deviation;
-[the placement rule](r:instr.reply.method) covers them on both.
+r[instr.reply.group]
+A REPLY inside a DO group that has a label and no repetition (`DO LABEL blk`)
+runs as the rules above describe, at any depth within the group: the caller
+receives the value, and the method goes on to the end of the group and past
+it. A group, a loop, a SELECT or an IF nested in it is inside it as well, and
+the group may itself stand in any other DO, loop, SELECT or IF.
 
 ```rexx
 o = .rep~new
@@ -391,6 +385,7 @@ say o~m
   return
 ```
 
-```output rc=120
+```output defect=#101
 before
+from block
 ```
