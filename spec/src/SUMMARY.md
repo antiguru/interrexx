@@ -83,6 +83,7 @@
   - [NOTREADY](conditions/notready.md)
   - [LOSTDIGITS](conditions/lostdigits.md)
   - [USER conditions](conditions/user.md)
+  - [Error numbers](conditions/errors.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
