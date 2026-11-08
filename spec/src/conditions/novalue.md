@@ -32,13 +32,14 @@ point, so an assignment it would have made is not made. The stem symbol alone,
 as in `st.`, is never without a value, as [the stem
 rule](r:expr.variables.stem) says, so reading it raises nothing. A variable
 that is only assigned, dropped or named in an EXPOSE list, with no
-parentheses, is not read. The list in parentheses of EXPOSE in a method shows
-the read through the `::OPTIONS` directive, which turns the untrapped condition
-into an error. An environment symbol such as `.foo`
-that finds no object is not a variable, so it raises nothing and stands for
-its own characters. A symbol in the tail of a compound symbol raises nothing,
-and stays as its own name in the derived name. SYMBOL and VALUE do not raise
-it, as [the function rules](r:bif.value.get) say.
+parentheses, is not read. EXPOSE must be the first instruction of a method, so
+no trap can precede it, and the `::OPTIONS` example below makes the read
+visible with `NOVALUE SYNTAX`, which turns the untrapped condition into an
+error. An environment symbol such as `.foo` that finds no object is not a
+variable, so it raises nothing and stands for its own name in upper case. A
+symbol in the tail of a compound symbol raises nothing, and stays as its own
+name in the derived name. SYMBOL and VALUE do not raise it, as
+[the function rules](r:bif.value.get) say.
 
 ```rexx
 do k = 1 to 16
@@ -63,7 +64,7 @@ exit
     when k = 12 then unset12 = 5
     when k = 13 then say st.1
     when k = 14 then call hasexpose
-    when k = 15 then drop (unset17)
+    when k = 15 then drop (unset15)
     when k = 16 then say .unsetenv
   end
   say k 'no NOVALUE'
@@ -97,7 +98,7 @@ LIT UNSET10
 12 no NOVALUE
 13 NOVALUE ST.1
 14 no NOVALUE
-15 NOVALUE UNSET17
+15 NOVALUE UNSET15
 .UNSETENV
 16 no NOVALUE
 ```

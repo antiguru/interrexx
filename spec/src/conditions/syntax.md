@@ -30,7 +30,7 @@ before the point, such as the output of a function that the expression called,
 stay. The error can come from an expression, from a builtin function or a
 method, from a call that finds no routine, from the text of an INTERPRET
 instruction, from a trap that has no label, and from a RAISE instruction that
-names SYNTAX, as the last three examples show. A fault in the text of an
+names SYNTAX, as the last two examples show. A fault in the text of an
 INTERPRET is found when that text is read as a whole, as [the whole-text
 rule](r:instr.interpret.whole) says, so none of its clauses has run then. An
 error found while the program itself is read is not a condition, as [the

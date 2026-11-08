@@ -2,7 +2,7 @@
 element: "HALT"
 kind: concept
 ansi: "8.4.1"
-rexxref: "Conditions and Condition Traps > Action Taken when a Condition Is Trapped; Conditions and Condition Traps > Action Taken when a Condition Is Not Trapped"
+rexxref: "Conditions and Condition Traps; Conditions and Condition Traps > Condition Information > Descriptive Strings; Conditions and Condition Traps > Action Taken when a Condition Is Trapped; Conditions and Condition Traps > Action Taken when a Condition Is Not Trapped"
 ---
 
 # HALT
@@ -30,9 +30,8 @@ rule](r:cond.information.object) lists them. A HALT that the host raises is
 not passed on to the caller of the code that was running, as [the propagation
 rule](r:cond.information.propagate.only) says for every condition but SYNTAX.
 Which level a RAISE instruction raises HALT in, the one that runs it or the
-caller of that one, is specified with that instruction. The examples on this
-page therefore raise it with `RETURN`, or from a `::ROUTINE`, which is the
-case that a trap of the caller answers.
+caller of that one, is specified with that instruction. The examples whose
+trap answers HALT raise it with `RETURN`, which raises it in the caller.
 
 ```rexx
 call on halt name h

@@ -112,9 +112,10 @@ r[cond.error.failure]
 A command raises FAILURE, and not ERROR, when it could not be run. That is the
 case when the current environment does not exist, as [the status
 rule](r:instr.command.status) says, whatever the command is. On a POSIX host
-it is also the case for a command environment that runs the command through
-the shell, such as `system`, when its return code is `127`, the code of a
-shell that found no such command. No other return code is a failure: `126`
+it is also the case when the return code is `127`, in the command
+environments `system`, `command`, `sh`, `bash` and `path`, whether the command
+was not found or exited with that code. Whether other environments of a host
+do the same is not specified. No other return code is a failure: `126`
 raises ERROR, and so does a negative one, which is not the failure of classic
 Rexx here. The condition is raised at the end of the clause, and the record
 has the return code in `RC`, the command string as its description, and `.RS`
@@ -154,6 +155,8 @@ call on failure name f
 call on error name e
 'exit 127'
 address sh 'exit 127'
+address command 'exit 127'
+address path 'nosuchprogram_interrexx_spec'
 'kill -9 $$'
 exit
 f: say 'F' rc .rs; return
@@ -161,6 +164,8 @@ e: say 'E' rc .rs; return
 ```
 
 ```output
+F 127 -1
+F 127 -1
 F 127 -1
 F 127 -1
 E -9 1
