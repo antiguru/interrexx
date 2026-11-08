@@ -22,17 +22,18 @@ r[cond.nostring.raise]
 NOSTRING is raised when a clause needs the string value of an object that is
 not a string, and the object has no `MAKESTRING` method, or has one that
 answers an object that is not a string. An object whose `MAKESTRING` or
-`STRING` method is private raises no NOSTRING in the clauses of the examples
-below: the message is refused, as [the conventions](r:conv.string.object) say
-for builtin arguments, and the clause raises `SYNTAX 97.2`. A string, a number and an instance of
-a subclass of `String` never raise it, and neither does an object whose
-`MAKESTRING` answers a string. The uses that raise it include the three
-concatenation operators (the explicit `||`, the abuttal and the blank), the
-operand of SAY, the source of `PARSE VALUE`, the text that INTERPRET runs, an operand of an
-arithmetic or comparison operator whose left operand is a string, the tail of
-a compound variable, and an argument of a builtin function that is to be a
-string, except for the builtins that link [the native call
-rule](r:bif.index.call.native), which raise `SYNTAX 88.909` for it. Sending the message
+`STRING` method is private raises no NOSTRING at the uses listed below: the
+message is refused, as [the conventions](r:conv.string.object) say for
+builtin arguments, and the clause raises `SYNTAX 97.2`. A string, a number
+and an instance of a subclass of `String` never raise it, and neither does an
+object whose `MAKESTRING` answers a string. The uses that raise it include
+the three concatenation operators (the explicit `||`, the abuttal and the
+blank), the operand of SAY, the source of `PARSE VALUE`, the text that
+INTERPRET runs, an operand of an arithmetic or comparison operator whose left
+operand is a string, the tail of a compound variable, and an argument of a
+builtin function that is to be a string, except for the builtins that link
+[the native call rule](r:bif.index.call.native), which raise `SYNTAX 88.909`
+for it. Sending the message
 `STRING` to the object raises nothing, because the object is then not
 converted. Which other positions convert, such as the arguments of method
 calls, is not specified. What a builtin does with such an argument when no
@@ -79,11 +80,11 @@ cols: || abuttal blank ~string parse upper
 ```
 
 > The next program tries the other positions and the private methods. A
-> comparison or an arithmetic operator with the object on its left is a message
-> to the object, so the operands here stand to the right of a string.
+> comparison or an arithmetic operator with the object on its left is a
+> message to the object, so the operands here stand to the right of a string.
 
 ```rexx
-do j = 1 to 6
+do j = 1 to 8
   say probe(j)
 end
 exit
@@ -98,6 +99,8 @@ exit
     when j = 4 then x = 'a' || .ps~new
     when j = 5 then x = 'a' || .pm~new
     when j = 6 then x = filespec('n', .object~new)
+    when j = 7 then parse value .ps~new with x .
+    when j = 8 then do; t = .pm~new; a.t = 5; end
   end
   return j 'nothing'
 n: return j 'NOSTRING'
@@ -117,15 +120,18 @@ s: return j 'SYNTAX' condition('o')~code
 4 SYNTAX 97.2
 5 SYNTAX 97.2
 6 SYNTAX 88.909
+7 SYNTAX 97.2
+8 SYNTAX 97.2
 ```
 
 r[cond.nostring.information]
 The description of a NOSTRING condition is the text that the `STRING` method
 of the object answers when that is a string, and its `ADDITIONAL` entry is the
-object. When the answer is not a string, [Deviation
-30](r:cond.nostring.deviation.30) applies. The condition
-object has the entries that every condition has, `ADDITIONAL` and `POSITION`,
-and neither `RC` nor `CODE`, as [the entries
+object. When the answer is an object that is not a string but has a string
+value, such as an array, the description is that value. When the answer has no
+string value, [Deviation 30](r:cond.nostring.deviation.30) applies. The
+condition object has the entries that every condition has, `ADDITIONAL` and
+`POSITION`, and neither `RC` nor `CODE`, as [the entries
 rule](r:cond.information.object) lists them. The text is the one that the
 object would have as its string value when no trap answers, as [the untrapped
 rule](r:cond.nostring.untrapped) says.
@@ -151,6 +157,9 @@ n4: say 'told:' '['condition('d')']' condition('o')~additional~class
 signal on nostring name n5
 x = 'a' || .badmake~new
 n5: say 'badmake:' '['condition('d')']' condition('o')~additional~class
+signal on nostring name n6
+x = 'a' || .arr~new
+n6: say 'arr:' '['condition('d')']' condition('o')~additional~class
 ::class plain
 ::class told
 ::method string
@@ -160,6 +169,9 @@ n5: say 'badmake:' '['condition('d')']' condition('o')~additional~class
   return .nil
 ::method string
   return 'bad text'
+::class arr
+::method string
+  return .array~of('arr text')
 ```
 
 ```output
@@ -170,6 +182,7 @@ interpret: NOSTRING [an Object]
 plain: [a PLAIN]
 told: [told text] The TOLD class
 badmake: [bad text] The BADMAKE class
+arr: [arr text] The ARR class
 ```
 
 ## Which traps answer it
@@ -224,15 +237,18 @@ r[cond.nostring.untrapped]
 A NOSTRING that neither its own trap nor the ANY trap answers is ignored, as
 [the untrapped rule](r:cond.index.untrapped) says: the clause goes on and uses
 as the string value of the object the text that its `STRING` method answers
-when that is a string, and [Deviation 30](r:cond.nostring.deviation.30)
-applies when it is not. The directive `::OPTIONS` can turn an untrapped NOSTRING into a SYNTAX
-condition, and the page of the directive specifies that.
+when that is a string, and the string value of that answer when it is another
+object that has one, such as an array. [Deviation
+30](r:cond.nostring.deviation.30) applies when the answer has none. The
+directive `::OPTIONS` can turn an untrapped NOSTRING into a SYNTAX condition,
+and the page of the directive specifies that.
 
 ```rexx
 say 'a' || .plain~new
 say 'b' || .told~new
 say .badmake~new
 say length(.told~new) 'c' .told~new
+say 'd' || .arr~new
 ::class plain
 ::class told
 ::method string
@@ -242,6 +258,9 @@ say length(.told~new) 'c' .told~new
   return .nil
 ::method string
   return 'bad text'
+::class arr
+::method string
+  return .array~of('arr text')
 ```
 
 ```output
@@ -249,6 +268,7 @@ aa PLAIN
 btold text
 bad text
 9 c told text
+darr text
 ```
 
 ## Deviations

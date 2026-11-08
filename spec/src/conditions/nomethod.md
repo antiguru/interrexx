@@ -18,20 +18,24 @@ traps answer it and what becomes of it when none does.
 r[cond.nomethod.raise]
 NOMETHOD is raised when a message is sent to an object, the object has no
 method of that name that the sender may run, and the object has no `UNKNOWN`
-method that takes the message instead. A private method that is sent from
-outside its class is a method the sender may not run, so the message raises
-NOMETHOD, with the name of the method, and an `UNKNOWN` method takes it as it
-takes any lost message. The message may be written with `~`, with `~~`, or
+method that takes the message instead. A private method sent from code that
+may not run it, such as a routine or a method of an unrelated class, counts
+as missing: the message goes to `UNKNOWN` when the object has one and
+otherwise raises NOMETHOD with the name of the method. [The access
+rule](r:dir.method.access) says which senders may run a private method,
+among them methods of the class, of its subclasses and of their instances,
+and class methods. The message may be written with `~`, with `~~`, or
 with a scope override such as `~name:super`, as [the information
 rule](r:cond.nomethod.information) shows, and it may be sent by the `SEND`
 method of an object. The arguments of the message are evaluated before the
 lookup, so the clause has evaluated them when the condition is raised. The
 condition is raised in the code that sent the message, and the clause ends
 there when a SIGNAL trap answers. The exception is a message that FORWARD
-sends without CONTINUE, which [the FORWARD rule](r:instr.forward.end) raises
-in the caller of the forwarding method. A class with an `UNKNOWN` method raises
-nothing, because that method receives the message. The `UNKNOWN` method and
-the way a class defines methods belong to the classes chapter.
+sends without CONTINUE, which [the FORWARD rule](r:instr.forward.end)
+raises in the caller of the forwarding method. A class with an `UNKNOWN`
+method raises nothing, because that method receives the message. The
+`UNKNOWN` method and the way a class defines methods belong to the classes
+chapter.
 
 ```rexx
 do k = 1 to 5

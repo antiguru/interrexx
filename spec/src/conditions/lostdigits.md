@@ -57,9 +57,10 @@ LOSTDIGITS is answered by SIGNAL ON LOSTDIGITS and by SIGNAL ON ANY, and by no
 CALL trap: CALL ON LOSTDIGITS is `SYNTAX 25.1`, as [the CALL
 rule](r:instr.call.on) says, and a CALL ON ANY trap does not see it, as [the
 choice rule](r:cond.traps.choice) says. A SIGNAL trap ends the clause that
-held the operation, so the clause assigns nothing. Whether a LOSTDIGITS that a trap is
-to answer comes before the SYNTAX error that the same operation would raise
-is [the arithmetic chapter's](r:num.arithmetic.deviation.102) to specify.
+held the operation, so the clause assigns nothing. Whether a LOSTDIGITS that
+a trap is to answer comes before the SYNTAX error that the same operation
+would raise is [the arithmetic
+chapter's](r:num.arithmetic.deviation.102) to specify.
 
 ```rexx
 numeric digits 4

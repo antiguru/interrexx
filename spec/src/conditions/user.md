@@ -100,8 +100,8 @@ The description of a user condition is the text of the DESCRIPTION option of
 the RAISE instruction that raised it, or the null string when the instruction
 gave none. Its `ADDITIONAL` entry is the value of the ADDITIONAL option, or
 the array of the ARRAY option, and is present exactly when the instruction
-gave one of them. The condition object has the entries that every condition has
-and `POSITION`, and neither `RC` nor `CODE`, as [the entries
+gave one of them. The condition object has the entries that every condition
+has and `POSITION`, and neither `RC` nor `CODE`, as [the entries
 rule](r:cond.information.object) lists them.
 
 ```rexx

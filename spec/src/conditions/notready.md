@@ -62,8 +62,8 @@ traps of both kinds. A CALL trap lets the stream call finish, and the
 clause that held the call finishes too. The routine is called before the next
 clause, with the state `DELAY` in the routine and `SIGL` the line of that
 clause, as [the CALL trap rule](r:cond.traps.call) says. The clause has then
-assigned what its page says the stream call answers, so the routine sees the
-assignment already made and the clause is not resumed after the routine.
+finished, so the routine sees its assignment already made, and the clause is
+not resumed after the routine.
 
 ```rexx
 f = 'spec-notready-call.tmp'
