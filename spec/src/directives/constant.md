@@ -25,13 +25,15 @@ class method, so the class and every instance of it, subclasses included,
 answer the name with the value. A subclass that declares a method of the name
 answers it instead. The method takes no argument, and an argument raises
 `SYNTAX 93.902`. There is no method that assigns, so a message assignment
-raises `SYNTAX 97.1`. A value left out makes the constant answer its own name
-in upper case. A constant needs no class before it, as the rule for
-[constants of no class](r:dir.constant.floating) says.
+raises `SYNTAX 97.1`. A value left out makes the constant answer its own name,
+in upper case for a symbol and as written for a string. A constant needs no
+class before it, as the rule for [constants of no
+class](r:dir.constant.floating) says.
 
 ```rexx
 say .shape~sides .shape~new~sides
 say .shape~kind .shape~new~kind
+say .shape~"Quiet" .shape~new~quiet
 say .square~sides .square~new~sides
 say .triangle~sides
 call try 'say .shape~sides(1)'
@@ -47,6 +49,7 @@ e: say arg(1) '=>' condition('o')~code
 ::class shape
 ::constant sides 0
 ::constant kind
+::constant "Quiet"
 ::class square subclass shape
 ::class triangle subclass shape
 ::method sides class
@@ -56,6 +59,7 @@ e: say arg(1) '=>' condition('o')~code
 ```output
 0 0
 KIND KIND
+Quiet Quiet
 0 0
 3
 say .shape~sides(1) => 93.902
@@ -65,8 +69,8 @@ say .shape~sides(1) => 93.902
 
 r[dir.constant.name]
 The name of a constant is a symbol or a string, with the rules that
-[::METHOD](r:dir.method.name) gives for the name of a method: a symbol names
-it in upper case, a string as written, and the lookup ignores case. A missing
+[::METHOD](r:dir.method.name) gives for the name of a method, and
+[the names rule](r:dir.index.names) gives for its spelling. A missing
 name raises `SYNTAX 19.915`. A class declares one method of a name, and the
 constant is both an instance and a class method, so a second declaration of
 its name in the same class raises a `SYNTAX` error when the program is read,
@@ -127,8 +131,8 @@ is never looked up: `.nil` is the text `.NIL` and `Hello.World` is
 number is not normalized, so `007` stays `007` and `1e3` is `1E3` as the
 symbol it is. A sign, `+` or `-`, may come before a number, with blanks
 between or not, and the value is the sign and the number joined, so `- 7` is
-`-7` and `+5` is `+5`. A sign followed by a symbol that is not a number, or by
-another sign, raises `SYNTAX 19.916`, and a second token raises `21.913`.
+`-7` and `+5` is `+5`. A sign followed by anything other than a number raises
+`SYNTAX 19.916`, and a second token raises `21.913`.
 These errors are found when the program is read.
 
 ```rexx
@@ -137,6 +141,7 @@ say .k~num .k~exp .k~neg .k~plus .k~spaced
 call try '::constant a - b'
 call try '::constant a +x'
 call try '::constant a - -1'
+call try '::constant a - "7"'
 call try '::constant a 1 2'
 call try '::constant a "x" "y"'
 call try '::constant a (1) (2)'
@@ -166,6 +171,7 @@ x  y HELLO .NIL HELLO.WORLD
 ::constant a - b => 19.916
 ::constant a +x => 19.916
 ::constant a - -1 => 19.916
+::constant a - "7" => 19.916
 ::constant a 1 2 => 21.913
 ::constant a "x" "y" => 21.913
 ::constant a (1) (2) => 21.913

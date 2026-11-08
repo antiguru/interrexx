@@ -62,13 +62,13 @@ LIT
 ```
 
 r[dir.routine.name]
-The name of a routine is a symbol or a string. A symbol names it in upper case
-and a string as written, and the lookup of a routine by name ignores case, so
-`::routine "Mixed"` is called by `mixed` and by `MIXED`. A package declares
-one routine of a name: a second ::ROUTINE of the name, in any case, raises
-`SYNTAX 99.903` when the program is read. A directive whose name is missing,
-or is neither a symbol nor a string, raises `19.903`. A routine and a method
-of the same name are unrelated.
+The name of a routine is a symbol or a string. [The names
+rule](r:dir.index.names) gives its spelling, and the lookup of a routine by
+name ignores case, so `::routine "Mixed"` is called by `mixed` and by `MIXED`.
+A package declares one routine of a name: a second ::ROUTINE of the name, in
+any case, raises `SYNTAX 99.903` when the program is read. A directive whose
+name is missing, or is neither a symbol nor a string, raises `19.903`. A
+routine and a method of the same name are unrelated.
 
 ```rexx
 call try '::routine r', '::routine R'
@@ -159,8 +159,9 @@ difference whether the routine is public. The search that
 package between the built-in functions and the external routines: a label of
 the same name hides a routine when the name is written as a symbol, a name
 written as a string skips the labels and finds the routine, and a routine
-named like a built-in function is never reached, because the built-in function
-is found first. A program file of the same name is an external routine and is
+named like a built-in function is reached only by a string name that is not in
+capitals, because the symbol and the capitalised string find the built-in
+function first. A program file of the same name is an external routine and is
 found only when no routine of the package or of a required package has the
 name. Where such a file is looked for is not specified here.
 
@@ -170,6 +171,8 @@ call sysfiledelete f
 call lineout f, "return 'external program'"
 call lineout f
 src = .array~of('say length("abcd")', -
+  'say "LENGTH"("abcd")', -
+  'say "length"("abcd")', -
   'say shadow()', -
   'say "shadow"()', -
   'call shadow', -
@@ -192,6 +195,8 @@ call sysfiledelete f
 
 ```output
 4
+4
+routine
 label
 routine shadow
 label
@@ -282,8 +287,9 @@ package declares, public and private, whose indexes are the routine names in
 upper case and whose items are routine objects. It does not hold the routines
 that the package found through its ::REQUIRES. The symbol exists only in a
 package that declares a routine; for any other package it is the symbol's own
-text. Each package has its own table. A routine object answers CALL with the
-arguments of the call, which runs the routine as a call by name does.
+text. Each package has its own table. The example runs a routine through the
+table with the CALL method of the routine object, which the classes chapter
+owns.
 
 ```rexx
 say .routines~items
@@ -313,13 +319,16 @@ r[dir.routine.external]
 EXTERNAL declares a routine that a native library supplies, and the directive
 has no section. Its operand is a string whose first word is LIBRARY or
 REGISTERED, in any case, followed by the name of the library and optionally
-one more word, the entry in it. A missing operand raises `SYNTAX 19.905`, and
-any other operand, such as a first word that is neither, a missing library
-name or more words than the entry, raises `99.917`. A clause after the
-directive that is not a null clause raises `99.939`. A library that cannot be
-loaded raises `98.903` for LIBRARY and `90.999` for REGISTERED as soon as the
-directive is read, so that a fault in a later directive is not reported and
-nothing is installed. The operand of the LIBRARY form is the one that
+one more word, the entry in it. A missing operand, or one that is not a
+string, raises `SYNTAX 19.905`, and any other operand, such as a first word
+that is neither, a missing library name or more words than the entry, raises
+`99.917`. A clause after the directive that is not a null clause raises
+`99.939`. A library that cannot be loaded raises `98.903` for LIBRARY and
+`90.999` for REGISTERED, and a library that loads but has no routine of the
+entry name raises `90.999`. These are raised when the section of the directive
+ends, so a clause in the section is refused first; [the rule for external
+methods](r:dir.method.external) says how that order goes for the faults of
+other directives. The operand of the LIBRARY form is the one that
 [::METHOD](r:dir.method.external) takes. How a library is searched for, and
 which routine of it the declaration binds, are not specified here.
 
@@ -330,6 +339,8 @@ call try '::routine r external "registered spec_no_such_lib_xyz"'
 call try '::routine r external "registered spec_no_such_lib_xyz entry"'
 call try '::routine r external "frob spec_no_such_lib_xyz"'
 call try '::routine r external "library"'
+call try '::routine r external "library rexxutil nosuchentry_xyz"'
+call try '::routine r external library'
 call try '::routine r external "library a b c"'
 call try '::routine r external ""'
 call try '::routine r external'
@@ -357,6 +368,8 @@ e: say arg(1) '=>' condition('o')~code
 ::routine r external "registered spec_no_such_lib_xyz entry" => 90.999
 ::routine r external "frob spec_no_such_lib_xyz" => 99.917
 ::routine r external "library" => 99.917
+::routine r external "library rexxutil nosuchentry_xyz" => 90.999
+::routine r external library => 19.905
 ::routine r external "library a b c" => 99.917
 ::routine r external "" => 99.917
 ::routine r external => 19.905

@@ -23,13 +23,14 @@ r[dir.attribute.create]
 most recent [::CLASS](class.md) declared: a method of the attribute's name and
 a method of that name followed by an equals sign. The first takes no argument
 and returns the value of the object variable of that name, which is the
-variable's own name in upper case while it is unset. The second takes exactly
-one argument and assigns it to the variable; it is what a message assignment
-`obj~name = value` sends. An extra argument raises `SYNTAX 93.902` and a
-missing one `93.903`. The directive has no section, so a clause after it that
-is not a null clause raises `SYNTAX 99.937`, found when the program is read.
-The form of [::METHOD](r:dir.method.attribute) with the keyword ATTRIBUTE
-declares the same two methods.
+variable's own name, spelled as [the name rule](r:dir.attribute.name) gives
+it, while it is unset. The second takes exactly one argument and assigns it to
+the variable; it is what a message assignment `obj~name = value` sends, and it
+returns no value, so a message whose result is used raises `SYNTAX 91.999`. An
+extra argument raises `SYNTAX 93.902` and a missing one `93.903`. A clause
+after the directive is refused as [the section rule](r:dir.attribute.section)
+says. The form of [::METHOD](r:dir.method.attribute) with the keyword
+ATTRIBUTE declares the same two methods.
 
 ```rexx
 o = .box~new
@@ -40,6 +41,7 @@ say o~peek
 call try 'say o~size(1)'
 call try 'o~"SIZE="()'
 call try 'o~"SIZE="(1, 2)'
+call try 'say o~"SIZE="(1)'
 src = .array~of('::class k', '::attribute a', 'say 1')
 signal on syntax name e
 p = .package~new('spec-dir-attribute-create', src)
@@ -65,14 +67,16 @@ SIZE
 say o~size(1) => 93.902
 o~"SIZE="() => 93.903
 o~"SIZE="(1, 2) => 93.902
+say o~"SIZE="(1) => 91.999
 99.937
 ```
 
 r[dir.attribute.name]
-The name is a symbol or a string. A symbol names the variable in upper case. A
-string names the variable exactly as written, so the variable of
-`::attribute "Mixed"` is not the one that the symbol `mixed` names in an
-EXPOSE, although the messages `mixed` and `mixed=` reach it, because the
+The name is a symbol or a string. As [the names rule](r:dir.index.names) says,
+a symbol names the variable in upper case and a string names it exactly as
+written, so the variable of `::attribute "Mixed"` is not the one that the
+symbol `mixed` names in an EXPOSE, and while it is unset the getter answers
+`Mixed`, although the messages `mixed` and `mixed=` reach it, because the
 lookup of a method by name [ignores case](r:dir.method.name). A name that
 cannot be the name of a variable, such as a string with a blank or a number,
 raises `SYNTAX 99.925`, and a directive whose name is missing or is neither a
@@ -84,6 +88,8 @@ o~"Mixed" = 5
 o~lower = 6
 say o~mixed o~lower
 say o~peek
+o2 = .box~new
+say o2~mixed
 call try '::attribute "a b"'
 call try '::attribute 1'
 call try '::attribute'
@@ -107,6 +113,7 @@ e: say arg(1) '=>' condition('o')~code
 ```output
 5 6
 MIXED 6
+Mixed
 ::attribute "a b" => 99.925
 ::attribute 1 => 99.925
 ::attribute => 19.914
@@ -118,8 +125,8 @@ MIXED 6
 r[dir.attribute.getset]
 GET declares only the getter and SET only the setter, so that the two can have
 different options. GET and SET together raise `SYNTAX 25.925`. A GET or SET
-directive that no keyword of the kind group (ABSTRACT, EXTERNAL, DELEGATE)
-follows and that has a section takes the section as the code of its method,
+directive without a keyword of the kind group (ABSTRACT, EXTERNAL, DELEGATE)
+that has a section takes the section as the code of its method,
 with the directive clause left out, and without a section it declares the
 generated method. In the code of a setter the argument is the value that
 `name = value` assigned, and the variable is reached through
@@ -415,18 +422,24 @@ PART
 
 r[dir.attribute.external]
 EXTERNAL takes the operand that [::METHOD](r:dir.method.external) describes
-and declares the method or methods from a native library. A missing operand
-raises `SYNTAX 19.905` and an operand that does not start with the word
-LIBRARY or has too many words raises `99.917`. A library that cannot be loaded
-raises `98.903` as soon as the directive is read, so that a fault in a later
-directive is not reported and nothing is installed.
+and declares the method or methods from a native library. A missing operand,
+or one that is not a string, raises `SYNTAX 19.905`, and a string that does
+not start with the word LIBRARY or has too many words raises `99.917`. A
+library that cannot be loaded raises `98.903`, and a library that loads but
+has no method entry of the given name raises `90.998`. Both are raised when
+the section of the directive ends, as [the rule for external
+methods](r:dir.method.external) describes for the faults of other directives,
+so that a clause in the section is refused first, as the section rule below
+says.
 
 ```rexx
 call try '::attribute a external'
+call try '::attribute a external library'
 call try '::attribute a external "library spec_no_such_lib_xyz"'
 call try '::attribute a get external "library spec_no_such_lib_xyz"'
 call try '::attribute a external "registered spec_no_such_lib_xyz"'
 call try '::attribute a external "library a b c"'
+call try '::attribute a external "library rexxutil sysfiledelete"'
 call try '::attribute a external "library spec_no_such_lib_xyz"', '::frob'
 exit
 try:
@@ -444,10 +457,12 @@ e: say arg(1) '=>' condition('o')~code
 
 ```output
 ::attribute a external => 19.905
+::attribute a external library => 19.905
 ::attribute a external "library spec_no_such_lib_xyz" => 98.903
 ::attribute a get external "library spec_no_such_lib_xyz" => 98.903
 ::attribute a external "registered spec_no_such_lib_xyz" => 99.917
 ::attribute a external "library a b c" => 99.917
+::attribute a external "library rexxutil sysfiledelete" => 90.998
 ::attribute a external "library spec_no_such_lib_xyz" => 98.903
 ```
 

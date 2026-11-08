@@ -20,18 +20,19 @@ files that the program writes into the current directory.
 ## Requiring a package
 
 r[dir.requires.create]
-The operand of ::REQUIRES is a symbol or a string that names the package. A
-symbol names it in upper case, a string as written, and which of the two finds
-a file is a property of the file system, so that a name that has lower-case
-letters is best written as a string. The interpreter installs the required
-package as [installation](r:dir.index.install) describes, which includes
-running its prolog, before the requiring package creates a class or runs its
-own prolog. An `exit` or `return` in the required prolog ends only that
-prolog, and the requiring package goes on. A directive with no operand, or
-with an operand that is neither a symbol nor a string, raises `SYNTAX 19.904`,
-found when the program is read. A name that finds no file raises `43.901` when
-the package is installed. The directive takes no code, and any clause after it
-that is not a null clause raises `SYNTAX 99.916` when the program is read.
+The operand of ::REQUIRES is a symbol or a string that names the package, and
+[the names rule](r:dir.index.names) gives the spelling of each. Which of the
+two finds a file is a property of the file system, so that a name that has
+lower-case letters is best written as a string. The interpreter installs the
+required package as [installation](r:dir.index.install) describes, which
+includes running its prolog, before the requiring package creates a class or
+runs its own prolog. An `exit` or `return` in the required prolog ends only
+that prolog, and the requiring package goes on. A directive with no operand,
+or with an operand that is neither a symbol nor a string, raises `SYNTAX
+19.904`, found when the program is read. A name that finds no file raises
+`43.901` when the package is installed. The directive takes no code, and any
+clause after it that is not a null clause raises `SYNTAX 99.916` when the
+program is read.
 
 ```rexx
 f = 'SPEC_DIR_REQUIRES_SYM.TMP'
@@ -119,9 +120,8 @@ A required package makes visible to the requiring package its public classes,
 which [the class rule](r:dir.class.visibility) describes, and its public
 routines, which [the routine rule](r:dir.routine.public) describes. Its
 private classes and routines, and the variables that its prolog set, are not
-visible. A class or routine that the requiring package declares itself hides
-one of the same name from a required package, and between required packages
-the earlier ::REQUIRES wins.
+visible. Those two rules also give the order in which names are looked up
+among the package's own and the required ones.
 
 ```rexx
 f = 'spec-dir-requires-vis.tmp'
@@ -227,16 +227,17 @@ say "main prolog" / ::requires "spec-dir-requires-cyc1.tmp" => 98.952
 
 r[dir.requires.library]
 With LIBRARY the operand names a native library, which the interpreter loads
-instead of a Rexx program, and a library that cannot be loaded raises
-`SYNTAX 98.903`. Every LIBRARY directive of a package is processed before any
-other ::REQUIRES of it, wherever it stands, so that a fault in a library
-comes before the prolog of any required program. A library can be required
-more than once. Whether a library name is case sensitive, and where libraries
-are searched for, are not specified here. The LIBRARY option does not combine
-with NAMESPACE: the two together raise `SYNTAX 25.904`.
+instead of a Rexx program, and a library that cannot be loaded raises `SYNTAX
+98.903`. A package processes its LIBRARY directives first, wherever they stand
+in its text, and only then its other ::REQUIRES directives, so a library that
+cannot be loaded raises before any required program has run its prolog. A
+library can be required more than once. Whether a library name is case
+sensitive, and where libraries are searched for, are not specified here. The
+LIBRARY option does not combine with NAMESPACE: the two together raise `SYNTAX
+25.904`.
 
 ```rexx
-f = 'spec-dir-requires-prolog.tmp'
+f = 'rq-p.tmp'
 call sysfiledelete f
 call lineout f, 'say "required prolog"'
 call lineout f
@@ -264,8 +265,8 @@ e: say src~makestring('l', ' / ') '=>' condition('o')~code
 ```output
 ::requires "rexxutil" library => ok
 ::requires "rexxutil" library / ::requires "rexxutil" LIBRARY => ok
-::requires "spec-dir-requires-prolog.tmp" / ::requires "spec_no_such_lib_xyz" library => 98.903
-::requires "spec_no_such_lib_xyz" library / ::requires "spec-dir-requires-prolog.tmp" => 98.903
+::requires "rq-p.tmp" / ::requires "spec_no_such_lib_xyz" library => 98.903
+::requires "spec_no_such_lib_xyz" library / ::requires "rq-p.tmp" => 98.903
 ::requires "rexxutil" library namespace a => 25.904
 ::requires "rexxutil" namespace a library => 25.904
 ```
@@ -274,16 +275,17 @@ e: say src~makestring('l', ' / ') '=>' condition('o')~code
 
 r[dir.requires.namespace]
 NAMESPACE takes a symbol, which becomes a name of the required package. A
-class or a routine of that package is then found by the name qualified with
-the namespace and a colon: `ns:name(...)` calls the routine and `ns:name` is
-the class, as in `ns:name~new`. Qualified names are symbols, so the namespace
-is matched without regard to case. The unqualified name finds the class or
-routine as before, and between two packages that supply it the earlier
-directive wins. When two directives give one namespace name, the later one
-names its package. A string, or no symbol after NAMESPACE, raises
-`SYNTAX 20.920`, and a keyword other than LIBRARY or NAMESPACE, a repeated
-keyword or any further word raises `25.904`, found when the program is read.
-The namespace name `REXX` belongs to the interpreter and raises `99.944`.
+class or a routine that the package makes visible is then found by the name
+qualified with the namespace and a colon: `ns:name(...)` calls the routine and
+`ns:name` is the class, as in `ns:name~new`. Qualified names are symbols, so
+the namespace is matched without regard to case. The unqualified name is
+looked up as [the routine rule](r:dir.routine.public) and [the class
+rule](r:dir.class.visibility) say. When two directives give one namespace
+name, the later one names its package. A string, or no symbol after NAMESPACE,
+raises `SYNTAX 20.920`, and a keyword other than LIBRARY or NAMESPACE, a
+repeated keyword or any further word raises `25.904`, found when the program
+is read. The namespace name `REXX` belongs to the interpreter and raises
+`99.944`.
 
 ```rexx
 fa = 'spec-dir-requires-nsa.tmp'
@@ -351,24 +353,39 @@ hello B
 r[dir.requires.namespace.lookup]
 A qualified name whose namespace no ::REQUIRES gave raises `SYNTAX 98.987`,
 and so does a qualified call of it. A qualified class that the namespace's
-package does not have raises `98.988`, and a qualified routine that it does
-not have raises `43.902`. A qualified name written as a function call needs
-the parenthesis to follow the name at once, and without it the name is read as
-a class. The CALL instruction does not accept the qualified form, as [its
-error rule](r:instr.call.error) says.
+package does not make visible raises `98.988`, and a qualified routine that it
+does not make visible raises `43.902`. What a package makes visible is what
+[the visibility rule](r:dir.requires.visible) says, including the public
+classes and routines that it found through its own ::REQUIRES. A qualified
+name written as a function call needs the parenthesis to follow the name at
+once, and without it the name is read as a class. The CALL instruction does
+not accept the qualified form, as [its error rule](r:instr.call.error) says.
 
 ```rexx
 fa = 'spec-dir-requires-lk.tmp'
 call sysfiledelete fa
 call lineout fa, '::routine only_a public'
 call lineout fa, '  return "only a"'
+call lineout fa, '::routine closed'
+call lineout fa, '  return "closed"'
+call lineout fa, '::class hid'
 call lineout fa
+fc = 'spec-dir-requires-lkc.tmp'
+call sysfiledelete fc
+call lineout fc, '::requires "'fa'"'
+call lineout fc, '::routine own_c public'
+call lineout fc, '  return "own c"'
+call lineout fc
 src = .array~of('call try "say c:hello()"', -
   'call try "say c:widget"', -
   'call try "say a:nowidget"', -
   'call try "say a:hello"', -
   'call try "say a:hello()"', -
   'call try "say a:only_a()"', -
+  'call try "say a:closed()"', -
+  'call try "say a:hid"', -
+  'call try "say n:own_c()"', -
+  'call try "say n:only_a()"', -
   'exit', -
   'try:', -
   '  signal on syntax name e', -
@@ -376,9 +393,11 @@ src = .array~of('call try "say c:hello()"', -
   '  return', -
   'e: say arg(1) "=>" condition("o")~code', -
   '  return', -
-  '::requires "'fa'" namespace a')
+  '::requires "'fa'" namespace a', -
+  '::requires "'fc'" namespace n')
 p = .package~new('spec-dir-requires-lookup', src)
 call sysfiledelete fa
+call sysfiledelete fc
 ```
 
 ```output
@@ -387,5 +406,9 @@ say c:widget => 98.987
 say a:nowidget => 98.988
 say a:hello => 98.988
 say a:hello() => 43.902
+only a
+say a:closed() => 43.902
+say a:hid => 98.988
+own c
 only a
 ```
