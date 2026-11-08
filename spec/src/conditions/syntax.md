@@ -1,37 +1,37 @@
 ---
 element: "SYNTAX"
 kind: concept
-ansi: "8.4.1, 9.5.3"
-rexxref: "Conditions and Condition Traps > Action Taken when a Condition Is Trapped; Conditions and Condition Traps > Condition Object"
+ansi: "8.4.1, 8.4.2, 9.2.4"
+rexxref: "Conditions and Condition Traps; Conditions and Condition Traps > Condition Information > Descriptive Strings; Conditions and Condition Traps > Condition Information > Condition Object; Conditions and Condition Traps > Condition Information > The Special Variable RC"
 ---
 
 # SYNTAX
 
-SYNTAX is the condition of an error in the program as it runs. It is raised
-by a clause that cannot be carried out: arithmetic on a value that is no
-number, a call with a wrong argument, a routine that does not exist, and the
-other faults that the error numbers describe. It differs from the other
-conditions in that nothing ignores it. A trap answers it, or the program
-ends. This page specifies what raises SYNTAX, what identifies the error, which
-traps can answer it and what a program sees after one has. The numbers of the
-errors are listed on [the error numbers page](errors.md) and on the pages of
-the clauses that raise them, and [the traps page](traps.md) and [the
-information page](information.md) specify what any trap does and what it
-records.
+SYNTAX is the condition of an error in the program as it runs. It is raised by
+a clause that cannot be carried out: arithmetic on a value that is no number,
+a call with a wrong argument, a routine that does not exist, and the other
+faults that the error numbers describe. It is also the condition that HALT and
+NOMETHOD become when nothing answers them, and it is never ignored: a trap
+answers it, or the program ends. This page specifies what raises SYNTAX, what
+identifies the error, which traps can answer it and what a program sees after
+one has. The numbers of the errors are listed on the pages of the clauses that
+raise them and in the error numbers chapter, and [the traps page](traps.md)
+and [the information page](information.md) specify what any trap does and what
+it records.
 
 ## What raises it
 
 r[cond.syntax.raise]
 An error that is found while a clause runs raises SYNTAX at that clause. The
 clause ends at the point of the error, so that an assignment it would have
-made is not made, a command it would have sent is not sent, and output that
-it would have written after the point is not written, while the effects it
-had before the point, such as the output of a function that the expression
-called, stay. The error can come from an expression, from a
-builtin function or a method, from a call that finds no routine, from the
-text of an INTERPRET instruction, from a trap that has no label, and from a
-RAISE instruction that names SYNTAX. A fault in the text of an INTERPRET is
-found when that text is read as a whole, as [the whole-text
+made is not made, a command it would have sent is not sent, and output that it
+would have written after the point is not written, while the effects it had
+before the point, such as the output of a function that the expression called,
+stay. The error can come from an expression, from a builtin function or a
+method, from a call that finds no routine, from the text of an INTERPRET
+instruction, from a trap that has no label, and from a RAISE instruction that
+names SYNTAX, as the last three examples show. A fault in the text of an
+INTERPRET is found when that text is read as a whole, as [the whole-text
 rule](r:instr.interpret.whole) says, so none of its clauses has run then. An
 error found while the program itself is read is not a condition, as [the
 reading rule](r:cond.index.read) says.
@@ -89,19 +89,52 @@ fine
 no error: say 'fine'
 ```
 
+```rexx
+address system
+signal on syntax name s
+'echo sent' 1 + 'a'
+say 'not reached'
+s: say 'syntax' condition('o')~code
+```
+
+```output
+syntax 41.1
+```
+
+```rexx
+address system
+signal on syntax name s
+signal on error name nolabel
+'exit 3'
+say 'not reached'
+s: say 'syntax' condition('o')~code sigl
+```
+
+```output
+syntax 16.1 4
+```
+
+```rexx
+signal on syntax name s
+raise syntax 93.900 additional ('boom')
+say 'not reached'
+s: o = condition('o')
+say o~code o~rc
+```
+
+```output
+93.900 93
+```
+
 ## What identifies the error
 
 r[cond.syntax.code]
-An error has a number and a subcode, and the `CODE` entry of the condition
-object holds both as one string, the number, a point and the subcode, as in
-`41.1`. The `RC` entry is the number alone, the same value that `RC` has in
-the code of a trap, as [the RC rule](r:cond.information.rc) says. The number
-names the kind of error and the subcode the particular fault, so errors of
-one kind share an `RC` and differ in `CODE`. The program tells them apart
-with `CODE`, never with the text of the message, which is not specified, and
-the text that `ERRORTEXT(RC)` answers is the one for the number. The values
-the message names are in `ADDITIONAL`, as [the values
-rule](r:cond.information.object.values) says.
+An error has a number and a subcode. The number names the kind of error and
+the subcode the particular fault, so errors of one kind share an `RC` and
+differ in `CODE`, as [the values rule](r:cond.information.object.values) says
+of the entries, and as [the RC rule](r:cond.information.rc) says of `RC` in
+the code of a trap. A program tells the errors apart with `CODE`, never with
+the text of the message, which is not specified.
 
 ```rexx
 call try "x = abs()"
@@ -114,7 +147,8 @@ exit
   signal on syntax name e
   interpret text
 e: o = condition('o')
-  say left(text, 22) o~code o~rc (o~rc == word(translate(o~code, ' ', '.'), 1)),
+  say left(text, 22) o~code o~rc,
+      (o~rc == word(translate(o~code, ' ', '.'), 1)),
       (o~errortext == errortext(o~rc))
 ```
 
@@ -129,11 +163,12 @@ x = copies('ab', -2)   93.906 93 1 1
 
 r[cond.syntax.trap]
 SYNTAX is answered by SIGNAL ON SYNTAX and by SIGNAL ON ANY, and by no CALL
-trap: CALL ON SYNTAX is itself an error, and a CALL ON ANY trap does not see
-a SYNTAX condition, as [the choice rule](r:cond.traps.choice) says for the
-conditions that CALL cannot trap. A SYNTAX that no SIGNAL trap answers ends
-the program as [the untrapped rule](r:cond.index.syntax) says, whatever other
-traps were on, and the exit code is the one of that rule.
+trap: CALL ON SYNTAX is itself an error, as [the CALL ON
+rule](r:instr.call.on) says, and a CALL ON ANY trap does not see a SYNTAX
+condition, as [the choice rule](r:cond.traps.choice) says for the conditions
+that CALL cannot trap. A SYNTAX that no SIGNAL trap answers ends the program
+as [the untrapped rule](r:cond.index.syntax) says, whatever other traps were
+on, and the exit code is the one of that rule.
 
 ```rexx
 call on any name h
@@ -179,11 +214,11 @@ signal on syntax name s
 say 'one'
 x = 1 + 'a'
 s: say 'caught' condition('o')~code condition('s')
-y = 2 + 'b'
+y = 1 % 0
 say 'not reached'
 ```
 
-```output rc=215
+```output rc=214
 one
 caught 41.1 OFF
 ```

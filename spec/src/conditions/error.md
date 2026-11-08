@@ -2,7 +2,7 @@
 element: "ERROR and FAILURE"
 kind: concept
 ansi: "8.4.1"
-rexxref: "Conditions and Condition Traps > Action Taken when a Condition Is Trapped; Conditions and Condition Traps > Action Taken when a Condition Is Not Trapped"
+rexxref: "Conditions and Condition Traps; Conditions and Condition Traps > Condition Information > Descriptive Strings; Conditions and Condition Traps > Action Taken when a Condition Is Trapped; Conditions and Condition Traps > Action Taken when a Condition Is Not Trapped"
 ---
 
 # ERROR and FAILURE
@@ -13,8 +13,9 @@ and raises one of them. ERROR means that the command ran and answered with a
 return code that is not zero, and FAILURE means that the command could not be
 run at all. A program that wants to react to a failing command traps one or
 both. This page specifies when each is raised, what the condition records, and
-the way an untrapped FAILURE reaches an ERROR trap. How a command is sent,
-and how it sets `RC`, is on [the command page](../instructions/command.md).
+the way a FAILURE that nothing answers reaches an ERROR trap. How a command is
+sent, and how it sets `RC`, is on [the command
+page](../instructions/command.md).
 
 ## ERROR
 
@@ -62,47 +63,64 @@ signal 4 ERROR OFF SIGNAL
 r[cond.error.untrapped]
 An ERROR that no trap answers is ignored, as [the untrapped
 rule](r:cond.index.untrapped) says: the clause is over, `RC` holds the return
-code, `.RS` is `1`, and the program goes on. This holds for the code that sent
-the command only, so a trap in a calling routine does not see the condition,
-as [the propagation rule](r:cond.information.propagate.only) says.
+code, `.RS` is `1`, and the program goes on. The traps that answer it are the
+ones of the code that sent the command, which for an internal routine are its
+copy of the traps of its caller, as [the scope rule](r:cond.traps.scope) says.
+The condition is not passed on to the next level, as [the propagation
+rule](r:cond.information.propagate.only) says, so a routine that has its trap
+off ignores the ERROR although its caller has the trap on.
 
 ```rexx
 address system
 'exit 3'
 say 'went on' rc .rs
-call r
+call on error name caught
+call fresh
 say 'back' rc
-signal on error name caught
-call r
+call copy
 say 'back again' rc
+call quiet
+say 'and again' rc
 exit
-caught: say 'caught in main'
-::routine r
+caught: say 'caught' condition('c') rc sigl; return
+copy:
+  'exit 6'
+  return
+quiet:
+  call off error
+  'exit 7'
+  say 'quiet went on' rc
+  return
+::routine fresh
   'exit 5'
-  say 'r went on' rc
+  say 'fresh went on' rc
 ```
 
 ```output
 went on 3 1
-r went on 5
+fresh went on 5
 back 3
-r went on 5
-back again 3
+caught ERROR 6 13
+back again 6
+quiet went on 7
+and again 7
 ```
 
 ## FAILURE
 
 r[cond.error.failure]
-A command raises FAILURE, and not ERROR, when it could not be run. That is
-the case when the current environment does not exist, as [the status
+A command raises FAILURE, and not ERROR, when it could not be run. That is the
+case when the current environment does not exist, as [the status
 rule](r:instr.command.status) says, whatever the command is. On a POSIX host
-it is also the case for the environment `system` when its return code is
-`127`, the code of a shell that found no such command, and then no other
-return code is a failure, so `126` raises ERROR. The condition is
-raised at the end of the clause, and the record has the return code in `RC`,
-the command string as its description, and `.RS` is `-1`. A trap for ERROR does
-not answer a FAILURE as such, so it needs the fallback of [the next
-rule](r:cond.error.fallback), and a trap for FAILURE does not answer an ERROR.
+it is also the case for a command environment that runs the command through
+the shell, such as `system`, when its return code is `127`, the code of a
+shell that found no such command. No other return code is a failure: `126`
+raises ERROR, and so does a negative one, which is not the failure of classic
+Rexx here. The condition is raised at the end of the clause, and the record
+has the return code in `RC`, the command string as its description, and `.RS`
+is `-1`. A trap for ERROR does not answer a FAILURE as such, so it needs the
+fallback of [the next rule](r:cond.error.fallback), and a trap for FAILURE
+does not answer an ERROR.
 
 ```rexx
 address system
@@ -116,7 +134,9 @@ say 'after env' rc .rs
 address system
 'exit 126'
 say 'not reached'
-f: say 'F' rc '['condition('d')']' condition('o')~rc sigl condition('c'); return
+f: say 'F' rc '['condition('d')']' condition('o')~rc sigl,
+     condition('c')
+  return
 e: say 'E' rc .rs condition('c')
 ```
 
@@ -128,16 +148,35 @@ after env 30 -1
 E 126 1 ERROR
 ```
 
+```rexx
+address bash
+call on failure name f
+call on error name e
+'exit 127'
+address sh 'exit 127'
+'kill -9 $$'
+exit
+f: say 'F' rc .rs; return
+e: say 'E' rc .rs; return
+```
+
+```output
+F 127 -1
+F 127 -1
+E -9 1
+```
+
 r[cond.error.fallback]
 A FAILURE that its own trap and the ANY trap do not answer is answered as an
-ERROR by the ERROR trap, when that is on. The condition is then ERROR for
-everything that reads it: `CONDITION('C')` answers `ERROR`, and the record
-holds the same return code and command string. `.RS` stays `-1`, because the
-command failed. A FAILURE trap that was switched off explicitly does not
-prevent this. An ANY trap that is on answers the FAILURE under its own name,
-so the ERROR trap is reached only when neither of the two is on. When no trap
-of the three is on, the FAILURE is ignored as [the untrapped
-rule](r:cond.index.untrapped) says, and nothing else is raised.
+ERROR by the ERROR trap, when that is on, as [the untrapped
+rule](r:cond.index.untrapped) and [the choice rule](r:cond.traps.choice) also
+say. The condition is then ERROR for everything that reads it:
+`CONDITION('C')` answers `ERROR`, and the record holds the same return code
+and command string. `.RS` stays `-1`, because the command failed. A FAILURE
+trap that was switched off explicitly does not prevent this. An ANY trap that
+is on answers the FAILURE under its own name, so the ERROR trap is reached
+only when neither of the two is on. When no trap of the three is on, the
+FAILURE is ignored and nothing else is raised.
 
 ```rexx
 address system
@@ -156,8 +195,8 @@ signal on any name any
 signal on error name er
 'exit 127'
 any: say 'ANY' condition('c') rc
-er: say 'ER' condition('c')
 exit
+er: say 'not reached'
 h: say 'ERROR trap' condition('c') condition('i') condition('s') rc .rs
   return
 f: say 'FAILURE trap' condition('c') rc; return
@@ -170,5 +209,4 @@ FAILURE trap FAILURE 127
 a 127
 ignored 127 -1
 ANY FAILURE 127
-ER FAILURE
 ```

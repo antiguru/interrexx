@@ -2,7 +2,7 @@
 element: "NOVALUE"
 kind: concept
 ansi: "8.4.1"
-rexxref: "Conditions and Condition Traps > Action Taken when a Condition Is Trapped"
+rexxref: "Conditions and Condition Traps; Conditions and Condition Traps > Condition Information > Descriptive Strings; Conditions and Condition Traps > Action Taken when a Condition Is Trapped"
 ---
 
 # NOVALUE
@@ -24,19 +24,22 @@ NOVALUE is raised when the value of a simple or compound variable symbol is
 needed and the variable has no value. That is so for a term of an expression
 wherever an expression is evaluated, among them the right side of an
 assignment, the condition of an IF or a WHEN, the bounds of a DO, an argument
-of a call and the value of a NUMERIC setting; for the variable that
-PARSE VAR reads; for a pattern in parentheses in a template; and for a
-variable that names the override class of a message term. The clause ends at
-that point, so an assignment it would have made is not made. The stem symbol
-alone, as in `st.`, is never without a value, as [the stem
-rule](r:expr.variables.stem) says, so reading it raises nothing, and a variable
-that is only assigned, dropped or named in an EXPOSE list is not read. A
-symbol in the tail of a compound symbol raises nothing, and stays as its own
-name in the derived name. SYMBOL and VALUE do not raise it, as [the
-function rules](r:bif.value.get) say.
+of a call and the value of a NUMERIC setting; for the variable that PARSE VAR
+reads; for a pattern in parentheses in a template; for a variable that names
+the override class of a message term; and for a variable that names a list in
+parentheses in DROP, in EXPOSE or in PROCEDURE EXPOSE. The clause ends at that
+point, so an assignment it would have made is not made. The stem symbol alone,
+as in `st.`, is never without a value, as [the stem
+rule](r:expr.variables.stem) says, so reading it raises nothing. A variable
+that is only assigned, dropped or named in an EXPOSE list is not read, and
+neither is a name inside such a list. An environment symbol such as `.foo`
+that finds no object is not a variable, so it raises nothing and stands for
+its own characters. A symbol in the tail of a compound symbol raises nothing,
+and stays as its own name in the derived name. SYMBOL and VALUE do not raise
+it, as [the function rules](r:bif.value.get) say.
 
 ```rexx
-do k = 1 to 14
+do k = 1 to 16
   call probe k
 end
 exit
@@ -58,6 +61,8 @@ exit
     when k = 12 then unset12 = 5
     when k = 13 then say st.1
     when k = 14 then call hasexpose
+    when k = 15 then drop (unset17)
+    when k = 16 then say .unsetenv
   end
   say k 'no NOVALUE'
   return
@@ -90,6 +95,39 @@ LIT UNSET10
 12 no NOVALUE
 13 NOVALUE ST.1
 14 no NOVALUE
+15 NOVALUE UNSET17
+.UNSETENV
+16 no NOVALUE
+```
+
+The same holds for the list of PROCEDURE EXPOSE, and for the list of EXPOSE in
+a method, where the `::OPTIONS` directive turns the untrapped condition into
+an error so that it shows.
+
+```rexx
+signal on novalue name n
+call keep
+say 'went on'
+exit
+n: say 'novalue' condition('d')
+keep: procedure expose (names)
+  return
+```
+
+```output
+novalue NAMES
+```
+
+```rexx
+say .store~new~fill
+::options novalue syntax
+::class store
+::method fill
+  expose (names)
+  return 'filled'
+```
+
+```output rc=158
 ```
 
 r[cond.novalue.description]
@@ -132,14 +170,17 @@ NOVALUE [ABC] 3
 
 r[cond.novalue.trap]
 NOVALUE is answered by SIGNAL ON NOVALUE and by SIGNAL ON ANY, and by no CALL
-trap: CALL ON NOVALUE is an error, and a CALL ON ANY trap does not see it, as
-[the choice rule](r:cond.traps.choice) says. With the trap `OFF`, and no ANY
-trap on, the symbol has its own name as value and the clause goes on, as [the
-untrapped rule](r:cond.index.untrapped) says. A SIGNAL trap ends the clause,
-so the value that the clause would have computed is not used. NOVALUE is
-raised in the code that read the variable and goes no further, so the trap of
-a caller does not answer a NOVALUE of a routine, as [the propagation
-rule](r:cond.information.propagate.only) says.
+trap: CALL ON NOVALUE is an error, as [the CALL ON rule](r:instr.call.on)
+says, and a CALL ON ANY trap does not see it, as [the choice
+rule](r:cond.traps.choice) says. With the trap `OFF`, and no ANY trap on, the
+symbol has its own name as value and the clause goes on, as [the untrapped
+rule](r:cond.index.untrapped) says. A SIGNAL trap ends the clause, so the
+value that the clause would have computed is not used. NOVALUE is not passed
+on, as [the propagation rule](r:cond.information.propagate.only) says. The
+traps that answer it are the ones of the code that read the variable, which
+for an internal routine are its copy of the traps of its caller, as [the scope
+rule](r:cond.traps.scope) says. A `::ROUTINE` starts with every trap `OFF`,
+and an internal routine that switches the trap off is not answered either.
 
 ```rexx
 x = 'before'
@@ -168,4 +209,37 @@ trapped before NOVALUE
 ANY NOVALUE ABD
 in r ABE
 back
+```
+
+```rexx
+signal on novalue name h
+call copy
+say 'back'
+call quiet
+say 'back again'
+exit
+h: say 'trap' condition('d') sigl
+  return
+copy:
+  x = abe
+  return
+quiet:
+  signal off novalue
+  x = abf
+  say 'quiet went on' x
+  return
+```
+
+```output
+trap ABE 9
+back
+quiet went on ABF
+back again
+```
+
+```rexx
+call on novalue name h
+```
+
+```output rc=231
 ```

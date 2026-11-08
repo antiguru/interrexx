@@ -14,8 +14,8 @@ between two clauses. A program that traps HALT can tidy up and end on its
 own terms. This page specifies what a program sees of HALT, the effect of each
 kind of trap and what happens when none is on. The interrupt keys, the
 signals and the interfaces are of the host and not specified, so every example
-on this page raises HALT with a RAISE instruction, which the [RAISE
-instruction](../instructions/raise.md) specifies.
+on this page raises HALT with a RAISE instruction, which has its own page in
+the instructions chapter.
 
 ## Raising it
 
@@ -26,9 +26,13 @@ noticed, is not specified. The condition has no description unless the RAISE
 instruction gave one with DESCRIPTION, so `CONDITION('D')` answers the null
 string otherwise. Its condition object has the entries that every condition
 has and `POSITION`, and neither `RC`, `CODE` nor `ADDITIONAL`, as [the entries
-rule](r:cond.information.object) lists them. HALT is never passed on to the
-caller of the code that raised it, as [the propagation
-rule](r:cond.information.propagate.only) says.
+rule](r:cond.information.object) lists them. A HALT that the host raises is
+not passed on to the caller of the code that was running, as [the propagation
+rule](r:cond.information.propagate.only) says for every condition but SYNTAX.
+Which level a RAISE instruction raises HALT in, the one that runs it or the
+caller of that one, is specified with that instruction. The examples on this
+page therefore raise it with `RETURN`, or from a `::ROUTINE`, which is the
+case that a trap of the caller answers.
 
 ```rexx
 call on halt name h
@@ -36,7 +40,8 @@ call plain
 call with
 exit
 h: o = arg(1)
-  say 'HALT' condition('c') '['condition('d')']' condition('i') condition('s'),
+  say 'HALT' condition('c') '['condition('d')']' condition('i'),
+      condition('s'),
       o~hasindex('POSITION') o~hasindex('RC') o~hasindex('CODE'),
       o~hasindex('ADDITIONAL')
   return
@@ -52,11 +57,11 @@ HALT HALT [asked to stop] CALL DELAY 1 0 0 0
 ## The traps
 
 r[cond.halt.signal]
-A SIGNAL trap for HALT ends the clause that was running and goes to the label, ending the open DO and
-SELECT constructs as [the SIGNAL trap rule](r:cond.traps.signal) says. A
-program uses it to leave a loop that has no other end. The trap is `OFF` at
-the label, and a second HALT is untrapped unless the program enables the trap
-again.
+A SIGNAL trap for HALT ends the clause that was running and goes to the label,
+ending the open DO and SELECT constructs as [the SIGNAL trap
+rule](r:cond.traps.signal) says. A program uses it to leave a loop that has no
+other end. The trap is `OFF` at the label, and a second HALT is untrapped
+unless the program enables the trap again.
 
 ```rexx
 signal on halt
@@ -73,6 +78,25 @@ halt: say 'stopped at' n '['condition('d')']' condition('c') condition('s')
 
 ```output
 stopped at 3 [enough] HALT OFF
+```
+
+```rexx
+n = 0
+signal on halt name h
+call stop
+say 'not reached'
+h: n = n + 1
+say 'halt' n
+if n = 1 then signal on halt name h
+call stop
+say 'not reached either'
+::routine stop
+  raise halt return
+```
+
+```output rc=252
+halt 1
+halt 2
 ```
 
 r[cond.halt.call]
@@ -107,11 +131,12 @@ handler second DELAY
 ## When nothing traps it
 
 r[cond.halt.untrapped]
-A HALT that neither its own trap nor the ANY trap answers is not ignored. It
-becomes the SYNTAX condition `4.1` at the same clause, as [the untrapped
-rule](r:cond.index.untrapped) says, and the program ends with the exit code
-252 unless a SYNTAX trap answers. That condition has `CODE` `4.1`, `RC` 4 and
-no description, and its trap sees the name SYNTAX.
+A HALT that neither its own trap nor the ANY trap answers is not ignored. As
+[the untrapped rule](r:cond.index.untrapped) says, it becomes the SYNTAX
+condition `4.1` at the same clause, which a SYNTAX trap sees under the name
+SYNTAX, and [the SYNTAX rule](r:cond.index.syntax) says what follows when none
+answers. That condition has `CODE` `4.1`, `RC` 4 and no description, whatever
+description the RAISE instruction gave.
 
 ```rexx
 say 'before'
