@@ -152,7 +152,7 @@ CALL
 
 r[bif.condition.description]
 After a trap has caught a condition, the option `D` answers the description
-string that the condition carries, or the null string when it carries none. A
+that the condition carries, or the null string when it carries none. A
 user condition carries what the RAISE instruction's
 [DESCRIPTION](r:instr.raise.description) gave, and a NOVALUE condition the
 name of the variable, in capital letters. A SYNTAX condition that the
@@ -190,6 +190,26 @@ rq: raise syntax 40.1 additional ('ad') return
 []
 [UNSET]
 [a note]
+```
+
+r[bif.condition.description.object]
+The answer of `D` is the object that the DESCRIPTION entry of the condition
+object holds, not a string made from it, so a RAISE whose DESCRIPTION is an
+array makes `D` answer that array, which is equal to the entry.
+
+```rexx
+call on user u name h
+call r
+exit
+r: raise user u description (.array~of(1, 2)) return
+h: o = condition('o')
+  d = condition('d')
+  say d~class '/' (d == o~description) '/' o~description~class
+  return
+```
+
+```output defect=#121
+The Array class / 1 / The Array class
 ```
 
 r[bif.condition.extra]

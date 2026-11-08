@@ -450,8 +450,8 @@ r[instr.raise.description]
 DESCRIPTION gives the description of the condition. The `DESCRIPTION` entry of
 the condition object holds the value of the expression as it is, whatever
 object that is, and [`CONDITION('D')`](r:bif.condition.description) answers
-the string value of it. Without DESCRIPTION the description is the null
-string.
+that same object, which SAY and concatenation show as its string value.
+Without DESCRIPTION the description is the null string.
 
 ```rexx
 call on user foo name h
@@ -1278,15 +1278,14 @@ the entries that it held, so a user condition is still the same user
 condition, a SYNTAX keeps its `CODE` and `RC`, and the `ADDITIONAL` entry
 stays, unless the clause replaces it as [the replacement
 rule](r:instr.raise.propagate.replace) says. In the new condition object
-`PROPAGATED` is `1`, as it is in the object of any SYNTAX condition that
-reached a caller, so for a SYNTAX the value does not tell a PROPAGATE from a
-condition that travelled on its own. The `POSITION` entry
-of a propagated user condition is still the line of the original RAISE, and
-that of a propagated SYNTAX is the line of the clause in the caller, which is
-also `SIGL`. A RETURN or EXIT value on the clause is the value that the code
-hands back, as [the rule for leaving](r:instr.raise.leave) says, and [the
-Deviation on values](r:instr.raise.deviation.65) says what the condition holds
-of it.
+`PROPAGATED` is `1`, as [the propagated rule](r:cond.information.propagated)
+specifies, so for a SYNTAX the value does not tell a PROPAGATE from a
+condition that travelled on its own. The `POSITION` entry of a propagated user
+condition is still the line of the original RAISE, and that of a propagated
+SYNTAX is the line of the clause in the caller, which is also `SIGL`. A RETURN
+or EXIT value on the clause is the value that the code hands back, as [the
+rule for leaving](r:instr.raise.leave) says, and [the Deviation on
+values](r:instr.raise.deviation.65) says what the condition holds of it.
 
 ```rexx
 signal on syntax name top

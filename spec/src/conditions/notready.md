@@ -171,8 +171,8 @@ main read done
 r[cond.notready.untrapped]
 A NOTREADY that neither its own trap nor the ANY trap answers is ignored, as
 [the untrapped rule](r:cond.index.untrapped) says, and the stream call answers
-as its page says. The directive `::OPTIONS` can turn an untrapped NOTREADY
-into a SYNTAX condition, and the page of the directive specifies that.
+as its page says. The [::OPTIONS](r:dir.options.condition) directive can turn
+an untrapped NOTREADY into a SYNTAX condition, and its rule specifies that.
 
 ```rexx
 f = 'spec-notready-none.tmp'

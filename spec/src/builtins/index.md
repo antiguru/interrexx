@@ -1336,10 +1336,11 @@ file the name is the file's name, taken from the current directory when it is
 not absolute (see [Deviation 34](r:bif.stream.deviation.34)). While the stream
 is open, a name denotes the same stream, whichever stream builtin it is given
 to, so what one builtin writes another reads. This holds in the main program
-and in the routines of a program, and in one call of a method. Each call of a
-method has streams of its own, so a name that the method uses is not the
-stream that the main program, a routine or another call of the method uses
-under that name.
+and in one call of a method, and in the routines that either of them calls.
+Each call of a method has streams of its own, which a routine called from it
+shares, so a name that the method uses is not the stream that the main
+program, a routine called from the main program or another call of the method
+uses under that name.
 
 ```rexx
 f = 'spec-streams-name.tmp'
@@ -1498,18 +1499,20 @@ aXYZ
 ```
 
 r[bif.index.stream.lifetime]
-A stream stays open, with its positions, until the program closes it or
-ends. [CHAROUT given only a name](r:bif.charout.close) closes a stream; the
-pages of the other stream builtins name their forms. The next use of a closed
-name opens the stream again: the read position is at the start and the write
-position at the end of the data, and the characters written before the close
-are in the file. A standard stream is closed in the same way, by
-[`CLOSE`](r:bif.stream.close) and by CHAROUT or LINEOUT given neither a string
-nor a start or line: its state is then `UNKNOWN`, and the next stream builtin
-that reads from it, writes to it, counts what is left in it (CHARS or LINES)
-or opens it opens it again on the same input or output, so that later reads
-and writes carry on. ooRexx differs, as
-[Deviation 98](r:bif.index.stream.lifetime.deviation.98) says.
+A stream stays open, with its positions, until the program closes it or ends.
+The streams of a call of a method end with the call, and what the call wrote
+to a stream that it did not close is not specified. [CHAROUT given only a
+name](r:bif.charout.close) closes a stream; the pages of the other stream
+builtins name their forms. The next use of a closed name opens the stream
+again: the read position is at the start and the write position at the end of
+the data, and the characters written before the close are in the file. A
+standard stream is closed in the same way, by [`CLOSE`](r:bif.stream.close)
+and by CHAROUT or LINEOUT given neither a string nor a start or line: its
+state is then `UNKNOWN`, and the next stream builtin that reads from it,
+writes to it, counts what is left in it (CHARS or LINES) or opens it opens it
+again on the same input or output, so that later reads and writes carry on.
+ooRexx differs, as [Deviation 98](r:bif.index.stream.lifetime.deviation.98)
+says.
 
 ```rexx
 f = 'spec-streams-life.tmp'

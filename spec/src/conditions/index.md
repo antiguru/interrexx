@@ -110,12 +110,13 @@ off again OFF
 ## When nothing traps a condition
 
 r[cond.index.untrapped]
-When a condition is raised and neither its trap nor the ANY trap is `ON` or
-`DELAY`, ERROR, FAILURE, LOSTDIGITS, NOSTRING, NOTREADY, NOVALUE and the user
-conditions are ignored: the clause goes on as if nothing had happened, and the
-trap stays `OFF`. The exception is the FAILURE of a command that neither its
-trap nor ANY answers, which [the fallback rule](r:cond.error.fallback) says
-the ERROR trap answers; a FAILURE that RAISE raised is ignored like the rest.
+When a condition is raised and no trap answers it, as [the choice
+rule](r:cond.traps.choice) decides, ERROR, FAILURE, LOSTDIGITS, NOSTRING,
+NOTREADY, NOVALUE and the user conditions are ignored: the clause goes on as
+if nothing had happened, and the trap stays `OFF`. The exceptions are the
+FAILURE of a command, which [the fallback rule](r:cond.error.fallback) says
+the ERROR trap answers, and the six conditions that the package's
+[::OPTIONS](r:dir.options.condition) makes a SYNTAX condition.
 HALT and NOMETHOD are not ignored. An untrapped HALT raises `SYNTAX 4.1`
 instead, and an untrapped NOMETHOD `SYNTAX 97.1`, or `SYNTAX 97.2` when the
 message went to a private method that its sender may not run, as [the NOMETHOD

@@ -28,8 +28,8 @@ REQUIRES, RESOURCE and ROUTINE. The pages of this chapter are:
 * [::OPTIONS](options.md): the settings that the code of a package starts
   with.
 * [::RESOURCE](resource.md): a block of text that the package holds as data.
-* [::ANNOTATE](annotate.md): the annotations on a class, a method or a
-  routine.
+* [::ANNOTATE](annotate.md): the annotations on the package, a class, a
+  method, an attribute, a constant or a routine.
 
 The classes that the directives create are objects too, and what their own
 methods do is specified in the classes chapter. This chapter says only what a
@@ -198,8 +198,9 @@ r[dir.index.unit]
 Each section, and the prolog, is a code unit of its own. Its labels are known
 only inside it, its variables are not shared with another unit, and a
 construct that it opens must end inside it: a DO, IF or SELECT that is still
-open at the next directive raises `SYNTAX 14.1`, `14.3` or `14.2`, found when
-the program is read. A routine or method that needs a value of another unit
+open at the next directive raises `SYNTAX 14.1`, `14.3` or `14.2`, and an
+ELSE that has no instruction by then raises `SYNTAX 14.4`, all found when the
+program is read. A routine or method that needs a value of another unit
 receives it as an argument or through an object variable.
 
 ```rexx
@@ -329,17 +330,17 @@ prolog
 ```
 
 r[dir.index.failure]
-A fault found while the package is read stops everything: nothing is
-installed and no prolog runs. A fault raised while the package is installed,
-such as a class that cannot be found or a required file that does not exist,
-stops installation at that step, so that no class activates after it and the
-prolog does not run. The condition is `SYNTAX` in both cases, and a program
-file ends with 256 minus the error number as its exit status, 158 for
-`98.909`. The classes created before such a fault have received their INIT
-message, as the next example shows, and have received no ACTIVATE message.
-A class that names itself, directly or through the classes it names, is an
-exception: [the order rule](r:dir.class.forward) finds it before any class is
-created, so no INIT message has been sent.
+A fault found while the package is read stops everything: nothing is installed
+and no prolog runs. A fault raised while the package is installed, such as a
+class that cannot be found or a required file that does not exist, stops
+installation at that step, so that no class activates after it and the prolog
+does not run. The condition is `SYNTAX` in both cases, and a program file ends
+with 256 minus the error number as its exit status, 158 for `98.909`, as [the
+SYNTAX rule](r:cond.index.syntax) says. The classes created before such a
+fault have received their INIT message, as the next example shows, and have
+received no ACTIVATE message. A class that names itself, directly or through
+the classes it names, is an exception: [the order rule](r:dir.class.forward)
+finds it before any class is created, so no INIT message has been sent.
 
 ```rexx
 call try '::class k public private'

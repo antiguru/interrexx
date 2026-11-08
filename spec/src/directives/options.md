@@ -665,8 +665,8 @@ fourteen UNSET14
 ```
 
 r[dir.options.condition.all]
-ALL stands for the six condition options at once: `ALL SYNTAX` sets all of
-them to SYNTAX and `ALL CONDITION` sets all of them to CONDITION. It is
+ALL is a single option that gives its value, SYNTAX or CONDITION, to each of
+the six. It is
 processed in text order like any option, so an option that follows it
 overrides its value for one condition, and one that precedes it is overridden.
 A missing value or a string after ALL raises `SYNTAX 20.929`, and any other

@@ -240,8 +240,8 @@ as the string value of the object the text that its `STRING` method answers
 when that is a string, and the string value of that answer when it is another
 object that has one, such as an array. [Deviation
 30](r:cond.nostring.deviation.30) applies when the answer has none. The
-directive `::OPTIONS` can turn an untrapped NOSTRING into a SYNTAX condition,
-and the page of the directive specifies that.
+[::OPTIONS](r:dir.options.condition) directive can turn an untrapped NOSTRING
+into a SYNTAX condition, and its rule specifies that.
 
 ```rexx
 say 'a' || .plain~new

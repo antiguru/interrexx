@@ -2,7 +2,7 @@
 element: "Condition information"
 kind: concept
 ansi: "8.4.1, 9.5.3"
-rexxref: "Conditions and Condition Traps > Condition Information; Conditions and Condition Traps > Condition Object"
+rexxref: "Conditions and Condition Traps > Condition Information; Conditions and Condition Traps > Condition Information > Condition Object"
 ---
 
 # Condition information
@@ -88,9 +88,10 @@ are [the entries that the object rule of CONDITION](r:bif.condition.object)
 names. `PACKAGE` is the package that holds the code that raised the condition,
 and `PROGRAM` its name. `POSITION` is the number of the line on which the
 clause that raised the condition starts, in that code, and a NOTREADY that the
-interpreter raised has none. `PROPAGATED` is `0` for a condition that a
-program or the interpreter raised, as opposed to one that a RAISE instruction
-with PROPAGATE raised again, which the RAISE page specifies. `STACKFRAMES` and
+interpreter raised has none. `PROPAGATED` is `1` for a condition that
+came to the code that answers it from another level and `0` for one that was
+answered where it was raised, as [the propagated
+rule](r:cond.information.propagated) specifies. `STACKFRAMES` and
 `TRACEBACK` are lists with one item for each active level of code at that
 time, the main program's included, and the text of a traceback line is not
 specified. `ADDITIONAL` is present for a SYNTAX, NOMETHOD, NOSTRING or
@@ -225,7 +226,9 @@ For a SYNTAX condition, `CODE` is the string `m.n` of the error number and
 subcode, `RC` is `m`, `ERRORTEXT` equals what the `ERRORTEXT` builtin answers
 for `RC`, `PACKAGE` is the package that `.CONTEXT~PACKAGE` answers in the code
 that raised it, `PROGRAM` is the name of that package, and `POSITION` is the
-line of the clause, and `PROPAGATED` is `0`. `ADDITIONAL` is an array of the
+line of the clause, and `PROPAGATED` is `0` when the code that raised it
+answers it, as [the propagated rule](r:cond.information.propagated) says for
+the other case. `ADDITIONAL` is an array of the
 values that the error message names, `a` for the nonnumeric value `'a'` of
 error `41.1`. The description of a SYNTAX condition is the null string.
 
@@ -380,19 +383,20 @@ interpret 16 16
 ## From the code that raised it to its caller
 
 r[cond.information.propagate]
-A SYNTAX condition that is raised in a level whose trap for SYNTAX and for ANY
-is `OFF` ends the clause that raised it, and then the clause of the level that
-called this one, so that no clause of the first level runs on, and is raised
-again at the clause that made the call, in the level above: a CALL, a function
-call, a message term or a message instruction. A level above whose trap
-answers ends the chain there, and the code of the trap runs in that level,
-with the record and the object of the original condition: `POSITION` names the
-line where the error was found, and `STACKFRAMES` lists the active levels as
-they were then. A level that does not answer passes the condition on, up to
-the main program, where an untrapped condition ends the program as [the SYNTAX
-rule](r:cond.index.syntax) says. A level that starts with every trap `OFF`, a
-`::ROUTINE` or a method, passes it on until it switches the trap on, and an
-internal routine does when its copy of the trap states has the trap off.
+A SYNTAX condition that is raised in a level where no trap answers it, as [the
+choice rule](r:cond.traps.choice) decides, ends the clause that raised it, and
+then the clause of the level that called this one, so that no clause of the
+first level runs on, and is raised again at the clause that made the call, in
+the level above: a CALL, a function call, a message term or a message
+instruction. A level above whose trap answers ends the chain there, and the
+code of the trap runs in that level, with the record and the object of the
+original condition: `POSITION` names the line where the error was found, and
+`STACKFRAMES` lists the active levels as they were then. A level that does not
+answer passes the condition on, up to the main program, where an untrapped
+condition ends the program as [the SYNTAX rule](r:cond.index.syntax) says. A
+level that starts with every trap `OFF`, a `::ROUTINE` or a method, passes it
+on until it switches a trap on, and an internal routine does when its copy of
+the trap states has no trap that answers.
 
 ```rexx
 signal on syntax name top
@@ -449,6 +453,55 @@ in m
 a handles 41.1 10
 a done
 caller goes on
+```
+
+r[cond.information.propagated]
+The `PROPAGATED` entry of the object that the trap sees is `1` when the
+condition left the level that raised it, which is the case for a SYNTAX that
+reached a caller from a `::ROUTINE`, from a method or from an internal
+routine, and after a RAISE with PROPAGATE. It is `0` for a condition that the
+level which raised it answers, a SYNTAX or a user condition alike.
+
+```rexx
+signal on syntax name t
+call r
+t: say 'routine' condition('o')~propagated
+signal on syntax name v
+say .o~new~m
+v: say 'method' condition('o')~propagated
+signal on syntax name w
+x = 1 % 0
+w: say 'same level' condition('o')~propagated
+exit
+::routine r
+  x = 1 % 0
+::class o
+::method m
+  x = 1 % 0
+```
+
+```output
+routine 1
+method 1
+same level 0
+```
+
+r[cond.information.propagated.internal]
+An internal routine that switched the trap off passes the condition on in the
+same way, and the object that its caller sees has `1`.
+
+```rexx
+signal on syntax name v
+call iq
+v: say 'caller' condition('o')~propagated condition('o')~code
+exit
+iq: procedure
+  signal off syntax
+  x = 1 % 0
+```
+
+```output defect=#120
+caller 1 42.3
 ```
 
 r[cond.information.propagate.only]

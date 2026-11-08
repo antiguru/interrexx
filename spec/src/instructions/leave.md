@@ -231,7 +231,8 @@ two faults in the form of the clause, a name that is not a symbol (`SYNTAX
 20.907`) and data after the name (`SYNTAX 21.907`, whatever the name is and
 whether or not a block has it), are found when the program is read instead.
 No clause of the program runs then, even one before the LEAVE or a LEAVE that
-no path reaches, and the exit code is 236 or 235. In the text of an INTERPRET
+no path reaches, and the exit code is 236 or 235, as [the rule for a program
+that is read](r:lex.index.read-first) says. In the text of an INTERPRET
 the same faults are ordinary SYNTAX conditions, as [the name
 rule](r:instr.leave.name) shows.
 

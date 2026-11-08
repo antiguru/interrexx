@@ -14,8 +14,8 @@ rule](r:expr.variables.value) says. A program that wants to find such reads
 traps the condition, which turns a misspelled variable into a stop with the
 name in hand. This page specifies which uses of a variable raise NOVALUE,
 which do not, what the description holds, and which traps can answer it. The
-directive `::OPTIONS` can make an untrapped NOVALUE into an error, and the
-page of the directive specifies that.
+[::OPTIONS](r:dir.options.condition) directive can make an untrapped NOVALUE
+into an error, and its rule specifies that.
 
 ## When it is raised
 

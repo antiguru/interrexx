@@ -98,7 +98,8 @@ digits against its own NUMERIC DIGITS, and goes no further. A trap in the
 caller does not answer a LOSTDIGITS that a routine raised, as [the propagation
 rule](r:cond.information.propagate.only) says, and the routine's own traps do.
 When no trap answers, the operation goes on with the digits it has, as [the
-arithmetic rule](r:num.arithmetic.lostdigits) says.
+arithmetic rule](r:num.arithmetic.lostdigits) says, unless the package's
+[::OPTIONS](r:dir.options.condition) makes it a SYNTAX condition.
 
 ```rexx
 signal on lostdigits name main

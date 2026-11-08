@@ -62,13 +62,15 @@ signal 4 ERROR OFF SIGNAL
 
 r[cond.error.untrapped]
 An ERROR that no trap answers is ignored, as [the untrapped
-rule](r:cond.index.untrapped) says: the clause is over, `RC` holds the return
-code, `.RS` is `1`, and the program goes on. The traps that answer it are the
-ones of the code that sent the command, which for an internal routine are its
-copy of the traps of its caller, as [the scope rule](r:cond.traps.scope) says.
-The condition is not passed on to the next level, as [the propagation
-rule](r:cond.information.propagate.only) says, so a routine that has its trap
-off ignores the ERROR although its caller has the trap on.
+rule](r:cond.index.untrapped) says, unless the package's
+[::OPTIONS](r:dir.options.condition) makes it a SYNTAX condition: the clause
+is over, `RC` holds the return code, `.RS` is `1`, and the program goes on.
+The traps that answer it are the ones of the code that sent the command, which
+for an internal routine are its copy of the traps of its caller, as [the scope
+rule](r:cond.traps.scope) says. The condition is not passed on to the next
+level, as [the propagation rule](r:cond.information.propagate.only) says, so a
+routine that has its trap off ignores the ERROR although its caller has the
+trap on.
 
 ```rexx
 address system
@@ -117,7 +119,7 @@ environments `system`, `command`, `sh`, `bash` and `path`, whether the command
 was not found or exited with that code. Whether other environments of a host
 do the same is not specified. No other return code is a failure: `126`
 raises ERROR, and so does a negative one, which is not the failure of classic
-Rexx here. The condition is raised at the end of the clause, and the record
+Rexx here. Both wait for the clause to end, and the record
 has the return code in `RC`, the command string as its description, and `.RS`
 is `-1`. A trap for ERROR does not answer a FAILURE as such, so it needs the
 fallback of [the next rule](r:cond.error.fallback), and a trap for FAILURE
