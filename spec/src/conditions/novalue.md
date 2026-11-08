@@ -31,8 +31,10 @@ parentheses in DROP, in EXPOSE or in PROCEDURE EXPOSE. The clause ends at that
 point, so an assignment it would have made is not made. The stem symbol alone,
 as in `st.`, is never without a value, as [the stem
 rule](r:expr.variables.stem) says, so reading it raises nothing. A variable
-that is only assigned, dropped or named in an EXPOSE list is not read, and
-neither is a name inside such a list. An environment symbol such as `.foo`
+that is only assigned, dropped or named in an EXPOSE list, with no
+parentheses, is not read. The list in parentheses of EXPOSE in a method shows
+the read through the `::OPTIONS` directive, which turns the untrapped condition
+into an error. An environment symbol such as `.foo`
 that finds no object is not a variable, so it raises nothing and stands for
 its own characters. A symbol in the tail of a compound symbol raises nothing,
 and stays as its own name in the derived name. SYMBOL and VALUE do not raise
@@ -99,10 +101,6 @@ LIT UNSET10
 .UNSETENV
 16 no NOVALUE
 ```
-
-The same holds for the list of PROCEDURE EXPOSE, and for the list of EXPOSE in
-a method, where the `::OPTIONS` directive turns the untrapped condition into
-an error so that it shows.
 
 ```rexx
 signal on novalue name n
