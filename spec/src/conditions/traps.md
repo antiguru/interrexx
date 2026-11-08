@@ -30,8 +30,8 @@ ERROR trap. A trap that answers a condition changes only its own state, so
 every other trap, ANY included, stays as it was. The two kinds of trap are
 equal in this: a CALL trap for the condition wins over a SIGNAL trap for ANY,
 and a SIGNAL trap for the condition wins over a CALL trap for ANY. A
-condition that the ANY trap catches is still itself: `CONDITION('C')` answers its own name, and
-the default label or routine of an ANY trap is `ANY`. A condition whose own
+condition that the ANY trap catches is still itself: `CONDITION('C')` answers
+its own name, and the default label or routine of an ANY trap is `ANY`. A condition whose own
 trap was switched off explicitly does not keep ANY from answering. A CALL
 trap for ANY answers only the conditions that CALL can trap, and a SIGNAL
 trap for ANY answers all of them. A user condition is answered by the trap of
