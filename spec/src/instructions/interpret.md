@@ -222,11 +222,10 @@ Every DO, IF and SELECT that the text opens must end inside it, and the text
 may not hold the end of a construct that began outside it. A simple DO with no
 END raises `SYNTAX 14.1`, a SELECT with no END `14.2`, and a loop with no END
 `14.5`. An IF with no THEN raises `18.1`, a THEN with no instruction after it
-`14.3` and an ELSE with none `14.4`. An END with no construct to end raises
-`10.1`, including an END that would close a loop around the INTERPRET. A
-THEN, an ELSE, a WHEN and an OTHERWISE with no IF or SELECT before it raise
-`8.1`, `8.2`, `9.1` and `9.2`, in that order. Complete constructs run as they
-do in a program.
+`14.3` and an ELSE with none `14.4`. An END with no construct to end is [a
+part out of place](r:instr.index.parts), and so is an END that would close a
+loop around the INTERPRET. A THEN, an ELSE, a WHEN and an OTHERWISE with no IF
+or SELECT before it are too. Complete constructs run as they do in a program.
 
 ```rexx
 interpret 'do 2; say "a"; end'
@@ -385,9 +384,12 @@ A LEAVE or ITERATE in the text refers to a loop that the text itself holds. A
 loop of the code around the INTERPRET is out of reach: the instruction raises
 `SYNTAX 28.1` for a LEAVE and `28.2` for an ITERATE with no name, and `28.3`
 and `28.4` when the instruction names a loop, even in the body of a loop. A
-simple DO group is not a loop. A PROCEDURE in the text raises `SYNTAX 17.1`,
-even when the INTERPRET is the first instruction of the routine, and an EXPOSE
-raises `99.908` and a REPLY `99.924` when the text is read, so that no clause
+simple DO group is not a loop, as [the LEAVE rule](r:instr.leave.target) says.
+The text may not hold a [PROCEDURE](r:instr.procedure.first), an
+[EXPOSE](r:instr.expose.first), a [USE LOCAL](r:instr.use.local.place), a
+[GUARD](r:instr.guard.method), a [FORWARD](r:instr.forward.method) or a
+[REPLY](r:instr.reply.method). Each page says what it raises there. In the
+example, an EXPOSE and a REPLY raise when the text is read, so that no clause
 of the text runs.
 
 ```rexx
@@ -525,11 +527,10 @@ say .rs .context~rs
 
 r[instr.interpret.deviation.66]
 A trap that `SIGNAL ON` enabled, and whose label does not exist, raises
-`SYNTAX 16.1` when its condition occurs, and not before, as [the rule on
-the ON form](r:instr.signal.on) says. When the condition occurs in the text of
-an INTERPRET, the condition has one stack frame, of the type `PROGRAM`, and
-its name is the name of the program. In ooRexx the name of that frame is the
-null string.
+`SYNTAX 16.1` when its condition occurs, as the conditions chapter specifies.
+When the condition occurs in the text of an INTERPRET, the condition has one
+stack frame, of the type `PROGRAM`, and its name is the name of the program.
+In ooRexx the name of that frame is the null string.
 
 ```rexx
 signal on syntax name e

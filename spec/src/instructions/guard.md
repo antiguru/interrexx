@@ -174,10 +174,8 @@ n reached 3
 r[instr.guard.when.value]
 The condition is an expression whose value must be `0` or `1`, and any other
 value raises `SYNTAX 34.902`. It can be a list of expressions separated by
-commas. The expressions of a list are evaluated from left to right, and the
-evaluation stops at the first one that is false, so the rest are not
-evaluated; the list is true when every expression is, and a value other than
-`0` or `1` in an expression that is evaluated raises `SYNTAX 34.6`.
+commas, evaluated as [the list of an IF](r:instr.if.list) is, and a value
+other than `0` or `1` in an expression that is evaluated raises `SYNTAX 34.6`.
 
 ```rexx
 o = .box~new

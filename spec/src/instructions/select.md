@@ -377,10 +377,11 @@ r[instr.select.syntax]
 Errors in the shape of a SELECT are found when the program is read, so a
 program that has one runs none of its clauses. A SELECT with no WHEN before
 its OTHERWISE or END raises `SYNTAX 7.1`, and another clause where a WHEN is
-required raises `7.2`. A WHEN or an OTHERWISE outside a SELECT raises `9.1`
-and `9.2`. A WHEN with no THEN raises `18.2`, and an END where the instruction
-of a THEN should be raises `10.1`. A SELECT with no END raises `14.2`
-and one whose OTHERWISE part has no END `14.901`. A stray END raises `10.1`.
+required raises `7.2`. A WHEN or an OTHERWISE outside a SELECT raises the
+codes of [a part out of place](r:instr.index.parts). A WHEN with no THEN
+raises `18.2`, and an END where the instruction of a THEN should be raises
+`10.1`. A SELECT with no END raises `14.2` and one whose OTHERWISE part has no
+END `14.901`. A stray END is [a part out of place](r:instr.index.parts) too.
 
 ```rexx
 say 'before'

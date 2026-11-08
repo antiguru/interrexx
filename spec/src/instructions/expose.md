@@ -244,12 +244,10 @@ set LIT VAR
 ```
 
 r[instr.expose.list.error]
-A word in a list that is not a variable symbol raises a `SYNTAX` error when
-the EXPOSE runs: `31.2` for a word that starts with a digit, `31.3` for one
-that starts with a period, and `20.928` for any other text in a name's
-place, such as a sign, a quote or a parenthesis. In the example the handler
-runs in the internal routine that called the method, so its RETURN leaves
-the routine and the loop goes on.
+A word in a list that is not a variable symbol raises the error that [the DROP
+list](r:instr.drop.list.error) gives, when the EXPOSE runs. In the example the
+handler runs in the internal routine that called the method, so its RETURN
+leaves the routine and the loop goes on.
 
 ```rexx
 o = .box~new

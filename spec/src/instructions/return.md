@@ -20,17 +20,15 @@ whole program from any depth, and the page of the exit code is that one.
 ## Returning from a routine
 
 r[instr.return.routine]
-RETURN in an internal routine, which is the code from a label that a CALL or
-a function call started, ends the routine and continues with the caller, even
+RETURN in an internal routine, which is the code from a label that a CALL or a
+function call started, ends the routine and continues with the caller, even
 when the RETURN is nested inside DO, IF or SELECT constructs, which it
 abandons. A RETURN with an expression hands its value to the caller, and a
 CALL stores it in `RESULT` as [the CALL rule](r:instr.call.result) says. A
 RETURN without an expression hands over no value, so a CALL drops `RESULT`,
-and a function call that has no value raises `SYNTAX 44.1`, as [the rule for
-a call in an expression](r:expr.terms.call.result) says. The caller has its
-own ADDRESS, TRACE and NUMERIC settings back, as [the ADDRESS
-rule](r:bif.address.scope.routine), [the TRACE rule](r:bif.trace.scope) and
-[the NUMERIC rule](r:num.settings.call) say.
+and a function call that has no value raises `SYNTAX 44.1`, as [the rule for a
+call in an expression](r:expr.terms.call.result) says. The caller's settings
+come back as [the CALL rule](r:instr.call.restore) says.
 
 ```rexx
 call find 6

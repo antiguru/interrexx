@@ -273,11 +273,11 @@ r[instr.if.syntax]
 Errors in the shape of an IF are found when the program is read, so a program
 that has one runs none of its clauses. An IF with no THEN raises
 `SYNTAX 18.1`. A THEN with no instruction after it raises `14.3`, and an ELSE
-with no instruction `14.4`. A THEN that no IF waits for raises `8.1` and an
-ELSE `8.2`. An END or a WHEN where the instruction of a branch should be
-raises `10.1` and `9.1`. An error in the expression is raised when the clause
-runs, as it is for any expression, and when a branch is not taken, its
-expression is not evaluated.
+with no instruction `14.4`. A THEN that no IF waits for, an ELSE with no IF,
+and an END or a WHEN where the instruction of a branch should be, raise the
+codes of [a part out of place](r:instr.index.parts). An error in the
+expression is raised when the clause runs, as it is for any expression, and
+when a branch is not taken, its expression is not evaluated.
 
 ```rexx
 say 'before'
