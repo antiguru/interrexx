@@ -146,9 +146,15 @@ to the package that declares it. A public class is also known to every package
 that requires the package, directly or through a chain of ::REQUIRES, and a
 class name is looked up first among the classes that the package declares,
 then among the public classes of the packages it requires, taking the first of
-those in the order of the ::REQUIRES directives, and then as [the environment
-rule](r:lex.symbols.environment) says, which finds the built-in classes and
-any class object that the program has stored in `.environment` under the name.
+those in the order of the ::REQUIRES directives. The order is depth first: a
+required package contributes its own public classes, then those it makes
+visible by its own ::REQUIRES, and all of these come before the classes of the
+next ::REQUIRES directive of the requiring package. A private class of a
+required package does not hide a public class of the same name that the
+package makes visible. When none of these has the name, the lookup goes on as
+[the environment rule](r:lex.symbols.environment) says, which finds the
+built-in classes and any class object that the program has stored in
+`.environment` under the name.
 This book does not specify which other directories that lookup searches. The
 same lookup finds the class that SUBCLASS, MIXINCLASS, METACLASS and INHERIT
 name. A name that no step finds is the environment symbol's own text, and the
@@ -200,6 +206,18 @@ call lineout h
 src = .array~of('say .shown~id', 'say .hidden', -
   '::requires "'h'"')
 p = .package~new('spec-dir-class-vis5', src)
+src = .array~of('say .box~new~hi', '::requires "'h'"', '::requires "'g'"')
+p = .package~new('spec-dir-class-vis7', src)
+k = 'spec-dir-class-lib4.tmp'
+call sysfiledelete k
+call lineout k, '::requires "'f'"'
+call lineout k, '::class box'
+call lineout k, '::method hi'
+call lineout k, '  return "private box"'
+call lineout k
+src = .array~of('say .box~new~hi', '::requires "'k'"')
+p = .package~new('spec-dir-class-vis8', src)
+call sysfiledelete k
 .environment['SPEC_DIR_CLASS_ENVCLASS'] = .queue
 src = .array~of('say .envsub~superclass~id', -
   '::class envsub subclass spec_dir_class_envclass')
@@ -218,6 +236,8 @@ local box
 98.909
 SHOWN
 .HIDDEN
+first box
+first box
 Queue
 ```
 
@@ -275,8 +295,10 @@ superclass and in the list, raises `98.944`. A class that would become its own
 ancestor through INHERIT, itself included, raises `98.911`. The class that
 MIXINCLASS names for a mixin class that is inherited must be the superclass of
 the inheriting class or one of the superclass's ancestors, or INHERIT raises
-`SYNTAX 98.943` when the package is installed. A mixin class can itself be a
-subclass and inherit other mixin classes.
+`SYNTAX 98.943` when the package is installed. When that class is itself a
+mixin class, the test applies to the class its own MIXINCLASS names, and so on
+down to the first class that is not a mixin class. A mixin class can itself be
+a subclass and inherit other mixin classes.
 
 ```rexx
 call try '::class c inherit m1 m2'
@@ -314,6 +336,12 @@ call try '::class ms mixinclass object', -
   '::class c subclass string inherit ms'
 call try '::class ms mixinclass array', -
   '::class c subclass string inherit ms'
+call try '::class ms mixinclass object', '::class m2 mixinclass ms', -
+  '::class c subclass string inherit m2'
+call try '::class ms mixinclass string', '::class m2 mixinclass ms', -
+  '::class c subclass string inherit m2'
+call try '::class ms mixinclass string', '::class m2 mixinclass ms', -
+  '::class c inherit m2'
 exit
 try:
   signal on syntax name e
@@ -333,6 +361,9 @@ e: say src~makestring('l', ' / ') '=>' condition('o')~code
 ::class ms mixinclass string / ::class c subclass string inherit ms => ok
 ::class ms mixinclass object / ::class c subclass string inherit ms => ok
 ::class ms mixinclass array / ::class c subclass string inherit ms => 98.943
+::class ms mixinclass object / ::class m2 mixinclass ms / ::class c subclass string inherit m2 => ok
+::class ms mixinclass string / ::class m2 mixinclass ms / ::class c subclass string inherit m2 => ok
+::class ms mixinclass string / ::class m2 mixinclass ms / ::class c inherit m2 => 98.943
 ```
 
 r[dir.class.search]

@@ -124,8 +124,8 @@ the keywords, a keyword repeated or a second keyword of one group raises
 `SYNTAX 25.902`. EXTERNAL and DELEGATE take an operand, and the other keywords
 do not. The errors of the directive are found when the program is read. A
 clause after an ATTRIBUTE method raises the error that [the attribute
-rule](r:dir.method.attribute) gives, whichever keyword of the kind group goes
-with it.
+rule](r:dir.method.attribute) gives, except with DELEGATE, where it raises the
+error of [the delegate rule](r:dir.method.delegate).
 
 ```rexx
 call try '::method m public private'
@@ -212,10 +212,12 @@ mixin class counts as a subclass of it. The sender may be another
 object, so objects of one class can send each other private messages, and a
 class method of the class can send a private instance method. A message from
 the prolog, from a routine, or from a method of an unrelated class raises
-`SYNTAX 97.2`, and so does one to a private method of a subclass from a method
-of the superclass. A PACKAGE method
-accepts a message from any code of the package that declares it and from no
-other package, which raises `SYNTAX 97.3`.
+`SYNTAX 97.2`. The test is on `SELF`, not on the class whose method runs, so a
+method of a superclass that runs with an instance of the superclass as `SELF`
+cannot send a private method of a subclass, and the same method running with an
+instance of the subclass as `SELF` can. A PACKAGE method accepts a message from
+any code of the package that declares it and from no other package, which
+raises `SYNTAX 97.3`.
 
 ```rexx
 a = .acct~new
@@ -228,6 +230,7 @@ call try 'say .other~new~take(a)'
 call try 'say .other~cvia(a)'
 call try 'say .acct~csecret'
 call try 'say a~down(c)'
+call try 'say c~down(c)'
 call try 'say peek(a)'
 exit
 try:
@@ -284,6 +287,7 @@ say .other~new~take(a) => 97.2
 say .other~cvia(a) => 97.2
 say .acct~csecret => 97.2
 say a~down(c) => 97.2
+childsecret
 say peek(a) => 97.2
 ```
 
@@ -407,7 +411,10 @@ as spelled. The first method takes no argument, and the second takes exactly
 one: `SYNTAX 93.902` for an extra argument and `93.903` for a missing one. A
 clause after the directive that is not a null clause raises `SYNTAX 99.934`,
 found when the program is read, because the directive has no section; that
-holds for ATTRIBUTE with ABSTRACT too, which declares both methods abstract.
+holds for ATTRIBUTE with ABSTRACT too, which declares both methods abstract,
+and for ATTRIBUTE with EXTERNAL, whose library is then not looked for, so that
+a missing one does not raise `98.903`. ATTRIBUTE with DELEGATE raises `99.946`
+instead, as [the delegate rule](r:dir.method.delegate) says.
 
 ```rexx
 o = .box~new
@@ -428,6 +435,8 @@ call try 'say .blank~new~limit'
 call try '.blank~new~limit = 1'
 call pkg 'size attribute'
 call pkg 'size abstract attribute'
+call pkg 'size attribute external "library spec_no_such_lib_xyz"'
+call pkg 'size attribute delegate d'
 o = .low~new
 say o~sz o~"Mx" o~mx
 o~set
@@ -486,6 +495,8 @@ say .blank~new~limit => 93.965
 .blank~new~limit = 1 => 93.965
 size attribute => 99.934
 size abstract attribute => 99.934
+size attribute external "library spec_no_such_lib_xyz" => 99.934
+size attribute delegate d => 99.946
 sz Mx Mx
 sz
 7 5
@@ -529,10 +540,13 @@ operand, or one that is not a string, raises `SYNTAX 19.905`. A string that
 does not have that form, whose first word is another word, or that has no
 library name or more than two words after LIBRARY, raises `99.917`; both are
 found when the program is read. A library that cannot be loaded raises
-`SYNTAX 98.903` as soon as the directive is read, so that a fault in a
-directive after it is not reported, while a fault in one before it is. A
-clause after the directive that is not a null clause raises `99.936`. How a library is searched for, and
-which routine of it the method runs, are not specified here.
+`SYNTAX 98.903` as soon as the directive is read. It therefore comes before
+every fault raised when the package is installed and before a fault found when
+a later directive is read, while a fault found when an earlier directive is
+read comes first. A clause after the directive that is not a null clause
+raises `99.936`. How a library is searched for, and which routine of it the
+method runs, are not specified here. With ATTRIBUTE the library is not looked
+for, as [the attribute rule](r:dir.method.attribute) says.
 
 ```rexx
 call try '::method m external "library spec_no_such_lib_xyz"'
@@ -544,6 +558,8 @@ call try '::method m external library'
 call try '::method m external ""'
 call try '::method m external "library"'
 call try '::method m external "library spec_no_such_lib_xyz"', '::frob x'
+call try '::class a subclass spec_no_such_super_xyz', -
+  '::method m external "library spec_no_such_lib_xyz"'
 call try '::frob x', '::method m external "library spec_no_such_lib_xyz"'
 exit
 try:
@@ -566,6 +582,7 @@ e: say strip(arg(1) arg(2)) '=>' condition('o')~code
 ::method m external "" => 99.917
 ::method m external "library" => 99.917
 ::method m external "library spec_no_such_lib_xyz" ::frob x => 98.903
+::class a subclass spec_no_such_super_xyz ::method m external "library spec_no_such_lib_xyz" => 98.903
 ::frob x ::method m external "library spec_no_such_lib_xyz" => 99.916
 ```
 
