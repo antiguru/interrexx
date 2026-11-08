@@ -83,19 +83,21 @@ label 2 p NOVALUE
 
 r[cond.information.object]
 The condition object is a directory with these entries, whose names are in
-capital letters. `CONDITION`, `DESCRIPTION` and `INSTRUCTION` are the
-condition's name, description and instruction as the options `C`, `D` and `I`
-of CONDITION answer them. `PACKAGE` is the package that holds the code that
-raised the condition, and `PROGRAM` its name. `POSITION` is the number of the
-line on which the clause that raised the condition starts, in that code, and
-it is absent for NOTREADY. `PROPAGATED` is `0` for a condition that a program
-or the interpreter raised, as opposed to one that a RAISE instruction with
-PROPAGATE raised again, which the RAISE page specifies. `STACKFRAMES` and
+capital letters. `CONDITION`, `DESCRIPTION`, `INSTRUCTION` and `ADDITIONAL`
+are [the entries that the object rule of CONDITION](r:bif.condition.object)
+names. `PACKAGE` is the package that holds the code that raised the condition,
+and `PROGRAM` its name. `POSITION` is the number of the line on which the
+clause that raised the condition starts, in that code, and a NOTREADY that the
+interpreter raised has none. `PROPAGATED` is `0` for a condition that a
+program or the interpreter raised, as opposed to one that a RAISE instruction
+with PROPAGATE raised again, which the RAISE page specifies. `STACKFRAMES` and
 `TRACEBACK` are lists with one item for each active level of code at that
 time, the main program's included, and the text of a traceback line is not
-specified. `ADDITIONAL` is the additional object, and it is present for
-SYNTAX, NOMETHOD, NOSTRING, NOTREADY, and for a user condition that was raised
-with one. SYNTAX adds `CODE`, the error number with its subcode as
+specified. `ADDITIONAL` is present for a SYNTAX, NOMETHOD, NOSTRING or
+NOTREADY that the interpreter raised. A condition that a RAISE instruction
+raised has `POSITION`, and has `ADDITIONAL` exactly when the instruction gave
+one, whatever the name of the condition, as the RAISE page specifies. SYNTAX
+adds `CODE`, the error number with its subcode as
 `41.1`, `RC`, its major number, `ERRORTEXT`, the text of the error that the
 `ERRORTEXT` builtin answers for `RC`, and `MESSAGE`, the text with the details
 of this occurrence. ERROR and FAILURE have `RC`, the return code of the
@@ -170,6 +172,29 @@ SYNTAX     common=1 ADDITIONAL CODE ERRORTEXT MESSAGE POSITION RC
 NOSTRING   common=1 ADDITIONAL POSITION
 NOMETHOD   common=1 ADDITIONAL POSITION
 LOSTDIGITS common=1 POSITION
+```
+
+```rexx
+call on notready name h
+call r
+call r2
+call on error name h2
+call r3
+exit
+r: raise notready return
+r2: raise notready additional ('z') description 'd' return
+r3: raise error 3 additional ('x') return
+h: o = arg(1)
+  say o~hasindex('POSITION') o~hasindex('ADDITIONAL') '['o~description']'
+  return
+h2: say arg(1)~condition arg(1)~hasindex('ADDITIONAL') arg(1)~rc
+  return
+```
+
+```output
+1 0 []
+1 1 [d]
+ERROR 1 3
 ```
 
 r[cond.information.object.values]
@@ -287,7 +312,11 @@ level. A clause that spans several lines counts at its first, and the clause
 of an INTERPRET is the INTERPRET instruction, not a clause of its text. The
 `POSITION` entry is the line of the clause that raised the condition, in the
 code that raised it, so it differs from `SIGL` when the condition was raised
-in a deeper level that has no trap.
+in a deeper level that has no trap. A CALL trap whose
+condition was raised by the RETURN or EXIT of a routine is called in the level
+of the caller, as [the CALL trap rule](r:cond.traps.call) says, and `SIGL` is
+then the line of that RETURN. A CALL trap whose routine is not an internal
+routine does not set `SIGL` at all.
 
 ```rexx
 signal on syntax name h

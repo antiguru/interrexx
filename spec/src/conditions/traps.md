@@ -25,7 +25,9 @@ r[cond.traps.choice]
 When a condition is raised, the trap of that condition answers it if its
 state is `ON` or `DELAY`. When it is `OFF`, the ANY trap answers instead if
 its state is `ON` or `DELAY`. When neither is on, the condition is
-[untrapped](r:cond.index.untrapped). The two kinds of trap are equal in this:
+[untrapped](r:cond.index.untrapped), except that a FAILURE then goes to the
+ERROR trap. A trap that answers a condition changes only its own state, so
+every other trap, ANY included, stays as it was. The two kinds of trap are equal in this:
 a CALL trap for the condition wins over a SIGNAL trap for ANY, and a SIGNAL
 trap for the condition wins over a CALL trap for ANY. A condition that the
 ANY trap catches is still itself: `CONDITION('C')` answers its own name, and
@@ -99,11 +101,12 @@ other SYNTAX
 ```
 
 r[cond.traps.replace]
-A SIGNAL ON, SIGNAL OFF, CALL ON or CALL OFF for a condition replaces the
-trap of that condition as a whole: its state, its kind, SIGNAL or CALL, and
-its name. A CALL ON after a SIGNAL ON for the same condition makes a CALL
-trap and the other way round, and an ON with no NAME goes back to the default
-name. The traps of other conditions are not touched.
+A trap has one setting at a time, and the latest SIGNAL ON, SIGNAL OFF, CALL
+ON or CALL OFF for its condition is that setting: the state, the kind (SIGNAL
+or CALL) and the name come from that instruction alone. A CALL ON and a
+SIGNAL ON for the same condition therefore do not coexist, whichever came
+first, and an ON with no NAME has the default name, not the name of an
+earlier ON. The traps of other conditions are not touched.
 
 ```rexx
 address system
@@ -141,15 +144,18 @@ after 4
 
 r[cond.traps.signal]
 When a SIGNAL trap answers a condition, the clause that raised it ends at
-once, so that an assignment is not made and a command is not sent. The state
-of the trap becomes `OFF`, the condition is recorded as [the information
+once, so that an assignment is not made, and a command whose string was being
+evaluated is not sent. A command whose return code raised ERROR or FAILURE has
+already run, and `RC` holds its return code. The state of the trap becomes
+`OFF`, the condition is recorded as [the information
 page](r:cond.information.record) says, and control goes to the label of the
 trap as [SIGNAL](r:instr.signal.label) goes to a label, ending the open DO,
 LOOP, SELECT and IF constructs of the routine as [that
 rule](r:instr.signal.ends) says. The label is the one that the NAME option
 gave, and the name of the condition when there was none. The trap is `OFF`
 at the label, so a second condition of the same kind that the code there
-raises is not trapped unless that code switches the trap on again.
+raises is not trapped unless that code switches the trap on again or an ANY
+trap is `ON`, which the answer did not change.
 
 ```rexx
 signal on syntax
@@ -169,6 +175,39 @@ say 'not reached either'
 loop 1
 loop 2
 trapped 2 LIT 4 41 OFF
+```
+
+```rexx
+address system
+signal on error name e
+'echo sent; exit 3'
+say 'not reached'
+e: say 'e' rc
+signal on novalue name n
+'echo' unsetvar
+say 'not reached'
+n: say 'n' condition('d')
+```
+
+```output
+sent
+e 3
+n UNSETVAR
+```
+
+```rexx
+signal on syntax name s
+signal on any name a
+x = 1 + 'a'
+s: say 's' condition('c') condition('s')
+y = 1 + 'b'
+say 'not reached'
+a: say 'a' condition('c') condition('s')
+```
+
+```output defect=#110
+s SYNTAX OFF
+a SYNTAX OFF
 ```
 
 r[cond.traps.signal.label]
@@ -224,15 +263,22 @@ first, so that a command has run and an assignment has been made. The state
 of the trap becomes `DELAY`, the condition is recorded, and a routine is
 called before the next clause starts. The next clause is the one after it in
 the same place, so the call is made inside a DO, a SELECT or an IF that holds
-the clause, and between the clauses of the text of an INTERPRET. The routine
+the clause, and between the clauses of the text of an INTERPRET. When the
+clause that raised the condition ends a routine or the program, as a RETURN,
+an EXIT or the last clause does, the routine of the trap is called in the
+level of the caller, after the return and before the clause after the CALL,
+and before the program ends. The routine
 is the one that [CALL](r:instr.call.search) finds for the name of the trap,
 which is the name of the condition when there was no NAME. It gets one
 argument, the [condition object](r:cond.information.argument). The call does
 not change `RESULT`, and what the routine returns is dropped. When the routine
 returns, the trap is `ON` again, and the clause after the one that raised the
-condition runs. `SIGL` is set as [a CALL](r:instr.call.sigl) sets it, to the
-line of the clause that raised the condition, and a routine without PROCEDURE
-shares the variables of the caller, `RC` among them.
+condition runs. When the routine is an internal routine, `SIGL` is set as [a
+CALL](r:instr.call.sigl) sets it, to the line of the clause that raised the
+condition, or to the line of the RETURN when that clause ended a routine. A
+routine without PROCEDURE shares the variables of the caller, `RC` among them.
+When the routine is a `::ROUTINE`, a built-in function or an external routine,
+`SIGL` is not set, and it keeps the value it had.
 
 ```rexx
 address system
@@ -273,6 +319,56 @@ handler 1 The Directory class ERROR CALL DELAY 6 17
 in text 6
 text end
 after interpret
+```
+
+```rexx
+call on notready name h
+say 'start' sigl
+call sub
+say 'main after' sigl result
+exit
+sub:
+  say 'in sub'
+  return '[' || linein() || ']'
+h: say 'h' sigl condition('s')
+  return
+```
+
+```output
+start SIGL
+in sub
+h 9 DELAY
+main after 9 []
+```
+
+```rexx
+address system
+call on error name h
+say 'before' sigl
+'exit 3'
+say 'after' sigl
+exit
+::routine h
+  say 'in h' sigl
+```
+
+```output defect=#111
+before SIGL
+in h SIGL
+after SIGL
+```
+
+```rexx
+address system
+call on error name length
+say 'before' sigl
+'exit 3'
+say 'after' sigl
+```
+
+```output defect=#111
+before SIGL
+after SIGL
 ```
 
 r[cond.traps.call.state]
@@ -327,8 +423,8 @@ address system 'exit 3'
 r[cond.traps.delay]
 While the state of a CALL trap is `DELAY`, a condition that is raised for it
 again does not call the routine. ERROR, FAILURE and NOTREADY raised again are
-ignored. Any other condition is held, and it is answered when the state of
-the trap changes. A CALL OFF or SIGNAL OFF for the condition drops it. A CALL
+ignored. Every other condition that is raised is held, and they are answered in
+the order raised when the state of the trap changes. A CALL OFF or SIGNAL OFF for the condition drops it. A CALL
 ON or SIGNAL ON for the condition answers it at the end of that instruction,
 with the trap that the instruction set. When the routine returns, the CALL
 trap answers it by calling the routine again. A SIGNAL trap is never `DELAY`.
@@ -495,10 +591,12 @@ h 4 DELAY
 ## Deviations
 
 r[cond.traps.deviation.64]
-When the routine of a CALL trap is not found and a SYNTAX trap is `ON`, that
-trap answers the `SYNTAX 43.1` at once, before the next clause runs, and
-`SIGL` is the line of the clause that raised the condition. In ooRexx the
-next clause runs first, and `SIGL` is its line.
+When the CALL that a CALL trap makes fails, and a SYNTAX trap is `ON` in the
+code that holds the CALL trap, that trap answers the SYNTAX condition at once,
+before the next clause runs, and `SIGL` is the line of the clause that raised
+the condition. The CALL fails when the routine is not found, which is `SYNTAX
+43.1`, and when a SYNTAX error leaves the routine. In ooRexx the next clause
+runs first, and `SIGL` is its line.
 
 ```rexx
 address system
@@ -512,6 +610,24 @@ s: say 'syntax trap' condition('o')~code sigl
 
 ```output
 syntax trap 43.1 4
+```
+
+```rexx
+address system
+signal on syntax name s
+call on error name ext
+'exit 3'
+say 'next clause'
+exit
+s: say 's' condition('o')~code sigl condition('o')~position
+::routine ext
+  say 'ext'
+  x = 1 + 'a'
+```
+
+```output
+ext
+s 41.1 5 11
 ```
 
 r[cond.traps.deviation.75]
@@ -594,5 +710,33 @@ r2: raise user foo description 'second' return
 enter h first DELAY
 held, before signal on
 sg second SIGNAL OFF
+main after
+```
+
+Several conditions that are held are answered one after the other, in the
+order raised.
+
+```rexx
+call on user foo name h
+call r 'first'
+say 'main after'
+exit
+r: raise user foo description (arg(1)) return
+h: say 'enter h' condition('d')
+  if condition('d') = 'first' then do
+    call r 'second'
+    call r 'third'
+  end
+  say 'leave h' condition('d')
+  return
+```
+
+```output
+enter h first
+leave h first
+enter h second
+leave h second
+enter h third
+leave h third
 main after
 ```

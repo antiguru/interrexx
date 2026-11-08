@@ -2,7 +2,7 @@
 element: "Conditions"
 kind: chapter
 ansi: "8.2.1, 8.4.1"
-rexxref: "Conditions and Condition Traps"
+rexxref: "Conditions and Condition Traps; Conditions and Condition Traps > Action Taken when a Condition Is Not Trapped"
 ---
 
 # Conditions
@@ -36,17 +36,13 @@ from a trapped condition, and this chapter links its rules.
 
 r[cond.index.names]
 The conditions are named ANY, ERROR, FAILURE, HALT, LOSTDIGITS, NOMETHOD,
-NOSTRING, NOTREADY, NOVALUE, SYNTAX and USER. A USER
-condition is the word USER with a name, a symbol that is read as a constant in
-upper case, so `user Foo` and `user FOO` are one condition, `USER FOO`, and
-`CONDITION('C')` answers it in that form. A user condition is a condition of
-its own, whatever its name: `user error` is not ERROR, and an ERROR trap does
-not catch it. ANY is not raised by anything.
-It is a trap that catches the others, as [the choice
-rule](r:cond.traps.choice) says. Which of the names each instruction accepts
-is the subject of [the ON rule of SIGNAL](r:instr.signal.on) and [that of
-CALL](r:instr.call.on): SIGNAL accepts all of them, and CALL only ERROR,
-FAILURE, HALT, NOTREADY, ANY and USER names.
+NOSTRING, NOTREADY, NOVALUE, SYNTAX and USER. A USER condition is the word
+USER with a name, and it is a condition of its own, whatever its name: `user
+error` is not ERROR, and an ERROR trap does not catch it. The form of the name
+and which of the two instructions accepts which condition are in [the ON rule
+of SIGNAL](r:instr.signal.on) and [that of CALL](r:instr.call.on). ANY is not
+raised by anything. It is a trap that catches the others, as [the choice
+rule](r:cond.traps.choice) says.
 
 ```rexx
 call on user Foo name h1
@@ -111,7 +107,9 @@ r[cond.index.untrapped]
 When a condition is raised and neither its trap nor the ANY trap is `ON` or
 `DELAY`, ERROR, FAILURE, LOSTDIGITS, NOSTRING, NOTREADY, NOVALUE and the user
 conditions are ignored: the clause goes on as if nothing had happened, and
-the trap stays `OFF`. HALT and NOMETHOD are not ignored. An untrapped HALT
+the trap stays `OFF`. The exception is a FAILURE that neither its trap nor
+ANY answers: it is raised as ERROR, and the ERROR trap answers it when that
+trap is `ON` or `DELAY`. HALT and NOMETHOD are not ignored. An untrapped HALT
 raises `SYNTAX 4.1` instead, and an untrapped NOMETHOD `SYNTAX 97.1`, and
 that SYNTAX condition is raised at the same place, so a SYNTAX trap catches
 it with `CONDITION('C')` answering `SYNTAX`. An ANY trap catches HALT and
@@ -157,6 +155,25 @@ SYNTAX 4.1 4
 SYNTAX 97.1 97
 HALT
 NOMETHOD
+```
+
+```rexx
+address nosuch
+signal on error name e
+'exit 3'
+say 'not reached'
+e: say 'e' condition('c') rc condition('d')
+call on error name h
+'exit 4'
+say 'after' rc
+exit
+h: say 'h' condition('c') rc; return
+```
+
+```output
+e ERROR 30 exit 3
+h ERROR 30
+after 30
 ```
 
 r[cond.index.syntax]
