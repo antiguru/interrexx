@@ -75,11 +75,11 @@ x = "abc"~substr(0)        93.924 93
 
 ## The numbers
 
-> Each entry gives the major number, what kind of construct or operation
-> raises it, and a rule that raises it where one is written. The grouping is
-> by the usual kind of fault, and a number may have subcodes of another kind.
-> The examples that follow each list run one clause for most rows and print
-> the code that its trap reads.
+> Each entry gives the major number, a short label, constructs that raise it
+> with the full code, and a rule of this book that raises it where one is
+> written. The grouping is by the usual kind of fault, and a number may have
+> subcodes of another kind. The examples run the listed constructs and print
+> the code that the trap reads.
 
 ### Faults in the form of the text
 
@@ -89,57 +89,55 @@ x = "abc"~substr(0)        93.924 93
 > when it runs, as [the reading rule](r:cond.index.read) says.
 
 r[cond.errors.form]
-The numbers below usually name a fault in the form of the text: a string, a
-comment, a character, a structure of blocks or the form of one clause. Two of
-them have subcodes that are raised by values when the clause runs, 7 for a
-SELECT that finds no WHEN to take, as [the OTHERWISE
-rule](r:instr.select.otherwise) says, and 25 for a NUMERIC FORM VALUE that
-holds no form, as [the FORM rule](r:instr.numeric.form.error) says.
-* 6: a string or a comment that is still open where the text ends,
+The numbers below usually name a fault in the form of the text, and some of
+them also have subcodes that are raised by values when the clause runs, such
+as 7.3, 25.11 and 31.2.
+* 6, unfinished literal or comment: `say 'a` 6.2, `/* open` 6.1;
   [rule](r:lex.index.read-first).
-* 7: a SELECT that is built wrongly, or has no branch to take,
-  [rule](r:instr.select.syntax).
-* 8: a THEN or an ELSE with no IF or WHEN before it to pair with,
-  [rule](r:instr.if.else).
-* 9: a WHEN or an OTHERWISE met where no SELECT is open,
+* 7, SELECT with no usable branch: `select; say 1; end` 7.2, `select; end`
+  7.1, `select; when 0 then nop; end` 7.3; [rule](r:instr.select.syntax),
   [rule](r:instr.select.otherwise).
-* 10: an END with no open block to close, or one that names another block,
+* 8, THEN or ELSE with no partner: `then say 1` 8.1, `else say 1` 8.2;
+  [rule](r:instr.if.else).
+* 9, WHEN or OTHERWISE outside SELECT: `when 1 then nop` 9.1, `otherwise nop`
+  9.2; [rule](r:instr.select.otherwise).
+* 10, END that closes nothing: `end` 10.1, `do; end x` 10.3;
   [rule](r:instr.do.end).
-* 13: a character that the language does not allow in a program,
+* 13, foreign character: `say 1 #` 13.1, `x = 1 ^ 2` 13.1;
   [rule](r:lex.characters.set).
-* 14: text that ends inside a block whose END has not come,
-  [rule](r:instr.do.end).
-* 15: a string written with an X or a B whose digits break the grouping or
-  digit rules of that form, [rule](r:lex.literals.hex.digit).
-* 18: an IF or WHEN test that no THEN follows, [rule](r:instr.if.syntax).
-* 19: an operand that the instruction wants as a name or a string and does
-  not find, [rule](r:instr.call.error).
-* 20: an instruction that needs a symbol at some place and finds another
-  kind of token, or none, [rule](r:instr.procedure.syntax).
-* 21: more tokens after an instruction that has all its operands,
+* 14, block left open: `do; say 1` 14.1, `if 1 then do; say 2` 14.1,
+  `do 1 to 2 to 3` 14.5; [rule](r:instr.do.end).
+* 15, malformed hex or binary literal: `say 'zz'x` 15.3, `say '12'b` 15.4,
+  `say '1 2'x` 15.5; [rule](r:lex.literals.hex.digit).
+* 18, IF with no THEN: `if 1 say 'a'` 18.1, `if 1; say 2` 18.1;
+  [rule](r:instr.if.syntax).
+* 19, missing operand: `call` 19.2, `signal` 19.4; [rule](r:instr.call.error).
+* 20, wrong token in an operand: `drop a b 'c'` 20.901, `procedure expose 'a'`
+  20.902, `parse var 'x'` 20.904, `numeric` 20.905, `drop ()` 20.906;
+  [rule](r:instr.procedure.syntax).
+* 21, tokens left over: `nop 1` 21.901, `call on error name lbl extra` 21.903;
   [rule](r:instr.call.on.error).
-* 22: a string literal whose bytes the character set refuses.
-* 23: a computed string whose bytes the character set refuses.
-* 25: a keyword that the instruction does not offer at that place,
-  [rule](r:instr.numeric.form.error).
-* 27: a DO or LOOP whose controller and keyword parts are put together in a
-  way that the form forbids, [rule](r:instr.do.syntax).
-* 30: a symbol longer than the limit of the symbol rule,
+* 25, keyword not offered: `signal on foo` 25.3, `numeric form foo` 25.11,
+  `parse foo x` 25.12, `numeric 1` 25.15; [rule](r:instr.numeric.form.error).
+* 27, clashing DO parts: `do forever x` 27.901, `do i=1 to 2 until 1 while 1`
+  27.1; [rule](r:instr.do.syntax).
+* 30, over-long symbol: `copies('a', 251) '= 1'` 30.1;
   [rule](r:lex.symbols.length).
-* 31: an assignment whose target is spelled like a constant,
+* 31, constant used as a variable: `1x = 2` 31.2, `drop 1a` 31.2,
+  `parse value 'x' with .a` 31.3, `x = '1a'; drop (x)` 31.2;
   [rule](r:lex.symbols.constant).
-* 35: an expression that cannot be parsed, because an operand or an operator
-  is missing or misplaced, [rule](r:expr.index.syntax).
-* 36: an opening parenthesis or bracket that the clause never closes,
+* 35, expression that does not parse: `x = 1 +` 35.1, `x = * 2` 35.1, `say ()`
+  35.1; [rule](r:expr.index.syntax).
+* 36, bracket left open: `x = (1` 36.901, `x = a[1` 36.902;
   [rule](r:expr.index.syntax).
-* 37: a closing parenthesis or bracket that has no opener of its own kind,
+* 37, closer with no opener: `x = ]` 37.901, `x = (1]` 37.901, `x = 1)` 37.2;
   [rule](r:expr.index.syntax).
-* 38: a template whose contents the template form does not allow,
-  [rule](r:parse.patterns.syntax).
-* 46: a variable reference in parentheses that is not closed or not a single
-  name, [rule](r:instr.drop.syntax).
-* 47: a label clause in text that cannot hold one, such as the text of an
-  INTERPRET, [rule](r:lex.clauses.label).
+* 38, malformed template: `parse var x a 3 3 b b ) c` 38.1,
+  `parse var x 'a' +` 38.901; [rule](r:parse.patterns.syntax).
+* 46, malformed name in parentheses: `drop (x y` 46.1;
+  [rule](r:instr.drop.syntax).
+* 47, label in a text that cannot hold one: `x: say 1` 47.1;
+  [rule](r:lex.clauses.label).
 
 > The numbers 22 and 23 would apply where a string holds a byte that the
 > character set cannot hold. Every string of this book may hold any of the
@@ -148,66 +146,124 @@ holds no form, as [the FORM rule](r:instr.numeric.form.error) says.
 
 ```rexx
 call try "say 'a"
+call try "/* open"
 call try "select; say 1; end"
-call try "if 1 then say 'a'; else; else say 'b'"
-call try "when 1 then say 'a'"
-call try "end"
-call try "say 1 #"
-call try "do; say 1"
-call try "say 'zz'x"
-call try "if 1 say 'a'"
-call try "call"
-call try "drop a b 'c'"
-call try "call on error name lbl extra"
-call try copies("a", 251) "= 1"
-call try "nop 1"
-call try "numeric form foo"
-call try "numeric form value 'foo'"
+call try "select; end"
 call try "select; when 0 then nop; end"
+call try "then say 1"
+call try "else say 1"
+call try "when 1 then nop"
+call try "otherwise nop"
+call try "end"
+call try "do; end x"
+call try "say 1 #"
+call try "x = 1 ^ 2"
+call try "do; say 1"
+call try "if 1 then do; say 2"
+call try "do 1 to 2 to 3"
+call try "say 'zz'x"
+call try "say '12'b"
+call try "say '1 2'x"
+call try "if 1 say 'a'"
+call try "if 1; say 2"
+call try "call"
+call try "signal"
+call try "drop a b 'c'"
+call try "procedure expose 'a'"
+call try "parse var 'x'"
+call try "numeric"
+call try "drop ()"
+call try "nop 1"
+call try "call on error name lbl extra"
+call try "signal on foo"
+call try "numeric form foo"
+call try "parse foo x"
+call try "numeric 1"
 call try "do forever x"
+call try "do i=1 to 2 until 1 while 1"
+call try copies('a', 251) '= 1', 'copies(''a'', 251) ''= 1'''
 call try "1x = 2"
+call try "drop 1a"
+call try "parse value 'x' with .a"
+call try "x = '1a'; drop (x)"
 call try "x = 1 +"
+call try "x = * 2"
+call try "say ()"
 call try "x = (1"
+call try "x = a[1"
 call try "x = ]"
+call try "x = (1]"
+call try "x = 1)"
 call try "parse var x a 3 3 b b ) c"
+call try "parse var x 'a' +"
 call try "drop (x y"
 call try "x: say 1"
 exit
 try:
   signal on syntax name e
   interpret arg(1)
-  say arg(1) '=> none'
+  say left(arg(1), 44) '=> none'
   return
-e: say left(arg(1), 40) condition('o')~code
+e: label = arg(1)
+  if arg(2, 'E') then label = arg(2)
+  say left(label, 44) condition('o')~code
   return
 ```
 
 ```output
-say 'a                                   6.2
-select; say 1; end                       7.2
-if 1 then say 'a'; else; else say 'b'    8.2
-when 1 then say 'a'                      9.1
-end                                      10.1
-say 1 #                                  13.1
-do; say 1                                14.1
-say 'zz'x                                15.3
-if 1 say 'a'                             18.1
-call                                     19.2
-drop a b 'c'                             20.901
-call on error name lbl extra             21.903
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 30.1
-nop 1                                    21.901
-numeric form foo                         25.11
-numeric form value 'foo'                 25.11
-select; when 0 then nop; end             7.3
-do forever x                             27.901
-1x = 2                                   31.2
-x = 1 +                                  35.1
-x = (1                                   36.901
-x = ]                                    37.901
-parse var x a 3 3 b b ) c                38.1
-drop (x y                                46.1
-x: say 1                                 47.1
+say 'a                                       6.2
+/* open                                      6.1
+select; say 1; end                           7.2
+select; end                                  7.1
+select; when 0 then nop; end                 7.3
+then say 1                                   8.1
+else say 1                                   8.2
+when 1 then nop                              9.1
+otherwise nop                                9.2
+end                                          10.1
+do; end x                                    10.3
+say 1 #                                      13.1
+x = 1 ^ 2                                    13.1
+do; say 1                                    14.1
+if 1 then do; say 2                          14.1
+do 1 to 2 to 3                               14.5
+say 'zz'x                                    15.3
+say '12'b                                    15.4
+say '1 2'x                                   15.5
+if 1 say 'a'                                 18.1
+if 1; say 2                                  18.1
+call                                         19.2
+signal                                       19.4
+drop a b 'c'                                 20.901
+procedure expose 'a'                         20.902
+parse var 'x'                                20.904
+numeric                                      20.905
+drop ()                                      20.906
+nop 1                                        21.901
+call on error name lbl extra                 21.903
+signal on foo                                25.3
+numeric form foo                             25.11
+parse foo x                                  25.12
+numeric 1                                    25.15
+do forever x                                 27.901
+do i=1 to 2 until 1 while 1                  27.1
+copies('a', 251) '= 1'                       30.1
+1x = 2                                       31.2
+drop 1a                                      31.2
+parse value 'x' with .a                      31.3
+x = '1a'; drop (x)                           31.2
+x = 1 +                                      35.1
+x = * 2                                      35.1
+say ()                                       35.1
+x = (1                                       36.901
+x = a[1                                      36.902
+x = ]                                        37.901
+x = (1]                                      37.901
+x = 1)                                       37.2
+parse var x a 3 3 b b ) c                    38.1
+parse var x 'a' +                            38.901
+drop (x y                                    46.1
+x: say 1                                     47.1
 ```
 
 ### Faults in the values and the flow
@@ -218,82 +274,120 @@ x: say 1                                 47.1
 r[cond.errors.run]
 The numbers below usually name a fault that the values or the flow of control
 cause, at the clause that meets it.
-* 16: a SIGNAL or a trap name that no label of the code carries,
-  [rule](r:instr.signal.label).
-* 17: a PROCEDURE reached with another clause before it, or outside an
-  internal routine, [rule](r:instr.procedure.first).
-* 24: a TRACE setting that is neither a number nor a valid letter,
-  [rule](r:instr.trace.invalid).
-* 26: a value used as a whole number, such as a setting or a count or an
-  exponent, that is not one or lies outside the range allowed,
+* 16, jump to a missing label: `signal nolabelhere` 16.1, `signal value 'zz'`
+  16.1; [rule](r:instr.signal.label).
+* 17, misplaced PROCEDURE: `procedure` 17.1; [rule](r:instr.procedure.first).
+* 24, unknown TRACE setting: `trace x1` 24.1; [rule](r:instr.trace.invalid).
+* 26, value that is no whole number: `numeric digits 'a'` 26.5,
+  `numeric digits 0` 26.5, `numeric fuzz -1` 26.6, `x = 2 ** 1.5` 26.8;
   [rule](r:num.settings.digits).
-* 28: a LEAVE or an ITERATE with no block of that name, or none at all, to
-  act on, [rule](r:instr.leave.target).
-* 29: the name of an ADDRESS environment that is longer than the interpreter
-  takes.
-* 33: a NUMERIC DIGITS and FUZZ pair in which FUZZ is not below DIGITS,
+* 28, LEAVE or ITERATE with no target: `leave` 28.1, `iterate` 28.2,
+  `leave nosuchzz` 28.3, `iterate nosuchzz` 28.4;
+  [rule](r:instr.leave.target).
+* 29, over-long ADDRESS name: `address value copies('E', 1000)` 29.1.
+* 33, FUZZ not below DIGITS: `numeric digits 5; numeric fuzz 5` 33.1;
   [rule](r:num.settings.fuzz).
-* 34: an operand of a test or of a logical operator that is anything but a
-  one-character `0` or `1`, [rule](r:expr.logical.value).
-* 40: a call whose arguments a routine rejects, for their count (too
-  [few](r:bif.index.call.too-few) or [many](r:bif.index.call.too-many)) or
-  for a value outside what the routine takes.
-* 41: an operand of arithmetic or of a numeric comparison that holds no
-  number, [rule](r:num.index.use).
-* 42: arithmetic whose result cannot be represented or is not defined, such
-  as an overflow, an underflow, a division by zero or zero to a negative
-  power, [rule](r:num.limits.overflow).
-* 43: a routine name that nothing supplies, [rule](r:instr.call.search).
-* 44: a clause that needs a value from a call that returned none,
+* 34, operand that is no truth value: `if 'a' then say 1` 34.1, `x = 1 & 'a'`
+  34.901, `x = \'a'` 34.901; [rule](r:expr.logical.value).
+* 40, argument count or value refused: `x = abs()` 40.3, `x = abs(1, 2)` 40.4,
+  `x = left('abc', 'q')` 40.12, `x = random(5, 1)` 40.33;
+  [rule](r:bif.index.call.too-few), [rule](r:bif.index.call.too-many).
+* 41, arithmetic on a non-number: `x = 1 + 'a'` 41.1, `x = -'a'` 41.1,
+  `x = 'a' % 2` 41.1; [rule](r:num.index.use).
+* 42, arithmetic with no result: `x = 9 // 0` 42.3, `x = 1e999999999 * 10`
+  42.901, `x = 1e-999999999 / 10` 42.902, `x = 0 ** -1` 42.903;
+  [rule](r:num.limits.overflow).
+* 43, call to an unknown routine: `x = nosuchroutine_spec_errors()` 43.1,
+  `call nosuchroutine_spec_errors` 43.1,
+  `::requires 'nonexistent_spec_errors_zz.rex'` 43.901;
+  [rule](r:instr.call.search).
+* 44, call that gives no value: `x = nothing()` 44.1, `say nothing()` 44.1;
   [rule](r:expr.terms.call.result).
-* 45: none of this book's clauses: the engines raise 44 where it fits.
 
-> The number 29 is raised for an ADDRESS name beyond a length that this book
-> does not fix. The number 45 is meant for a program that is called for a
-> value and ends without one; both engines raise 44 at the clause that makes
-> such a call, so 45 has no example here.
+> The number 29 has no rule, and the length at which it is raised is not
+> specified. The number 45 has no construct here, because both engines raise
+> 44 where a call that is made for a value reaches a RETURN that carries
+> none, in an internal routine, a ::ROUTINE or a program file.
 
 ```rexx
 call try "signal nolabelhere"
+call try "signal value 'zz'"
 call try "procedure"
 call try "trace x1"
 call try "numeric digits 'a'"
+call try "numeric digits 0"
+call try "numeric fuzz -1"
+call try "x = 2 ** 1.5"
 call try "leave"
+call try "iterate"
+call try "leave nosuchzz"
+call try "iterate nosuchzz"
+call try "address value copies('E', 1000)"
 call try "numeric digits 5; numeric fuzz 5"
 call try "if 'a' then say 1"
+call try "x = 1 & 'a'"
+call try "x = \'a'"
 call try "x = abs()"
+call try "x = abs(1, 2)"
 call try "x = left('abc', 'q')"
-call try "address value '"copies("E", 1000)"'"
+call try "x = random(5, 1)"
 call try "x = 1 + 'a'"
+call try "x = -'a'"
+call try "x = 'a' % 2"
 call try "x = 9 // 0"
+call try "x = 1e999999999 * 10"
+call try "x = 1e-999999999 / 10"
+call try "x = 0 ** -1"
 call try "x = nosuchroutine_spec_errors()"
+call try "call nosuchroutine_spec_errors"
 call try "x = nothing()"
+call try "say nothing()"
 exit
 try:
   signal on syntax name e
   interpret arg(1)
-  say arg(1) '=> none'
+  say left(arg(1), 44) '=> none'
   return
-e: say left(arg(1), 40) condition('o')~code
+e: label = arg(1)
+  if arg(2, 'E') then label = arg(2)
+  say left(label, 44) condition('o')~code
   return
 nothing: return
 ```
 
 ```output
-signal nolabelhere                       16.1
-procedure                                17.1
-trace x1                                 24.1
-numeric digits 'a'                       26.5
-leave                                    28.1
-numeric digits 5; numeric fuzz 5         33.1
-if 'a' then say 1                        34.1
-x = abs()                                40.3
-x = left('abc', 'q')                     40.12
-address value 'EEEEEEEEEEEEEEEEEEEEEEEEE 29.1
-x = 1 + 'a'                              41.1
-x = 9 // 0                               42.3
-x = nosuchroutine_spec_errors()          43.1
-x = nothing()                            44.1
+signal nolabelhere                           16.1
+signal value 'zz'                            16.1
+procedure                                    17.1
+trace x1                                     24.1
+numeric digits 'a'                           26.5
+numeric digits 0                             26.5
+numeric fuzz -1                              26.6
+x = 2 ** 1.5                                 26.8
+leave                                        28.1
+iterate                                      28.2
+leave nosuchzz                               28.3
+iterate nosuchzz                             28.4
+address value copies('E', 1000)              29.1
+numeric digits 5; numeric fuzz 5             33.1
+if 'a' then say 1                            34.1
+x = 1 & 'a'                                  34.901
+x = \'a'                                     34.901
+x = abs()                                    40.3
+x = abs(1, 2)                                40.4
+x = left('abc', 'q')                         40.12
+x = random(5, 1)                             40.33
+x = 1 + 'a'                                  41.1
+x = -'a'                                     41.1
+x = 'a' % 2                                  41.1
+x = 9 // 0                                   42.3
+x = 1e999999999 * 10                         42.901
+x = 1e-999999999 / 10                        42.902
+x = 0 ** -1                                  42.903
+x = nosuchroutine_spec_errors()              43.1
+call nosuchroutine_spec_errors               43.1
+x = nothing()                                44.1
+say nothing()                                44.1
 ```
 
 ### Faults of the interpreter and its services
@@ -301,25 +395,20 @@ x = nothing()                            44.1
 r[cond.errors.system]
 The numbers below usually name a fault that is neither in the text nor in a
 value of the program: the interpreter that cannot start the program or go on,
-a program that is stopped, and a call into the system that fails.
-* 3: the program cannot be loaded to begin with.
-* 4: the program was halted and nothing trapped it,
+a program that is stopped, and a request to the system that fails.
+* 3, a program file that does not exist: 3.901, with the exit status `253`.
+* 4, a HALT that no trap answers: `raise halt` 4.1;
   [rule](r:cond.halt.untrapped).
-* 5: the interpreter lacks a resource that it needs to go on.
-* 11: nesting of parentheses or of calls beyond the limit,
+* 11, parentheses or calls nested beyond the limit;
   [rule](r:expr.index.nesting).
-* 39: an expression that the evaluator gives up on for its size or depth.
-* 48: a call that the interpreter makes into the system and that fails, such
-  as one on the external queue, [rule](r:instr.queue.queue).
-* 49: a consistency check of the interpreter itself that fails.
+* 48, a request to the system that fails: `call rxqueue 'Set', 'nosuchq'`
+  followed by `queue 'x'` 48.1; [rule](r:instr.queue.queue).
 
-> The number 3 is raised for a program that cannot be loaded, such as a
-> program file that cannot be found. It comes before any clause runs, so no
-> trap sees it. The numbers 5, 39 and 49 name states that this book does not
-> tie to a clause: how much a program can ask for before 5 is raised, how
-> complex an expression can be before 39, and what 49 reports are not
-> specified. The number 4 is the error that a HALT becomes when nothing
-> traps it, and a RAISE HALT is a deterministic way to reach it.
+> The number 3 comes before any clause runs, so no trap sees it. The numbers
+> 5, 39 and 49 name states that this book does not tie to a clause: how much
+> a program can ask for before 5 is raised, how complex an expression can be
+> before 39, and what 49 reports are not specified. A RAISE HALT is a
+> deterministic way to reach 4.
 
 ```rexx
 call try "call gone; queue 'x'"
@@ -355,87 +444,140 @@ e: say condition('o')~code rc
 r[cond.errors.objects]
 The numbers from 88 up usually name faults of messages, of objects, of
 directives and of native code.
-* 88: an argument that is missing or surplus for a routine or method of the
-  native family, [rule](r:bif.index.call.native).
-* 89: a USE clause whose target is neither a variable nor a message term,
+* 88, argument refused by native code: `x = filespec('N')` 88.901,
+  `x = .directory~new~put(1)` 88.901, `x = charin(, 0, -1)` 88.907;
+  [rule](r:bif.index.call.native).
+* 89, USE target of the wrong kind: `use arg a, 'b'` 89.1, `use arg (a)` 89.1;
   [rule](r:instr.use.syntax).
-* 90: a library routine or method entry that a directive names and the
-  system cannot supply, [rule](r:dir.routine.external).
-* 91: a message term used for its value whose method ended without one,
+* 90, EXTERNAL entry that is not there:
+  `::routine r external 'registered nonezz'` 90.999;
+  [rule](r:dir.routine.external).
+* 91, message term with no result: `say 'a' .m~new~bar 'b'` 91.999;
   [rule](r:expr.messages.cascade).
-* 92: a failure in the object-linking interface of a platform.
-* 93: a method, or a builtin that is a String method, given an argument that
-  it cannot accept, [rule](r:conv.position.check).
-* 97: a message that finds no method of its name in the class of the
-  receiver, [rule](r:expr.messages.name).
-* 98: a fault found while a clause or a directive runs that no lower number
-  names, such as the load of what a directive requires
-  ([rule](r:dir.requires.failure)) or a NOVALUE under ::OPTIONS
-  ([rule](r:dir.options.condition)).
-* 99: a fault in the form of a directive, or an instruction in a place where
-  it cannot stand, found when the text is read,
-  [rule](r:dir.class.duplicate).
+* 93, argument value refused: `x = left('abc', -2)` 93.923,
+  `x = copies('ab', -2)` 93.906, `x = 'abc'~substr(0)` 93.924, `x = d2c(-1)`
+  93.927, `x = .array~new('x')` 93.906,
+  `x = stream('nofile_zz', 'c', 'bogus')` 93.914;
+  [rule](r:conv.position.check).
+* 97, message that is not answered: `x = 'a'~foo` 97.1, `x = .nil~foo` 97.1,
+  `.m~new~p` 97.2; [rule](r:expr.messages.name), [rule](r:conv.string.object).
+* 98, fault of a running clause or directive: `raise propagate` 98.918,
+  `::class a subclass nosuchzzclass` 98.909,
+  `::routine r external 'library nonezz'` 98.903;
+  [rule](r:dir.requires.failure), [rule](r:dir.options.condition).
+* 99, fault in a directive or its place: `::routine zz` 99.914, `expose x`
+  99.908, `forward to (.nil)` 99.923, `use local a` 99.915,
+  `::class a (twice)` 99.901; [rule](r:dir.class.duplicate).
 
-> The numbers 40, 88 and 93 all mean arguments that do not fit, and which of
-> them a builtin or a method raises depends on the fault and is named on its
-> own page: `left('abc', 'q')` raises 40 and `left('abc', -2)` raises 93.
-> The number 92 belongs to a platform interface that this book does not
-> specify, so no rule or example raises it. The numbers 98 and 99 differ in
-> when the fault is found: 99 is a fault of the form that is found when the
-> text is read, and 98 is a fault found when the clause or directive takes
-> effect. A directive in the text of an INTERPRET is no directive, so it
-> raises 99 there.
+> The numbers 40, 88 and 93 all refuse arguments, and which of them a builtin
+> or a method raises is named on its own page. The number 92 belongs to a
+> platform interface that this book does not specify, so no rule or example
+> raises it. The numbers 98 and 99 differ in when the fault is found: 99 is a
+> fault of form found when the text is read, and 98 is a fault found when
+> the clause or directive takes effect. A directive in the text of an
+> INTERPRET is no directive, so it raises 99 there.
 
 ```rexx
 call try "x = filespec('N')"
+call try "x = .directory~new~put(1)"
+call try "x = charin(, 0, -1)"
 call try "use arg a, 'b'"
-call try "x = .array~new~foo~bar"
+call try "use arg (a)"
+call try "x = left('abc', -2)"
+call try "x = copies('ab', -2)"
 call try "x = 'abc'~substr(0)"
+call try "x = d2c(-1)"
+call try "x = .array~new('x')"
+call try "x = stream('nofile_zz', 'c', 'bogus')"
+call try "x = 'a'~foo"
 call try "x = .nil~foo"
+call try "raise propagate"
 call try "::routine zz"
-call pk 'registered'
-call pk 'library'
+call try "expose x"
+call try "forward to (.nil)"
+call try "use local a"
 exit
 try:
   signal on syntax name e
   interpret arg(1)
-  say arg(1) '=> none'
+  say left(arg(1), 44) '=> none'
   return
-e: say left(arg(1), 40) condition('o')~code
-  return
-pk:
-  signal on syntax name pe
-  use arg kind
-  src = .array~of('::routine r external "'kind' spec_errors_none"')
-  p = .package~new('n', src)
-  return
-pe: say 'external' left(kind, 11) condition('o')~code
+e: label = arg(1)
+  if arg(2, 'E') then label = arg(2)
+  say left(label, 44) condition('o')~code
   return
 ```
 
 ```output
-x = filespec('N')                        88.901
-use arg a, 'b'                           89.1
-x = .array~new~foo~bar                   97.1
-x = 'abc'~substr(0)                      93.924
-x = .nil~foo                             97.1
-::routine zz                             99.914
-external registered  90.999
-external library     98.903
+x = filespec('N')                            88.901
+x = .directory~new~put(1)                    88.901
+x = charin(, 0, -1)                          88.907
+use arg a, 'b'                               89.1
+use arg (a)                                  89.1
+x = left('abc', -2)                          93.923
+x = copies('ab', -2)                         93.906
+x = 'abc'~substr(0)                          93.924
+x = d2c(-1)                                  93.927
+x = .array~new('x')                          93.906
+x = stream('nofile_zz', 'c', 'bogus')        93.914
+x = 'a'~foo                                  97.1
+x = .nil~foo                                 97.1
+raise propagate                              98.918
+::routine zz                                 99.914
+expose x                                     99.908
+forward to (.nil)                            99.923
+use local a                                  99.915
 ```
 
-> The number 91 needs a method that returns nothing and a class to hold it,
-> so its example is a program of its own.
+> The directive constructs run as the source lines of a package, so that the
+> fault is found when the package is built.
 
 ```rexx
-signal on syntax name e
+call pk "::routine r external 'registered nonezz'"
+call pk "::routine r external 'library nonezz'"
+call pk "::class a subclass nosuchzzclass"
+call pk "::class a", "::class a"
+call pk "::requires 'nonexistent_spec_errors_zz.rex'"
+exit
+pk:
+  signal on syntax name pe
+  src = .array~new
+  do i = 1 to arg()
+    src~append(arg(i))
+  end
+  p = .package~new('n', src)
+  say arg(1) '=> none'
+  return
+pe: say left(arg(1), 44) condition('o')~code
+  return
+```
+
+```output
+::routine r external 'registered nonezz'     90.999
+::routine r external 'library nonezz'        98.903
+::class a subclass nosuchzzclass             98.909
+::class a                                    99.901
+::requires 'nonexistent_spec_errors_zz.rex'  43.901
+```
+
+> The numbers 91 and 97.2 need a class to hold the method, so their example
+> is a program of its own.
+
+```rexx
+signal on syntax name e1
 say 'a' .m~new~bar 'b'
-e: say condition('o')~code
+e1: say condition('o')~code
+signal on syntax name e2
+.m~new~p
+e2: say condition('o')~code
 ::class m
 ::method bar
+  return
+::method p private
   return
 ```
 
 ```output
 91.999
+97.2
 ```
