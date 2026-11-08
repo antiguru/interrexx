@@ -21,9 +21,10 @@ r[instr.exit.program]
 EXIT in the main program, or in an internal routine of it that a CALL or a
 function call started, ends the program. No clause after the EXIT runs, the
 routines that were being called are abandoned without returning, and a
-function call that is still waiting for its value does not raise `SYNTAX
-44.1`. An EXIT in the text of an INTERPRET ends the program too, as [the rule
-on leaving the text](r:instr.interpret.transfer) says.
+function call that is still waiting for its value does not raise
+`SYNTAX 44.1`. An EXIT in the text of an INTERPRET that such code runs ends
+the program too, and in a method or a `::ROUTINE` it ends that unit, as [the
+rule on leaving the text](r:instr.interpret.transfer) says.
 
 ```rexx
 say 'start'

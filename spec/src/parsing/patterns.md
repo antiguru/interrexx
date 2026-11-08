@@ -319,13 +319,13 @@ abcde|de|de|fghij
 r[parse.patterns.length.before]
 `<n` puts the point `n` characters before the start of the previous break,
 limited to position 1, and it does not leave the targets between the previous
-break and `<n` the piece that the earlier triggers gave them. Those targets receive the `n` characters
-that lie just before the start of the previous break, or the characters from
-position 1 when fewer lie there, and the next piece begins at the point. So
-`<n` reads again the text before the break that precedes it. It is not the
-same as `-n`, which leaves the preceding piece to run to the end of the
-source. When no break precedes it, the start is position 1 and the targets
-before `<n` receive the null string.
+break and `<n` the piece that the earlier triggers gave them. Those targets
+receive the `n` characters that lie just before the start of the previous
+break, or the characters from position 1 when fewer lie there, and the next
+piece begins at the point. So `<n` reads again the text before the break that
+precedes it. It is not the same as `-n`, which leaves the preceding piece to
+run to the end of the source. When no break precedes it, the start is position
+1 and the targets before `<n` receive the null string.
 
 ```rexx
 parse value 'abcdefghij' with u 'f' near <3 rest
@@ -453,16 +453,16 @@ a|bcdefghij
 ## Errors in the template
 
 r[parse.patterns.syntax]
-A template is checked when the program is read. A token that cannot be part
-of a template, such as `*`, `||`, `>>` or `>=`, raises `SYNTAX 38.1`. A sign,
+A template is checked when the program is read. A token that cannot be part of
+a template, such as `*`, `||`, `>>` or `>=`, raises `SYNTAX 38.1`. A sign,
 `=`, `>` or `<` followed by any token other than a number or an opening
-parenthesis, a comma or a symbol that does not start with a digit or a period among
-them, raises `SYNTAX 38.2`, and one
-that is the last token of the clause raises `SYNTAX 38.901`. (A `-` that ends
-a line is a [continuation](r:lex.clauses.continuation) and not a template
-token.) A program file that holds any of these does not run at all, and its
-exit code is 218. The text of INTERPRET raises the same error
-[when it is read](r:instr.interpret.whole).
+parenthesis, a comma or a symbol that does not start with a digit or a period
+among them, raises `SYNTAX 38.2`, and one that is the last token of the clause
+raises `SYNTAX 38.901`. (A `-` that ends a line is a
+[continuation](r:lex.clauses.continuation) and not a template token.) A
+program file that holds any of these does not run at all, and its exit code is
+218. The text of INTERPRET raises the same error [when it is
+read](r:instr.interpret.whole).
 
 ```rexx
 say 'never shown'

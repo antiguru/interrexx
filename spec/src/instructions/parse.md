@@ -317,17 +317,16 @@ say datatype(level, 'N') datatype(day, 'W') length(month) length(year)
 
 r[instr.parse.syntax]
 The form of the instruction is checked when the program is read, so a fault
-stops the program before any clause runs, and an INTERPRET raises the
-error when its text is read. A PARSE with no source keyword raises
-`SYNTAX 20.903`, also when only the case keywords are there. A word that is
-not a case keyword or a source keyword raises `25.12`, and so does a
-repeated or a conflicting case keyword, such as UPPER with LOWER. A VAR
-with no symbol after it, or something that is not a symbol, such as a
-string, raises `20.904`. A VAR symbol that starts with a digit raises
-`31.2`, and one that starts with a period `31.3`. A VALUE with no WITH
-raises `38.3`. The template errors, which are `38.1` and `38.2`, are
-[theirs](r:parse.patterns.syntax), and a fault in the VALUE expression is
-the error of the expression.
+stops the program before any clause runs, and an INTERPRET raises the error
+when its text is read. A PARSE with no source keyword raises `SYNTAX 20.903`,
+also when only the case keywords are there. A word that is not a case keyword
+or a source keyword raises `25.12`, and so does a repeated or a conflicting
+case keyword, such as UPPER with LOWER. A VAR with no symbol after it, or
+something that is not a symbol, such as a string, raises `20.904`. A VAR
+symbol that starts with a digit raises `31.2`, and one that starts with a
+period `31.3`. A VALUE with no WITH raises `38.3`. The template errors,
+`38.1`, `38.2` and `38.901`, are [theirs](r:parse.patterns.syntax), and a
+fault in the VALUE expression is the error of the expression.
 
 ```rexx
 say 'never shown'

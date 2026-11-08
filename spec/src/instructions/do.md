@@ -74,8 +74,9 @@ to the power of NUMERIC DIGITS however it is written: at DIGITS 5, `9.9999e4`
 is a count and `1e5` is not. No count may reach 10 to the power of 18,
 whatever DIGITS is. Any other value raises `SYNTAX 26.2`. A count of zero runs
 no pass and does not raise an error. When LOSTDIGITS is trapped, a count
-written with more than DIGITS digits raises that condition before the error, if any, as [the lost-digits
-rule](r:num.arithmetic.lostdigits) describes for an operand.
+written with more than DIGITS digits raises that condition before the error,
+if any, as [the lost-digits rule](r:num.arithmetic.lostdigits) describes for
+an operand.
 
 ```rexx
 n = 3
@@ -557,15 +558,16 @@ r[instr.do.with]
 entry of a collection, and assigns the index and the item of the entry. The
 two phrases come in either order, and one or both may be left out. With
 neither, the loop is an OVER loop that assigns nothing: it behaves as [the
-OVER rules](r:instr.do.over) say, and the sentences below about `SUPPLIER`
-do not apply to it. With INDEX or ITEM, the loop sends the value of the
-expression the message `SUPPLIER` and walks the Supplier that comes back, assigning the index first and the item after it, so
-that a variable named by both ends up holding the item. The entries are taken
-when the loop starts. A FOR phrase limits the number of entries as it does in
-an OVER loop. A phrase repeated raises `SYNTAX 27.902`. WITH starts this form
-only when INDEX, ITEM or OVER follows it, and such a clause with no OVER
-raises `SYNTAX 27.904`. An object that does not answer `SUPPLIER` raises
-`SYNTAX 97.1`, and an answer that is not a Supplier raises `SYNTAX 98.994`.
+OVER rules](r:instr.do.over) say, and the sentences below about `SUPPLIER` do
+not apply to it. With INDEX or ITEM, the loop sends the value of the
+expression the message `SUPPLIER` and walks the Supplier that comes back,
+assigning the index first and the item after it, so that a variable named by
+both ends up holding the item. The entries are taken when the loop starts. A
+FOR phrase limits the number of entries as it does in an OVER loop. A phrase
+repeated raises `SYNTAX 27.902`. WITH starts this form only when INDEX, ITEM
+or OVER follows it, and such a clause with no OVER raises `SYNTAX 27.904`. An
+object that does not answer `SUPPLIER` raises `SYNTAX 97.1`, and an answer
+that is not a Supplier raises `SYNTAX 98.994`.
 
 ```rexx
 a = .array~of('x', 'y', 'z')
@@ -851,17 +853,18 @@ do counter c; end => 27.905
 ## Labels and the end of a block
 
 r[instr.do.label]
-A LABEL phrase gives the block a name that LEAVE, ITERATE and END can use, The name is the label when the
-block has a LABEL phrase, and otherwise the control variable of a controlled
-loop or of an OVER loop. A block with neither has no name. The interpreter
-compares a name to the names in those clauses without regard to case, and a
-compound symbol matches by its text, without working out the tail. Once a
-block has a LABEL, the name of its control variable no longer names it, so
-LEAVE, ITERATE and END have to use the label. When two active blocks have the
-same name, the name means the innermost. The phrase works on every form, a
-simple group included. It comes before any repetitor, and in either order with
-COUNTER. A LABEL phrase does not create a label for CALL or SIGNAL. A LABEL
-with no symbol after it, or with a string there, raises `SYNTAX 20.918`.
+A LABEL phrase gives the block a name that LEAVE, ITERATE and END can use. The
+name is the label when the block has a LABEL phrase, and otherwise the control
+variable of a controlled loop or of an OVER loop. A block with neither has no
+name. The interpreter compares a name to the names in those clauses without
+regard to case, and a compound symbol matches by its text, without working out
+the tail. Once a block has a LABEL, the name of its control variable no longer
+names it, so LEAVE, ITERATE and END have to use the label. When two active
+blocks have the same name, the name means the innermost. The phrase works on
+every form, a simple group included. It comes before any repetitor, and in
+either order with COUNTER. A LABEL phrase does not create a label for CALL or
+SIGNAL. A LABEL with no symbol after it, or with a string there, raises
+`SYNTAX 20.918`.
 
 ```rexx
 do label outer i = 1 to 2
@@ -921,11 +924,11 @@ one symbol, which has to be [the name of the block](r:instr.do.label), so
 `s.k` closes only `s.k` and not `s.j`. A symbol after the END of a block that
 has no name, which includes a count, `FOREVER`, a bare condition, a WITH loop
 and a loop that has only COUNTER, raises `SYNTAX 10.3`. A symbol that does not
-match raises `SYNTAX 10.2`, and an END with no open block raises
-`SYNTAX 10.1`. A token after END that is not a symbol raises `SYNTAX 20.909`,
-and a second token after the symbol `21.909`. A DO with no END raises
-`SYNTAX 14.1` as a simple group and `14.5` as a loop. All of these are found
-when the program is read, so no clause of the program runs.
+match raises `SYNTAX 10.2`, and an END with no open block is [a part out of
+place](r:instr.index.parts). A token after END that is not a symbol raises
+`SYNTAX 20.909`, and a second token after the symbol `21.909`. A DO with no
+END raises `SYNTAX 14.1` as a simple group and `14.5` as a loop. All of these
+are found when the program is read, so no clause of the program runs.
 
 ```rexx
 say 'before'
@@ -991,13 +994,14 @@ program with one runs no clause at all, as [the read-first
 rule](r:lex.index.read-first) says. The text of an INTERPRET is read in the
 same way, as [the INTERPRET rule](r:instr.interpret.whole) says. A TO, BY,
 FOR, INDEX or ITEM phrase given twice raises `SYNTAX 27.902`, an unwanted word
-after FOREVER `27.901`, a WHILE and an UNTIL together `27.1`, an INDEX or ITEM phrase
-with no OVER `27.904`, and a COUNTER on a simple group `27.905`. A missing expression
-raises `SYNTAX 35.904` after the `=`, `35.905` after BY, `35.906` after TO and
-`35.907` after FOR, `35.911` after OVER, and `35.929` after WHILE or UNTIL. A
-LABEL with no symbol, or with a string there, raises `SYNTAX 20.918`, a
-COUNTER with no symbol or with a string `20.934`, and an INDEX or ITEM with no symbol `20.929`. A control, COUNTER, INDEX or ITEM
-name that starts with a digit raises `31.2`, and one that starts with a period
+after FOREVER `27.901`, a WHILE and an UNTIL together `27.1`, an INDEX or ITEM
+phrase with no OVER `27.904`, and a COUNTER on a simple group `27.905`. A
+missing expression raises `SYNTAX 35.904` after the `=`, `35.905` after BY,
+`35.906` after TO and `35.907` after FOR, `35.911` after OVER, and `35.929`
+after WHILE or UNTIL. A LABEL with no symbol, or with a string there, raises
+`SYNTAX 20.918`, a COUNTER with no symbol or with a string `20.934`, and an
+INDEX or ITEM with no symbol `20.929`. A control, COUNTER, INDEX or ITEM name
+that starts with a digit raises `31.2`, and one that starts with a period
 `31.3`. Anything that follows a COUNTER or LABEL phrase out of its place is
 part of the expression before it, so that the errors of that expression are
 raised instead. The errors of a value, `26.2`, `26.3` and `41.1`, are raised
@@ -1256,11 +1260,10 @@ LOSTDIGITS condition first when that is trapped. ooRexx refuses such a count
 too while NUMERIC DIGITS is below 9. At 9 or more it runs the loop when the
 count is an unquoted integer literal of at most 18 digits, written without a
 sign, a leading zero, a decimal point or an exponent, or that literal's own
-value carried unchanged through variables, arguments, returns and
-collections. A quoted string, a
-value that an operation produced, and a literal in any other form that is
-wider than DIGITS are refused there as they are here, and so is every count of 10 to the power of
-18 or more.
+value carried unchanged through variables, arguments, returns and collections.
+A quoted string, a value that an operation produced, and a literal in any
+other form that is wider than DIGITS are refused there as they are here, and
+so is every count of 10 to the power of 18 or more.
 
 ```rexx
 call try 'do 4294967296; leave; end'

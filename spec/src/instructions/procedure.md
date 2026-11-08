@@ -292,18 +292,18 @@ list rule](r:instr.drop.list) describes, split at
 [whitespace](r:conv.string.whitespace), and each word is exposed as if it had
 been written in the clause, as a simple, stem or compound symbol. A list that
 is empty or all whitespace exposes nothing. The routine sees the variable that
-holds the list, and an assignment to it reaches the caller. For a compound
-name whose tail has a variable, the name exposes the caller's variable,
-with the tail resolved in the caller as [the compound
-rule](r:instr.procedure.compound) says. The list is the value of the name in
-the routine, and the tail is resolved there, with the routine's own variables.
-Where the tail variable is unset in the routine, that value is the compound
-with the tail as written, in capitals, such as `A.I`. This is the exposed
-variable only when the tail variable is unset in the caller too; then the list
-is the caller's value of it. Otherwise it is the routine's own unset variable,
-whose value is its name, and that name is exposed as a name of the clause
-would be. Whether an earlier name of the clause can change that is the
-matter of [the deviation rule](r:instr.procedure.deviation.70). Blanks may stand inside the
+holds the list, and an assignment to it reaches the caller. A compound name in
+parentheses exposes the caller's variable, with the tail resolved in the
+caller as [the compound rule](r:instr.procedure.compound) says. The list is
+then read from the routine's own variable of that name, with the tail resolved
+in the routine, where the tail variable is unset unless an earlier name of the
+clause exposed it. So `(a.i)` with `i` set in the caller exposes the caller's
+`a.1`, reads the list from the routine's `A.I`, which is unset and yields its
+name, and so exposes `A.I` and nothing more, as the second example shows. When
+the caller's `i` is unset too, the exposed variable is `A.I` itself and its
+value is the list, as the third example shows. Whether an earlier name of the
+clause can change that is the matter of [the deviation
+rule](r:instr.procedure.deviation.70). Blanks may stand inside the
 parentheses, and one list may follow another without a blank.
 
 ```rexx
@@ -361,13 +361,11 @@ VAR VAR VAR x y
 ```
 
 r[instr.procedure.list.error]
-A word in a list that is not a variable symbol raises a `SYNTAX` error when
-the PROCEDURE runs: `31.2` for a word that starts with a digit, `31.3` for
-one that starts with a period, and `20.928` for any other text in a name's
-place, such as a sign, a quote or a parenthesis. The routine has no variable
-exposed then. In the example the handler runs in the routine, as [the rule on
-a jump out of a routine](r:instr.signal.routine) says, so its RETURN leaves
-the routine and the loop goes on.
+A word in a list that is not a variable symbol raises the error that [the DROP
+list](r:instr.drop.list.error) gives, when the PROCEDURE runs. The routine has
+no variable exposed then. In the example the handler runs in the routine, as
+[the rule on a jump out of a routine](r:instr.signal.routine) says, so its
+RETURN leaves the routine and the loop goes on.
 
 ```rexx
 signal on syntax name e
