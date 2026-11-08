@@ -1,8 +1,8 @@
 ---
 element: "Error numbers"
 kind: concept
-ansi: "8.4.1, 8.4.2, 9.2.4"
-rexxref: "Conditions and Condition Traps > Condition Information > The Special Variable RC; Appendix > Error Numbers and Messages"
+ansi: "8.2.1, 8.4, 8.4.1"
+rexxref: "Conditions and Condition Traps > Condition Information > The Special Variable RC; Error Numbers and Messages"
 ---
 
 # Error numbers
@@ -21,20 +21,15 @@ that name no kind of fault are the ones that
 ## How a number is built
 
 r[cond.errors.scheme]
-An error number has two parts, a major number and a subcode, which is a whole
-number written after a point and without leading zeros: `40.3`, `93.924`.
-The major number names the kind of error and the subcode the particular fault
-of that kind, so one major number has many subcodes and a program that wants a
-kind of error looks only at the major number. A trap sees the whole number as
-the string `m.n` in `CONDITION('O')~CODE`, and the major number alone in the
-`RC` entry and in the variable `RC`, as [the values
-rule](r:cond.information.object.values) and [the RC
-rule](r:cond.information.rc) say. `SIGL` is the line of the clause that was
-running, as [the SIGL rule](r:cond.information.sigl) says. An error that no
-SIGNAL trap answers ends the program with the exit code `256` minus the major
-number, as [the untrapped rule](r:cond.index.syntax) says, and the subcode
-does not enter it. The error of a fault in the text that is read before the
-program runs is no condition at all, as [the reading
+An error number has two parts, a major number and a subcode written after a
+point without leading zeros: `40.3`, `93.924`. How a trap reads the two parts,
+and why a program tells faults apart by the whole code, is the business of
+[the code rule](r:cond.syntax.code); this page owns what the major numbers
+mean. `SIGL` is set as [the SIGL rule](r:cond.information.sigl) says. An error
+that no SIGNAL trap answers ends the program with the exit code `256` minus
+the major number, as [the untrapped rule](r:cond.index.syntax) says, and the
+subcode does not enter it. The error of a fault in the text that is read
+before the program runs is no condition at all, as [the reading
 rule](r:lex.index.read-first) says.
 
 ```rexx
@@ -54,10 +49,8 @@ one
 
 r[cond.errors.subcodes]
 The subcodes of an error number are named on the pages of the clauses and
-functions that raise it, in the rule that names the fault. Two faults of one
-major number differ in their subcodes and in nothing that a program can rely
-on in the message, so a program that must tell them apart compares `CODE`.
-This page names a subcode only to show a kind of error.
+functions that raise it, in the rule that names the fault. This page names a
+subcode only to show a kind of error.
 
 ```rexx
 call try 'x = left("abc", -2)'
@@ -82,65 +75,76 @@ x = "abc"~substr(0)        93.924 93
 
 ## The numbers
 
-> Each entry gives the major number, the kind of fault it names in a few
-> words of this book's own, and a rule that raises it where one is written.
+> Each entry gives the major number, what kind of construct or operation
+> raises it, and a rule that raises it where one is written. The grouping is
+> by the usual kind of fault, and a number may have subcodes of another kind.
 > The examples that follow each list run one clause for most rows and print
 > the code that its trap reads.
 
 ### Faults in the form of the text
 
-> These faults are found in the text of a clause, and a clause that is a
-> directive or part of a block can raise them too. A fault in the text of a
+> These faults are usually found in the text of a clause, and a clause that is
+> a directive or part of a block can raise them too. A fault in the text of a
 > program is found when the program is read, and in the text of an INTERPRET
 > when it runs, as [the reading rule](r:cond.index.read) says.
 
 r[cond.errors.form]
-The numbers below name a fault in the text, whether it is a string, a
-comment, a character, a structure of blocks or the form of one clause.
-* 6: a string or a comment that is not closed, [rule](r:lex.index.read-first).
-* 7: a SELECT that has no WHEN where one belongs,
+The numbers below usually name a fault in the form of the text: a string, a
+comment, a character, a structure of blocks or the form of one clause. Two of
+them have subcodes that are raised by values when the clause runs, 7 for a
+SELECT that finds no WHEN to take, as [the OTHERWISE
+rule](r:instr.select.otherwise) says, and 25 for a NUMERIC FORM VALUE that
+holds no form, as [the FORM rule](r:instr.numeric.form.error) says.
+* 6: a string or a comment that is still open where the text ends,
+  [rule](r:lex.index.read-first).
+* 7: a SELECT that is built wrongly, or has no branch to take,
   [rule](r:instr.select.syntax).
-* 8: a THEN or an ELSE that has no IF or WHEN to belong to,
+* 8: a THEN or an ELSE with no IF or WHEN before it to pair with,
   [rule](r:instr.if.else).
-* 9: a WHEN or an OTHERWISE outside a SELECT,
+* 9: a WHEN or an OTHERWISE met where no SELECT is open,
   [rule](r:instr.select.otherwise).
-* 10: an END that closes nothing, or that names the wrong block,
+* 10: an END with no open block to close, or one that names another block,
   [rule](r:instr.do.end).
-* 13: a character outside the character set, [rule](r:lex.characters.set).
-* 14: a block that is not closed, [rule](r:instr.interpret.complete).
-* 15: a hexadecimal or binary string that is malformed,
-  [rule](r:lex.literals.hex.digit).
-* 18: an IF or WHEN condition that THEN does not follow,
-  [rule](r:instr.if.syntax).
-* 19: a string or a symbol is wanted and something else stands there,
-  [rule](r:instr.call.error).
-* 20: a symbol is wanted and something else stands there,
-  [rule](r:instr.procedure.syntax).
-* 21: data that remains after a clause is complete,
-  [rule](r:instr.leave.error).
-* 22: a literal string with character codes that are not valid.
-* 23: a value with character codes that are not valid.
-* 25: a keyword or option that the instruction does not have,
+* 13: a character that the language does not allow in a program,
+  [rule](r:lex.characters.set).
+* 14: text that ends inside a block whose END has not come,
+  [rule](r:instr.do.end).
+* 15: a string written with an X or a B whose digits break the grouping or
+  digit rules of that form, [rule](r:lex.literals.hex.digit).
+* 18: an IF or WHEN test that no THEN follows, [rule](r:instr.if.syntax).
+* 19: an operand that the instruction wants as a name or a string and does
+  not find, [rule](r:instr.call.error).
+* 20: an instruction that needs a symbol at some place and finds another
+  kind of token, or none, [rule](r:instr.procedure.syntax).
+* 21: more tokens after an instruction that has all its operands,
+  [rule](r:instr.call.on.error).
+* 22: a string literal whose bytes the character set refuses.
+* 23: a computed string whose bytes the character set refuses.
+* 25: a keyword that the instruction does not offer at that place,
   [rule](r:instr.numeric.form.error).
-* 27: the form of a DO or LOOP that is not valid, [rule](r:instr.do.syntax).
-* 30: a name or a symbol that is too long, [rule](r:lex.symbols.length).
-* 31: a name that starts with a digit or a point, where a target stands,
+* 27: a DO or LOOP whose controller and keyword parts are put together in a
+  way that the form forbids, [rule](r:instr.do.syntax).
+* 30: a symbol longer than the limit of the symbol rule,
+  [rule](r:lex.symbols.length).
+* 31: an assignment whose target is spelled like a constant,
   [rule](r:lex.symbols.constant).
-* 35: an expression that is not valid, [rule](r:expr.index.syntax).
-* 36: a parenthesis or a bracket that is not matched,
+* 35: an expression that cannot be parsed, because an operand or an operator
+  is missing or misplaced, [rule](r:expr.index.syntax).
+* 36: an opening parenthesis or bracket that the clause never closes,
   [rule](r:expr.index.syntax).
-* 37: a comma, a parenthesis or a bracket where none belongs,
+* 37: a closing parenthesis or bracket that has no opener of its own kind,
   [rule](r:expr.index.syntax).
-* 38: a template or a pattern that is not valid,
+* 38: a template whose contents the template form does not allow,
   [rule](r:parse.patterns.syntax).
-* 46: a variable reference in parentheses that is not valid,
-  [rule](r:instr.drop.syntax).
-* 47: a label where the text does not allow one, [rule](r:lex.clauses.label).
+* 46: a variable reference in parentheses that is not closed or not a single
+  name, [rule](r:instr.drop.syntax).
+* 47: a label clause in text that cannot hold one, such as the text of an
+  INTERPRET, [rule](r:lex.clauses.label).
 
-> The numbers 22 and 23 are for a string that holds a character code which
-> the character set cannot hold. Every string of this book may hold any of
-> the 256 character codes, as [the character rule](r:conv.string.chars)
-> says, so this book names no clause that raises them.
+> The numbers 22 and 23 would apply where a string holds a byte that the
+> character set cannot hold. Every string of this book may hold any of the
+> 256 character codes, as [the character rule](r:conv.string.chars) says, so
+> this book names no clause that raises them.
 
 ```rexx
 call try "say 'a"
@@ -154,8 +158,12 @@ call try "say 'zz'x"
 call try "if 1 say 'a'"
 call try "call"
 call try "drop a b 'c'"
-call try "leave x y"
+call try "call on error name lbl extra"
+call try copies("a", 251) "= 1"
+call try "nop 1"
 call try "numeric form foo"
+call try "numeric form value 'foo'"
+call try "select; when 0 then nop; end"
 call try "do forever x"
 call try "1x = 2"
 call try "x = 1 +"
@@ -186,8 +194,12 @@ say 'zz'x                                15.3
 if 1 say 'a'                             18.1
 call                                     19.2
 drop a b 'c'                             20.901
-leave x y                                21.907
+call on error name lbl extra             21.903
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 30.1
+nop 1                                    21.901
 numeric form foo                         25.11
+numeric form value 'foo'                 25.11
+select; when 0 then nop; end             7.3
 do forever x                             27.901
 1x = 2                                   31.2
 x = 1 +                                  35.1
@@ -204,36 +216,42 @@ x: say 1                                 47.1
 > of the program does not fit the clause.
 
 r[cond.errors.run]
-The numbers below name a fault that the values or the flow of control cause,
-at the clause that meets it.
-* 16: a label that the program does not have, [rule](r:instr.signal.label).
-* 17: a PROCEDURE that is not the first clause of a routine,
-  [rule](r:instr.procedure.first).
-* 24: a TRACE setting that is not valid, [rule](r:instr.trace.invalid).
-* 26: a value that is no whole number, or out of the range allowed,
+The numbers below usually name a fault that the values or the flow of control
+cause, at the clause that meets it.
+* 16: a SIGNAL or a trap name that no label of the code carries,
+  [rule](r:instr.signal.label).
+* 17: a PROCEDURE reached with another clause before it, or outside an
+  internal routine, [rule](r:instr.procedure.first).
+* 24: a TRACE setting that is neither a number nor a valid letter,
+  [rule](r:instr.trace.invalid).
+* 26: a value used as a whole number, such as a setting or a count or an
+  exponent, that is not one or lies outside the range allowed,
   [rule](r:num.settings.digits).
-* 28: a LEAVE or an ITERATE that has no block to act on,
-  [rule](r:instr.leave.target).
-* 29: the name of an ADDRESS environment that is too long.
-* 33: the value of a NUMERIC setting that the other settings forbid,
+* 28: a LEAVE or an ITERATE with no block of that name, or none at all, to
+  act on, [rule](r:instr.leave.target).
+* 29: the name of an ADDRESS environment that is longer than the interpreter
+  takes.
+* 33: a NUMERIC DIGITS and FUZZ pair in which FUZZ is not below DIGITS,
   [rule](r:num.settings.fuzz).
-* 34: a value used as a truth value that is not 0 or 1,
-  [rule](r:expr.logical.value).
-* 40: a call of a routine with arguments that do not fit it,
-  [rule](r:bif.index.call.count).
-* 41: a value used as a number that is not a number,
-  [rule](r:num.limits.not-number).
-* 42: arithmetic that overflows, underflows or divides by zero,
-  [rule](r:num.limits.overflow).
-* 43: a routine that cannot be found, [rule](r:instr.call.search).
-* 44: a clause that needs a value from a call that gave none,
+* 34: an operand of a test or of a logical operator that is anything but a
+  one-character `0` or `1`, [rule](r:expr.logical.value).
+* 40: a call whose arguments a routine rejects, for their count (too
+  [few](r:bif.index.call.too-few) or [many](r:bif.index.call.too-many)) or
+  for a value outside what the routine takes.
+* 41: an operand of arithmetic or of a numeric comparison that holds no
+  number, [rule](r:num.index.use).
+* 42: arithmetic whose result cannot be represented or is not defined, such
+  as an overflow, an underflow, a division by zero or zero to a negative
+  power, [rule](r:num.limits.overflow).
+* 43: a routine name that nothing supplies, [rule](r:instr.call.search).
+* 44: a clause that needs a value from a call that returned none,
   [rule](r:expr.terms.call.result).
 * 45: none of this book's clauses: the engines raise 44 where it fits.
 
 > The number 29 is raised for an ADDRESS name beyond a length that this book
-> does not fix. The number 45 is the error of a RETURN that carries no data
-> in a program called as a function; both engines raise 44 for the clause
-> that calls such a program, so 45 has no example here.
+> does not fix. The number 45 is meant for a program that is called for a
+> value and ends without one; both engines raise 44 at the clause that makes
+> such a call, so 45 has no example here.
 
 ```rexx
 call try "signal nolabelhere"
@@ -244,6 +262,8 @@ call try "leave"
 call try "numeric digits 5; numeric fuzz 5"
 call try "if 'a' then say 1"
 call try "x = abs()"
+call try "x = left('abc', 'q')"
+call try "address value '"copies("E", 1000)"'"
 call try "x = 1 + 'a'"
 call try "x = 9 // 0"
 call try "x = nosuchroutine_spec_errors()"
@@ -268,6 +288,8 @@ leave                                    28.1
 numeric digits 5; numeric fuzz 5         33.1
 if 'a' then say 1                        34.1
 x = abs()                                40.3
+x = left('abc', 'q')                     40.12
+address value 'EEEEEEEEEEEEEEEEEEEEEEEEE 29.1
 x = 1 + 'a'                              41.1
 x = 9 // 0                               42.3
 x = nosuchroutine_spec_errors()          43.1
@@ -277,21 +299,21 @@ x = nothing()                            44.1
 ### Faults of the interpreter and its services
 
 r[cond.errors.system]
-The numbers below name a fault that is not in the text or in a value of the
-program: the interpreter that cannot start the program or go on, a program
-that is stopped, and a service of the system that does not answer.
-* 3: the program cannot be started or loaded.
+The numbers below usually name a fault that is neither in the text nor in a
+value of the program: the interpreter that cannot start the program or go on,
+a program that is stopped, and a call into the system that fails.
+* 3: the program cannot be loaded to begin with.
 * 4: the program was halted and nothing trapped it,
   [rule](r:cond.halt.untrapped).
-* 5: the interpreter has no resource left that it needs.
-* 11: nesting of parentheses or of calls that is too deep,
+* 5: the interpreter lacks a resource that it needs to go on.
+* 11: nesting of parentheses or of calls beyond the limit,
   [rule](r:expr.index.nesting).
-* 39: an expression too complex for the interpreter to evaluate.
-* 48: a service of the system that fails, such as the external queue,
-  [rule](r:instr.queue.queue).
-* 49: an internal check of the interpreter that fails.
+* 39: an expression that the evaluator gives up on for its size or depth.
+* 48: a call that the interpreter makes into the system and that fails, such
+  as one on the external queue, [rule](r:instr.queue.queue).
+* 49: a consistency check of the interpreter itself that fails.
 
-> The number 3 is the error of a program that cannot be started, such as a
+> The number 3 is raised for a program that cannot be loaded, such as a
 > program file that cannot be found. It comes before any clause runs, so no
 > trap sees it. The numbers 5, 39 and 49 name states that this book does not
 > tie to a clause: how much a program can ask for before 5 is raised, how
@@ -331,32 +353,38 @@ e: say condition('o')~code rc
 ### Faults of objects, directives and native code
 
 r[cond.errors.objects]
-The numbers from 88 up name faults of messages, of objects, of directives
-and of native routines.
-* 88: a builtin of the native kind that is called with arguments that do not
-  fit, [rule](r:bif.index.call.native).
-* 89: a variable or a message term that is wanted and another thing stands,
+The numbers from 88 up usually name faults of messages, of objects, of
+directives and of native code.
+* 88: an argument that is missing or surplus for a routine or method of the
+  native family, [rule](r:bif.index.call.native).
+* 89: a USE clause whose target is neither a variable nor a message term,
   [rule](r:instr.use.syntax).
-* 90: an external routine or method whose name cannot be found,
-  [rule](r:dir.routine.external).
-* 91: a message term that needs a result from a method that gave none,
+* 90: a library routine or method entry that a directive names and the
+  system cannot supply, [rule](r:dir.routine.external).
+* 91: a message term used for its value whose method ended without one,
   [rule](r:expr.messages.cascade).
-* 92: a fault of the OLE interface of a platform.
-* 93: a call of a method, or of a builtin function that is one, with arguments
-  that do not fit, [rule](r:conv.position.check).
-* 97: a message to an object that has no method of that name,
-  [rule](r:conv.string.object).
-* 98: a fault in running a directive or in loading what it names,
-  [rule](r:dir.class.subclass).
-* 99: a fault in a directive, found while the program is read,
+* 92: a failure in the object-linking interface of a platform.
+* 93: a method, or a builtin that is a String method, given an argument that
+  it cannot accept, [rule](r:conv.position.check).
+* 97: a message that finds no method of its name in the class of the
+  receiver, [rule](r:expr.messages.name).
+* 98: a fault found while a clause or a directive runs that no lower number
+  names, such as the load of what a directive requires
+  ([rule](r:dir.requires.failure)) or a NOVALUE under ::OPTIONS
+  ([rule](r:dir.options.condition)).
+* 99: a fault in the form of a directive, or an instruction in a place where
+  it cannot stand, found when the text is read,
   [rule](r:dir.class.duplicate).
 
+> The numbers 40, 88 and 93 all mean arguments that do not fit, and which of
+> them a builtin or a method raises depends on the fault and is named on its
+> own page: `left('abc', 'q')` raises 40 and `left('abc', -2)` raises 93.
 > The number 92 belongs to a platform interface that this book does not
 > specify, so no rule or example raises it. The numbers 98 and 99 differ in
-> when the fault is found: 99 is a fault of the text of a directive and is
-> found when the program is read, and 98 is a fault of what the directive
-> asks for and is found when the directive takes effect. A directive in the
-> text of an INTERPRET is no directive, so it raises 99 there.
+> when the fault is found: 99 is a fault of the form that is found when the
+> text is read, and 98 is a fault found when the clause or directive takes
+> effect. A directive in the text of an INTERPRET is no directive, so it
+> raises 99 there.
 
 ```rexx
 call try "x = filespec('N')"
