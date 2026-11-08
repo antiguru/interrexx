@@ -371,7 +371,7 @@ first method takes no argument, and the second takes exactly one:
 `SYNTAX 93.902` for an extra argument and `93.903` for a missing one. A clause
 after the directive that is not a null clause raises `SYNTAX 99.934`, found
 when the program is read, because the directive has no section. ATTRIBUTE with
-ABSTRACT or DELEGATE declares both methods of that kind.
+ABSTRACT declares both methods abstract.
 
 ```rexx
 o = .box~new
@@ -387,6 +387,8 @@ call try 'o~"SIZE="(1, 2)'
 call try 'say .box~new~count'
 call try 'say .vault~new~pin'
 call try '.vault~new~pin = 1'
+call try 'say .blank~new~limit'
+call try '.blank~new~limit = 1'
 src = .array~of('::class k', '::method size attribute', 'say 1')
 signal on syntax name e
 p = .package~new('spec-dir-method-attr', src)
@@ -401,6 +403,8 @@ e2: say arg(1) '=>' condition('o')~code
 ::class box
 ::method size attribute
 ::method count attribute class
+::class blank
+::method limit attribute abstract
 ::class vault
 ::method pin attribute private
 ::method safe_open
@@ -419,6 +423,8 @@ o~"SIZE="(1, 2) => 93.902
 say .box~new~count => 97.1
 say .vault~new~pin => 97.2
 .vault~new~pin = 1 => 97.2
+say .blank~new~limit => 93.965
+.blank~new~limit = 1 => 93.965
 99.934
 ```
 
