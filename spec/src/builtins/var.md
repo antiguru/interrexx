@@ -155,8 +155,9 @@ say var('x.abc') var('x.ABC') var('x.t') var('X.T') var('c.w') var('c.x y')
 
 r[bif.var.scope]
 VAR sees the variables of the routine or method running it. In a routine with
-PROCEDURE the caller's variables are not seen unless exposed, and in a method
-an object variable is seen once it is exposed and holds a value.
+[PROCEDURE](r:instr.procedure.scope) the caller's variables are not seen
+unless exposed, and in a method an object variable is seen once it is exposed
+and holds a value.
 
 ```rexx
 g = 1
@@ -188,9 +189,9 @@ return var('at') var('un')
 ```
 
 r[bif.var.result-var]
-The variable `RESULT` is a variable that holds a value after a CALL of a
-routine that returned a value, and is not after a CALL of one that returned
-none.
+The variable `RESULT` is a variable that holds a value after a
+[CALL](r:instr.call.result) of a routine that returned a value, and is not
+after a CALL of one that returned none.
 
 ```rexx
 call none

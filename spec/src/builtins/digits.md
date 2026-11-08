@@ -48,11 +48,11 @@ d: say condition('o')~code
 ## The result
 
 r[bif.digits.result]
-DIGITS answers the setting as a whole number written without a sign, a
-point, an exponent or leading zeros. At the start of a program the setting
-is the [default](r:bif.digits.default) of the package, and the NUMERIC
-DIGITS instruction changes it, to the value of its expression as a whole
-number.
+DIGITS answers the setting as a whole number written without a sign, a point,
+an exponent or leading zeros. At the start of a program the setting is the
+[default](r:bif.digits.default) of the package, and the [NUMERIC DIGITS
+instruction](r:instr.numeric.value) changes it, to the value of its expression
+as a whole number.
 
 ```rexx
 say digits()
@@ -103,14 +103,15 @@ reset 12 12 12
 
 r[bif.digits.scope]
 The setting belongs to the routine or method that is running. An internal
-routine, which CALL or a function call reaches by its label, starts with the
-setting in force at the call, and the caller's setting is unchanged when it
-returns, whatever it set meanwhile. A routine of a `::ROUTINE` directive,
-public or private, a method (also one that another method sends the message
-to), and an external routine in another file all start with the
-[default](r:bif.digits.default) of their own package, whatever the setting of
-the caller. The NUMERIC instruction in an INTERPRET string changes the setting
-of the running routine, and the change stays after the INTERPRET.
+routine, which [CALL](r:instr.call.run) or a function call reaches by its
+label, starts with the setting in force at the call, and the caller's setting
+is unchanged when it returns, whatever it set meanwhile. A routine of a
+`::ROUTINE` directive, public or private, a method (also one that another
+method sends the message to), and an external routine in another file all
+start with the [default](r:bif.digits.default) of their own package, whatever
+the setting of the caller. The [NUMERIC instruction](r:instr.numeric.value) in
+an [INTERPRET](r:instr.interpret.scope) string changes the setting of the
+running routine, and the change stays after the INTERPRET.
 
 ```rexx
 numeric digits 15

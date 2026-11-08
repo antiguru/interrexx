@@ -373,12 +373,12 @@ SYNTAX OFF
 
 r[bif.condition.scope]
 The information belongs to the code that holds it. An internal routine, a
-routine that CALL or a function call reaches by its label, starts with a copy
-of the information of the code that called it, and what it does to the copy, a
-trap that catches a condition in it or the option `R`, is not seen by the
-caller. A `::ROUTINE`, a method and a routine made from other source text
-start with none. INTERPRET runs in the code that holds it, and shares its
-information.
+routine that [CALL](r:instr.call.run) or a function call reaches by its label,
+starts with a copy of the information of the code that called it, and what it
+does to the copy, a trap that catches a condition in it or the option `R`, is
+not seen by the caller. A `::ROUTINE`, a method and a routine made from other
+source text start with none. [INTERPRET](r:instr.interpret.scope) runs in the
+code that holds it, and shares its information.
 
 ```rexx
 call on user foo name u

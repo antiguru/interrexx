@@ -7,14 +7,14 @@ rexxref: "Numbers and Arithmetic > Arithmetic > Precision"
 
 # Numeric settings
 
-Three settings steer every numeric operation: NUMERIC DIGITS, NUMERIC FUZZ
-and NUMERIC FORM. They are not arguments of the operations and no number
-carries them, so the same expression gives different answers under different
-settings. This page says what each setting controls, how it is checked when a
-program changes it, and which part of a program a change reaches. The syntax
-of the NUMERIC instruction that changes a setting belongs to the instructions
-chapter, and the examples here use it only in its plain form, `numeric digits
-expression` and its two siblings.
+Three settings steer every numeric operation: NUMERIC DIGITS, NUMERIC FUZZ and
+NUMERIC FORM. They are not arguments of the operations and no number carries
+them, so the same expression gives different answers under different settings.
+This page says what each setting controls, how it is checked when a program
+changes it, and which part of a program a change reaches. The syntax of the
+[NUMERIC instruction](r:instr.numeric.value) that changes a setting belongs to
+the instructions chapter, and the examples here use it only in its plain form,
+`numeric digits expression` and its two siblings.
 
 ## What the settings control
 
@@ -23,11 +23,11 @@ NUMERIC DIGITS is the count of significant digits that arithmetic and numeric
 comparison keep, and it is also read by the builtins that [round their
 numbers](r:bif.index.num.round). NUMERIC FUZZ is the count of those digits
 that a numeric comparison ignores, so it acts only on comparison: every
-numeric comparison, the end test of a DO loop included, and the comparisons of
-the builtins that [pick](r:bif.index.num.pick) a number.
-NUMERIC FORM decides only how an exponent is written in a result that needs
-one, as [the notation rule](r:bif.index.num.sci) says. Each setting has a
-[default](r:bif.digits.default) that a program starts with: 9, 0 and
+numeric comparison, the end test of a [DO loop](r:instr.do.control) included,
+and the comparisons of the builtins that [pick](r:bif.index.num.pick) a
+number. NUMERIC FORM decides only how an exponent is written in a result that
+needs one, as [the notation rule](r:bif.index.num.sci) says. Each setting has
+a [default](r:bif.digits.default) that a program starts with: 9, 0 and
 SCIENTIFIC, unless a directive of the package gives another value. The
 builtins [DIGITS](r:bif.digits.result), [FUZZ](r:bif.fuzz.result) and
 [FORM](r:bif.form.result) answer the setting in force where they are called.
@@ -183,13 +183,14 @@ say fuzz()
 
 r[num.settings.block]
 A setting belongs to the routine that is running and not to a block of it. A
-NUMERIC instruction in the body of a DO loop, an IF or a SELECT changes the
-setting for the rest of the routine, including the clauses after the block,
-and a trapped condition that transfers control to a label of the same routine
-finds the setting as it was. A condition raised inside an internal routine
-whose trap names a label of the calling routine runs that label with the
-settings of the routine where the condition was raised, as the last lines of
-the example show.
+[NUMERIC instruction](r:instr.numeric.value) in the body of a
+[DO](../instructions/do.md) loop, an [IF](../instructions/if.md) or a
+[SELECT](../instructions/select.md) changes the setting for the rest of the
+routine, including the clauses after the block, and a trapped condition that
+transfers control to a label of the same routine finds the setting as it was.
+A condition raised inside an internal routine whose trap names a label of the
+calling routine runs that label with the settings of the routine where the
+condition was raised, as the last lines of the example show.
 
 ```rexx
 numeric digits 4

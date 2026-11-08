@@ -259,11 +259,12 @@ whether the operand is missing at the start of the expression, before a
 closing parenthesis, or at the end of the clause. A prefix `+` or `-` with
 nothing after it raises `SYNTAX 35.901` instead. A `-` that is the last token
 of a line is a [continuation](r:lex.clauses.continuation) and takes the line
-end with it, in a program file and in the text of an INTERPRET instruction
-alike, so it is never an operator without a right operand and no example can
-show that error for `-`. The error is found when the program is read, so a
-program file with such an error runs no clause and [exits with `256` minus the
-error number](r:lex.index.read-first).
+end with it, in a program file and in the text of an [INTERPRET
+instruction](r:instr.interpret.lines) alike, so it is never an operator
+without a right operand and no example can show that error for `-`. The error
+is found when the program is read, so a program file with such an error runs
+no clause and [exits with `256` minus the error
+number](r:lex.index.read-first).
 
 ```rexx
 say 'not reached'

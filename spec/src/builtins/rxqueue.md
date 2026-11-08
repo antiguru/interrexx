@@ -7,14 +7,15 @@ rexxref: "Functions > Built-in Functions > RXQUEUE"
 
 # RXQUEUE
 
-RXQUEUE creates, deletes and asks after the external data queues, and names
-or changes the current one. A queue is a list of lines kept outside the
-program, in a service that every program of a session can reach, where the
-QUEUE and PUSH instructions put lines and the PULL and PARSE PULL
+RXQUEUE creates, deletes and asks after the external data queues, and names or
+changes the current one. A queue is a list of lines kept outside the program,
+in a service that every program of a session can reach, where the
+[QUEUE](r:instr.queue.fifo) and [PUSH](r:instr.push.lifo) instructions put
+lines and the [PULL](r:instr.pull.source) and [PARSE PULL](r:instr.parse.pull)
 instructions take them out. A program has one current queue, the one those
-instructions use and [QUEUED](queued.md) counts. The queue called `SESSION`
-is the current queue when a program starts, it always exists, and it cannot
-be deleted.
+instructions use and [QUEUED](queued.md) counts. The queue called `SESSION` is
+the current queue when a program starts, it always exists, and it cannot be
+deleted.
 
 > **Note.** The examples create a queue of their own under a name no other
 > example uses, and delete it when they are done, so they leave nothing
@@ -302,9 +303,11 @@ r[bif.rxqueue.set]
 `Set` makes the queue of the name the current queue, and answers the name of
 the queue that was current before, in upper case. It does not look for the
 queue: a name that no queue has is accepted, and `Get` answers it. A line put
-into a queue that does not exist, by QUEUE or PUSH, raises `SYNTAX 48.1`, and
-[QUEUED](queued.md) answers `0` for it. After `Set`, the QUEUE and PUSH
-instructions put lines into the new current queue, and the PULL and PARSE PULL
+into a queue that does not exist, by [QUEUE](r:instr.queue.fifo) or
+[PUSH](r:instr.push.lifo), raises `SYNTAX 48.1`, and [QUEUED](queued.md)
+answers `0` for it. After `Set`, the [QUEUE](r:instr.queue.fifo) and
+[PUSH](r:instr.push.lifo) instructions put lines into the new current queue,
+and the [PULL](r:instr.pull.source) and [PARSE PULL](r:instr.parse.pull)
 instructions take them out of it.
 
 ```rexx

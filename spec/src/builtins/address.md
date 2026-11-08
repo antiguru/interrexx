@@ -51,10 +51,11 @@ c: say condition('o')~code
 r[bif.address.initial]
 Which environment a program starts with is not specified: it is the one that
 the platform and the way the program was started choose, and its name is
-different on different systems. What is fixed is that the ADDRESS instruction
-with no operand, given before any other ADDRESS instruction, leaves the
-environment as it was: the environment the program started with is also the
-one that the instruction would swap back to.
+different on different systems. What is fixed is that the [ADDRESS
+instruction](r:instr.address.form.bare) with no operand, given before any
+other ADDRESS instruction, leaves the environment as it was: the environment
+the program started with is also the one that the instruction would swap back
+to.
 
 ```rexx
 d = address()
@@ -107,12 +108,12 @@ say '['address()']'
 > result. Neither interrexx nor ooRexx does so, and this rule matches them.
 
 r[bif.address.swap]
-The ADDRESS instruction with no operand makes the previous environment the
-current one and the current one the previous one, so a second such
-instruction undoes the first. An instruction that sets a name makes the
-environment that was current the previous one, also when the name is the same
-as the current one, so after that the instruction with no operand changes
-nothing.
+The [ADDRESS instruction](r:instr.address.form.bare) with no operand makes the
+previous environment the current one and the current one the previous one, so
+a second such instruction undoes the first. An instruction that sets a name
+makes the environment that was current the previous one, also when the name is
+the same as the current one, so after that the instruction with no operand
+changes nothing.
 
 ```rexx
 address first
@@ -159,9 +160,10 @@ FIRST 0
 r[bif.address.scope.routine]
 An internal routine, one that the program calls by its label, starts with the
 caller's current environment and its previous one, and when it returns, the
-caller has its own back: a setting made inside the routine, by ADDRESS
-instructions or in a routine it called, is lost on return. This holds for a
-routine with PROCEDURE and for one without it.
+caller has its own back: a setting made inside the routine, by [ADDRESS
+instructions](../instructions/address.md) or in a routine it called, is lost
+on return. This holds for a routine with [PROCEDURE](r:instr.procedure.scope)
+and for one without it.
 
 ```rexx
 address outer
@@ -237,8 +239,9 @@ return address()
 ```
 
 r[bif.address.scope.interpret]
-Code run by INTERPRET shares the environment of the code that runs it: a
-setting made there is still in effect after the INTERPRET ends.
+Code run by [INTERPRET](r:instr.interpret.scope) shares the environment of the
+code that runs it: a setting made there is still in effect after the INTERPRET
+ends.
 
 ```rexx
 address outer

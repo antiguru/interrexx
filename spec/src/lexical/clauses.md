@@ -7,15 +7,15 @@ rexxref: "General Concepts > Structure and General Syntax"
 
 # Clauses
 
-A clause is the unit that the interpreter runs: a sequence of tokens that
-ends at a semicolon, which the reader supplies at most line ends. This page
-says where a clause ends, which clauses do nothing, how a label is
-recognized, how a line is continued, and how the first tokens of a clause
-decide whether it is a label, an assignment, an instruction or a command.
-The line ends of this page are those of a program file. The text given to
-INTERPRET has [no line ends](r:lex.characters.interpret), so only a
-semicolon and the end of the text end a clause there, and examples of
-INTERPRET here hold no line end.
+A clause is the unit that the interpreter runs: a sequence of tokens that ends
+at a semicolon, which the reader supplies at most line ends. This page says
+where a clause ends, which clauses do nothing, how a label is recognized, how
+a line is continued, and how the first tokens of a clause decide whether it is
+a label, an assignment, an instruction or a command. The line ends of this
+page are those of a program file. The text given to
+[INTERPRET](r:instr.interpret.lines) has [no line
+ends](r:lex.characters.interpret), so only a semicolon and the end of the text
+end a clause there, and examples of INTERPRET here hold no line end.
 
 r[lex.clauses.end]
 A clause ends at a semicolon, at a line end, or at the end of the program.
@@ -46,9 +46,9 @@ say 6
 r[lex.clauses.null]
 A clause with no tokens is a null clause. Blank lines, lines that hold only
 comments and repeated semicolons are null clauses, and a null clause does
-nothing. Where an instruction is required after THEN, ELSE or OTHERWISE, the
-null clauses in between are passed over and the next clause that has tokens
-is that instruction.
+nothing. Where an instruction is required after [THEN, ELSE or
+OTHERWISE](r:instr.index.parts), the null clauses in between are passed over
+and the next clause that has tokens is that instruction.
 
 ```rexx
 say 1;;;say 2
@@ -72,14 +72,15 @@ if 0 then nop; else
 ```
 
 r[lex.clauses.implied]
-The keywords THEN, ELSE and OTHERWISE end the clause they are in, so that
-the instruction after one may follow on the same line with no semicolon.
-They have this effect only where they are keywords: THEN after the
-expression of IF or WHEN, and ELSE and OTHERWISE as the first token of a
-clause that is not an [assignment](r:lex.clauses.assignment). Anywhere else
-they are ordinary symbols. In the expression of IF or WHEN, outside
-parentheses and brackets, THEN is never a symbol, so `if then = 1 then` raises
-`SYNTAX 35.929`, while `if (then = 1) then` reads the variable.
+The keywords [THEN, ELSE and OTHERWISE](r:instr.index.parts) end the clause
+they are in, so that the instruction after one may follow on the same line
+with no semicolon. They have this effect only where they are keywords: THEN
+after the expression of [IF](r:instr.if.then) or [WHEN](r:instr.select.when),
+and ELSE and OTHERWISE as the first token of a clause that is not an
+[assignment](r:lex.clauses.assignment). Anywhere else they are ordinary
+symbols. In the expression of IF or WHEN, outside parentheses and brackets,
+THEN is never a symbol, so `if then = 1 then` raises `SYNTAX 35.929`, while
+`if (then = 1) then` reads the variable.
 
 ```rexx
 if 1 then say 'a'; else say 'b'
@@ -120,8 +121,10 @@ one that is found. The colon makes a label before it can make an assignment,
 so `x: = 3` is the label `x` followed by the clause `= 3`, which raises
 `SYNTAX 35.1` when the program is read, so that the program produces no output
 and [ends](r:lex.index.read-first) with the exit code 221. A label inside a
-DO, IF or SELECT body raises `SYNTAX 47.2`, `47.3` or `47.4` when the program
-is read, and a label in the text given to INTERPRET raises `SYNTAX 47.1`.
+[DO](../instructions/do.md), [IF](../instructions/if.md) or
+[SELECT](../instructions/select.md) body raises `SYNTAX 47.2`, `47.3` or
+`47.4` when the program is read, and a label in the text given to
+[INTERPRET](r:instr.interpret.labels) raises `SYNTAX 47.1`.
 
 ```rexx
 go : /* c */ say 'a'
@@ -433,8 +436,8 @@ stem
 r[lex.clauses.command]
 A clause that is not a label, an assignment or an instruction is a command.
 The string that its expression evaluates to is sent to the current
-environment. How that is done is the business of the ADDRESS
-instruction, and here only the recognition matters.
+environment. How that is done is the business of the [ADDRESS
+instruction](r:instr.address.command), and here only the recognition matters.
 
 ```rexx
 signal on failure name f

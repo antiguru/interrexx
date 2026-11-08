@@ -96,13 +96,14 @@ say (directory() == here) value('SPEC_SETLOCAL_A',, 'ENVIRONMENT') v
 r[bif.setlocal.owner]
 A save belongs to the code that is running when SETLOCAL is called: the
 program, a `::routine` or a method. An internal routine, with or without
-PROCEDURE, and the code that INTERPRET runs are part of the code that runs
-them. A save made in one of them is therefore still outstanding after it has
+[PROCEDURE](r:instr.procedure.scope), and the code that
+[INTERPRET](r:instr.interpret.scope) runs are part of the code that runs them.
+A save made in one of them is therefore still outstanding after it has
 returned, the changes made after the save stay in force, and an ENDLOCAL in
 the code that ran it takes the save back; a save made by that code can
 likewise be taken back by an ENDLOCAL in one of them. A `::routine` or a
-method sees only its own saves, as
-[ENDLOCAL in a routine](r:bif.endlocal.restore) shows.
+method sees only its own saves, as [ENDLOCAL in a
+routine](r:bif.endlocal.restore) shows.
 
 ```rexx
 call value 'SPEC_SETLOCAL_D', 'd0', 'ENVIRONMENT'

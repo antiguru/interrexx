@@ -8,11 +8,12 @@ rexxref: "General Concepts > Terms, Expressions, and Operators > Operators > Log
 # Logical operators
 
 The logical operators combine the values `0` and `1`, which are the values
-that a comparison answers and that `IF` and `WHILE` test for. There are three
-infix operators, `&`, `|` and `&&`, and one prefix operator, `\`. They work on
-strings, and a string is a logical value only when it is exactly `0` or
-exactly `1`. This page gives their truth tables, the error for any other
-operand, and the order in which their operands are evaluated and checked.
+that a comparison answers and that [`IF`](r:instr.if.value) and
+[`WHILE`](r:instr.do.while) test for. There are three infix operators, `&`,
+`|` and `&&`, and one prefix operator, `\`. They work on strings, and a string
+is a logical value only when it is exactly `0` or exactly `1`. This page gives
+their truth tables, the error for any other operand, and the order in which
+their operands are evaluated and checked.
 
 ## Operators
 
@@ -130,12 +131,13 @@ The prefix `\` takes the one term after it, as [the prefix
 rule](r:expr.index.prefix) says, so `\ 1 = 1` is `(\ 1) = 1`, and a comparison
 to be negated is put in parentheses. A `\` with no term after it raises
 `SYNTAX 35.901`. The character is an operator only in front of a term or as
-the first character of a comparison operator, so an infix `\` such as in `1 \
-1` raises `SYNTAX 35.1`. The sign may be written `'AA'x` or `'AC'x`, as [the
-not rule](r:lex.operators.not) says. Both errors are found when the program is
-read, so a program file with one of them [exits with `256` minus the error
-number](r:lex.index.read-first) before it runs a clause, and the text of an
-INTERPRET instruction raises them as ordinary conditions.
+the first character of a comparison operator, so an infix `\` such as in
+`1 \ 1` raises `SYNTAX 35.1`. The sign may be written `'AA'x` or `'AC'x`, as
+[the not rule](r:lex.operators.not) says. Both errors are found when the
+program is read, so a program file with one of them [exits with `256` minus
+the error number](r:lex.index.read-first) before it runs a clause, and the
+text of an [INTERPRET instruction](r:instr.interpret.whole) raises them as
+ordinary conditions.
 
 ```rexx
 say (\ 1 = 1) (\ (1 = 1)) (\ 0 > 1) (\ \ 0 = 0)
