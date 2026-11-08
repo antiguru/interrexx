@@ -35,7 +35,7 @@ one writes nothing and exits with 256 minus the error number, 231 for
 
 ```rexx
 src = .array~of('say digits() fuzz() form()', -
-  '::options digits 20 form engineering', -
+  '::options digits 23 form engineering', -
   '::options fuzz 3 digits 15', -
   '::OPTIONS Digits 11')
 p = .package~new('spec-dir-options-syntax', src)
@@ -248,7 +248,7 @@ call try '::options digits 5 fuzz 4'
 call try '::options fuzz 8 digits 10'
 call try '::options digits 10 fuzz 8 digits 8'
 call try '::options digits 10 fuzz 8', '::options digits 7'
-call try '::options digits 20', '::options fuzz 19', '::options digits 19'
+call try '::options digits 24', '::options fuzz 21', '::options digits 21'
 exit
 try:
   signal on syntax name e
@@ -279,7 +279,7 @@ e: say text '=>' condition('o')~code
 ::options fuzz 8 digits 10 => ok
 ::options digits 10 fuzz 8 digits 8 => 33.1
 ::options digits 10 fuzz 8 / ::options digits 7 => 33.1
-::options digits 20 / ::options fuzz 19 / ::options digits 19 => 33.1
+::options digits 24 / ::options fuzz 21 / ::options digits 21 => 33.1
 ```
 
 r[dir.options.inherit]
@@ -445,14 +445,14 @@ answers raise a SYNTAX condition instead, with these codes: `98.970` for
 ERROR, `98.971` for FAILURE, `98.972` for LOSTDIGITS, `98.973` for NOSTRING,
 `98.974` for NOTREADY and `98.986` for NOVALUE. The clause that raised it ends
 there as [the SYNTAX rule](r:cond.syntax.raise) says, and `RC` is 98 in the
-trap that catches it. Without a trap the program ends as [the rule for an
-untrapped SYNTAX](r:cond.index.syntax) says, with exit status 158. A FAILURE
-raised as SYNTAX is not passed on to the ERROR trap, as the second example
-shows. A FAILURE that no trap answers is answered as ERROR, as [the fallback
-rule](r:cond.error.fallback) says, so with ERROR SYNTAX it raises `98.970`
-when FAILURE is left at CONDITION, as the third example shows. A missing value
-or a string raises `SYNTAX 20.929` and any other symbol `25.927`, both when
-the program is read.
+trap that catches it. Without a trap the program ends as
+[the rule for an untrapped SYNTAX](r:cond.index.syntax) says, with exit status
+158. A FAILURE raised as SYNTAX is not passed on to the ERROR trap, as the
+second example shows. A FAILURE that no trap answers, which
+[the untrapped rule](r:cond.index.untrapped) would ignore, is answered as
+ERROR here, so with ERROR SYNTAX it raises `98.970` when FAILURE is left at
+CONDITION, as the third example shows. A missing value or a string raises
+`SYNTAX 20.929` and any other symbol `25.927`, both when the program is read.
 
 ```rexx
 call try 'error'
@@ -567,15 +567,15 @@ instruction that turns the trap of the condition `ON` or `OFF`, or the trap of
 ANY, ends the option for that condition for the rest of the routine or method
 in which it ran, so that an `OFF` condition is
 [ignored](r:cond.index.untrapped) again. A CALL instruction does so for ERROR,
-FAILURE and NOTREADY, the conditions that CALL can trap, and CALL ON or OFF of
-ANY does so for these three only: for LOSTDIGITS, NOSTRING and NOVALUE the
-option stays in force. An internal routine takes this state from its caller,
-and the instructions that it runs end the option for its own code only, so
-that its caller still has the state it had when the routine returns. A SIGNAL
-or CALL in the text of an INTERPRET ends the option for the code that runs the
-INTERPRET. A `::ROUTINE` and a method start without the state, and the option
-applies there afresh. A SYNTAX condition that the option raises is an
-ordinary one, which SIGNAL ON SYNTAX answers.
+FAILURE and NOTREADY, the conditions of the option that CALL can trap, and
+CALL ON or OFF of ANY does so for these three only: for LOSTDIGITS, NOSTRING
+and NOVALUE the option stays in force. An internal routine takes this state
+from its caller, and the instructions that it runs end the option for its own
+code only, so that its caller still has the state it had when the routine
+returns. A SIGNAL or CALL in the text of an INTERPRET ends the option for the
+code that runs the INTERPRET. A `::ROUTINE` and a method start without the
+state, and the option applies there afresh. A SYNTAX condition that the option
+raises is an ordinary one, which SIGNAL ON SYNTAX answers.
 
 ```rexx
 call try 1
@@ -705,17 +705,17 @@ nothing went on
 ## The prolog option
 
 r[dir.options.prolog]
-PROLOG and NOPROLOG say whether the prolog of the package runs when another
-package requires it: PROLOG, the default, runs it and NOPROLOG leaves it out,
-so that a package of routines and classes can be required without its
+PROLOG and NOPROLOG decide what a ::REQUIRES of the package does with its
+prolog: with PROLOG, the default, the prolog runs, and with NOPROLOG it is
+skipped, so that a package of routines and classes can be required without its
 start-up code. The last of the two in text order is used. The installation of
 the package is not affected, so its routines and classes exist all the same.
-The program that was started runs its prolog whatever the option says.
-Loading the text of a package with the `Package` class follows the same rule
-as a requirement, as the first example shows. The option acts on a package
-that is required or loaded as a package only: a file that a program calls as
-an external routine runs its code from the start, whatever the option says,
-as the second example shows.
+The program that was started runs its prolog whatever the option says. Loading
+the text of a package with the `Package` class follows the same rule as a
+requirement, as the first example shows. The option acts on a package that is
+required or loaded as a package only: a file that a program calls as an
+external routine runs its code from the start, whatever the option says, as
+the third example shows.
 
 ```rexx
 f = 'spec-dir-options-pro1.tmp'
