@@ -337,8 +337,8 @@ h: say 'h' sigl condition('s')
 ```output
 start SIGL
 in sub
-h 9 DELAY
-main after 9 []
+h 8 DELAY
+main after 8 []
 ```
 
 ```rexx
@@ -627,14 +627,15 @@ s: say 's' condition('o')~code sigl condition('o')~position
 
 ```output
 ext
-s 41.1 5 11
+s 41.1 4 10
 ```
 
 r[cond.traps.deviation.75]
 A condition that is raised for a CALL trap in the `DELAY` state, from a
 routine that the handler calls, is held and answered as [the delay
 rule](r:cond.traps.delay) says: the handler is called again when it returns,
-or at once when a CALL ON or a SIGNAL ON for the condition runs. ooRexx
+or at once when a CALL ON or a SIGNAL ON for the condition runs, and several
+such conditions are answered one after the other in the order raised. ooRexx
 loses such a condition, and crashes in some programs.
 
 ```rexx
@@ -712,9 +713,6 @@ held, before signal on
 sg second SIGNAL OFF
 main after
 ```
-
-Several conditions that are held are answered one after the other, in the
-order raised.
 
 ```rexx
 call on user foo name h
