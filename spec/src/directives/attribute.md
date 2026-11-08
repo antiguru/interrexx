@@ -76,8 +76,8 @@ The name is a symbol or a string. As [the names rule](r:dir.index.names) says,
 a symbol names the variable in upper case and a string names it exactly as
 written, so the variable of `::attribute "Mixed"` is not the one that the
 symbol `mixed` names in an EXPOSE, and while it is unset the getter answers
-`Mixed`, although the messages `mixed` and `mixed=` reach it, because the
-lookup of a method by name [ignores case](r:dir.method.name). A name that
+`Mixed`. The messages `mixed` and `mixed=` still reach the methods, because
+the lookup of a method by name [ignores case](r:dir.method.name). A name that
 cannot be the name of a variable, such as a string with a blank or a number,
 raises `SYNTAX 99.925`, and a directive whose name is missing or is neither a
 symbol nor a string raises `19.914`. Both are found when the program is read.
@@ -427,10 +427,10 @@ or one that is not a string, raises `SYNTAX 19.905`, and a string that does
 not start with the word LIBRARY or has too many words raises `99.917`. A
 library that cannot be loaded raises `98.903`, and a library that loads but
 has no method entry of the given name raises `90.998`. Both are raised when
-the section of the directive ends, as [the rule for external
-methods](r:dir.method.external) describes for the faults of other directives,
-so that a clause in the section is refused first, as the section rule below
-says.
+the section of the directive ends, so a clause in the section is refused
+first, as the section rule below says. How they are ordered against the faults
+of other directives is the subject of [the rule for external
+methods](r:dir.method.external).
 
 ```rexx
 call try '::attribute a external'

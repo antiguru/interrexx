@@ -131,9 +131,11 @@ is never looked up: `.nil` is the text `.NIL` and `Hello.World` is
 number is not normalized, so `007` stays `007` and `1e3` is `1E3` as the
 symbol it is. A sign, `+` or `-`, may come before a number, with blanks
 between or not, and the value is the sign and the number joined, so `- 7` is
-`-7` and `+5` is `+5`. A sign followed by anything other than a number raises
-`SYNTAX 19.916`, and a second token raises `21.913`.
-These errors are found when the program is read.
+`-7` and `+5` is `+5`. A sign followed by anything other than a number, or by
+nothing before a semicolon, raises `SYNTAX 19.916`, and a second token raises
+`21.913`. These errors are found when the program is read. A sign that is the
+last token on its line is a [continuation](r:lex.clauses.continuation) and not
+a sign.
 
 ```rexx
 say .k~lit .k~sym .k~nil .k~dotted
@@ -142,6 +144,8 @@ call try '::constant a - b'
 call try '::constant a +x'
 call try '::constant a - -1'
 call try '::constant a - "7"'
+call try '::constant a - ;'
+call try '::constant a -'
 call try '::constant a 1 2'
 call try '::constant a "x" "y"'
 call try '::constant a (1) (2)'
@@ -172,6 +176,8 @@ x  y HELLO .NIL HELLO.WORLD
 ::constant a +x => 19.916
 ::constant a - -1 => 19.916
 ::constant a - "7" => 19.916
+::constant a - ; => 19.916
+::constant a - => ok
 ::constant a 1 2 => 21.913
 ::constant a "x" "y" => 21.913
 ::constant a (1) (2) => 21.913
