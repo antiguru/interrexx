@@ -435,8 +435,9 @@ for SYNTAX.
 
 ## 66. Frame name for a 16.1 inside INTERPRET
 
-For a SIGNAL to a missing label inside INTERPRET, the PROGRAM stack frame
-keeps the program's name. ooRexx reports it empty.
+When a condition occurs in INTERPRET text and the SIGNAL ON trap for it names
+a label that does not exist, the one PROGRAM frame of the 16.1 condition keeps
+the program's name. ooRexx reports that frame's name as the null string.
 
 ## 67. The line a started message's error names
 
