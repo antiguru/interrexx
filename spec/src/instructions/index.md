@@ -73,7 +73,7 @@ The keyword instruction names are [ADDRESS](address.md), [ARG](arg.md),
 [INTERPRET](interpret.md), [ITERATE](iterate.md), [LEAVE](leave.md),
 [LOOP](loop.md), [NOP](nop.md), [NUMERIC](numeric.md), [OPTIONS](options.md),
 [PARSE](parse.md), [PROCEDURE](procedure.md), [PULL](pull.md),
-[PUSH](push.md), [QUEUE](queue.md), RAISE, [REPLY](reply.md),
+[PUSH](push.md), [QUEUE](queue.md), [RAISE](raise.md), [REPLY](reply.md),
 [RETURN](return.md), [SAY](say.md), [SELECT](select.md), [SIGNAL](signal.md),
 [TRACE](trace.md) and [USE](use.md). A clause that is not an assignment and
 whose first token is one of these names is that instruction, whatever the case

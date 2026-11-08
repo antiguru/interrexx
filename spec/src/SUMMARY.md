@@ -49,6 +49,7 @@
   - [PULL](instructions/pull.md)
   - [PUSH](instructions/push.md)
   - [QUEUE](instructions/queue.md)
+  - [RAISE](instructions/raise.md)
   - [REPLY](instructions/reply.md)
   - [RETURN](instructions/return.md)
   - [SAY](instructions/say.md)
