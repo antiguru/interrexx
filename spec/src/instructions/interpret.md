@@ -4,7 +4,7 @@ kind: instruction
 syntax: "INTERPRET expression"
 ansi: "6.3.2.62, 8.3.10"
 rexxref: "Keyword Instructions > INTERPRET"
-deviations: [51, 76]
+deviations: [51, 66, 76]
 ---
 
 # INTERPRET
@@ -315,10 +315,14 @@ r[instr.interpret.transfer]
 An instruction of the text that moves control moves it for the code that holds
 the INTERPRET. A `RETURN` returns from that routine or method with its value,
 or ends the program, and the clauses after the INTERPRET do not run. An `EXIT`
-ends the program with its value as the exit code. A `SIGNAL` to a label of the
-program leaves the text and any active DO, IF or SELECT, and sets `SIGL` to
-the number of the line of the INTERPRET clause, as it would for a SIGNAL
-written there.
+does what it would do where the INTERPRET stands, as [the EXIT
+rules](r:instr.exit.program) say. In the main program and in an internal
+routine of it, it ends the program with its value as the exit code. In a
+method or a `::ROUTINE`, it ends only that unit, and the value goes to the
+sender or the caller as [the rule for a unit](r:instr.exit.unit) says. A
+`SIGNAL` to a label of the program leaves the text and any active DO, IF or
+SELECT, and sets `SIGL` to the number of the line of the INTERPRET clause, as
+it would for a SIGNAL written there.
 
 ```rexx
 say f(5)
@@ -327,17 +331,28 @@ say 'sigl' sigl result
 interpret 'signal lab; say "no"'
 say 'not run'
 lab: say 'at lab' sigl
+say 'method' .box~new~run
+say 'routine' later()
 interpret 'exit 3'
 say 'not run'
 f: interpret 'return arg(1) * 2'
 say 'not run'
 sub: return 'from sub'
+::class box
+::method run
+  interpret 'exit "from method"'
+  say 'not run'
+::routine later
+  interpret 'exit "from routine"'
+  say 'not run'
 ```
 
 ```output rc=3
 10
 sigl 2 from sub
 at lab 4
+method from method
+routine from routine
 ```
 
 r[instr.interpret.result]
@@ -506,4 +521,25 @@ say .rs .context~rs
 ```output
 1 1
 1 1
+```
+
+r[instr.interpret.deviation.66]
+A trap that `SIGNAL ON` enabled, and whose label does not exist, raises
+`SYNTAX 16.1` when its condition occurs, and not before, as [the rule on
+the ON form](r:instr.signal.on) says. When the condition occurs in the text of
+an INTERPRET, the condition has one stack frame, of the type `PROGRAM`, and
+its name is the name of the program. In ooRexx the name of that frame is the
+null string.
+
+```rexx
+signal on syntax name e
+signal on novalue name nolabel
+interpret 'a = undefinedvar'
+e: c = condition('o')
+f = c~stackFrames~firstItem
+say c~code c~stackFrames~items f~type (f~name == .context~package~name)
+```
+
+```output
+16.1 1 PROGRAM 1
 ```
