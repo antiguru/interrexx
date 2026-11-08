@@ -27,10 +27,10 @@ state is `ON` or `DELAY`. When it is `OFF`, the ANY trap answers instead if
 its state is `ON` or `DELAY`. When neither is on, the condition is
 [untrapped](r:cond.index.untrapped), except that a FAILURE then goes to the
 ERROR trap. A trap that answers a condition changes only its own state, so
-every other trap, ANY included, stays as it was. The two kinds of trap are equal in this:
-a CALL trap for the condition wins over a SIGNAL trap for ANY, and a SIGNAL
-trap for the condition wins over a CALL trap for ANY. A condition that the
-ANY trap catches is still itself: `CONDITION('C')` answers its own name, and
+every other trap, ANY included, stays as it was. The two kinds of trap are
+equal in this: a CALL trap for the condition wins over a SIGNAL trap for ANY,
+and a SIGNAL trap for the condition wins over a CALL trap for ANY. A
+condition that the ANY trap catches is still itself: `CONDITION('C')` answers its own name, and
 the default label or routine of an ANY trap is `ANY`. A condition whose own
 trap was switched off explicitly does not keep ANY from answering. A CALL
 trap for ANY answers only the conditions that CALL can trap, and a SIGNAL
@@ -264,10 +264,14 @@ of the trap becomes `DELAY`, the condition is recorded, and a routine is
 called before the next clause starts. The next clause is the one after it in
 the same place, so the call is made inside a DO, a SELECT or an IF that holds
 the clause, and between the clauses of the text of an INTERPRET. When the
-clause that raised the condition ends a routine or the program, as a RETURN,
-an EXIT or the last clause does, the routine of the trap is called in the
-level of the caller, after the return and before the clause after the CALL,
-and before the program ends. The routine
+clause that raised the condition ends the program, as an EXIT in the main
+program or the last clause does, or ends a routine, as a RETURN or running off
+its end does, the routine of the trap is called in the level of the caller,
+after the return and before the caller goes on. The caller goes on with the
+clause after the CALL, or with the rest of the expression of the clause that
+invoked the routine as a function. When the program ends, the routine is
+called before it does. What an EXIT inside an internal routine does with a
+pending CALL trap is not specified. The routine
 is the one that [CALL](r:instr.call.search) finds for the name of the trap,
 which is the name of the condition when there was no NAME. It gets one
 argument, the [condition object](r:cond.information.argument). The call does
@@ -275,7 +279,8 @@ not change `RESULT`, and what the routine returns is dropped. When the routine
 returns, the trap is `ON` again, and the clause after the one that raised the
 condition runs. When the routine is an internal routine, `SIGL` is set as [a
 CALL](r:instr.call.sigl) sets it, to the line of the clause that raised the
-condition, or to the line of the RETURN when that clause ended a routine. A
+condition, which for a RETURN, an EXIT or a clause that ends a routine is that
+clause itself and not the CALL. A
 routine without PROCEDURE shares the variables of the caller, `RC` among them.
 When the routine is a `::ROUTINE`, a built-in function or an external routine,
 `SIGL` is not set, and it keeps the value it had.
@@ -339,6 +344,34 @@ start SIGL
 in sub
 h 8 DELAY
 main after 8 []
+```
+
+```rexx
+call on notready name h
+x = f() g()
+say 'after' sigl x
+exit
+f: return '[' || linein() || ']'
+g: say 'g'; return 'G'
+h: say 'h' sigl condition('s')
+  return
+```
+
+```output
+h 5 DELAY
+g
+after 2 [] G
+```
+
+```rexx
+call on notready name h
+exit linein()
+h: say 'h' sigl condition('s')
+  return
+```
+
+```output
+h 2 DELAY
 ```
 
 ```rexx
@@ -423,11 +456,12 @@ address system 'exit 3'
 r[cond.traps.delay]
 While the state of a CALL trap is `DELAY`, a condition that is raised for it
 again does not call the routine. ERROR, FAILURE and NOTREADY raised again are
-ignored. Every other condition that is raised is held, and they are answered in
-the order raised when the state of the trap changes. A CALL OFF or SIGNAL OFF for the condition drops it. A CALL
-ON or SIGNAL ON for the condition answers it at the end of that instruction,
-with the trap that the instruction set. When the routine returns, the CALL
-trap answers it by calling the routine again. A SIGNAL trap is never `DELAY`.
+ignored. Every other condition that is raised is held, and the held ones are
+answered in the order raised when the state of the trap changes. A CALL OFF
+or SIGNAL OFF for the condition drops them. A CALL ON or SIGNAL ON for the
+condition answers them at the end of that instruction, with the trap that the
+instruction set. When the routine returns, the CALL trap answers them by
+calling the routine again. A SIGNAL trap is never `DELAY`.
 The held conditions are [Deviation 75](r:cond.traps.deviation.75).
 
 ```rexx

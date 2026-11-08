@@ -312,11 +312,8 @@ level. A clause that spans several lines counts at its first, and the clause
 of an INTERPRET is the INTERPRET instruction, not a clause of its text. The
 `POSITION` entry is the line of the clause that raised the condition, in the
 code that raised it, so it differs from `SIGL` when the condition was raised
-in a deeper level that has no trap. A CALL trap whose
-condition was raised by the RETURN or EXIT of a routine is called in the level
-of the caller, as [the CALL trap rule](r:cond.traps.call) says, and `SIGL` is
-then the line of that RETURN. A CALL trap whose routine is not an internal
-routine does not set `SIGL` at all.
+in a deeper level that has no trap. The `SIGL` of a CALL trap is set as
+[the CALL trap rule](r:cond.traps.call) says.
 
 ```rexx
 signal on syntax name h
