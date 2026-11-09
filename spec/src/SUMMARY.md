@@ -88,6 +88,7 @@
   - [Method search](classes/methods.md)
   - [Object](classes/object.md)
   - [Class](classes/class.md)
+  - [String](classes/string.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
