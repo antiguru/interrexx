@@ -24,15 +24,16 @@ chapter.
 
 r[class.messagenotification.creation]
 `MessageNotification` is a mixin class whose superclass is `Object`, and
-`queryMixinClass` answers 1 for it ([the mixin rule](r:class.index.mixins)).
-A class implements the interface by inheriting it with the `INHERIT` option of
-[`::CLASS`](../directives/class.md), or by being a subclass of such a class; an
-object is an implementation when it is an instance of one of these, which is
-what `isInstanceOf` tests, and nothing else counts: an object whose class has a
-method `messageComplete` and does not inherit the interface is not accepted by
-`notify`, which raises `SYNTAX 88.914` for it. `new` is not refused, and makes
-an object of the class that received it. `Message` is itself an
-implementation, so a message object can be the target of a notification.
+`queryMixinClass` answers 1 for it ([the mixin rule](r:class.index.mixins)). A
+class implements the interface by inheriting it with the `INHERIT` option of
+[`::CLASS`](../directives/class.md), or by being a subclass of such a class;
+an object is an implementation when it is an instance of one of these, which
+is what `isInstanceOf` tests, and nothing else counts: an object whose class
+has a method `messageComplete` and does not inherit the interface is not
+accepted by `notify`, which raises `SYNTAX 88.914` for it. `new` is not
+refused, and makes an object of the class that received it. `Message` is
+itself an implementation, so a message object can be the target of a
+notification.
 
 ```rexx
 say .messagenotification~queryMixinClass .messagenotification~superclass~id
@@ -77,17 +78,17 @@ r[class.messagenotification.messagecomplete]
 `messageComplete(source)` is abstract. Sent to an object whose class has no
 `messageComplete` of its own, whatever arguments it has, it raises
 `SYNTAX 93.965`, as [the abstract rule](r:dir.method.abstract) says of any
-abstract method. An implementation declares the method and takes one
-argument, the message object that has ended, as `source`: the library sends
-it after the run has ended, so `completed` answers 1 for it, and the answer
-of the message is there for `result` to give, or its error for
-`errorCondition`. What an implementation answers is not used. The library
-sends the message in the circumstances that
-[the `notify` rule](r:class.message.notify) lists: once for each `notify` to
-the target, at each end of the message and in the order of the calls; at once
-when the message had already ended; and in the activity that ran the message
-for a message that was started. A `messageComplete` that raises an error does
-not change the message; where the error shows is also stated there.
+abstract method. An implementation declares the method and takes one argument,
+the message object that has ended, as `source`: the library sends it after the
+run has ended, so `completed` answers 1 for it, and the answer of the message
+is there for `result` to give, or its error for `errorCondition`. What an
+implementation answers is not used. The library sends the message in the
+circumstances that [the `notify` rule](r:class.message.notify) lists: once for
+each `notify` to the target, at each end of the message and in the order of
+the calls; at once when the message had already ended; and in the activity
+that ran the message for a message that was started. What an error that a
+`messageComplete` raises does to the message depends on how the message was
+run, as [the `notify` rule](r:class.message.notify) states.
 
 ```rexx
 t = .t~new

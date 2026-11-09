@@ -2,7 +2,7 @@
 element: "Message"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Message Class; Builtin Classes > Fundamental Classes > Message Class > new (Class Method); Builtin Classes > Fundamental Classes > Message Class > arguments; Builtin Classes > Fundamental Classes > Message Class > completed; Builtin Classes > Fundamental Classes > Message Class > errorCondition; Builtin Classes > Fundamental Classes > Message Class > halt; Builtin Classes > Fundamental Classes > Message Class > hasError; Builtin Classes > Fundamental Classes > Message Class > hasResult; Builtin Classes > Fundamental Classes > Message Class > messageComplete; Builtin Classes > Fundamental Classes > Message Class > messageName; Builtin Classes > Fundamental Classes > Message Class > notify; Builtin Classes > Fundamental Classes > Message Class > reply; Builtin Classes > Fundamental Classes > Message Class > replyWith; Builtin Classes > Fundamental Classes > Message Class > result; Builtin Classes > Fundamental Classes > Message Class > send; Builtin Classes > Fundamental Classes > Message Class > sendWith; Builtin Classes > Fundamental Classes > Message Class > start; Builtin Classes > Fundamental Classes > Message Class > startWith; Builtin Classes > Fundamental Classes > Message Class > target; Builtin Classes > Fundamental Classes > Message Class > triggered; Builtin Classes > Fundamental Classes > Message Class > wait; Builtin Classes > Utility Classes > AlarmNotification Class > cancel"
-deviations: [20, 105, 107]
+deviations: [105, 107]
 ---
 
 # Message
@@ -149,11 +149,13 @@ r[class.message.new]
 `new(target, name, option, ...)` makes a message object that has not been run.
 It needs at least two arguments: fewer raise `SYNTAX 93.901`, and an omitted
 target raises `88.901`. The target is any object, `.nil` included. The name is
-checked first, as [the `send` rule](r:class.object.send) checks it: a string,
+checked next, after the target, as [the `send` rule](r:class.object.send)
+checks it: a string,
 or an array of two items, the name and a class that starts the search ([the
 scoped send rule](r:class.methods.scoped.send)). A name that is neither,
 `.nil` for instance, raises `93.972`, an array of another size `93.946`, an
-array with a first item that has no string value `88.909` and one with a
+array whose first item is missing `88.901`, an array with a first item that
+has no string value `88.909` and one with a
 second item that is not a class `88.914`. The null string is a name. The
 option that follows is the third argument, which says how the remaining
 arguments are read, as the next rule states. With no option, the message has
@@ -212,15 +214,15 @@ or `A` (array); the other letters are not looked at, so `Individual` and
 option is checked after the name. An omitted option with an argument after it
 raises `88.901`. With `I`, every argument after the option is an argument of
 the message, in order, and an omitted place stays omitted; omitted places at
-the end add nothing to the count, as [the count
-rule](r:class.index.args.count) says, and an argument may be any object,
-`.nil` included. With `A`, the fourth argument is required (`SYNTAX 93.901`),
-is the only argument that may follow (a fifth raises `93.902`), and holds the
-arguments of the message: it is an array, or an object that answers an array
-to the message `request` with the argument `ARRAY`, and the items of the array
-are the arguments in order, the places that hold nothing being omitted
-arguments. An object that answers no array, `.nil` and an array of more than
-one dimension among them, raises `SYNTAX 88.913`.
+the end add nothing to the count, as
+[the count rule](r:class.index.args.count) says, and an argument may be any
+object, `.nil` included. With `A`, the fourth argument is required
+(`SYNTAX 93.901`) and is the only argument that may follow: a fifth raises
+`93.902`, also when the fourth is omitted. It holds the arguments of the
+message: it is an array, or an object that answers an array to the message
+`request` with the argument `ARRAY`, and the items of the array are the
+arguments in order. An object that answers no array, `.nil` and an array of
+more than one dimension among them, raises `SYNTAX 88.913`.
 
 ```rexx
 t = .t~new
@@ -229,7 +231,7 @@ say .message~new(t, 'show', 'I', 1, , 3)~send
 say .message~new(t, 'show', 'individual', 1, )~send
 say .message~new(t, 'show', 'I', , )~send
 say .message~new(t, 'show', 'I', 'x', .nil)~send
-say .message~new(t, 'show', 'Array', .array~of(4, , 6))~send
+say .message~new(t, 'show', 'Array', .array~of(4, 5, 6))~send
 say .message~new(t, 'show', 'a', .list~of(7, 8))~send
 say .message~new(t, 'show', 'A', 'xyz')~send
 call try '.message~new(t, "show", "Z")'
@@ -266,7 +268,7 @@ bad: say arg(1) '=>' condition('o')~code
 1: 1
 0:
 2: x The NIL object
-3: 4 . 6
+3: 4 5 6
 2: 7 8
 1: xyz
 .message~new(t, "show", "Z") => 93.915
@@ -539,15 +541,17 @@ boom 0 1
 r[class.message.haserror]
 `hasError` answers 1 when the latest run ended with an error condition and 0
 when the message has not been run, has not ended, or ended without one. The
-error is the one the message raised in its own code, a SYNTAX error or a
-condition that nothing trapped there, including the `97.1` of a message that
-no method of the target understands and the `4.1` of a
-[halt](r:class.message.halt) nothing trapped. The error of an argument that
-`sendWith` or the other methods refuse is raised to their caller and is not an
-error of the message, which is then not run. It takes no argument. The answer,
-like those of `completed`, `hasResult` and `errorCondition`, is that of the
-latest run: a message that is sent again starts from the state of one that has
-not been run.
+error is a SYNTAX condition that the code of the message raised and nothing
+trapped there, including the `97.1` of a message that no method of the target
+understands, and a HALT that nothing trapped, which is the error `4.1`
+([halt](r:class.message.halt)). Any other condition that nothing traps ends
+the method as [the RAISE rule](r:instr.raise.exit) says and is not an error:
+the message has completed, with no result and no error. The error of an
+argument that `sendWith` or the other methods refuse is raised to their caller
+and is not an error of the message, which is then not run. It takes no
+argument. The answer, like those of `completed`, `hasResult` and
+`errorCondition`, is that of the latest run: a message that is sent again
+starts from the state of one that has not been run.
 
 ```rexx
 t = .t~new
@@ -564,6 +568,9 @@ say m~hasError
 m = t~start('boom')
 m~wait
 say m~hasError
+m = .message~new(t, 'usr')
+call attempt m
+say m~completed m~hasError m~hasResult
 f = .message~new(t, 'flip')
 do 3
   call attempt f
@@ -591,6 +598,9 @@ bad: say arg(1) '=>' condition('o')~code
   return 1
 ::method boom
   return 1/0
+::method usr
+  raise user foo
+  return 'not reached'
 ::method flip
   expose n
   n = n + 1
@@ -604,6 +614,7 @@ bad: say arg(1) '=>' condition('o')~code
 1
 1
 1
+1 0 0
 1 0 1 1
 1 1 0 0
 1 0 1 1
@@ -667,7 +678,9 @@ in the target, goes to `UNKNOWN` when nothing is found, raises NOMETHOD
 (`SYNTAX 97.1` when untrapped) when there is none, and is checked for
 `PRIVATE` and `PACKAGE` access as if the code that called `send` had sent it.
 A scoped name starts the search at its class, and raises `93.957` when the
-target is not an instance of that class. Each `send` is a new run: the message
+target is not an instance of that class; that error is raised to the caller
+of `send`, `start` or the other run methods before the message runs, and is
+not an error of the message. Each `send` is a new run: the message
 can be sent again, and the result, the error and the completion are those of
 the latest run.
 
@@ -735,15 +748,17 @@ the first argument is the target, which is replaced as `send` does when it is
 not omitted. The second argument is an array, or an object that answers an
 array to the message `request` with the argument `ARRAY`; an object that
 answers anything else, `.nil` included, and an array of more than one
-dimension raise `SYNTAX 88.913`. The items are the arguments in order, and a
-place of the array that holds nothing is an omitted argument. Apart from the
-arguments, `sendWith` runs the message as `send` does, answers as it does, and
-a run replaces the state of the message in the same way.
+dimension raise `SYNTAX 88.913`. The items are the arguments in order. The
+target is replaced before the array is checked, so a call that is refused
+leaves its target in the message; the arguments and what the latest run left
+are unchanged. Apart from the arguments, `sendWith` runs the message as `send`
+does, answers as it does, and a run replaces the state of the message in the
+same way.
 
 ```rexx
 t = .t~new
 m = .message~new(t, 'show', 'I', 'old')
-say m~sendWith(, .array~of(1, , 3))
+say m~sendWith(, .array~of(1, 2, 3))
 say m~arguments~items m~arguments[3]
 say m~sendWith(.u~new, .array~of(5))
 say m~target~class~id
@@ -754,6 +769,9 @@ call try 'm~sendWith(t)'
 call try 'm~sendWith(t, .nil)'
 call try 'm~sendWith(t, .array~new(2, 2))'
 call try 'm~sendWith(t, .array~new, 1)'
+r = .message~new(t, 'show')
+call try 'r~sendWith(.u~new, .nil)'
+say r~target~class~id
 exit
 try:
   signal on syntax name bad
@@ -776,8 +794,8 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-3: 1 . 3
-2 3
+3: 1 2 3
+3 3
 u 1 5
 U
 u 2 6
@@ -787,6 +805,8 @@ m~sendWith(t) => 88.901
 m~sendWith(t, .nil) => 88.913
 m~sendWith(t, .array~new(2, 2)) => 88.913
 m~sendWith(t, .array~new, 1) => 93.902
+r~sendWith(.u~new, .nil) => 88.913
+U
 ```
 
 r[class.message.sendwith.sends]
@@ -891,13 +911,14 @@ r[class.message.startwith]
 array is required (`SYNTAX 88.901`), a third argument raises `93.902`, and an
 array that is not one, `.nil` for instance, or has more than one dimension
 raises `88.913`. These errors are raised by `startWith` itself, at the call,
-and the message is not started when one is raised. The answer is nothing, and
+and the message is not started when one is raised, though a target given to
+the call has replaced the message's target. The answer is nothing, and
 the rest is as for [`start`](r:class.message.start).
 
 ```rexx
 t = .t~new
 m = .message~new(t, 'show', 'I', 'old')
-m~startWith(, .array~of(1, , 3))
+m~startWith(, .array~of(1, 2, 3))
 say m~result
 call try '.message~new(t, "show")~startWith'
 call try '.message~new(t, "show")~startWith(t)'
@@ -908,6 +929,9 @@ n = .message~new(t, "show")
 call try 'n~startWith(t, .nil)'
 n~startWith(t, .array~of(9))
 say n~result
+r = .message~new(t, 'show')
+call try 'r~startWith(.u~new, .nil)'
+say r~target~class~id
 exit
 try:
   signal on syntax name bad
@@ -924,10 +948,11 @@ bad: say arg(1) '=>' condition('o')~code
     else s = s '.'
   end
   return s
+::class u subclass t
 ```
 
 ```output
-3: 1 . 3
+3: 1 2 3
 .message~new(t, "show")~startWith => 88.901
 .message~new(t, "show")~startWith(t) => 88.901
 .message~new(t, "show")~startWith(t, .nil) => 88.913
@@ -935,6 +960,8 @@ bad: say arg(1) '=>' condition('o')~code
 .message~new(t, "show")~startWith(t, .array~new, 1) => 93.902
 n~startWith(t, .nil) => 88.913
 1: 9
+r~startWith(.u~new, .nil) => 88.913
+U
 ```
 
 r[class.message.startwith.sends]
@@ -1082,12 +1109,15 @@ r[class.message.result]
 has been started and has not ended. When the message answered nothing it
 answers `.nil`, so that `hasResult` is the way to tell the two apart. When the
 latest run ended with an error, `result` raises that error again, in the
-activity of its caller, with the code of the error that the message raised, so
-that a trap there sees it: the `SYNTAX 42.3` of a division by zero in the
-message is `42.3` at the clause that asked for `result`, and asking again
-raises it again. `result` takes no argument. A message that has not been run,
-and that nothing will run, is the case of
-[Deviation 20](r:class.message.deviation.20).
+activity of its caller, with the code of the error that the message raised:
+the trap there sees a new condition object each time, with the `CODE`, `RC`,
+`CONDITION`, `DESCRIPTION`, `ADDITIONAL`, `ERRORTEXT` and `MESSAGE` of the
+object that `errorCondition` answers, which is the same object each time, so
+that the `SYNTAX 42.3` of a division by zero in the message is `42.3` at the
+clause that asked for `result`, and asking again raises it again. `result`
+takes no argument. What `result` does for a message that nothing will run,
+such as one that has never been sent or the original of a `reply`, is the case
+of [Deviation 20](../deviations.md#20-a-wait-nothing-can-end).
 
 ```rexx
 t = .t~new
@@ -1132,12 +1162,13 @@ m~result(1) => 93.902
 ```
 
 r[class.message.wait]
-`wait` waits until the message has ended, answers nothing and raises no
-error, also when the message ended with one: the error is asked for with
-`hasError` and `errorCondition`, or raised by `result`. It returns at once
-for a message that has ended. It takes no argument. A message that has not
-been run, and that nothing will run, is the case of
-[Deviation 20](r:class.message.deviation.20).
+`wait` waits until the message has ended, answers nothing and raises no error,
+also when the message ended with one: the error is asked for with `hasError`
+and `errorCondition`, or raised by `result`. It returns at once for a message
+that has ended. It takes no argument. What `wait` does for a message that
+nothing will run, such as one that has never been sent or the original of a
+`reply`, is the case of
+[Deviation 20](../deviations.md#20-a-wait-nothing-can-end).
 
 ```rexx
 g = .gate~new
@@ -1192,16 +1223,17 @@ m~wait(1) => 93.902
 
 r[class.message.halt]
 `halt(description)` asks for the HALT condition to be raised in the activity
-that is running the message, and answers 1 when there is such an activity and
-0 when the message is not being run: it has not been started, or has not been
-run at all. The description is optional and is a string, which the condition
-has as `CONDITION('D')`; without one that is the null string. `.nil` as the
-description raises `SYNTAX 88.909`, and a second argument `93.902`. Code of
-the message that traps HALT, as [the HALT page](r:cond.halt.signal) describes,
-handles it as for any HALT. A HALT nothing traps ends the message with the
-error `4.1`, which `hasError`, `errorCondition` and `result` then show as for
-any other error of a message. What `halt` answers and does for a message that
-has ended is not specified.
+that is running the message, and answers 1 when a run of the message is in
+progress, started or sent (a sent message runs in the sender's activity, which
+then gets the HALT), and 0 when the message has not been run. The description
+is optional and is a string, which the condition has as `CONDITION('D')`;
+without one that is the null string. `.nil` as the description raises
+`SYNTAX 88.909`, and a second argument `93.902`. Code of the message that
+traps HALT, as [the HALT page](r:cond.halt.signal) describes, handles it as
+for any HALT. A HALT nothing traps ends the message with the error `4.1`,
+which `hasError`, `errorCondition` and `result` then show as for any other
+error of a message. What `halt` answers and does for a message that has ended
+is not specified.
 
 ```rexx
 g = .gate~new
@@ -1291,13 +1323,22 @@ can be sent any number of times: the targets are kept in the order of the
 calls, and each is sent `messageComplete` each time the message ends, in that
 order. A run of `send` or `sendWith` sends them before it returns, in the
 activity of the sender, and an error that a `messageComplete` raises is raised
-there, so that it ends the `send` clause; the error does not become an error
-of the message, which has ended without one. When a message that has ended is
-given a target, the target is sent `messageComplete` at once, in the activity
-that called `notify`. For a started message the targets are sent it in the
-activity that ran the message; when that happens relative to the activity that
-waits for the message is a matter of scheduling. A copy made by `reply` or by
-`copy` has the targets of the message. The message the target is sent is the
+there, so that it ends the `send` clause; the targets after the one that
+raised it are not sent `messageComplete`, and when the message itself ended
+with an error, the sender sees the error of the `messageComplete`, while
+`errorCondition` keeps that of the message. The error does not become an error
+of a sent message, which has ended without one. When a message that has ended
+is given a target, the target is sent `messageComplete` at once, in the
+activity that called `notify`. For a started message the targets are sent it
+in the activity that ran the message; when that happens relative to the
+activity that waits for the message is a matter of scheduling. For a started
+message, an error that a `messageComplete` raises becomes the error of the
+message: `hasError` answers 1, `errorCondition` answers the condition of that
+error and `result` raises it, while `hasResult` keeps the 1 of the run. The
+targets after the one that raised it are not sent `messageComplete`, and the
+target that raised it is sent it three times in all. A copy made by `reply`
+has the targets of the message, and so has the one that
+[`copy`](r:class.message.copy) makes. The message the target is sent is the
 completed message object, so `completed` answers 1 in it.
 
 ```rexx
@@ -1309,11 +1350,18 @@ say m~send
 say 'after send'
 say m~send
 f = .message~new(t, 'show', 'I', 'b')
+f~notify(.rec~new('first'))
 f~notify(.bad~new)
+f~notify(.rec~new('third'))
 signal on syntax name c1
 f~send
 say 'not reached'
 c1: say 'handler:' condition('o')~code f~completed f~hasError f~result
+g = .message~new(t, 'boom')
+g~notify(.bad~new)
+signal on syntax name c2
+g~send
+c2: say 'sender' condition('o')~code 'message' g~errorCondition~code
 late = .message~new(t, 'show', 'I', 'c')
 late~send
 late~notify(.rec~new('late'))
@@ -1342,6 +1390,8 @@ bad: say arg(1) '=>' condition('o')~code
   return 'shown' arg(1)
 ::method quiet unguarded
   return 'quiet'
+::method boom
+  return 1/0
 ::class rec inherit MessageNotification
 ::method init
   expose name
@@ -1367,7 +1417,9 @@ messageComplete one Message 1 shown a
 messageComplete two Message 1 shown a
 shown a
 running b
+messageComplete first Message 1 shown b
 handler: 93.900 1 0 shown b
+sender 93.900 message 42.3
 running c
 messageComplete late Message 1 shown c
 registered
@@ -1413,6 +1465,56 @@ say c~result
 messageComplete first
 messageComplete first
 shown a
+```
+
+```rexx
+t = .t~new
+s = .message~new(t, 'show')
+b = .bad~new
+r = .rec~new
+s~notify(b)
+s~notify(r)
+s~start
+s~wait
+call syssleep 0.3
+say 'failing target sent' b~count 'times, the next one' r~count
+say s~completed s~hasError s~hasResult
+say 'error' s~errorCondition~code
+signal on syntax name c1
+say s~result
+c1: say 'result raised' condition('o')~code
+exit
+::class t
+::method show unguarded
+  return 'shown'
+::class bad inherit MessageNotification
+::method init
+  expose n
+  n = 0
+::method count unguarded
+  expose n
+  return n
+::method messageComplete unguarded
+  expose n
+  n = n + 1
+  raise syntax 93.900 array('refused')
+::class rec inherit MessageNotification
+::method init
+  expose n
+  n = 0
+::method count unguarded
+  expose n
+  return n
+::method messageComplete unguarded
+  expose n
+  n = n + 1
+```
+
+```output
+failing target sent 3 times, the next one 0
+1 1 1
+error 93.900
+result raised 93.900
 ```
 
 r[class.message.messagecomplete]
@@ -1537,6 +1639,53 @@ c1: say 'answered nothing:' condition('o')~code
 answered nothing: 91.999
 ```
 
+r[class.message.copy]
+`copy` answers a message object with the target, the name, the arguments
+(the same objects) and the notification targets of the message, as a message
+that has not been run: it has not completed, has no result and no error, and
+is not a started message even when the message was. A target that `notify`
+later adds to one of the two is not added to the other.
+
+```rexx
+t = .t~new
+s = .message~new(t, 'show', 'I', t)
+s~start
+s~wait
+k = s~copy
+say 'copy of started:' k~completed k~hasResult k~hasError
+say (k~target == t) (k~arguments[1] == t) k~messageName
+say k~send k~completed
+m = .message~new(t, 'show', 'I', 1)
+m~notify(.rec~new('original'))
+c = m~copy
+c~notify(.rec~new('copy'))
+say '-- send copy'
+c~send
+say '-- send original'
+m~send
+::class t
+::method show unguarded
+  return 'shown'
+::class rec inherit MessageNotification
+::method init
+  expose name
+  use arg name
+::method messageComplete unguarded
+  expose name
+  say 'messageComplete' name
+```
+
+```output
+copy of started: 0 0 0
+1 1 SHOW
+shown 1
+-- send copy
+messageComplete original
+messageComplete copy
+-- send original
+messageComplete original
+```
+
 ## Sends
 
 r[class.message.sends]
@@ -1639,44 +1788,6 @@ messageComplete override
 
 ## Deviations
 
-r[class.message.deviation.20]
-A wait that nothing can end is refused. A message that has not been run,
-whose `result` or `wait` is asked for, and a message object that received
-`reply`, whose own `result` or `wait` is asked for, wait for a run that
-nobody will start: interrexx ends the program with exit code 120 and a
-message when no other activity, timer or call can end the wait, and ooRexx
-waits for ever
-([Deviation 20](../deviations.md#20-a-wait-nothing-can-end)). `completed`,
-`hasResult`, `hasError` and `halt` are not waits and answer 0 for such a
-message.
-
-```rexx
-m = .message~new(.object~new, 'string')
-say m~completed m~hasResult m~hasError m~halt
-say 'before'
-say m~result
-say 'not reached'
-```
-
-```output rc=120
-0 0 0 0
-before
-```
-
-```rexx
-m = .message~new(.object~new, 'string')
-c = m~reply
-say c~result
-say 'before'
-say m~wait
-say 'not reached'
-```
-
-```output rc=120
-an Object
-before
-```
-
 r[class.message.deviation.105]
 A message that `start`, `startWith`, `reply` or `replyWith` runs is checked
 for `PRIVATE` and `PACKAGE` access as the same message sent by `send` from the
@@ -1718,7 +1829,8 @@ A string that names a number is the same string to every message, as
 [the Object rule](r:class.object.deviation.107) states, and a number literal
 such as `12` is accepted as the name of `new`: the message object has the
 name `12`, and runs the method of that name. ooRexx raises `SYNTAX 93.946`
-for the literal, where it accepts the same characters in quotes
+for a name stored as a whole number, as a literal or arithmetic gives, and for
+the same characters in quotes once the literal occurs in the program
 ([Deviation 107](../deviations.md#107-number-literals-are-ordinary-strings)).
 
 ```rexx
