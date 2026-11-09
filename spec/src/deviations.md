@@ -216,8 +216,9 @@ Replaced by [Deviation 36](#36-strings-and-numbers-are-value-based).
 When a class-side NEW reached through `enhanced` answers an object it did
 not build, that object comes back unchanged; ooRexx marks it enhanced, which
 changes every object of its class, every String for example. A metaclass NEW
-that answers an existing class during `subclass` is refused, exit code 120,
-where ooRexx rewires that class in place.
+that answers an existing class while a class with that metaclass is made, by
+`subclass`, by `mixinclass` or by a `::CLASS` directive with METACLASS, is
+refused, exit code 120, where ooRexx rewires that class in place.
 
 ## 33. Hash iteration order
 
@@ -704,3 +705,44 @@ of the trap that caught the condition, also after the routine has changed the
 `CONDITION` entry of its argument. ooRexx answers the state of the trap for
 the condition that the entry names at that moment, and `OFF` when no trap has
 that name as the entry spells it.
+
+## 107. Number literals are ordinary strings
+
+A string that names a number is the same string to every message, however it
+was written or computed. A number literal such as `12` used as the message
+name of `send` or `start` names the message `12`, and `request('ARRAY')`
+sent to it answers the array that `makeArray` answers. ooRexx raises
+`SYNTAX 93.946` for the first and answers `.nil` for the second when the
+number came from a whole-number literal or from arithmetic, and treats the
+same characters written as a quoted string as interrexx does.
+
+## 108. A supplier that is not a Supplier
+
+When `subclass`, `mixinclass` or `defineMethods` takes the methods of an
+object through its `supplier` method, the object that `supplier` answers is
+used through the messages `available`, `index`, `item` and `next`, whatever
+its class; an object that does not answer one of them raises `SYNTAX 97.1` as
+for any message. ooRexx reads the answer as a Supplier without checking it
+and crashes when it is not one.
+
+## 109. String subclass instances are their characters
+
+An instance of a subclass of `String` is read by its own characters wherever a
+string, a number, a logical value or a whole number is needed, as receiver
+and as argument; `MAKESTRING` and `STRING` are not sent to it for that.
+ooRexx reads such an instance through its `MAKESTRING` method in some places
+(the numeric methods and operators, the logical operators, `dataType`, `?`,
+whole-number arguments, `new`) and through its own characters in others, so
+one instance can answer differently to `=` and to `==`.
+
+## 110. Instances follow every change to their class
+
+Provisional. An object sees every change made, at any time, to the methods of
+its class, of that class's superclasses and of their mixin classes, by
+`define`, `defineMethods`, `delete`, `inherit` and `uninherit`, also when the
+object has methods of its own from `setMethod` or `enhanced` and when the
+class has been changed before. ooRexx copies the method table into existing
+instances: after a `define`, `defineMethods` or `delete` sent to a class, even
+one that changes nothing, its existing instances no longer see later changes
+to its superclasses and mixin classes, and an object given a method by
+`setMethod` no longer sees later changes to its class.
