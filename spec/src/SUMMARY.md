@@ -86,6 +86,8 @@
   - [Error numbers](conditions/errors.md)
 - [Classes](classes/index.md)
   - [Method search](classes/methods.md)
+  - [Object](classes/object.md)
+  - [Class](classes/class.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
