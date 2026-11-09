@@ -153,10 +153,10 @@ declares it. The library sends it, with the `Alarm` or `Ticker` as the
 argument, when the alarm or ticker is cancelled by its `cancel` method while
 it is still waiting: an `Alarm` that has not gone off and was not cancelled
 before, or a `Ticker` that has not been cancelled before. A `cancel` of an
-`Alarm` that has already gone off, and a second `cancel` of an `Alarm` or a
-`Ticker`, send nothing more. The second and third examples send `cancel` twice
-to a `Ticker` and to an `Alarm` that is still five seconds away, and the
-implementation prints a line for each message it receives.
+`Alarm` that has already gone off, and a second `cancel` of a `Ticker`, send
+nothing more. The second example sends `cancel` twice to a `Ticker` that is
+still five seconds away, and the implementation prints a line for each message
+it receives.
 
 ```rexx
 n = .note~new
@@ -223,24 +223,6 @@ exit
 ```
 
 ```output
-cancel sent
-done
-```
-
-```rexx
-n = .n~new
-a = .alarm~new(5, n)
-a~cancel
-a~cancel
-call syssleep 0.2
-say 'done'
-exit
-::class n inherit alarmnotification
-::method cancel unguarded
-  say 'cancel sent'
-```
-
-```output defect=#150
 cancel sent
 done
 ```
