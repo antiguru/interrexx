@@ -144,7 +144,8 @@ below are different variables when `x` is set, because the tail `x.y` is
 `1.Y`, and the same one when `x` and `y` are unset. A value that is not a
 string is replaced by a string as [the conversion rule](r:conv.string.object)
 says, as [a concatenation operand](r:expr.concatenation.operands) is, so an
-object with a `MAKESTRING` method contributes that answer and not its
+object whose `request` with the argument `STRING` answers a string contributes
+that answer and not its
 `STRING` value.
 
 ```rexx

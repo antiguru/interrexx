@@ -20,13 +20,17 @@ which traps answer it and what a clause does when nothing does.
 
 r[cond.nostring.raise]
 NOSTRING is raised when a clause needs the string value of an object that is
-not a string, and the object has no `MAKESTRING` method, or has one that
-answers an object that is not a string. An object whose `MAKESTRING` or
+not a string, and `request` with the argument `STRING`, sent to the object,
+answers no string: an object with no `MAKESTRING` method does so, and so does
+one whose `MAKESTRING` or own `request` answers `.nil` or another object that is
+not a string, whatever its `STRING` method answers. An object whose `request`,
+`MAKESTRING` or
 `STRING` method is private raises no NOSTRING at the uses listed below: the
 message is refused, as [the conventions](r:conv.string.object) say for
 builtin arguments, and the clause raises `SYNTAX 97.2`. A string, a number
 and an instance of a subclass of `String` never raise it, and neither does an
-object whose `MAKESTRING` answers a string. The uses that raise it include
+object whose `request` answers a string, as `Object` does with the answer of
+`MAKESTRING`. The uses that raise it include
 the three concatenation operators (the explicit `||`, the abuttal and the
 blank), the operand of SAY, the source of `PARSE VALUE`, the text that
 INTERPRET runs, an operand of an arithmetic or comparison operator whose left
@@ -122,6 +126,52 @@ s: return j 'SYNTAX' condition('o')~code
 6 SYNTAX 88.909
 7 SYNTAX 97.2
 8 SYNTAX 97.2
+```
+
+> The last program gives objects their own `request`: one that answers `.nil`,
+> one that answers a string and one that answers another object. The columns
+> are `||`, the length of `~string`, and `upper`; `N` and the description show
+> a raised NOSTRING.
+
+```rexx
+objs = .array~of(.rn~new, .rs~new, .ro~new)
+do k = 1 to 3
+  line = k
+  do j = 1 to 3
+    line = line probe(j, objs[k])
+  end
+  say line
+end
+exit
+::routine probe
+  use arg j, o
+  signal on nostring name n
+  select
+    when j = 1 then x = 'a' || o
+    when j = 2 then x = o~string~length
+    when j = 3 then x = upper(o)
+  end
+  return '-'
+n: return 'N' condition('d')
+::class rn
+::method request
+  return .nil
+::method string
+  return 'told'
+::class rs
+::method request
+  return 'x'
+::class ro
+::method request
+  return .object~new
+::method string
+  return 'told'
+```
+
+```output defect=#164
+1 N told - N told
+2 - - -
+3 N told - N told
 ```
 
 r[cond.nostring.information]

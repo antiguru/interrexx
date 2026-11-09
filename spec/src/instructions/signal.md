@@ -88,9 +88,8 @@ method label
 
 r[instr.signal.value]
 `SIGNAL VALUE expression` evaluates the expression and uses the string it
-converts to as the name, by [the conversion rule](r:conv.string.object): the
-answer of its `MAKESTRING` method when it has one and of its `STRING` method
-otherwise. The value is compared with the labels as it is, so a lower-case
+converts to as the name, by [the conversion rule](r:conv.string.object). The
+value is compared with the labels as it is, so a lower-case
 value finds no symbol label, which is written in capitals. A token after
 SIGNAL that is neither a symbol nor a string, such as a parenthesis, starts an
 expression, so VALUE is needed only when the expression itself starts with a

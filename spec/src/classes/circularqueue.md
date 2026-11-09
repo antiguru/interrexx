@@ -1023,7 +1023,8 @@ queue writes its items separated by commas. An item that is a string is used as
 it is and any other object, `.nil`
 included, gives the answer of its `objectName`: [the Array
 rule](r:class.array.makestring) says the same. A delimiter that is not a string
-and has no `MAKESTRING` method raises `SYNTAX 88.909`; the order is checked as
+and [gives no string](r:class.index.string) raises `SYNTAX 88.909`; the order is
+checked as
 [the order
 rule](r:class.circularqueue.order) says, and a third argument raises
 `SYNTAX 93.902`. A queue without items answers the null string.

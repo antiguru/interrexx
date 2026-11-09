@@ -68,8 +68,8 @@ B FAILURE 30 -1
 
 r[instr.command.string]
 A value that is not a string is turned into one before it is sent, as [the
-conversion rule](r:conv.string.object) says: an object with a `MAKESTRING`
-method contributes its answer. A number is sent in the form that the
+conversion rule](r:conv.string.object) says. A number is sent in the form that
+the
 operation gave it, so `'exit' 2 + 3` sends `exit 5`.
 
 ```rexx

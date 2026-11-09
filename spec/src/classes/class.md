@@ -32,7 +32,8 @@ The class method `new` of `Class` makes a class. It is a class method of
 `Class` and so of every metaclass, a subclass of `Class`, and it is not the
 `new` that makes the instances of an ordinary class ([the Object
 rule](r:class.object.new) specifies that one). Its first argument is the id of
-the new class: a string, or an object whose `MAKESTRING` method answers one,
+the new class: a string, or an object whose `request` with the argument `STRING`
+answers one,
 and the null string and a number are allowed. The new class has `Object` as
 its superclass, is not a mixin class and not abstract, and is an instance of
 the class that received `new`, which is also its metaclass; its package is the
@@ -690,8 +691,9 @@ one argument form answers `.nil`; a name that `define` hid with `.nil` as the
 method has no entry that `method` could answer and raises `97.1`. The answer
 is the object that the class holds, so the same method answers every time, and
 it is the object that [`instanceMethod`](r:class.object.instancemethod) of an
-instance answers. The name is a string or an object whose `MAKESTRING` method
-answers one: none raises `88.901`, and `.nil` raises `88.909`, and a second
+instance answers. The name is a string or an object whose `request` with the
+argument `STRING` answers one: none raises `88.901`, and `.nil` raises `88.909`,
+and a second
 argument raises `93.902`.
 
 ```rexx
@@ -849,7 +851,8 @@ r[class.class.annotation]
 name, as a string, as [the `::ANNOTATE` rules](r:dir.annotate.value) keep it,
 and `.nil` when the class has no annotation of that name. The name is compared
 in upper case. The annotations of the superclasses are not inherited. The
-argument is a string or an object whose `MAKESTRING` method answers one: none
+argument is a string or an object whose `request` with the argument `STRING`
+answers one: none
 raises `SYNTAX 88.901`, `.nil` raises `88.909`, and a second argument raises
 `93.902`.
 
@@ -1558,7 +1561,8 @@ m3 first: M3 PLAIN
 r[class.class.subclass]
 `subclass` makes a new class that has the receiver as its superclass and
 answers it. The first argument is the id of the class, which `id` answers, a
-string or an object whose `MAKESTRING` method answers one: none raises
+string or an object whose `request` with the argument `STRING` answers one: none
+raises
 `SYNTAX 88.901`, and `.nil` and an object with no string value raise `88.909`.
 The null string and a number are allowed, the id need not be unique, and the
 class is not entered in `.environment`. The second argument is the metaclass,

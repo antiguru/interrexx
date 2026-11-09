@@ -65,7 +65,8 @@ r[class.routine.new]
 `new` makes a routine from a name, a source and a context, with the same
 arguments, the same checks, in the same order, and the same errors as
 [the `new` of `Method`](r:class.method.new): the name and the source are
-required (`SYNTAX 88.901`), a name with no `MAKESTRING` method, `.nil` among
+required (`SYNTAX 88.901`), a name that [gives no string](r:class.index.string),
+`.nil` among
 them, raises `88.909`, a context that is not `PROGRAMSCOPE`, a `Method`, a
 `Routine` or a `Package` raises `40.904`, and a source that does not translate
 raises its translation error, and the code does not run. The source is read as
@@ -203,7 +204,8 @@ r[class.routine.newfile]
 checks, their order and the errors of
 [the `newFile` of `Method`](r:class.method.newfile): the file name and an
 optional context, no third argument (`SYNTAX 93.902`), `.nil` or an object
-with no `MAKESTRING` method as the name raises `88.909`, a context that does
+that [gives no string](r:class.index.string) as the name raises `88.909`, a
+context that does
 not fit raises `40.904` before the file is looked for, and a file that cannot
 be read raises `SYNTAX 3.1`. The routine's package is named by the file name
 as it was given. Its source is the lines of the file before the first
@@ -281,7 +283,8 @@ after the first line
 r[class.routine.newfile.sends]
 `newFile` sends the new object the message `init` with no argument, after the
 file has been read and translated, and a file name that is an object with a
-`MAKESTRING` method is sent that message once, before `init`; no other message
+`request` with the argument `STRING` once, before `init`, and the `request` of
+`Object` sends `MAKESTRING` in turn; no other message
 is sent, as [the rule of `Method`](r:class.method.newfile.sends) says.
 
 ```rexx
@@ -323,8 +326,9 @@ descriptor, with the checks, the descriptor form and the errors of
 [`loadExternalMethod`](r:class.method.loadexternalmethod): the word `LIBRARY`
 in any case, the library, and optionally the entry in it, which is the name of
 the routine when it is left out. A third argument raises `SYNTAX 93.902`, a
-missing argument `88.901`, a `.nil` argument or one with no `MAKESTRING`
-method `88.909` and a descriptor of another form `99.917`. When the library
+missing argument `88.901`, a `.nil` argument or one that [gives no
+string](r:class.index.string) `88.909` and a descriptor of another form
+`99.917`. When the library
 cannot be loaded or has no entry of that name, the answer is `.nil`. The
 answer is an instance of `Routine` also when a subclass received the message,
 and no `init` is sent. The routine can be called, with the arguments that the
@@ -678,8 +682,9 @@ name it is given, and `.nil` when there is none, as
 [the annotation rule](r:dir.annotate.read) says: the name is taken in upper
 case, and a routine made by `new`, `newFile` or `loadExternalRoutine` has no
 annotations: the answer for one is `.nil`, and its `annotations` table is
-empty. The name is required (`SYNTAX 88.901`), an object with no `MAKESTRING`
-method, `.nil` among them, raises `88.909`, and a second argument raises
+empty. The name is required (`SYNTAX 88.901`), an object that [gives no
+string](r:class.index.string), `.nil` among them, raises `88.909`, and a second
+argument raises
 `93.902`. A number or a string that names no annotation answers `.nil`.
 
 ```rexx

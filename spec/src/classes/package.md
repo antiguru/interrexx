@@ -76,8 +76,9 @@ REXX REXX 1
 
 r[class.package.new]
 `new` makes a package from a name and, optionally, a source and a context. The
-name is required (`SYNTAX 88.901`), and is a string or the `MAKESTRING` answer
-of its argument: an object with no `MAKESTRING` method, `.nil` among them,
+name is required (`SYNTAX 88.901`), and is a string or the string that its
+argument [gives](r:class.index.string): an object that gives no string, `.nil`
+among them,
 raises `88.909`. With a source, the name is only the name of the package, and
 the package is always a new object. With no source, the name is the name of a
 file, which `new` looks for and reads, as
@@ -160,8 +161,8 @@ when the source is omitted. An answer to `request` with `ARRAY` that is
 neither an array nor `.nil` raises `SYNTAX 88.913`, and no `request` with
 `STRING` follows it ([Deviation 115](r:class.package.deviation.115)). An
 instance of a subclass of `List` is sent `request` as well ([Deviation
-118](r:class.package.deviation.118)). The name is converted by the string
-conversion when it has a `MAKESTRING` method, once.
+118](r:class.package.deviation.118)). A name that is an object is sent `request`
+with the argument `STRING`, once, before `init`.
 
 ```rexx
 f = 'class_package_sends_zq.tmp'
@@ -212,9 +213,11 @@ r[class.package.new.source]
 The source is a string or an array of strings, read as
 [the source rule of `Method`](r:class.method.new.source) says: a string is one
 line and is not split at line ends, an array holds one line for each item,
-converted by `MAKESTRING`, a line end character (`'0A'x`, `'0D'x` or `'1A'x`)
-in a line raises `SYNTAX 13.1`, an item that has no `MAKESTRING` method,
-`.nil` among them, or a hole before an item, raises `93.952`, and any other
+sent `request` with the argument `STRING`, a line end character (`'0A'x`,
+`'0D'x` or `'1A'x`)
+in a line raises `SYNTAX 13.1`, an item that [gives no
+string](r:class.index.string), `.nil` among them, or a hole before an item,
+raises `93.952`, and any other
 object, an instance of a subclass of `String` included, is converted by
 [the sends rule](r:class.method.new.sends): `request` with `ARRAY`, then with
 `STRING`. What differs is that the lines of a package are the whole text,
@@ -475,7 +478,8 @@ r[class.package.defaultoptions]
 `defaultOptions` reads and sets the options that a package gets when it is
 made without the corresponding `::OPTIONS`. It takes an option name and
 optionally a value, and no further argument (`SYNTAX 93.902`). The name is
-required (`88.901`), an object with no `MAKESTRING` method, `.nil` among them,
+required (`88.901`), an object that [gives no string](r:class.index.string),
+`.nil` among them,
 raises `88.909`, and only its first letter counts: `D` names
 `DefineDefaultOptions` and `C` names `CountOverrides`, in any case; another
 name raises `SYNTAX 93.914`. With no value the call answers the current value,
@@ -1013,8 +1017,9 @@ r[class.package.resource]
 `resource` answers the array of lines of the resource that has the name it is
 given, as [the directive](r:dir.resource.access) says, and `.nil` when the
 package has no resource of that name; the name is taken in upper case. The
-name is required (`SYNTAX 88.901`), an object with no `MAKESTRING` method,
-`.nil` among them, raises `88.909`, and a second argument raises `93.902`.
+name is required (`SYNTAX 88.901`), an object that [gives no
+string](r:class.index.string), `.nil` among them, raises `88.909`, and a second
+argument raises `93.902`.
 
 ```rexx
 src = .array~of('return 1', '::resource first', 'line a', 'line b', '::END')
@@ -1046,8 +1051,9 @@ r[class.package.annotation]
 `annotation` answers the value of the annotation of the package that has the
 name it is given, and `.nil` when there is none, as
 [the annotation rule](r:dir.annotate.read) says: the name is taken in upper
-case. The name is required (`SYNTAX 88.901`), an object with no `MAKESTRING`
-method, `.nil` among them, raises `88.909`, and a second argument raises
+case. The name is required (`SYNTAX 88.901`), an object that [gives no
+string](r:class.index.string), `.nil` among them, raises `88.909`, and a second
+argument raises
 `93.902`.
 
 ```rexx
@@ -1355,8 +1361,9 @@ public classes of the library; the package's [`local`](r:class.package.local)
 directory; and then `.local` and `.environment`, so the answer may be an
 object that is not a class, such as `.nil`, `.true` or `.local`, and a name
 that nothing holds answers `.nil`. The first place that holds the name
-decides. The name is required (`SYNTAX 88.901`), an object with no
-`MAKESTRING` method, `.nil` among them, raises `88.909`, and a second argument
+decides. The name is required (`SYNTAX 88.901`), an object that [gives no
+string](r:class.index.string), `.nil` among them, raises `88.909`, and a second
+argument
 raises `93.902`. Any string is a name: a name with a blank or a period is
 found when `addClass`, `addPublicClass` or a directory holds it under that
 name. A name that has a colon is not looked up through a namespace: `tg:shown`
@@ -1456,8 +1463,9 @@ context finds, one of the packages it imports (the one imported first winning
 among equal names), and the classes of the library that are public; a class
 that is not public, a library class that is not public, such as `RexxInfo`,
 and a name that is not a class answer `.nil`. The name is taken in upper case.
-The name is required (`SYNTAX 88.901`), an object with no `MAKESTRING` method,
-`.nil` among them, raises `88.909`, and a second argument raises `93.902`. A
+The name is required (`SYNTAX 88.901`), an object that [gives no
+string](r:class.index.string), `.nil` among them, raises `88.909`, and a second
+argument raises `93.902`. A
 name that has a colon is not looked up through a namespace, as for
 [`findClass`](r:class.package.findclass): `tg:shown` answers `.nil`.
 
@@ -1523,7 +1531,8 @@ objects: they answer `.nil`. A name that has a colon is not looked up through
 a namespace: `tg:rr` answers `.nil` even when a package that holds a public
 routine `RR` was added under the namespace `TG`; a routine that was added
 under a name with a colon is found by that name. The name is required
-(`SYNTAX 88.901`), an object with no `MAKESTRING` method, `.nil` among them,
+(`SYNTAX 88.901`), an object that [gives no string](r:class.index.string),
+`.nil` among them,
 raises `88.909`, and a second argument raises `93.902`.
 
 ```rexx
@@ -1610,8 +1619,10 @@ r[class.package.findpublicroutine]
 [`findRoutine`](r:class.package.findroutine) does for the name it is given, or
 `.nil`: a routine that the package holds or that its context finds answers
 public or not, and a routine that an imported package holds answers only when
-it is public there. The name is required (`SYNTAX 88.901`), an object with no
-`MAKESTRING` method, `.nil` among them, raises `88.909`, and a second argument
+it is public there. The name is required (`SYNTAX 88.901`), an object that
+[gives no
+string](r:class.index.string), `.nil` among them, raises `88.909`, and a second
+argument
 raises `93.902`.
 
 ```rexx
@@ -1651,7 +1662,8 @@ r[class.package.findnamespace]
 is given, or `.nil`. The name is taken in upper case. The namespace `REXX` is
 the package of the library classes in every package; other namespaces are
 those that `namespaces` lists. The name is required (`SYNTAX 88.901`), an
-object with no `MAKESTRING` method, `.nil` among them, raises `88.909`, and a
+object that [gives no string](r:class.index.string), `.nil` among them, raises
+`88.909`, and a
 second argument raises `93.902`.
 
 ```rexx
@@ -1685,7 +1697,8 @@ r[class.package.findprogram]
 `findProgram` answers the file name that the search for the program that is
 named finds, in the absolute form that `new` gives a package for the file, or
 `.nil` when the file is not found. The name is required (`SYNTAX 88.901`), an
-object with no `MAKESTRING` method, `.nil` among them, raises `88.909`, and a
+object that [gives no string](r:class.index.string), `.nil` among them, raises
+`88.909`, and a
 second argument raises `93.902`. The search is specified in the environment
 chapter; it starts from the directory of the receiver's file, so packages that
 were loaded from different directories can answer differently.
@@ -1744,7 +1757,8 @@ p~findProgram(f, 1) => 93.902
 r[class.package.addclass]
 `addClass` adds a class to the package under a name, as a class that is not
 public, and answers the package. The name is required (`SYNTAX 88.901`), an
-object with no `MAKESTRING` method, `.nil` among them, raises `88.909`, and
+object that [gives no string](r:class.index.string), `.nil` among them, raises
+`88.909`, and
 the class is required too (`88.901`) and must be a class (`SYNTAX 88.914`;
 `.nil`, a number and an instance that is not a class do not qualify); a third
 argument raises `93.902`. The checks run in that order. The name is taken in
@@ -1846,7 +1860,8 @@ p~addPublicClass("a", .object, 1) => 93.902
 r[class.package.addroutine]
 `addRoutine` adds a routine to the package under a name, as a routine that is
 not public, and answers the package. The name is required (`SYNTAX 88.901`),
-an object with no `MAKESTRING` method, `.nil` among them, raises `88.909`, and
+an object that [gives no string](r:class.index.string), `.nil` among them,
+raises `88.909`, and
 the routine is required too (`88.901`) and must be a `Routine`
 (`SYNTAX 88.914`; a method, `.nil` or another object do not qualify); a third
 argument raises `93.902`. The name is taken in upper case, any string is a
@@ -1952,8 +1967,9 @@ routines of the added package are then found by the receiver, and appear in
 `importedClasses`, `importedRoutines` and `importedPackages`. The package is
 required (`SYNTAX 88.901`) and must be a `Package` (`SYNTAX 88.914`; `.nil`
 and other objects do not qualify). The second argument is a namespace name, a
-string or an object with a `MAKESTRING` method (`88.909` for `.nil` and for an
-object with none), which names the package in `namespaces` and for
+string or an object that [gives one](r:class.index.string) (`88.909` for `.nil`
+and for an
+object that gives none), which names the package in `namespaces` and for
 `findNamespace`; a third argument raises `SYNTAX 93.902`. A package that was
 already added is not added again, so it is in `importedPackages` once, and a
 package may be added to itself. The namespace is taken in upper case. The
@@ -2017,8 +2033,9 @@ r[class.package.loadpackage]
 `loadPackage` loads a package by name as a `::REQUIRES` of the receiver would,
 adds it to the packages that the receiver imports, as
 [`addPackage`](r:class.package.addpackage) does, and answers the loaded package.
-The name is required (`SYNTAX 93.903`); an object with no `MAKESTRING` method,
-`.nil` among them, raises `88.909`. With no second argument the name is the name
+The name is required (`SYNTAX 93.903`); an object that [gives no
+string](r:class.index.string), `.nil` among them, raises `88.909`. With no
+second argument the name is the name
 of a file, which is found, read and installed as [the file
 rule](r:class.package.new.file) of `new` says, so a file that was loaded before
 is not read or run again: the answer is the same package. A file that cannot be
@@ -2030,8 +2047,10 @@ therefore split at its line ends by [its `makeArray`](r:class.string.makearray),
 and the null string is a source of no lines, where for `new` a string is one
 line. The items of an array are the lines, and an item is read as [the source
 rule of `new`](r:class.package.new.source) reads one: a string is its own line,
-and any other item is converted by `MAKESTRING`, so that an item with no
-`MAKESTRING` method, `.nil` among them, or a hole before an item, raises
+and any other item is sent `request` with the argument `STRING`, so that an item
+that [gives no
+string](r:class.index.string), `.nil` among them, or a hole before an item,
+raises
 `SYNTAX 93.952` and an answer that has a line end raises `13.1` ([Deviation
 112](r:class.package.deviation.112)). An object for which `request` answers
 `.nil`, `.nil` itself among them, raises `SYNTAX 88.913`, and `request` is not
@@ -2223,7 +2242,8 @@ r[class.package.loadlibrary]
 `loadLibrary` loads a native library by name as a `::REQUIRES ... LIBRARY`
 does, and answers `1` when the library was loaded and `0` when it was not. A
 library that cannot be loaded does not raise an error. The name is required
-(`SYNTAX 88.901`), an object with no `MAKESTRING` method, `.nil` among them,
+(`SYNTAX 88.901`), an object that [gives no string](r:class.index.string),
+`.nil` among them,
 raises `88.909`, and a second argument raises `93.902`. The library is loaded
 for the interpreter, not for the package, and adds no routine to
 `importedRoutines`. Where libraries are searched for, and whether the name is
@@ -2391,7 +2411,8 @@ and its setting, so the initial string ends with `PROLOG TRACE NORMAL`. With
 one argument, the option, it answers the current setting of that option, and
 with a second argument it sets the option to that value and answers the
 previous setting. More than two arguments raise `SYNTAX 93.902`. The option
-name is a string, an object with no `MAKESTRING` method, `.nil` among them,
+name is a string, an object that [gives no string](r:class.index.string), `.nil`
+among them,
 raises `88.909`, and a name that is not an option raises `SYNTAX 93.914`.
 [The names rule](r:class.package.options.names) says which strings name which
 option, and [the settings rule](r:class.package.options.settings) says what
@@ -2765,16 +2786,17 @@ nop
 ```
 
 r[class.package.deviation.112]
-An item of the source array of `loadPackage` that is not a string is read
-through `MAKESTRING`, as [the rule of
+An item of the source array of `loadPackage` that is not a string is sent
+`request` with the argument `STRING`, as [the rule of
 `loadPackage`](r:class.package.loadpackage) says and the source rule of `new`
 reads an item: an instance of a subclass of `String` or a `MutableBuffer` is its
-own text, an object that declares `MAKESTRING` is the string it answers, and an
-object that has none raises `SYNTAX 93.952`. ooRexx reads an instance of a
+own text, an object whose `request` answers a string is the string it answers,
+and an
+object that gives none raises `SYNTAX 93.952`. ooRexx reads an instance of a
 subclass of `String` and a `MutableBuffer` by their text as well. Any other
-item it sends `objectName`, not `MAKESTRING`, and uses the answer as the line,
+item it sends `objectName`, not `request`, and uses the answer as the line,
 so the default name of an object, such as `a MK`, is a line that the package
-runs as a command, and an item with no `MAKESTRING` method, `.nil` among them,
+runs as a command, and an item that gives no string, `.nil` among them,
 raises no error. A hole followed by an item raises the error that the source
 rule of `new` gives for it, and crashes ooRexx. The example gives the objects a
 package source line each; on ooRexx the second line runs `a MK` as a command,

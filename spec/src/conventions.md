@@ -49,21 +49,37 @@ say c2x(upper('61007a'x))
 
 r[conv.string.object]
 An argument that a page calls a string and that is an object other than a
-string is replaced by a string, and the builtin works on that string. When the
-object has a public `MAKESTRING` method that answers a string, the replacement
-is that answer, as for an `Array` or a `MutableBuffer`. An instance of a
+string is replaced by a string, and the builtin works on that string. The
+replacement is found by sending the object the message `REQUEST` with the
+argument `STRING`, and nothing else is sent first. When the
+answer is a string, it is the replacement. When the answer is `.nil` or another
+object that is not a string, the replacement
+is the answer of the object's public `STRING` method, and when that answer is
+not a string either, see [Deviation 30](r:conv.string.deviation.30). The
+`REQUEST` of `Object` sends the object `MAKESTRING` when it has one and answers
+what that answers, and answers `.nil` when it has none. So an object with a
+`MAKESTRING` method is replaced by its answer, as for an `Array` or a
+`MutableBuffer`, and an object with only a `STRING` method by the answer of that
+method. A class that declares its own `REQUEST` method decides the answer
+itself: its `MAKESTRING` method is not used unless its `REQUEST` sends it, and a
+`REQUEST` that answers a string is used even when the class has a `STRING`
+method. A `MAKESTRING` that answers `.nil` or an object that is not a string is
+like a `REQUEST` that does. An instance of a
 subclass of `String` is a string here, whether it is passed directly or is
-what `MAKESTRING` answers: the builtin works on its own characters, and no
+what `REQUEST` answers: the builtin works on its own characters, and no
 message is sent to it for that
-([Deviation 109](r:class.string.deviation.109)). When the object has no
-`MAKESTRING` method, the replacement is the answer of its public `STRING`
-method; when that answer is not a string either, see
-[Deviation 30](r:conv.string.deviation.30). A builtin whose page links
-[the native call rule](r:bif.index.call.native) has no such fallback to
-`STRING`, as that rule says. A `MAKESTRING` or `STRING` method that is private
+([Deviation 109](r:class.string.deviation.109)). A builtin that reads several
+such arguments reads them from left to right, after it has checked the number of
+its arguments. An argument that a builtin reads as a whole number or as a number
+is read this way too, and the replacement must then be a number. A builtin whose
+page links
+[the native call rule](r:bif.index.call.native) has no fallback to
+`STRING`, as that rule says, and the same holds for the string arguments of
+methods ([the method argument rule](r:class.index.string)). A `REQUEST`,
+`MAKESTRING` or `STRING` method that is private
 is not one the replacement can use: the call raises `SYNTAX 97.2`. This book
-does not specify the replacement when `MAKESTRING` answers an object that is
-not a string, or for an object whose class defines its own `REQUEST` method.
+does not specify how many times a comparison operator sends `REQUEST` to an
+operand, as [the comparison rule](r:expr.comparison.object) says.
 
 ```rexx
 say upper(.object~new) upper(.both~new) upper(.mutablebuffer~new('mb'))
@@ -104,6 +120,72 @@ say upper(.mk~new) upper(.strsub~new('abc'))
 
 ```output defect=#89
 SS ABC
+```
+
+```rexx
+say length(.asks~new)
+say length(.asknil~new)
+say length(.askobj~new)
+say length(.askdef~new)
+say length(.askup~new)
+say copies('ab', .two~new) 1 + .two~new 'x' || .two~new
+signal on syntax name p
+say length(.askpriv~new)
+p: say condition('o')~code
+::class asks
+::method request
+  say 'request' arg(1) arg()
+  return 'abcd'
+::method makestring
+  say 'makestring'
+  return 'xx'
+::method string
+  say 'string'
+  return 'yy'
+::class asknil
+::method request
+  return .nil
+::method makestring
+  say 'makestring'
+  return 'xx'
+::method string
+  return 'abc'
+::class askobj
+::method request
+  return .object~new
+::method string
+  return 'ab'
+::class askdef
+::method request
+  return .nil
+::class askup
+::method request
+  say 'sent' arg(1)
+  return self~request:super(arg(1))
+::method makestring
+  say 'makestring'
+  return 'm'
+::class two
+::method request
+  return 2
+::class askpriv
+::method request private
+  return 'abc'
+::method string
+  return 'abc'
+```
+
+```output defect=#164
+request STRING 1
+4
+3
+2
+9
+sent STRING
+makestring
+1
+abab 3 x2
+97.2
 ```
 
 r[conv.string.whitespace]

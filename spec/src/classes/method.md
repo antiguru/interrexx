@@ -69,8 +69,9 @@ hello world
 
 r[class.method.new]
 `new` makes a method object from a name, a source and a context. The name is
-required (`SYNTAX 88.901`), and is a string, or the `MAKESTRING` answer of its
-argument: an object with no `MAKESTRING` method, `.nil` among them, raises
+required (`SYNTAX 88.901`), and is a string, or the string that its
+argument [gives](r:class.index.string): an object that gives no string, `.nil`
+among them, raises
 `88.909`, and a number is a name like any other string. The name becomes the
 name of the method's package, which `package` shows. The source is required
 too (`88.901`) and is read as [the source rule](r:class.method.new.source)
@@ -154,12 +155,14 @@ code, and the method's `source` is an array of that one line; a string is not
 split at line ends, and a line end character in a line, `'0A'x`, `'0D'x` or
 `'1A'x`, makes the translation raise `SYNTAX 13.1`, while a tab is an ordinary
 character. An empty string is a source of no lines. An array holds the lines
-in the order of its indexes. Each item is converted by `MAKESTRING` and the
+in the order of its indexes. Each item is sent `request` with the argument
+`STRING` and the
 answer is the line: a string is its own line, a number is a line like any
 string, a `MutableBuffer` is the line of its text, and so is an instance of a
-subclass of `String`; an item that has no `MAKESTRING` method, `.nil` among
+subclass of `String`; an item that [gives no string](r:class.index.string),
+`.nil` among
 them, or a hole that is followed by an item, raises `SYNTAX 93.952`. The
-answer of `MAKESTRING` is a line like any other, so an item whose answer has a
+answer is a line like any other, so an item whose answer has a
 line end, such as an array (its `makeString` joins its items with line ends),
 raises `13.1`. An empty array is a source of no lines. A source that is
 neither a string nor an array is converted as
@@ -410,8 +413,9 @@ m1 m2
 
 r[class.method.newfile]
 `newFile` makes a method object from the lines of a file. The file name is
-required (`SYNTAX 88.901`) and is a string, or an object with a `MAKESTRING`
-method (`.nil` and others with none raise `88.909`), and the context is the
+required (`SYNTAX 88.901`) and is a string, or an object that [gives
+one](r:class.index.string) (`.nil` and others that give none raise `88.909`),
+and the context is the
 second argument, with the same values and the same error `40.904` as for
 [`new`](r:class.method.new.context). `newFile` takes no other argument: a
 third raises `SYNTAX 93.902` before the file is looked for. The checks run in
@@ -497,8 +501,9 @@ r[class.method.newfile.sends]
 `newFile` sends the new object the message `init` with no argument, after the
 file has been read and translated, so that a subclass of `Method` that
 declares `init` runs it once for each `newFile`. A file name that is an object
-with a `MAKESTRING` method is sent that message for its string value, once,
-before `init`; no other message is sent. The arguments of `newFile` are only
+is sent `request` with the argument `STRING`, once,
+before `init`, and the `request` of `Object` sends `MAKESTRING` in turn; no
+other message is sent. The arguments of `newFile` are only
 the name and the context, so no argument reaches `init`.
 
 ```rexx
@@ -537,8 +542,9 @@ r[class.method.loadexternalmethod]
 library, the same kind of method that
 [`::METHOD EXTERNAL`](r:dir.method.external) declares. It takes a name and a
 descriptor and no other argument (a third raises `SYNTAX 93.902`). Both are
-required (`88.901`), and each is a string or an object with a `MAKESTRING`
-method (`88.909` for `.nil` and for an object with none). The descriptor has
+required (`88.901`), and each is a string or an object that [gives
+one](r:class.index.string) (`88.909` for `.nil` and for an object that gives
+none). The descriptor has
 the form that the directive's operand has: the word `LIBRARY` in any case, the
 name of the library, and optionally the name of the entry in it, which is the
 method name when it is left out; a descriptor of another form raises
@@ -781,8 +787,9 @@ name it is given, and `.nil` when there is none, as
 [the annotation rule](r:dir.annotate.read) says: the name is taken in upper
 case, and a method made by `new`, `newFile` or `loadExternalMethod` has no
 annotations: the answer for one is `.nil`, and its `annotations` table is
-empty. The name is required (`SYNTAX 88.901`), an object with no `MAKESTRING`
-method, `.nil` among them, raises `88.909`, and a second argument raises
+empty. The name is required (`SYNTAX 88.901`), an object that [gives no
+string](r:class.index.string), `.nil` among them, raises `88.909`, and a second
+argument raises
 `93.902`. A name that is a number or a string that names no annotation answers
 `.nil`.
 

@@ -261,9 +261,8 @@ a~"\==" => 93.903
 r[class.object.concat]
 The methods `||`, the one blank and the null string answer a new string: the
 string value of the receiver, then (for the blank method) one blank, then the
-string value of the argument. The string value of the receiver is the answer
-of its `MAKESTRING` method when it has one, and otherwise of its `string`
-method, as [the string rule](r:class.index.string) says, and the same goes for
+string value of the argument. The string value of the receiver is found as [the
+string rule](r:class.index.string) says, and the same goes for
 the argument; `.nil` has the string value `The NIL object`. The three methods
 take one argument: none raises `SYNTAX 93.903` and two raise `93.902`. They
 are the messages that the concatenation operators send ([the operator
@@ -429,8 +428,9 @@ a~objectName(1) => 93.902
 r[class.object.objectname-set]
 `objectName=` sets the name of the receiver to the string value of its
 argument, under the checks of [the name rule](r:class.index.objectname): an
-argument that is not a string, or has no `MAKESTRING` method that answers one,
-raises `SYNTAX 88.909`, and one argument is required (`93.903`, none). Sent as
+argument that is not a string, and whose `request` with the argument `STRING`
+answers no string, raises `SYNTAX 88.909`, and one argument is required
+(`93.903`, none). Sent as
 a message it answers no value. Only the receiver gets the name, and the name
 survives `copy`. A String that is no instance of a subclass and no enhancement
 is refused, as [Deviation 36](r:class.object.deviation.36) states.
@@ -475,8 +475,10 @@ madestring
 r[class.object.string]
 `string` answers a string that shows the receiver, which is its `objectName`,
 as [the string rule](r:class.index.string) says, and takes no argument. `say`,
-the joining operators and the builtin functions use it for an object that has
-no `MAKESTRING` method. A class that declares `string` shows its instances in
+the joining operators and the builtin functions use it for an object whose
+`request` with the argument `STRING` answers no string, as the `request` of
+`Object` does for an object with no `MAKESTRING` method. A class that declares
+`string` shows its instances in
 another way without changing their names.
 
 ```rexx
@@ -640,7 +642,8 @@ counts; a name that is hidden counts as not found; and `UNKNOWN` plays no
 part, so an object whose `UNKNOWN` answers every message still answers 0 for a
 name that has no method. A class receiver is searched in its class-side order,
 so `hasMethod` shows [which side](r:class.index.sides) a name is on. The
-argument is a string or an object whose `MAKESTRING` method answers one; any
+argument is a string, or an object whose `request` with the argument `STRING`
+answers one; any
 other object, `.nil` included, raises `SYNTAX 88.909`, and no argument raises
 `93.903`. A second argument raises `93.902`.
 
@@ -1536,7 +1539,8 @@ r[class.object.setmethod]
 It is private, with the restriction that
 [the access rule](r:class.methods.object.access) gives. The first argument is
 the name and is required (`SYNTAX 88.901`); an object that is no string and
-has no `MAKESTRING` method raises `88.909`. The second is the method: a method
+whose `request` with the argument `STRING` answers no string raises `88.909`.
+The second is the method: a method
 object, a string that holds the source of a method, or an array of strings,
 one for each line. These are instances of `Method`, `String` and `Array`
 themselves; an instance of a subclass of one of them, `Method` included, is
@@ -1547,8 +1551,8 @@ as the source ([the sends rule](r:class.object.setmethod.sends)). `.nil`, and
 an object whose `request` with `STRING` answers `.nil`, raise `SYNTAX 93.974`,
 so a subclass of `Method` that declares neither `MAKEARRAY` nor `MAKESTRING`
 is refused. When that `request` answers an object that is not a string, the
-result is not specified, as [the string conversion](r:conv.string.object)
-leaves it. The method that the receiver gets runs the code of a method object
+result is not specified. The method that the receiver gets runs the code of a
+method object
 that is given, with the scope that
 [the scope rule](r:class.methods.object.scope) says. It is not specified
 whether the method object that the receiver holds is the argument itself or a

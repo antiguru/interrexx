@@ -92,8 +92,7 @@ for their operands: `01`, `1.0`, a blank around the digit, the null string and
 every other text are refused. An IF that gets another value raises
 `SYNTAX 34.1`, and no branch runs. A value that is an object and not a string
 counts as the string it converts to, which [the conversion
-rule](r:conv.string.object) gives: the answer of its `MAKESTRING` method when
-it has one, and the answer of its `STRING` method otherwise. An object that
+rule](r:conv.string.object) gives. An object that
 converts to `1` takes the THEN branch, and one that converts to any other
 string, such as `.nil`, raises `34.1`. The test does not look at the number
 form: `1 + 0` and `5 - 5` are logical because they come out as `1` and `0`,
