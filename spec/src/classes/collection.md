@@ -2,7 +2,7 @@
 element: "Collection"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Collection Class; Builtin Classes > Collection Classes > Collection Class > [] (Abstract Method); Builtin Classes > Collection Classes > Collection Class > []= (Abstract Method); Builtin Classes > Collection Classes > Collection Class > allIndexes (Abstract Method); Builtin Classes > Collection Classes > Collection Class > allItems (Abstract Method); Builtin Classes > Collection Classes > Collection Class > at (Abstract Method); Builtin Classes > Collection Classes > Collection Class > difference; Builtin Classes > Collection Classes > Collection Class > disjoint; Builtin Classes > Collection Classes > Collection Class > equivalent; Builtin Classes > Collection Classes > Collection Class > hasIndex; Builtin Classes > Collection Classes > Collection Class > hasItem; Builtin Classes > Collection Classes > Collection Class > index (Abstract Method); Builtin Classes > Collection Classes > Collection Class > intersection; Builtin Classes > Collection Classes > Collection Class > items; Builtin Classes > Collection Classes > Collection Class > makeArray; Builtin Classes > Collection Classes > Collection Class > put (Abstract Method); Builtin Classes > Collection Classes > Collection Class > subset; Builtin Classes > Collection Classes > Collection Class > supplier; Builtin Classes > Collection Classes > Collection Class > union; Builtin Classes > Collection Classes > Collection Class > xor"
-deviations: [109]
+deviations: [109, 118]
 ---
 
 # Collection
@@ -643,8 +643,11 @@ itself is both arrays: it is read position by position, so an element is its own
 index, and a position that holds nothing is an entry whose item and index are
 `.nil`. Any other answer, an instance of a subclass of `Array` included, is sent
 `makeArray` twice, and the first answer is the items and the second the indexes;
-for a `List`, a `Queue`, a `Set` or a string the two are the same. Messages that
-the operation sends to the entries are those of its own rule.
+for a `List`, a `Queue`, a `Set` or a string the two are the same. An instance
+of a subclass of `List` is such an answer, and is sent `makeArray` like the
+instance of any other class that is not `Array` itself ([Deviation
+118](r:class.collection.deviation.118)). Messages that the operation sends to
+the entries are those of its own rule.
 
 ```rexx
 h = .array~new(3)
@@ -2309,4 +2312,42 @@ say x~subset(.map~new('k', .name~new('b')))
 ```output defect=#140
 0
 0
+```
+
+r[class.collection.deviation.118]
+An instance of a subclass of `List` that `makeArray` answers to `union`,
+`intersection`, `xor` or `disjoint` is sent `makeArray`, twice, so that the
+`makeArray` of the subclass is used, as [the list
+rule](r:class.collection.operand.list) says. ooRexx reads such an instance as a
+`List` directly and sends it no `makeArray`. In the example the subclass answers
+other items than it holds.
+
+```rexx
+r = .nb~new~union(.pk~new(.llist~of('held')))
+::class llist subclass list
+::method makearray
+  say 'makearray sent'
+  return .array~of('answered')
+::class nb inherit collection
+::method copy
+  return self
+::method hasindex
+  say 'hasIndex' arg(1)
+  return 0
+::method put
+  say 'put' arg(1) arg(2)
+::class pk inherit collection
+::method init
+  expose answer
+  use arg answer
+::method makearray
+  expose answer
+  return answer
+```
+
+```output
+makearray sent
+makearray sent
+hasIndex answered
+put answered answered
 ```

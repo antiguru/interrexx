@@ -2,7 +2,7 @@
 element: "Package"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Package Class; Builtin Classes > Fundamental Classes > Package Class > new (Class Method); Builtin Classes > Fundamental Classes > Package Class > defaultOptions (Class Method); Builtin Classes > Fundamental Classes > Package Class > addClass; Builtin Classes > Fundamental Classes > Package Class > addPackage; Builtin Classes > Fundamental Classes > Package Class > addPublicClass; Builtin Classes > Fundamental Classes > Package Class > addPublicRoutine; Builtin Classes > Fundamental Classes > Package Class > addRoutine; Builtin Classes > Fundamental Classes > Package Class > annotation; Builtin Classes > Fundamental Classes > Package Class > annotations; Builtin Classes > Fundamental Classes > Package Class > classes; Builtin Classes > Fundamental Classes > Package Class > definedMethods; Builtin Classes > Fundamental Classes > Package Class > digits; Builtin Classes > Fundamental Classes > Package Class > findClass; Builtin Classes > Fundamental Classes > Package Class > findNamespace; Builtin Classes > Fundamental Classes > Package Class > findProgram; Builtin Classes > Fundamental Classes > Package Class > findPublicClass; Builtin Classes > Fundamental Classes > Package Class > findPublicRoutine; Builtin Classes > Fundamental Classes > Package Class > findRoutine; Builtin Classes > Fundamental Classes > Package Class > form; Builtin Classes > Fundamental Classes > Package Class > fuzz; Builtin Classes > Fundamental Classes > Package Class > importedClasses; Builtin Classes > Fundamental Classes > Package Class > importedPackages; Builtin Classes > Fundamental Classes > Package Class > importedRoutines; Builtin Classes > Fundamental Classes > Package Class > loadLibrary; Builtin Classes > Fundamental Classes > Package Class > loadPackage; Builtin Classes > Fundamental Classes > Package Class > local; Builtin Classes > Fundamental Classes > Package Class > name; Builtin Classes > Fundamental Classes > Package Class > namespaces; Builtin Classes > Fundamental Classes > Package Class > options; Builtin Classes > Fundamental Classes > Package Class > prolog; Builtin Classes > Fundamental Classes > Package Class > publicClasses; Builtin Classes > Fundamental Classes > Package Class > publicRoutines; Builtin Classes > Fundamental Classes > Package Class > resource; Builtin Classes > Fundamental Classes > Package Class > resources; Builtin Classes > Fundamental Classes > Package Class > routines; Builtin Classes > Fundamental Classes > Package Class > setSecurityManager; Builtin Classes > Fundamental Classes > Package Class > source; Builtin Classes > Fundamental Classes > Package Class > sourceLine; Builtin Classes > Fundamental Classes > Package Class > sourceSize; Builtin Classes > Fundamental Classes > Package Class > trace"
-deviations: [41, 109]
+deviations: [41, 109, 112, 115]
 ---
 
 # Package
@@ -156,8 +156,10 @@ that is not a string and not an array, `request` with `ARRAY` and then with
 `STRING` (the line is a string answer itself, and any other answer's
 `objectName`), and then sends the new package `init`, after the package has
 been installed, with the arguments from the fourth on, or from the third on
-when the source is omitted. The name is converted by the string conversion
-when it has a `MAKESTRING` method, once.
+when the source is omitted. An answer to `request` with `ARRAY` that is
+neither an array nor `.nil` raises `SYNTAX 88.913`, and no `request` with
+`STRING` follows it ([Deviation 115](r:class.package.deviation.115)). The name
+is converted by the string conversion when it has a `MAKESTRING` method, once.
 
 ```rexx
 f = 'class_package_sends_zq.tmp'
@@ -2012,32 +2014,35 @@ p~addPackage(lib, "x", 1) => 93.902
 r[class.package.loadpackage]
 `loadPackage` loads a package by name as a `::REQUIRES` of the receiver would,
 adds it to the packages that the receiver imports, as
-[`addPackage`](r:class.package.addpackage) does, and answers the loaded
-package. The name is required (`SYNTAX 93.903`); an object with no
-`MAKESTRING` method, `.nil` among them, raises `88.909`. With no second
-argument the name is the name of a file, which is found, read and installed as
-[the file rule](r:class.package.new.file) of `new` says, so a file that was
-loaded before is not read or run again: the answer is the same package. A file
-that cannot be found raises `SYNTAX 43.901`. The second argument is a source,
-which is installed under the name in place of the file. A source that is not
-an instance of `Array` itself, a string included, is sent `request` with the
-argument `ARRAY`, once, and an `Array` is used as it is, with no message. A
-string is therefore split at its line ends by
-[its `makeArray`](r:class.string.makearray), and the null string is a source
-of no lines, where for `new` a string is one line. The items of an array are
-the lines, and a string item is its line. An object for which `request`
-answers `.nil`, `.nil` itself among them, raises `SYNTAX 88.913`, and
-`request` is not sent with `STRING`. A source that does not translate raises
-its translation error. A package that is installed from a source is found
-afterwards by its name: a `loadPackage` of that name with no source, the `new`
-of `Package` with that name and a `::REQUIRES` of it answer that package and
-run nothing. A `loadPackage` with a source for a name that was already loaded,
-from a file or from a source, answers the package that was loaded first: the
-new source is not read, translated or run, and no class or routine of it is
-added. A third argument raises `93.902`. How the file is searched for is
-specified in the environment chapter. The checkpoint that a security manager
-sees is that of
-[the `REQUIRES` rule](r:class.routine.setsecuritymanager.requires).
+[`addPackage`](r:class.package.addpackage) does, and answers the loaded package.
+The name is required (`SYNTAX 93.903`); an object with no `MAKESTRING` method,
+`.nil` among them, raises `88.909`. With no second argument the name is the name
+of a file, which is found, read and installed as [the file
+rule](r:class.package.new.file) of `new` says, so a file that was loaded before
+is not read or run again: the answer is the same package. A file that cannot be
+found raises `SYNTAX 43.901`. The second argument is a source, which is
+installed under the name in place of the file. A source that is not an instance
+of `Array` itself, a string included, is sent `request` with the argument
+`ARRAY`, once, and an `Array` is used as it is, with no message. A string is
+therefore split at its line ends by [its `makeArray`](r:class.string.makearray),
+and the null string is a source of no lines, where for `new` a string is one
+line. The items of an array are the lines, and an item is read as [the source
+rule of `new`](r:class.package.new.source) reads one: a string is its own line,
+and any other item is converted by `MAKESTRING`, so that an item with no
+`MAKESTRING` method, `.nil` among them, raises `SYNTAX 93.952` and an answer
+that has a line end raises `13.1` ([Deviation
+112](r:class.package.deviation.112)). An object for which `request` answers
+`.nil`, `.nil` itself among them, raises `SYNTAX 88.913`, and `request` is not
+sent with `STRING`. A source that does not translate raises its translation
+error. A package that is installed from a source is found afterwards by its
+name: a `loadPackage` of that name with no source, the `new` of `Package` with
+that name and a `::REQUIRES` of it answer that package and run nothing. A
+`loadPackage` with a source for a name that was already loaded, from a file or
+from a source, answers the package that was loaded first: the new source is not
+read, translated or run, and no class or routine of it is added. A third
+argument raises `93.902`. How the file is searched for is specified in the
+environment chapter. The checkpoint that a security manager sees is that of [the
+`REQUIRES` rule](r:class.routine.setsecuritymanager.requires).
 
 ```rexx
 f = 'class_package_load_zq.tmp'
@@ -2755,4 +2760,88 @@ say .package~new('q', .name~new('nop'))~source[1]
 Foo
 0
 nop
+```
+
+r[class.package.deviation.112]
+An item of the source array of `loadPackage` that is not a string is read
+through `MAKESTRING`, as [the rule of
+`loadPackage`](r:class.package.loadpackage) says and the source rule of `new`
+reads an item: an instance of a subclass of `String` or a `MutableBuffer` is its
+own text, an object that declares `MAKESTRING` is the string it answers, and an
+object that has none raises `SYNTAX 93.952`. ooRexx uses the `objectName` of the
+item as the line, so that the line of an object that answers a name such as
+`a MK` is code that the package then runs. The example gives the objects a
+package source line each.
+
+```rexx
+p = .package~new('n', 'nop')
+a = .array~of('say "first"', .mk~new, .ss~new('say "third"'))
+a~append(.mutablebuffer~new('say "fourth"'))
+q = p~loadPackage('cp112_zq.cls', a)
+say q~sourceSize q~source[2]
+call try 'p~loadPackage("cp112b_zq.cls", .array~of("nop", .object~new))'
+call try 'p~loadPackage("cp112c_zq.cls", .array~of("nop", .nil))'
+call try 'p~loadPackage("cp112d_zq.cls", .array~of(.array~of("nop", "nop")))'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=>' zres
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class mk
+::method makestring
+  return 'say "second"'
+::class ss subclass string
+```
+
+```output defect=#155
+first
+second
+third
+fourth
+4 say "second"
+p~loadPackage("cp112b_zq.cls", .array~of("nop", .object~new)) => 93.952
+p~loadPackage("cp112c_zq.cls", .array~of("nop", .nil)) => 93.952
+p~loadPackage("cp112d_zq.cls", .array~of(.array~of("nop", "nop"))) => 13.1
+```
+
+r[class.package.deviation.115]
+A source that answers `request` with `ARRAY` by an object that is neither an
+array nor `.nil` makes `new` raise `SYNTAX 88.913`, as [the rule of
+`Method`](r:class.method.deviation.115) says, and no `request` with `STRING` is
+sent after it. ooRexx reads the answer as an array without checking it and
+crashes. The examples have `request` answer a string and a list.
+
+```rexx
+call try '.package~new("n", .src~new("nop"))'
+call try '.package~new("n", .src~new(.list~of("nop")))'
+call try '.package~new("n", .src~new(.array~of("nop")))~source[1]'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=>' zres
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class src
+::method init
+  expose ans
+  use arg ans
+::method request
+  expose ans
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return ans
+  return 'nop'
+```
+
+```output defect=#157
+request ARRAY
+.package~new("n", .src~new("nop")) => 88.913
+request ARRAY
+.package~new("n", .src~new(.list~of("nop"))) => 88.913
+request ARRAY
+.package~new("n", .src~new(.array~of("nop")))~source[1] => nop
 ```

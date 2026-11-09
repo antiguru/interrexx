@@ -2,7 +2,7 @@
 element: "Method"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Method Class; Builtin Classes > Fundamental Classes > Method Class > new (Class Method); Builtin Classes > Fundamental Classes > Method Class > newFile (Class Method); Builtin Classes > Fundamental Classes > Method Class > loadExternalMethod (Class Method); Builtin Classes > Fundamental Classes > Method Class > annotation; Builtin Classes > Fundamental Classes > Method Class > annotations; Builtin Classes > Fundamental Classes > Method Class > isAbstract; Builtin Classes > Fundamental Classes > Method Class > isAttribute; Builtin Classes > Fundamental Classes > Method Class > isConstant; Builtin Classes > Fundamental Classes > Method Class > isGuarded; Builtin Classes > Fundamental Classes > Method Class > isPackage; Builtin Classes > Fundamental Classes > Method Class > isPrivate; Builtin Classes > Fundamental Classes > Method Class > isProtected; Builtin Classes > Fundamental Classes > Method Class > package; Builtin Classes > Fundamental Classes > Method Class > scope; Builtin Classes > Fundamental Classes > Method Class > setGuarded; Builtin Classes > Fundamental Classes > Method Class > setPrivate; Builtin Classes > Fundamental Classes > Method Class > setProtected; Builtin Classes > Fundamental Classes > Method Class > setSecurityManager; Builtin Classes > Fundamental Classes > Method Class > setUnguarded; Builtin Classes > Fundamental Classes > Method Class > source"
-deviations: [41, 109]
+deviations: [41, 109, 115]
 ---
 
 # Method
@@ -251,25 +251,27 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.method.new.sends]
-`new` sends messages to its source and to the object it makes. A source that
-is not a string and not an array, and an instance of a subclass of `String` or
-`Array`, is sent `request` with the argument `ARRAY`; when that answers an
-array its items are the lines, read as
-[the source rule](r:class.method.new.source) reads an array. When it answers
-`.nil` the source is sent `request` with the argument `STRING`: an answer that
-is a string is the one-line source, and for any other answer its `objectName`
-is the line, with no `MAKESTRING` or `string` message sent to it; `.nil` from
-both raises `SYNTAX 93.961`. A string that is an instance
-of `String` itself and an array that is an instance of `Array` itself are used
-directly, without a message. The `request` of `Object` sends `makeArray` for
-the argument `ARRAY` and `makeString` for `STRING`, as
-[its rule](r:class.object.request.sends) says, so an object that declares
-`makeArray` or `makeString` is a source. When the method is made, `new` sends
-the new object the message `init` with the arguments of `new` from the fourth
-on, so that a subclass of `Method` that declares `init` receives them; the
-`init` of `Object` accepts none, and a fourth argument raises `SYNTAX 93.902`
-after the source has been translated. The class that received `new` decides
-the class of the answer: a subclass of `Method` makes instances of itself.
+`new` sends messages to its source and to the object it makes. A source that is
+not a string and not an array, and an instance of a subclass of `String` or
+`Array`, is sent `request` with the argument `ARRAY`; when that answers an array
+its items are the lines, read as [the source rule](r:class.method.new.source)
+reads an array. When it answers an object that is neither an array nor `.nil`,
+`new` raises `SYNTAX 88.913` and sends no `request` with `STRING` ([Deviation
+115](r:class.method.deviation.115)). When it answers `.nil` the source is sent
+`request` with the argument `STRING`: an answer that is a string is the one-line
+source, and for any other answer its `objectName` is the line, with no
+`MAKESTRING` or `string` message sent to it; `.nil` from both raises
+`SYNTAX 93.961`. A string that is an instance of `String` itself and an array
+that is an instance of `Array` itself are used directly, without a message. The
+`request` of `Object` sends `makeArray` for the argument `ARRAY` and
+`makeString` for `STRING`, as [its rule](r:class.object.request.sends) says, so
+an object that declares `makeArray` or `makeString` is a source. When the method
+is made, `new` sends the new object the message `init` with the arguments of
+`new` from the fourth on, so that a subclass of `Method` that declares `init`
+receives them; the `init` of `Object` accepts none, and a fourth argument raises
+`SYNTAX 93.902` after the source has been translated. The class that received
+`new` decides the class of the answer: a subclass of `Method` makes instances of
+itself.
 
 ```rexx
 call try '.method~new("n", .src~new(.array~of("return 1"), .nil))'
@@ -1323,4 +1325,48 @@ say m~package~name m~source[1]
 
 ```output defect=#140
 Foo say "src"
+```
+
+r[class.method.deviation.115]
+A source that answers `request` with `ARRAY` by an object that is neither an
+array nor `.nil` makes `new` raise `SYNTAX 88.913`, whatever the object is: a
+string, a list or any other object, and no `request` with `STRING` is sent after
+it. ooRexx reads the answer as an array without checking it and crashes. [The
+Routine page rule](r:class.routine.deviation.115) has the examples for
+`Routine~new`; the examples here have `request` answer a string and a directory.
+
+```rexx
+call try '.method~new("n", .src~new("return 1"))'
+call try '.method~new("n", .src~new(.directory~new))'
+call try '.method~new("n", .src~new(.array~of("return 1")))~source[1]'
+call try '.method~new("n", .src~new(.nil))~source[1]'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=>' zres
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class src
+::method init
+  expose ans
+  use arg ans
+::method request
+  expose ans
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return ans
+  return 'return 2'
+```
+
+```output defect=#157
+request ARRAY
+.method~new("n", .src~new("return 1")) => 88.913
+request ARRAY
+.method~new("n", .src~new(.directory~new)) => 88.913
+request ARRAY
+.method~new("n", .src~new(.array~of("return 1")))~source[1] => return 1
+request ARRAY
+request STRING
+.method~new("n", .src~new(.nil))~source[1] => return 2
 ```

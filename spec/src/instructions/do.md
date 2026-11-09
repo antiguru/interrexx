@@ -4,7 +4,7 @@ kind: instruction
 syntax: "DO [LABEL name] [COUNTER name] [repetitor] [conditional]; instructions; END [name]"
 ansi: "6.3.2.12, 8.3.6"
 rexxref: "Keyword Instructions > DO"
-deviations: [1, 25, 26, 38, 47]
+deviations: [1, 25, 26, 38, 47, 118]
 ---
 
 # DO
@@ -421,16 +421,18 @@ r[instr.do.over]
 `DO name OVER expression` runs the block once for each item that a collection
 yields, and assigns the item to `name` before the pass. The expression is
 evaluated once, before `name` is assigned, and the loop sends it the message
-`MAKEARRAY`. The items are those of the Array that comes back, in its order,
-and they are taken when the loop starts, so a change to the collection during
-the loop does not add, remove or alter an item that the loop visits. An Array
-yields its items in index order and skips an index that holds none, and a List
-and a Queue yield theirs from first to last. A String yields its lines, so a
-null string yields none. A Stem, a Directory and a Table yield their
-indexes, which for a Stem are the tails of the existing compound variables,
-and a Set yields its members. The order of those four is not specified, as
-[Deviation 1](r:instr.do.deviation.1) says for a Stem and [Deviation
-33](../deviations.md#33-hash-iteration-order) for the others. A
+`MAKEARRAY`, whatever the class of the object is: an instance of a subclass of
+`List` is sent it as any other collection is ([Deviation
+118](r:instr.do.deviation.118)). The items are those of the Array that comes
+back, in its order, and they are taken when the loop starts, so a change to the
+collection during the loop does not add, remove or alter an item that the loop
+visits. An Array yields its items in index order and skips an index that holds
+none, and a List and a Queue yield theirs from first to last. A String yields
+its lines, so a null string yields none. A Stem, a Directory and a Table yield
+their indexes, which for a Stem are the tails of the existing compound
+variables, and a Set yields its members. The order of those four is not
+specified, as [Deviation 1](r:instr.do.deviation.1) says for a Stem and
+[Deviation 33](../deviations.md#33-hash-iteration-order) for the others. A
 collection that yields nothing leaves `name` as it was, and otherwise `name`
 holds the last item after the loop.
 
@@ -1291,4 +1293,36 @@ n = 4294967296; do n; leave; end => 26.2
 do "4294967296"; leave; end => 26.2
 do 4294967296 + 0; leave; end => 26.2
 numeric digits 8; do 4294967296; leave; end => 26.2
+```
+
+r[instr.do.deviation.118]
+`DO OVER` sends `MAKEARRAY` to an instance of a subclass of `List` as it does to
+an instance of any other collection class, so that a `MAKEARRAY` of the subclass
+is used and its answer decides the items. ooRexx reads such an instance as a
+`List` directly and sends it no `MAKEARRAY`, unlike the subclasses of the other
+collection classes. In the example the subclasses answer other items than they
+hold.
+
+```rexx
+do x over .llist~of('held')
+  say x
+end
+do x over .qsub~of('held')
+  say x
+end
+::class llist subclass list
+::method makearray
+  say 'makearray sent'
+  return .array~of('answered')
+::class qsub subclass queue
+::method makearray
+  say 'makearray sent'
+  return .array~of('answered')
+```
+
+```output
+makearray sent
+answered
+makearray sent
+answered
 ```

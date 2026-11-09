@@ -2,7 +2,7 @@
 element: "OrderedCollection"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > OrderedCollection Class; Builtin Classes > Collection Classes > OrderedCollection Class > append (Abstract Method); Builtin Classes > Collection Classes > OrderedCollection Class > appendAll; Builtin Classes > Collection Classes > OrderedCollection Class > delete (Abstract Method); Builtin Classes > Collection Classes > OrderedCollection Class > difference; Builtin Classes > Collection Classes > OrderedCollection Class > first (Abstract Method); Builtin Classes > Collection Classes > OrderedCollection Class > firstItem (Abstract Method); Builtin Classes > Collection Classes > OrderedCollection Class > insert (Abstract Method); Builtin Classes > Collection Classes > OrderedCollection Class > intersection; Builtin Classes > Collection Classes > OrderedCollection Class > last (Abstract Method); Builtin Classes > Collection Classes > OrderedCollection Class > lastItem (Abstract Method); Builtin Classes > Collection Classes > OrderedCollection Class > next (Abstract Method); Builtin Classes > Collection Classes > OrderedCollection Class > previous (Abstract Method); Builtin Classes > Collection Classes > OrderedCollection Class > section (Abstract Method); Builtin Classes > Collection Classes > OrderedCollection Class > sort; Builtin Classes > Collection Classes > OrderedCollection Class > sortWith; Builtin Classes > Collection Classes > OrderedCollection Class > stableSort; Builtin Classes > Collection Classes > OrderedCollection Class > stableSortWith; Builtin Classes > Collection Classes > OrderedCollection Class > subset; Builtin Classes > Collection Classes > OrderedCollection Class > union; Builtin Classes > Collection Classes > OrderedCollection Class > xor"
-deviations: [109]
+deviations: [109, 118]
 ---
 
 # OrderedCollection
@@ -510,9 +510,11 @@ The answer of `allItems` is read as [`DO OVER`](r:instr.do.over) reads a
 collection: `makeArray` is sent to it once and the items present in the array
 that comes back are the items of the list, in order, a position that holds
 nothing being skipped. An answer that is an array, a list, any collection or a
-string is read in this way; one that has no `makeArray` method, `.nil`
-included, raises `SYNTAX 98.913`. Whether the argument was asked `isA` or
-`makeArray` first makes no difference to this.
+string is read in this way, an instance of a subclass of `List` among them,
+which is sent `makeArray` like any other ([Deviation
+118](r:class.orderedcollection.deviation.118)); one that has no `makeArray`
+method, `.nil` included, raises `SYNTAX 98.913`. Whether the argument was asked
+`isA` or `makeArray` first makes no difference to this.
 
 ```rexx
 h = .array~new(4)
@@ -1327,4 +1329,39 @@ say .fake~new(.name~new('7'))~subset(.array~new)
 
 ```output defect=#140
 0
+```
+
+r[class.orderedcollection.deviation.118]
+An instance of a subclass of `List` that `appendAll` or one of the operations
+that read a list gets as the answer of `allItems` is sent `makeArray`, so that
+its own `makeArray` is used, as [the answer
+rule](r:class.orderedcollection.operand.answer) says for any collection. ooRexx
+reads such an instance as a `List` directly and sends it no `makeArray`. In the
+example the subclass answers other items than it holds.
+
+```rexx
+s = .seq~new
+s~appendAll(.src~new(.llist~of('held')))
+say s~items s~firstItem
+s = .seq~new
+say s~union(.src~new(.llist~of('held')))~items
+::class llist subclass list
+::method makearray
+  say 'makearray sent'
+  return .array~of('answered')
+::class src inherit collection
+::method init
+  expose ans
+  use arg ans
+::method allitems
+  expose ans
+  return ans
+::class seq subclass list
+```
+
+```output
+makearray sent
+1 answered
+makearray sent
+1
 ```

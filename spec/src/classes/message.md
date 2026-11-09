@@ -2,7 +2,7 @@
 element: "Message"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Message Class; Builtin Classes > Fundamental Classes > Message Class > new (Class Method); Builtin Classes > Fundamental Classes > Message Class > arguments; Builtin Classes > Fundamental Classes > Message Class > completed; Builtin Classes > Fundamental Classes > Message Class > errorCondition; Builtin Classes > Fundamental Classes > Message Class > halt; Builtin Classes > Fundamental Classes > Message Class > hasError; Builtin Classes > Fundamental Classes > Message Class > hasResult; Builtin Classes > Fundamental Classes > Message Class > messageComplete; Builtin Classes > Fundamental Classes > Message Class > messageName; Builtin Classes > Fundamental Classes > Message Class > notify; Builtin Classes > Fundamental Classes > Message Class > reply; Builtin Classes > Fundamental Classes > Message Class > replyWith; Builtin Classes > Fundamental Classes > Message Class > result; Builtin Classes > Fundamental Classes > Message Class > send; Builtin Classes > Fundamental Classes > Message Class > sendWith; Builtin Classes > Fundamental Classes > Message Class > start; Builtin Classes > Fundamental Classes > Message Class > startWith; Builtin Classes > Fundamental Classes > Message Class > target; Builtin Classes > Fundamental Classes > Message Class > triggered; Builtin Classes > Fundamental Classes > Message Class > wait; Builtin Classes > Utility Classes > AlarmNotification Class > cancel"
-deviations: [105, 107, 109]
+deviations: [105, 107, 109, 113, 116]
 ---
 
 # Message
@@ -210,21 +210,24 @@ bad: say arg(1) '=>' condition('o')~code
 
 r[class.message.new.options]
 The option is a string whose first letter, in either case, is `I` (individual)
-or `A` (array); the other letters are not looked at, so `Individual` and
-`array` are options. Any other string, the null string, and a number raise
+or `A` (array); the other letters are not looked at, so `Individual` and `array`
+are options. Any other string, the null string, and a number raise
 `SYNTAX 93.915`, and an option that has no string value raises `88.909`; the
 option is checked after the name. An omitted option with an argument after it
-raises `88.901`. With `I`, every argument after the option is an argument of
-the message, in order, and an omitted place stays omitted; omitted places at
-the end add nothing to the count, as
-[the count rule](r:class.index.args.count) says, and an argument may be any
-object, `.nil` included. With `A`, the fourth argument is required
-(`SYNTAX 93.901`) and is the only argument that may follow: a fifth raises
-`93.902`, also when the fourth is omitted. It holds the arguments of the
-message: it is an array, or an object that answers an array to the message
-`request` with the argument `ARRAY`, and the items of the array are the
-arguments in order. An object that answers no array, `.nil` and an array of
-more than one dimension among them, raises `SYNTAX 88.913`.
+raises `88.901`. With `I`, every argument after the option is an argument of the
+message, in order, and an omitted place stays omitted; omitted places at the end
+add nothing to the count, as [the count rule](r:class.index.args.count) says,
+and an argument may be any object, `.nil` included. With `A`, the fourth
+argument is required (`SYNTAX 93.901`) and is the only argument that may follow:
+a fifth raises `93.902`, also when the fourth is omitted. It holds the arguments
+of the message: it is an array, or an object that answers an array to the
+message `request` with the argument `ARRAY`, and the items of the array are the
+arguments in order. The message keeps a copy of the array, made when `new` runs,
+so that a change that the caller makes to the array afterwards does not reach
+the message, and the number of arguments is the position of the last item
+present, as [the count rule](r:class.index.args.count) says ([Deviation
+113](r:class.message.deviation.113)). An object that answers no array, `.nil`
+and an array of more than one dimension among them, raises `SYNTAX 88.913`.
 
 ```rexx
 t = .t~new
@@ -1379,28 +1382,27 @@ r[class.message.notify]
 only argument. The target must be an instance of
 [`MessageNotification`](messagenotification.md), a class that inherits it or a
 subclass of one; any other object, `.nil` included, raises `SYNTAX 88.914`, no
-target `88.901` and a second argument `93.902`. `notify` answers nothing and
-can be sent any number of times: the targets are kept in the order of the
-calls, and each is sent `messageComplete` each time the message ends, in that
-order. A run of `send` or `sendWith` sends them before it returns, in the
-activity of the sender, and an error that a `messageComplete` raises is raised
-there, so that it ends the `send` clause; the targets after the one that
-raised it are not sent `messageComplete`, and when the message itself ended
-with an error, the sender sees the error of the `messageComplete`, while
-`errorCondition` keeps that of the message. The error does not become an error
-of a sent message, which has ended without one. When a message that has ended
-is given a target, the target is sent `messageComplete` at once, in the
-activity that called `notify`. For a started message the targets are sent it
-in the activity that ran the message; when that happens relative to the
-activity that waits for the message is a matter of scheduling. For a started
-message, an error that a `messageComplete` raises becomes the error of the
-message: `hasError` answers 1, `errorCondition` answers the condition of that
-error and `result` raises it, while `hasResult` keeps the 1 of the run. The
-targets after the one that raised it are not sent `messageComplete`; whether
-the target that raised it is sent it again, and how often, is not specified.
-`hasError` answers 1 once the error has been recorded, which may be after
-`wait` has returned. A copy made by `reply`
-has the targets of the message, and so has the one that
+target `88.901` and a second argument `93.902`. `notify` answers nothing and can
+be sent any number of times: the targets are kept in the order of the calls, and
+each is sent `messageComplete` each time the message ends, in that order. A run
+of `send` or `sendWith` sends them before it returns, in the activity of the
+sender, and an error that a `messageComplete` raises is raised there, so that it
+ends the `send` clause; the targets after the one that raised it are not sent
+`messageComplete`, and when the message itself ended with an error, the sender
+sees the error of the `messageComplete`, while `errorCondition` keeps that of
+the message. The error does not become an error of a sent message, which has
+ended without one. When a message that has ended is given a target, the target
+is sent `messageComplete` at once, in the activity that called `notify`. For a
+started message the targets are sent it in the activity that ran the message;
+when that happens relative to the activity that waits for the message is a
+matter of scheduling. For a started message, an error that a `messageComplete`
+raises becomes the error of the message: `hasError` answers 1, `errorCondition`
+answers the condition of that error and `result` raises it, while `hasResult`
+keeps the 1 of the run. The targets after the one that raised it are not sent
+`messageComplete`, and the target that raised it is sent it that once
+([Deviation 116](r:class.message.deviation.116)). `hasError` answers 1 once the
+error has been recorded, which may be after `wait` has returned. A copy made by
+`reply` has the targets of the message, and so has the one that
 [`copy`](r:class.message.copy) makes. The message the target is sent is the
 completed message object, so `completed` answers 1 in it.
 
@@ -1998,4 +2000,78 @@ say m~messageName m~send
 
 ```output defect=#140
 COUNT count got 0
+```
+
+r[class.message.deviation.113]
+`new` with the option `A` keeps a copy of the array of arguments, so that a
+change to the caller's array after `new` does not reach the message, and the
+number of arguments of the message is the position of the last item present.
+ooRexx keeps the caller's array itself, so that a change to it reaches the
+message, and passes the size of the array as the number of arguments, with the
+empty places at its end counted. In the example the array of the first message
+gets a new first item and one more item after `new`, and the array of the second
+message has room for four items and holds one.
+
+```rexx
+t = .t~new
+a = .array~of('x', 'y')
+m = .message~new(t, 'show', 'A', a)
+a[1] = 'changed'
+a~append('z')
+say m~send
+b = .array~new(4)
+b[1] = 'p'
+say .message~new(t, 'show', 'A', b)~send
+::class t
+::method show
+  s = arg()':'
+  do i = 1 to arg()
+    if arg(i, 'e') then s = s arg(i)
+    else s = s '.'
+  end
+  return s
+```
+
+```output
+2: x y
+1: p
+```
+
+r[class.message.deviation.116]
+A target of a started message whose `messageComplete` raises an error is sent
+`messageComplete` once for that message, and no target after it is sent it.
+ooRexx sends the target that raised the error `messageComplete` three times in
+all, and none after it. The example counts the sends to the failing target after
+the error has been recorded, and gives the activity that runs the notifications
+time to send any further one.
+
+```rexx
+s = .message~new(.t~new, 'show')
+b = .bad~new
+s~notify(b)
+s~start
+s~wait
+do until s~hasError
+  call syssleep 0.01
+end
+call syssleep 0.3
+say 'failing target sent' b~count
+::class t
+::method show unguarded
+  return 'shown'
+::class bad inherit MessageNotification
+::method init
+  expose n
+  n = 0
+::method count unguarded
+  expose n
+  return n
+::method messageComplete unguarded
+  expose n
+  n = n + 1
+  raise syntax 93.900 array('refused')
+```
+
+```output defect=#158
+failing target sent 1
 ```

@@ -2,7 +2,7 @@
 element: "Class"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Class Class (Metaclass); Builtin Classes > Fundamental Classes > Class Class (Metaclass) > Comparison Methods; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > activate; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > annotation; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > annotations; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > baseClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > defaultName; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > define; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > defineMethods; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > delete; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > enhanced; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > id; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > inherit; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > isAbstract; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > isMetaclass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > isSubclassOf; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > metaClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > method; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > methods; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > mixinClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > new; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > package; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > queryMixinClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > subclass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > subclasses; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > superClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > superClasses; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > uninherit"
-deviations: [32, 33, 63, 108, 109, 110]
+deviations: [32, 33, 63, 108, 109, 110, 114]
 ---
 
 # Class
@@ -1297,17 +1297,18 @@ supplier sent 0
 ```
 
 r[class.class.delete]
-`delete` removes the entry that the class's own table holds for a name, taken
-in upper case, whether the entry is a method or a mark that hides the name,
-and answers no value. The name is then looked up in the classes behind, as
-[the hidden-name rule](r:class.methods.hidden) says. A name that the table
-does not hold is not an error and changes nothing, and `delete` does not
+`delete` removes the entry that the class's own table holds for a name, taken in
+upper case, whether the entry is a method or a mark that hides the name, and
+answers no value. A name that `define` hid with `.nil` as the method is hidden
+by such a mark too, and `delete` ends the hiding at once ([Deviation
+117](r:class.methods.deviation.117)). The name is then looked up in the classes
+behind, as [the hidden-name rule](r:class.methods.hidden) says. A name that the
+table does not hold is not an error and changes nothing, and `delete` does not
 remove a method that only a class behind holds. The name is required
 (`SYNTAX 88.901`), `.nil` raises `88.909`, and a second argument raises
 `93.902`. The number of arguments is checked first, then the class, then the
 name. The classes of the class library accept no `delete` ([the library
-rule](r:class.methods.library)); they raise `98.985` before the name is
-checked.
+rule](r:class.methods.library)); they raise `98.985` before the name is checked.
 
 ```rexx
 .sub~define('M2', 'return "sub m2"')
@@ -1663,21 +1664,23 @@ d: say condition('o')~code .k~subclasses~items
 
 r[class.class.subclass.sends]
 `subclass` sends the message `new` to the metaclass, which is the receiver's
-metaclass when there is no metaclass argument, with the id as its only
-argument, and the class that `new` builds for it is the new class: a class
-method `new` of the metaclass runs ([the new rule](r:class.class.new)
-specifies the one that `Class` supplies). The class that `new` answers
-receives `init`, from that `new`, while it is still a plain class: its
-superclass is `Object` and it has only the methods of its metaclass.
-`subclass` then sends the third argument `supplier`, once, with no argument,
-as [`defineMethods`](r:class.class.definemethods) does. It then makes the
-receiver the superclass, adds the class methods, sets the package to `.nil`,
-and sends the class `init` a second time, with no argument. A class method
-`init` that the receiver declares is therefore run only by the second `init`.
-`activate` is not sent. A `new` of the metaclass that answers a class that
-`subclass`, `mixinclass` or a `::CLASS` directive has already completed, or a
-class of the library, is treated as [Deviation
-32](r:class.class.deviation.32) states.
+metaclass when there is no metaclass argument, with the id as its only argument,
+and the class that `new` builds for it is the new class: a class method `new` of
+the metaclass runs ([the new rule](r:class.class.new) specifies the one that
+`Class` supplies). The class that `new` answers receives `init`, from that
+`new`, while it is still a plain class: its superclass is `Object` and it has
+only the methods of its metaclass. `subclass` then sends the third argument
+`supplier`, once, with no argument, as
+[`defineMethods`](r:class.class.definemethods) does. It then makes the receiver
+the superclass, adds the class methods, sets the package to `.nil`, and sends
+the class `init` a second time, with no argument. A class method `init` that the
+receiver declares is therefore run only by the second `init`. `activate` is not
+sent. A `new` of the metaclass that answers a class that `subclass`,
+`mixinclass` or a `::CLASS` directive has already completed, or a class of the
+library, is treated as [Deviation 32](r:class.class.deviation.32) states. A
+`new` of the metaclass that answers an object that is not a class raises
+`SYNTAX 98.900` from `subclass` or `mixinclass`, in the program that sent it,
+where it can be trapped ([Deviation 114](r:class.class.deviation.114)).
 
 ```rexx
 x = .k~subclass('S1')
@@ -2025,6 +2028,32 @@ say 'after' y~id
 
 ```output rc=120
 before
+```
+
+r[class.class.deviation.114]
+A metaclass whose `new` answers an object that is not a class makes `subclass`
+or `mixinclass` raise `SYNTAX 98.900`, whatever the object is, `.nil` and a
+string included, and the error can be trapped by the program that sent the
+message, as [the chapter rule](r:class.index.deviation.114) says. ooRexx
+crashes. The metaclass is the second argument in the example.
+
+```rexx
+signal on syntax name e1
+y = .object~subclass('Y', .meta)
+say 'not reached'
+e1: say 'subclass' condition('o')~code
+signal on syntax name e2
+z = .object~mixinclass('Z', .meta)
+say 'not reached'
+e2: say 'mixinclass' condition('o')~code
+::class meta subclass class
+::method new class
+  return .nil
+```
+
+```output defect=#156
+subclass 98.900
+mixinclass 98.900
 ```
 
 r[class.class.deviation.33]

@@ -2,7 +2,7 @@
 element: "Routine"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Routine Class; Builtin Classes > Fundamental Classes > Routine Class > new (Class Method); Builtin Classes > Fundamental Classes > Routine Class > newFile (Class Method); Builtin Classes > Fundamental Classes > Routine Class > loadExternalRoutine (Class method); Builtin Classes > Fundamental Classes > Routine Class > []; Builtin Classes > Fundamental Classes > Routine Class > annotation; Builtin Classes > Fundamental Classes > Routine Class > annotations; Builtin Classes > Fundamental Classes > Routine Class > call; Builtin Classes > Fundamental Classes > Routine Class > callWith; Builtin Classes > Fundamental Classes > Routine Class > package; Builtin Classes > Fundamental Classes > Routine Class > setSecurityManager; Builtin Classes > Fundamental Classes > Routine Class > source; The Security Manager"
-deviations: [41, 109]
+deviations: [41, 109, 115]
 ---
 
 # Routine
@@ -142,12 +142,14 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.routine.new.sends]
-`new` sends the messages that
-[the sends rule of `Method`](r:class.method.new.sends) states, in the same
-order: `request` with `ARRAY` and then with `STRING` to a source that is not a
-string and not an array (the line is a string answer itself, and any other
-answer's `objectName`), and, when the routine has been made, `init` with the
-arguments of `new` from the fourth on.
+`new` sends the messages that [the sends rule of
+`Method`](r:class.method.new.sends) states, in the same order: `request` with
+`ARRAY` and then with `STRING` to a source that is not a string and not an array
+(the line is a string answer itself, and any other answer's `objectName`), and,
+when the routine has been made, `init` with the arguments of `new` from the
+fourth on. An answer to `request` with `ARRAY` that is neither an array nor
+`.nil` raises `SYNTAX 88.913`, and no `request` with `STRING` follows it
+([Deviation 115](r:class.routine.deviation.115)).
 
 ```rexx
 call try '.routine~new("n", .src~new(.array~of("return 1"), .nil))~call'
@@ -1350,4 +1352,51 @@ say r~package~name r~source[1]
 
 ```output defect=#140
 Foo say "src"
+```
+
+r[class.routine.deviation.115]
+A `new` whose source answers `request` with `ARRAY` by an object that is neither
+an array nor `.nil` raises `SYNTAX 88.913`, as [the sends rule of
+`Method`](r:class.method.deviation.115) states, and no `request` with `STRING`
+is sent. ooRexx reads the answer as an array without checking it and crashes.
+The examples have `request` answer a string, a list and an object that is none
+of them.
+
+```rexx
+call try '.routine~new("n", .src~new("return 1"))'
+call try '.routine~new("n", .src~new(.list~of("return 1")))'
+call try '.routine~new("n", .src~new(.object~new))'
+call try '.routine~new("n", .src~new(.array~of("return 1")))~call'
+call try '.routine~new("n", .src~new(.nil))~call'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=>' zres
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class src
+::method init
+  expose ans
+  use arg ans
+::method request
+  expose ans
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return ans
+  return 'return 2'
+```
+
+```output defect=#157
+request ARRAY
+.routine~new("n", .src~new("return 1")) => 88.913
+request ARRAY
+.routine~new("n", .src~new(.list~of("return 1"))) => 88.913
+request ARRAY
+.routine~new("n", .src~new(.object~new)) => 88.913
+request ARRAY
+.routine~new("n", .src~new(.array~of("return 1")))~call => 1
+request ARRAY
+request STRING
+.routine~new("n", .src~new(.nil))~call => 2
 ```

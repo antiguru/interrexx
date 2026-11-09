@@ -2,7 +2,7 @@
 element: "Method search"
 kind: concept
 rexxref: "Objects and Classes > Default Search Order for Method Selection; Objects and Classes > Changing the Search Order for Methods; Objects and Classes > Defining an UNKNOWN Method; Objects and Classes > Mixin Classes; Objects and Classes > Metaclasses; Objects and Classes > Defining Instance Methods with SETMETHOD or ENHANCED; Objects and Classes > Public, Package-Scope, and Private Methods; Special Variables > SUPER; Builtin Classes > Fundamental Classes > Object Class > setMethod; Builtin Classes > Fundamental Classes > Object Class > unsetMethod; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > define; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > defineMethods; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > delete; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > enhanced; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > inherit; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > uninherit"
-deviations: [32, 105, 110]
+deviations: [32, 105, 110, 117]
 ---
 
 # Method search
@@ -585,20 +585,21 @@ unknown took M
 ```
 
 r[class.methods.hidden]
-A name can be hidden instead of given a method: the search stops at it, and
-the name counts as not found. `define` with no method, an item `.nil` in the
+A name can be hidden instead of given a method: the search stops at it, and the
+name counts as not found. `define` with no method, an item `.nil` in the
 collection that `defineMethods` or `enhanced` receives, and, for the object's
-own methods, `setMethod` with no method leave a mark in the table. `define`
-with `.nil` as the method hides the name as well, but the table then holds no
-entry that [`method`](r:class.class.method) could answer, as [the `define`
+own methods, `setMethod` with no method leave a mark in the table. `define` with
+`.nil` as the method hides the name as well, but the table then holds no entry
+that [`method`](r:class.class.method) could answer, as [the `define`
 rule](r:class.class.define) says. The `delete` method of `Class` removes the
 mark or the method that the table of the class it is sent to holds for a name,
-and the name is then looked up in the classes behind.
+the mark that `define` with `.nil` left included, and the name is then looked up
+in the classes behind at once ([Deviation 117](r:class.methods.deviation.117)).
 A name the table does not hold is left as it is; `delete` does not remove a
 method that only a class behind holds. The example hides a method that the
-superclass holds, shows that `UNKNOWN` receives the hidden name, and brings
-the method back with `delete`. A second example hides an inherited name with
-`.nil` as the method of `define`.
+superclass holds, shows that `UNKNOWN` receives the hidden name, and brings the
+method back with `delete`. A second example hides an inherited name with `.nil`
+as the method of `define`.
 
 ```rexx
 .sub~define('m')
@@ -1808,4 +1809,37 @@ meta who - -
 meta later meta later
 sbase later2 mxm later3
 four four
+```
+
+r[class.methods.deviation.117]
+`delete` of a name that `define` hid with `.nil` as the method ends the hiding
+at once: the name is looked up in the classes behind from then on, as it is
+after a `delete` of a name that `define` hid with no method. ooRexx keeps the
+name hidden after the `delete`, for the objects made later as well, until the
+table of the class is changed again, by a `define` of another name for instance.
+The example sends the name before the `delete`, after it and after a later
+`define` of another name.
+
+```rexx
+.sub~define('m', .nil)
+say t(.sub~new, 'm')
+.sub~delete('m')
+say t(.sub~new, 'm')
+.sub~define('q', 'return 1')
+say t(.sub~new, 'm')
+exit
+t:
+  return arg(1)~send(arg(2))
+::class base
+::method m
+  return 'base m'
+::class sub subclass base
+::method unknown
+  return 'unknown' arg(1)
+```
+
+```output defect=#129
+unknown M
+base m
+base m
 ```

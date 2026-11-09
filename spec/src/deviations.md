@@ -713,8 +713,8 @@ that name as the entry spells it.
 A string that names a number is the same string to every message, however it
 was written or computed. A number literal such as `12` used as the message
 name of `send`, `sendWith`, `start`, `startWith` or `Message~new` names the
-message `12`, and
-`request('ARRAY')` sent to it answers the array that `makeArray` answers.
+message `12`, and `request('ARRAY')` sent to it answers the array that
+`makeArray` answers.
 ooRexx raises `SYNTAX 93.946` for the first and answers `.nil` for the second
 when the number is stored as a whole number, as a whole-number literal or the
 result of arithmetic is. Equal literals of a program share one stored value,
@@ -762,3 +762,52 @@ or their mixin classes, and not `inherit` or `uninherit`. An object given a
 method by `setMethod` sees no later change to its class or to the classes
 behind it. A class object sees no change to its metaclass or to the classes
 behind it that is made after the class itself.
+
+## 112. Array items of a loadPackage source are read through makeString
+
+An item of the source array of `loadPackage` that is not a string is read as
+`Method~new` and `Package~new` read one, through `makeString`; an answer that
+is not a string raises the same error as there. ooRexx uses the item's
+`objectName` as the line.
+
+## 113. A message keeps a copy of its argument array
+
+`Message~new` with the option `A` keeps a copy of the argument array, so later
+changes to the caller's array do not reach the message, and the number of
+arguments is the position of the last item present, as for `sendWith`. ooRexx
+keeps the caller's array itself and passes its size as the number of
+arguments, trailing empty positions included.
+
+## 114. A metaclass NEW that answers an object that is not a class
+
+When `subclass`, `mixinclass` or a `::CLASS` directive sends `new` to a
+metaclass and the answer is not a class, `SYNTAX 98.900` is raised in the
+program that made the request, and it can be trapped. ooRexx crashes.
+
+## 115. A request('ARRAY') answer that is neither an array nor .nil
+
+When `Method~new`, `Routine~new` or `Package~new` sends its source `request`
+with the argument `ARRAY` and the answer is neither an array nor `.nil`,
+`SYNTAX 88.913` is raised. ooRexx reads the answer as an array without
+checking it and crashes.
+
+## 116. A failing notification target is sent messageComplete once
+
+When a `messageComplete` sent to a notification target of a started message
+raises an error, that target is not sent `messageComplete` again. ooRexx sends
+it to that target three times in all.
+
+## 117. delete ends a hiding at once
+
+`define` with `.nil` puts a mark in the class's method table that hides the
+name, and `delete` of that name removes the mark: from then on the name is
+looked up in the classes behind. ooRexx keeps the name hidden after the
+`delete` until the class's table changes again.
+
+## 118. A List subclass is sent makeArray
+
+`DO OVER` and the collection methods that read a collection through
+`makeArray` send it to an instance of a subclass of `List` as to any other
+collection, so an override is used. ooRexx reads such an instance as a `List`
+directly and sends it no `makeArray`, unlike the subclasses of the other
+collection classes.
