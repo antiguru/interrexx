@@ -2,7 +2,7 @@
 element: "Classes"
 kind: chapter
 rexxref: "Builtin Classes; Objects and Classes > Mixin Classes; Objects and Classes > Overview of Classes Provided by Rexx; Builtin Classes > Fundamental Classes > Object Class > defaultName; Builtin Classes > Fundamental Classes > Object Class > objectName; Builtin Classes > Fundamental Classes > Object Class > objectName=; Builtin Classes > Fundamental Classes > Object Class > string"
-deviations: [30, 32, 36]
+deviations: [30, 32, 36, 109]
 ---
 
 # Classes
@@ -1003,4 +1003,29 @@ say 'after'
 
 ```output rc=120
 before
+```
+
+r[class.index.deviation.109]
+The string value of an instance of a subclass of `String` is its own
+characters, and the methods that read it as a string, a number or a logical
+value send it no `MAKESTRING` and no `STRING`, as
+[the rule on the string value](r:class.index.string) says and
+[the String page rule](r:class.string.deviation.109) states in full; ooRexx
+reads the instance through its `MAKESTRING` method as an argument and as the
+receiver of some methods. In the example `MAKESTRING` answers another string.
+
+```rexx
+.local~sent = 0
+s = .st~new('ab')
+say s~length s~pos('b') 'x' || s
+say 'sends' .local~sent
+::class st subclass string
+::method makestring
+  .local~sent = .local~sent + 1
+  return 'MADE'
+```
+
+```output defect=#140
+2 2 xab
+sends 0
 ```

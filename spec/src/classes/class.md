@@ -2,7 +2,7 @@
 element: "Class"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Class Class (Metaclass); Builtin Classes > Fundamental Classes > Class Class (Metaclass) > Comparison Methods; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > activate; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > annotation; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > annotations; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > baseClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > defaultName; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > define; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > defineMethods; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > delete; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > enhanced; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > id; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > inherit; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > isAbstract; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > isMetaclass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > isSubclassOf; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > metaClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > method; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > methods; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > mixinClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > new; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > package; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > queryMixinClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > subclass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > subclasses; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > superClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > superClasses; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > uninherit"
-deviations: [32, 33, 63, 108]
+deviations: [32, 33, 63, 108, 110]
 ---
 
 # Class
@@ -982,9 +982,11 @@ r = .plain~activate => 91.999
 ### Changing the class
 
 r[class.class.define]
-`define` gives the class an instance method, or hides a name, for the objects
-that are made afterwards, as [the hidden-name rule](r:class.methods.hidden)
-and [the search rule](r:class.methods.search) say, and answers no value. The
+`define` gives the class an instance method, or hides a name, for every
+instance of the class, those that exist already included, as
+[the rule on changes](r:class.methods.late) and
+[the hidden-name rule](r:class.methods.hidden) say, and the search finds it as
+[the search rule](r:class.methods.search) says, and answers no value. The
 first argument is the name, taken in upper case, and may be any string, a
 number included. The second is the method, in the forms that `setMethod`
 takes: a method object, a string that is the source of a method, or an array
@@ -2074,15 +2076,15 @@ bad: say arg(1) '=>' condition('o')~code
 r[class.class.deviation.108]
 When `subclass`, `mixinclass` or `defineMethods` takes the methods of an
 object through its `supplier` method, the object that `supplier` answers is
-used through the messages `available`, `index`, `item` and `next`, whatever
-its class, when it is not a `Supplier`; an object that does not answer one of
-them raises `SYNTAX 97.1` as for any message
-([Deviation 108](../deviations.md)). A `Supplier` is read directly, as
-[the sends rule](r:class.class.definemethods.sends) says. ooRexx reads the
-answer as a Supplier without checking it, and crashes when it is not one. In
-the example the `supplier` method of `holder` answers its argument, `lister`
-is no `Supplier` and records the messages sent to it, and `broken` lacks
-`next`.
+used through the messages `available`, `index`, `item` and `next` when it is
+not a `Supplier`; an object that does not answer one of them raises
+`SYNTAX 97.1` as for any message ([Deviation 108](../deviations.md)). A
+`Supplier`, an instance of a subclass of `Supplier` included, is read
+directly, as [the sends rule](r:class.class.definemethods.sends) says. ooRexx
+reads the answer as a Supplier without checking it, and crashes when it is not
+one. In the example the `supplier` method of `holder` answers its argument,
+`lister` is no `Supplier` and records the messages sent to it, and `broken`
+lacks `next`.
 
 ```rexx
 .local~seen = .directory~new
@@ -2136,4 +2138,24 @@ bad: say condition('o')~code
 1 2 available index item next
 1 2
 97.1
+```
+
+r[class.class.deviation.110]
+`define` reaches the instances of the class that exist already and the ones
+that are made afterwards, as [the rule on changes](r:class.methods.late) says
+and [Deviation 110](r:class.methods.deviation.110) states; ooRexx copies the
+method table into each existing instance, which a `define` sent to the class
+does not reach. In the example the `define` messages follow the instance, so
+ooRexx raises `97.1` for the first message.
+
+```rexx
+o = .k~new
+.k~define('ONE', 'return "one"')
+.k~define('TWO', 'return "two"')
+say o~one o~two
+::class k
+```
+
+```output defect=#141
+one two
 ```

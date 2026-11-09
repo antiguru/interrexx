@@ -611,6 +611,8 @@ same name that is sent to the class afterwards is not seen while the object's
 own method of that name stands, and is seen after `unsetMethod`, as
 [the rule on changes](r:class.methods.late) says; the second example shows the
 object's own method and the class's method of the same name.
+[Deviation 110](r:class.methods.deviation.110) has the example for the
+`define` that is seen after `unsetMethod`.
 
 ```rexx
 o = .k~new
@@ -1488,8 +1490,6 @@ say 'after inherit:' t(.c, 'mixcls') t(.sub, 'mixcls')
 say 'after uninherit:' t(.c, 'mixcls') t(.sub, 'mixcls')
 .sbase~define('later2', 'return "sbase later2"')
 .mxm~define('later3', 'return "mxm later3"')
-.sbase~define('later2', 'return "sbase later2"')
-.mxm~define('later3', 'return "mxm later3"')
 .meta~inherit(.my)
 say 'meta inherit:' t(.meta~new('g'), 'four')
 say 'new class:' t(.meta~new('f'), 'later2') t(.meta~new('h'), 'later3')
@@ -1601,16 +1601,19 @@ classes, by `define`, `defineMethods`, `delete`, `inherit` and `uninherit`
 ([the rule on changes](r:class.methods.late)): also when the object has
 methods of its own from `setMethod` or `enhanced`, and when the class has been
 changed before. A class object follows its metaclass in the same way. ooRexx
-copies the method table into existing instances: after a `define`,
-`defineMethods` or `delete` sent to a class, even one that changes nothing,
-its existing instances no longer see later changes to its superclasses and
-mixin classes, and an object given a method by `setMethod` no longer sees
-later changes to its class ([Deviation 110](../deviations.md)). The first
-example is the one of the rule on changes, with a `define` sent to `K` itself
-and an instance `B` that is made after it: `A`, `B` and `S` answer alike after
-every change. The second example gives an object an own method with
-`setMethod` and another with `enhanced`, and changes the class afterwards. The
-third follows a class object over changes to its metaclass.
+copies the method table into existing instances. A `define`, `defineMethods`
+or `delete` sent to a class, even one that changes nothing, does not reach the
+instances that exist already, and no later change reaches them after it: not
+to the class, not to its superclasses or their mixin classes, and not
+`inherit` or `uninherit`. An object given a method by `setMethod` sees no
+later change to its class or to the classes behind it. A class object sees no
+change to its metaclass or to the classes behind it that is made after the
+class itself ([Deviation 110](../deviations.md)). The first example is the one
+of the rule on changes, with a `define` sent to `K` itself and an instance `B`
+that is made after it: `A`, `B` and `S` answer alike after every change. The
+second example gives an object an own method with `setMethod` and another with
+`enhanced`, and changes the class afterwards. The third follows a class object
+over changes to its metaclass.
 
 ```rexx
 a = .k~new
@@ -1691,6 +1694,7 @@ k define one again:
 ```rexx
 a = .k~new
 a~give('OWN', 'return "own"')
+a~give('ONE', 'return "a one"')
 e = .k~enhanced(.directory~new~~put('return "en"', 'EN'))
 .k~define('ONE', 'return "o1"')
 .base~define('TWO', 'return "t"')
@@ -1698,6 +1702,9 @@ e = .k~enhanced(.directory~new~~put('return "en"', 'EN'))
 .k~define('THREE', 'return "h"')
 say t(a, 'OWN') t(a, 'ONE') t(a, 'TWO') t(a, 'THREE')
 say t(e, 'EN') t(e, 'ONE') t(e, 'TWO') t(e, 'THREE')
+.k~define('ONE', 'return "k1"')
+a~drop('ONE')
+say t(a, 'ONE')
 exit
 t:
   signal on syntax name x
@@ -1707,11 +1714,14 @@ x: return '-'
 ::class k subclass base
 ::method give
   self~setMethod(arg(1), arg(2))
+::method drop
+  self~unsetMethod(arg(1))
 ```
 
 ```output defect=#141
-own - t h
+own a one t h
 en - t h
+k1
 ```
 
 ```rexx

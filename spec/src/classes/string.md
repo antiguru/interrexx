@@ -1858,17 +1858,19 @@ before
 ```
 
 r[class.string.deviation.109]
-An instance of a subclass of `String` is read by its own characters wherever
-a string, a number, a logical value or a whole number is needed, as the
-receiver and as an argument, in the message form, in the function form and in
-the operators; `MAKESTRING` and `STRING` are not sent to it for that
+An instance of a subclass of `String` is read by its own characters wherever a
+string, a number, a logical value or a whole number is needed, as the receiver
+and as an argument, in the message form, in the function form and in the
+operators; `MAKESTRING` and `STRING` are not sent to it for that
 ([Deviation 109](../deviations.md)). In the example the subclass declares both
 methods and counts the sends: the instance `n` is the number 2, `b` is the
 logical value 1 and `s` is the string `ab`, and no send is made. ooRexx reads
-such an instance through its `MAKESTRING` method in some places (the numeric
-methods and operators, the logical operators, `dataType`, `?`, whole-number
-arguments, `new`) and through its own characters in others, so one instance
-can answer differently to `=` and to `==`.
+such an instance through its `MAKESTRING` method when it is an argument, of a
+method, an operator or a builtin function, and when it is the receiver of the
+numeric methods and operators, the logical operators, `dataType` and `?`, and
+in `new`; as the receiver of the other methods, of the strict comparisons and
+of the joining operators it reads the instance's own characters, so one
+instance can answer differently to `=` and to `==`.
 
 ```rexx
 .local~sent = 0

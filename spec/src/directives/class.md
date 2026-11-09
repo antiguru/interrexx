@@ -3,6 +3,7 @@ element: "::CLASS"
 kind: directive
 syntax: "::CLASS name [METACLASS m] [SUBCLASS s | MIXINCLASS s] [PUBLIC | PRIVATE] [ABSTRACT] [INHERIT i ...]"
 rexxref: "Directives > ::CLASS"
+deviations: [32]
 ---
 
 # ::CLASS
@@ -626,4 +627,25 @@ exit
 ```
 
 ```output rc=158
+```
+
+## Deviations
+
+r[dir.class.deviation.32]
+When the `new` of the METACLASS answers a class that `Class` did not build,
+interrexx ends the program with exit code 120 while the directive is read, so
+that the program writes nothing, as
+[the chapter rule](r:class.index.deviation.32) states for `subclass`,
+`mixinclass` and the directive; ooRexx rewires the existing class in place and
+runs the program. See [Deviation 32](../deviations.md).
+
+```rexx
+say 'before'
+::class meta subclass class
+::method new class
+  return .array
+::class k metaclass meta
+```
+
+```output rc=120
 ```
