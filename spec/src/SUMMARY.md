@@ -99,6 +99,8 @@
   - [MapCollection](classes/mapcollection.md)
   - [OrderedCollection](classes/orderedcollection.md)
   - [SetCollection](classes/setcollection.md)
+  - [Array](classes/array.md)
+  - [List](classes/list.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
