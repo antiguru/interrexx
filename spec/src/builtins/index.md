@@ -318,13 +318,13 @@ say verify(copies('a', 1200) || 'b', 'a') verify(copies('a', 1300), '', 'N', 123
 
 r[bif.index.count.answer.deviation.4]
 interrexx does not specify whether the answer of a builtin that answers a
-count is the same object as another string of equal value: as an equal
-number the program already holds, such as the `start` argument of a call
-that answers it, or a literal such as `'1201'`, or the equal answer of
-another call. Through `identityHash`, or as a key of an `IdentityTable` or
-`IdentitySet`, the answer may be either, and a program can rely only on the
-value, which is equal under `==`. ooRexx differs: it often answers a
-new object where interrexx answers the existing one.
+count is the same object as another string of equal value: as an equal number
+the program already holds, such as the `start` argument of a call that answers
+it, or a literal such as `'1201'`, or the equal answer of another call.
+Through `identityHash`, or as a key of an `IdentityTable`, the answer may be
+either, and a program can rely only on the value, which is equal under `==`.
+ooRexx differs: it often answers a new object where interrexx answers the
+existing one.
 
 ```rexx
 w = copies('x ', 1200) || 'y'
@@ -482,13 +482,13 @@ say (bitxor('abc', 'z', 'q') == bitxor('z', 'abc', 'q')) (bitxor('', 'z') == bit
 ```
 
 r[bif.index.bit.deviation.4]
-interrexx does not specify whether the answer of a bit-by-bit function is
-the same object as another string of equal value: as `string1` itself when
-the answer equals it, as in `bitor(s)`, or as an equal string produced some
-other way, such as a literal. Through `identityHash`, or as a key of an
-`IdentityTable` or `IdentitySet`, the answer may be either, and a program can
-rely only on the value, which is equal under `==`. ooRexx differs: it often
-answers a new object where interrexx answers the existing one.
+interrexx does not specify whether the answer of a bit-by-bit function is the
+same object as another string of equal value: as `string1` itself when the
+answer equals it, as in `bitor(s)`, or as an equal string produced some other
+way, such as a literal. Through `identityHash`, or as a key of an
+`IdentityTable`, the answer may be either, and a program can rely only on the
+value, which is equal under `==`. ooRexx differs: it often answers a new
+object where interrexx answers the existing one.
 
 ```rexx
 s = 'ab' || 'cd'
@@ -862,13 +862,13 @@ d: say condition('o')~code
 > answers 0 without examining the string.
 
 r[bif.index.conv.deviation.4]
-interrexx does not specify whether the answer of a conversion function is
-the same object as another string of equal value, such as a literal, the
-argument itself when the answer equals it, or the equal answer of another
-call. Through `identityHash`, or as a key of an `IdentityTable` or
-`IdentitySet`, the answer may be either, and a program can rely only on the
-value, which is equal under `==`. ooRexx differs: it often answers a new
-object where interrexx answers the existing one.
+interrexx does not specify whether the answer of a conversion function is the
+same object as another string of equal value, such as a literal, the argument
+itself when the answer equals it, or the equal answer of another call. Through
+`identityHash`, or as a key of an `IdentityTable`, the answer may be either,
+and a program can rely only on the value, which is equal under `==`. ooRexx
+differs: it often answers a new object where interrexx answers the existing
+one.
 
 ```rexx
 s = '6' || '1'

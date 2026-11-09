@@ -38,10 +38,10 @@ POS past the end of the haystack: current ooRexx agrees with interrexx.
 ## 4. Identity of equal values
 
 Whether two equal strings or numbers produced separately are one object, and
-whether an operation that leaves a value unchanged answers the same object,
-is not specified; it shows only through `identityHash` and the identity
-collections. ooRexx's answers follow how each value was built. An empty
-stem's name in `USE ARG` is compared by its characters, where ooRexx
+whether an operation that leaves a value unchanged answers the same object, is
+not specified; it shows only through `identityHash` and the identity
+collection `IdentityTable`. ooRexx's answers follow how each value was built.
+An empty stem's name in `USE ARG` is compared by its characters, where ooRexx
 compares identity.
 
 ## 5. Withdrawn
@@ -216,8 +216,11 @@ Replaced by [Deviation 36](#36-strings-and-numbers-are-value-based).
 When a class-side NEW reached through `enhanced` answers an object it did
 not build, that object comes back unchanged; ooRexx marks it enhanced, which
 changes every object of its class, every String for example. A metaclass NEW
-that answers an existing class during `subclass` is refused, exit code 120,
-where ooRexx rewires that class in place.
+that answers a class that `subclass`, `mixinclass` or a `::CLASS` directive has
+already completed, or a class of the library such as `Array`, while a class
+with that metaclass is made, by `subclass`, by `mixinclass` or by a `::CLASS`
+directive with METACLASS, is refused, exit code 120, where ooRexx rewires that
+class in place.
 
 ## 33. Hash iteration order
 
@@ -704,3 +707,58 @@ of the trap that caught the condition, also after the routine has changed the
 `CONDITION` entry of its argument. ooRexx answers the state of the trap for
 the condition that the entry names at that moment, and `OFF` when no trap has
 that name as the entry spells it.
+
+## 107. Number literals are ordinary strings
+
+A string that names a number is the same string to every message, however it
+was written or computed. A number literal such as `12` used as the message
+name of `send`, `sendWith`, `start`, `startWith` or `Message~new` names the
+message `12`, and
+`request('ARRAY')` sent to it answers the array that `makeArray` answers.
+ooRexx raises `SYNTAX 93.946` for the first and answers `.nil` for the second
+when the number is stored as a whole number, as a whole-number literal or the
+result of arithmetic is. Equal literals of a program share one stored value,
+so a quoted `'12'` behaves the same way when the literal `12` was used before
+it.
+
+## 108. A supplier that is not a Supplier
+
+When `subclass`, `mixinclass`, `defineMethods` or `enhanced` takes the methods
+of an object through its `supplier` method, the object that `supplier` answers is
+used through the messages `available`, `index`, `item` and `next` when it is
+not a `Supplier`; an object that does not answer one of them raises
+`SYNTAX 97.1` as for any message. A `Supplier`, an instance of a subclass
+included, is read directly, as a String subclass instance is read by its
+characters
+([Deviation 109](#109-string-subclass-instances-are-their-characters)). ooRexx
+reads the answer as a Supplier without checking it and crashes when it is not
+one.
+
+## 109. String subclass instances are their characters
+
+An instance of a subclass of `String` is read by its own characters wherever a
+string, a number, a logical value or a whole number is needed, as receiver and
+as argument; `MAKESTRING` and `STRING` are not sent to it for that. ooRexx
+reads such an instance through its `MAKESTRING` method when it is an argument,
+of a method, an operator or a builtin function, and when it is the receiver of
+the numeric methods and operators, the logical operators, `dataType` and `?`,
+and in `new`; as the receiver of the other methods, of the strict comparisons
+and of the joining operators it reads the instance's own characters, so one
+instance can answer differently to `=` and to `==`. As the message name of
+`send`, `sendWith`, `start`, `startWith` or `Message~new`, ooRexx sends it
+`request('ARRAY')` instead and raises `SYNTAX 93.946`.
+
+## 110. Instances follow every change to their class
+
+Provisional. An object sees every change made, at any time, to the methods of
+its class, of that class's superclasses and of their mixin classes, by
+`define`, `defineMethods`, `delete`, `inherit` and `uninherit`, also when the
+object has methods of its own from `setMethod` or `enhanced` and when the
+class has been changed before. ooRexx copies the method table into existing
+instances. A `define`, `defineMethods` or `delete` sent to a class, even one
+that changes nothing, does not reach the instances that exist already, and no
+later change reaches them after it: not to the class, not to its superclasses
+or their mixin classes, and not `inherit` or `uninherit`. An object given a
+method by `setMethod` sees no later change to its class or to the classes
+behind it. A class object sees no change to its metaclass or to the classes
+behind it that is made after the class itself.

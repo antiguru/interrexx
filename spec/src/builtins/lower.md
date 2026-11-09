@@ -166,9 +166,9 @@ another string of equal value: as `string` itself, when no character of it
 changes, as in `lower(s)` for an `s` with no uppercase letter, or as an equal
 string produced some other way, such as the literal `'ghij'` beside
 `lower('GH' || 'IJ')`. Through `identityHash`, or as a key of an
-`IdentityTable` or `IdentitySet`, the answer may be either, and a program can
-rely only on the value, which is equal under `==`. ooRexx differs: it often
-answers a new object where interrexx answers the existing one.
+`IdentityTable`, the answer may be either, and a program can rely only on the
+value, which is equal under `==`. ooRexx differs: it often answers a new
+object where interrexx answers the existing one.
 
 ```rexx
 s = 'pq' || 'rs'

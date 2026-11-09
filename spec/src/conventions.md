@@ -3,7 +3,7 @@ element: "Conventions"
 kind: concept
 ansi: "9.2.1"
 rexxref: "Functions > Built-in Functions"
-deviations: [30]
+deviations: [30, 109]
 ---
 
 # Conventions
@@ -49,15 +49,17 @@ say c2x(upper('61007a'x))
 
 r[conv.string.object]
 An argument that a page calls a string and that is an object other than a
-string is replaced by a string, and the builtin works on that string. When
-the object has a public `MAKESTRING` method that answers a string, the
-replacement is that answer, as for an `Array` or a `MutableBuffer`. An
-instance of a subclass of `String` is a string here, as it is when it is
-passed directly: when `MAKESTRING` answers one, that instance is the
-replacement. When the object has no `MAKESTRING` method, the replacement is
-the answer of its public `STRING` method; when that answer is not a string
-either, see [Deviation 30](r:conv.string.deviation.30). A builtin whose page
-links [the native call rule](r:bif.index.call.native) has no such fallback to
+string is replaced by a string, and the builtin works on that string. When the
+object has a public `MAKESTRING` method that answers a string, the replacement
+is that answer, as for an `Array` or a `MutableBuffer`. An instance of a
+subclass of `String` is a string here, whether it is passed directly or is
+what `MAKESTRING` answers: the builtin works on its own characters, and no
+message is sent to it for that
+([Deviation 109](r:class.string.deviation.109)). When the object has no
+`MAKESTRING` method, the replacement is the answer of its public `STRING`
+method; when that answer is not a string either, see
+[Deviation 30](r:conv.string.deviation.30). A builtin whose page links
+[the native call rule](r:bif.index.call.native) has no such fallback to
 `STRING`, as that rule says. A `MAKESTRING` or `STRING` method that is private
 is not one the replacement can use: the call raises `SYNTAX 97.2`. This book
 does not specify the replacement when `MAKESTRING` answers an object that is
@@ -456,4 +458,28 @@ say 'after'
 
 ```output rc=120
 before
+```
+
+r[conv.string.deviation.109]
+A builtin that takes a string works on the own characters of an instance of a
+subclass of `String`, and sends it neither `MAKESTRING` nor `STRING`, as
+[the string rule](r:conv.string.object) says and
+[Deviation 109](r:class.string.deviation.109) states; ooRexx sends
+`MAKESTRING` to the instance when it is an argument of a builtin function. In
+the example the subclass answers another string from `MAKESTRING`.
+
+```rexx
+.local~sent = 0
+s = .st~new('ab')
+say length(s) upper(s)
+say 'sends' .local~sent
+::class st subclass string
+::method makestring
+  .local~sent = .local~sent + 1
+  return 'MADE'
+```
+
+```output defect=#140
+2 AB
+sends 0
 ```
