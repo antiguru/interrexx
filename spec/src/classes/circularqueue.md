@@ -1330,10 +1330,10 @@ for the items that are there: `at` and `[]` ([the at rule](r:class.queue.at)),
 `previous`, `items`, `isEmpty`, `empty`, `allItems`, `allIndexes` and the
 sorts, and the methods of the mixins that this page does not list. The
 differences are these. The size of the queue does not raise what `put` and
-`insert` accept: an index above the number of items is refused, as [the Queue
-rules](r:class.queue.put) say, `insert` with `SYNTAX 93.966`, whatever the
-size is. `empty` keeps the size. Each of the methods sends only the messages
-that [the Queue rule](r:class.queue.sends) lists. The example shows these.
+`insert` accept: `insert` with an index above the number of items is refused
+with `SYNTAX 93.966`, whatever the size is. `empty` keeps the size. Each of
+the methods sends only the messages that [the Queue rule](r:class.queue.sends)
+lists. The example shows these.
 
 ```rexx
 q = .circularqueue~new(5)
@@ -1346,8 +1346,6 @@ say q~sort~allItems~makeString('L', ',') q~size
 say q~pull q~pull (q~pull == .nil) q~items q~size
 q~queue('p'); q~queue('q')
 say (q~empty == q) q~items q~size
-call try 'q~put("x", 1)'
-call try 'q~put("x", 5)'
 call try 'q~insert("x", 1)'
 call try 'q~at(0)'
 call try 'q~hasIndex'
@@ -1372,8 +1370,6 @@ a c The NIL object b
 z 5
 z The NIL object 1 0 5
 1 0 5
-q~put("x", 1) => 93.966
-q~put("x", 5) => 93.966
 q~insert("x", 1) => 93.966
 q~at(0) => 93.907
 q~hasIndex => 93.901

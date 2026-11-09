@@ -194,7 +194,7 @@ bad: say arg(1) '=>' condition('o')~code
   forward class (super)
 ```
 
-```output defect=#9002
+```output defect=#163
 init 0
 .watch~of(1, , 3) => 93.903
 init 0
@@ -216,10 +216,9 @@ that index; an array with none or with more than one raises `SYNTAX 93.907` as
 does any other object, such as a list. An index above the number of items is
 not an error for the methods that look an item up: `at` answers `.nil`,
 `hasIndex` answers 0, `delete` and `remove` answer `.nil`, `next` answers
-`.nil`, `previous` answers the last index and `section` an empty queue; the
-methods that must reach an item, `put` and `insert`, raise a condition ([the
-put rule](r:class.queue.put), [the insert rule](r:class.queue.insert)). Where
-a method adds or removes an item in front of others, those others have other
+`.nil`, `previous` answers the last index and `section` an empty queue;
+`insert` raises a condition ([the insert rule](r:class.queue.insert)). Where a
+method adds or removes an item in front of others, those others have other
 indexes afterwards, and the examples of the methods show it.
 
 ```rexx
@@ -318,12 +317,9 @@ r[class.queue.put]
 `put(item, index)` replaces the item at the index and answers no value; the
 other items keep their indexes. `q[i] = v` is the message `[]=` and the same
 as `put`. The index is read as [the index rule](r:class.queue.indexes) says.
-An index above the number of items raises a condition and leaves the queue as
-it was: `SYNTAX 93.966` or `SYNTAX 93.918`; which of the two is not specified,
-since it depends on room the queue holds in advance. The method takes two
-arguments: fewer, or an omitted item or index, raise `SYNTAX 93.903`, and a
-third raises `SYNTAX 93.902`. A `put` of a subclass is not asked for `[]=`,
-nor the other way round.
+The method takes two arguments: fewer, or an omitted item or index, raise
+`SYNTAX 93.903`, and a third raises `SYNTAX 93.902`. A `put` of a subclass is
+not asked for `[]=`, nor the other way round.
 
 ```rexx
 q = .queue~of('a', 'b', 'c')
@@ -340,19 +336,6 @@ call try 'q~put(, 1)'
 call try 'q~put("x", 1, 2)'
 call try 'q~put("x", 2)'
 say q~allItems~makeString('L', ',')
-code = .nil
-signal on syntax name over
-q~put('x', 4)
-over: c = condition('o')~code
-say (c = 93.966 | c = 93.918) q~items
-signal on syntax name over2
-.queue~new~put('x', 1)
-over2: c = condition('o')~code
-say (c = 93.966 | c = 93.918) q~items
-signal on syntax name over3
-q~put('x', 5000)
-over3: c = condition('o')~code
-say (c = 93.966 | c = 93.918) q~items
 exit
 try:
   signal on syntax name bad
@@ -375,9 +358,6 @@ q~put(, 1) => 93.903
 q~put("x", 1, 2) => 93.902
 q~put("x", 2) => no error
 a,x,C
-1 3
-1 3
-1 3
 ```
 
 r[class.queue.append]
@@ -929,7 +909,7 @@ say s~items
   forward class (super)
 ```
 
-```output defect=#9001
+```output defect=#128
 new 1
 init 1
 MANY 4
