@@ -672,3 +672,23 @@ When LOSTDIGITS is trapped, a wide operand of an arithmetic operator raises it
 before the operator raises `SYNTAX 42.3` for a zero divisor or `SYNTAX 26.8`
 for an exponent that is not a whole number, as the ANSI standard orders the
 operations. ooRexx raises the error for the right operand first.
+
+## 103. TRACE() under ::OPTIONS TRACE ?
+
+Under `::OPTIONS TRACE ?`, the TRACE builtin answers `?N`, as after the
+instruction `trace ?` at the start of a program: the option turns interactive
+tracing on and keeps the setting. ooRexx answers the null string.
+
+## 104. A pending CALL trap at an EXIT in an internal routine
+
+When an EXIT inside an internal routine ends the program while a CALL trap is
+pending, the routine of the trap is called before the program ends, as for an
+EXIT in the main program. ooRexx ends the program without calling it.
+
+## 105. Access checks of started messages
+
+A message sent with START is checked for PRIVATE and PACKAGE access as the
+same message sent directly by the code that starts it. A method of a class
+may start a private method of its own class, and a PACKAGE method started
+from another package raises `SYNTAX 97.3`. ooRexx raises `97.2` for the first
+and `97.1` for the second.
