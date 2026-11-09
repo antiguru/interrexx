@@ -440,7 +440,7 @@ do c over .top~subclasses
 end
 say s~strip
 do i = 1 to 3
-  x = .top~subclass('D'i)
+  keep.i = .top~subclass('D'i)
 end
 s = ''
 do c over .top~subclasses
@@ -990,25 +990,21 @@ number included. The second is the method, in the forms that `setMethod`
 takes: a method object, a string that is the source of a method, or an array
 of strings, one for each line, converted as
 [the `setMethod` rule](r:class.object.setmethod) says and with the messages of
-[the sends rule](r:class.class.define.sends). A method object that a class
-method of `Method` made, or a copy of one, is taken as it is as long as it has
-not been given to `define`, `defineMethods`, `setMethod`, `run` or `enhanced`:
-it gets the class as its scope and `method` answers that object. Every other
-method object is copied, and the class holds the copy, with the class as its
-scope, while the argument keeps its scope. These include one that a class
-holds, one that `method`, `methods`, `instanceMethod` or `instanceMethods`
-answered, one given earlier to one of those methods, and a copy of any of
-them. A method replaces what the table held for the name. With no second
-argument the name is hidden; with `.nil` as the second argument the name is
-hidden from the search as well, but the table no longer holds an entry for it
-that `method` could answer. An object whose `request` with `STRING` answers
-`.nil`, an instance of a subclass of `Method` that declares neither
-`MAKEARRAY` nor `MAKESTRING` among them, raises `SYNTAX 93.974`, and a source
-that does not translate raises its translation error from `define`. A name is
-required (`88.901`), a name that is no string and has no string value raises
-`88.909`, and a third argument raises `93.902`. The number of arguments is
-checked first, then the class, then the name, then the method. The classes of
-the class library accept no `define`
+[the sends rule](r:class.class.define.sends). The method that the class holds
+runs the code of the method object that is given, with the class as its scope.
+It is not specified whether the method object that the class holds is the
+argument itself or a copy of it, and what scope the argument object answers
+afterwards is not specified either. A method replaces what the table held for
+the name. With no second argument the name is hidden; with `.nil` as the
+second argument the name is hidden from the search as well, but the table no
+longer holds an entry for it that `method` could answer. An object whose
+`request` with `STRING` answers `.nil`, as an instance of a subclass of
+`Method` that declares neither `MAKEARRAY` nor `MAKESTRING` does, raises
+`SYNTAX 93.974`, and a source that does not translate raises its translation
+error from `define`. A name is required (`88.901`), a name that is no string
+and has no string value raises `88.909`, and a third argument raises `93.902`.
+The number of arguments is checked first, then the class, then the name, then
+the method. The classes of the class library accept no `define`
 ([the library rule](r:class.methods.library)), which raises `98.985` before
 any argument is checked. The examples use objects made after the change.
 
@@ -1045,21 +1041,21 @@ call try '.string~define'
 call try '.k~define("z", .lmeth~new("", "return 1"))'
 m = .method~new('', 'return "mobj"')
 .k~define('M2', m)
-say (.k~method('M2') == m) (.k~method('M2')~scope == .k) m~scope~string
 .k~define('M3', m)
-say (.k~method('M3') == m) (.k~method('M3')~scope == .k) m~scope~string
+say .k~new~m2 .k~new~m3 (.k~method('M2')~scope == .k),
+  (.k~method('M3')~scope == .k)
 n = .method~new('', 'return "n"')
 x = .k~new~go(n)
 .k~define('M4', n)
-say (.k~method('M4') == n) (.k~method('M4')~scope == .k) n~scope~string
-c = .method~new('', 'return 1')~copy
+say .k~new~m4 (.k~method('M4')~scope == .k)
+c = .method~new('', 'return 5')~copy
 .k~define('M5', c)
-say (.k~method('M5') == c)
+say .k~new~m5 (.k~method('M5')~scope == .k)
 o = .k~new
-o~sm('IM', .method~new('', 'return 1'))
+o~sm('IM', .method~new('', 'return 6'))
 im = o~instanceMethod('IM')
 .k~define('M6', im)
-say (.k~method('M6') == im)
+say .k~new~m6 (.k~method('M6')~scope == .k)
 exit
 try:
   signal on syntax name bad
@@ -1104,11 +1100,10 @@ r = .k~define("y", "return 1") => 91.999
 .string~define(.nil) => 98.985
 .string~define => 98.985
 .k~define("z", .lmeth~new("", "return 1")) => 93.974
-1 1 The K class
-0 1 The K class
-0 1 The NIL object
-1
-0
+mobj mobj 1 1
+n 1
+5 1
+6 1
 ```
 
 r[class.class.define.sends]
@@ -1156,20 +1151,21 @@ gives one. The argument is a collection whose indexes are the method names and
 whose items are method objects, strings or arrays of strings, as `define`
 takes them, or `.nil` to hide the name, converted as
 [`define`](r:class.class.define) converts its method, with the same errors for
-an item that is no method (`SYNTAX 93.974`). A method object item is always
-copied: the class holds a copy with the class as its scope, and the item
-itself is given the class as its scope as well. Every item is made into a
-method before any is defined, so an error leaves the class unchanged. The
-names are taken in upper case. A name that the class holds is replaced. The
-method sends the argument the message `supplier`, with no argument, once, and
-takes the pairs of what the supplier answers one after the other, so any
-object that answers a supplier will do, and the indexes of an array are the
-names `1`, `2` and so on. An object that has no `supplier` method raises
-`SYNTAX 97.1`, as `.nil` does. The argument is required (`88.901`) and a
-second raises `93.902`. The number of arguments is checked first, then the
-class, then the argument. The method answers no value, and the classes of the
-class library accept it as little as `define`: they raise `98.985` before the
-argument is checked.
+an item that is no method (`SYNTAX 93.974`). A method object item is installed
+as [`define`](r:class.class.define) installs a method object: the class holds
+a method that runs the code of the item with the class as its scope, and it is
+not specified whether that is the item itself or a copy, or what scope the
+item answers afterwards. Every item is made into a method before any is
+defined, so an error leaves the class unchanged. The names are taken in upper
+case. A name that the class holds is replaced. The method sends the argument
+the message `supplier`, with no argument, once, and takes the pairs of what
+the supplier answers one after the other, so any object that answers a
+supplier will do, and the indexes of an array are the names `1`, `2` and so
+on. An object that has no `supplier` method raises `SYNTAX 97.1`, as `.nil`
+does. The argument is required (`88.901`) and a second raises `93.902`. The
+number of arguments is checked first, then the class, then the argument. The
+method answers no value, and the classes of the class library accept it as
+little as `define`: they raise `98.985` before the argument is checked.
 
 ```rexx
 t = .directory~new
@@ -1205,7 +1201,10 @@ call try '.k~defineMethods(x~~put("if then", 4))'
 say .k~new~hasMethod('3')
 n = .method~new('', 'return "n"')
 .k~defineMethods(.directory~new~~put(n, 'N'))
-say (.k~method('N') == n) (n~scope == .k)
+say .k~new~n (.k~method('N')~scope == .k)
+h = .j~method('FOO')
+.k~defineMethods(.directory~new~~put(h, 'H'))
+say .k~new~h (.k~method('H')~scope == .k)
 exit
 try:
   signal on syntax name bad
@@ -1217,6 +1216,9 @@ bad: say arg(1) '=>' condition('o')~code
 ::class k
 ::method foo
   return 'foo'
+::class j
+::method foo
+  return 'from j'
 ::class sp
 ::method supplier
   say 'supplier sent' arg()
@@ -1242,7 +1244,8 @@ spa
 0
 .k~defineMethods(x~~put("if then", 4)) => 35.929
 0
-0 1
+n 1
+from j 1
 ```
 
 r[class.class.definemethods.sends]
@@ -1831,21 +1834,22 @@ a collection, added to the methods of the class. The first argument is the
 collection: its indexes are the names and its items are method objects,
 strings or arrays of strings, or `.nil` to hide a name, as
 [`defineMethods`](r:class.class.definemethods) takes them, with the same
-errors, except that a method object item is not copied: the new object holds
-that method object, and its scope stays `.nil`. The items are made into
-methods before `new` is sent, so an error in one sends no `new`; the arguments
-after it are the arguments of the new object. The method sends the collection
-the message `supplier`, with no argument, and then sends the receiver the
-message `new` with the remaining arguments, so that the class method `new`
-that the class declares runs and `init` gets those arguments. The object that
-`new` answers gets the methods and is the answer. Its class is the receiver;
-the object follows the rules of [the enhanced rule](r:class.methods.enhanced)
-for the search, and its default name is that of
-[the default name rule](r:class.object.defaultname). The abstract property of
-the receiver is not checked, and the receiver need not accept the arguments
-after the collection: that is the business of its `new` and `init`. The
-collection is required (`SYNTAX 93.901`), and an object with no `supplier`
-method, `.nil` included, raises `97.1`.
+errors, except for method object items: the new object holds a method that
+runs the code of the item, with `.nil` as its scope. It is not specified
+whether that method object is the item itself or a copy, or what scope the
+item answers afterwards. The items are made into methods before `new` is sent,
+so an error in one sends no `new`; the arguments after it are the arguments of
+the new object. The method sends the collection the message `supplier`, with
+no argument, and then sends the receiver the message `new` with the remaining
+arguments, so that the class method `new` that the class declares runs and
+`init` gets those arguments. The object that `new` answers gets the methods
+and is the answer. Its class is the receiver; the object follows the rules of
+[the enhanced rule](r:class.methods.enhanced) for the search, and its default
+name is that of [the default name rule](r:class.object.defaultname). The
+abstract property of the receiver is not checked, and the receiver need not
+accept the arguments after the collection: that is the business of its `new`
+and `init`. The collection is required (`SYNTAX 93.901`), and an object with
+no `supplier` method, `.nil` included, raises `97.1`.
 
 ```rexx
 d = .directory~new
@@ -1873,7 +1877,7 @@ call try '.k~enhanced(d)'
 d~remove('BAD')
 em = .method~new('', 'return "e"')
 z = .k~enhanced(.directory~new~~put(em, 'E'))
-say (z~instanceMethod('E') == em) em~scope~string
+say z~e z~instanceMethod('E')~scope~string
 exit
 try:
   signal on syntax name bad
@@ -1915,7 +1919,7 @@ sp ran
 .string~enhanced(d) => 93.903
 .class~enhanced(d) => 93.901
 .k~enhanced(d) => 93.974
-1 The NIL object
+e The NIL object
 ```
 
 r[class.class.enhanced.sends]

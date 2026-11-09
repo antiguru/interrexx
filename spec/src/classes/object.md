@@ -1464,22 +1464,25 @@ converted as any other object is. Any other object is sent `request` with the
 argument `ARRAY`, and the array it answers is used; when it answers no array,
 it is sent `request` with the argument `STRING`, and a string answer is used
 as the source ([the sends rule](r:class.object.setmethod.sends)). `.nil`, and
-an object whose `request` with `STRING` answers `.nil`, raise `SYNTAX 93.974`.
-An answer that is another object that is not a string is not specified, as
-[the string conversion](r:conv.string.object) leaves it. So a subclass of
-`Method` that declares neither `MAKEARRAY` nor `MAKESTRING` is refused. A
-method object is copied: the object gets a copy whose scope is set as
-[the scope rule](r:class.methods.object.scope) says, and the argument keeps
-its scope, so `instanceMethod` answers the copy. The checks run in this order:
-the number of arguments, the name, the method, the scope. With no second
-argument the name is hidden for the receiver. The third argument is the scope,
-`FLOAT` or `OBJECT` as [the scope rule](r:class.methods.object.scope) says;
-another value raises `88.916`, and `.nil` raises `88.909`. A fourth argument
-raises `93.902`. A source that does not translate raises the translation error
-from `setMethod`. The code of a method made from a source runs with the scope
-`FLOAT`, whose object variables are separate from those of any class: the
-methods that the receiver got by `setMethod` with `FLOAT`, by `run` and by
-`enhanced` share one set, which is kept for the receiver.
+an object whose `request` with `STRING` answers `.nil`, raise `SYNTAX 93.974`,
+so a subclass of `Method` that declares neither `MAKEARRAY` nor `MAKESTRING`
+is refused. When that `request` answers an object that is not a string, the
+result is not specified, as [the string conversion](r:conv.string.object)
+leaves it. The method that the receiver gets runs the code of a method object
+that is given, with the scope that
+[the scope rule](r:class.methods.object.scope) says. It is not specified
+whether the method object that the receiver holds is the argument itself or a
+copy of it, and what scope the argument object answers afterwards is not
+specified either. The checks run in this order: the number of arguments, the
+name, the method, the scope. With no second argument the name is hidden for
+the receiver. The third argument is the scope, `FLOAT` or `OBJECT` as
+[the scope rule](r:class.methods.object.scope) says; another value raises
+`88.916`, and `.nil` raises `88.909`. A fourth argument raises `93.902`. A
+source that does not translate raises the translation error from `setMethod`.
+The code of a method made from a source runs with the scope `FLOAT`, whose
+object variables are separate from those of any class: the methods that the
+receiver got by `setMethod` with `FLOAT`, by `run` and by `enhanced` share one
+set, which is kept for the receiver.
 
 ```rexx
 o = .w~new
@@ -1511,8 +1514,7 @@ call try 'o~sm("a9", .lmeth~new("", "return 1"))'
 m = .method~new("", 'return "mobj"')
 o~sm('M1', m)
 o~sm('M1b', m)
-say (o~instanceMethod('M1') == m),
-  (o~instanceMethod('M1') == o~instanceMethod('M1b')) m~scope
+say o~m1 o~m1b
 o~sm('SETX', 'expose x; x = 41; return x')
 o~sm('GETX', 'expose x; return x + 1')
 say o~setx o~getx o~x
@@ -1567,7 +1569,7 @@ o~sm(.nil, .nil) => 88.909
 o~sm("a9", .nil, "x") => 93.974
 o~sm("a9", "if then", "x") => 35.929
 o~sm("a9", .lmeth~new("", "return 1")) => 93.974
-0 0 The NIL object
+mobj mobj
 41 42 class x
 o~setMethod("outside", "return 1") => 97.2
 ```
