@@ -117,6 +117,8 @@ c~section(1) => 93.965
 c~section(1, 2) => 93.965
 ```
 
+## Sorting
+
 r[class.orderedcollection.sort]
 The methods `sort`, `stableSort`, `sortWith` and `stableSortWith` sort any
 receiver through other messages; a class that inherits the mixin and has no
@@ -649,10 +651,12 @@ r[class.orderedcollection.union]
 answers, with every item of the argument appended to it, in the order the
 argument gives them. An item that the receiver already has is appended again,
 so the result has as many copies of an item as the receiver and the argument
-have together. The receiver is not changed. When the last item has been
-appended, the copy is sent `isA` with the class `Array`; when it answers 1 the
-answer is what the copy answers to `makeArray`, sent with no argument, and
-otherwise the answer is the copy.
+have together. The receiver is not changed. After the items have been
+appended, at once when the argument has none, the copy is sent
+`isA` with the class `Array`; its answer is read by its string value as a
+logical value, and one that is neither 0 nor 1, `.nil` included, raises
+`SYNTAX 34.1`. On 1 the answer is what the copy answers to `makeArray`, sent
+with no argument, and on 0 it is the copy.
 
 ```rexx
 a = .seq~new('a b b')
@@ -660,6 +664,13 @@ u = a~union(.seq~new('b c'))
 say u '|' a '|' (u == a)
 say a~union(a)
 say a~union(.array~new)
+signal on syntax name bad
+say .odd~new('a')~union(.array~new)
+exit
+bad: say condition('o')~code
+::class odd subclass seq
+::method isA
+  return '1.0'
 ::class seq inherit orderedcollection
 ::method init
   expose a
@@ -691,6 +702,7 @@ say a~union(.array~new)
 a b b b c | a b b | 0
 a b b a b b
 a b b
+34.1
 ```
 
 r[class.orderedcollection.union.sends]
@@ -836,10 +848,12 @@ r[class.orderedcollection.difference]
 occurrence of the item has been removed by `removeItem`. An item of the
 argument that the copy no longer has removes nothing. The receiver is not
 changed. `removeItem` is not declared by the mixin: a receiver without it
-raises `SYNTAX 93.948` at the first removal. When the last item has been
-removed, the copy is sent `isA` with the class `Array`; when it answers 1 the
-answer is what the copy answers to `makeArray`, sent with no argument, and
-otherwise the answer is the copy.
+raises `SYNTAX 93.948` at the first removal. After the items have been
+removed, at once when the argument has none, the copy is sent
+`isA` with the class `Array`; its answer is read by its string value as a
+logical value, and one that is neither 0 nor 1, `.nil` included, raises
+`SYNTAX 34.1`. On 1 the answer is what the copy answers to `makeArray`, sent
+with no argument, and on 0 it is the copy.
 
 ```rexx
 a = .seq~new('a b b c')
@@ -1173,10 +1187,12 @@ answers, in which each item of the argument, in order, cancels one occurrence
 of itself when a working copy of the receiver still has one, and is appended
 otherwise. Occurrences therefore cancel one against one: an item that the
 argument has more often than the receiver has it is appended once for each
-occurrence left over. The receiver is not changed. When the last item has been
-appended or removed, the result is sent `isA` with the class `Array`; when it
-answers 1 the answer is what the result answers to `makeArray`, sent with no
-argument, and otherwise the answer is the result.
+occurrence left over. The receiver is not changed. After the items have been
+appended or removed, at once when the argument has none, the result is sent
+`isA` with the class `Array`; its answer is read by its string value as a
+logical value, and one that is neither 0 nor 1, `.nil` included, raises
+`SYNTAX 34.1`. On 1 the answer is what the result answers to `makeArray`, sent
+with no argument, and on 0 it is the result.
 
 ```rexx
 a = .seq~new('a b b c')

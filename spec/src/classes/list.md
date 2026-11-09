@@ -1049,9 +1049,10 @@ those of [`OrderedCollection`](orderedcollection.md), and `disjoint` and
 mixins say, and a
 list is one of the collections they take as an argument, so that
 `.list~of(1)~union(.array~of(2))` is a list of 1 and 2. A list answers 0 to
-`isA` with `Array`, so the answers of `union`, `difference`, `intersection` and
-`xor` are the copies they work on, instances of the class of the receiver, and
-`appendAll` answers the receiver.
+`isA` with `Array`, so `union`, `difference` and `xor` answer the copies they
+work on, and `intersection` the collection that `new` of the receiver's class
+made; all four are instances of the class of the receiver, and `appendAll`
+answers the receiver.
 
 ```rexx
 a = .many~of(1, 2, 2)

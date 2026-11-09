@@ -796,8 +796,8 @@ r[class.array.next]
 over empty slots, and `.nil` when there is none; `previous(index)` answers the
 index of the last item before it. The index need not hold an item, or exist:
 `next` of an index beyond the array answers `.nil`, and `previous` of one
-beyond the array answers the index of the last item ([the rule for an index
-beyond the array](r:class.array.next.beyond)). The index is
+beyond the array answers as [the rule for an index beyond
+the array](r:class.array.next.beyond) says. The index is
 read as [the index rule](r:class.array.indexes) says, with `SYNTAX 93.901` for
 no index and `SYNTAX 93.907` for an index that is not a whole number of at
 least 1; so index 0 is an error, and `previous(1)` is `.nil`.
@@ -832,19 +832,34 @@ a~next(1, 2) => 93.926
 ```
 
 r[class.array.next.beyond]
-`previous` of an index that lies beyond the array answers the index of the
-last item, in an array of more than one dimension as in one of one dimension,
-when the index is beyond every dimension.
+`previous` of an index that has a component beyond its dimension answers the
+index of the last item that lies before a position, or `.nil` when there is
+none. In an array of one dimension the position is the index, so an index
+beyond the array answers the last item. In an array of more than one
+dimension the slots are numbered with the first dimension running fastest: the
+slot at `i, j` is number `i + (j - 1) * n`, where `n` is the size of the first
+dimension, and likewise for more dimensions. The position is the value of the
+first component, in the order of the dimensions, that is beyond its dimension;
+the other components do not matter.
 
 ```rexx
-a = .array~new(2, 2)
-a[1, 1] = 'p'; a[2, 2] = 's'
-say a~previous(5, 5)~makeString('L', ',') .array~of('x', 'y')~previous(9)
+a = .array~new(3, 3)
+do i = 1 to 3; do j = 1 to 3; a[i, j] = i||j; end; end
+say a~previous(4, 1)~makeString('L', ',') a~previous(4, 7)~makeString('L', ',')
+say a~previous(1, 5)~makeString('L', ',') a~previous(10, 1)~makeString('L', ',')
+b = .array~new(2, 2)
+b[2, 2] = 'x'
+say (b~previous(3, 1) == .nil) b~previous(5, 1)~makeString('L', ',')
+say .array~of('x', 'y')~previous(9)
 ```
 
 ```output defect=#160
-2,2 2
+3,1 3,1
+1,2 3,3
+1 2,2
+2
 ```
+
 ## Size, dimensions and filling
 
 r[class.array.items]
@@ -1504,8 +1519,9 @@ array is one of the collections they take as an argument, so that
 `difference` and `xor` send the copy they work on `isA` with the class `Array`
 and answer its `makeArray` when that answers 1, as their rules say, so for an
 array, an instance of a subclass included, the answer is a new `Array`;
-`intersection` answers the copy itself, an instance of the class of the
-receiver. `appendAll` answers the receiver.
+`intersection` answers the collection that `new` of the receiver's class made,
+an instance of that class, and sends it neither message. `appendAll` answers
+the receiver.
 
 ```rexx
 a = .many~of(1, 2, 2)
@@ -1615,8 +1631,8 @@ say .array~of(.n3~new)~toString~c2x
 ```
 
 r[class.array.deviation.109]
-An index, a size, a count, a mode or a separator that is an instance of a
-subclass of `String`
+An index, a size, a count, the `n` of `dimension`, a mode or a separator that
+is an instance of a subclass of `String`
 is read by its own characters, and `MAKESTRING` is not sent to it ([Deviation
 109](r:class.string.deviation.109)). ooRexx reads such an instance through its
 `MAKESTRING` method. In the example `MAKESTRING` answers another number,
