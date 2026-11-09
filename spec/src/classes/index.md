@@ -93,14 +93,17 @@ only inherits has no rule on its page: the page links to the rule on the page
 that defines it, in a sentence that is not itself a rule and has no
 identifier.
 
-A method that the class defines but whose behavior another page owns, such
-as a String method that a builtin function runs, a Stream method that a
-stream builtin uses, or an operator method, is covered by one grouped rule
-per page and group, such as `class.string.builtins`. The grouped rule lists
-each such method with a link to the rule that owns its behavior, and has one
-example that sends several of them as messages. It covers the inventory rows
-of those methods. Such a method has a rule of its own, in addition, only
-where something differs when it is sent as a message.
+A method that the class defines but whose behavior another page owns, such as
+a String method that a builtin function runs, a Stream method that a stream
+builtin uses, or an operator method, is covered by one grouped rule per page
+and group. The identifier of a grouped rule is `class.<page>.builtins` for the
+methods that builtin functions run or use, as `class.string.builtins` and
+`class.stream.builtins`, and `class.<page>.operators` for the operator
+methods, as `class.string.operators`; it is a topic in the sense of the list
+above. The grouped rule lists each such method with a link to the rule that
+owns its behavior, and has one example that sends several of them as messages.
+It covers the inventory rows of those methods. Such a method has a rule of its
+own, in addition, only where something differs when it is sent as a message.
 
 ## The two sides of a class
 
@@ -602,6 +605,8 @@ o~init(2)
 say 'statement ok'
 o~send('INIT', 3)
 say 'send ok'
+o~init:.noisy(4)
+say 'scope ok'
 .object~new~init
 say 'object init ok'
 x = .ret~new~init
@@ -627,6 +632,8 @@ init 2
 statement ok
 init 3
 send ok
+init 4
+scope ok
 object init ok
 ret value val
 init 1
@@ -711,10 +718,10 @@ null string. Any other argument, `.nil` and an object that has only a `string`
 method included, raises `SYNTAX 88.909`. The object `.nil` has the name
 `The NIL object`. The name belongs to the object alone: it changes no other
 object, not the objects of its class, and not the class's `id`. `objectName=`
-sent to a String of no subclass, a number included, is refused, as
-[Deviation 36](r:class.index.deviation.36) states; an instance of a subclass
-of `String` takes a name like any other object.
-`objectName` takes no argument and `objectName=` takes one.
+sent to a String of no subclass and no enhancement, a number included, is
+refused, as [Deviation 36](r:class.index.deviation.36) states; an instance of
+a subclass of `String`, or one made by `enhanced`, takes a name like any other
+object. `objectName` takes no argument and `objectName=` takes one.
 
 ```rexx
 o = .xylo~new
@@ -788,8 +795,10 @@ name. A class whose instances should show differently declares `string`. It
 declares `makeString` as well when its instances should be accepted where a
 method takes a string argument, such as the pad of `left`, the needle of `pos`
 or the argument of `objectName=`, because such a method uses `MAKESTRING`
-only. A `string` method that answers an object that is not a string is covered
-by [Deviation 30](r:class.index.deviation.30).
+only. An operator method sent as a message, such as `"x"~"||"(b)`, takes the
+string value of its argument as the operator does. A `string` method that
+answers an object that is not a string is covered by
+[Deviation 30](r:class.index.deviation.30).
 
 ```rexx
 a = .plain~new
@@ -803,6 +812,7 @@ say c '|' c'!' '|' c~string '|' c~objectName
 say length(b) left(b, 3)
 call try '"abc"~left(2, .shown~new)'
 call try '"abc"~left(5, .pad~new)'
+call try '"x"~"||"(.shown~new)'
 exit
 try:
   signal on syntax name bad
@@ -831,6 +841,7 @@ M: c | M: c! | a MADE | a MADE
 8 SHO
 "abc"~left(2, .shown~new) => 88.909
 "abc"~left(5, .pad~new) => abc**
+"x"~"||"(.shown~new) => xSHOWN: b
 ```
 
 ## Messages a method sends
@@ -905,12 +916,13 @@ before
 
 r[class.index.deviation.32]
 When a class-side `new` reached through `enhanced` answers an object it did
-not build, interrexx answers that object unchanged; ooRexx marks it
-enhanced, which changes every object of its class. When a metaclass `new`
-answers an existing class while a class with that metaclass is made, by
-`subclass` or by a `::CLASS` directive, interrexx ends the program with exit
-code 120; ooRexx rewires the existing class in place, so that `y~id` in the
-example answers `Array`. See [Deviation 32](../deviations.md).
+not build, interrexx answers that object unchanged; ooRexx marks it enhanced,
+which changes every object of its class. When a metaclass `new` answers an
+existing class while `subclass` makes a class with that metaclass, interrexx
+ends the program with exit code 120; ooRexx rewires the existing class in
+place, so that `y~id` in the first example answers `Array`. In the second
+example, interrexx answers `String` for both strings, where ooRexx marks every
+string as enhanced and answers `ODD`. See [Deviation 32](../deviations.md).
 
 ```rexx
 say 'before'
@@ -927,12 +939,28 @@ say 'after' y~id
 before
 ```
 
+```rexx
+m = .table~new; m['HI'] = 'return "hi"'
+q = .odd~enhanced(m)
+say q~class~id q~hasMethod('HI')
+say 'xyz'~class~id 'xyz'~hasMethod('HI')
+::class odd
+::method new class
+  return 'abc'
+```
+
+```output
+String 0
+String 0
+```
+
 r[class.index.deviation.36]
-`objectName=` sent to a String of no subclass, a number included, ends the
-program with exit code 120, because such a string is value-based, as
-[Deviation 36](../deviations.md) says. ooRexx gives the name to the string,
-and an equal string elsewhere can show it. [The message assignment
-rule](r:instr.message.deviation.36) states it for the instruction.
+`objectName=` sent to a String of no subclass and no enhancement, a number
+included, ends the program with exit code 120, because such a string is
+value-based, as [Deviation 36](../deviations.md) says. ooRexx gives the name
+to the string, and an equal string elsewhere can show it.
+[The message assignment rule](r:instr.message.deviation.36) states it for the
+instruction.
 
 ```rexx
 say 'before'
