@@ -99,7 +99,7 @@ nix = { version = "0.29.0", default-features = false, features = ["net", "proces
 # canonical name and `getnameinfo`, which glibc's `gethostbyname` and
 # `gethostbyaddr` reach the DNS through and which no safe crate offers
 # directly (`src/builtin/rxsock/hosts.rs`).
-dns-lookup = "2"
+dns-lookup = "4"
 
 [features]
 # The pinned-park counter, `src/pinning.rs`.
