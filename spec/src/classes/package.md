@@ -2,7 +2,7 @@
 element: "Package"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Package Class; Builtin Classes > Fundamental Classes > Package Class > new (Class Method); Builtin Classes > Fundamental Classes > Package Class > defaultOptions (Class Method); Builtin Classes > Fundamental Classes > Package Class > addClass; Builtin Classes > Fundamental Classes > Package Class > addPackage; Builtin Classes > Fundamental Classes > Package Class > addPublicClass; Builtin Classes > Fundamental Classes > Package Class > addPublicRoutine; Builtin Classes > Fundamental Classes > Package Class > addRoutine; Builtin Classes > Fundamental Classes > Package Class > annotation; Builtin Classes > Fundamental Classes > Package Class > annotations; Builtin Classes > Fundamental Classes > Package Class > classes; Builtin Classes > Fundamental Classes > Package Class > definedMethods; Builtin Classes > Fundamental Classes > Package Class > digits; Builtin Classes > Fundamental Classes > Package Class > findClass; Builtin Classes > Fundamental Classes > Package Class > findNamespace; Builtin Classes > Fundamental Classes > Package Class > findProgram; Builtin Classes > Fundamental Classes > Package Class > findPublicClass; Builtin Classes > Fundamental Classes > Package Class > findPublicRoutine; Builtin Classes > Fundamental Classes > Package Class > findRoutine; Builtin Classes > Fundamental Classes > Package Class > form; Builtin Classes > Fundamental Classes > Package Class > fuzz; Builtin Classes > Fundamental Classes > Package Class > importedClasses; Builtin Classes > Fundamental Classes > Package Class > importedPackages; Builtin Classes > Fundamental Classes > Package Class > importedRoutines; Builtin Classes > Fundamental Classes > Package Class > loadLibrary; Builtin Classes > Fundamental Classes > Package Class > loadPackage; Builtin Classes > Fundamental Classes > Package Class > local; Builtin Classes > Fundamental Classes > Package Class > name; Builtin Classes > Fundamental Classes > Package Class > namespaces; Builtin Classes > Fundamental Classes > Package Class > options; Builtin Classes > Fundamental Classes > Package Class > prolog; Builtin Classes > Fundamental Classes > Package Class > publicClasses; Builtin Classes > Fundamental Classes > Package Class > publicRoutines; Builtin Classes > Fundamental Classes > Package Class > resource; Builtin Classes > Fundamental Classes > Package Class > resources; Builtin Classes > Fundamental Classes > Package Class > routines; Builtin Classes > Fundamental Classes > Package Class > setSecurityManager; Builtin Classes > Fundamental Classes > Package Class > source; Builtin Classes > Fundamental Classes > Package Class > sourceLine; Builtin Classes > Fundamental Classes > Package Class > sourceSize; Builtin Classes > Fundamental Classes > Package Class > trace"
-deviations: [41, 109, 112, 115]
+deviations: [41, 109, 112, 115, 118]
 ---
 
 # Package
@@ -158,8 +158,10 @@ that is not a string and not an array, `request` with `ARRAY` and then with
 been installed, with the arguments from the fourth on, or from the third on
 when the source is omitted. An answer to `request` with `ARRAY` that is
 neither an array nor `.nil` raises `SYNTAX 88.913`, and no `request` with
-`STRING` follows it ([Deviation 115](r:class.package.deviation.115)). The name
-is converted by the string conversion when it has a `MAKESTRING` method, once.
+`STRING` follows it ([Deviation 115](r:class.package.deviation.115)). An
+instance of a subclass of `List` is sent `request` as well ([Deviation
+118](r:class.package.deviation.118)). The name is converted by the string
+conversion when it has a `MAKESTRING` method, once.
 
 ```rexx
 f = 'class_package_sends_zq.tmp'
@@ -2775,7 +2777,8 @@ so the default name of an object, such as `a MK`, is a line that the package
 runs as a command, and an item with no `MAKESTRING` method, `.nil` among them,
 raises no error. A hole followed by an item raises the error that the source
 rule of `new` gives for it, and crashes ooRexx. The example gives the objects a
-package source line each; on ooRexx only the second line differs.
+package source line each; on ooRexx the second line runs `a MK` as a command,
+the fifth shows `a MK`, and the three calls at the end answer a package.
 
 ```rexx
 p = .package~new('n', 'nop')
@@ -2815,7 +2818,8 @@ r[class.package.deviation.115]
 A source that answers `request` with `ARRAY` by an object that is neither an
 array nor `.nil` makes `new` raise `SYNTAX 88.913`, as [the rule of
 `Method`](r:class.method.deviation.115) says, and no `request` with `STRING` is
-sent after it. ooRexx crashes. The examples have `request` answer a string and a list.
+sent after it. ooRexx crashes. The examples have `request` answer a string
+and a list.
 
 ```rexx
 call try '.package~new("n", .src~new("nop"))'
@@ -2847,4 +2851,30 @@ request ARRAY
 .package~new("n", .src~new(.list~of("nop"))) => 88.913
 request ARRAY
 .package~new("n", .src~new(.array~of("nop")))~source[1] => nop
+```
+
+r[class.package.deviation.118]
+A source that is an instance of a subclass of `List` is sent `request` with
+the argument `ARRAY`, as [the sends rule of `new`](r:class.package.new.sends)
+states for any other object that is not a string and not an array, and the
+lines are the items of the array that it answers; so is a source that
+`loadPackage` is given ([Deviation 118](../deviations.md)). ooRexx sends the
+instance no `request` and takes the items it holds as the lines, so the
+example writes `held` on ooRexx.
+
+```rexx
+l = .ll~new
+l~append('held')
+p = .package~new('n', l)
+say p~source[1]
+::class ll subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('say "answered"')
+```
+
+```output
+request ARRAY
+answered
+say "answered"
 ```

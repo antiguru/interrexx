@@ -251,26 +251,28 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.method.new.sends]
-`new` sends messages to its source and to the object it makes. A source that is
-not a string and not an array, and an instance of a subclass of `String` or
-`Array`, is sent `request` with the argument `ARRAY`; when that answers an array
-its items are the lines, read as [the source rule](r:class.method.new.source)
-reads an array. When it answers an object that is neither an array nor `.nil`,
-`new` raises `SYNTAX 88.913` and sends no `request` with `STRING` ([Deviation
-115](r:class.method.deviation.115)). When it answers `.nil` the source is sent
+`new` sends messages to its source and to the object
+it makes. A source that is not a string and not an array, and an instance of a
+subclass of `String` or `Array`, is sent `request` with the argument `ARRAY`;
+when that answers an array its items are the lines, read as [the source
+rule](r:class.method.new.source) reads an array. When it answers an object that
+is neither an array nor `.nil`, `new` raises `SYNTAX 88.913` and sends no
+`request` with `STRING` ([Deviation 115](r:class.method.deviation.115)). An
+instance of a subclass of `List` is sent `request` as well ([Deviation
+118](r:class.method.deviation.118)). When it answers `.nil` the source is sent
 `request` with the argument `STRING`: an answer that is a string is the one-line
 source, and for any other answer its `objectName` is the line, with no
-`MAKESTRING` or `string` message sent to it; `.nil` from both raises
-`SYNTAX 93.961`. A string that is an instance of `String` itself and an array
-that is an instance of `Array` itself are used directly, without a message. The
-`request` of `Object` sends `makeArray` for the argument `ARRAY` and
-`makeString` for `STRING`, as [its rule](r:class.object.request.sends) says, so
-an object that declares `makeArray` or `makeString` is a source. When the method
-is made, `new` sends the new object the message `init` with the arguments of
-`new` from the fourth on, so that a subclass of `Method` that declares `init`
-receives them; the `init` of `Object` accepts none, and a fourth argument raises
-`SYNTAX 93.902` after the source has been translated. The class that received
-`new` decides the class of the answer: a subclass of `Method` makes instances of
+`MAKESTRING` or `string` message sent to it; `.nil` from both raises `SYNTAX
+93.961`. A string that is an instance of `String` itself and an array that is an
+instance of `Array` itself are used directly, without a message. The `request`
+of `Object` sends `makeArray` for the argument `ARRAY` and `makeString` for
+`STRING`, as [its rule](r:class.object.request.sends) says, so an object that
+declares `makeArray` or `makeString` is a source. When the method is made, `new`
+sends the new object the message `init` with the arguments of `new` from the
+fourth on, so that a subclass of `Method` that declares `init` receives them;
+the `init` of `Object` accepts none, and a fourth argument raises `SYNTAX
+93.902` after the source has been translated. The class that received `new`
+decides the class of the answer: a subclass of `Method` makes instances of
 itself.
 
 ```rexx
@@ -1375,8 +1377,8 @@ r[class.method.deviation.118]
 A source that is an instance of a subclass of `List` is sent `request` with
 the argument `ARRAY`, as [the sends rule](r:class.method.new.sends) states for
 any other object that is not a string and not an array, and the lines are the
-items of the array that it answers ([Deviation
-118](r:class.method.deviation.118)). ooRexx sends the instance no `request` and
+items of the array that it answers
+([Deviation 118](../deviations.md)). ooRexx sends the instance no `request` and
 takes the items it holds as the lines, so the example writes `held` on
 ooRexx.
 

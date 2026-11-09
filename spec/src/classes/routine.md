@@ -149,7 +149,9 @@ r[class.routine.new.sends]
 when the routine has been made, `init` with the arguments of `new` from the
 fourth on. An answer to `request` with `ARRAY` that is neither an array nor
 `.nil` raises `SYNTAX 88.913`, and no `request` with `STRING` follows it
-([Deviation 115](r:class.routine.deviation.115)).
+([Deviation 115](r:class.routine.deviation.115)). An instance of a subclass of
+`List` is sent `request` as well ([Deviation
+118](r:class.routine.deviation.118)).
 
 ```rexx
 call try '.routine~new("n", .src~new(.array~of("return 1"), .nil))~call'
@@ -1405,7 +1407,7 @@ r[class.routine.deviation.118]
 A source that is an instance of a subclass of `List` is sent `request` with
 the argument `ARRAY`, as [the sends rule](r:class.routine.new.sends) states,
 and the lines are the items of the array that it answers
-([Deviation 118](r:class.routine.deviation.118)). ooRexx sends the instance no
+([Deviation 118](../deviations.md)). ooRexx sends the instance no
 `request` and takes the items it holds as the lines, so the example writes
 `held` on ooRexx.
 

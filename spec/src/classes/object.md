@@ -1363,7 +1363,8 @@ r[class.object.sendwith.sends]
 `sendWith` sends its second argument the message `request` with the argument
 `ARRAY`, once, before it sends the message that the first argument names. A
 class whose `request` or `makeArray` is overridden shows it, and the answer of
-`request` is checked as the previous rule says.
+`request` is checked as the previous rule says. An instance of a subclass of
+`List` is sent it as well ([Deviation 118](r:class.object.deviation.118)).
 
 ```rexx
 o = .w~new
@@ -1499,7 +1500,9 @@ o~startWith(.nil, .array~new) => 93.972
 
 r[class.object.startwith.sends]
 `startWith` sends the message `request` with the argument `ARRAY` to its
-second argument, once, at the call, and not when the message runs.
+second argument, once, at the call, and not when the message runs. An instance
+of a subclass of `List` is sent it as well
+([Deviation 118](r:class.object.deviation.118)).
 
 ```rexx
 o = .w~new
@@ -2208,7 +2211,7 @@ the array the message `request` with the argument `ARRAY`, as
 [the sends rule of `sendWith`](r:class.object.sendwith.sends) and
 [that of `startWith`](r:class.object.startwith.sends) say for any other
 object, so that an override is used
-([Deviation 118](r:class.object.deviation.118)). ooRexx sends the instance
+([Deviation 118](../deviations.md)). ooRexx sends the instance
 no `request` and uses the items it holds, so the example answers 1 on ooRexx.
 The `request` of the class `ll` answers two items.
 

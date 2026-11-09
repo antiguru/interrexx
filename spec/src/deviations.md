@@ -815,7 +815,8 @@ An instance of a subclass of `List` is read as any other collection is
 wherever an array is wanted: `DO OVER` and the collection methods that read a
 collection through `makeArray` send it `makeArray`, and the methods and
 instructions that read an argument array or a source through `request` with
-`ARRAY` (`sendWith`, `startWith`, `Message~new` with the option `A`, FORWARD
-with ARGUMENTS, `Method~new`, `Routine~new`) send it `request`, so an override
-is used. ooRexx sends such an instance neither message and uses the items it
-holds, unlike the subclasses of the other collection classes.
+`ARRAY` (`sendWith`, `startWith`, `Message~new` with the option `A`,
+`Message~replyWith`, FORWARD with ARGUMENTS, `Method~new`, `Routine~new`,
+`Package~new` and `loadPackage`) send it `request`, so an override is used.
+ooRexx sends such an instance neither message and uses the items it holds,
+unlike the subclasses of the other collection classes.

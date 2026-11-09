@@ -784,7 +784,8 @@ dimension raise `SYNTAX 88.913`. The items are the arguments in order. The
 message keeps a copy of the array, so a later change to it does not reach the
 message, and the number of arguments is the position of the last item present,
 as [the count rule](r:class.index.args.count) says
-([Deviation 113](r:class.message.deviation.113)). The target is replaced before the array is checked, so a call that is refused
+([Deviation 113](r:class.message.deviation.113)). The target is replaced
+before the array is checked, so a call that is refused
 leaves its target in the message; the arguments and what the latest run left
 are unchanged. Apart from the arguments, `sendWith` runs the message as `send`
 does, answers as it does, and a run replaces the state of the message in the
@@ -847,7 +848,8 @@ U
 r[class.message.sendwith.sends]
 `sendWith` sends its second argument the message `request` with the argument
 `ARRAY`, once, before it runs the message, and it uses the array that
-`request` answers.
+`request` answers. An instance of a subclass of `List` is sent it as well
+([Deviation 118](r:class.message.deviation.118)).
 
 ```rexx
 t = .t~new
@@ -1111,7 +1113,8 @@ m~replyWith(t, .array~new, 1) => 93.902
 
 r[class.message.replywith.sends]
 `replyWith` sends its second argument the message `request` with the argument
-`ARRAY`, once, at the call.
+`ARRAY`, once, at the call. An instance of a subclass of `List` is sent it as
+well ([Deviation 118](r:class.message.deviation.118)).
 
 ```rexx
 t = .t~new
@@ -2007,16 +2010,16 @@ COUNT count got 0
 ```
 
 r[class.message.deviation.113]
-`new` with the option `A` keeps a copy of the array of arguments, so that a
-change to the caller's array after `new` does not reach the message, and the
-number of arguments of the message is the position of the last item present.
-The arrays of arguments that `sendWith`, `startWith` and `replyWith` take are
-copied and counted the same way. ooRexx keeps the caller's array itself, so that a change
-to it reaches the message, and passes the size of the array as the number of
-arguments, with the empty places at its end counted, for all four methods. In
-the example the array of the first message gets a new first item and one more
-item after `new`, and the arrays of the second message and of `sendWith` have
-room for four items and hold one.
+`new` with the option `A` keeps a copy of the
+array of arguments, so that a change to the caller's array after `new` does not
+reach the message, and the number of arguments of the message is the position of
+the last item present. The arrays of arguments that `sendWith`, `startWith` and
+`replyWith` take are copied and counted the same way. ooRexx keeps the caller's
+array itself, so that a change to it reaches the message, and passes the size of
+the array as the number of arguments, with the empty places at its end counted,
+for all four methods. In the example the array of the first message gets a new
+first item and one more item after `new`, and the arrays of the second message
+and of `sendWith` have room for four items and hold one.
 
 ```rexx
 t = .t~new
@@ -2085,14 +2088,13 @@ failing target sent 1
 ```
 
 r[class.message.deviation.118]
-`new` with the option `A`, `sendWith` and `startWith` send an instance of a
-subclass of `List` given as the array of arguments the message `request` with
-the argument `ARRAY`, as [the sends rule of
+`new` with the option `A`, `sendWith`, `startWith` and `replyWith` send an
+instance of a subclass of `List` given as the array of arguments the message
+`request` with the argument `ARRAY`, as [the sends rule of
 `sendWith`](r:class.message.sendwith.sends) states for any other object, so
-that an override is used ([Deviation 118](r:class.message.deviation.118)).
-ooRexx sends the instance no `request` and uses the items it holds, so each
-line of the example answers 1 on ooRexx. The `request` of the class `ll`
-answers two items.
+that an override is used ([Deviation 118](../deviations.md)). ooRexx sends the
+instance no `request` and uses the items it holds, so each line of the example
+answers 1 on ooRexx. The `request` of the class `ll` answers two items.
 
 ```rexx
 l = .ll~new
@@ -2105,6 +2107,8 @@ say m~sendWith(t, l)
 m = .message~new(t, 'count')
 m~startWith(t, l)
 say m~result
+c = .message~new(t, 'count')~replyWith(t, l)
+say c~result
 ::class ll subclass list
 ::method request
   say 'request' arg(1)
@@ -2115,6 +2119,8 @@ say m~result
 ```
 
 ```output
+request ARRAY
+2
 request ARRAY
 2
 request ARRAY

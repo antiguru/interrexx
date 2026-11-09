@@ -219,7 +219,8 @@ argument, and an item that is missing in an array is an argument that is left
 empty. A string that is not null and has no line ends is one argument, the
 null string supplies none, a string of several lines has one argument for each
 line, and a list supplies its items. A value that cannot be made into an array
-raises `SYNTAX 98.946`.
+raises `SYNTAX 98.946`. An instance of a subclass of `List` is sent `REQUEST`
+as well ([Deviation 118](r:instr.forward.deviation.118)).
 
 ```rexx
 t = .target~new
