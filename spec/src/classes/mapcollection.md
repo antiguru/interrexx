@@ -105,12 +105,17 @@ MapCollection
 
 r[class.mapcollection.of.sends]
 `of` sends `new` to the class that received it, with no argument, before it
-looks at any argument. For each argument in order it then sends `put` to the
-new object with the item and then the index. What `new` answers is the result,
-and `init` is not sent again.
+looks at any argument. For each argument in order it then asks the argument
+what it is and how big, by sending it [`isA`](r:class.object.isa) with the
+class `Array`, `dimension`, `items` and `last`, in that order and the last
+three with no argument, and, when it is accepted, sends `[]` with 2 and then
+`[]` with 1 to it, and then `put` to the new object with the item and then the
+index. What `new` answers is the result, and `init` is not sent again. The
+argument need not be an `Array`: an object that answers those messages as one
+does is accepted.
 
 ```rexx
-s = .tstore~of(.array~of('a', 1), .array~of('b', 2))
+s = .tstore~of(.lpa~of('a', 1), .pair~new)
 say s~items
 ::class tstore inherit mapcollection
 ::method new class
@@ -128,30 +133,90 @@ say s~items
 ::method allindexes
   expose d
   return d~allindexes
+::class lpa subclass array
+::method isa
+  say '  isA' arg(1)~id
+  forward class (super)
+::method dimension
+  say '  dimension' arg()
+  forward class (super)
+::method items
+  say '  items'
+  forward class (super)
+::method last
+  say '  last'
+  forward class (super)
+::method '[]'
+  say '  []' arg(1)
+  forward class (super)
+::class pair
+::method isa
+  say '  isA' arg(1)~id
+  return 1
+::method dimension
+  say '  dimension' arg()
+  return 1
+::method items
+  say '  items'
+  return 2
+::method last
+  say '  last'
+  return 2
+::method '[]'
+  say '  []' arg(1)
+  return 'e' || arg(1)
 ```
 
 ```output
 new 0
 init 0
+  isA Array
+  dimension 0
+  items
+  last
+  [] 2
+  [] 1
 put 1 a
-put 2 b
+  isA Array
+  dimension 0
+  items
+  last
+  [] 2
+  [] 1
+put e2 e1
 2
 ```
 
 r[class.mapcollection.of.error]
 Each argument is checked when it is reached, after the pairs before it have
-been stored. An argument that is not a single-dimensional array, `.nil` and a
-string included, raises `SYNTAX 88.923`. An array that does not have exactly
-two items raises `SYNTAX 88.924`, and an item counts only when it is present,
-so `.array~of('a', )` is too short. An argument that is omitted and is
-followed by another raises `SYNTAX 93.903`.
+been stored. The answers to `isA` and to `dimension` are used as logical
+values, and the argument is accepted when both are 1. An argument for which
+`isA` answers 0, `.nil` and a string included, raises `SYNTAX 88.923`, and so
+does one whose `dimension` answers 0; an answer that is neither 0 nor 1 raises
+`SYNTAX 34.901`, which is what a multi-dimensional array answers to
+`dimension`, and `.nil` raises `SYNTAX 97.1`. An argument that is accepted has
+to answer 2 to both `items` and `last`, or it raises `SYNTAX 88.924`: an array
+with a hole, such as one with items at positions 1 and 3, has two items but
+its `last` is 3. An argument that is omitted and is followed by another raises
+`SYNTAX 93.903`.
 
 ```rexx
+sparse = .array~new(3)
+sparse[1] = 'k'
+sparse[3] = 'v'
+grid = .array~new(1, 2)
+grid[1, 1] = 'k'
+grid[1, 2] = 'v'
 call try ".store~of(.array~of('a', 1), 'x')"
 call try ".store~of(.nil)"
 call try ".store~of(.array~of('a'))"
 call try ".store~of(.array~of('a', 1, 2))"
 call try ".store~of(.array~of('a', ))"
+call try ".store~of(sparse)"
+call try ".store~of(grid)"
+call try ".store~of(.pair~new(0, 1))"
+call try ".store~of(.pair~new(1, 7))"
+call try ".store~of(.pair~new(1, .nil))"
 call try ".store~of(.array~of('a', 1), , .array~of('b', 2))"
 exit
 try:
@@ -170,6 +235,20 @@ bad: say arg(1) '=>' condition('o')~code
   use arg item, index
   say '  put' item index
   d[index] = item
+::class pair
+::method init
+  expose dimension isa
+  use arg isa, dimension
+::method isa
+  expose isa
+  return isa
+::method dimension
+  expose dimension
+  return dimension
+::method items
+  return 2
+::method last
+  return 2
 ```
 
 ```output
@@ -179,6 +258,11 @@ bad: say arg(1) '=>' condition('o')~code
 .store~of(.array~of('a')) => 88.924
 .store~of(.array~of('a', 1, 2)) => 88.924
 .store~of(.array~of('a', )) => 88.924
+.store~of(sparse) => 88.924
+.store~of(grid) => 34.901
+.store~of(.pair~new(0, 1)) => 88.923
+.store~of(.pair~new(1, 7)) => 34.901
+.store~of(.pair~new(1, .nil)) => 97.1
   put 1 a
 .store~of(.array~of('a', 1), , .array~of('b', 2)) => 93.903
 ```
@@ -215,24 +299,37 @@ Array 2 1
 ```
 
 r[class.mapcollection.makearray.sends]
-`makeArray` sends `allIndexes` to the receiver, with no argument, and nothing
-else.
+`makeArray` sends `allIndexes` to the receiver, with no argument, and answers
+what it answers. Nothing else is sent, to the receiver or to the answer.
 
 ```rexx
 s = .spy~new
-say s~makeArray
+say s~makeArray~class~id
 ::class spy inherit mapcollection
 ::method allindexes
   say 'allIndexes' arg()
-  return 'the answer'
+  return .answer~new
 ::method allitems
   say 'allItems'
   return .array~new
+::class answer
+::method isa
+  say 'isA'
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~new
+::method items
+  say 'items'
+  return 0
+::method '[]'
+  say '[]'
+  return 0
 ```
 
 ```output
 allIndexes 0
-the answer
+ANSWER
 ```
 
 ### putAll
@@ -291,9 +388,9 @@ answer by messages, whatever its class: it sends `available`, and while that
 answers true sends `item`, then `index`, then `put` to the receiver with the
 item and the index, then `next`, and asks `available` again. The answer of
 `supplier` need not be a `Supplier`: an object that answers those four
-messages does. Of the four, `available` is what the object has to understand
-at once; a missing `item`, `index` or `next` raises `SYNTAX 97.1` when it is
-sent, after the entries before it have been stored.
+messages does. One that does not understand one of the four raises
+`SYNTAX 93.948` when that message is sent, so after the entries before it have
+been stored. Nothing else is sent, to `source` or to the answer.
 
 ```rexx
 s = .tstore~new
@@ -302,10 +399,28 @@ say s~putAll(.source~new)~class~id
 ::method supplier
   say 'supplier' arg()
   return .walker~new
+::method isa
+  say 'isA'
+  return 0
+::method allitems
+  say 'allItems'
+  return .array~new
+::method items
+  say 'items'
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~new
 ::class walker
 ::method init
   expose n
   n = 1
+::method isa
+  say 'isA'
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~new
 ::method available
   expose n
   say 'available' n
@@ -345,10 +460,13 @@ TSTORE
 
 r[class.mapcollection.putall.error]
 A `source` that does not understand `supplier` raises `SYNTAX 93.948`, and so
-does an answer of `supplier` that does not understand `available`, as an
-object does that has no such method and no `UNKNOWN` method. The check is for
-understanding the message: an object whose `UNKNOWN` method handles it is
-accepted. Both are raised before the receiver has been changed.
+does an answer of `supplier` that does not understand one of `available`,
+`item`, `index` and `next`, as an object does that has no such method and no
+`UNKNOWN` method. The check is for understanding the message: an object whose
+`UNKNOWN` method handles it is accepted. A `source` without `supplier` and an
+answer without `available` are found before the receiver has been changed; one
+without `item`, `index` or `next` is found when that message is sent, after
+the entries before it have been stored.
 
 ```rexx
 s = .store~new
@@ -357,6 +475,10 @@ call try 's~putAll(.object~new)'
 call try 's~putAll(.deaf~new)'
 call try 's~putAll(.lenient~new)'
 call try 's~putAll(.array~of(1))'
+call try 's~putAll(.noitem~new)'
+say s~items
+call try 's~putAll(.nonext~new)'
+say s~items
 exit
 try:
   signal on syntax name bad
@@ -368,6 +490,26 @@ bad: say arg(1) '=>' condition('o')~code
 ::class deaf
 ::method supplier
   return .object~new
+::class nonext
+::method supplier
+  return .halfwalker~new
+::class noitem
+::method supplier
+  return .halfwalker2~new
+::class halfwalker
+::method available
+  return 1
+::method item
+  return 'v'
+::method index
+  return 'i'
+::class halfwalker2
+::method available
+  return 1
+::method index
+  return 'i'
+::method next
+  nop
 ::class lenient
 ::method supplier
   return .quiet~new
@@ -393,6 +535,10 @@ s~putAll(.object~new) => 93.948
 s~putAll(.deaf~new) => 93.948
 s~putAll(.lenient~new) => ok 0
 s~putAll(.array~of(1)) => ok 1
+s~putAll(.noitem~new) => 93.948
+1
+s~putAll(.nonext~new) => 93.948
+2
 ```
 
 ## Deviations

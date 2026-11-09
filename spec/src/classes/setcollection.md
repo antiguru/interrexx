@@ -55,8 +55,10 @@ SetCollection 1 Collection
 
 r[class.setcollection.operand]
 Inheriting `SetCollection` does not change how an instance is read when it is
-the argument of a [set operation](r:class.collection.operand): an instance of
-a class that inherits it and not `MapCollection` is read like any other
+the argument of a [set operation](r:class.collection.operand). The operations
+ask `isA` only about `OrderedCollection` and `MapCollection` ([the isA
+rule](r:class.collection.operand.isa)), so an instance of a class that
+inherits `SetCollection` and not `MapCollection` is read like any other
 collection that is not ordered, through `makeArray`, and an instance of a
 class that inherits both is read as a map, through `supplier` or `allIndexes`.
 

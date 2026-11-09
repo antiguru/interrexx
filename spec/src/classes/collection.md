@@ -2,6 +2,7 @@
 element: "Collection"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Collection Class; Builtin Classes > Collection Classes > Collection Class > [] (Abstract Method); Builtin Classes > Collection Classes > Collection Class > []= (Abstract Method); Builtin Classes > Collection Classes > Collection Class > allIndexes (Abstract Method); Builtin Classes > Collection Classes > Collection Class > allItems (Abstract Method); Builtin Classes > Collection Classes > Collection Class > at (Abstract Method); Builtin Classes > Collection Classes > Collection Class > difference; Builtin Classes > Collection Classes > Collection Class > disjoint; Builtin Classes > Collection Classes > Collection Class > equivalent; Builtin Classes > Collection Classes > Collection Class > hasIndex; Builtin Classes > Collection Classes > Collection Class > hasItem; Builtin Classes > Collection Classes > Collection Class > index (Abstract Method); Builtin Classes > Collection Classes > Collection Class > intersection; Builtin Classes > Collection Classes > Collection Class > items; Builtin Classes > Collection Classes > Collection Class > makeArray; Builtin Classes > Collection Classes > Collection Class > put (Abstract Method); Builtin Classes > Collection Classes > Collection Class > subset; Builtin Classes > Collection Classes > Collection Class > supplier; Builtin Classes > Collection Classes > Collection Class > union; Builtin Classes > Collection Classes > Collection Class > xor"
+deviations: [109]
 ---
 
 # Collection
@@ -161,9 +162,10 @@ c~hasIndex(1) => 93.965
 
 r[class.collection.hasindex.sends]
 `hasIndex` sends `allIndexes` to the receiver, with no argument, and then
-sends `hasItem` with the index to the object that `allIndexes` answered. That
-object need not be an array: any object that understands `hasItem` does, and
-what it answers is what `hasIndex` answers. Nothing else is sent.
+sends `hasItem` with the index to the object that `allIndexes` answered, and
+answers what that answers. That object need not be an array: any object that
+understands `hasItem` does. Nothing else is sent, to the receiver or to the
+answer.
 
 ```rexx
 c = .spy~new
@@ -176,6 +178,18 @@ say c~hasIndex('k')
 ::method hasitem
   say 'hasItem' arg(1)
   return 'any object'
+::method isa
+  say 'isA'
+  return 0
+::method items
+  say 'items'
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~new
+::method '[]'
+  say '[]'
+  return 0
 ```
 
 ```output
@@ -214,8 +228,8 @@ bad: say condition('o')~code
 
 r[class.collection.hasitem.sends]
 `hasItem` sends `allItems` to the receiver, with no argument, and then sends
-`hasItem` with the item to the object that `allItems` answered. Nothing else
-is sent.
+`hasItem` with the item to the object that `allItems` answered, and answers
+what that answers. Nothing else is sent, to the receiver or to the answer.
 
 ```rexx
 c = .spy~new
@@ -228,6 +242,18 @@ say c~hasItem('v')
 ::method hasitem
   say 'hasItem' arg(1)
   return 'any object'
+::method isa
+  say 'isA'
+  return 0
+::method items
+  say 'items'
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~new
+::method '[]'
+  say '[]'
+  return 0
 ```
 
 ```output
@@ -258,9 +284,10 @@ say b~items b~items(1, 2)
 ```
 
 r[class.collection.items.sends]
-`items` sends `allIndexes` to the receiver, with no argument, and then
-sends `items` to the object that `allIndexes` answered. Nothing else is sent;
-in particular `allItems` is not.
+`items` sends `allIndexes` to the receiver, with no argument, and then sends
+`items` to the object that `allIndexes` answered, and answers what that
+answers. Nothing else is sent; in particular `allItems` is not, and the answer
+is sent nothing but `items`.
 
 ```rexx
 c = .spy~new
@@ -276,6 +303,15 @@ say c~items
 ::method items
   say 'items' arg()
   return 'a count'
+::method isa
+  say 'isA'
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~new
+::method hasitem
+  say 'hasItem'
+  return 0
 ```
 
 ```output
@@ -286,9 +322,9 @@ a count
 
 r[class.collection.makearray]
 `makeArray` answers what `allItems` answers, and the very object: it is not
-copied, and what it is is not checked. Arguments are ignored. A collection that wants
-`makeArray` to answer something other than its items declares it; the
-[`MapCollection`](mapcollection.md) mixin answers the indexes instead.
+copied, and what it is is not checked. Arguments are ignored. A collection
+that wants `makeArray` to answer something other than its items declares it;
+the [`MapCollection`](mapcollection.md) mixin answers the indexes instead.
 
 ```rexx
 mine = .array~of('u', 'v')
@@ -311,24 +347,37 @@ Array 2 1
 ```
 
 r[class.collection.makearray.sends]
-`makeArray` sends `allItems` to the receiver, with no argument, and nothing
-else.
+`makeArray` sends `allItems` to the receiver, with no argument, and answers
+what it answers. Nothing else is sent, to the receiver or to the answer.
 
 ```rexx
 c = .spy~new
-say c~makeArray
+say c~makeArray~class~id
 ::class spy inherit collection
 ::method allitems
   say 'allItems' arg()
-  return 'whatever allItems answers'
+  return .answer~new
 ::method allindexes
   say 'allIndexes'
   return .array~new
+::class answer
+::method isa
+  say 'isA'
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~new
+::method items
+  say 'items'
+  return 0
+::method '[]'
+  say '[]'
+  return 0
 ```
 
 ```output
 allItems 0
-whatever allItems answers
+ANSWER
 ```
 
 r[class.collection.supplier]
@@ -374,7 +423,9 @@ Supplier
 
 r[class.collection.supplier.sends]
 `supplier` sends `allItems` to the receiver, then `allIndexes`, both with no
-argument, in that order, and makes the supplier from the two answers.
+argument, in that order, and makes the supplier from the two answers. The
+supplier is made by `new` of the `Supplier` class, which sends `makeArray`
+once to the answer of `allItems` and then once to the answer of `allIndexes`.
 Nothing else is sent.
 
 ```rexx
@@ -384,16 +435,32 @@ say s~index s~item
 ::class spy inherit collection
 ::method allitems
   say 'allItems' arg()
-  return .array~of('the item')
+  return .answer~new('items')
 ::method allindexes
   say 'allIndexes' arg()
-  return .array~of('the index')
+  return .answer~new('indexes')
+::class answer
+::method init
+  expose kind
+  use arg kind
+::method makearray
+  expose kind
+  say kind 'answer: makeArray'
+  return .array~of('the' kind)
+::method isa
+  say 'isA'
+  return 0
+::method items
+  say 'items'
+  return 0
 ```
 
 ```output
 allItems 0
 allIndexes 0
-the index the item
+items answer: makeArray
+indexes answer: makeArray
+the indexes the items
 ```
 
 ## The set operations
@@ -401,15 +468,20 @@ the index the item
 r[class.collection.operand]
 The argument of `union`, `difference`, `intersection`, `xor`, `subset`,
 `disjoint` and `equivalent` is read as a list of entries, and what is sent to
-it depends on what it is. An instance of a class that inherits
-[`OrderedCollection`](orderedcollection.md) is sent `allItems`. Any other
-instance of a class that inherits [`MapCollection`](mapcollection.md) is
-sent `supplier` by `union`, `intersection`, `xor` and `disjoint`, and
-`allIndexes` by `difference` and `subset`. Every other object is sent
-`makeArray`. An object that inherits both mixins counts as ordered. An
-element of an ordered or plain list is an index and an item at once; an entry
-of a map is its own index with its own item. `disjoint` reads its argument
-through `intersection`, and `equivalent` through `subset`.
+it depends on what it is, which the object itself decides by its answers to
+`isA` ([the isA rule](r:class.collection.operand.isa)). An ordered argument,
+one for which `isA` says it is an [`OrderedCollection`](orderedcollection.md),
+is sent `allItems`. Any other object for which `isA` says it is a
+[`MapCollection`](mapcollection.md) is sent `supplier` by `union`,
+`intersection`, `xor` and `disjoint`, and `allIndexes` by `difference` and
+`subset`. Every other object is sent `makeArray`. An object that is both
+counts as ordered. An element of an ordered or plain list is an index and an
+item at once; an entry of a map is its own index with its own item. `disjoint`
+reads its argument through `intersection`, and `equivalent` through `subset`.
+What is done with the answer is the subject of [the list
+rule](r:class.collection.operand.list), [the map
+rule](r:class.collection.operand.map) and [the answer
+rule](r:class.collection.operand.answer).
 
 ```rexx
 a = .box~new('a b')
@@ -487,15 +559,395 @@ end
   allItems
 ```
 
+r[class.collection.operand.isa]
+Each of the seven operations asks the argument what it is by sending
+[`isA`](r:class.object.isa) with the class `OrderedCollection` and, when the
+answer is not 1, `isA` with the class `MapCollection`. An answer of 1 to the
+first question ends the questions. The answers are used as logical values, so
+what an object answers to `isA` is what decides, not the classes it inherits:
+an object that inherits no mixin and answers 1 is read as an ordered argument,
+and an instance of a class that inherits `OrderedCollection` and answers 0 to
+both is read as a plain one. An answer that is neither 0 nor 1 raises
+`SYNTAX 34.1`, and so does `.nil`. `equivalent` asks after its two `items`
+messages, as part of the `subset` it sends, and `subset` asks once more, with
+the class `Set`, as [its rule](r:class.collection.subset) says.
+
+```rexx
+a = .box~new('a')
+say a~union(.liar~new)
+say a~union(.shy~new)
+signal on syntax name bad
+say a~union(.odd~new)
+bad: say condition('o')~code
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method string
+  expose d
+  return d~allitems~sort~makestring('L', ' ')
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::class liar
+::method isa
+  say '  isA' arg(1)~id
+  return 1
+::method allitems
+  say '  allItems'
+  return .array~of('from allItems')
+::method makearray
+  say '  makeArray'
+  return .array~of('from makeArray')
+::class shy inherit orderedcollection
+::method isa
+  say '  isA' arg(1)~id
+  return 0
+::method allitems
+  say '  allItems'
+  return .array~of('from allItems')
+::method makearray
+  say '  makeArray'
+  return .array~of('from makeArray')
+::class odd
+::method isa
+  return 2
+```
+
+```output
+  isA OrderedCollection
+  allItems
+a from allItems
+  isA OrderedCollection
+  isA MapCollection
+  makeArray
+a from makeArray
+34.1
+```
+
+r[class.collection.operand.list]
+The answer of `allItems` or `makeArray` is read as two arrays, the items and
+the indexes, and the operation takes the entries from position 1 of the items
+up to its last position, an entry being the item at the position and the index
+at the same position, `.nil` when there is none. An answer that is an `Array`
+of that class itself is both arrays: it is read position by position, so an
+element is its own index, and a position that holds nothing is an entry whose
+item and index are `.nil`. Any other answer, an instance of a subclass of
+`Array` included, is sent `makeArray` twice, and the first answer is the items
+and the second the indexes; for a `List`, a `Queue`, a `Set` or a string the
+two are the same. Messages that the operation sends to the entries are those
+of its own rule.
+
+```rexx
+h = .array~new(3)
+h[2] = 'two'
+r = .nb~new~union(.pk~new(h))
+say '--'
+r = .nb~new~union(.pk~new(.twice~new(2, 2)))
+say '--'
+r = .nb~new~union(.pk~new(.twice~new(3, 2)))
+say '--'
+r = .nb~new~union(.pk~new(.sub~of('s1', 's2')))
+say '--'
+r = .nb~new~union(.pk~new(.twice~new(1, 3)))
+::class nb inherit collection
+::method copy
+  return self
+::method hasindex
+  say 'hasIndex' arg(1)
+  return 0
+::method put
+  say 'put' arg(1) arg(2)
+::class pk inherit collection
+::method init
+  expose answer
+  use arg answer
+::method makearray
+  expose answer
+  return answer
+::class twice
+::method init
+  expose n m k
+  use arg n, m
+  k = 0
+::method makearray
+  expose n m k
+  k += 1
+  a = .array~new
+  if k = 1 then do i = 1 to n; a~append('item' i); end
+  else do i = 1 to m; a~append('index' i); end
+  return a
+::class sub subclass array
+::method makearray
+  say 'makeArray of the subclass'
+  return .array~of('<'self[1]'>')
+```
+
+```output
+hasIndex The NIL object
+put The NIL object The NIL object
+hasIndex two
+put two two
+hasIndex The NIL object
+put The NIL object The NIL object
+--
+hasIndex index 1
+put item 1 index 1
+hasIndex index 2
+put item 2 index 2
+--
+hasIndex index 1
+put item 1 index 1
+hasIndex index 2
+put item 2 index 2
+hasIndex The NIL object
+put item 3 The NIL object
+--
+makeArray of the subclass
+makeArray of the subclass
+hasIndex <s1>
+put <s1> <s1>
+--
+hasIndex index 1
+put item 1 index 1
+```
+
+r[class.collection.operand.map]
+A map argument of `union`, `intersection`, `xor` and `disjoint` is read from
+the answer of `supplier`, and the operation does not need that to be a
+`Supplier`: it sends `available`, and while the answer is true sends `index`,
+then the operation's own message to the receiver or the copy with the index,
+then `item` only when the operation has an item to store, then `next`, and
+asks `available` again. An object that answers those four messages is read as
+a supplier is. An answer that does not understand one of them raises
+`SYNTAX 93.948` when the message is sent, so after the entries before it have
+been handled.
+
+```rexx
+s = .sp~new(.array~of('v1', 'v2', 'v3'), .array~of('a', 'b', 'c'))
+r = .nb~new~union(.mp~new(s))
+::class nb inherit collection
+::method copy
+  return self
+::method hasindex
+  say 'hasIndex' arg(1)
+  return arg(1) == 'b'
+::method put
+  say 'put' arg(1) arg(2)
+::class mp inherit mapcollection
+::method init
+  expose answer
+  use arg answer
+::method supplier
+  expose answer
+  return answer
+::class sp subclass supplier
+::method available
+  say '  available'
+  forward class (super)
+::method index
+  say '  index'
+  forward class (super)
+::method item
+  say '  item'
+  forward class (super)
+::method next
+  say '  next'
+  forward class (super)
+```
+
+```output
+  available
+  index
+hasIndex a
+  item
+put v1 a
+  next
+  available
+  index
+hasIndex b
+  next
+  available
+  index
+hasIndex c
+  item
+put v3 c
+  next
+  available
+```
+
+r[class.collection.operand.answer]
+The object that `makeArray`, `allItems` or `allIndexes` answered is not
+required to be a collection, only to understand the messages the operation
+sends it, and what it lacks is found out when the message is due. The four
+operations that read a list send `makeArray` to an answer that is not an
+`Array` of that class itself, and one that has no `makeArray` method raises
+`SYNTAX 98.913`; an `UNKNOWN` method does not count as one. `difference` sends
+`[]` to the answer and `subset` sends `hasItem`, and an answer that does not
+understand one raises `SYNTAX 93.948`, an `UNKNOWN` method that answers the
+message counting as understanding it. `difference` and `subset` also send
+`items` to the argument itself, after `copy`, and what that answers is how
+many positions `difference` takes: an answer that is not a number raises
+`SYNTAX 41.1`, and `.nil` raises `SYNTAX 93.948`, and a position beyond the
+end of the answer reads `.nil`.
+
+```rexx
+a = .box~new('a b')
+call try 'union', .pk~new(.object~new), 'plain object'
+call try 'union', .pk~new(.unk~new), 'UNKNOWN only'
+call try 'union', .mp~new(.nil), 'supplier .nil'
+call try 'union', .mp~new(.noindex~new), 'no index'
+call try 'difference', .pk~new(.object~new), 'plain object'
+call try 'difference', .pk~new(.unk~new), 'UNKNOWN only'
+call try 'subset', .pk~new(.object~new), 'plain object'
+call try 'subset', .pk~new(.unk~new), 'UNKNOWN only'
+call try 'difference', .counted~new('abc'), 'items abc'
+call try 'difference', .counted~new(.nil), 'items .nil'
+call try 'difference', .counted~new(3), 'items 3'
+exit
+try:
+  signal on syntax name bad
+  r = .message~new(a, arg(1), 'I', arg(2))~send
+  say arg(1) arg(3) '->' r~class~id
+  return
+bad: say arg(1) arg(3) '=>' condition('o')~code
+  return
+::class box inherit collection
+::method init
+  expose d
+  d = .directory~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); d[w] = w; end
+::method copy
+  expose d
+  c = self~class~new
+  do i over d~allindexes; c~put(d[i], i); end
+  return c
+::method put
+  expose d
+  d[arg(2)] = arg(1)
+::method remove
+  expose d
+  if arg(1) == .nil then return .nil
+  return d~remove(arg(1))
+::method allindexes
+  expose d
+  return d~allindexes
+::method makearray
+  return .array~of('a')
+::method items
+  return 2
+::class pk inherit collection
+::method init
+  expose answer
+  use arg answer
+::method makearray
+  expose answer
+  return answer
+::method items
+  return 1
+::class mp inherit mapcollection
+::method init
+  expose answer
+  use arg answer
+::method supplier
+  expose answer
+  return answer
+::class unk
+::method unknown
+  return 0
+::class noindex
+::method available
+  return 1
+::method item
+  return 'v'
+::method next
+  nop
+::class counted inherit collection
+::method init
+  expose n
+  use arg n
+::method makearray
+  return .array~of('b', 'a')
+::method items
+  expose n
+  return n
+```
+
+```output
+union plain object => 98.913
+union UNKNOWN only => 98.913
+union supplier .nil => 93.948
+union no index => 93.948
+difference plain object => 93.948
+difference UNKNOWN only -> BOX
+subset plain object => 93.948
+subset UNKNOWN only -> String
+difference items abc => 41.1
+difference items .nil => 93.948
+difference items 3 -> BOX
+```
+
+r[class.collection.operand.logical]
+`union`, `intersection` and `xor` use what `hasIndex` answers as a logical
+value. An answer that is neither 0 nor 1 raises `SYNTAX 34.901` from `union`,
+and `SYNTAX 34.1` from `intersection` and `xor`, and so from `disjoint`, which
+reads its argument through `intersection`. The answer of `isA` is used in the
+same way, as [the isA rule](r:class.collection.operand.isa) says.
+
+```rexx
+do op over 'union intersection xor disjoint'~makearray(' ')
+  call try op
+end
+exit
+try:
+  signal on syntax name bad
+  r = .message~new(.hb~new, arg(1), 'I', .array~of('p'))~send
+  say arg(1) '=> ok'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class hb inherit collection
+::method copy
+  return self
+::method hasindex
+  return 'maybe'
+::method put
+  nop
+::method remove
+  nop
+::method isempty
+  return 1
+```
+
+```output
+union => 34.901
+intersection => 34.1
+xor => 34.1
+disjoint => 34.1
+```
+
 r[class.collection.operand.error]
 Each of the seven operations takes exactly one argument: none raises
-`SYNTAX 93.901` and a second raises `SYNTAX 93.902`. An argument that is not
-a collection and does not understand `makeArray`, `.nil` and an object of
-a class with no such method included, raises `SYNTAX 93.948` from `union`,
-`difference`, `intersection`, `xor`, `subset` and `disjoint`. `equivalent`
-sends `items` to the argument first, and raises `SYNTAX 97.1` for the same
-objects. A string is read by its `makeArray`, so a string without line ends is
-a list of one element.
+`SYNTAX 93.901` and a second raises `SYNTAX 93.902`. An argument that `isA`
+does not report as ordered or as a map and that has no `makeArray` method,
+`.nil` and an object of a class with no such method included, raises
+`SYNTAX 93.948` from `union`, `difference`, `intersection`, `xor`, `subset`
+and `disjoint`. `equivalent` sends `items` to the argument first, and raises
+`SYNTAX 97.1` for the same objects. A string is read by its `makeArray`, so
+`union`, `intersection`, `xor` and `disjoint` read a string without line ends
+as a list of one element. A string has no `items` method, which `difference`
+and `subset` need after they have read the argument and `equivalent` needs
+first: a string raises `SYNTAX 93.948` from the first two and `SYNTAX 97.1`
+from `equivalent`.
 
 ```rexx
 a = .box~new('a b')
@@ -505,6 +957,9 @@ do op over ops~makearray(' ')
   call try 'a~'op
 end
 call try 'a~union(a, a)'
+call try 'a~difference("b c")'
+call try 'a~subset("b")'
+call try 'a~equivalent("b")'
 say a~union('x y')~allitems~items
 exit
 try:
@@ -551,6 +1006,9 @@ a~disjoint => 93.901
 a~equivalent(.nil) => 97.1
 a~equivalent => 93.901
 a~union(a, a) => 93.902
+a~difference("b c") => 93.948
+a~subset("b") => 93.948
+a~equivalent("b") => 97.1
 3
 ```
 
@@ -612,17 +1070,23 @@ Z a b c
 ```
 
 r[class.collection.union.sends]
-`union` sends `copy` to the receiver, with no argument. It then reads the
-argument as [the operand rule](r:class.collection.operand) says, and for each
-element or entry in the order the argument gives them sends `hasIndex` to the
-copy with the index, and, when that answers 0, `put` to the copy with the item
-and then the index. Nothing else is sent. The copy is made before the argument
-is read, so an argument that cannot be read leaves the `copy` already sent.
+`union` sends `copy` to the receiver, with no argument, and then reads the
+argument: it sends `isA` with `OrderedCollection` and, when that does not
+answer 1, `isA` with `MapCollection`, then `allItems`, `supplier` or
+`makeArray` as [the operand rule](r:class.collection.operand) says, and reads
+the answer by [the list rule](r:class.collection.operand.list) or [the map
+rule](r:class.collection.operand.map). For each entry in the order the
+argument gives them it sends `hasIndex` to the copy with the index, and, when
+that answers 0, `put` to the copy with the item and then the index. The answer
+of `hasIndex` is used as [a logical
+value](r:class.collection.operand.logical). Nothing else is sent. The copy is
+made before the argument is read, so an argument that cannot be read leaves
+the `copy` already sent.
 
 ```rexx
 a = .lbox~new('a b')
 say 'start'
-r = a~union(.array~of('b', 'x'))
+r = a~union(.tr~new)
 say r
 signal on syntax name bad
 r = a~union(.nil)
@@ -672,11 +1136,21 @@ bad: say condition('o')~code
 ::method remove
   say 'remove' arg(1)
   forward class (super)
+::class tr
+::method isa
+  say 'isA' arg(1)~id
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~of('b', 'x')
 ```
 
 ```output
 start
 copy
+isA OrderedCollection
+isA MapCollection
+makeArray
 hasIndex b
 hasIndex x
 put x x
@@ -739,17 +1213,27 @@ b c
 ```
 
 r[class.collection.difference.sends]
-`difference` first reads the argument as [the operand
-rule](r:class.collection.operand) says, then sends `copy` to the receiver, and
-then sends `items` to the argument, with no argument. It then sends `remove`
-to the copy once for each of the positions from 1 up to the number that
-`items` answered, with the element or index of the list that the argument
-gave at that position, or `.nil` for a position beyond its end. The answer of
-`remove` is not used.
+`difference` first reads the argument: it sends `isA` with `OrderedCollection`
+and, when that does not answer 1, `isA` with `MapCollection`, then `allItems`,
+`allIndexes` or `makeArray` as [the operand rule](r:class.collection.operand)
+says. It then sends `copy` to the receiver and `items` to the argument, with
+no argument. It then does the following for each of the positions from 1 up to
+the number that `items` answered: it sends `[]` with the position to the
+answer that the first step gave, and `remove` to the copy with what `[]`
+answered. A position beyond the end of the answer reads `.nil`, and the answer
+of `remove` is not used. Nothing else is sent. `remove` is not defined by
+`Collection`, so a copy that lacks it raises `SYNTAX 93.948` at the first
+position, and an argument whose `items` answers 0 never sends it.
 
 ```rexx
 a = .lbox~new('a b')
-r = a~difference(.short~new)
+r = a~difference(.tr~new)
+say r
+r = .bare~new~difference(.tr~new('none'))
+say 'no position'
+signal on syntax name bad
+say .bare~new~difference(.tr~new)
+bad: say condition('o')~code
 ::class box inherit collection
 ::method init
   expose d
@@ -795,20 +1279,55 @@ r = a~difference(.short~new)
 ::method remove
   say 'remove' arg(1)
   forward class (super)
-::class short inherit collection
+::class bare inherit collection
+::method copy
+  return self
+::method put
+  nop
+::class tr
+::method init
+  expose kind
+  if arg(1, 'E') then kind = 'none'
+  else kind = 'some'
+::method isa
+  say 'isA' arg(1)~id
+  return 0
 ::method makearray
-  return .array~of('b', 'x')
+  say 'makeArray'
+  return .ans~new
 ::method items
+  expose kind
   say 'items'
-  return 3
+  if kind = 'none' then return 0
+  return 2
+::class ans
+::method '[]'
+  say '[]' arg(1)
+  return .array~of('b', 'x')[arg(1)]
 ```
 
 ```output
+isA OrderedCollection
+isA MapCollection
+makeArray
 copy
 items
+[] 1
 remove b
+[] 2
 remove x
-remove The NIL object
+a
+isA OrderedCollection
+isA MapCollection
+makeArray
+items
+no position
+isA OrderedCollection
+isA MapCollection
+makeArray
+items
+[] 1
+93.948
 ```
 
 r[class.collection.intersection]
@@ -866,16 +1385,21 @@ item from the map
 
 r[class.collection.intersection.sends]
 `intersection` sends `new` to the class of the receiver, with no argument,
-which makes the result; it then reads the argument as [the operand
-rule](r:class.collection.operand) says, and for each element or entry sends
+which makes the result. It then reads the argument: it sends `isA` with
+`OrderedCollection` and, when that does not answer 1, `isA` with
+`MapCollection`, then `allItems`, `supplier` or `makeArray` as [the operand
+rule](r:class.collection.operand) says, and reads the answer by [the list
+rule](r:class.collection.operand.list) or [the map
+rule](r:class.collection.operand.map). For each entry in order it sends
 `hasIndex` to the receiver, not to the result, with the index, and when that
-answers 1 sends `put` to the result with the item and then the index. No
-`copy` is sent.
+answers 1 sends `put` to the result with the item and then the index. The
+answer of `hasIndex` is used as [a logical
+value](r:class.collection.operand.logical). No `copy` is sent.
 
 ```rexx
 a = .nbox~new('a b')
 say 'start'
-r = a~intersection(.array~of('b', 'x'))
+r = a~intersection(.tr~new)
 say r
 ::class box inherit collection
 ::method init
@@ -909,29 +1433,32 @@ say r
 ::method '[]'
   expose d
   return d[arg(1)]
-::class lbox subclass box
-::method copy
-  say 'copy'
-  return self~class~new(self~string)
+::class nbox subclass box
+::method new class
+  say 'new' arg()
+  forward class (super)
 ::method hasindex
   say 'hasIndex' arg(1)
   forward class (super)
 ::method put
   say 'put' arg(1) arg(2)
   forward class (super)
-::method remove
-  say 'remove' arg(1)
-  forward class (super)
-::class nbox subclass lbox
-::method new class
-  say 'new' arg()
-  forward class (super)
+::class tr
+::method isa
+  say 'isA' arg(1)~id
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~of('b', 'x')
 ```
 
 ```output
 new 1
 start
 new 0
+isA OrderedCollection
+isA MapCollection
+makeArray
 hasIndex b
 put b b
 hasIndex x
@@ -989,17 +1516,26 @@ a d
 ```
 
 r[class.collection.xor.sends]
-`xor` sends `copy` to the receiver, then reads the argument as [the operand
-rule](r:class.collection.operand) says, and for each element or entry in
-order sends `hasIndex` to the copy with the index. When that answers 1 it
-sends `remove` to the copy with the index, and otherwise `put` with the item
-and then the index. An index that occurs twice in the argument is toggled
-twice.
+`xor` sends `copy` to the receiver, then reads the argument: it sends `isA`
+with `OrderedCollection` and, when that does not answer 1, `isA` with
+`MapCollection`, then `allItems`, `supplier` or `makeArray` as [the operand
+rule](r:class.collection.operand) says, and reads the answer by [the list
+rule](r:class.collection.operand.list) or [the map
+rule](r:class.collection.operand.map). For each entry in order it sends
+`hasIndex` to the copy with the index. When that answers 1 it sends `remove`
+to the copy with the index, and otherwise `put` with the item and then the
+index. The answer of `hasIndex` is used as [a logical
+value](r:class.collection.operand.logical). An index that occurs twice in the
+argument is toggled twice, and a copy that lacks `remove` raises
+`SYNTAX 93.948` at the first index that is already present.
 
 ```rexx
 a = .lbox~new('a b')
-r = a~xor(.array~of('b', 'x'))
+r = a~xor(.tr~new)
 say r
+signal on syntax name bad
+r = .bare~new~xor(.tr~new)
+bad: say condition('o')~code
 ::class box inherit collection
 ::method init
   expose d
@@ -1045,28 +1581,54 @@ say r
 ::method remove
   say 'remove' arg(1)
   forward class (super)
+::class bare inherit collection
+::method copy
+  return self
+::method hasindex
+  return 1
+::class tr
+::method isa
+  say 'isA' arg(1)~id
+  return 0
+::method makearray
+  say 'makeArray'
+  return .array~of('b', 'x', 'x')
 ```
 
 ```output
 copy
+isA OrderedCollection
+isA MapCollection
+makeArray
 hasIndex b
 remove b
 hasIndex x
 put x x
-a x
+hasIndex x
+remove x
+a
+isA OrderedCollection
+isA MapCollection
+makeArray
+93.948
 ```
 
 r[class.collection.subset]
 `subset(other)` answers 1 when each item that the receiver's `makeArray`
 answers is equal to an element that the argument supplies, and 0 otherwise.
 The argument is read as [the operand rule](r:class.collection.operand) says,
-so for a plain or ordered argument the elements are its items, and a
-receiver with no items is a subset of every collection. An item and an
-element are equal as `==` compares strings: `1` and `1.0` differ, and so do
-`a` and `A`. For an argument that is read through `allIndexes`, the elements
-are its indexes, and an item of the receiver that is one of them must also
-have an equal entry: the receiver's entry at that index and the argument's
-are compared by `=`, so `1` and `1.0` are equal there and `a` and `A` are not.
+so for a plain or ordered argument the elements are its items, and a receiver
+with no items is a subset of every collection. An item and an element are
+equal as `==` compares strings: `1` and `1.0` differ, and so do `a` and `A`.
+For an argument that is read through `allIndexes`, the elements are its
+indexes, and an item of the receiver that is one of them must also have a
+matching entry: the receiver's entry at that index is sent `\=` with the
+argument's entry at that index, and an answer of 1 makes the result 0, so a
+receiver whose entries do not override `\=` compares them as `=` does, where
+`1` and `1.0` are equal and `a` and `A` are not. When `isA` says that the
+argument is a `Set`, its entries are not compared, because an index and its
+item are the same there. The answer of `\=` is used as a logical value: what
+is neither 0 nor 1 raises `SYNTAX 34.6`.
 
 ```rexx
 a = .box~new('a b')
@@ -1077,6 +1639,11 @@ x = .map~new('k', 1, 'm', 'a')
 say x~subset(.map~new('k', 1.0, 'm', 'a', 'n', 5))
 say x~subset(.map~new('k', 1, 'm', 'A'))
 say x~subset(.map~new('k', 1))
+say x~subset(.set~of('k', 'm'))
+t = .table~new
+t['k'] = 'k'
+t['m'] = 'm'
+say x~subset(t)
 ::class map inherit mapcollection
 ::method init
   expose d
@@ -1134,23 +1701,33 @@ say x~subset(.map~new('k', 1))
 1
 0
 0
+1
+0
 ```
 
 r[class.collection.subset.sends]
-`subset` reads the argument as [the operand rule](r:class.collection.operand)
-says, then sends `copy` to the receiver, then `items` to the argument, and
-then `makeArray` to the receiver, each with no argument. The answers of `copy`
-and `items` are not used. When the argument is read through `allIndexes`, `[]`
-is then sent for each item of the receiver that is among the argument's
-indexes, in the order of `makeArray`: first to the receiver and then to the
-argument, with the item as the argument. The first item that is not an
-element, or whose entries differ, ends the operation with 0 and sends nothing
-more.
+`subset` first reads the argument: it sends `isA` with `OrderedCollection`
+and, when that does not answer 1, `isA` with `MapCollection`, then `allItems`,
+`allIndexes` or `makeArray` as [the operand rule](r:class.collection.operand)
+says. For a map it then sends `isA` with `Set`. Then it sends `copy` to the
+receiver, `items` to the argument and `makeArray` to the receiver, each with
+no argument, and uses none of the first two answers. A `copy` that answers
+anything and an `items` that answers anything do not matter, but an argument
+that does not understand `items` raises `SYNTAX 93.948`. The answer of the
+receiver's `makeArray` is read as [`DO OVER`](r:instr.do.over) reads it, and
+for each item in it, in order, `subset` sends `hasItem` with the item to the
+answer of the first step, and answers 0 at the first item for which that
+answers 0, sending nothing more. For a map that is not a `Set`, when `hasItem`
+answers 1 it sends `[]` with the item to the receiver and then `[]` with the
+item to the argument itself, and then `\=` to the receiver's entry with the
+argument's entry as the argument. An answer of 1 ends the operation with 0.
+When every item has passed the answer is 1.
 
 ```rexx
-a = .lmap~new('me', 'k', 1, 'm', 2)
-say a~subset(.lmap~new('arg', 'k', 1, 'm', 2, 'n', 3))
-say a~subset(.lmap~new('arg', 'k', 1, 'm', 9))
+a = .lmap~new('me', 'k', .e~new('one'), 'm', .e~new('two'))
+b = .lmap~new('arg', 'k', .e~new('one'), 'm', .e~new('two'), 'n', .e~new('x'))
+say a~subset(b)
+say a~subset(.lmap~new('arg', 'k', .e~new('one'), 'm', .e~new('2')))
 ::class lmap inherit mapcollection
 ::method init
   expose d name
@@ -1158,40 +1735,72 @@ say a~subset(.lmap~new('arg', 'k', 1, 'm', 9))
   d = .directory~new
   do i = 2 to arg() by 2; d[arg(i)] = arg(i + 1); end
 ::method allindexes
-  expose d
+  expose d name
+  say name'.allIndexes'
   return d~allindexes~sort
 ::method makearray
-  say 'makeArray'
+  expose name
+  say name'.makeArray'
   forward class (.mapcollection)
 ::method copy
-  say 'copy'
+  expose name
+  say name'.copy'
   return self
 ::method items
-  expose d
-  say 'items'
+  expose d name
+  say name'.items'
   return d~items
+::method isa
+  expose name
+  say name'.isA' arg(1)~id
+  forward class (super)
 ::method '[]'
   expose d name
-  say name'[]' arg(1) '->' d[arg(1)]
+  say name'.[]' arg(1)
   return d[arg(1)]
+::class e
+::method init
+  expose s
+  use arg s
+::method '\='
+  expose s
+  say '  \=' s arg(1)~string
+  return s \= arg(1)~string
+::method string
+  expose s
+  return s
 ```
 
 ```output
-copy
-items
-makeArray
-me[] k -> 1
-arg[] k -> 1
-me[] m -> 2
-arg[] m -> 2
+arg.isA OrderedCollection
+arg.isA MapCollection
+arg.allIndexes
+arg.isA Set
+me.copy
+arg.items
+me.makeArray
+me.allIndexes
+me.[] k
+arg.[] k
+  \= one one
+me.[] m
+arg.[] m
+  \= two two
 1
-copy
-items
-makeArray
-me[] k -> 1
-arg[] k -> 1
-me[] m -> 2
-arg[] m -> 9
+arg.isA OrderedCollection
+arg.isA MapCollection
+arg.allIndexes
+arg.isA Set
+me.copy
+arg.items
+me.makeArray
+me.allIndexes
+me.[] k
+arg.[] k
+  \= one one
+me.[] m
+arg.[] m
+  \= two 2
 0
 ```
 
@@ -1259,8 +1868,9 @@ bad: say condition('o')~code
 r[class.collection.disjoint.sends]
 `disjoint` sends `intersection` to the receiver with the argument, and then
 `isEmpty` to the object `intersection` answered, with no argument. It sends
-nothing else itself: the `new`, `hasIndex` and `put` messages are those of
-[the intersection rule](r:class.collection.intersection.sends).
+nothing else itself: the `new`, `isA`, `hasIndex` and `put` messages are those
+of [the intersection rule](r:class.collection.intersection.sends), and an
+answer of `isEmpty` is returned as it is.
 
 ```rexx
 a = .lbox2~new('a b')
@@ -1380,14 +1990,27 @@ say a~equivalent(.box~new('a b')) a~equivalent(.array~of('a', 'b', 'c'))
 
 r[class.collection.equivalent.sends]
 `equivalent` sends `items` to the receiver and then `items` to the argument,
-each with no argument. When `=` finds the two answers different it answers 0
-and sends nothing more. Otherwise it sends `subset` to the receiver with the
-argument, and answers what that answers.
+each with no argument. It then sends `=` to the answer of the receiver's
+`items`, with the answer of the argument's as the argument, and uses what that
+answers as a logical value. When it is 0 `equivalent` answers 0 and sends
+nothing more. Otherwise it sends `subset` to the receiver with the argument,
+which sends what [its rule](r:class.collection.subset.sends) says, and answers
+what that answers, which is a logical value as well. An answer of `=` or of
+`subset` that is neither 0 nor 1 raises `SYNTAX 34.6`.
 
 ```rexx
 a = .lbox2~new('a b')
 say a~equivalent(.other~new(3))
 say a~equivalent(.other~new(2))
+call try .odd~new(2, 'maybe')
+call try .odd~new('maybe', 1)
+exit
+try:
+  signal on syntax name bad
+  say arg(1)~equivalent(.other~new(2))
+  return
+bad: say condition('o')~code
+  return
 ::class box inherit collection
 ::method init
   expose d
@@ -1450,6 +2073,25 @@ say a~equivalent(.other~new(2))
   return n
 ::method makearray
   return .array~of('a', 'b')
+::class odd inherit collection
+::method init
+  expose count answer
+  use arg count, answer
+::method items
+  expose count
+  return .count~new(count)
+::method subset
+  expose answer
+  return answer
+::class count
+::method init
+  expose n
+  use arg n
+::method '='
+  expose n
+  say 'count =' arg(1)
+  if n == 'maybe' then return n
+  return n = arg(1)
 ```
 
 ```output
@@ -1462,4 +2104,61 @@ subset
 copy
 other items
 1
+other items
+count = 2
+34.6
+other items
+count = 2
+34.6
+```
+
+## Deviations
+
+r[class.collection.deviation.109]
+An instance of a subclass of `String` that is compared by `subset` or
+`equivalent` is read by its own characters, and `MAKESTRING` is not sent to it
+([Deviation 109](r:class.string.deviation.109)). That reaches the entry of the
+argument that `subset` gives to `\=` and the count of the argument that
+`equivalent` gives to `=`. ooRexx reads such an instance through its
+`MAKESTRING` method. In the example `MAKESTRING` answers other characters.
+
+```rexx
+n = .name~new('9')
+say .cnt~new('3')~equivalent(.cnt~new(n))
+x = .map~new('k', 'a')
+say x~subset(.map~new('k', .name~new('b')))
+::class name subclass string
+::method makestring
+  if self == '9' then return '3'
+  return 'a'
+::class cnt inherit collection
+::method init
+  expose c
+  use arg c
+::method items
+  expose c
+  return c
+::method subset
+  return 1
+::class map inherit mapcollection
+::method init
+  expose d
+  d = .directory~new
+  do i = 1 to arg() by 2; d[arg(i)] = arg(i + 1); end
+::method allindexes
+  expose d
+  return d~allindexes~sort
+::method '[]'
+  expose d
+  return d[arg(1)]
+::method copy
+  return self
+::method items
+  expose d
+  return d~items
+```
+
+```output defect=#140
+0
+0
 ```
