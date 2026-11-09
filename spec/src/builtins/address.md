@@ -204,10 +204,11 @@ OUTER
 ```
 
 r[bif.address.scope.method]
-A method, and a `::ROUTINE`, starts with the environment the program started
-with, not the caller's, and as for an internal routine, a setting made in it
-is lost when it returns. Both have the start environment as the previous one
-too, so the instruction with no operand there swaps back to it.
+A method, and a [`::ROUTINE`](r:dir.routine.create), starts with the
+environment the program started with, not the caller's, and as for an internal
+routine, a setting made in it is lost when it returns. Both have the start
+environment as the previous one too, so the instruction with no operand there
+swaps back to it.
 
 ```rexx
 d = address()

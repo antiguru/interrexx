@@ -1334,8 +1334,13 @@ r[bif.index.stream.name]
 A stream builtin names its stream with a string, its `name` argument. For a
 file the name is the file's name, taken from the current directory when it is
 not absolute (see [Deviation 34](r:bif.stream.deviation.34)). While the stream
-is open, a name always denotes the same stream, whichever stream builtin it is
-given to, so what one builtin writes another reads.
+is open, a name denotes the same stream, whichever stream builtin it is given
+to, so what one builtin writes another reads. This holds in the main program
+and in one call of a method, and in the routines that either of them calls.
+Each call of a method has streams of its own, which a routine called from it
+shares, so a name that the method uses is not the stream that the main
+program, a routine called from the main program or another call of the method
+uses under that name.
 
 ```rexx
 f = 'spec-streams-name.tmp'
@@ -1348,6 +1353,33 @@ call sysfiledelete f
 
 ```output
 first / sec
+```
+
+```rexx
+f = 'spec-streams-name2.tmp'
+call sysfiledelete f
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f, 'three'
+call stream f, 'C', 'CLOSE'
+say 'main' linein(f)
+o = .o~new
+say 'call 1' o~two(f)
+say 'call 2' o~two(f)
+say 'main' linein(f)
+call stream f, 'C', 'CLOSE'
+call sysfiledelete f
+::class o
+::method two
+  use arg f
+  return linein(f) linein(f)
+```
+
+```output
+main one
+call 1 one two
+call 2 one two
+main two
 ```
 
 r[bif.index.stream.std]
@@ -1467,10 +1499,13 @@ aXYZ
 ```
 
 r[bif.index.stream.lifetime]
-A stream stays open, with its positions, until the program closes it or
-ends. [CHAROUT given only a name](r:bif.charout.close) closes a stream; the
-pages of the other stream builtins name their forms. The next use of a closed
-name opens the stream again: the read position is at the start and the write
+A stream stays open, with its positions, until the program closes it or ends.
+The streams that a call of a method opened are closed when the call returns,
+so what the call wrote is in the file then. What it wrote to a name that the
+code which called it also has open is not specified.
+[CHAROUT given only a name](r:bif.charout.close) closes a stream; the pages of
+the other stream builtins name their forms. The next use of a closed name
+opens the stream again: the read position is at the start and the write
 position at the end of the data, and the characters written before the close
 are in the file. A standard stream is closed in the same way, by
 [`CLOSE`](r:bif.stream.close) and by CHAROUT or LINEOUT given neither a string
@@ -1497,6 +1532,22 @@ call sysfiledelete f
 ab c
 a
 abcd
+```
+
+```rexx
+f = 'spec-streams-method.tmp'
+call sysfiledelete f
+.spec_writer~new~w(f)
+say 'size after call' stream(f, 'C', 'QUERY SIZE')
+call sysfiledelete f
+::class spec_writer
+::method w
+  use arg f
+  call lineout f, 'from method'
+```
+
+```output defect=#122
+size after call 12
 ```
 
 r[bif.index.stream.lifetime.deviation.98]
@@ -1536,11 +1587,14 @@ A call that cannot read, or write, as many characters as it was asked to
 raises the NOTREADY condition. That happens at the end of the data, when the
 stream cannot be opened, and when a write fails. `condition('D')` in a trap
 for it is the name of the stream, and `condition('C')` is `NOTREADY`. For a
-file the name is the one the call gave, in its spelling. For the standard
-input it is `STDIN`, whatever the spelling of the name in the call and also
-when the call gave none. The condition is not an error: when it is not
-trapped, or after a `CALL ON` trap returns, the call goes on and answers what
-its page says. A trap by `SIGNAL ON NOTREADY` abandons the clause that raised
+file the name is the spelling that the first call to name the stream gave. A
+later call that names the same file in another way, such as `./x` for `x` or
+an absolute path, gets that spelling again, until a `CLOSE` ends the stream.
+For the standard input it is `STDIN`, whatever the spelling of the name in the
+call and also when the call gave none. The condition is not an error: when it
+is not trapped, or after a [`CALL ON`](r:cond.notready.call) trap returns, the
+call goes on and answers what its page says. A trap by
+[`SIGNAL ON NOTREADY`](r:cond.notready.signal) abandons the clause that raised
 it, like any other condition. Reading the standard output or the standard
 error by name, with CHARIN or LINEIN and a count that is not 0, is a read the
 stream does not allow, whatever the stream is connected to, and raises
@@ -1573,6 +1627,28 @@ return
 NOTREADY spec-streams-nr.tmp ab
 STDIN
 STDIN
+```
+
+```rexx
+call on notready name h
+f = 'spec-streams-nr2.tmp'
+x = linein('./'f, 1, 1)
+x = linein(f, 1, 1)
+x = linein(directory()'/'f, 1, 1)
+call stream f, 'C', 'CLOSE'
+x = linein(f, 1, 1)
+x = linein('./'f, 1, 1)
+exit
+h: say condition('d')
+return
+```
+
+```output
+./spec-streams-nr2.tmp
+./spec-streams-nr2.tmp
+./spec-streams-nr2.tmp
+spec-streams-nr2.tmp
+spec-streams-nr2.tmp
 ```
 
 ```rexx

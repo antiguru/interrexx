@@ -23,9 +23,10 @@ is unset, and the value of its symbol is the name of the symbol, in upper
 case, or for a compound symbol its [derived name](r:expr.variables.compound).
 [The SYMBOL function](r:bif.symbol.result) tells the two states apart: it
 answers `VAR` for a variable that has a value and `LIT` for one that has none.
-Reading an unset variable is what the NOVALUE condition reports when it is
-enabled, and the conditions chapter specifies it. A stem symbol is never unset
-in this sense, because its value is a `Stem` in every state, as [the stem
+Reading an unset variable is what the [NOVALUE](r:cond.novalue.raise)
+condition reports when it is enabled, and [the conditions
+chapter](../conditions/index.md) specifies it. A stem symbol is never unset in
+this sense, because its value is a `Stem` in every state, as [the stem
 rule](r:expr.variables.stem) says: reading one that was never assigned raises
 no NOVALUE, and what SYMBOL answers for a stem symbol, which depends on
 whether it has been referred to, is specified with [the

@@ -713,8 +713,8 @@ routine starts with the caller's redirections, a stem it names is the one in
 its own variables, and the caller has its own redirections back when the
 routine returns. A routine with PROCEDURE and no EXPOSE therefore fills a stem
 of its own and leaves the caller's stem as it was. A method, and a
-`::ROUTINE`, starts with none, so its commands read and write the program's
-own streams. Code run by INTERPRET shares them.
+[`::ROUTINE`](r:dir.routine.create), starts with none, so its commands read
+and write the program's own streams. Code run by INTERPRET shares them.
 
 ```rexx
 address system with output stem o.

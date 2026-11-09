@@ -8,15 +8,15 @@ rexxref: "Keyword Instructions > SIGNAL"
 
 # SIGNAL
 
-SIGNAL moves control to a label, and it also switches the trap of a
-condition on or off. The jump goes to a label by name, anywhere in the
-program, and it abandons the blocks that are open in the routine, so it is
-the instruction for leaving a deeply nested construct and for a handler that
-does not come back. The other form, with ON or OFF, does not move control.
-This page specifies how the label is found, what the jump ends, what it
-sets, and the shape of the ON and OFF forms. What a trap does when its
-condition occurs belongs to the chapter on conditions, which also specifies
-SIGNAL's role there.
+SIGNAL moves control to a label, and it also switches the trap of a condition
+on or off. The jump goes to a label by name, anywhere in the program, and it
+abandons the blocks that are open in the routine, so it is the instruction for
+leaving a deeply nested construct and for a handler that does not come back.
+The other form, with ON or OFF, does not move control. This page specifies how
+the label is found, what the jump ends, what it sets, and the shape of the ON
+and OFF forms. What a trap does when its condition occurs belongs to [the
+chapter on conditions](../conditions/traps.md), which also specifies [SIGNAL's
+role](r:cond.traps.signal) there.
 
 ## The label
 
@@ -302,7 +302,8 @@ ON may be followed by `NAME` and a label, a symbol or a string, that the trap
 goes to, and the default label is the name of the condition. The label is not
 looked for when the trap is enabled, so an ON for a label that does not exist
 is not an error then. What a trap does when its condition occurs, and the role
-of the label, are the subject of the conditions chapter. OFF takes no NAME.
+of the label, are the subject of [the conditions
+chapter](../conditions/traps.md). OFF takes no NAME.
 
 ```rexx
 do c over .array~of('error', 'failure', 'halt', 'lostdigits',,

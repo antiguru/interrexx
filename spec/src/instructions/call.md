@@ -17,7 +17,8 @@ call anything: they switch the trap of a condition. This page specifies the
 arguments, the search order as far as it separates internal routines from
 built-in ones, `RESULT` and `SIGL`, and the errors. How a routine is found
 outside the program belongs to the environment chapter, and what a trap does
-when its condition occurs to the chapter on conditions.
+when its condition occurs to [the chapter on
+conditions](../conditions/traps.md).
 
 ## Running a routine
 
@@ -257,12 +258,12 @@ The settings of an internal routine are its own. When NUMERIC settings, the
 trace setting or the default environment of ADDRESS are changed inside the
 routine, the caller has the ones it had before the CALL when the routine
 returns, whether or not the routine starts with PROCEDURE. For NUMERIC, [the
-scope rule](r:num.settings.call) says it, and for the trace setting [the
-TRACE rule](r:bif.trace.scope) does. The same holds for the address
-environment, which the ADDRESS page specifies, and the traps of conditions
-that the conditions chapter specifies. The routine of the example traces, and
-that trace output goes to standard error, so the output block shows only the
-standard output.
+scope rule](r:num.settings.call) says it, and for the trace setting [the TRACE
+rule](r:bif.trace.scope) does. The same holds for the address environment,
+which the ADDRESS page specifies, and the traps of conditions that [the
+conditions chapter](../conditions/traps.md) specifies. The routine of the
+example traces, and that trace output goes to standard error, so the output
+block shows only the standard output.
 
 ```rexx
 numeric digits 5
@@ -379,10 +380,10 @@ symbol read as a constant in upper case, not a string. ON may be followed by
 `NAME` and a routine name, a symbol or a string, and the default name is the
 name of the condition. The routine is not looked for when the trap is enabled,
 so a CALL ON for a name that is not a routine is not an error then. What a
-trap does when its condition occurs belongs to the chapter on conditions. The
-conditions that only SIGNAL can trap are not accepted: NOVALUE, SYNTAX,
-LOSTDIGITS, NOMETHOD and NOSTRING raise `SYNTAX 25.1` after ON and `25.2`
-after OFF.
+trap does when its condition occurs belongs to [the chapter on
+conditions](../conditions/traps.md). The conditions that only SIGNAL can trap
+are not accepted: NOVALUE, SYNTAX, LOSTDIGITS, NOMETHOD and NOSTRING raise
+`SYNTAX 25.1` after ON and `25.2` after OFF.
 
 ```rexx
 do c over .array~of('error', 'failure', 'halt', 'notready', 'any')

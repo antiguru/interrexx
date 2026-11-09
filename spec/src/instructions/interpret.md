@@ -144,10 +144,11 @@ r[instr.interpret.whole]
 The text is read as a whole before its first clause runs. An error of the kind
 that [a program file](r:lex.index.read-first) raises when it is read, such as
 an expression that cannot be read, an unterminated string or comment, a label,
-a directive or an unbalanced construct, is raised before any clause of the
-text runs, so the clauses before the faulty one do nothing. An error that a
-clause raises when it runs, such as a zero divisor or a missing routine, is
-raised when that clause runs, and the clauses before it have run.
+a [directive](r:dir.index.directive) or an unbalanced construct, is raised
+before any clause of the text runs, so the clauses before the faulty one do
+nothing. An error that a clause raises when it runs, such as a zero divisor or
+a missing routine, is raised when that clause runs, and the clauses before it
+have run.
 
 ```rexx
 call try 'say "first"; say 2 +'
@@ -317,11 +318,11 @@ or ends the program, and the clauses after the INTERPRET do not run. An `EXIT`
 does what it would do where the INTERPRET stands, as [the EXIT
 rules](r:instr.exit.program) say. In the main program and in an internal
 routine of it, it ends the program with its value as the exit code. In a
-method or a `::ROUTINE`, it ends only that unit, and the value goes to the
-sender or the caller as [the rule for a unit](r:instr.exit.unit) says. A
-`SIGNAL` to a label of the program leaves the text and any active DO, IF or
-SELECT, and sets `SIGL` to the number of the line of the INTERPRET clause, as
-it would for a SIGNAL written there.
+method or a [`::ROUTINE`](r:dir.routine.create), it ends only that unit, and
+the value goes to the sender or the caller as [the rule for a
+unit](r:instr.exit.unit) says. A `SIGNAL` to a label of the program leaves the
+text and any active DO, IF or SELECT, and sets `SIGL` to the number of the
+line of the INTERPRET clause, as it would for a SIGNAL written there.
 
 ```rexx
 say f(5)

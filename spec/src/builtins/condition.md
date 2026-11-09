@@ -4,6 +4,7 @@ kind: builtin
 syntax: "CONDITION([option])"
 ansi: "9.5.3"
 rexxref: "Functions > Built-in Functions > CONDITION"
+deviations: [106]
 ---
 
 # CONDITION
@@ -102,9 +103,9 @@ say (condition('A') == .nil) (condition('O') == .nil)
 r[bif.condition.name]
 After a trap has caught a condition, the option `C` answers the name of the
 condition in capital letters: for a SYNTAX error `SYNTAX`, for an unset
-variable under NOVALUE `NOVALUE`. For a user condition raised by the RAISE
-instruction, it answers `USER`, a blank and the name of the condition in
-capital letters.
+variable under [NOVALUE](r:cond.novalue.raise) `NOVALUE`. For a user condition
+raised by the [RAISE instruction](r:instr.raise.form), it answers `USER`, a
+blank and the name of the condition in capital letters.
 
 ```rexx
 signal on syntax name s
@@ -152,13 +153,13 @@ CALL
 
 r[bif.condition.description]
 After a trap has caught a condition, the option `D` answers the description
-string that the condition carries, or the null string when it carries none. A
-user condition carries what the RAISE instruction's DESCRIPTION gave, and a
-NOVALUE condition the name of the variable, in capital letters. A SYNTAX
-condition that the interpreter raises because of an error carries no
-description string; one that the RAISE instruction raises carries what its
-DESCRIPTION gave, and none when it has no DESCRIPTION, whether or not it has
-an ADDITIONAL.
+that the condition carries, or the null string when it carries none. A
+user condition carries what the RAISE instruction's
+[DESCRIPTION](r:instr.raise.description) gave, and a NOVALUE condition the
+name of the variable, in capital letters. A SYNTAX condition that the
+interpreter raises because of an error carries no description string; one that
+the RAISE instruction raises carries what its DESCRIPTION gave, and none when
+it has no DESCRIPTION, whether or not it has an ADDITIONAL.
 
 ```rexx
 signal on syntax name s
@@ -192,11 +193,32 @@ rq: raise syntax 40.1 additional ('ad') return
 [a note]
 ```
 
+r[bif.condition.description.object]
+The answer of `D` is the object that the DESCRIPTION entry of the condition
+object holds, not a string made from it, so a RAISE whose DESCRIPTION is an
+array makes `D` answer that array, which is equal to the entry.
+
+```rexx
+call on user u name h
+call r
+exit
+r: raise user u description (.array~of(1, 2)) return
+h: o = condition('o')
+  d = condition('d')
+  say d~class '/' (d == o~description) '/' o~description~class
+  return
+```
+
+```output defect=#121
+The Array class / 1 / The Array class
+```
+
 r[bif.condition.extra]
 After a trap has caught a SYNTAX condition, the option `E` answers the subcode
 of the error number: the part after the period, as `12` for `40.12`. An error
-number raised without a subcode, as `RAISE SYNTAX 40` does, has the subcode 0
-and the code `40.0`. After any other condition `E` answers the null string.
+number raised without a subcode, as [`RAISE SYNTAX 40`](r:instr.raise.number)
+does, has the subcode 0 and the code `40.0`. After any other condition `E`
+answers the null string.
 
 ```rexx
 signal on syntax name s
@@ -225,8 +247,9 @@ rz: raise syntax 40 return
 r[bif.condition.additional]
 After a trap has caught a condition, the option `A` answers the additional
 information object the condition carries, and `.nil` when it carries none. A
-user condition carries what the RAISE instruction's ADDITIONAL gave, as the
-object itself, and not a string made from it.
+user condition carries what the RAISE instruction's
+[ADDITIONAL](r:instr.raise.additional) gave, as the object itself, and not a
+string made from it.
 
 ```rexx
 signal on novalue name n
@@ -252,7 +275,9 @@ trap for that condition as it is now: `ON`, `OFF` or `DELAY`. A SIGNAL ON trap
 that has caught a condition is `OFF`, and a CALL ON trap is `DELAY` while its
 handler runs. The state changes with the code that follows: a SIGNAL ON or
 CALL ON instruction for the condition makes it `ON`, and a SIGNAL OFF or CALL
-OFF instruction makes it `OFF`.
+OFF instruction makes it `OFF`. A change that the routine of a CALL trap
+makes to the `CONDITION` entry of its argument does not change which trap that
+is, as [a Deviation](r:bif.condition.deviation.106) states.
 
 ```rexx
 signal on syntax name s
@@ -292,8 +317,13 @@ options answer, and more. Its entries `CONDITION`, `DESCRIPTION` and
 when the condition carries additional information. When it carries none, as
 with NOVALUE, the directory has no `ADDITIONAL` entry, and `~additional`
 answers `.nil` as for any absent entry, which is also what `A` answers. The
-directory is not the condition itself: changing it changes nothing that
-CONDITION answers.
+directory is a new copy of the condition's entries on each call, so two calls
+answer two objects. A copy holds the same objects as the condition: adding,
+removing or replacing an entry of a copy changes nothing that CONDITION
+answers, while a change to an object that an entry holds, such as the array of
+`ADDITIONAL`, shows wherever that object is held. The condition itself is the
+object that a CALL trap's routine gets as its argument, as
+[the argument rule](r:cond.information.argument) says.
 
 ```rexx
 signal on syntax name s
@@ -313,6 +343,22 @@ say o~hasIndex('ADDITIONAL') (o~additional == .nil) (condition('A') == .nil)
 The Directory class 1 1 1 1
 SYNTAX SYNTAX
 0 1 1
+```
+
+```rexx
+call on user foo name h
+call r
+exit
+h: c = condition('o')
+  c~additional[1] = 'z'
+  say condition('a')[1] arg(1)~additional[1] (c~additional == arg(1)~additional)
+  return
+::routine r
+  raise user foo array ('a', 'b')
+```
+
+```output
+z z 1
 ```
 
 ## How long the information lasts
@@ -376,9 +422,10 @@ The information belongs to the code that holds it. An internal routine, a
 routine that [CALL](r:instr.call.run) or a function call reaches by its label,
 starts with a copy of the information of the code that called it, and what it
 does to the copy, a trap that catches a condition in it or the option `R`, is
-not seen by the caller. A `::ROUTINE`, a method and a routine made from other
-source text start with none. [INTERPRET](r:instr.interpret.scope) runs in the
-code that holds it, and shares its information.
+not seen by the caller. A [`::ROUTINE`](r:dir.routine.create), a method and a
+routine made from other source text start with none.
+[INTERPRET](r:instr.interpret.scope) runs in the code that holds it, and
+shares its information.
 
 ```rexx
 call on user foo name u
@@ -428,3 +475,37 @@ caller USER FOO
 > ooRexx adds `A`, `O` and `R`, and interrexx follows ooRexx. The conditions
 > chapter lists every condition, the information each carries, and the traps
 > that catch them.
+
+## Deviations
+
+r[bif.condition.deviation.106]
+In the routine of a CALL trap, the option `S` of CONDITION answers the state
+of the trap that caught the condition, also after the routine has changed the
+`CONDITION` entry of its argument. ooRexx answers the state of the trap for
+the condition that the entry names at that moment, and `OFF` when no trap has
+that name as the entry spells it.
+
+```rexx
+call on user foo name h
+call on user bar name h2
+call r
+exit
+r: raise user foo return
+h: o = arg(1)
+  say condition('s')
+  o~condition = 'USER BAR'
+  say condition('s')
+  call on user foo name h
+  say condition('s')
+  call off user foo
+  say condition('s')
+  return
+h2: return
+```
+
+```output
+DELAY
+DELAY
+ON
+OFF
+```

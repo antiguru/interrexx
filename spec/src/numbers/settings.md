@@ -28,9 +28,10 @@ and the comparisons of the builtins that [pick](r:bif.index.num.pick) a
 number. NUMERIC FORM decides only how an exponent is written in a result that
 needs one, as [the notation rule](r:bif.index.num.sci) says. Each setting has
 a [default](r:bif.digits.default) that a program starts with: 9, 0 and
-SCIENTIFIC, unless a directive of the package gives another value. The
-builtins [DIGITS](r:bif.digits.result), [FUZZ](r:bif.fuzz.result) and
-[FORM](r:bif.form.result) answer the setting in force where they are called.
+SCIENTIFIC, unless a [directive](r:dir.options.numeric) of the package gives
+another value. The builtins [DIGITS](r:bif.digits.result),
+[FUZZ](r:bif.fuzz.result) and [FORM](r:bif.form.result) answer the setting in
+force where they are called.
 
 ```rexx
 say digits() fuzz() form()

@@ -153,11 +153,12 @@ b: say condition('o')~code
 
 r[bif.sourceline.which]
 SOURCELINE reads the program that holds the code that calls it. An internal
-routine, a method, a `::ROUTINE` and an [INTERPRET](r:instr.interpret.scope)
-string read the program that holds them; so does code in a required package,
-which reads that package's source and not the requiring program's. A routine
-or package made from other source text reads that text, which has one line for
-each item of the array it was made from, an empty item included.
+routine, a method, a [`::ROUTINE`](r:dir.routine.create) and an
+[INTERPRET](r:instr.interpret.scope) string read the program that holds them;
+so does code in a required package, which reads that package's source and not
+the requiring program's. A routine or package made from other source text
+reads that text, which has one line for each item of the array it was made
+from, an empty item included.
 
 ```rexx
 say show() rt() .box~new~m

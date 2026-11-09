@@ -132,7 +132,8 @@ A name that is available without a registration of its own is not removed:
 the answer is `1` and the function stays available. That covers the functions
 the interpreter provides from the start, such as `SysSleep`, and the
 functions of a library that is loaded, by [RXFUNCADD](rxfuncadd.md) or by a
-`::requires` directive with the `LIBRARY` keyword, which stay callable.
+[`::requires`](r:dir.requires.library) directive with the `LIBRARY` keyword,
+which stay callable.
 
 ```rexx
 say rxfuncdrop('SysSleep') rxfuncquery('SysSleep')

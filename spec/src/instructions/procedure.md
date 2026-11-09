@@ -69,10 +69,11 @@ run between the label of an internal routine, once a CALL or a function call
 has reached it, and the PROCEDURE. Any other clause before it, a NOP included,
 makes it a misplaced one, and so does a PROCEDURE inside a DO or IF, in the
 text of an INTERPRET, in the main program, in a method or in a routine of a
-`::ROUTINE` directive, after a SIGNAL to its label, and a second PROCEDURE in
-the same routine. A misplaced PROCEDURE raises `SYNTAX 17.1` when it runs. In
-the example with a loop, the handler's RETURN leaves the failing routine, as
-[the rule on a jump out of a routine](r:instr.signal.routine) says.
+[`::ROUTINE`](r:dir.routine.create) directive, after a SIGNAL to its label,
+and a second PROCEDURE in the same routine. A misplaced PROCEDURE raises
+`SYNTAX 17.1` when it runs. In the example with a loop, the handler's RETURN
+leaves the failing routine, as [the rule on a jump out of a
+routine](r:instr.signal.routine) says.
 
 ```rexx
 call ok1

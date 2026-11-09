@@ -122,7 +122,10 @@ r[instr.iterate.name]
 `ITERATE name` selects the innermost running loop whose name is `name`. The
 names are those of [the LABEL rule](r:instr.do.label). When no running loop
 has the name, ITERATE raises `SYNTAX 28.4`. A name that is not a symbol raises
-`SYNTAX 20.908`, and data after the name `SYNTAX 21.908`.
+`SYNTAX 20.908`, and data after the name `SYNTAX 21.908`. Those two are
+found when the program is read, as [the LEAVE rule](r:instr.leave.error) says
+of the same faults: no clause runs, and the exit codes are 236 and 235, as
+[the rule for a program that is read](r:lex.index.read-first) says.
 
 ```rexx
 do label outer i = 1 to 2
@@ -159,6 +162,24 @@ do 2; iterate nosuch; end => 28.4
 do label a i = 1 to 2; iterate i; end => 28.4
 do i = 1 to 2; iterate "i"; end => 20.908
 do i = 1 to 2; iterate i j; end => 21.908
+```
+
+```rexx
+say 'before'
+if 0 then iterate x y
+say 'unreached'
+```
+
+```output rc=235
+```
+
+```rexx
+say 'before'
+if 0 then iterate 'x'
+say 'unreached'
+```
+
+```output rc=236
 ```
 
 ## Where it runs and its errors

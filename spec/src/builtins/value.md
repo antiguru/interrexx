@@ -174,9 +174,9 @@ it when it uses the symbol. A variable that holds no value, or has been
 dropped, answers the name as the program would then see it: in uppercase, with
 the parts of a compound name's tail that name a variable holding a value
 replaced by that value and the others left as they are. VALUE never raises the
-NOVALUE condition, so a trap for it does not see the call. A symbol that is a
-constant symbol, a number or one that starts with a period, is answered as it
-is, in uppercase, except that a name that
+[NOVALUE](r:cond.novalue.raise) condition, so a trap for it does not see the
+call. A symbol that is a constant symbol, a number or one that starts with a
+period, is answered as it is, in uppercase, except that a name that
 stands for an object of the environment, such as `.nil`, answers that object.
 The value is the object the variable holds, not a copy of it, and a variable
 that holds a non-string object answers it, so the call can be used with

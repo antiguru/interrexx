@@ -355,13 +355,13 @@ e: say condition('o')~code
 
 r[instr.expose.method]
 EXPOSE belongs to a method. As the first instruction of the main program, or
-of a routine of a `::ROUTINE` directive, it is accepted when the program is
-read and raises `SYNTAX 98.992` when it runs. Anywhere else in the main
-program or in a routine it is misplaced, as [the rule on the first
-instruction](r:instr.expose.first) says, and raises `99.907` when the program
-is read. That includes the first clause after the label of an internal
-routine, also of one that a method calls, since a label does not start the
-code of a method.
+of a routine of a [`::ROUTINE`](r:dir.routine.create) directive, it is
+accepted when the program is read and raises `SYNTAX 98.992` when it runs.
+Anywhere else in the main program or in a routine it is misplaced, as [the
+rule on the first instruction](r:instr.expose.first) says, and raises `99.907`
+when the program is read. That includes the first clause after the label of an
+internal routine, also of one that a method calls, since a label does not
+start the code of a method.
 
 ```rexx
 say 'not run'

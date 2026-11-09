@@ -35,18 +35,18 @@ chapter specifies them.
 ## Kinds of instruction
 
 r[instr.index.kinds]
-A clause that is not a null clause, a label or a directive is an
-instruction of one of four kinds: an assignment, a message instruction, a
-keyword instruction or a command. [The lexical
-rule](r:lex.clauses.kinds) decides from the first tokens of a clause which of
-the four it is, so a symbol followed by `=` is an assignment before any
-keyword is looked at. This chapter adds the naming and the pages. A message
-assignment, which [the message page](message.md) specifies, is a message
-instruction like the lone message term, and what the lexical chapter calls an
-instruction is the keyword instruction here. Because every clause that is
-none of the other three is a command, a clause that holds only a function
-call, a string, or a parenthesized expression is a command, and so is a
-message term that an operator or another term follows.
+A clause that is not a null clause, a label or a
+[directive](r:dir.index.directive) is an instruction of one of four kinds: an
+assignment, a message instruction, a keyword instruction or a command. [The
+lexical rule](r:lex.clauses.kinds) decides from the first tokens of a clause
+which of the four it is, so a symbol followed by `=` is an assignment before
+any keyword is looked at. This chapter adds the naming and the pages. A
+message assignment, which [the message page](message.md) specifies, is a
+message instruction like the lone message term, and what the lexical chapter
+calls an instruction is the keyword instruction here. Because every clause
+that is none of the other three is a command, a clause that holds only a
+function call, a string, or a parenthesized expression is a command, and so is
+a message term that an operator or another term follows.
 
 ```rexx
 address system
@@ -73,17 +73,17 @@ The keyword instruction names are [ADDRESS](address.md), [ARG](arg.md),
 [INTERPRET](interpret.md), [ITERATE](iterate.md), [LEAVE](leave.md),
 [LOOP](loop.md), [NOP](nop.md), [NUMERIC](numeric.md), [OPTIONS](options.md),
 [PARSE](parse.md), [PROCEDURE](procedure.md), [PULL](pull.md),
-[PUSH](push.md), [QUEUE](queue.md), RAISE, [REPLY](reply.md),
+[PUSH](push.md), [QUEUE](queue.md), [RAISE](raise.md), [REPLY](reply.md),
 [RETURN](return.md), [SAY](say.md), [SELECT](select.md), [SIGNAL](signal.md),
 [TRACE](trace.md) and [USE](use.md). A clause that is not an assignment and
 whose first token is one of these names is that instruction, whatever the case
 of the name. A name that is not on the list starts no keyword instruction. A
 clause that begins with such a name is a command, so that the name is
-evaluated as an expression like any other symbol. The names of directives and
-of builtin functions are not keywords: `endlocal` as a clause is a command,
-and so are `class` and `method` without colons. The words THEN, ELSE, END,
-WHEN and OTHERWISE are the exception, and [the next rule](r:instr.index.parts)
-covers them.
+evaluated as an expression like any other symbol. The names of
+[directives](r:dir.index.directive) and of builtin functions are not keywords:
+`endlocal` as a clause is a command, and so are `class` and `method` without
+colons. The words THEN, ELSE, END, WHEN and OTHERWISE are the exception, and
+[the next rule](r:instr.index.parts) covers them.
 
 ```rexx
 address nosuch

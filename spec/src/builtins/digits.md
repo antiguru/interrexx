@@ -72,11 +72,12 @@ say digits()
 ```
 
 r[bif.digits.default]
-The default of a package is 9 unless a `::OPTIONS` directive of the package
-names another value with its `DIGITS` keyword. Where it does, that value is
-the setting at the start of the program, the setting at the start of each of
-its `::ROUTINE` routines and methods, and the setting that the NUMERIC DIGITS
-instruction without an expression returns to.
+The default of a package is 9 unless a [`::OPTIONS`](r:dir.options.numeric)
+directive of the package names another value with its `DIGITS` keyword. Where
+it does, that value is the setting at the start of the program, the setting at
+the start of each of its [`::ROUTINE`](r:dir.routine.create) routines and
+methods, and the setting that the NUMERIC DIGITS instruction without an
+expression returns to.
 
 ```rexx
 say 'start' digits()

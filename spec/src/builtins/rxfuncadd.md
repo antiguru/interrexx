@@ -181,8 +181,8 @@ whatever `module` and `procedure` are, even when they name no library, and the
 call changes nothing. Such a name is a function the interpreter provides from
 the start, such as `SysSleep` and the loader function `SysLoadFuncs`, or a
 function of a library that is already loaded, whether an earlier call loaded
-it or a `::requires` directive with the `LIBRARY` keyword did. A name that
-only an earlier call registered for an
+it or a [`::requires`](r:dir.requires.library) directive with the `LIBRARY`
+keyword did. A name that only an earlier call registered for an
 [unknown library](r:bif.rxfuncadd.unknown-library) is not such a name.
 
 ```rexx
