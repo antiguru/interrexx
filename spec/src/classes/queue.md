@@ -18,7 +18,7 @@ lists what it inherits. [`CircularQueue`](circularqueue.md) is its subclass.
 
 The page follows the order of the rexxref entry. Examples that show an error
 use a small routine `try`, as the builtin pages do. The page says nothing
-about an entry whose item was omitted in a `put` or an `insert`.
+about an entry whose item was omitted in an `insert`.
 
 ## The class
 
@@ -61,8 +61,9 @@ Queue 13 1 0
 
 r[class.queue.new]
 `new` makes an empty queue. Its optional argument is a hint for how large the
-queue will grow and changes nothing the program can see; it must be a whole
-number that is not negative, or `SYNTAX 93.923` is raised. A second argument
+queue will grow; no method that this page specifies answers differently for
+it. It must be a whole number that is not negative, or `SYNTAX 93.923` is
+raised. A second argument
 raises `SYNTAX 93.902`, and omitted arguments at the end count for nothing.
 `new` sends `init` to the new object with the arguments it received, so a
 subclass's `init` sees them ([the new rule](r:class.index.new)). The checks
@@ -210,10 +211,12 @@ value ([the conversion rule](r:conv.string.object)) as a whole-number argument
 of a builtin is ([the form rule](r:conv.whole.form), [the digits
 rule](r:conv.whole.digits)): `"2"`, `' 2 '` and `2.0` are as good as `2`,
 NUMERIC DIGITS plays no part, and an argument that those rules refuse, a
-number below 1, or `.nil` raises `SYNTAX 93.907`. An array, an instance of a
-subclass of `Array` included, that holds exactly one such index is read as
-that index; an array with none or with more than one raises `SYNTAX 93.907` as
-does any other object, such as a list. An index above the number of items is
+number below 1, or `.nil` raises `SYNTAX 93.907`. An object that is not a
+string is read by its string value, so an array is read through its
+`makeString`: an array of exactly one such index gives that index, and an
+array with none or with more than one gives a string that is not an index and
+raises `SYNTAX 93.907`, as does an object without `MAKESTRING`, such as a
+list. An index above the number of items is
 not an error for the methods that look an item up: `at` answers `.nil`,
 `hasIndex` answers 0, `delete` and `remove` answer `.nil`, `next` answers
 `.nil`, `previous` answers the last index and `section` an empty queue;
@@ -829,6 +832,7 @@ The `start` is read as [the index rule](r:class.queue.indexes) says; the
 omitted one, raises `SYNTAX 93.903`, and a third argument `SYNTAX 93.902`. The
 answer is an instance of the class of the receiver, so that a subclass gets a
 queue of its own class back.
+The arguments are counted first, then `start` is read, then `count`.
 
 ```rexx
 q = .queue~of('a', 'b', 'c', 'd')
@@ -847,6 +851,7 @@ call try 'q~section(.nil)'
 call try 'q~section("x")'
 call try 'q~section(1.5)'
 call try 'q~section(.array~of(1, 2))'
+call try 'q~section(0, -1)'
 call try 'q~section(1, -1)'
 call try 'q~section(1, "x")'
 call try 'q~section(1, .nil)'
@@ -879,6 +884,7 @@ q~section(.nil) => 93.907
 q~section("x") => 93.907
 q~section(1.5) => 93.907
 q~section(.array~of(1, 2)) => 93.907
+q~section(0, -1) => 93.907
 q~section(1, -1) => 93.923
 q~section(1, "x") => 93.923
 q~section(1, .nil) => 93.923
