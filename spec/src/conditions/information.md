@@ -53,13 +53,13 @@ A CALL trap calls its routine with one argument, the condition object of the
 condition that it answers, so `ARG()` is 1 there and `ARG(1)` is a directory
 with the entries of [the entries rule](r:cond.information.object). A SIGNAL
 trap passes no argument: `ARG()` at its label is what it is at any other place
-of the code, which is the arguments of the routine that holds the label.
-That directory is the condition object itself. `CONDITION('O')` answers a new
-copy of it on each call, so two calls answer two objects, none of them the
-argument. The other options of `CONDITION` read the current entries of the
-object itself, so a change that the routine makes to its argument shows in
-what they answer, and in the entries of a copy made after it. A change to a
-copy changes nothing else.
+of the code, which is the arguments of the routine that holds the label. That
+directory is the condition object itself, and none of the copies that
+[the object rule of CONDITION](r:bif.condition.object) says `CONDITION('O')`
+answers is the argument. The options `C`, `D`, `I` and `A` of `CONDITION` read
+the current entries of the object itself, so a change that the routine makes
+to its argument shows in what they answer, and in the entries of a copy made
+after it.
 
 ```rexx
 address system
@@ -97,6 +97,9 @@ h: o = arg(1)
   c = condition('o')
   c~description = 'copy changed'
   say condition('d') o~description
+  o~condition = 'USER BAR'
+  o~instruction = 'SIGNAL'
+  say condition('c') condition('i')
   return
 ::routine r
   raise user foo description 'raised'
@@ -107,6 +110,7 @@ same 0 0
 changed changed
 x
 changed changed
+USER BAR SIGNAL
 done
 ```
 

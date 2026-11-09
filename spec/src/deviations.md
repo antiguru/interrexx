@@ -675,20 +675,24 @@ operations. ooRexx raises the error for the right operand first.
 
 ## 103. TRACE() under ::OPTIONS TRACE ?
 
-Under `::OPTIONS TRACE ?`, the TRACE builtin answers `?N`, as after the
-instruction `trace ?` at the start of a program: the option turns interactive
-tracing on and keeps the setting. ooRexx answers the null string.
+Under `::OPTIONS TRACE ?`, the TRACE builtin answers `?N` when the code
+starts, as after the instruction `trace ?` at the start of a program: the
+question mark turns interactive tracing on and the letter stays `N`, the
+default. ooRexx answers the null string.
 
 ## 104. A pending CALL trap at an EXIT in an internal routine
 
 When an EXIT inside an internal routine ends the program while a CALL trap is
 pending, the routine of the trap is called before the program ends, as for an
-EXIT in the main program. ooRexx ends the program without calling it.
+EXIT in the main program, and it sees the variables of the routine that holds
+the EXIT, with `SIGL` the line of the EXIT. ooRexx ends the program without
+calling it.
 
 ## 105. Access checks of started messages
 
 A message sent with START is checked for PRIVATE and PACKAGE access as the
-same message sent directly by the code that starts it. A method of a class
-may start a private method of its own class, and a PACKAGE method started
-from another package raises `SYNTAX 97.3`. ooRexx raises `97.2` for the first
-and `97.1` for the second.
+same message sent directly by the code that starts it. A method of a class may
+start a private method of its own class, code of a package may start a PACKAGE
+method of that package, and a PACKAGE method started from another package
+raises `SYNTAX 97.3`. ooRexx raises `97.2` for every started private message
+and `97.1` for every started PACKAGE message, whichever code starts it.

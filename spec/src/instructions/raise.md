@@ -163,12 +163,12 @@ the value of the parenthesized expression, with no check that it is a number.
 The code is the value that `RC` has in the code that answers the condition, as
 [the rule for `RC`](r:cond.information.rc) says. The `RC` entry of the
 condition object holds the code itself: when the parenthesized expression is
-an object that is not a string, the entry holds that object, as it does in
-ooRexx, and the variable `RC` shows its string value. The user conditions take
-a name, which [the name rule](r:cond.user.name) specifies. HALT, LOSTDIGITS,
-NOMETHOD, NOSTRING, NOTREADY and NOVALUE take nothing, and the condition has
-the entries that [the entries rule](r:cond.information.object) lists for a
-condition that an instruction raised.
+an object that is not a string, the entry holds that object, and so does the
+variable `RC` in the code of the trap. The user conditions take a name, which
+[the name rule](r:cond.user.name) specifies. HALT, LOSTDIGITS, NOMETHOD,
+NOSTRING, NOTREADY and NOVALUE take nothing, and the condition has the entries
+that [the entries rule](r:cond.information.object) lists for a condition that
+an instruction raised.
 
 ```rexx
 names = 'HALT LOSTDIGITS NOMETHOD NOSTRING NOTREADY NOVALUE'
@@ -218,7 +218,7 @@ call r1 .array~of('a', 'b')
 call r2 (3 + 4)
 exit
 h: c = condition('o')
-  say condition('c') c~rc~class
+  say condition('c') c~rc~class rc~class
   return
 ::routine r1
   raise error (arg(1))
@@ -227,8 +227,8 @@ h: c = condition('o')
 ```
 
 ```output defect=#124
-ERROR The Array class
-FAILURE The String class
+ERROR The Array class The Array class
+FAILURE The String class The String class
 ```
 
 ```rexx

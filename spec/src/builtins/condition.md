@@ -315,10 +315,12 @@ when the condition carries additional information. When it carries none, as
 with NOVALUE, the directory has no `ADDITIONAL` entry, and `~additional`
 answers `.nil` as for any absent entry, which is also what `A` answers. The
 directory is a new copy of the condition's entries on each call, so two calls
-answer two objects, and changing a copy changes nothing that CONDITION answers
-or that another object holds. The condition itself is the object that a CALL
-trap's routine gets as its argument, as [the argument
-rule](r:cond.information.argument) says.
+answer two objects. A copy holds the same objects as the condition: adding,
+removing or replacing an entry of a copy changes nothing that CONDITION
+answers, while a change to an object that an entry holds, such as the array of
+`ADDITIONAL`, shows wherever that object is held. The condition itself is the
+object that a CALL trap's routine gets as its argument, as
+[the argument rule](r:cond.information.argument) says.
 
 ```rexx
 signal on syntax name s
@@ -338,6 +340,22 @@ say o~hasIndex('ADDITIONAL') (o~additional == .nil) (condition('A') == .nil)
 The Directory class 1 1 1 1
 SYNTAX SYNTAX
 0 1 1
+```
+
+```rexx
+call on user foo name h
+call r
+exit
+h: c = condition('o')
+  c~additional[1] = 'z'
+  say condition('a')[1] arg(1)~additional[1] (c~additional == arg(1)~additional)
+  return
+::routine r
+  raise user foo array ('a', 'b')
+```
+
+```output
+z z 1
 ```
 
 ## How long the information lasts

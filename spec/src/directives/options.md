@@ -784,9 +784,10 @@ prolog of the file y
 ## Deviations
 
 r[dir.options.deviation.103]
-Under `::OPTIONS TRACE ?`, the TRACE builtin answers `?N`, as after the
-instruction `trace ?` at the start of a program: the option turns interactive
-tracing on and keeps the setting. ooRexx answers the null string.
+Under `::OPTIONS TRACE ?`, the TRACE builtin answers `?N` when the code
+starts, as after the instruction `trace ?` at the start of a program: the
+question mark turns interactive tracing on and the letter stays `N`, the
+default. ooRexx answers the null string.
 
 ```rexx
 say trace()

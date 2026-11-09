@@ -777,7 +777,9 @@ main after
 r[cond.traps.deviation.104]
 When an EXIT inside an internal routine ends the program while a CALL trap is
 pending, the routine of the trap is called before the program ends, as for an
-EXIT in the main program. ooRexx ends the program without calling it.
+EXIT in the main program, and it sees the variables of the routine that holds
+the EXIT, with `SIGL` the line of the EXIT. ooRexx ends the program without
+calling it.
 
 ```rexx
 call on notready name h

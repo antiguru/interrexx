@@ -704,10 +704,11 @@ ok
 
 r[dir.method.deviation.105]
 A message sent with START is checked for PRIVATE and PACKAGE access as the
-same message sent directly by the code that starts it. A method of a class
-may start a private method of its own class, and a PACKAGE method started
-from another package raises `SYNTAX 97.3`. ooRexx raises `97.2` for the first
-and `97.1` for the second.
+same message sent directly by the code that starts it. A method of a class may
+start a private method of its own class, code of a package may start a PACKAGE
+method of that package, and a PACKAGE method started from another package
+raises `SYNTAX 97.3`. ooRexx raises `97.2` for every started private message
+and `97.1` for every started PACKAGE message, whichever code starts it.
 
 ```rexx
 say .vault~new~open
@@ -743,4 +744,18 @@ call sysfiledelete f
 
 ```output
 97.3
+```
+
+```rexx
+signal on syntax name lost
+say .vault2~new~start('code')~result
+exit
+lost: say condition('o')~code
+::class vault2
+::method code package
+  return 'package answer'
+```
+
+```output
+package answer
 ```
