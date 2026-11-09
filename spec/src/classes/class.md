@@ -1108,6 +1108,35 @@ spa
 .object~defineMethods(.directory~new) => 98.985
 ```
 
+r[class.class.definemethods.sends]
+`defineMethods` sends its argument the message `supplier`, with no argument,
+once, and nothing else to the argument; it sends nothing to the class. The
+indexes and items it takes are those that the supplier answers in turn.
+
+```rexx
+.k~defineMethods(.sp~new)
+say .k~new~one .k~new~two
+::class k
+::class sp
+::method supplier
+  say 'supplier sent' arg()
+  s = .directory~new
+  s['ONE'] = 'return 1'
+  s['TWO'] = 'return 2'
+  return s~supplier
+::method allIndexes
+  say 'allIndexes sent'
+::method allItems
+  say 'allItems sent'
+::method items
+  say 'items sent'
+```
+
+```output
+supplier sent 0
+1 2
+```
+
 r[class.class.delete]
 `delete` removes the entry that the class's own table holds for a name, taken
 in upper case, whether the entry is a method or a mark that hides the name,
