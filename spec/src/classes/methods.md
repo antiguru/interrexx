@@ -93,22 +93,25 @@ or, when that is a mixin class too, the base class of that one, and so on
 until a class that is not a mixin class is reached; the INHERIT list of the
 mixin class does not enter into it. The base class comes behind the mixin
 class in its own order. By [the order rule](r:class.methods.order) a mixin
-class that a class inherits therefore stands in front of its base class and of
-every class above that, and behind the classes of the superclass's order that
-are not among those. A mixin class based on `Object` that the directive lists
-stands behind every class of the superclass's order except `Object` and the
-classes its own order holds, so its methods hide those of `Object`, of the
-classes it inherits and of the mixin classes listed after it; this is the case
-[the search rule](r:dir.class.search) of the directive describes. A mixin
-class based on an ancestor of the superclass hides the methods of that
-ancestor and of the classes above it, and loses to the classes of the chain
-below that ancestor. The mixin classes of one list keep the order of the list,
-so a mixin class based on `Object` that is listed before one based on a lower
-class also stands in front of that lower class. In the example, `LEAF` lists
-the `Object`-based mixin class `OM` first, so it stands in front of `BASE`,
-and `LEAF2` lists it last, so it stays behind. `MO` is based on `BASE` through
+class that a class lists, and that no class listed after it reaches, therefore
+stands in front of every class of its own order, its base class among them,
+and of every class of the order of each class listed after it, and behind the
+other classes of the superclass's order; its methods hide those of the first
+and lose to those of the second. A mixin class based on an ancestor of the
+superclass thus hides the methods of that ancestor and of the classes above
+it, and loses to the classes of the chain below that ancestor unless the order
+of a class listed after it holds them; a mixin class based on `Object` loses
+in the same way to every class of the superclass's chain but `Object`.
+[The search rule](r:dir.class.search) of the directive describes the case in
+which each listed class is a mixin class whose MIXINCLASS option names
+`Object` and that inherits none. In the example, `LEAF` lists the
+`Object`-based mixin class `OM` first, so it stands in front of `BASE`, and
+`LEAF2` lists it last, so it stays behind. `MO` is based on `BASE` through
 `MX` and inherits `OM`, so in `LEAF4` it stands in front of `MX` and `BASE`,
-and `OM` stands behind them.
+and `OM` stands behind them. In the second example `MT` is based on `TOP` and
+listed in front of `MM`, which is based on the lower class `MID`; `MT` stands
+in front of `TOP`, and also in front of `MID`, because a class listed after it
+reaches `MID`, but behind `LOW`.
 
 ```rexx
 call show .leaf, .leaf2, .leaf3, .leaf4
@@ -157,6 +160,37 @@ LEAF: LEAF MID OM MX BASE
 LEAF2: LEAF2 MID MX BASE OM
 LEAF3: LEAF3 MID MX BASE
 LEAF4: LEAF4 MID MO MX BASE OM
+```
+
+```rexx
+say .leaf~new~who
+::routine step
+  use arg id, obj, scope
+  signal on nomethod name last
+  return id obj~who:scope
+last: return id
+::class top
+::method who
+  return step('TOP', self, super)
+::class mid subclass top
+::method who
+  return step('MID', self, super)
+::class low subclass mid
+::method who
+  return step('LOW', self, super)
+::class mt mixinclass top
+::method who
+  return step('MT', self, super)
+::class mm mixinclass mid
+::method who
+  return step('MM', self, super)
+::class leaf subclass low inherit mt mm
+::method who
+  return step('LEAF', self, super)
+```
+
+```output
+LEAF LOW MT MM MID TOP
 ```
 
 r[class.methods.order.shared]
@@ -248,13 +282,16 @@ the class that its second argument names, which may be the superclass; the
 then comes first in `superClasses`, `superClass` answers it, and its methods
 hide the superclass's. An `uninherit` of a mixin class that another class of
 the order still inherits takes it out of the list of superclasses and leaves
-it in the order, and an `uninherit` of a class that the list does not hold
-raises `SYNTAX 98.945`. The first example prints the order of `C` and of its
-subclass `SUB` and the list of superclasses after each change; its last line
-shows that the step `inherit ma before mx` has put the mixin class `MA`, which
-is based on `Object`, in front of `P1`, so that `superClass` answers `MA`. The
-second example sends `uninherit` twice for a mixin class that `C` has by two
-paths.
+it in the order, and an `uninherit` of a mixin class that the list does not
+hold, or that stands first in it so that `superClass` answers it, raises
+`SYNTAX 98.945`, and one whose argument is not a mixin class raises `98.942`;
+the first class of the list therefore stays. The first example prints the
+order of `C` and of its subclass `SUB` and the list of superclasses after each
+change; its last line shows that the step `inherit ma before mx` has put the
+mixin class `MA`, which is based on `Object`, in front of `P1`, so that
+`superClass` answers `MA`, and that `MA`, standing first, can no longer be
+taken out. The second example sends `uninherit` twice for a mixin class that
+`C` has by two paths, and once for `Object`, which is not a mixin class.
 
 ```rexx
 call show 'start'
@@ -269,6 +306,9 @@ call show 'inherit ma before mx'
 .c~uninherit(.mb)
 call show 'uninherit mb'
 say 'superclass:' .c~superclass~id
+signal on syntax name e
+.c~uninherit(.ma)
+e: say 'uninherit ma:' condition('o')~code
 exit
 show:
   s = ''
@@ -310,6 +350,7 @@ uninherit ma: MX P1 MB / C MX P1 MB / SUB C MX P1 MB
 inherit ma before mx: MA MX P1 MB / C MA MX P1 MB / SUB C MA MX P1 MB
 uninherit mb: MA MX P1 / C MA MX P1 / SUB C MA MX P1
 superclass: MA
+uninherit ma: 98.945
 ```
 
 ```rexx
@@ -319,8 +360,10 @@ call show 'uninherit shared'
 signal on syntax name e
 .c~uninherit(.shared)
 say 'second uninherit shared: ok'
-exit
 e: say 'second uninherit shared:' condition('o')~code
+signal on syntax name f
+.c~uninherit(.object)
+f: say 'uninherit object:' condition('o')~code
 exit
 show:
   s = ''
@@ -349,6 +392,7 @@ last: return id
 start: Object SHARED LEFT / C LEFT SHARED
 uninherit shared: Object LEFT / C LEFT SHARED
 second uninherit shared: 98.945
+uninherit object: 98.942
 ```
 
 ## The search for a message
@@ -369,7 +413,10 @@ messages. The first example shows each step: a table that is reached first
 wins, a superclass before a mixin class, and an object's own method before all
 of them. The message name is written in several cases. The second example
 sends operators, which find their methods in the same sequence, also when the
-message is written with a scope or an object has set the operator itself.
+message is written with a scope or an object has set the operator itself; an
+operator that finds no method goes to `UNKNOWN` like any message, with an
+array of one item for the infix form and an empty one for the prefix form
+([the operator messages](r:expr.messages.operator)).
 
 ```rexx
 o = .sub~new

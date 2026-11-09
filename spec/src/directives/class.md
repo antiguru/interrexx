@@ -373,13 +373,14 @@ through SUBCLASS and INHERIT, in the order that
 [the order rule](r:class.methods.order) of the
 [method search](../classes/methods.md) gives; the first method found runs.
 When the superclass and its ancestors inherit no mixin classes and each class
-that INHERIT names is a mixin class based on `Object` that inherits none
-itself, as in the example, that order is the class, its superclass and the
-superclass's ancestors other than `Object`, the mixin classes in the order
-written, and `Object` last. A superclass then hides a method of a mixin class
-that the subclass inherits, and an earlier mixin class hides a later one. A
-mixin class with another base class, and a class that more than one listed
-class reaches, stand where [the base rule](r:class.methods.order.base) and
+that INHERIT names is a mixin class whose MIXINCLASS option names `Object` and
+that inherits none itself, as in the example, that order is the class, its
+superclass and the superclass's ancestors other than `Object`, the mixin
+classes in the order written, and `Object` last. A superclass then hides a
+method of a mixin class that the subclass inherits, and an earlier mixin class
+hides a later one. A mixin class with another base class, and a class that
+more than one listed class reaches, stand where
+[the base rule](r:class.methods.order.base) and
 [the shared-class rule](r:class.methods.order.shared) say.
 
 ```rexx
