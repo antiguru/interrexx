@@ -367,12 +367,20 @@ e: say src~makestring('l', ' / ') '=>' condition('o')~code
 ```
 
 r[dir.class.search]
-A message sent to an instance finds its method by looking, in this order, at
-the methods the class itself declares, at those of its superclass and the
-superclass's own ancestors, and at those of each class that INHERIT names, in
-the order written, each of them followed by its own ancestors. The first
-method found runs. A superclass therefore hides a method of a mixin class that
-the subclass inherits, and an earlier mixin class hides a later one.
+A message sent to an instance finds its method by looking first at the methods
+the class itself declares and then at those of the classes it descends from
+through SUBCLASS and INHERIT, in the order that
+[the order rule](r:class.methods.order) of the
+[method search](../classes/methods.md) gives; the first method found runs.
+When the superclass and its ancestors inherit no mixin classes and each class
+that INHERIT names is a mixin class based on `Object` that inherits none
+itself, as in the example, that order is the class, its superclass and the
+superclass's ancestors other than `Object`, the mixin classes in the order
+written, and `Object` last. A superclass then hides a method of a mixin class
+that the subclass inherits, and an earlier mixin class hides a later one. A
+mixin class with another base class, and a class that more than one listed
+class reaches, stand where [the base rule](r:class.methods.order.base) and
+[the shared-class rule](r:class.methods.order.shared) say.
 
 ```rexx
 o = .c~new

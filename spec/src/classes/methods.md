@@ -33,8 +33,11 @@ classes whose tables a message to one of its instances is looked up in.
 r[class.methods.order]
 The order of `Object` holds only `Object`. The order of any other class `C`
 starts with `C` itself and goes on with the orders of the classes that its
-`superClasses` method answers, one after the other: the superclass first, then
-the mixin classes in the order they were inherited. A class that this makes
+`superClasses` method answers, one after the other, in the order of that list:
+the superclass and then the mixin classes in the order they were inherited,
+except that a mixin class that `inherit` placed in front of another class of
+the list, the superclass included, stands there
+([the change rule](r:class.methods.order.change)). A class that this makes
 occur more than once keeps only its last place. The order therefore ends with
 `Object`, and a class stands after every class that has it as a superclass or
 inherits it.
@@ -85,25 +88,30 @@ LEAF2: LEAF2 MID TOP MB MA
 ```
 
 r[class.methods.order.base]
-A mixin class has a base class, the first class among its ancestors that is
-not a mixin class, and the base class comes behind it in its own order. By
-[the order rule](r:class.methods.order) a mixin class that a class inherits
-therefore stands in front of its base class and of every class above that,
-and behind the classes of the superclass's order that are not among those. A
-mixin class based on `Object` stands behind every class of the superclass's
-order but `Object`, so its methods hide only those of `Object` and of mixin
-classes listed after it; this is the case [the search
-rule](r:dir.class.search) of the directive describes. A mixin class based on
-an ancestor of the superclass hides the methods of that ancestor and of the
-classes above it, and loses to the classes of the chain below that ancestor.
-The mixin classes of one list keep the order of the list, so a mixin class
-based on `Object` that is listed before one based on a lower class also stands
-in front of that lower class. In the example, `LEAF` lists the `Object`-based
-mixin class `OM` first, so it stands in front of `BASE`, and `LEAF2` lists it
-last, so it stays behind.
+A mixin class has a base class: the class that its MIXINCLASS option names,
+or, when that is a mixin class too, the base class of that one, and so on
+until a class that is not a mixin class is reached; the INHERIT list of the
+mixin class does not enter into it. The base class comes behind the mixin
+class in its own order. By [the order rule](r:class.methods.order) a mixin
+class that a class inherits therefore stands in front of its base class and of
+every class above that, and behind the classes of the superclass's order that
+are not among those. A mixin class based on `Object` that the directive lists
+stands behind every class of the superclass's order except `Object` and the
+classes its own order holds, so its methods hide those of `Object`, of the
+classes it inherits and of the mixin classes listed after it; this is the case
+[the search rule](r:dir.class.search) of the directive describes. A mixin
+class based on an ancestor of the superclass hides the methods of that
+ancestor and of the classes above it, and loses to the classes of the chain
+below that ancestor. The mixin classes of one list keep the order of the list,
+so a mixin class based on `Object` that is listed before one based on a lower
+class also stands in front of that lower class. In the example, `LEAF` lists
+the `Object`-based mixin class `OM` first, so it stands in front of `BASE`,
+and `LEAF2` lists it last, so it stays behind. `MO` is based on `BASE` through
+`MX` and inherits `OM`, so in `LEAF4` it stands in front of `MX` and `BASE`,
+and `OM` stands behind them.
 
 ```rexx
-call show .leaf, .leaf2, .leaf3
+call show .leaf, .leaf2, .leaf3, .leaf4
 exit
 show:
   do c over arg(1, 'A')
@@ -136,12 +144,19 @@ last: return id
 ::class leaf3 subclass mid inherit mx
 ::method who
   return step('LEAF3', self, super)
+::class mo mixinclass mx inherit om
+::method who
+  return step('MO', self, super)
+::class leaf4 subclass mid inherit mo
+::method who
+  return step('LEAF4', self, super)
 ```
 
 ```output
 LEAF: LEAF MID OM MX BASE
 LEAF2: LEAF2 MID MX BASE OM
 LEAF3: LEAF3 MID MX BASE
+LEAF4: LEAF4 MID MO MX BASE OM
 ```
 
 r[class.methods.order.shared]
@@ -229,8 +244,17 @@ The order of a class is worked out again whenever its list of superclasses
 changes, and so is the order of every class below it. The `inherit` method of
 `Class` adds a mixin class at the end of the list, or immediately in front of
 the class that its second argument names, which may be the superclass; the
-`uninherit` method takes one out. The example prints the order of `C` and of
-its subclass `SUB` and the list of superclasses after each change.
+`uninherit` method takes one out. A mixin class put in front of the superclass
+then comes first in `superClasses`, `superClass` answers it, and its methods
+hide the superclass's. An `uninherit` of a mixin class that another class of
+the order still inherits takes it out of the list of superclasses and leaves
+it in the order, and an `uninherit` of a class that the list does not hold
+raises `SYNTAX 98.945`. The first example prints the order of `C` and of its
+subclass `SUB` and the list of superclasses after each change; its last line
+shows that the step `inherit ma before mx` has put the mixin class `MA`, which
+is based on `Object`, in front of `P1`, so that `superClass` answers `MA`. The
+second example sends `uninherit` twice for a mixin class that `C` has by two
+paths.
 
 ```rexx
 call show 'start'
@@ -244,6 +268,7 @@ call show 'uninherit ma'
 call show 'inherit ma before mx'
 .c~uninherit(.mb)
 call show 'uninherit mb'
+say 'superclass:' .c~superclass~id
 exit
 show:
   s = ''
@@ -284,25 +309,67 @@ inherit mx before p1: MX P1 MA MB / C MX P1 MA MB / SUB C MX P1 MA MB
 uninherit ma: MX P1 MB / C MX P1 MB / SUB C MX P1 MB
 inherit ma before mx: MA MX P1 MB / C MA MX P1 MB / SUB C MA MX P1 MB
 uninherit mb: MA MX P1 / C MA MX P1 / SUB C MA MX P1
+superclass: MA
+```
+
+```rexx
+call show 'start'
+.c~uninherit(.shared)
+call show 'uninherit shared'
+signal on syntax name e
+.c~uninherit(.shared)
+say 'second uninherit shared: ok'
+exit
+e: say 'second uninherit shared:' condition('o')~code
+exit
+show:
+  s = ''
+  do x over .c~superclasses
+    s = s x~id
+  end
+  say arg(1)':' s~strip '/' .c~new~who
+  return
+::routine step
+  use arg id, obj, scope
+  signal on nomethod name last
+  return id obj~who:scope
+last: return id
+::class shared mixinclass object
+::method who
+  return step('SHARED', self, super)
+::class left mixinclass object inherit shared
+::method who
+  return step('LEFT', self, super)
+::class c inherit shared left
+::method who
+  return step('C', self, super)
+```
+
+```output
+start: Object SHARED LEFT / C LEFT SHARED
+uninherit shared: Object LEFT / C LEFT SHARED
+second uninherit shared: 98.945
 ```
 
 ## The search for a message
 
 r[class.methods.search]
-A message to an object is looked up in this sequence. First come the
-object's own methods, those that `setMethod` gave it and those that
-`enhanced` made it with. Then come the tables of the classes of the order of
-the object's class, one after another. The name of the message is compared in
-upper case. The first table that has an entry for the name decides: when the
-entry is a method that the sender may run, that method runs; when the entry
-hides the name, or the method is one the sender may not run, the name counts
-as not found and the search for the name ends, without going on to the classes
-behind. A name that counts as not found goes to `UNKNOWN`, as
+A message to an object is looked up in this sequence. First come the object's
+own methods, those that `setMethod` gave it and those that `enhanced` made it
+with. Then come the tables of the classes of the order of the object's class,
+one after another. The name of the message is compared in upper case. The
+first table that has an entry for the name decides: when the entry is a method
+that the sender may run, that method runs; when the entry hides the name, or
+the method is one the sender may not run, the name counts as not found and the
+search for the name ends, without going on to the classes behind. A name that
+counts as not found goes to `UNKNOWN`, as
 [the unknown rule](r:class.methods.unknown) says. The same sequence serves
-`send` and the other methods that send a message, and the operators, which
-are messages. The example shows each step: a table that is
-reached first wins, a superclass before a mixin class, and an object's own
-method before all of them. The message name is written in several cases.
+`send` and the other methods that send a message, and the operators, which are
+messages. The first example shows each step: a table that is reached first
+wins, a superclass before a mixin class, and an object's own method before all
+of them. The message name is written in several cases. The second example
+sends operators, which find their methods in the same sequence, also when the
+message is written with a scope or an object has set the operator itself.
 
 ```rexx
 o = .sub~new
@@ -336,6 +403,38 @@ say .sub~new~one '|' .sub~new~four
 sub one | base two | base three | mx four
 object one | base two | base three | object four
 sub one | mx four
+```
+
+```rexx
+a = .k~new
+say (a + 1) '|' a~'+'(2) '|' (-a) '|' a~"+":.base(3)
+o = .k~new
+o~put('+', 'return "own plus" arg(1)')
+say o + 9
+say (.u~new + 4) '|' (- .u~new)
+::class base
+::method '+'
+  if arg() = 0 then return 'base prefix +'
+  return 'base +' arg(1)
+::method '-'
+  if arg() = 0 then return 'base prefix -'
+  return 'base -' arg(1)
+::class mx mixinclass base
+::method '+'
+  return 'mx + >' self~"+":super(arg(1))
+::class k subclass base inherit mx
+::method put
+  self~setMethod(arg(1), arg(2))
+::class u
+::method unknown
+  use arg n, a
+  return n'('a~size')'
+```
+
+```output
+mx + > base + 1 | mx + > base + 2 | base prefix - | base + 3
+own plus 9
++(1) | -(0)
 ```
 
 r[class.methods.search.access]
@@ -388,15 +487,16 @@ unknown took M
 r[class.methods.hidden]
 A table can hold a mark that hides a name instead of a method: the search
 stops at it, and the name counts as not found. The marks are made by `define`
-with no method, by an item `.nil` in the collection that `defineMethods` or
-`enhanced` receives, and, for the object's own methods, by `setMethod` with no
-method. The `delete` method of `Class` removes the entry of a name from the
-table of the class it is sent to, whether it is a method or a mark, and the
-name is then looked up in the classes behind. A name the table does not hold
-is left as it is; `delete` does not remove a method that only a class behind
-holds. The
-example hides a method that the superclass holds, shows that `UNKNOWN`
-receives the hidden name, and brings the method back with `delete`.
+with no method or with `.nil` as the method, by an item `.nil` in the
+collection that `defineMethods` or `enhanced` receives, and, for the object's
+own methods, by `setMethod` with no method. The `delete` method of `Class`
+removes the entry of a name from the table of the class it is sent to, whether
+it is a method or a mark, and the name is then looked up in the classes
+behind. A name the table does not hold is left as it is; `delete` does not
+remove a method that only a class behind holds. The example hides a method
+that the superclass holds, shows that `UNKNOWN` receives the hidden name, and
+brings the method back with `delete`. A second example hides an inherited name
+with `.nil` as the method of `define`.
 
 ```rexx
 .sub~define('m')
@@ -431,6 +531,21 @@ base m | unknown N | base k
 unknown ZZ
 ```
 
+```rexx
+.sub~define('m', .nil)
+say .sub~new~send('m') '|' .base~new~m
+::class base
+::method m
+  return 'base m'
+::class sub subclass base
+::method unknown
+  return 'unknown' arg(1)
+```
+
+```output defect=#129
+unknown M | base m
+```
+
 ## The object's own methods
 
 r[class.methods.object]
@@ -444,7 +559,11 @@ there and the message goes to `UNKNOWN`. `unsetMethod` takes the name off the
 object again: the name is looked up in the classes as if `setMethod` had never
 been sent, and `unsetMethod` of a name the object has not set is not an error.
 `setMethod` and `unsetMethod` are private methods with a further restriction,
-which [the next rule](r:class.methods.object.access) gives.
+which [the next rule](r:class.methods.object.access) gives. A `define` of the
+same name that is sent to the class afterwards does not change what an object
+made before it answers, as [the rule on changes](r:class.methods.late) says,
+and after `unsetMethod` the object answers the method that its class had
+before the `define`; the second example shows it.
 
 ```rexx
 o = .k~new
@@ -482,6 +601,27 @@ from a string | 42 | from a method object | k old
 replaced | k old
 unknown OLD
 k old | k m
+```
+
+```rexx
+o = .k~new
+o~put('m', 'return "own m"')
+.k~define('m', 'return "defined m"')
+say o~m '|' o~m:.k '|' .k~new~m
+o~unset('m')
+say o~m
+::class k
+::method m
+  return 'k m'
+::method put
+  self~setMethod(arg(1), arg(2))
+::method unset
+  self~unsetMethod(arg(1))
+```
+
+```output
+own m | k m | defined m
+k m
 ```
 
 r[class.methods.object.access]
@@ -559,8 +699,13 @@ method starts behind. A method set with the scope `FLOAT`, the default,
 belongs to no class of the order, and `SUPER` in it is the object's own class,
 so that `self~m:super` runs the class's `m`. A method set with `OBJECT` takes
 the place of a method of the object's class, and `SUPER` in it is the class
-that follows the object's class in the order. A method that `enhanced` adds
-behaves as one with `FLOAT`. The scoped send is specified by
+that follows the object's class in the order. It takes the place also for a
+search that starts at the object's class: a scoped message, `send` with a
+scope, or FORWARD CLASS naming that class finds it ahead of the class's own
+entry, while a search that starts at another class does not. A hiding
+`setMethod` with `OBJECT` is not seen there, and a `FLOAT` method is found by
+none of these searches. The second example shows both. A method that
+`enhanced` adds behaves as one with `FLOAT`. The scoped send is specified by
 [the scoped send rule](r:class.methods.scoped).
 
 ```rexx
@@ -592,6 +737,51 @@ say e~m
 float m > k m | object n > base n
 K BASE
 enhanced m > k m
+```
+
+```rexx
+o = .k~new
+o~put('w', 'return "own w"', 'OBJECT')
+say 'plain:' o~w '| scoped k:' o~w:.k '| scoped base:' o~w:.base
+say 'forward class k:' o~fk '| send with array:' o~send(.array~of('w', .k))
+p = .k~new
+p~put('w', 'return "float w"', 'FLOAT')
+say 'float, scoped k:' p~w:.k
+q = .sub~new
+q~put('w', 'return "own w on sub"', 'OBJECT')
+say 'sub scoped sub:' q~w:.sub '| sub scoped k:' q~w:.k
+r = .k~new
+r~hide('old')
+signal on syntax name e
+say 'hiding mark, scoped k:' r~old:.k
+say 'hiding mark, plain:' r~old
+e: say 'hiding mark, plain:' condition('o')~code
+::class base
+::method w
+  return 'base w'
+::class k subclass base
+::method w
+  return 'k w'
+::method old
+  return 'k old'
+::method fk
+  forward class (.k) message 'w'
+::method hide
+  self~setMethod(arg(1), , 'OBJECT')
+::method put
+  self~setMethod(arg(1), arg(2), arg(3))
+::class sub subclass k
+::method w
+  return 'sub w'
+```
+
+```output defect=#131
+plain: own w | scoped k: own w | scoped base: base w
+forward class k: own w | send with array: own w
+float, scoped k: k w
+sub scoped sub: own w on sub | sub scoped k: k w
+hiding mark, scoped k: k old
+hiding mark, plain: 97.1
 ```
 
 r[class.methods.enhanced]
@@ -789,18 +979,24 @@ e: say arg(1) '=>' condition('o')~code
 
 r[class.methods.scoped]
 A message written `object~name:scope` starts the search at a class. The
-`scope` is a variable symbol or an environment symbol such as `.base`, and its
-value is evaluated like that of any term; a string or a number there makes the
-program unreadable with `SYNTAX 20.917`. The value must be a class that stands
-in the order of the object's class, that is the class itself, a superclass, an
-inherited mixin class or `Object`. Another value raises `SYNTAX 88.914` when
-it is not a class, and `93.957` when it is a class that does not stand in the
-order. The object's own methods are not looked at. The search begins with the
-table of the named class and goes on through the classes that follow it in the
-order of the object's class, whichever class the sending method belongs to. It
-ends as [the search rule](r:class.methods.search) says, and a name that is not
-found goes to `UNKNOWN` through the plain search for that name. A scoped
-message can be sent from any code, and the object need not be `SELF`.
+`scope` is a variable symbol, simple or compound, or an environment symbol
+such as `.base`, and its value is evaluated like that of any term; a string, a
+number or a parenthesized expression there makes the program unreadable with
+`SYNTAX 20.917`. The value must be a class that stands in the order of the
+object's class, that is the class itself, a superclass, an inherited mixin
+class or `Object`. Another value raises `SYNTAX 88.914` when it is not a
+class, and `93.957` when it is a class that does not stand in the order. The
+object's own methods are not looked at, except a method that `setMethod` gave
+it with the scope `OBJECT`, which counts as an entry of the table of the
+object's class and is found ahead of that table's own entry when the search
+starts at that class, as [the scope rule](r:class.methods.object.scope) says.
+The search begins with the table of the named class and goes on through the
+classes that follow it in the order of the object's class, whichever class the
+sending method belongs to. It ends as
+[the search rule](r:class.methods.search) says, and a name that is not found
+goes to `UNKNOWN` through the plain search for that name, and without one
+raises NOMETHOD, `SYNTAX 97.1` when untrapped. A scoped message can be sent
+from any code, and the object need not be `SELF`.
 
 > **Note.** In the first example `o` has a method of its own, and the scoped
 > messages skip it. `ONLYMX` is held by a mixin class that stands behind
@@ -1013,16 +1209,15 @@ super is SUPER SUPER
 
 r[class.methods.forward]
 The `CLASS` option of [FORWARD](r:instr.forward.class) names the class that
-starts the search, and it starts it as the scope of a scoped message does:
-the object's own methods are skipped, the table of the named class comes
-first, and the classes behind it in the order of the receiver's class follow.
-`forward class (super)` therefore runs the method that the running one
-overrides. The class
-must be one the receiver is an instance of, or the instruction raises
-`93.957` as the FORWARD page says. In the example, `GO3` of the first mixin
-class forwards to the class behind it in the order of `LEAF`, which is the
-second mixin class, and `GO4` of `LEAF` forwards to the second mixin class by
-name.
+starts the search, and it starts it as the scope of a scoped message does: the
+object's own methods are skipped as for a scoped message, the table of the
+named class comes first, and the classes behind it in the order of the
+receiver's class follow. `forward class (super)` therefore runs the method
+that the running one overrides. The class must be one the receiver is an
+instance of, or the instruction raises `93.957` as the FORWARD page says. In
+the example, `GO3` of the first mixin class forwards to the class behind it in
+the order of `LEAF`, which is the second mixin class, and `GO4` of `LEAF`
+forwards to the second mixin class by name.
 
 ```rexx
 o = .leaf~new
@@ -1054,20 +1249,27 @@ base go | m2 go3 | m2 go4
 ## When nothing is found
 
 r[class.methods.unknown]
-When the search for a name ends without a method, because no table holds it,
-a mark hides it, or the sender may not run the method that was found, the
-search is made again for the name `UNKNOWN`, over the object's own methods and
-then the order of its class, whatever scope the first message had. The first
-`UNKNOWN` found runs, with two arguments: the name of the message in upper
-case, and a new array that holds the arguments of the message at their
-positions. The array has as many places as the position of the last argument
-that was not [omitted](r:conv.arg.omitted), and a place of an omitted argument
-holds nothing. The answer of `UNKNOWN` is the answer of the message, and a
-message to an `UNKNOWN` that answers nothing answers nothing. A class in front
-of another in the order wins also here, so an `UNKNOWN` of a superclass hides
-the one of a mixin class and the object's own `UNKNOWN` hides both. When no
-`UNKNOWN` is found, [NOMETHOD is raised](r:cond.nomethod.raise). A message to
-a class object is looked up in the class-side order the same way.
+When the search for a name ends without a method, because no table holds it, a
+mark hides it, or the sender may not run the method that was found, the search
+is made again for the name `UNKNOWN`, over the object's own methods and then
+the order of its class, whatever scope the first message had. The search for
+`UNKNOWN` makes no access check: a `PRIVATE` or `PACKAGE` `UNKNOWN` runs for
+any sender, and a mark that hides `UNKNOWN` ends the search as if there were
+none. The first `UNKNOWN` found runs, with two arguments: the name of the
+message in upper case, and a new array that holds the arguments of the message
+at their positions. The array has as many places as the position of the last
+argument that was not [omitted](r:conv.arg.omitted), and a place of an omitted
+argument holds nothing; for a message with no arguments the array is empty and
+has dimension 1. The answer of `UNKNOWN` is the answer of the message, and a
+message to an `UNKNOWN` that answers nothing answers nothing, so that using it
+as a value, as SAY does, raises `SYNTAX 91.999`. A class in front of another
+in the order wins also here, so an `UNKNOWN` of a superclass hides the one of
+a mixin class and the object's own `UNKNOWN` hides both. When no `UNKNOWN` is
+found, [NOMETHOD is raised](r:cond.nomethod.raise). A message to a class
+object is looked up in the class-side order the same way. The second example
+sends to objects whose `UNKNOWN` is `PRIVATE`, is `PACKAGE` and is hidden,
+once from the code of another package; the third gives the dimension of the
+array.
 
 ```rexx
 o = .c~new
@@ -1115,6 +1317,62 @@ base.unknown ZZ | mix m
 own unknown FOO | own unknown NOTHING
 91.999
 class-side unknown WHATEVER
+```
+
+```rexx
+call t '.pu~new~zz'
+call t '.pu~new~callzz'
+call t '.k~new~zz'
+call t '.pu~new~unknown("A", .array~of(1))'
+.hid~define('unknown')
+call t '.hid~new~zz'
+src = .array~of('::routine far public', 'return arg(1)~zz')
+p = .package~new('far-away-package', src)
+say 'from another package:' p~findRoutine('far')~call(.pk~new) p~findRoutine('far')~call(.k~new)
+exit
+t:
+  signal on syntax name e
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+e: say arg(1) '=> error' condition('o')~code
+  return
+::class pu
+::method unknown private
+  return 'private unknown' arg(1)
+::method callzz
+  return self~zz
+::class base
+::method unknown
+  return 'base unknown' arg(1)
+::class hid subclass base
+::class k subclass base
+::method zz private
+  return 'k private zz'
+::class pk
+::method unknown package
+  return 'package unknown' arg(1)
+```
+
+```output
+.pu~new~zz => private unknown ZZ
+.pu~new~callzz => private unknown ZZ
+.k~new~zz => base unknown ZZ
+.pu~new~unknown("A", .array~of(1)) => private unknown UNKNOWN
+.hid~new~zz => error 97.1
+from another package: package unknown ZZ base unknown ZZ
+```
+
+```rexx
+say .c~new~foo '|' .c~new~foo(1)
+::class c
+::method unknown
+  use arg n, a
+  return a~dimension
+```
+
+```output defect=#130
+1 | 1
 ```
 
 ## Messages to a class
@@ -1184,10 +1442,13 @@ The class methods a class has follow the same changes as its order does. A
 class that inherits a mixin class at run time gets the class methods of the
 mixin class, and loses them with `uninherit`; the class methods of its
 subclasses change with it. The instance methods of a metaclass can be changed
-with `define` like those of any class: the classes that were made with that
-metaclass before the `define` do not get the new method, and a class made
-afterwards does, as an instance of the metaclass does in
-[the rule on changes](r:class.methods.late).
+with `define` like those of any class, but a class object takes the methods of
+its metaclass's order as they are when the class is made: no later `define`,
+`defineMethods` or `delete` sent to the metaclass or to a class of its order,
+and no `inherit` or `uninherit` sent to one of them, reaches a class that
+exists already, as the last lines of the example show for `define` sent to a
+superclass and a mixin class of the metaclass and for `inherit`; a class made
+afterwards gets them.
 
 ```rexx
 say 'start:' t(.c, 'who') t(.c, 'later') t(.d, 'later')
@@ -1199,12 +1460,23 @@ say 'before inherit:' t(.c, 'mixcls') t(.sub, 'mixcls')
 say 'after inherit:' t(.c, 'mixcls') t(.sub, 'mixcls')
 .c~uninherit(.mix)
 say 'after uninherit:' t(.c, 'mixcls') t(.sub, 'mixcls')
+.sbase~define('later2', 'return "sbase later2"')
+.mxm~define('later3', 'return "mxm later3"')
+say 'superclass and mixin define:' t(.c, 'later2') t(.c, 'later3') t(.d, 'later2')
+.meta~inherit(.my)
+say 'meta inherit:' t(.c, 'four') t(.meta~new('g'), 'four')
+say 'new class:' t(.meta~new('f'), 'later2') t(.meta~new('h'), 'later3')
 exit
 t:
   signal on syntax name e
   return arg(1)~send(arg(2))
 e: return '-'
-::class meta subclass class
+::class sbase subclass class
+::class mxm mixinclass class
+::class my mixinclass class
+::method four
+  return 'four'
+::class meta subclass sbase inherit mxm
 ::method who
   return 'meta who'
 ::class c metaclass meta
@@ -1222,13 +1494,16 @@ new class: meta later
 before inherit: - -
 after inherit: mixcls mixcls
 after uninherit: - -
+superclass and mixin define: - - -
+meta inherit: - four
+new class: sbase later2 mxm later3
 ```
 
 r[class.methods.class-side.roles]
 A class that stands in a class-side order both as a metaclass and as a class
 with class methods occupies one place, the last one, and stands there for its
-class methods only. In the example, `T` is both the superclass and the
-metaclass of `W`.
+class methods only; its instance methods are not found there (`97.1` in the
+example). In the example, `T` is both the superclass and the metaclass of `W`.
 
 ```rexx
 say .w~who
