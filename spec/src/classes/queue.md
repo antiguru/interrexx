@@ -215,14 +215,14 @@ number below 1, or `.nil` raises `SYNTAX 93.907`. An object that is not a
 string is read by its string value, so an array is read through its
 `makeString`: an array of exactly one such index gives that index, and an
 array with none or with more than one gives a string that is not an index and
-raises `SYNTAX 93.907`, as does an object without `MAKESTRING`, such as a
-list. An index above the number of items is
-not an error for the methods that look an item up: `at` answers `.nil`,
-`hasIndex` answers 0, `delete` and `remove` answer `.nil`, `next` answers
-`.nil`, `previous` answers the last index and `section` an empty queue;
-`insert` raises a condition ([the insert rule](r:class.queue.insert)). Where a
-method adds or removes an item in front of others, those others have other
-indexes afterwards, and the examples of the methods show it.
+raises `SYNTAX 93.907`, as does a list, whose string value is not an index
+either. An index above the number of items is not an error for the methods
+that look an item up: `at` answers `.nil`, `hasIndex` answers 0, `delete` and
+`remove` answer `.nil`, `next` answers `.nil`, `previous` answers the last
+index and `section` an empty queue; `insert` raises a condition
+([the insert rule](r:class.queue.insert)). Where a method adds or removes an
+item in front of others, those others have other indexes afterwards, and the
+examples of the methods show it.
 
 ```rexx
 q = .queue~of('a', 'b', 'c')
