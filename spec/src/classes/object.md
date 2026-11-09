@@ -2,7 +2,7 @@
 element: "Object"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Object Class; Builtin Classes > Fundamental Classes > Object Class > new (Class Method); Builtin Classes > Fundamental Classes > Object Class > Comparison Methods; Builtin Classes > Fundamental Classes > Object Class > Concatenation Methods; Builtin Classes > Fundamental Classes > Object Class > class; Builtin Classes > Fundamental Classes > Object Class > copy; Builtin Classes > Fundamental Classes > Object Class > defaultName; Builtin Classes > Fundamental Classes > Object Class > hashCode; Builtin Classes > Fundamental Classes > Object Class > hasMethod; Builtin Classes > Fundamental Classes > Object Class > identityHash; Builtin Classes > Fundamental Classes > Object Class > init; Builtin Classes > Fundamental Classes > Object Class > instanceMethod; Builtin Classes > Fundamental Classes > Object Class > instanceMethods; Builtin Classes > Fundamental Classes > Object Class > isA; Builtin Classes > Fundamental Classes > Object Class > isInstanceOf; Builtin Classes > Fundamental Classes > Object Class > isNil; Builtin Classes > Fundamental Classes > Object Class > objectName; Builtin Classes > Fundamental Classes > Object Class > objectName=; Builtin Classes > Fundamental Classes > Object Class > request; Builtin Classes > Fundamental Classes > Object Class > run (Private Method); Builtin Classes > Fundamental Classes > Object Class > send; Builtin Classes > Fundamental Classes > Object Class > sendWith; Builtin Classes > Fundamental Classes > Object Class > setMethod (Private Method); Builtin Classes > Fundamental Classes > Object Class > start; Builtin Classes > Fundamental Classes > Object Class > startWith; Builtin Classes > Fundamental Classes > Object Class > string; Builtin Classes > Fundamental Classes > Object Class > unsetMethod (Private Method)"
-deviations: [4, 28, 30, 32, 33, 36, 105]
+deviations: [4, 28, 30, 32, 33, 36, 105, 107]
 ---
 
 # Object
@@ -1129,22 +1129,24 @@ r[class.object.send]
 the remaining arguments as the arguments of that message, in order, and
 answers what the message answers. An omitted argument stays omitted in the
 message, and omitted places at the end add nothing to the argument count. The
-message is an ordinary one: it is found by [the search
-rule](r:class.methods.search) and so also goes to `UNKNOWN` when nothing is
-found, raises NOMETHOD (`SYNTAX 97.1` when untrapped) when there is no
-`UNKNOWN`, and is checked for access as if the code that called `send` had
+message is an ordinary one: it is found by
+[the search rule](r:class.methods.search) and so also goes to `UNKNOWN` when
+nothing is found, raises NOMETHOD (`SYNTAX 97.1` when untrapped) when there is
+no `UNKNOWN`, and is checked for access as if the code that called `send` had
 sent it, so `send('secret')` from outside the class raises `97.2` for a
-private method that no `UNKNOWN` takes. The name is taken in upper case. The
-first argument is a string, or an array of two items, the name and a class,
-which starts the search at that class as [the scoped send
-rule](r:class.methods.scoped.send) says; `.nil` raises `SYNTAX 93.972`, an
-array of another size `93.946`, an array whose first item is missing
-`88.901` and one whose first item has no string value `88.909`, and no
-argument `88.901`. The null string is a name like any other: it names the
-abuttal method ([the joining rule](r:class.object.concat)), so
-`send('', 'x')` joins and `send('')` raises that method's `93.903`. An array
-whose second item is not a class raises `88.914`. A message
-that answers nothing makes `send` answer nothing.
+private method that no `UNKNOWN` takes. The name is taken in upper case, and a
+number literal such as `12` names the message `12`, as the same characters in
+quotes do ([Deviation 107](r:class.object.deviation.107)). The first argument
+is a string, or an array of two items, the name and a class, which starts the
+search at that class as [the scoped send rule](r:class.methods.scoped.send)
+says; `.nil` raises `SYNTAX 93.972`, an array of another size `93.946`, an
+array whose first item is missing `88.901` and one whose first item has no
+string value `88.909`, and no argument `88.901`. The null string is a name
+like any other: it names the abuttal method
+([the joining rule](r:class.object.concat)), so `send('', 'x')` joins and
+`send('')` raises that method's `93.903`. An array whose second item is not a
+class raises `88.914`. A message that answers nothing makes `send` answer
+nothing.
 
 ```rexx
 o = .w~new
@@ -2017,4 +2019,34 @@ say .safe~new~open
 
 ```output
 inner got 7
+```
+
+r[class.object.deviation.107]
+A string that names a number is the same string to every message, however it
+was written or computed. A number literal such as `12` used as the message
+name of `send` or `start` names the message `12`, and `request('ARRAY')` sent
+to it answers the array that `makeArray` answers, as it does for the string
+`'12'` and for the result of arithmetic. ooRexx raises `SYNTAX 93.946` for the
+first and answers `.nil` for the second when the number came from a
+whole-number literal or from arithmetic, and treats the same characters
+written as a quoted string as interrexx does
+([Deviation 107](../deviations.md)).
+
+```rexx
+o = .w~new
+say o~send(12, 'a') o~send('12', 'b')
+m = o~start(12, 'c')
+say m~result
+say 12~request('ARRAY')~class~id (3 + 4)~request('ARRAY')~class~id
+say '12'~request('ARRAY')~class~id 12~makeArray~class~id
+::class w
+::method 12
+  return 'ran 12' arg(1)
+```
+
+```output
+ran 12 a ran 12 b
+ran 12 c
+Array Array
+Array Array
 ```

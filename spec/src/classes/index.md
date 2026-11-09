@@ -796,7 +796,10 @@ declares `makeString` as well when its instances should be accepted where a
 method takes a string argument, such as the pad of `left`, the needle of `pos`
 or the argument of `objectName=`, because such a method uses `MAKESTRING`
 only. An operator method sent as a message, such as `"x"~"||"(b)`, takes the
-string value of its argument as the operator does. A `string` method that
+string value of its argument as the operator does. An instance of a subclass
+of `String` is a string, and its string value is its own characters, whatever
+`makeString` and `string` it declares: no message is sent to it for that
+([Deviation 109](r:class.string.deviation.109)). A `string` method that
 answers an object that is not a string is covered by
 [Deviation 30](r:class.index.deviation.30).
 
@@ -918,11 +921,14 @@ r[class.index.deviation.32]
 When a class-side `new` reached through `enhanced` answers an object it did
 not build, interrexx answers that object unchanged; ooRexx marks it enhanced,
 which changes every object of its class. When a metaclass `new` answers an
-existing class while `subclass` makes a class with that metaclass, interrexx
-ends the program with exit code 120; ooRexx rewires the existing class in
-place, so that `y~id` in the first example answers `Array`. In the second
-example, interrexx answers `String` for both strings, where ooRexx marks every
-string as enhanced and answers `ODD`. See [Deviation 32](../deviations.md).
+existing class while a class with that metaclass is made, by `subclass`, by
+`mixinclass` or by a `::CLASS` directive with METACLASS, interrexx ends the
+program with exit code 120; ooRexx rewires the existing class in place, so
+that `y~id` in the first example answers `Array`. A directive is read before
+the program runs, so the program of the third example writes nothing. In the
+last example, interrexx answers `String` for both strings, where ooRexx marks
+every string as enhanced and answers `ODD`. See
+[Deviation 32](../deviations.md).
 
 ```rexx
 say 'before'
@@ -937,6 +943,32 @@ say 'after' y~id
 
 ```output rc=120
 before
+```
+
+```rexx
+say 'before'
+y = .k~mixinclass('Y')
+say 'after' y~id
+::class meta subclass class
+::method new class
+  if arg(1) = 'Y' then return .array
+  forward class (super)
+::class k metaclass meta
+```
+
+```output rc=120
+before
+```
+
+```rexx
+say 'before'
+::class meta subclass class
+::method new class
+  return .array
+::class k metaclass meta
+```
+
+```output rc=120
 ```
 
 ```rexx

@@ -2,7 +2,7 @@
 element: "Method search"
 kind: concept
 rexxref: "Objects and Classes > Default Search Order for Method Selection; Objects and Classes > Changing the Search Order for Methods; Objects and Classes > Defining an UNKNOWN Method; Objects and Classes > Mixin Classes; Objects and Classes > Metaclasses; Objects and Classes > Defining Instance Methods with SETMETHOD or ENHANCED; Objects and Classes > Public, Package-Scope, and Private Methods; Special Variables > SUPER; Builtin Classes > Fundamental Classes > Object Class > setMethod; Builtin Classes > Fundamental Classes > Object Class > unsetMethod; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > define; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > defineMethods; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > delete; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > enhanced; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > inherit; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > uninherit"
-deviations: [32, 105]
+deviations: [32, 105, 110]
 ---
 
 # Method search
@@ -607,10 +607,10 @@ object again: the name is looked up in the classes as if `setMethod` had never
 been sent, and `unsetMethod` of a name the object has not set is not an error.
 `setMethod` and `unsetMethod` are private methods with a further restriction,
 which [the next rule](r:class.methods.object.access) gives. A `define` of the
-same name that is sent to the class afterwards does not change what an object
-made before it answers, as [the rule on changes](r:class.methods.late) says,
-and after `unsetMethod` the object answers the method that its class had
-before the `define`; the second example shows it.
+same name that is sent to the class afterwards is not seen while the object's
+own method of that name stands, and is seen after `unsetMethod`, as
+[the rule on changes](r:class.methods.late) says; the second example shows the
+object's own method and the class's method of the same name.
 
 ```rexx
 o = .k~new
@@ -653,7 +653,6 @@ k old | k m
 ```rexx
 o = .k~new
 o~put('m', 'return "own m"')
-.k~define('m', 'return "defined m"')
 say o~m '|' o~m:.k '|' .k~new~m
 o~unset('m')
 say o~m
@@ -667,7 +666,7 @@ say o~m
 ```
 
 ```output
-own m | k m | defined m
+own m | k m | k m
 k m
 ```
 
@@ -843,8 +842,7 @@ added methods are the object's own methods, so they are found before the
 class's, and `unsetMethod` leaves them: after a `setMethod` has replaced one,
 `unsetMethod` brings the added method back. The object follows the later
 changes to the class, to its superclasses and to its mixin classes, and
-`inherit` and `uninherit`, unlike an object that `new` made, which [stops
-following](r:class.methods.late) them at the next `define` of its class.
+`inherit` and `uninherit`, as [every instance does](r:class.methods.late).
 
 ```rexx
 c = .k~new
@@ -860,7 +858,7 @@ say e~extra
 f = .k~enhanced(.directory~new)
 .k~define('later', 'return "later"')
 .base~define('earlier', 'return "earlier"')
-say f~later f~earlier '|' c~hasMethod('LATER') c~hasMethod('EARLIER')
+say f~later f~earlier
 ::class base
 ::class k subclass base
 ::method new class
@@ -885,37 +883,33 @@ K 1 added 7,8
 set
 added
 added
-later earlier | 0 0
+later earlier
 ```
 
 ## Changes after objects exist
 
 r[class.methods.late]
-`define`, `defineMethods` and `delete`, sent to a class `C`, change the table
-of `C` for the objects made after them. An instance of `C` that exists
-already keeps the methods it had: the change does not reach it, and after that
-no later change reaches it either, neither a further change to the table of
-`C`, nor one to its superclasses or its mixin classes, nor `inherit` or
-`uninherit` sent to `C`. Until then, such an instance does follow the
-changes to the tables of the classes behind its class, and `inherit` and
-`uninherit`. The instances of subclasses of `C`, the instances of classes that
-inherit `C` and enhanced objects follow every change to `C` whenever they
-were made.
+An object follows every change made to the methods that its class finds, at
+any time. A `define`, `defineMethods` or `delete` sent to a class `C`, an
+`inherit` or `uninherit` sent to `C`, and a change to the table of a
+superclass of `C` or of a mixin class in the order of `C`, all change what
+the instances of `C` answer: the instances made before the change as well as
+those made after it, however many changes came before, and also an object
+that has methods of its own from `setMethod` or `enhanced`. The own methods
+stay first in the search ([the object rule](r:class.methods.object)).
+[Deviation 110](r:class.methods.deviation.110) gives the examples of the
+changes to the table of `C` itself.
 
-> **Note.** In the example, `A` is made first and the first `define` of `ONE`
-> cuts it off from the class. `B`, made after that `define`, follows the
-> changes to the superclass and to the mixin classes and `inherit` and
-> `uninherit`, until the second `define` of `ONE` cuts it off too. `S` is an
-> instance of a subclass, so it follows everything. Each line gives, for each
-> name, what `A`, `B` and `S` answer, with `-` where the name is not found.
+> **Note.** In the example, `A` is an instance of `K` and `S` is an
+> instance of a subclass. Both are made first, and each line gives, for each
+> name, what `A` and `S` answer after a change to the superclass or to a mixin
+> class, or after `inherit` or `uninherit`, with `-` where the name is not
+> found.
 
 ```rexx
 a = .k~new
 s = .sub~new
 call show 'start'
-.k~define('one', 'return "o1"')
-b = .k~new
-call show 'k define one'
 .base~define('two', 'return "t"')
 call show 'base define two'
 .mx~define('three', 'return "h"')
@@ -924,14 +918,13 @@ call show 'mixin define three'
 call show 'k inherit my'
 .k~uninherit(.mx)
 call show 'k uninherit mx'
-.k~define('one', 'return "o2"')
 .base~define('two', 'return "T"')
-call show 'k define one again'
+call show 'base define two again'
 exit
 show:
   say arg(1)':'
-  do n over 'ONE TWO THREE FOUR'~makearray(' ')
-    say ' ' n f(a, n)'/'f(b, n)'/'f(s, n)
+  do n over 'TWO THREE FOUR'~makearray(' ')
+    say ' ' n f(a, n)'/'f(s, n)
   end
   return
 f:
@@ -949,40 +942,29 @@ e: return '-'
 
 ```output
 start:
-  ONE -/-/-
-  TWO -/-/-
-  THREE -/-/-
-  FOUR -/-/-
-k define one:
-  ONE -/o1/o1
-  TWO -/-/-
-  THREE -/-/-
-  FOUR -/-/-
+  TWO -/-
+  THREE -/-
+  FOUR -/-
 base define two:
-  ONE -/o1/o1
-  TWO -/t/t
-  THREE -/-/-
-  FOUR -/-/-
+  TWO t/t
+  THREE -/-
+  FOUR -/-
 mixin define three:
-  ONE -/o1/o1
-  TWO -/t/t
-  THREE -/h/h
-  FOUR -/-/-
+  TWO t/t
+  THREE h/h
+  FOUR -/-
 k inherit my:
-  ONE -/o1/o1
-  TWO -/t/t
-  THREE -/h/h
-  FOUR -/f/f
+  TWO t/t
+  THREE h/h
+  FOUR f/f
 k uninherit mx:
-  ONE -/o1/o1
-  TWO -/t/t
-  THREE -/-/-
-  FOUR -/f/f
-k define one again:
-  ONE -/o1/o2
-  TWO -/t/T
-  THREE -/-/-
-  FOUR -/f/f
+  TWO t/t
+  THREE -/-
+  FOUR f/f
+base define two again:
+  TWO T/T
+  THREE -/-
+  FOUR f/f
 ```
 
 r[class.methods.library]
@@ -1489,18 +1471,15 @@ The class methods a class has follow the same changes as its order does. A
 class that inherits a mixin class at run time gets the class methods of the
 mixin class, and loses them with `uninherit`; the class methods of its
 subclasses change with it. The instance methods of a metaclass can be changed
-with `define` like those of any class, but a class object takes the methods of
-its metaclass's order as they are when the class is made: no later `define`,
-`defineMethods` or `delete` sent to the metaclass or to a class of its order,
-and no `inherit` or `uninherit` sent to one of them, reaches a class that
-exists already, as the last lines of the example show for `define` sent to a
-superclass and a mixin class of the metaclass and for `inherit`; a class made
-afterwards gets them.
+with `define` like those of any class, and a class object follows every change
+made to its metaclass or to a class of its order, as [any other
+object](r:class.methods.late) follows the changes to its class; a class made
+afterwards gets them too. [Deviation 110](r:class.methods.deviation.110) has
+the example of the changes to a metaclass.
 
 ```rexx
 say 'start:' t(.c, 'who') t(.c, 'later') t(.d, 'later')
 .meta~define('later', 'return "meta later"')
-say 'meta define:' t(.c, 'later') t(.d, 'later')
 say 'new class:' t(.meta~new('e'), 'later')
 say 'before inherit:' t(.c, 'mixcls') t(.sub, 'mixcls')
 .c~inherit(.mix)
@@ -1509,9 +1488,10 @@ say 'after inherit:' t(.c, 'mixcls') t(.sub, 'mixcls')
 say 'after uninherit:' t(.c, 'mixcls') t(.sub, 'mixcls')
 .sbase~define('later2', 'return "sbase later2"')
 .mxm~define('later3', 'return "mxm later3"')
-say 'superclass and mixin define:' t(.c, 'later2') t(.c, 'later3') t(.d, 'later2')
+.sbase~define('later2', 'return "sbase later2"')
+.mxm~define('later3', 'return "mxm later3"')
 .meta~inherit(.my)
-say 'meta inherit:' t(.c, 'four') t(.meta~new('g'), 'four')
+say 'meta inherit:' t(.meta~new('g'), 'four')
 say 'new class:' t(.meta~new('f'), 'later2') t(.meta~new('h'), 'later3')
 exit
 t:
@@ -1536,13 +1516,11 @@ e: return '-'
 
 ```output
 start: meta who - -
-meta define: - -
 new class: meta later
 before inherit: - -
 after inherit: mixcls mixcls
 after uninherit: - -
-superclass and mixin define: - - -
-meta inherit: - four
+meta inherit: four
 new class: sbase later2 mxm later3
 ```
 
@@ -1614,4 +1592,157 @@ say .vault~new~open
 
 ```output
 private answer
+```
+
+r[class.methods.deviation.110]
+This Deviation is provisional. An object sees every change made, at any time,
+to the methods of its class, of that class's superclasses and of their mixin
+classes, by `define`, `defineMethods`, `delete`, `inherit` and `uninherit`
+([the rule on changes](r:class.methods.late)): also when the object has
+methods of its own from `setMethod` or `enhanced`, and when the class has been
+changed before. A class object follows its metaclass in the same way. ooRexx
+copies the method table into existing instances: after a `define`,
+`defineMethods` or `delete` sent to a class, even one that changes nothing,
+its existing instances no longer see later changes to its superclasses and
+mixin classes, and an object given a method by `setMethod` no longer sees
+later changes to its class ([Deviation 110](../deviations.md)). The first
+example is the one of the rule on changes, with a `define` sent to `K` itself
+and an instance `B` that is made after it: `A`, `B` and `S` answer alike after
+every change. The second example gives an object an own method with
+`setMethod` and another with `enhanced`, and changes the class afterwards. The
+third follows a class object over changes to its metaclass.
+
+```rexx
+a = .k~new
+s = .sub~new
+call show 'start'
+.k~define('one', 'return "o1"')
+b = .k~new
+call show 'k define one'
+.base~define('two', 'return "t"')
+call show 'base define two'
+.mx~define('three', 'return "h"')
+call show 'mixin define three'
+.k~inherit(.my)
+call show 'k inherit my'
+.k~uninherit(.mx)
+call show 'k uninherit mx'
+.k~define('one', 'return "o2"')
+.base~define('two', 'return "T"')
+call show 'k define one again'
+exit
+show:
+  say arg(1)':'
+  do n over 'ONE TWO THREE FOUR'~makearray(' ')
+    say ' ' n f(a, n)'/'f(b, n)'/'f(s, n)
+  end
+  return
+f:
+  signal on syntax name e
+  return arg(1)~send(arg(2))
+e: return '-'
+::class base
+::class mx mixinclass object
+::class my mixinclass object
+::method four
+  return 'f'
+::class k subclass base inherit mx
+::class sub subclass k
+```
+
+```output defect=#0
+start:
+  ONE -/-/-
+  TWO -/-/-
+  THREE -/-/-
+  FOUR -/-/-
+k define one:
+  ONE o1/o1/o1
+  TWO -/-/-
+  THREE -/-/-
+  FOUR -/-/-
+base define two:
+  ONE o1/o1/o1
+  TWO t/t/t
+  THREE -/-/-
+  FOUR -/-/-
+mixin define three:
+  ONE o1/o1/o1
+  TWO t/t/t
+  THREE h/h/h
+  FOUR -/-/-
+k inherit my:
+  ONE o1/o1/o1
+  TWO t/t/t
+  THREE h/h/h
+  FOUR f/f/f
+k uninherit mx:
+  ONE o1/o1/o1
+  TWO t/t/t
+  THREE -/-/-
+  FOUR f/f/f
+k define one again:
+  ONE o2/o2/o2
+  TWO T/T/T
+  THREE -/-/-
+  FOUR f/f/f
+```
+
+```rexx
+a = .k~new
+a~give('OWN', 'return "own"')
+e = .k~enhanced(.directory~new~~put('return "en"', 'EN'))
+.k~define('ONE', 'return "o1"')
+.base~define('TWO', 'return "t"')
+.k~delete('ONE')
+.k~define('THREE', 'return "h"')
+say t(a, 'OWN') t(a, 'ONE') t(a, 'TWO') t(a, 'THREE')
+say t(e, 'EN') t(e, 'ONE') t(e, 'TWO') t(e, 'THREE')
+exit
+t:
+  signal on syntax name x
+  return arg(1)~send(arg(2))
+x: return '-'
+::class base
+::class k subclass base
+::method give
+  self~setMethod(arg(1), arg(2))
+```
+
+```output defect=#0
+own - t h
+en - t h
+```
+
+```rexx
+say t(.c, 'who') t(.c, 'later') t(.d, 'later')
+.meta~define('later', 'return "meta later"')
+say t(.c, 'later') t(.d, 'later')
+.sbase~define('later2', 'return "sbase later2"')
+.mxm~define('later3', 'return "mxm later3"')
+say t(.c, 'later2') t(.d, 'later3')
+.meta~inherit(.my)
+say t(.c, 'four') t(.d, 'four')
+exit
+t:
+  signal on syntax name e
+  return arg(1)~send(arg(2))
+e: return '-'
+::class sbase subclass class
+::class mxm mixinclass class
+::class my mixinclass class
+::method four
+  return 'four'
+::class meta subclass sbase inherit mxm
+::method who
+  return 'meta who'
+::class c metaclass meta
+::class d metaclass meta
+```
+
+```output defect=#0
+meta who - -
+meta later meta later
+sbase later2 mxm later3
+four four
 ```

@@ -2,7 +2,7 @@
 element: "String"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > String Class; Builtin Classes > Fundamental Classes > String Class > new (Class Method); Builtin Classes > Fundamental Classes > String Class > alnum (Class Method); Builtin Classes > Fundamental Classes > String Class > alpha (Class Method); Builtin Classes > Fundamental Classes > String Class > blank (Class Method); Builtin Classes > Fundamental Classes > String Class > cntrl (Class Method); Builtin Classes > Fundamental Classes > String Class > cr (Class Method); Builtin Classes > Fundamental Classes > String Class > digit (Class Method); Builtin Classes > Fundamental Classes > String Class > graph (Class Method); Builtin Classes > Fundamental Classes > String Class > lower (Class Method); Builtin Classes > Fundamental Classes > String Class > nl (Class Method); Builtin Classes > Fundamental Classes > String Class > null (Class Method); Builtin Classes > Fundamental Classes > String Class > print (Class Method); Builtin Classes > Fundamental Classes > String Class > punct (Class Method); Builtin Classes > Fundamental Classes > String Class > space (Class Method); Builtin Classes > Fundamental Classes > String Class > tab (Class Method); Builtin Classes > Fundamental Classes > String Class > upper (Class Method); Builtin Classes > Fundamental Classes > String Class > xdigit (Class Method); Builtin Classes > Fundamental Classes > String Class > Arithmetic Methods; Builtin Classes > Fundamental Classes > String Class > Comparison Methods; Builtin Classes > Fundamental Classes > String Class > Concatenation Methods; Builtin Classes > Fundamental Classes > String Class > Logical Methods; Builtin Classes > Fundamental Classes > String Class > []; Builtin Classes > Fundamental Classes > String Class > ? (inline if); Builtin Classes > Fundamental Classes > String Class > abbrev; Builtin Classes > Fundamental Classes > String Class > abs; Builtin Classes > Fundamental Classes > String Class > append; Builtin Classes > Fundamental Classes > String Class > b2x; Builtin Classes > Fundamental Classes > String Class > bitAnd; Builtin Classes > Fundamental Classes > String Class > bitOr; Builtin Classes > Fundamental Classes > String Class > bitXor; Builtin Classes > Fundamental Classes > String Class > c2d; Builtin Classes > Fundamental Classes > String Class > c2x; Builtin Classes > Fundamental Classes > String Class > caselessAbbrev; Builtin Classes > Fundamental Classes > String Class > caselessChangeStr; Builtin Classes > Fundamental Classes > String Class > caselessCompare; Builtin Classes > Fundamental Classes > String Class > caselessCompareTo; Builtin Classes > Fundamental Classes > String Class > caselessContains; Builtin Classes > Fundamental Classes > String Class > caselessContainsWord; Builtin Classes > Fundamental Classes > String Class > caselessCountStr; Builtin Classes > Fundamental Classes > String Class > caselessEndsWith; Builtin Classes > Fundamental Classes > String Class > caselessEquals; Builtin Classes > Fundamental Classes > String Class > caselessLastPos; Builtin Classes > Fundamental Classes > String Class > caselessMatch; Builtin Classes > Fundamental Classes > String Class > caselessMatchChar; Builtin Classes > Fundamental Classes > String Class > caselessPos; Builtin Classes > Fundamental Classes > String Class > caselessStartsWith; Builtin Classes > Fundamental Classes > String Class > caselessWordPos; Builtin Classes > Fundamental Classes > String Class > ceiling; Builtin Classes > Fundamental Classes > String Class > center/centre; Builtin Classes > Fundamental Classes > String Class > changeStr; Builtin Classes > Fundamental Classes > String Class > compare; Builtin Classes > Fundamental Classes > String Class > compareTo; Builtin Classes > Fundamental Classes > String Class > contains; Builtin Classes > Fundamental Classes > String Class > containsWord; Builtin Classes > Fundamental Classes > String Class > copies; Builtin Classes > Fundamental Classes > String Class > countStr; Builtin Classes > Fundamental Classes > String Class > d2c; Builtin Classes > Fundamental Classes > String Class > d2x; Builtin Classes > Fundamental Classes > String Class > dataType; Builtin Classes > Fundamental Classes > String Class > decodeBase64; Builtin Classes > Fundamental Classes > String Class > delStr; Builtin Classes > Fundamental Classes > String Class > delWord; Builtin Classes > Fundamental Classes > String Class > encodeBase64; Builtin Classes > Fundamental Classes > String Class > endsWith; Builtin Classes > Fundamental Classes > String Class > equals; Builtin Classes > Fundamental Classes > String Class > floor; Builtin Classes > Fundamental Classes > String Class > format; Builtin Classes > Fundamental Classes > String Class > hashCode; Builtin Classes > Fundamental Classes > String Class > insert; Builtin Classes > Fundamental Classes > String Class > lastPos; Builtin Classes > Fundamental Classes > String Class > left; Builtin Classes > Fundamental Classes > String Class > length; Builtin Classes > Fundamental Classes > String Class > lower; Builtin Classes > Fundamental Classes > String Class > makeArray; Builtin Classes > Fundamental Classes > String Class > makeString; Builtin Classes > Fundamental Classes > String Class > match; Builtin Classes > Fundamental Classes > String Class > matchChar; Builtin Classes > Fundamental Classes > String Class > max; Builtin Classes > Fundamental Classes > String Class > min; Builtin Classes > Fundamental Classes > String Class > modulo; Builtin Classes > Fundamental Classes > String Class > overlay; Builtin Classes > Fundamental Classes > String Class > pos; Builtin Classes > Fundamental Classes > String Class > replaceAt; Builtin Classes > Fundamental Classes > String Class > reverse; Builtin Classes > Fundamental Classes > String Class > right; Builtin Classes > Fundamental Classes > String Class > round; Builtin Classes > Fundamental Classes > String Class > sign; Builtin Classes > Fundamental Classes > String Class > space; Builtin Classes > Fundamental Classes > String Class > startsWith; Builtin Classes > Fundamental Classes > String Class > strip; Builtin Classes > Fundamental Classes > String Class > subChar; Builtin Classes > Fundamental Classes > String Class > substr; Builtin Classes > Fundamental Classes > String Class > subWord; Builtin Classes > Fundamental Classes > String Class > subWords; Builtin Classes > Fundamental Classes > String Class > translate; Builtin Classes > Fundamental Classes > String Class > trunc; Builtin Classes > Fundamental Classes > String Class > upper; Builtin Classes > Fundamental Classes > String Class > verify; Builtin Classes > Fundamental Classes > String Class > word; Builtin Classes > Fundamental Classes > String Class > wordIndex; Builtin Classes > Fundamental Classes > String Class > wordLength; Builtin Classes > Fundamental Classes > String Class > wordPos; Builtin Classes > Fundamental Classes > String Class > words; Builtin Classes > Fundamental Classes > String Class > x2b; Builtin Classes > Fundamental Classes > String Class > x2c; Builtin Classes > Fundamental Classes > String Class > x2d"
-deviations: [4, 36]
+deviations: [4, 36, 109]
 ---
 
 # String
@@ -70,16 +70,20 @@ Comparable
 ```
 
 r[class.string.subclass]
-A program makes a subclass of `String` with [the
-directive](r:dir.class.subclass) or with the `subclass` method of `Class`.
-An instance is made with [`new`](r:class.string.new), takes the characters
-given there, and has the class of the receiver of `new`. It is a string
-wherever a string is wanted, and the class-side methods of `String` are
-understood by the subclass. A String method sent to the instance works on
-the characters of the instance and answers a new string of class `String`,
-not an instance of the subclass, and `copy`, which `Object` supplies, answers
-another instance of the subclass. The instance may have attributes and methods
-of its own, and an object name ([Deviation 36](r:class.string.deviation.36)).
+A program makes a subclass of `String` with
+[the directive](r:dir.class.subclass) or with the `subclass` method of
+`Class`. An instance is made with [`new`](r:class.string.new), takes the
+characters given there, and has the class of the receiver of `new`. It is a
+string wherever a string is wanted, and the class-side methods of `String` are
+understood by the subclass. A String method sent to the instance works on the
+characters of the instance and answers a new string of class `String`, not an
+instance of the subclass, and `copy`, which `Object` supplies, answers another
+instance of the subclass. Wherever a string, a number, a logical value or a
+whole number is read from the instance, as the receiver or as an argument, its
+own characters are read and neither `MAKESTRING` nor `STRING` is sent to it
+([Deviation 109](r:class.string.deviation.109)). The instance may have
+attributes and methods of its own, and an object name
+([Deviation 36](r:class.string.deviation.36)).
 
 ```rexx
 x = .shout~new('abc')
@@ -100,8 +104,11 @@ A position, length or count argument of a method of `String` is read as
 [a whole-number argument](r:conv.whole.form) of a builtin function is, with
 the value that [the digits rule](r:conv.whole.digits) gives and
 [its limit](r:num.limits.whole). This holds for the methods that only `String`
-has as well as for the builtin ones. A failure of either raises the range code
-of the argument (`SYNTAX 93.924`, `93.923` or `93.906`), not 40.12.
+has as well as for the builtin ones. An instance of a subclass of `String`
+given as such an argument is read by its own characters
+([Deviation 109](r:class.string.deviation.109)). A failure of either raises
+the range code of the argument (`SYNTAX 93.924`, `93.923` or `93.906`), not
+40.12.
 
 ```rexx
 say 'abc'~"[]"('1.0000000000000000001') 'abc'~subChar(' +2 ')
@@ -133,8 +140,9 @@ a b
 r[class.string.new]
 `new` makes a string. Its first argument is required, and gives the
 characters: the string value of the argument, which is the argument itself for
-a string, a number included, and its `MAKESTRING` answer for another object.
-`new` uses `MAKESTRING` only, as the methods that take a string argument do
+a string, a number and an instance of a subclass of `String` included, and its
+`MAKESTRING` answer for another object. For another object `new` uses
+`MAKESTRING` only, as the methods that take a string argument do
 ([the string-value rule](r:class.index.string)). Without an argument `new`
 raises `SYNTAX 93.903`, and with an argument that has no `MAKESTRING` method,
 `.nil` and an object with only a `string` method included, `SYNTAX 88.909`.
@@ -465,7 +473,9 @@ its second when the receiver is `0`; the receiver must be a [logical
 value](r:expr.logical.value) (`SYNTAX 34.901`). Both arguments are required,
 and a missing or omitted one raises `SYNTAX 88.901` whichever the receiver is;
 a third raises `93.902`. The argument not chosen is not looked at, so it may
-be any object. The answer is the argument itself.
+be any object. The answer is the argument itself. When the receiver is an
+instance of a subclass of `String`, `?` tests its own characters and sends
+it nothing ([Deviation 109](r:class.string.deviation.109)).
 
 ```rexx
 say (1 = 1)~?('yes', 'no') (1 = 2)~?('yes', 'no') '1'~"?"('a', 'b')
@@ -556,8 +566,8 @@ e: say condition('o')~code
 
 r[class.string.compareto]
 `compareTo` compares the receiver with its first argument and answers `0` when
-they are equal, `1` when the receiver is the greater and `-1` when it is
-the lesser. The comparison is of characters by their codes, unsigned, so case
+they are equal, `1` when the receiver is the greater and `-1` when it is the
+lesser. The comparison is of characters by their codes, unsigned, so case
 matters and `'FF'x` is greater than `'00'x`, and a string that is a leading
 part of another is the lesser, whatever follows; numbers are not compared as
 numbers. The second argument `start` is the position, 1 by default, from which
@@ -565,9 +575,10 @@ both strings are compared, and the third `length` is the number of characters
 compared of each, by default all that are left. A part that runs past the end
 of a string is cut there. The arguments are checked from left to right: the
 first, `other`, is required (`SYNTAX 93.903`) and has a string value as the
-conversion rule says (`88.909`, as for `.nil`; its `MAKESTRING` only is used);
-`start` must be a positive whole number (`93.924`) and `length` a non-negative
-whole number (`93.923`); a fourth argument raises `93.902`.
+conversion rule says (`88.909`, as for `.nil`; its `MAKESTRING` only is used,
+and then only for an object that is no string); `start` must be a positive
+whole number (`93.924`) and `length` a non-negative whole number (`93.923`); a
+fourth argument raises `93.902`.
 
 ```rexx
 say 'abc'~compareTo('abc') 'b'~compareTo('a') 'a'~compareTo('b')
@@ -676,10 +687,11 @@ receiver, and 0 otherwise; a needle that is the null string is never found.
 The search covers the whole receiver unless `start`, a position, and `length`,
 a number of characters from it, limit it, and then the needle must lie within
 that part. A `start` or a `length` that reaches past the end is cut there. The
-needle is required (`SYNTAX 93.903`) and uses its `MAKESTRING` answer
-(`88.909` for `.nil`), `start` must be a positive whole number (`93.924`) and
-`length` a non-negative whole number (`93.923`); the arguments are checked
-from left to right, and a fourth argument raises `93.902`. Case matters.
+needle is required (`SYNTAX 93.903`) and is a string or else uses its
+`MAKESTRING` answer (`88.909` for `.nil`), `start` must be a positive whole
+number (`93.924`) and `length` a non-negative whole number (`93.923`); the
+arguments are checked from left to right, and a fourth argument raises
+`93.902`. Case matters.
 
 ```rexx
 t = '-abcdef-'
@@ -736,10 +748,10 @@ e: say condition('o')~code
 
 r[class.string.startswith]
 `startsWith` answers 1 when the receiver begins with its argument, and 0
-otherwise; the null string is never a prefix, not even of the null string.
-The argument is required, and without it `startsWith` raises `SYNTAX 88.901`;
-a second raises `93.902`. The argument uses its `MAKESTRING` answer (`88.909`
-for `.nil`). Case matters.
+otherwise; the null string is never a prefix, not even of the null string. The
+argument is required, and without it `startsWith` raises `SYNTAX 88.901`; a
+second raises `93.902`. The argument is a string or else uses its `MAKESTRING`
+answer (`88.909` for `.nil`). Case matters.
 
 ```rexx
 say 'abc'~startsWith('ab') 'abc'~startsWith('AB') 'abc'~startsWith('abc')
@@ -830,15 +842,15 @@ e: say condition('o')~code
 
 r[class.string.containsword]
 `containsWord` answers 1 when the words of its first argument, the phrase,
-occur in the receiver as whole words in the same order, and 0 otherwise.
-The phrase and the receiver are cut into [words](r:bif.index.words.split) in
-the same way, so the blanks between the words of the phrase need not equal
-those of the receiver. A phrase with no words is never
-found. The search begins at the word `start`, 1 by default, which is a
-[word number](r:bif.index.words.number): a phrase that begins before it is
-not found. The phrase is required (`SYNTAX 93.903`) and uses its `MAKESTRING`
-answer (`88.909`), `start` must be a positive whole number (`93.924`), and a
-third argument raises `93.902`. Case matters.
+occur in the receiver as whole words in the same order, and 0 otherwise. The
+phrase and the receiver are cut into [words](r:bif.index.words.split) in the
+same way, so the blanks between the words of the phrase need not equal those
+of the receiver. A phrase with no words is never found. The search begins at
+the word `start`, 1 by default, which is a
+[word number](r:bif.index.words.number): a phrase that begins before it is not
+found. The phrase is required (`SYNTAX 93.903`) and is a string or else uses
+its `MAKESTRING` answer (`88.909`), `start` must be a positive whole number
+(`93.924`), and a third argument raises `93.902`. Case matters.
 
 ```rexx
 t = 'the quick fox'
@@ -903,9 +915,9 @@ has the characters that the receiver has there, and 0 otherwise. A part that
 is empty, begins after the end of `other`, or runs past the end of either
 string is not an error: the answer is 0. The arguments are checked from left
 to right: `start` and `n` must be positive whole numbers (`SYNTAX 93.924`),
-`other` is required, as `start` is (`93.903`), and uses its `MAKESTRING`
-answer (`88.909`), and `length` must be a non-negative whole number
-(`93.923`); a fifth argument raises `93.902`. Case matters.
+`other` is required, as `start` is (`93.903`), and is a string or else uses
+its `MAKESTRING` answer (`88.909`), and `length` must be a non-negative whole
+number (`93.923`); a fifth argument raises `93.902`. Case matters.
 
 ```rexx
 t = 'Wednesday'
@@ -970,9 +982,9 @@ r[class.string.matchchar]
 one of the characters of its second argument, the set, and 0 otherwise: when
 it is not in the set, when the set is the null string, and when `n` is past
 the end of the receiver. Both arguments are required (`SYNTAX 93.903`), `n`
-must be a positive whole number (`93.924`) and is checked first, the set uses
-its `MAKESTRING` answer (`88.909`), and a third argument raises `93.902`. Case
-matters.
+must be a positive whole number (`93.924`) and is checked first, the set is a
+string or else uses its `MAKESTRING` answer (`88.909`), and a third argument
+raises `93.902`. Case matters.
 
 ```rexx
 t = 'Saturday'
@@ -1270,11 +1282,11 @@ from position `position` are replaced by the first argument, `newstr`. The
 default `length` is the length of `newstr`, and a part that runs past the end
 of the receiver is cut there. When `position` is more than one past the end of
 the receiver, the gap is filled with the pad, a blank by default. `newstr` and
-`position` are required (`SYNTAX 93.903`), and `newstr` uses its `MAKESTRING`
-answer (`88.909`), `position` must be a positive whole number (`93.924`),
-`length` a non-negative whole number (`93.923`) and the pad a single character
-(`93.922`); the arguments are checked from left to right, and a fifth raises
-`93.902`. A `length` of 0 inserts `newstr`.
+`position` are required (`SYNTAX 93.903`), and `newstr` is a string or else
+uses its `MAKESTRING` answer (`88.909`), `position` must be a positive whole
+number (`93.924`), `length` a non-negative whole number (`93.923`) and the pad
+a single character (`93.922`); the arguments are checked from left to right,
+and a fifth raises `93.902`. A `length` of 0 inserts `newstr`.
 
 ```rexx
 s = 'abcdef'
@@ -1688,20 +1700,20 @@ left('abc', 1, 'x', 3) => 40.4
 ```
 
 r[class.string.builtins.receiver]
-When the receiver of such a method is an instance of a subclass of `String`,
-the method works on the characters of the instance itself, and answers a new
-string of class `String`. The characters it reads are not the answer of the
-instance's `MAKESTRING` method, even when the subclass declares one. The
-function form is different: a function call converts its argument with [the
-conversion rule](r:conv.string.object), which sends `MAKESTRING`, so the
-function reads the answer of that method, where the message does not. The
-methods that read their receiver as a number are not covered by this rule.
+When the receiver or an argument of such a method is an instance of a
+subclass of `String`, the method works on the characters of the instance
+itself, and answers a new string of class `String`. This holds for the message
+form and for the function form, and for the methods that read a number, such
+as `abs` and `max`, and `dataType` as well. The characters it reads are never
+the answer of the instance's `MAKESTRING` or `STRING` method, even when the
+subclass declares one, and neither is sent to the instance
+([Deviation 109](r:class.string.deviation.109) has the example for the
+arguments and the function form).
 
 ```rexx
 x = .over~new('Hello')
 say x~left(3) x~length x~pos('l') x~c2x~left(4) x~reverse x~left(3)~class~id
-say left(x, 3) length(x) pos('l', x) c2x(x)~left(4) reverse(x)
-say x~makeString (x || '!') ('!' || x)
+say x~makeString (x || '!')
 ::class over subclass string
 ::method makestring
   return 'MADE'
@@ -1709,8 +1721,7 @@ say x~makeString (x || '!') ('!' || x)
 
 ```output
 Hel 5 3 4865 olleH String
-MAD 4 0 4D41 EDAM
-MADE Hello! !MADE
+MADE Hello!
 ```
 
 ### The operators
@@ -1770,29 +1781,29 @@ abc ab c abc
 ```
 
 r[class.string.operators.receiver]
-When the receiver of the joining methods and the strict comparisons is an
-instance of a subclass of `String`, they use the characters of the instance
-itself, and not the answer of its `MAKESTRING` method, as
+When the receiver or the argument of an operator method is an instance of a
+subclass of `String`, the method uses the characters of the instance itself,
+and not the answer of its `MAKESTRING` or `STRING` method, as
 [the receiver rule](r:class.string.builtins.receiver) says of the builtin
-methods; the argument, when it is such an instance, is converted by
-[the conversion rule](r:conv.string.object) and so gives its `MAKESTRING`
-answer. The joining methods answer a new string of class `String`. The
-arithmetic operators and the normal comparisons read the receiver as a number,
-and the logical operators read it as a logical value; this rule does not cover
-them.
+methods. This holds for every operator: the joining methods and the strict
+comparisons, which read a string, the arithmetic operators and the normal
+comparisons, which read a number, and the logical operators, which read a
+logical value. The joining methods answer a new string of class `String`.
+[Deviation 109](r:class.string.deviation.109) has the example for the
+arguments and the numbers.
 
 ```rexx
 x = .over~new('Hello')
-say x~"||"('!') '!'~"||"(x) x~"=="('Hello') x~"=="('MADE') 'MADE'~"=="(x)
-say x~" "('!') x~""('!') (x || '!')~class~id (x == 'Hello') ('MADE' == x)
+say x~"||"('!') x~"=="('Hello') x~"=="('MADE')
+say x~" "('!') x~""('!') (x || '!')~class~id (x == 'Hello')
 ::class over subclass string
 ::method makestring
   return 'MADE'
 ```
 
 ```output
-Hello! !MADE 1 0 1
-Hello ! Hello! String 1 1
+Hello! 1 0
+Hello ! Hello! String 1
 ```
 
 ## Deviations
@@ -1844,4 +1855,46 @@ say 'after'
 ```output rc=120
 named abc
 before
+```
+
+r[class.string.deviation.109]
+An instance of a subclass of `String` is read by its own characters wherever
+a string, a number, a logical value or a whole number is needed, as the
+receiver and as an argument, in the message form, in the function form and in
+the operators; `MAKESTRING` and `STRING` are not sent to it for that
+([Deviation 109](../deviations.md)). In the example the subclass declares both
+methods and counts the sends: the instance `n` is the number 2, `b` is the
+logical value 1 and `s` is the string `ab`, and no send is made. ooRexx reads
+such an instance through its `MAKESTRING` method in some places (the numeric
+methods and operators, the logical operators, `dataType`, `?`, whole-number
+arguments, `new`) and through its own characters in others, so one instance
+can answer differently to `=` and to `==`.
+
+```rexx
+.local~sent = 0
+n = .num~new('2')
+b = .num~new('1')
+s = .num~new('ab')
+say 'abcdef'~left(n) left('abcdef', n) 'abcdef'[n] 'a b c'~word(n)
+say 'x' || s 'xaby'~pos(s) pos(s, 'xaby') compare(s, 'ab') (s == 'ab')
+say 1 + n (n + 1) (n * n) ('2' = n) abs(n) max(n, 1)
+say ('1' & b) (b | '0') (\b) b~?('y', 'n') n~dataType datatype(n)
+say .string~new(s) .string~new(s)~class~id s
+say 'sends' .local~sent
+::class num subclass string
+::method makestring
+  .local~sent = .local~sent + 1
+  return 7
+::method string
+  .local~sent = .local~sent + 1
+  return 'str'
+```
+
+```output defect=#0
+ab ab b b
+xab 2 2 0 1
+3 3 4 1 2 2
+1 1 0 y NUM NUM
+ab String ab
+sends 0
 ```
