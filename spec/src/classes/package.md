@@ -38,7 +38,7 @@ which also specifies the checkpoints.
 
 The examples that show an error use a routine `try` that sends the message in
 its argument and prints the answer, or the error code when the message raises
-one. A message that answers `.nil` prints `.nil`.
+one. A message that answers `.nil` prints `The NIL object`.
 
 ## The class
 
@@ -296,7 +296,6 @@ bad: say arg(1) '=>' condition('o')~code
 .package~new("n", .array~of(.array~of("nop", "nop"))) => 13.1
 ```
 
-
 r[class.package.new.context]
 The context decides which classes and routines the code of the package can
 name besides its own and those of the library. A package made with no context
@@ -304,13 +303,13 @@ sees nothing of the package of the code that made it: a class name that it
 does not hold is the string of that name, and a routine that it does not hold
 raises `SYNTAX 43.1`. With a `Package` object as the context the package
 finds, after its own, the classes and routines that the context package finds,
-its own and those it imports, and with a `Routine` or a `Method` it finds
-those of the package of that object. A context that is a `Method` or a
-`Routine` whose `package` is `.nil`, one that `loadExternalMethod` or
-`loadExternalRoutine` made, gives a package whose lookup through the context
-is not specified. The context package is not one of the `importedPackages` of
-the new package, and its classes and routines are not among the `classes` and
-`routines` of the new package.
+its own, those it imports and what its own context finds, and with a `Routine`
+or a `Method` it finds those of the package of that object. A context that is
+a `Method` or a `Routine` whose `package` is `.nil`, one that
+`loadExternalMethod` or `loadExternalRoutine` made, gives a package whose
+lookup through the context is not specified. The context package is not one of
+the `importedPackages` of the new package, and its classes and routines are
+not among the `classes` and `routines` of the new package.
 
 ```rexx
 src = .array~of('return 1', '::class there', '::routine thereproc')
@@ -326,6 +325,11 @@ c = .package~new('e', 'return 1', p)
 say c~classes~items c~routines~items c~importedPackages~items
 say c~findClass('THERE')~id (c~findClass('HERE') == .nil)
 say c~findRoutine('THEREPROC')~class~id
+src = .array~of('nop', '::class c2cls', '::routine c2r', '  return "c2"')
+c2 = .package~new('c2', src)
+c1 = .package~new('c1', 'nop', c2)
+pc = .package~new('pc', 'nop', c1)
+say pc~findClass('C2CLS')~isNil pc~findRoutine('C2R')~isNil
 src = .array~of('return 1', '::class libpub public')
 src~append('::routine libproc public')
 src~append('  return "lib routine"')
@@ -353,6 +357,7 @@ Class there routine
 0 0 0
 THERE 1
 Routine
+0 0
 Class lib routine
 ```
 
@@ -473,7 +478,8 @@ name raises `SYNTAX 93.914`. With no value the call answers the current value,
 and with a value it sets it and answers the previous one.
 `DefineDefaultOptions` is a string in the form of an `::OPTIONS` directive,
 which is the same form that [`options`](r:class.package.options.settings)
-answers; a string that does not begin with `::OPTIONS` raises `93.900`, a
+answers; a string that is not one `::OPTIONS` directive, in any case and
+after optional blanks, raises `93.900`, as a string of two directives does, a
 string whose options the directive refuses raises the error of the directive
 (`25.924` for an unknown option), and a directive with no options leaves every
 option at its initial value. The initial value names `DIGITS 9`,
@@ -524,6 +530,8 @@ call try '.package~defaultOptions(.nil)'
 call try '.package~defaultOptions("Other")'
 call try '.package~defaultOptions("D", "text")'
 call try '.package~defaultOptions("D", "OPTIONS DIGITS 5")'
+two = '::OPTIONS DIGITS 7; ::OPTIONS FORM ENGINEERING'
+call try '.package~defaultOptions("D", two)'
 call try '.package~defaultOptions("D", "::OPTIONS BADWORD")'
 call try '.package~defaultOptions("C", "text")'
 call try '.package~defaultOptions("C", 1.5)'
@@ -557,6 +565,7 @@ bad: say arg(1) '=>' condition('o')~code
 .package~defaultOptions("Other") => 93.914
 .package~defaultOptions("D", "text") => 93.900
 .package~defaultOptions("D", "OPTIONS DIGITS 5") => 93.900
+.package~defaultOptions("D", two) => 93.900
 .package~defaultOptions("D", "::OPTIONS BADWORD") => 25.924
 .package~defaultOptions("C", "text") => 93.905
 .package~defaultOptions("C", 1.5) => 93.905
@@ -1225,7 +1234,6 @@ DEEP,DUP,MID
 1
 ```
 
-
 r[class.package.importedroutines]
 `importedRoutines` answers a new `StringTable` of the public routines that the
 package imports from the packages of its `::REQUIRES` directives, of
@@ -1289,7 +1297,6 @@ RDEEP
 from x from x
 ```
 
-
 r[class.package.importedpackages]
 `importedPackages` answers a new `Array` of the packages that the package
 imports, in the order that it imported them: those of its `::REQUIRES`
@@ -1337,19 +1344,20 @@ r[class.package.findclass]
 looked up in the package's code, and answers what it finds, or `.nil`. The
 name is taken in upper case. The places that are searched, in this order, are
 the classes of the package, public or not; the classes that the package of its
-context finds, which are its own, public or not, and the public ones of the
-packages it imports; the public classes of the packages it imports, the one
-imported first winning among equal names; the public classes of the library;
-the package's [`local`](r:class.package.local) directory; and then `.local`
-and `.environment`, so the answer may be an object that is not a class, such
-as `.nil`, `.true` or `.local`, and a name that nothing holds answers `.nil`.
-The first place that holds the name decides. The name is required
-(`SYNTAX 88.901`), an object with no `MAKESTRING` method, `.nil` among them,
-raises `88.909`, and a second argument raises `93.902`. Any string is a name:
-a name with a blank or a period is found when `addClass`, `addPublicClass` or
-a directory holds it under that name. A name that has a colon is not looked up
-through a namespace: `tg:shown` and `rexx:string` answer `.nil`, even when a
-package that holds a public class `SHOWN` was added under the namespace `TG`.
+context finds, which are its own, public or not, the public ones of the
+packages it imports, and what its own context finds; the public classes of the
+packages it imports, the one imported first winning among equal names; the
+public classes of the library; the package's [`local`](r:class.package.local)
+directory; and then `.local` and `.environment`, so the answer may be an
+object that is not a class, such as `.nil`, `.true` or `.local`, and a name
+that nothing holds answers `.nil`. The first place that holds the name
+decides. The name is required (`SYNTAX 88.901`), an object with no
+`MAKESTRING` method, `.nil` among them, raises `88.909`, and a second argument
+raises `93.902`. Any string is a name: a name with a blank or a period is
+found when `addClass`, `addPublicClass` or a directory holds it under that
+name. A name that has a colon is not looked up through a namespace: `tg:shown`
+and `rexx:string` answer `.nil`, even when a package that holds a public class
+`SHOWN` was added under the namespace `TG`.
 
 ```rexx
 src = .array~of('return 1', '::class own public', '::class priv')
@@ -1412,6 +1420,7 @@ q~addPackage(lib)
 say (q~findClass('ARRAY') == lib~classes['ARRAY'])
 say (q~findClass('STRING') == .string) (q~findClass('ARRAY') == .array)
 say (p~findClass('LIBC') == lib2~classes['LIBC'])
+say .package~new('z', 'nop', .package~new('y', 'nop', p))~findClass('MINE')~id
 lib3 = .package~new('lib3', .array~of('return 1', '::class same public'))
 q~addPackage(lib3)
 say (q~findClass('SAME') == lib~classes['SAME'])
@@ -1431,20 +1440,22 @@ say q~findClass('ZQSTR') '/' q~findClass('ZQONLY')
 1
 1 0
 1
+MINE
 1
 package local / only in local
 ```
 
 r[class.package.findpublicclass]
 `findPublicClass` answers the public class that has the name it is given, or
-`.nil`: a public class of the package, one of its context, one of the packages
-it imports (the one imported first winning among equal names), and the classes
-of the library that are public; a class that is not public, a library class
-that is not public, such as `RexxInfo`, and a name that is not a class answer
-`.nil`. The name is taken in upper case. The name is required
-(`SYNTAX 88.901`), an object with no `MAKESTRING` method, `.nil` among them,
-raises `88.909`, and a second argument raises `93.902`. A name that has a
-colon answers `.nil` as for [`findClass`](r:class.package.findclass).
+`.nil`: a public class of the package, a public class that the package of its
+context finds, one of the packages it imports (the one imported first winning
+among equal names), and the classes of the library that are public; a class
+that is not public, a library class that is not public, such as `RexxInfo`,
+and a name that is not a class answer `.nil`. The name is taken in upper case.
+The name is required (`SYNTAX 88.901`), an object with no `MAKESTRING` method,
+`.nil` among them, raises `88.909`, and a second argument raises `93.902`. A
+name that has a colon is not looked up through a namespace, as for
+[`findClass`](r:class.package.findclass): `tg:shown` answers `.nil`.
 
 ```rexx
 src = .array~of('return 1', '::class own public', '::class priv')
@@ -1458,9 +1469,16 @@ say q~findPublicClass('OWN')~id q~findPublicClass('PRIV')~isNil
 src = .array~of('nop', '::class cpub public', '::class cpriv')
 c = .package~new('c', 'nop', .package~new('ctx', src))
 say c~findPublicClass('CPUB')~id c~findPublicClass('CPRIV')~isNil
+src = .array~of('nop', '::class deep public', '::routine deepr public')
+src~append('  return "deep"')
+d2 = .package~new('d2', src)
+d = .package~new('d', 'nop', .package~new('d1', 'nop', d2))
+say d~findPublicClass('DEEP')~id d~findPublicRoutine('DEEPR')~call
 o = .package~new('o', .array~of('nop', '::class shown public'))
 p~addPackage(o, 'tg')
 say p~findPublicClass('tg:shown')~isNil p~findPublicClass('shown')~id
+p~addPublicClass('c:d', .array)
+say p~findPublicClass('c:d')~id
 call try 'p~findPublicClass'
 call try 'p~findPublicClass(.nil)'
 call try 'p~findPublicClass("x", 1)'
@@ -1480,7 +1498,9 @@ OWN String
 1 1
 OWN 1
 CPUB 1
+DEEP deep
 1 SHOWN
+Array
 p~findPublicClass => 88.901
 p~findPublicClass(.nil) => 88.909
 p~findPublicClass("x", 1) => 93.902
@@ -1491,12 +1511,14 @@ r[class.package.findroutine]
 The name is taken in upper case. The routines it looks through, in this order,
 are those of the package, public or not, those that were added to it, the
 routines that the package of its context finds, which are its own, public or
-not, and the public ones of the packages it imports, and the public routines
-of the packages it imports, the one imported first winning among equal names;
-the first that holds the name decides. Built-in functions and the functions of
-native libraries are not routine objects: they answer `.nil`, and so does a
-name with a colon, such as `tg:rr`, even when a package that holds a public
-routine `RR` was added under the namespace `TG`. The name is required
+not, the public ones of the packages it imports, and what its own context
+finds, and the public routines of the packages it imports, the one imported
+first winning among equal names; the first that holds the name decides.
+Built-in functions and the functions of native libraries are not routine
+objects: they answer `.nil`. A name that has a colon is not looked up through
+a namespace: `tg:rr` answers `.nil` even when a package that holds a public
+routine `RR` was added under the namespace `TG`; a routine that was added
+under a name with a colon is found by that name. The name is required
 (`SYNTAX 88.901`), an object with no `MAKESTRING` method, `.nil` among them,
 raises `88.909`, and a second argument raises `93.902`.
 
@@ -1512,6 +1534,8 @@ o = .package~new('o', .array~of('nop', '::routine rr public'))
 p~addPackage(o, 'tg')
 say p~findRoutine('RR')~class~id p~findRoutine('tg:rr')~isNil
 say p~findRoutine('LEFT')~isNil p~findRoutine('SysSleep')~isNil
+p~addRoutine('e:f', .routine~new('x', 'return "ef"'))
+say p~findRoutine('e:f')~call
 q = .package~new('q', 'return 1')
 q~addPackage(p)
 say q~findRoutine('PUBR')~call q~findRoutine('PRIVR')~isNil
@@ -1534,6 +1558,7 @@ p q
 1 1
 Routine 1
 1 1
+ef
 p 1
 p~findRoutine => 88.901
 p~findRoutine(.nil) => 88.909
@@ -1579,7 +1604,7 @@ from x
 r[class.package.findpublicroutine]
 `findPublicRoutine` answers the same routine as
 [`findRoutine`](r:class.package.findroutine) does for the name it is given, or
-`.nil`: a routine that the package holds or that its context holds answers
+`.nil`: a routine that the package holds or that its context finds answers
 public or not, and a routine that an imported package holds answers only when
 it is public there. The name is required (`SYNTAX 88.901`), an object with no
 `MAKESTRING` method, `.nil` among them, raises `88.909`, and a second argument
@@ -1994,22 +2019,24 @@ argument the name is the name of a file, which is found, read and installed as
 [the file rule](r:class.package.new.file) of `new` says, so a file that was
 loaded before is not read or run again: the answer is the same package. A file
 that cannot be found raises `SYNTAX 43.901`. The second argument is a source,
-which is installed under the name in place of the file. A string is one line,
-as for `new`. Any other object is sent `request` with the argument `ARRAY`,
-once, and an `Array` itself is used as it is, with no message; the items of
-the array are the lines, read as [the source rule](r:class.method.new.source)
-reads an array, so an empty item, a hole that is followed by an item, raises
-`SYNTAX 93.952`, as for `new`. An object for which `request` answers `.nil`,
-`.nil` itself among them, raises `SYNTAX 88.913`, and `request` is not sent
-with `STRING`. A source that does not translate raises its translation error.
-A package that is installed from a source is found afterwards by its name: a
-`loadPackage` of that name with no source, the `new` of `Package` with that
-name and a `::REQUIRES` of it answer that package and run nothing. A
-`loadPackage` with a source for a name that was already loaded, from a file or
-from a source, answers the package that was loaded first: the new source is
-not read, translated or run, and no class or routine of it is added. A third
-argument raises `93.902`. How the file is searched for is specified in the
-environment chapter. The checkpoint that a security manager sees is that of
+which is installed under the name in place of the file. A source that is not
+an instance of `Array` itself, a string included, is sent `request` with the
+argument `ARRAY`, once, and an `Array` is used as it is, with no message. A
+string is therefore split at its line ends by
+[its `makeArray`](r:class.string.makearray), and the null string is a source
+of no lines, where for `new` a string is one line. The items of an array are
+the lines, and a string item is its line. An object for which `request`
+answers `.nil`, `.nil` itself among them, raises `SYNTAX 88.913`, and
+`request` is not sent with `STRING`. A source that does not translate raises
+its translation error. A package that is installed from a source is found
+afterwards by its name: a `loadPackage` of that name with no source, the `new`
+of `Package` with that name and a `::REQUIRES` of it answer that package and
+run nothing. A `loadPackage` with a source for a name that was already loaded,
+from a file or from a source, answers the package that was loaded first: the
+new source is not read, translated or run, and no class or routine of it is
+added. A third argument raises `93.902`. How the file is searched for is
+specified in the environment chapter. The checkpoint that a security manager
+sees is that of
 [the `REQUIRES` rule](r:class.routine.setsecuritymanager.requires).
 
 ```rexx
@@ -2115,6 +2142,25 @@ first body
 1
 1
 1
+```
+
+```rexx
+p = .package~new('n', 'nop')
+say p~loadPackage('class_package_empty_zq.cls', '')~sourceSize
+```
+
+```output defect=#147
+0
+```
+
+```rexx
+p = .package~new('n', 'nop')
+src = 'nop' || '0A'x || 'return 1'
+say p~loadPackage('class_package_split_zq.cls', src)~sourceSize
+```
+
+```output defect=#148
+2
 ```
 
 r[class.package.loadlibrary]

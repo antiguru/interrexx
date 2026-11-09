@@ -587,7 +587,8 @@ of its file before the first directive, without a first line that begins with
 `#!`, and one that a `::ROUTINE` directive makes has the lines of its section,
 which [the rule of `Method`](r:class.method.source) reads as it does for a
 method: the text after the `;` of the directive is the first line, and an
-empty last line is left out. A routine that `loadExternalRoutine` loaded, and
+empty last line is left out, so a directive with nothing after its `;` and
+no lines has an empty source. A routine that `loadExternalRoutine` loaded, and
 an external routine, answer an array of no items. The method takes no argument
 (`SYNTAX 93.902`).
 
@@ -621,6 +622,15 @@ say 1
 return 'plain'
 1
 r~source(1) => 93.902
+```
+
+```rexx
+p = .package~new('n', .array~of('nop', '::routine r ;', '::routine s'))
+say p~routines['R']~source~items
+```
+
+```output defect=#147
+0
 ```
 
 r[class.routine.package]
@@ -707,7 +717,6 @@ say r~annotation('x')~isNil r~annotations~items
 ```output
 1 0
 ```
-
 
 r[class.routine.annotations]
 `annotations` answers the `StringTable` that holds every annotation of the
@@ -979,7 +988,7 @@ exit
       info~rc = 12
       info~failure = 1
     end
-        when info~command = 'echo three' then do
+    when info~command = 'echo three' then do
       info~rc = 13
       info~error = 1
     end
@@ -1011,14 +1020,14 @@ r[class.routine.setsecuritymanager.local]
 The `LOCAL` checkpoint is offered when the code names an object of `.local`,
 with the entry `NAME`, the upper case name, before `.local` is searched. It is
 offered for a name that [`findClass`](r:class.package.findclass) takes from
-`.local` or `.environment` or does not find, and so not for `.nil`, `.true` or
-`.false`, not for a name that a class of the package, of its context, of the
-packages it imports or of the library gives, and not for a name in the `local`
-directory of the package, which is searched first. A manager that answers `1`
-with an entry `RESULT` provides the object; one that answers `1` with no
-`RESULT` is read as the name not being found, and the lookup goes on with the
-`ENVIRONMENT` checkpoint. The code of the routine is the code that is under
-the manager; the program that called it is not.
+`.local` or `.environment` or does not find, except `.nil`, `.true` and
+`.false`, which are never offered, not for a name that a class of the package,
+of its context, of the packages it imports or of the library gives, and not
+for a name in the `local` directory of the package, which is searched first. A
+manager that answers `1` with an entry `RESULT` provides the object; one that
+answers `1` with no `RESULT` is read as the name not being found, and the
+lookup goes on with the `ENVIRONMENT` checkpoint. The code of the routine is
+the code that is under the manager; the program that called it is not.
 
 ```rexx
 .local~zqvalue = 'in local'
@@ -1172,31 +1181,60 @@ offered twice for a file that is found, first with the name as it was given
 and then with its absolute name, and once, with the name as it was given, for
 a file that is not found, before the load raises `SYNTAX 43.901`. A package
 that was loaded before is not loaded again and is not offered, and neither is
-a `loadPackage` that has a source. A manager that answers `0` lets the load go
-on, and so does one that answers `1` and leaves `NAME` as it is.
+a `loadPackage` that has a source, and a `::REQUIRES` of a package that the
+code makes from a source is not offered either. A manager that answers `0`
+lets the load go on, and so does one that answers `1` and leaves `NAME` as it
+is.
 
 ```rexx
 f = 'class_routine_requires_zq.tmp'
 call sysfiledelete f
 call lineout f, 'say "loaded body"'
 call lineout f
+g = 'class_routine_requires_n_zq.tmp'
+call sysfiledelete g
+call lineout g, 'say "new body"'
+call lineout g
+m = 'class_routine_requires_m_zq.tmp'
+call sysfiledelete m
+call lineout m, 'say "m body"'
+call lineout m
+h = 'class_routine_requires_b_zq.tmp'
+call sysfiledelete h
+call lineout h, 'say "required body"'
+call lineout h
 src = 'p = .package~new("p", "nop"); signal on syntax name bad; '
 src = src || 'say p~loadPackage("class_routine_requires_zq.tmp")~class~id; '
 src = src || 'say p~loadPackage("class_routine_requires_zq.tmp")~class~id; '
 src = src || 'say p~loadPackage("class_routine_requires_src_zq.tmp", '
 src = src || '"nop")~class~id; '
+src = src || 'say .package~new("class_routine_requires_n_zq.tmp")~class~id; '
+src = src || 'x = .package~new("x", .array~of("nop", '
+src = src || '"::requires ""class_routine_requires_b_zq.tmp"""));'
 src = src || 'say p~loadPackage("class_routine_requires_gone_zq.tmp"); '
 src = src || 'bad: say condition("o")~code'
 r = .routine~new('agent', src)
 r~setSecurityManager(.mgr~new)
 r~call
+src = 'say .package~new("class_routine_requires_m_zq.tmp")~class~id'
+r = .routine~new('agent2', src)
+r~setSecurityManager(.mgr1~new)
+r~call
 call sysfiledelete f
+call sysfiledelete g
+call sysfiledelete h
+call sysfiledelete m
 exit
 ::class mgr
 ::method requires
   use arg info
-    say 'requires, absolute name:' (info~name == qualify(info~name))
+  say 'requires, absolute name:' (info~name == qualify(info~name))
   return 0
+::class mgr1
+::method requires
+  use arg info
+  say 'requires, answer 1:' (info~name == qualify(info~name))
+  return 1
 ```
 
 ```output
@@ -1207,7 +1245,16 @@ Package
 Package
 Package
 requires, absolute name: 0
+requires, absolute name: 1
+new body
+Package
+required body
+requires, absolute name: 0
 43.901
+requires, answer 1: 0
+requires, answer 1: 1
+m body
+Package
 ```
 
 r[class.routine.setsecuritymanager.method]

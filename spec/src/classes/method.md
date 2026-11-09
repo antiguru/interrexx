@@ -666,6 +666,15 @@ TAIL 1 [  say "a"]
 BLANK 2 [  say "b"|  ]
 ```
 
+```rexx
+p = .package~new('n', .array~of('nop', '::method f ;', '::method g'))
+say p~definedMethods['F']~source~items
+```
+
+```output defect=#147
+0
+```
+
 r[class.method.package]
 `package` answers the package that holds the method's code, which decides
 which classes and routines the code names. For a method that a `::METHOD`
@@ -712,13 +721,14 @@ r[class.method.scope]
 that belongs to no class, such as one made by `new` or `newFile`. A method
 that a class inherits from a superclass or a mixin class keeps the scope of
 the class that defined it, so `instanceMethod` of an instance of a subclass
-shows the superclass. [`define`](r:class.class.define) installs the method
-object itself, and sets its `scope` to the class, so the object that was
-installed answers the class and is the one that `method` of the class answers.
-[`setMethod`](r:class.object.setmethod) installs a copy of the method object:
-the original keeps its scope, `.nil` for one made by `new`, and the copy that
-the object holds has the scope `.nil` too, so the two are different objects.
-The method takes no argument.
+shows the superclass. The method that [`define`](r:class.class.define)
+installs runs the code of the method object that is given, with the class as
+its scope, so `method` of the class answers a method with that scope. The
+method that [`setMethod`](r:class.object.setmethod) installs runs the code
+with the scope that [the scope rule](r:class.methods.object.scope) says, which
+is none for `FLOAT`. Whether the installed method is the argument or a copy of
+it, and what scope the argument answers afterwards, is not specified. The
+method takes no argument.
 
 ```rexx
 say .sub~method('own')~scope~id .sub~new~instanceMethod('inherited')~scope~id
@@ -727,12 +737,11 @@ say .array~method('append')~scope~id
 say .method~new('n', 'nop')~scope~isNil
 m = .method~new('d', 'return 1')
 .sub~define('D', m)
-say m~scope~isNil m~scope~id (m == .sub~method('D'))
+say .sub~method('D')~scope~id
 n = .method~new('s', 'return 2')
 o = .sub~new
 o~put('S', n)
-say n~scope~isNil o~instanceMethod('S')~scope~isNil,
-  (n == o~instanceMethod('S'))
+say o~instanceMethod('S')~scope~isNil
 call try '.sub~method("own")~scope(1)'
 exit
 try:
@@ -758,8 +767,8 @@ SUB BASE
 MIX
 Array
 1
-0 SUB 1
-1 1 0
+SUB
+1
 .sub~method("own")~scope(1) => 93.902
 ```
 
@@ -813,7 +822,6 @@ say m~annotation('x')~isNil m~annotations~items
 ```output defect=#146
 1 0
 ```
-
 
 r[class.method.annotations]
 `annotations` answers the `StringTable` that holds every annotation of the
@@ -1238,9 +1246,8 @@ method runs, and in the internal routines of that code, the actions that
 [the checkpoint rules](r:class.routine.setsecuritymanager.checkpoints) name
 are offered to the manager first; the code of other packages that the method
 calls is not under the manager. A manager that was set before
-[`define`](r:class.class.define) installed the method is the installed
-method's, as the example shows, because `define` installs the method object
-itself.
+[`define`](r:class.class.define) installed the method stays with the
+installed method, as the example shows.
 
 ```rexx
 m = .method~new('n', 'address system "echo not run"; return "ran"')
