@@ -1,7 +1,8 @@
 ---
 element: "Classes"
 kind: chapter
-rexxref: "Builtin Classes"
+rexxref: "Builtin Classes; Objects and Classes > Mixin Classes; Objects and Classes > Overview of Classes Provided by Rexx; Fundamental Classes > Object Class > defaultName; Fundamental Classes > Object Class > objectName; Fundamental Classes > Object Class > objectName=; Fundamental Classes > Object Class > string"
+deviations: [30, 32, 36]
 ---
 
 # Classes
@@ -51,17 +52,28 @@ ANSI draft has the class, and the Deviations that touch the page.
 ## How rules are named
 
 A rule on a class page is named `class.` followed by the page, which is the
-class name in lower case, and then the following words.
+class name in lower case, and then the following words. On a page that holds
+several classes, the class name in lower case follows the page, as in
+`class.comparators.numeric.compare`.
 
 * `class.<page>.<method>` is the main rule of a method, with the method name
   in lower case: `class.array.append`.
 * `class.<page>.<method>.<aspect>` is a further rule of the same method, such
   as an error or a default.
 * `class.<page>.<topic>` is a rule about the class as a whole, such as
-  `creation`, `string` or `comparison`.
+  `creation` or `comparison`. A topic never takes the name of a method of
+  the class: when the class has a method of that name, the main rule of the
+  method is the rule about it, so for a class with a `string` method the
+  rule about its string value is `class.<page>.string`.
+* `class.<page>.<method>.sends` is the rule that states the messages the
+  method sends, as [the sends rule](r:class.index.sends) says.
 * A class method and an instance method of one class never share an
   identifier. When a name exists on both sides, the instance method has the
-  plain name, and the class method has the aspect `class-side`.
+  plain name, and the class method has the aspect `class-side`; a further
+  aspect of the class method follows it, as in
+  `class.properties.load.class-side.error`.
+* The prefix form of `-` and `+`, which is a method of its own with no
+  argument, takes the aspect `prefix`: `class.<page>.minus.prefix`.
 * A method that is written as a symbol takes a word in place of the symbol:
   `eq` for `=`, `seq` for `==`, `ne` for `\=`, `sne` for `\==`, `ltgt` for
   `<>`, `gtlt` for `><`, `gt`, `lt`, `ge` and `le` for `>`, `<`, `>=` and
@@ -75,8 +87,11 @@ class name in lower case, and then the following words.
   name without it and `-set`: `objectname-set` for `objectName=`, and
   `brackets-set` for `[]=`.
 
-Every method of a class has a rule on its page, and the identifiers never
-change once they are in the book.
+Every method that a class defines has a rule on its page, and the
+identifiers never change once they are in the book. A method that the class
+only inherits has no rule on its page: the page links to the rule on the page
+that defines it, in a sentence that is not itself a rule and has no
+identifier.
 
 ## The two sides of a class
 
@@ -110,8 +125,9 @@ r[class.index.root]
 Every class is an instance of `Class`. `Object` is the root of the
 hierarchy: it has no superclass, and every other class has `Object` among its
 ancestors. A class has one superclass and may inherit any number of mixin
-classes. A mixin class is a class that exists to be inherited; it is also a
-class with a superclass, and it can make instances.
+classes. A mixin class is a class that exists to be inherited. Nothing stops a
+program from sending `new` to a mixin class: it makes an instance like any
+other class.
 
 ```rexx
 say .object~superclass~isNil .object~class~id .array~class~id
@@ -127,12 +143,18 @@ say .comparable~isSubclassOf(.object) .comparable~new~class~id
 
 r[class.index.hierarchy]
 The `superClasses` method of a class answers an array that holds its
-superclass first, then the mixin classes it inherits in the order it
-inherits them. The four listings below show the library classes related by
-it, each line giving the superclasses of the class before the colon. The
-first listing also shows the class of each class, which is `Class` for every
-one of them, `Singleton` included. A class that is not in a listing is
-described on its own page.
+superclass first, then its mixin classes in the order of its inherit list,
+into which the `inherit` method of `Class` can insert more (see the page of
+`Class`). The four listings below show the library classes related by it, each
+line giving the superclasses of the class before the colon. The first listing
+also shows the class of each class, which is `Class` for every one of them,
+`Singleton` included. A class has everything its superclass and its mixin
+classes inherit, so `CircularQueue` has `OrderedCollection` through `Queue`,
+though only `Queue` is among its superclasses. Apart from `ArgUtil`, which
+[a rule of its own](r:class.index.argutil) covers, a class that is not in a
+listing is described on its own page. `RexxInfo`, whose class is reached only
+as `.rexxinfo~class`, and `RegularExpression`, which a program gets with
+`::REQUIRES`, are among those.
 
 ```rexx
 say .object~superclasses~items .object~class~id
@@ -280,6 +302,38 @@ InputOutputStream: Object InputStream OutputStream
 Stream: InputOutputStream
 ```
 
+```rexx
+call show
+.c~inherit(.m3)
+call show
+.c~inherit(.m4, .m1)
+call show
+say .circularqueue~isSubclassOf(.orderedcollection),
+  .circularqueue~superclasses~items
+say .rexxinfo~class~id .rexxinfo~class~superclass~id
+exit
+show:
+  s = ''
+  do x over .c~superclasses
+    s = s x~id
+  end
+  say s~strip
+  return
+::class c inherit m2 m1
+::class m1 mixinclass object
+::class m2 mixinclass object
+::class m3 mixinclass object
+::class m4 mixinclass object
+```
+
+```output
+Object M2 M1
+Object M2 M1 M3
+Object M2 M4 M1 M3
+1 1
+RexxInfo Object
+```
+
 r[class.index.mixins]
 The library classes that are mixin classes are the ones for which
 `queryMixinClass` answers 1: the two notification classes, the four
@@ -287,8 +341,7 @@ collection mixins `Collection`, `MapCollection`, `OrderedCollection` and
 `SetCollection`, `Comparable`, `Orderable`, `Comparator` and every class
 below it, `CommandHandler`, `Singleton`, and the stream classes
 `InputStream`, `OutputStream`, `InputOutputStream` and `Stream`. Every other
-class listed in the hierarchy is not a mixin class. A mixin class can
-still make instances with `new`.
+class listed in the hierarchy is not a mixin class.
 
 ```rexx
 mix = ''
@@ -313,27 +366,43 @@ other: Array String Message Directory
 Collection Comparator
 ```
 
+r[class.index.argutil]
+The class `ArgUtil` is among the classes of `.environment`. It is a class
+whose superclass is `Object`, and it is not a mixin class. It is deprecated
+and has no page in this chapter; its methods are not specified.
+
+```rexx
+c = .environment~at('ARGUTIL')
+say c~class~id c~superclass~id c~queryMixinClass
+```
+
+```output
+Class Object 0
+```
+
 ## Arguments and the errors of methods
 
 r[class.index.errors]
-A message to an object of a library class can fail in three ways: no method
-of that name is found, the arguments do not fit the method, or an argument
-has a value the method refuses. The first raises
-[NOMETHOD](r:cond.nomethod.raise), which untrapped ends as `SYNTAX 97.1`,
-and its private and package forms are those of
-[the access rule](r:dir.method.access). The other two raise SYNTAX at the
-clause that sent the message, as [the SYNTAX rule](r:cond.syntax.raise) says,
-with the error number and subcode that the method gives. A rule of this
-chapter that says a method "raises `SYNTAX m.n`" means what
-[that convention](r:conv.error.name) means: the message returns no value, a
-trap sees `m.n` as the code and `m` as `RC`, and the text of the error
-message is not specified.
+A message to an object of a library class can fail in three ways: no method of
+that name is found and the class has no `UNKNOWN` method (`Directory`,
+`StringTable` and their subclasses have one, and their pages say what it
+does), the arguments do not fit the method, or an argument has a value the
+method refuses. The first raises [NOMETHOD](r:cond.nomethod.raise), which
+[untrapped](r:cond.nomethod.untrapped) ends as `SYNTAX 97.1`, and its private
+and package forms are those of [the access rule](r:dir.method.access). The
+other two raise SYNTAX at the clause that sent the message, as
+[the SYNTAX rule](r:cond.syntax.raise) says, with the error number and subcode
+that the method gives. A rule of this chapter that says a method "raises
+`SYNTAX m.n`" means what [that convention](r:conv.error.name) means: the
+message returns no value, a trap sees `m.n` as the code and `m` as `RC`, and
+the text of the error message is not specified.
 
 ```rexx
 call try '.array~new~nosuchzz'
 call try '.array~new~items(1)'
 call try '.array~new~at'
 call try '.array~new~section("x")'
+call try '.directory~new~nosuchzz'
 exit
 try:
   signal on syntax name bad
@@ -349,24 +418,29 @@ bad: say arg(1) '=>' condition('c') condition('o')~code rc
 .array~new~items(1) => SYNTAX 93.902 93
 .array~new~at => SYNTAX 93.901 93
 .array~new~section("x") => SYNTAX 93.907 93
+.directory~new~nosuchzz => no error
 ```
 
 r[class.index.args.count]
 The argument count of a message is the position of the last argument that is
 not [omitted](r:conv.arg.omitted), as it is for [a built-in
 function](r:bif.index.call.count), so omitted places at the end add nothing.
-A message with more arguments than the method accepts raises `SYNTAX 93.902`,
+A message with more arguments than the method accepts raises a SYNTAX error
 whatever the values of the arguments are, and an omitted place before the
-last argument still counts.
+last argument still counts. The subcode is `93.902` unless the page of the
+method gives another; the stream methods, such as `state`, raise `88.922`.
 
 ```rexx
 o = .object~new
+s = .stream~new('class_index_zzq_never_opened')
 call try 'o~hasMethod("A", "B")'
 call try 'o~hasMethod(, "B")'
 call try 'o~hasMethod("A", )'
 call try 'o~copy(1)'
 call try 'o~class(, )~id'
 call try '.array~of(1)~items(1)'
+call try '"abc"~left(-1, "xx", 3)'
+call try 's~state(1)'
 exit
 try:
   signal on syntax name bad
@@ -384,14 +458,17 @@ o~hasMethod("A", ) => 0
 o~copy(1) => 93.902
 o~class(, )~id => Object
 .array~of(1)~items(1) => 93.902
+"abc"~left(-1, "xx", 3) => 93.902
+s~state(1) => 88.922
 ```
 
 r[class.index.args.missing]
 A message that leaves out an argument the method requires raises a SYNTAX
-error, and the subcode belongs to the method: the page of a method gives
-it. Among those that occur are `93.903` for a method such as `append`,
-`hasMethod` or `left`, `93.901` for the index methods such as `at` and
-`put`, and `88.901` for `isA` and `put` of a `Directory`.
+error. The subcode belongs to the method, and its page gives it. Among those
+that occur are `93.903`, an argument at a given position is missing, as for
+`append`, `hasMethod`, `left` and the `at` of `List`; `93.901`, fewer
+arguments than the method needs, as for the `at` and `put` of `Array`; and
+`88.901`, as for `isA` and the `at` and `put` of `Table` and `Directory`.
 
 ```rexx
 o = .object~new
@@ -400,6 +477,8 @@ call try '.array~new~append'
 call try '"abc"~left'
 call try '.array~new~at'
 call try '.array~new~put(1)'
+call try '.list~new~at'
+call try '.table~new~at'
 call try 'o~isA'
 call try '.directory~new~put(1)'
 exit
@@ -418,6 +497,8 @@ o~hasMethod => 93.903
 "abc"~left => 93.903
 .array~new~at => 93.901
 .array~new~put(1) => 93.901
+.list~new~at => 93.903
+.table~new~at => 88.901
 o~isA => 88.901
 .directory~new~put(1) => 88.901
 ```
@@ -425,16 +506,20 @@ o~isA => 88.901
 ## Making an object with new
 
 r[class.index.new]
-The message `new` to a class makes an object of the class that received it,
-and sends the new object the message `init` with the arguments of the `new`
-message, in order. The result of `new` is that object, whatever `init`
-answers. A class that inherits `new` from a superclass still makes an object
-of the class that received the message, so a subclass of a class with an
-`init` runs that `init` on its own instances. An `init` that a class does not
-declare is that of `Object`, which accepts no argument: `new` with an argument
-raises `SYNTAX 93.902` for such a class. A class that is
+The `new` that `Class` supplies makes an object of the class that received
+it and sends the new object the message `init` with the arguments of `new`,
+in order. A library class may have a class-side `new` of its own, which uses
+the arguments itself and sends `init` with other arguments or none:
+`.array~new(5)` sends `init` with no argument. The page of each such class
+states what its `new` sends to `init`. The result of `new` is the new object,
+whatever `init` answers. A class that inherits `new` from a superclass still
+makes an object of the class that received the message, so a subclass of a
+class with an `init` runs that `init` on its own instances. A class that
+neither declares nor inherits an `init` other than that of `Object` has the
+`init` of `Object`, which accepts no argument: `new` with an argument raises
+`SYNTAX 93.902` for such a class. A class that is
 [abstract](r:dir.class.abstract) makes no object with the `new` that `Class`
-supplies.
+supplies: it raises `SYNTAX 98.989`.
 
 ```rexx
 p = .point~new(3, 4)
@@ -442,8 +527,11 @@ say p~class~id p~x p~y
 q = .point3~new(1, 2)
 say q~class~id q~x q~y q~z
 say .ret~new~class~id
+a = .xa~new(5)
+say a~class~id a~size
 call try '.plain~new(1)'
 call try '.plain~new'
+call try '.abs~new'
 exit
 try:
   signal on syntax name bad
@@ -468,26 +556,37 @@ bad: say arg(1) '=>' condition('o')~code
 ::method init
   return 'ignored'
 ::class plain
+::class xa subclass array
+::method init
+  say 'xa init' arg()
+  forward class (super)
+::class abs abstract
 ```
 
 ```output
 POINT 3 4
 POINT3 1 2 z
 RET
+xa init 0
+XA 5
 .plain~new(1) => 93.902
 .plain~new => PLAIN
+.abs~new => 98.989
 ```
 
 r[class.index.new.init-once]
-A message `init` to an object that already exists runs the method it finds and
-then raises `SYNTAX 91.999`, whoever sends it, and so does an `init` that the
-object's own methods send to `self` or by `send` once the object is made.
-The `init` that `new` sends, and a FORWARD to the `init` of a superclass
-from inside an `init`, are not subject to this.
+A message `init` sent to an object after the `new` that made it has returned
+runs the method it finds and then raises `SYNTAX 91.999`, whoever sends it
+and whether it is sent by `~`, by `send` or as a scoped `~init:super`. An
+`init` sent while that first `init` is still running, by FORWARD, by
+`self~init:super` or by `self~init`, raises nothing.
 
 ```rexx
 call try '.noisy~new(1)~init(2)'
 call try '.noisy~new(1)~redo'
+call try '.noisy~new(1)~send("INIT", 3)'
+call try '.viasuper~new(6)~class~id'
+call try '.viaself~new(7)~class~id'
 call try '.object~new~init'
 exit
 try:
@@ -503,6 +602,12 @@ bad: say arg(1) '=>' condition('o')~code
   say 'init' n
 ::method redo
   self~init(9)
+::class viasuper subclass noisy
+::method init
+  self~init:super(arg(1))
+::class viaself subclass noisy
+::method init
+  if arg(1) = 7 then self~init(8)
 ```
 
 ```output
@@ -512,6 +617,12 @@ init 2
 init 1
 init 9
 .noisy~new(1)~redo => 91.999
+init 1
+init 3
+.noisy~new(1)~send("INIT", 3) => 91.999
+init 6
+.viasuper~new(6)~class~id => VIASUPER
+.viaself~new(7)~class~id => VIASELF
 .object~new~init => 91.999
 ```
 
@@ -520,7 +631,8 @@ A class method named `new` that a class declares answers the message `new`
 in place of the one `Class` supplies, as the
 [metaclass rule](r:dir.class.metaclass) says for a class method that hides
 another. The one `Class` supplies is reached from it with FORWARD CLASS to
-`super`. The override may answer any object.
+`super`. The override may answer any object, except as
+[Deviation 32](r:class.index.deviation.32) states.
 
 ```rexx
 say .counted~new~class~id .counted~new~class~id .counted~made
@@ -585,13 +697,15 @@ an apple | The XYLO class | The Array class
 r[class.index.objectname]
 The `objectName` method of an object answers its name: the name set for it,
 and when none was set, the object's `defaultName`. The `objectName=` method
-sets the name. Its argument is converted to a string as [the conversion
-rule](r:conv.string.object) says for an argument that is not a string, and it
-is the name from then on, even when it is the null string. An argument that
-cannot be converted raises `SYNTAX 88.909`. The object `.nil` has the name
-`The NIL object`. The name belongs to the object
-alone: it changes no other object, not the objects of its class, and not the
-class's `id`. `objectName` takes no argument and `objectName=` takes one.
+sets the name. Its argument must be a string or an object with a `MAKESTRING`
+method that answers one, which is then the name; an instance of a subclass of
+`String` is a string here. The name is kept from then on, even when it is the
+null string. Any other argument, `.nil` and an object that has only a `string`
+method included, raises `SYNTAX 88.909`. The object `.nil` has the name
+`The NIL object`. The name belongs to the object alone: it changes no other
+object, not the objects of its class, and not the class's `id`. `objectName=`
+on a string is refused, as [Deviation 36](r:class.index.deviation.36) states.
+`objectName` takes no argument and `objectName=` takes one.
 
 ```rexx
 o = .xylo~new
@@ -606,6 +720,11 @@ say '['o~objectName']' .nil~objectName
 say .xylo~objectName '|' .xylo~id '|' .xylo~defaultName
 call try 'o~objectName = .object~new'
 call try 'o~objectName = .nil'
+call try 'o~objectName = .ms~new'
+say o~objectName
+call try 'o~objectName = .st~new'
+call try 'o~objectName = .sub~new("subval")'
+say o~objectName
 call try 'o~objectName("x")'
 call try 'o~"OBJECTNAME="()'
 exit
@@ -617,6 +736,13 @@ try:
 bad: say arg(1) '=>' condition('o')~code
   return
 ::class xylo
+::class ms
+::method makestring
+  return 'from-makestring'
+::class st
+::method string
+  return 'from-string'
+::class sub subclass string
 ```
 
 ```output
@@ -627,19 +753,27 @@ Fred | a XYLO | a XYLO
 Cls | XYLO | The XYLO class
 o~objectName = .object~new => 88.909
 o~objectName = .nil => 88.909
+o~objectName = .ms~new => no error
+from-makestring
+o~objectName = .st~new => 88.909
+o~objectName = .sub~new("subval") => no error
+subval
 o~objectName("x") => 93.902
 o~"OBJECTNAME="() => 93.903
 ```
 
 r[class.index.string]
-The string value of an object that is not a string is the answer of its
-`string` method, and that of `Object` answers the `objectName` of the object.
-So the string value is the name that was set, and otherwise the default name.
-`say`, a concatenation with `||`, a blank or an abuttal, and every other use
-that needs the string value of an object, as [the message
-rule](r:expr.messages.default) says for the joining messages, take the answer
-of `string`. A class whose instances should show differently declares `string`
-itself.
+The string value of an object that is not a string is found as [the
+conversion rule](r:conv.string.object) says: the answer of its `MAKESTRING`
+method when it has one, and otherwise the answer of its `string` method.
+`say` and the joining operators use it, as [the SAY
+rule](r:instr.say.object) and [the concatenation
+rule](r:expr.concatenation.operands) say. The `string` method of `Object`
+answers the object's `objectName`, so an object with no `MAKESTRING` method
+shows the name that was set, and otherwise its default name. A class whose
+instances should show differently declares `string`, or `makeString` when
+builtins too should see that value. A `string` method that answers an object
+that is not a string is covered by [Deviation 30](r:class.index.deviation.30).
 
 ```rexx
 a = .plain~new
@@ -648,30 +782,39 @@ a~objectName = 'named'
 say a '|' a'!' '|' a~string '|' a~defaultName
 b = .shown~new
 say b '|' b'!' '|' b~string '|' b~objectName
+c = .made~new
+say c '|' c'!' '|' c~string '|' c~objectName
 ::class plain
 ::class shown
 ::method string
   return 'SHOWN: b'
+::class made
+::method makestring
+  return 'M: c'
 ```
 
 ```output
 a PLAIN | a PLAIN! | a PLAIN
 named | named! | named | a PLAIN
 SHOWN: b | SHOWN: b! | SHOWN: b | a SHOWN
+M: c | M: c! | a MADE | a MADE
 ```
 
 ## Messages a method sends
 
 r[class.index.sends]
-A method of a library class whose result depends on messages it sends, to its
-receiver or to its arguments, is specified with those messages: the page
-names them and gives their order, because a subclass of the receiver's
-class, or the class of an argument, can answer one of them differently, and
-the result then differs. A method that sends no message that a class can
-override has no such statement. The default of `string` above is such a
-case: it sends `objectName`, and `objectName` sends `defaultName` when no name
-was set. `appendAll` sends `allItems` to its argument and appends what it
-answers, and `putAll` sends `supplier` to its argument and puts what it
+A method of a library class that sends a message a program can override, to
+its receiver, to the receiver's class, to an argument, to an item it holds or
+to an object it makes, has a rule `class.<page>.<method>.sends`. That rule
+names the messages, their receivers, their arguments and their order, and
+says whether the number of times each is sent is specified, with an example
+in which an override shows each message. A method with no such rule sends no
+message that a program can override, other than what [the conversion
+rule](r:conv.string.object) sends to its string arguments. The methods named
+here are stated in this rule instead: the `string` method of `Object` sends
+`objectName` to the object, and `objectName` sends `defaultName` when no name
+was set; `appendAll` sends `allItems` to its argument and appends what it
+answers; and `putAll` sends `supplier` to its argument and puts what it
 answers.
 
 ```rexx
@@ -700,4 +843,61 @@ say r~items r~allIndexes~items
 alpha-default | beta-name
 3 7,8,9
 2 2
+```
+
+## Deviations
+
+r[class.index.deviation.30]
+When the `string` method of an object answers an object that is not a
+string, a builtin or an operator that needs the string value of that object
+ends the program with exit code 120, as [the conventions
+rule](r:conv.string.deviation.30) states for builtin arguments and
+[the NOSTRING rule](r:cond.nostring.deviation.30) for the condition.
+
+```rexx
+say 'before'
+say 'x' .weird~new
+::class weird
+::method string
+  return .directory~new
+```
+
+```output rc=120
+before
+```
+
+r[class.index.deviation.32]
+A class-side `new` that answers an object other than one it built is
+subject to [Deviation 32](../deviations.md): a metaclass `new` that answers
+an existing class while `subclass` makes a class ends the program with exit
+code 120.
+
+```rexx
+say 'before'
+y = .k~subclass('Y')
+say 'after'
+::class meta subclass class
+::method new class
+  return .array
+::class k metaclass meta
+```
+
+```output rc=120
+```
+
+r[class.index.deviation.36]
+`objectName=` on a string ends the program with exit code 120, because a
+string is value-based, as [Deviation 36](../deviations.md) says; the
+[message assignment rule](r:instr.message.deviation.36) states it for the
+instruction.
+
+```rexx
+say 'before'
+a = 'abc'
+a~objectName = 'named'
+say 'after'
+```
+
+```output rc=120
+before
 ```

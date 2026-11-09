@@ -203,9 +203,9 @@ another string of equal value: as `string` itself, when it is already in the
 form SPACE gives it, as in `space(s)` for an `s` of one blank between each
 word and none outside, or as an equal string produced some other way, such as
 the literal `'x y'` beside `space('x y')`. Through `identityHash`, or as a key
-of an `IdentityTable` or `IdentitySet`, the answer may be either, and a
-program can rely only on the value, which is equal under `==`. ooRexx differs:
-it often answers a new object where interrexx answers the existing one.
+of an `IdentityTable`, the answer may be either, and a program can rely only
+on the value, which is equal under `==`. ooRexx differs: it often answers a
+new object where interrexx answers the existing one.
 
 ```rexx
 s = 'p' || ' ' || 'q'

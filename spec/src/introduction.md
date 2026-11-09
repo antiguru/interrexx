@@ -48,9 +48,10 @@ differently belongs to such a rule; any other difference is a defect.
 [the conventions](r:conv.method) define.
 
 **Identity.** Whether two values are the same object, as opposed to equal
-strings. It is observable only through `identityHash` and the identity
-collections (`IdentityTable`, `IdentitySet`), and the book says where it is
-not specified.
+strings. It is observable only through `identityHash`, the identity
+collection `IdentityTable` and, on ooRexx, `objectName=` on a string, which
+[Deviation 36](deviations.md) covers; the book says where it is not
+specified.
 
 ## Reading a rule
 

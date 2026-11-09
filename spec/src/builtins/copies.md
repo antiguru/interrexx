@@ -160,9 +160,9 @@ another string of equal value: as `string` itself, when the call leaves it
 unchanged as `copies(s, 1)` does, or as an equal string produced some other
 way, such as the literal `'abab'` beside `copies('ab', 2)`, or the null string
 answered when `n` is 0 or `string` is null. Through `identityHash`, or as a
-key of an `IdentityTable` or `IdentitySet`, the answer may be either, and a
-program can rely only on the value, which is equal under `==`. ooRexx differs:
-it often answers a new object where interrexx answers the existing one.
+key of an `IdentityTable`, the answer may be either, and a program can rely
+only on the value, which is equal under `==`. ooRexx differs: it often answers
+a new object where interrexx answers the existing one.
 
 ```rexx
 s = 'ab' || 'cd'

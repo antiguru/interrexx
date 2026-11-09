@@ -178,9 +178,9 @@ interrexx does not specify whether the answer of DELWORD is the same object as
 another string of equal value: as `string` itself, when the call deletes
 nothing, as `delword(s, 99)` does, or as an equal string produced some other
 way, such as the literal `'a b'`. Through `identityHash`, or as a key of an
-`IdentityTable` or `IdentitySet`, the answer may be either, and a program can
-rely only on the value, which is equal under `==`. ooRexx differs: it often
-answers a new object where interrexx answers the existing one.
+`IdentityTable`, the answer may be either, and a program can rely only on the
+value, which is equal under `==`. ooRexx differs: it often answers a new
+object where interrexx answers the existing one.
 
 ```rexx
 s = 'a ' || 'b'

@@ -145,9 +145,9 @@ another string of equal value: as `string` itself, when the call returns all
 of it unchanged as `subword(w, 1)` does for a `w` with no whitespace around
 its words, or as an equal string produced some other way, such as the literal
 `'a b'` beside `subword('a b c', 1, 2)`. Through `identityHash`, or as a key
-of an `IdentityTable` or `IdentitySet`, the answer may be either, and a
-program can rely only on the value, which is equal under `==`. ooRexx differs:
-it often answers a new object where interrexx answers the existing one.
+of an `IdentityTable`, the answer may be either, and a program can rely only
+on the value, which is equal under `==`. ooRexx differs: it often answers a
+new object where interrexx answers the existing one.
 
 ```rexx
 w = 'a' || ' b'

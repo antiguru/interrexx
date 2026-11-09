@@ -309,13 +309,13 @@ a: say condition('o')~code
 ## Deviations
 
 r[bif.xrange.deviation.4]
-interrexx does not specify whether the answer of XRANGE is the same object
-as another string of equal value, such as the literal `'a'` beside the answer
-of `xrange('a', 'a')`, or the equal answer of another call. Through
-`identityHash`, or as a key of an `IdentityTable` or `IdentitySet`, the
-answer may be either, and a program can rely only on the value, which is
-equal under `==`. ooRexx differs: it often answers a new object where
-interrexx answers the existing one.
+interrexx does not specify whether the answer of XRANGE is the same object as
+another string of equal value, such as the literal `'a'` beside the answer of
+`xrange('a', 'a')`, or the equal answer of another call. Through
+`identityHash`, or as a key of an `IdentityTable`, the answer may be either,
+and a program can rely only on the value, which is equal under `==`. ooRexx
+differs: it often answers a new object where interrexx answers the existing
+one.
 
 ```rexx
 say (xrange('a', 'a') == 'a') (xrange('a', 'b') == 'ab') (xrange('digit') == xrange('0', '9'))
