@@ -65,17 +65,16 @@ r[class.routine.new]
 `new` makes a routine from a name, a source and a context, with the same
 arguments, the same checks, in the same order, and the same errors as
 [the `new` of `Method`](r:class.method.new): the name and the source are
-required (`SYNTAX 88.901`), a name with no string value raises `88.909`, a
-context that is not `PROGRAMSCOPE`, a `Method`, a `Routine` or a `Package`
-raises `40.904`, and a source that does not translate raises its translation
-error, and the code does not run. The source is read as
+required (`SYNTAX 88.901`), a name with no `MAKESTRING` method, `.nil` among
+them, raises `88.909`, a context that is not `PROGRAMSCOPE`, a `Method`, a
+`Routine` or a `Package` raises `40.904`, and a source that does not translate
+raises its translation error, and the code does not run. The source is read as
 [the source rule](r:class.method.new.source) says, with the messages of
 [the sends rule](r:class.method.new.sends), and the context decides what the
-routine finds as
-[the context rule](r:class.method.new.context) says. The arguments from the
-fourth on are passed to `init` of the new object, and the class that received
-`new` is the class of the answer, as for a method. The name is the name of the
-routine's package.
+routine finds as [the context rule](r:class.method.new.context) says. The
+arguments from the fourth on are passed to `init` of the new object, and the
+class that received `new` is the class of the answer, as for a method. The
+name is the name of the routine's package.
 
 ```rexx
 r = .routine~new('who', 'return "I am" .context~executable~class~id')
@@ -124,12 +123,31 @@ init 2 a b
 MINE
 ```
 
+```rexx
+call try '.routine~new("n", .nil, 7)'
+call try '.routine~new("n", "nop", 7)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=>' zres
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output defect=#143
+.routine~new("n", .nil, 7) => 93.961
+.routine~new("n", "nop", 7) => 40.904
+```
+
 r[class.routine.new.sends]
-`new` sends the messages that [the sends rule of
-`Method`](r:class.method.new.sends) states, in the same order: `request` with
-`ARRAY` and then with `STRING` to a source that is not a string and not an
-array, and, when the routine has been made, `init` with the arguments of `new`
-from the fourth on.
+`new` sends the messages that
+[the sends rule of `Method`](r:class.method.new.sends) states, in the same
+order: `request` with `ARRAY` and then with `STRING` to a source that is not a
+string and not an array (the line is a string answer itself, and any other
+answer's `objectName`), and, when the routine has been made, `init` with the
+arguments of `new` from the fourth on.
 
 ```rexx
 call try '.routine~new("n", .src~new(.array~of("return 1"), .nil))~call'
@@ -178,18 +196,19 @@ init 0
 
 r[class.routine.newfile]
 `newFile` makes a routine from the lines of a file, with the arguments, the
-checks, their order and the errors of [the `newFile` of
-`Method`](r:class.method.newfile): the file name and an optional context, no
-third argument (`SYNTAX 93.902`), `.nil` or an object with no string value as
-the name raises `88.909`, a context that does not fit raises `40.904` before
-the file is looked for, and a file that cannot be read raises `SYNTAX 3.1`.
-The routine's package is named by the file name as it was given. Its source is
-the lines of the file before the first directive, and the directives of the
-file still make the classes and routines of its package, which its code can
-name. `call` runs the lines before the first directive. How the file is
-searched for is specified in the environment chapter. `newFile` sends `init`
-with no argument to the new object, and a subclass of `Routine` makes
-instances of itself.
+checks, their order and the errors of
+[the `newFile` of `Method`](r:class.method.newfile): the file name and an
+optional context, no third argument (`SYNTAX 93.902`), `.nil` or an object
+with no `MAKESTRING` method as the name raises `88.909`, a context that does
+not fit raises `40.904` before the file is looked for, and a file that cannot
+be read raises `SYNTAX 3.1`. The routine's package is named by the file name
+as it was given. Its source is the lines of the file before the first
+directive, except that a first line that begins with `#!` is not part of it,
+and the directives of the file still make the classes and routines of its
+package, which its code can name. `call` runs the lines before the first
+directive. How the file is searched for is specified in the environment
+chapter. `newFile` sends `init` with no argument to the new object, and a
+subclass of `Routine` makes instances of itself.
 
 ```rexx
 f = 'class_routine_newfile_zq.tmp'
@@ -238,6 +257,23 @@ MINE
 .routine~newFile("class_routine_newfile_none.tmp", "bad") => 40.904
 ```
 
+```rexx
+f = 'class_routine_shebang_zq.tmp'
+call sysfiledelete f
+call lineout f, '#!/usr/bin/rexx'
+call lineout f, 'return "after the first line"'
+call lineout f
+r = .routine~newFile(f)
+say r~source~items r~source[1]
+say r~call
+call sysfiledelete f
+```
+
+```output defect=#144
+1 return "after the first line"
+after the first line
+```
+
 r[class.routine.newfile.sends]
 `newFile` sends the new object the message `init` with no argument, after the
 file has been read and translated, and a file name that is an object with a
@@ -282,15 +318,15 @@ native library, the same kind of routine that
 descriptor, with the checks, the descriptor form and the errors of
 [`loadExternalMethod`](r:class.method.loadexternalmethod): the word `LIBRARY`
 in any case, the library, and optionally the entry in it, which is the name of
-the routine when it is left out. A third argument raises `SYNTAX 93.902`,
-a missing argument `88.901`, a `.nil` argument `88.909` and a descriptor of
-another form `99.917`. When the library cannot be loaded or has no entry of
-that name, the answer is `.nil`. The answer is an instance of `Routine` also
-when a subclass received the message, and no `init` is sent. The routine can
-be called, with the arguments that the library routine takes, and its
-`source` is an empty array and its `package` is `.nil`. Where the library is
-searched for, and whether its name is case sensitive, is specified in the
-environment chapter.
+the routine when it is left out. A third argument raises `SYNTAX 93.902`, a
+missing argument `88.901`, a `.nil` argument or one with no `MAKESTRING`
+method `88.909` and a descriptor of another form `99.917`. When the library
+cannot be loaded or has no entry of that name, the answer is `.nil`. The
+answer is an instance of `Routine` also when a subclass received the message,
+and no `init` is sent. The routine can be called, with the arguments that the
+library routine takes, and its `source` is an empty array and its `package` is
+`.nil`. Where the library is searched for, and whether its name is case
+sensitive, is specified in the environment chapter.
 
 ```rexx
 p = .routine~loadExternalRoutine('pi', 'LIBRARY rxmath rxcalcpi')
@@ -443,13 +479,14 @@ instance of a subclass of `Array` included, is sent `request` with the
 argument `ARRAY`, and the array that answers is used; an object for which that
 answers `.nil`, and `.nil` itself, and an array of more than one dimension
 raise `SYNTAX 98.913`. What `request` does when its answer is neither an array
-nor `.nil` is not specified. A string, being a value of `String`, has the
-array of one item that holds it, and the empty `StringTable` and `Directory`
-have no items. The arguments are the items of the array by position: a hole is
-an omitted argument, and the argument count is the highest index that holds an
-item, as the count of a message is for [`call`](r:class.routine.call), so an
-array with no items gives a routine with no arguments, however large it was
-made.
+nor `.nil` is not specified. A string is converted by its
+[`makeArray`](r:class.string.makearray), one argument for each line, so a
+string with no line end is one argument and the null string has none; the
+empty `StringTable` and `Directory` have no items. The arguments are the items
+of the array by position: a hole is an omitted argument, and the argument
+count is the highest index that holds an item, as the count of a message is
+for [`call`](r:class.routine.call), so an array with no items gives a routine
+with no arguments, however large it was made.
 
 ```rexx
 r = .routine~new('n', 'return arg() "<"arg(1)"><"arg(2)"><"arg(3)">"')
@@ -459,6 +496,8 @@ call try 'r~callWith(.array~new(3))'
 call try 'r~callWith(.array~new(3)~~put("a", 3))'
 call try 'r~callWith(.array~of(1, 2)~~put("z", 5))'
 call try 'r~callWith("a b")'
+call try 'r~callWith("a" || "0A"x || "b")'
+call try 'r~callWith("")'
 call try 'r~callWith(.stringtable~new)'
 call try 'r~callWith(.holder~new)'
 call try 'r~callWith(.arrsub~of(1, 2))'
@@ -492,6 +531,8 @@ r~callWith(.array~new(3)) => 0 <><><>
 r~callWith(.array~new(3)~~put("a", 3)) => 3 <><><a>
 r~callWith(.array~of(1, 2)~~put("z", 5)) => 5 <1><2><>
 r~callWith("a b") => 1 <a b><><>
+r~callWith("a" || "0A"x || "b") => 2 <a><b><>
+r~callWith("") => 0 <><><>
 r~callWith(.stringtable~new) => 0 <><><>
 request ARRAY
 r~callWith(.holder~new) => 2 <r1><r2><>
@@ -538,14 +579,17 @@ makearray
 ### What the routine is
 
 r[class.routine.source]
-`source` answers a new array that holds the lines of the routine's source,
-one string for each line, so changing the array changes nothing in the
-routine. A routine made by `new` has the lines of its source argument (an
-empty string and an empty array are a source of no lines), one made by
-`newFile` the lines of its file before the first directive, and one that a
-`::ROUTINE` directive makes has the lines of its section. A routine that
-`loadExternalRoutine` loaded, and an external routine, answer an array of no
-items. The method takes no argument (`SYNTAX 93.902`).
+`source` answers a new array that holds the lines of the routine's source, one
+string for each line, so changing the array changes nothing in the routine. A
+routine made by `new` has the lines of its source argument (an empty string
+and an empty array are a source of no lines), one made by `newFile` the lines
+of its file before the first directive, without a first line that begins with
+`#!`, and one that a `::ROUTINE` directive makes has the lines of its section,
+which [the rule of `Method`](r:class.method.source) reads as it does for a
+method: the text after the `;` of the directive is the first line, and an
+empty last line is left out. A routine that `loadExternalRoutine` loaded, and
+an external routine, answer an array of no items. The method takes no argument
+(`SYNTAX 93.902`).
 
 ```rexx
 r = .routine~new('n', .array~of('say 1', 'return 2'))
@@ -620,8 +664,9 @@ r[class.routine.annotation]
 name it is given, and `.nil` when there is none, as
 [the annotation rule](r:dir.annotate.read) says: the name is taken in upper
 case, and a routine made by `new`, `newFile` or `loadExternalRoutine` has no
-annotations. The name is required (`SYNTAX 88.901`), an object with no string
-value, `.nil` among them, raises `88.909`, and a second argument raises
+annotations: the answer for one is `.nil`, and its `annotations` table is
+empty. The name is required (`SYNTAX 88.901`), an object with no `MAKESTRING`
+method, `.nil` among them, raises `88.909`, and a second argument raises
 `93.902`. A number or a string that names no annotation answers `.nil`.
 
 ```rexx
@@ -653,6 +698,16 @@ r~annotation => 88.901
 r~annotation(.nil) => 88.909
 r~annotation("a", "b") => 93.902
 ```
+
+```rexx
+r = .routine~loadExternalRoutine('pi', 'LIBRARY rxmath rxcalcpi')
+say r~annotation('x')~isNil r~annotations~items
+```
+
+```output
+1 0
+```
+
 
 r[class.routine.annotations]
 `annotations` answers the `StringTable` that holds every annotation of the
@@ -813,14 +868,16 @@ GENERIC => ran
 r[class.routine.setsecuritymanager.call]
 The `CALL` checkpoint is offered for the call of an external routine: one that
 is not a label in the code, not a built-in function and not a routine that the
-routine's package or its context package holds. The directory holds `NAME`,
-the upper case name of the routine, and `ARGUMENTS`, an array of the
-arguments. A manager that answers `1` takes the call over: the entry `RESULT`,
-when the manager set one, is the value of the call, and with no `RESULT` the
-call answers no value, which raises `SYNTAX 44.1` where the value is used. A
+routine's package or its context package finds, its own and those it imports;
+a function of a native library is offered. The directory holds `NAME`, the
+upper case name of the routine, and `ARGUMENTS`, an array of the arguments. A
+manager that answers `1` takes the call over: the entry `RESULT`, when the
+manager set one, is the value of the call, and with no `RESULT` the call
+answers no value, which raises `SYNTAX 44.1` where the value is used. A
 manager that answers `0` lets the call go on, which raises `SYNTAX 43.1` for a
-routine that does not exist. A routine that the package or its context holds
-is not offered, as the call of `known` in the example shows.
+routine that does not exist. A routine that the package or its context finds
+is not offered, as the call of `known` in the example shows, and neither is
+one that they import, as the second example shows.
 
 ```rexx
 src = 'say left("abc", 2) lab(1) known(); say zqprovided(4, 5); '
@@ -863,6 +920,29 @@ call ZQMISSING 0
 r~call => 43.1
 ```
 
+```rexx
+src = .array~of('nop', '::routine zqpub public', '  return "pub"')
+lib = .package~new('zqlib', src)
+ctx = .package~new('zqctx', 'nop')
+ctx~addPackage(lib)
+src = 'say zqpub(); say sysfileexists("zq_nofile_zz")'
+r = .routine~new('agent', src, ctx)
+r~setSecurityManager(.mgr~new)
+r~call
+exit
+::class mgr
+::method call
+  use arg info
+  say 'call' info~name
+  return 0
+```
+
+```output
+pub
+call SYSFILEEXISTS
+0
+```
+
 r[class.routine.setsecuritymanager.command]
 The `COMMAND` checkpoint is offered for a command that goes to an `ADDRESS`
 environment. The directory holds `COMMAND`, the command string, and `ADDRESS`,
@@ -870,8 +950,8 @@ the name of the environment in upper case. A manager that answers `1` has run
 the command itself: the entry `RC`, when it is set, is the return code, and
 `0` is used when it is not. The entry `FAILURE`, when it is set alone, raises
 the FAILURE condition for the command, and the entry `ERROR`, when it is set
-alone, raises ERROR; what the two together raise is not covered here. The
-manager answers `0` to let the interpreter run the command. The default
+alone, raises ERROR; when both are set, FAILURE is raised and ERROR is not.
+The manager answers `0` to let the interpreter run the command. The default
 environment that a command goes to when the code names no `ADDRESS` is that of
 the host and is not specified.
 
@@ -880,7 +960,10 @@ src = 'address system "echo one"; say "rc" rc; signal on failure name fail; '
 src = src || 'address system "echo two"; say "not here"; '
 src = src || 'fail: say "failure" rc; signal on error name err; '
 src = src || 'address system "echo three"; say "not here"; '
-src = src || 'err: say "error" rc'
+src = src || 'err: say "error" rc; signal on failure name fail2; '
+src = src || 'signal on error name err2; address system "echo four"; '
+src = src || 'say "not here"; fail2: say "both failure" rc; exit; '
+src = src || 'err2: say "both error" rc'
 r = .routine~new('agent', src)
 r~setSecurityManager(.mgr~new)
 r~call
@@ -896,8 +979,13 @@ exit
       info~rc = 12
       info~failure = 1
     end
-    when info~command = 'echo three' then do
+        when info~command = 'echo three' then do
       info~rc = 13
+      info~error = 1
+    end
+    when info~command = 'echo four' then do
+      info~rc = 14
+      info~failure = 1
       info~error = 1
     end
   end
@@ -914,15 +1002,23 @@ failure 12
 command SYSTEM >echo three<
   entries ADDRESS,COMMAND
 error 13
+command SYSTEM >echo four<
+  entries ADDRESS,COMMAND
+both failure 14
 ```
 
 r[class.routine.setsecuritymanager.local]
 The `LOCAL` checkpoint is offered when the code names an object of `.local`,
-with the entry `NAME`, the upper case name, before `.local` is searched. A
-manager that answers `1` with an entry `RESULT` provides the object; one that
-answers `1` with no `RESULT` is read as the name not being found, and the
-lookup goes on with the `ENVIRONMENT` checkpoint. The code of the routine is
-the code that is under the manager; the program that called it is not.
+with the entry `NAME`, the upper case name, before `.local` is searched. It is
+offered for a name that [`findClass`](r:class.package.findclass) takes from
+`.local` or `.environment` or does not find, and so not for `.nil`, `.true` or
+`.false`, not for a name that a class of the package, of its context, of the
+packages it imports or of the library gives, and not for a name in the `local`
+directory of the package, which is searched first. A manager that answers `1`
+with an entry `RESULT` provides the object; one that answers `1` with no
+`RESULT` is read as the name not being found, and the lookup goes on with the
+`ENVIRONMENT` checkpoint. The code of the routine is the code that is under
+the manager; the program that called it is not.
 
 ```rexx
 .local~zqvalue = 'in local'
@@ -954,12 +1050,43 @@ environment ZQNONE
 in local | provided | .ZQNONE
 ```
 
+```rexx
+src = .array~of('nop', '::class libpub public', '::class libpriv')
+lib = .package~new('lib', src)
+ctx = .package~new('ctx', .array~of('nop', '::class ctxpriv'))
+ctx~addPackage(lib)
+src = 'x = .nil; x = .false; x = .ctxpriv; x = .libpub; x = .string; '
+src = src || 'x = .zqpkg; x = .libpriv; x = .rexxinfo; x = .stdout; '
+src = src || 'x = .local'
+r = .routine~new('agent', src, ctx)
+r~package~local~put('in package', 'ZQPKG')
+r~setSecurityManager(.mgr~new)
+r~call
+exit
+::class mgr
+::method unknown
+  use arg name, args
+  say name args[1]~name
+  return 0
+```
+
+```output
+LOCAL LIBPRIV
+ENVIRONMENT LIBPRIV
+LOCAL REXXINFO
+ENVIRONMENT REXXINFO
+LOCAL STDOUT
+LOCAL LOCAL
+ENVIRONMENT LOCAL
+```
+
 r[class.routine.setsecuritymanager.environment]
-The `ENVIRONMENT` checkpoint is offered, after the `LOCAL` one answered `0`
-or did not provide the name, for a name that is looked up in `.environment`:
-the entry `NAME` is the upper case name, `RESULT` and the answer have the
-same meaning as for `LOCAL`. A name that `LOCAL` provided is not offered to
-`ENVIRONMENT`.
+The `ENVIRONMENT` checkpoint is offered, after the `LOCAL` one answered `0` or
+did not provide the name, for a name that is looked up in `.environment`: the
+entry `NAME` is the upper case name, `RESULT` and the answer have the same
+meaning as for `LOCAL`. A name that `LOCAL` provided is not offered to
+`ENVIRONMENT`, and neither is a name that `.local` holds, such as `.stdout`,
+when `LOCAL` answered `0`.
 
 ```rexx
 .environment~zqenvvalue = 'in environment'
@@ -1039,36 +1166,48 @@ end
 
 r[class.routine.setsecuritymanager.requires]
 The `REQUIRES` checkpoint is offered when the code of the routine loads a
-package with `loadPackage`. The directory holds `NAME`, the name of the
-package to load. A manager that answers `0` lets the load go on. How many
-times the checkpoint is offered for one load is not specified, so the example
-prints the first. What the interpreter does with an answer of `1` is not
-covered by this page.
+package from a file, with `loadPackage` or with the `new` of `Package` and a
+file name. The directory holds `NAME`, the name of the file. The checkpoint is
+offered twice for a file that is found, first with the name as it was given
+and then with its absolute name, and once, with the name as it was given, for
+a file that is not found, before the load raises `SYNTAX 43.901`. A package
+that was loaded before is not loaded again and is not offered, and neither is
+a `loadPackage` that has a source. A manager that answers `0` lets the load go
+on, and so does one that answers `1` and leaves `NAME` as it is.
 
 ```rexx
 f = 'class_routine_requires_zq.tmp'
 call sysfiledelete f
 call lineout f, 'say "loaded body"'
 call lineout f
-src = '.package~new("p", "nop")~loadPackage("class_routine_requires_zq.tmp")'
+src = 'p = .package~new("p", "nop"); signal on syntax name bad; '
+src = src || 'say p~loadPackage("class_routine_requires_zq.tmp")~class~id; '
+src = src || 'say p~loadPackage("class_routine_requires_zq.tmp")~class~id; '
+src = src || 'say p~loadPackage("class_routine_requires_src_zq.tmp", '
+src = src || '"nop")~class~id; '
+src = src || 'say p~loadPackage("class_routine_requires_gone_zq.tmp"); '
+src = src || 'bad: say condition("o")~code'
 r = .routine~new('agent', src)
 r~setSecurityManager(.mgr~new)
 r~call
-say .local~asked
 call sysfiledelete f
 exit
 ::class mgr
 ::method requires
   use arg info
-  if .local~asked == .nil then say 'requires asked' info~name
-  .local~asked = 1
+    say 'requires, absolute name:' (info~name == qualify(info~name))
   return 0
 ```
 
 ```output
-requires asked class_routine_requires_zq.tmp
+requires, absolute name: 0
+requires, absolute name: 1
 loaded body
-1
+Package
+Package
+Package
+requires, absolute name: 0
+43.901
 ```
 
 r[class.routine.setsecuritymanager.method]
@@ -1077,9 +1216,11 @@ message to a [protected method](r:dir.method.protected), before the method
 runs. The directory holds `OBJECT`, the receiver, `NAME`, the upper case name
 of the method, and `ARGUMENTS`, an array of the arguments. A manager that
 answers `1` has run the message itself: the entry `RESULT`, when it is set, is
-what the message answers. A manager that answers `0` lets the method run. A
-message to a protected method from code that is not under a manager runs the
-method, and so does a message to a method that is not protected.
+what the message answers, and with no `RESULT` the message answers no value,
+so that using the answer raises `SYNTAX 91.999`. A manager that answers `0`
+lets the method run. A message to a protected method from code that is not
+under a manager runs the method, and so does a message to a method that is not
+protected.
 
 ```rexx
 r = .routine~new('agent', 'o = .box~new; return o~locked(1, 2) o~open')
@@ -1104,6 +1245,25 @@ exit
 method LOCKED BOX 2
 replaced open ran
 locked ran
+```
+
+```rexx
+r = .routine~new('agent', 'return .box~new~locked')
+r~setSecurityManager(.mgr~new)
+signal on syntax name bad
+say r~call
+exit
+bad: say condition('o')~code
+::class box
+::method locked protected
+  return 'locked ran'
+::class mgr
+::method method
+  return 1
+```
+
+```output
+91.999
 ```
 
 ## Deviations
