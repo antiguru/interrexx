@@ -95,25 +95,61 @@ SHOUT 3 ab String ABC!
 0A String 1 SHOUT
 ```
 
+r[class.string.args]
+A position, length or count argument of a method of `String` is read as
+[a whole-number argument](r:conv.whole.form) of a builtin function is, with
+the value that [the digits rule](r:conv.whole.digits) gives and
+[its limit](r:num.limits.whole). This holds for the methods that only `String`
+has as well as for the builtin ones. A failure of either raises the range code
+of the argument (`SYNTAX 93.924`, `93.923` or `93.906`), not 40.12.
+
+```rexx
+say 'abc'~"[]"('1.0000000000000000001') 'abc'~subChar(' +2 ')
+say '['||'abc'~"[]"(1000)']'
+numeric digits 3
+say '['||'abcdef'~"[]"(1000)']' 'abcdef'~"[]"('2e0')
+signal on syntax name a
+say 'abc'~"[]"(1000000000000000000)
+a: say condition('o')~code
+signal on syntax name b
+say 'abc'~"[]"(1, 1000000000000000000)
+b: say condition('o')~code
+signal on syntax name c
+say 'abc'~match(1.5, 'a')
+c: say condition('o')~code
+```
+
+```output
+a b
+[]
+[] b
+93.924
+93.923
+93.924
+```
+
 ## Class methods
 
 r[class.string.new]
 `new` makes a string. Its first argument is required, and gives the
 characters: the string value of the argument, which is the argument itself for
-a string, a number included, and its `MAKESTRING` answer for another object,
-as [the conversion rule](r:class.index.string) says. Without an argument `new`
-raises `SYNTAX 93.903`, and with an argument that has no string value, `.nil`
-included, `SYNTAX 88.909`. The object that `new` makes has the class of the
-receiver, and the characters are in place before `init` runs, so an `init` of
-a subclass can use them. `init` is sent the arguments after the first, as [the
-new rule](r:class.index.new) says, so a second argument raises `SYNTAX 93.902`
-for a class whose `init` is that of `Object`.
+a string, a number included, and its `MAKESTRING` answer for another object.
+`new` uses `MAKESTRING` only, as the methods that take a string argument do
+([the string-value rule](r:class.index.string)). Without an argument `new`
+raises `SYNTAX 93.903`, and with an argument that has no `MAKESTRING` method,
+`.nil` and an object with only a `string` method included, `SYNTAX 88.909`.
+The object that `new` makes has the class of the receiver, and the characters
+are in place before `init` runs, so an `init` of a subclass can use them.
+`init` is sent the arguments after the first, as
+[the new rule](r:class.index.new) says, so a second argument raises
+`SYNTAX 93.902` for a class whose `init` is that of `Object`.
 
 ```rexx
 say .string~new('abc') .string~new(12)~class~id .string~new('')~length
 call try ".string~new"
 call try ".string~new(.nil)"
 call try ".string~new(.object~new)"
+call try ".string~new(.st~new)"
 call try ".string~new('a', 'b')"
 call try ".string~new('a', )"
 x = .si~new('abc', 1, 2)
@@ -129,6 +165,9 @@ bad: say arg(1) '=>' condition('o')~code
 ::class si subclass string
 ::method init
   say 'init' self~length self 'with' arg() 'arguments'
+::class st
+::method string
+  return 'q'
 ```
 
 ```output
@@ -136,6 +175,7 @@ abc String 0
 .string~new => 93.903
 .string~new(.nil) => 88.909
 .string~new(.object~new) => 88.909
+.string~new(.st~new) => 88.909
 .string~new('a', 'b') => 93.902
 .string~new('a', ) => a
 init 3 abc with 2 arguments
@@ -391,6 +431,7 @@ call try "'abc'[0, -1]"
 call try "'abc'[1, -1]"
 call try "'abc'['x']"
 call try "'abc'[1, 'x']"
+call try "'abc'[1000000000000000000]"
 call try "'abc'~'[]'"
 call try "'abc'~'[]'(, 1)"
 call try "'abc'~'[]'(1, 2, 3)"
@@ -412,6 +453,7 @@ b bcd [] ef 234
 'abc'[1, -1] => 93.923
 'abc'['x'] => 93.924
 'abc'[1, 'x'] => 93.923
+'abc'[1000000000000000000] => 93.924
 'abc'~'[]' => 93.903
 'abc'~'[]'(, 1) => 93.903
 'abc'~'[]'(1, 2, 3) => 93.902
@@ -866,19 +908,19 @@ answer (`88.909`), and `length` must be a non-negative whole number
 (`93.923`); a fifth argument raises `93.902`. Case matters.
 
 ```rexx
-t = 'Saturday'
-say t~match(6, 'day') t~match(6, 'DAY') t~match(6, 'Sunday', 4, 3)
-say t~match(6, 'daytime', 1, 3) t~match(6, 'daytime', 1, 4)
-say t~match(6, 'daytime')
-say t~match(8, 'y') t~match(8, 'yz') t~match(1, '') t~match(1, 'S', 2)
-say t~match(1, 'S', 1, 0) t~match(1, 'S', 1, 2) t~match(1, 'S', , 1)
+t = 'Wednesday'
+say t~match(4, 'nes') t~match(4, 'NES') t~match(4, 'honest', 3, 3)
+say t~match(4, 'nesting', 1, 3) t~match(4, 'nesting', 1, 4)
+say t~match(4, 'nesday')
+say t~match(9, 'y') t~match(9, 'yz') t~match(1, '') t~match(1, 'W', 2)
+say t~match(1, 'W', 1, 0) t~match(1, 'W', 1, 2) t~match(1, 'W', , 1)
 call try "t~match"
 call try "t~match(1)"
-call try "t~match(0, 'S')"
+call try "t~match(0, 'W')"
 call try "t~match(1, .nil, 0, -1)"
-call try "t~match(1, 'S', 0, -1)"
-call try "t~match(1, 'S', 1, -1)"
-call try "t~match(1, 'S', 1, 1, 1)"
+call try "t~match(1, 'W', 0, -1)"
+call try "t~match(1, 'W', 1, -1)"
+call try "t~match(1, 'W', 1, 1, 1)"
 exit
 try:
   signal on syntax name bad
@@ -892,16 +934,16 @@ bad: say arg(1) '=>' condition('o')~code
 ```output
 1 0 1
 1 0
-0
+1
 1 0 0 0
 0 0 1
 t~match => 93.903
 t~match(1) => 93.903
-t~match(0, 'S') => 93.924
+t~match(0, 'W') => 93.924
 t~match(1, .nil, 0, -1) => 88.909
-t~match(1, 'S', 0, -1) => 93.924
-t~match(1, 'S', 1, -1) => 93.923
-t~match(1, 'S', 1, 1, 1) => 93.902
+t~match(1, 'W', 0, -1) => 93.924
+t~match(1, 'W', 1, -1) => 93.923
+t~match(1, 'W', 1, 1, 1) => 93.902
 ```
 
 r[class.string.caselessmatch]
@@ -909,11 +951,11 @@ r[class.string.caselessmatch]
 letters taken as equal.
 
 ```rexx
-t = 'Saturday'
-say t~caselessMatch(1, 'sat') t~caselessMatch(6, 'SUNDAY', 4, 3)
-say t~caselessMatch(1, '') t~match(1, 'sat')
+t = 'Wednesday'
+say t~caselessMatch(1, 'wed') t~caselessMatch(4, 'HONEST', 3, 3)
+say t~caselessMatch(1, '') t~match(1, 'wed')
 signal on syntax name e
-say t~caselessMatch(0, 'S')
+say t~caselessMatch(0, 'W')
 e: say condition('o')~code
 ```
 
@@ -1376,18 +1418,24 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.string.modulo]
-`modulo` answers the remainder of the receiver divided by its argument `n`,
-always from 0 up to `n` minus 1: for a negative receiver the answer is not
-negative, so `(-10)~modulo(3)` is 2. The receiver must be a number (`SYNTAX
-93.943`) and a whole number (`93.940`) under `NUMERIC DIGITS`; the argument is
-required (`93.903`) and must be a positive whole number (`93.907`), checked
-after the receiver; a second argument raises `93.902`. For a receiver and `n`
-that are not negative the answer is that of the `//` operator, and the
-answer is written as that operator writes it.
+`modulo` answers the remainder of the receiver divided by its argument `n`.
+The answer is never negative and is less than `n`, so for a negative receiver
+`(-7)~modulo(4)` is 1. The receiver must be a number (`SYNTAX 93.943`) and a
+whole number (`93.940`): a number written with no period and no exponent is a
+whole number whatever its length, and any other number must be exactly whole,
+without rounding, and its value must have at most `NUMERIC DIGITS` digits. The
+argument is required (`93.903`) and must be a positive whole number (`93.907`)
+in the same sense, checked after the receiver; a second argument raises
+`93.902`. An argument that is not a string is converted to a number as
+[the conversion rule](r:conv.string.object) says, as the other numeric
+arguments are. The remainder is found as
+[the `//` operator](r:num.arithmetic.integer) finds it, and written as that
+operator writes it, so a quotient wider than `NUMERIC DIGITS` raises
+`SYNTAX 26.12`, for a negative receiver too.
 
 ```rexx
-say 10~modulo(3) (-10)~modulo(3) 0~modulo(5) '1e2'~modulo(7) 12~modulo(' 5 ')
-say '1.0'~modulo(5) 10~modulo(7.0) '11.0'~modulo(5) (10 // 3)
+say 9~modulo(4) (-7)~modulo(4) 0~modulo(5) '1e2'~modulo(7) 12~modulo(' 5 ')
+say '1.0'~modulo(5) 9~modulo(5.0) '11.0'~modulo(5) (9 // 4)
 call try "10~modulo"
 call try "10~modulo(0)"
 call try "10~modulo(-3)"
@@ -1398,6 +1446,12 @@ call try "10.5~modulo(0)"
 call try "'x'~modulo('y')"
 call try "'1E+30'~modulo(7)"
 call try "10~modulo(3, 4)"
+numeric digits 3
+say '1000'~modulo(7) '1.0000'~modulo(7)
+call try "'1E+3'~modulo(7)"
+call try "'7000'~modulo(7)"
+call try "'-7006'~modulo(7)"
+call try "'1000000'~modulo('1E+3')"
 exit
 try:
   signal on syntax name bad
@@ -1409,8 +1463,8 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-1 2 0 2 2
-1.0 3.0 1.0 1
+1 1 0 2 2
+1.0 4.0 1.0 1
 10~modulo => 93.903
 10~modulo(0) => 93.907
 10~modulo(-3) => 93.907
@@ -1421,6 +1475,25 @@ bad: say arg(1) '=>' condition('o')~code
 'x'~modulo('y') => 93.943
 '1E+30'~modulo(7) => 93.940
 10~modulo(3, 4) => 93.902
+6 1.00
+'1E+3'~modulo(7) => 93.940
+'7000'~modulo(7) => 26.12
+'-7006'~modulo(7) => 26.12
+'1000000'~modulo('1E+3') => 93.907
+```
+
+```rexx
+say '17'~modulo(.five~new) '17'~modulo(.six~new)
+::class five
+::method makestring
+  return 5
+::class six
+::method string
+  return 6
+```
+
+```output defect=#138
+2 5
 ```
 
 ### Base 64
@@ -1451,15 +1524,17 @@ SGVsbG8sIFdvcmxkIQ== /wD+ MTI=
 r[class.string.decodebase64]
 `decodeBase64` undoes [`encodeBase64`](r:class.string.encodebase64): it
 answers the bytes that the receiver, a text in base 64, stands for, and the
-null string for the null string. The text must be in the exact form that
-`encodeBase64` writes: a length that is a multiple of 4, characters of that
-alphabet, and `=` signs only at the end, one or two of them, to complete the
-last group. A blank, a line end, any other character, or `=` in another place
-raises `SYNTAX 93.962`. It takes no argument (`93.902`).
+null string for the null string. The text must have a length that is a
+multiple of 4, characters of that alphabet, and `=` signs only at the end, one
+or two of them, to complete the last group; the bits of the last character
+that the group does not need are ignored, so `'TR=='` decodes as `'TQ=='`
+does. A blank, a line end, any other character, or `=` in another place raises
+`SYNTAX 93.962`. It takes no argument (`93.902`).
 
 ```rexx
 say 'TWFu'~decodeBase64 'TWE='~decodeBase64 'TQ=='~decodeBase64
 say '['||''~decodeBase64']' 'TWFuTQ=='~decodeBase64 '/+8='~decodeBase64~c2x
+say 'TR=='~decodeBase64~c2x 'TWF='~decodeBase64~c2x
 say 'abc'~encodeBase64~decodeBase64
 call try "'TWE'~decodeBase64"
 call try "'TWE=='~decodeBase64"
@@ -1481,6 +1556,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```output
 Man Ma M
 [] ManM FFEF
+4D 4D61
 abc
 'TWE'~decodeBase64 => 93.962
 'TWE=='~decodeBase64 => 93.962
@@ -1548,20 +1624,22 @@ a+b 7 ababab
 r[class.string.builtins.errors]
 A method of the list is checked as the method itself checks it, argument by
 argument and from left to right, without the earlier check that a function
-call makes. The function form checks the form of its arguments first and
-raises `SYNTAX 40.12` for a number that is not a whole number, `40.23` for a
-pad, `40.3` for a missing argument, `40.5` for an omitted one and `40.4` for
-too many. The message form raises these errors: for a position that is not a
-positive whole number, `SYNTAX 93.924` whatever the value is, `abc` or 0 or
-1.5; for a length that is not a non-negative whole number, `93.923`; for a pad
-that is not a single character, `93.922`; for a missing argument, or an
-omitted one that is followed by another, `93.903`; and for too many arguments,
-`93.902`, as [the argument rules](r:class.index.args.count) say. A count or a
-number of copies that is not a non-negative whole number raises `93.906`, and
-the other arguments raise the code that the page of the builtin gives. Because
-the message form checks one argument at a time, a bad position before a bad
-length is the error raised, where the function form raises the error of the
-bad length first ([the order rule](r:conv.check.order)).
+call makes. The function form first checks the form of its arguments, as
+[the order rule](r:conv.check.order) says, and raises the codes of
+[the whole-number](r:conv.whole.form), [pad](r:conv.pad) and
+[argument count](r:bif.index.call.count) rules. In the message form an
+argument that fails its form raises the code of its range check. The message
+form raises these errors: for a position that is not a positive whole number,
+`SYNTAX 93.924` whatever the value is, `abc` or 0 or 1.5; for a length that is
+not a non-negative whole number, `93.923`; for a pad that is not a single
+character, `93.922`; for a missing argument, or an omitted one that is
+followed by another, `93.903`; and for too many arguments, `93.902`, as
+[the argument rules](r:class.index.args.count) say. A count or a number of
+copies that is not a non-negative whole number raises `93.906`, and the other
+arguments raise the code that the page of the builtin gives. Because the
+message form checks one argument at a time, a bad position before a length
+that is not a number is the error raised, where the function form raises 40.12
+for the length first.
 
 ```rexx
 call try "'abc'~substr('x')"
@@ -1694,13 +1772,14 @@ abc ab c abc
 r[class.string.operators.receiver]
 When the receiver of the joining methods and the strict comparisons is an
 instance of a subclass of `String`, they use the characters of the instance
-itself, and not the answer of its `MAKESTRING` method, as [the receiver
-rule](r:class.string.builtins.receiver) says of the builtin methods; the
-argument, when it is such an instance, is converted by [the conversion
-rule](r:conv.string.object) and so gives its `MAKESTRING` answer. The joining
-methods answer a new string of class `String`. The arithmetic operators, the
-logical operators and the normal comparisons read the receiver as a number,
-and this rule does not cover them.
+itself, and not the answer of its `MAKESTRING` method, as
+[the receiver rule](r:class.string.builtins.receiver) says of the builtin
+methods; the argument, when it is such an instance, is converted by
+[the conversion rule](r:conv.string.object) and so gives its `MAKESTRING`
+answer. The joining methods answer a new string of class `String`. The
+arithmetic operators and the normal comparisons read the receiver as a number,
+and the logical operators read it as a logical value; this rule does not cover
+them.
 
 ```rexx
 x = .over~new('Hello')
