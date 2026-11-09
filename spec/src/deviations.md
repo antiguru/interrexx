@@ -724,9 +724,9 @@ it.
 ## 108. A supplier that is not a Supplier
 
 When `subclass`, `mixinclass`, `defineMethods` or `enhanced` takes the methods
-of an object through its `supplier` method, the object that `supplier` answers is
-used through the messages `available`, `index`, `item` and `next` when it is
-not a `Supplier`; an object that does not answer one of them raises
+of an object through its `supplier` method, the object that `supplier`
+answers is used through the messages `available`, `index`, `item` and `next`
+when it is not a `Supplier`; an object that does not answer one of them raises
 `SYNTAX 97.1` as for any message. A `Supplier`, an instance of a subclass
 included, is read directly, as a String subclass instance is read by its
 characters
@@ -780,9 +780,9 @@ it crashes on a hole followed by an item.
 changes to the caller's array do not reach the message, and the number of
 arguments is the position of the last item present, as for `Object~sendWith`;
 the array of arguments that `Message~sendWith`, `startWith` and `replyWith`
-take is copied and counted the same way. ooRexx keeps the caller's array itself and
-passes its size as the number of arguments, trailing empty positions included,
-in all four.
+take is copied and counted the same way. ooRexx keeps the caller's array
+itself and passes its size as the number of arguments, trailing empty
+positions included, in all four.
 
 ## 114. A metaclass NEW that answers an object that is not a class
 

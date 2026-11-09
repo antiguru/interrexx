@@ -213,7 +213,8 @@ base name q
 
 r[instr.forward.arguments]
 The value of ARGUMENTS is turned into the list of arguments by sending it the
-message `MAKEARRAY`, so an array supplies its items, an empty array no
+message `REQUEST` with the argument `ARRAY` (the `request` of `Object` sends
+`MAKEARRAY`), so an array supplies its items, an empty array no
 argument, and an item that is missing in an array is an argument that is left
 empty. A string that is not null and has no line ends is one argument, the
 null string supplies none, a string of several lines has one argument for each
