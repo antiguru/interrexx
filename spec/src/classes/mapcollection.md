@@ -105,14 +105,16 @@ MapCollection
 
 r[class.mapcollection.of.sends]
 `of` sends `new` to the class that received it, with no argument, before it
-looks at any argument. For each argument in order it then asks the argument
-what it is and how big, by sending it [`isA`](r:class.object.isa) with the
-class `Array`, `dimension`, `items` and `last`, in that order and the last
-three with no argument, and, when it is accepted, sends `[]` with 2 and then
-`[]` with 1 to it, and then `put` to the new object with the item and then the
-index. What `new` answers is the result, and `init` is not sent again. The
-argument need not be an `Array`: an object that answers those messages as one
-does is accepted.
+looks at any argument. For each argument in order it then asks the argument what
+it is and how big, by sending it [`isA`](r:class.object.isa) with the class
+`Array`; when that answers 1, `dimension`; when that answers 1, `items` and then
+`last`, whatever `items` answered; and when both answered a number equal to 2,
+`[]` with 2 and then `[]` with 1, and then `put` to the new object with the item
+and then the index. `dimension`, `items` and `last` have no argument. An answer
+of 0 to `isA` or to `dimension` ends the checks of that argument with [the error
+rule](r:class.mapcollection.of.error)'s error. What `new` answers is the result,
+and `init` is not sent again. The argument need not be an `Array`: an object
+that answers those messages as one does is accepted.
 
 ```rexx
 s = .tstore~of(.lpa~of('a', 1), .pair~new)
@@ -188,16 +190,16 @@ put e2 e1
 ```
 
 r[class.mapcollection.of.error]
-Each argument is checked when it is reached, after the pairs before it have
-been stored. The answers to `isA` and to `dimension` are used as logical
-values, and the argument is accepted when both are 1. An argument for which
-`isA` answers 0, `.nil` and a string included, raises `SYNTAX 88.923`, and so
-does one whose `dimension` answers 0; an answer that is neither 0 nor 1 raises
-`SYNTAX 34.901`, which is what a multi-dimensional array answers to
-`dimension`, and `.nil` raises `SYNTAX 97.1`. An argument that is accepted has
-to answer 2 to both `items` and `last`, or it raises `SYNTAX 88.924`: an array
-with a hole, such as one with items at positions 1 and 3, has two items but
-its `last` is 3. An argument that is omitted and is followed by another raises
+Each argument is checked when it is reached, after the pairs before it have been
+stored. The answers to `isA` and to `dimension` are used as logical values, and
+the argument is accepted when both are 1. An argument for which `isA` answers 0,
+`.nil` and a string included, raises `SYNTAX 88.923`, and so does one whose
+`dimension` answers 0; an answer that is neither 0 nor 1 raises `SYNTAX 34.901`,
+which is what a multi-dimensional array answers to `dimension`, and `.nil`
+raises `SYNTAX 97.1`. An argument that is accepted has to answer a number equal
+to 2 to both `items` and `last`, or it raises `SYNTAX 88.924`: an array with a
+hole, such as one with items at positions 1 and 3, has two items but its `last`
+is 3. An argument that is omitted and is followed by another raises
 `SYNTAX 93.903`.
 
 ```rexx
@@ -215,8 +217,11 @@ call try ".store~of(.array~of('a', ))"
 call try ".store~of(sparse)"
 call try ".store~of(grid)"
 call try ".store~of(.pair~new(0, 1))"
+call try ".store~of(.pair~new(1, 0))"
 call try ".store~of(.pair~new(1, 7))"
 call try ".store~of(.pair~new(1, .nil))"
+call try ".store~of(.pair~new(1, 1, 3))"
+call try ".store~of(.pair~new(1, 1, '2.0'))"
 call try ".store~of(.array~of('a', 1), , .array~of('b', 2))"
 exit
 try:
@@ -237,18 +242,25 @@ bad: say arg(1) '=>' condition('o')~code
   d[index] = item
 ::class pair
 ::method init
-  expose dimension isa
-  use arg isa, dimension
+  expose dimension isa count
+  use arg isa, dimension, count = 2
 ::method isa
   expose isa
   return isa
 ::method dimension
   expose dimension
+  say '  dimension'
   return dimension
 ::method items
-  return 2
+  expose count
+  say '  items'
+  return count
 ::method last
-  return 2
+  expose count
+  say '  last'
+  return count
+::method '[]'
+  return 'e' || arg(1)
 ```
 
 ```output
@@ -261,8 +273,21 @@ bad: say arg(1) '=>' condition('o')~code
 .store~of(sparse) => 88.924
 .store~of(grid) => 34.901
 .store~of(.pair~new(0, 1)) => 88.923
+  dimension
+.store~of(.pair~new(1, 0)) => 88.923
+  dimension
 .store~of(.pair~new(1, 7)) => 34.901
+  dimension
 .store~of(.pair~new(1, .nil)) => 97.1
+  dimension
+  items
+  last
+.store~of(.pair~new(1, 1, 3)) => 88.924
+  dimension
+  items
+  last
+  put e2 e1
+.store~of(.pair~new(1, 1, '2.0')) => a STORE
   put 1 a
 .store~of(.array~of('a', 1), , .array~of('b', 2)) => 93.903
 ```

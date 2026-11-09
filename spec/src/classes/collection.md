@@ -635,17 +635,16 @@ a from makeArray
 ```
 
 r[class.collection.operand.list]
-The answer of `allItems` or `makeArray` is read as two arrays, the items and
-the indexes, and the operation takes the entries from position 1 of the items
-up to its last position, an entry being the item at the position and the index
-at the same position, `.nil` when there is none. An answer that is an `Array`
-of that class itself is both arrays: it is read position by position, so an
-element is its own index, and a position that holds nothing is an entry whose
-item and index are `.nil`. Any other answer, an instance of a subclass of
-`Array` included, is sent `makeArray` twice, and the first answer is the items
-and the second the indexes; for a `List`, a `Queue`, a `Set` or a string the
-two are the same. Messages that the operation sends to the entries are those
-of its own rule.
+The answer of `allItems` or `makeArray` is read as two arrays, the items and the
+indexes, and the operation takes the entries from position 1 of the items up to
+its size, an entry being the item at the position and the index at the same
+position, `.nil` when there is none. An answer that is an `Array` of that class
+itself is both arrays: it is read position by position, so an element is its own
+index, and a position that holds nothing is an entry whose item and index are
+`.nil`. Any other answer, an instance of a subclass of `Array` included, is sent
+`makeArray` twice, and the first answer is the items and the second the indexes;
+for a `List`, a `Queue`, a `Set` or a string the two are the same. Messages that
+the operation sends to the entries are those of its own rule.
 
 ```rexx
 h = .array~new(3)
@@ -719,6 +718,55 @@ put <s1> <s1>
 --
 hasIndex index 1
 put item 1 index 1
+```
+
+r[class.collection.operand.list.subclass]
+Each of the two answers of `makeArray` that [the list
+rule](r:class.collection.operand.list) reads is used as it is when it is an
+`Array` or an instance of a subclass of `Array`: it is read position by position
+and is sent nothing, so a subclass's own `makeArray`, `[]` or `items` is not
+used.
+
+```rexx
+r = .nb~new~union(.pk~new(.twoans~new))
+::class nb inherit collection
+::method copy
+  return self
+::method hasindex
+  say 'hasIndex' arg(1)
+  return 0
+::method put
+  say 'put' arg(1) arg(2)
+::class pk inherit collection
+::method init
+  expose answer
+  use arg answer
+::method makearray
+  expose answer
+  return answer
+::class twoans
+::method makearray
+  expose k
+  if var('k') then return .lsub~of('i1', 'i2')
+  k = 1
+  return .lsub~of('c', 'q')
+::class lsub subclass array
+::method makearray
+  say 'makeArray of the subclass'
+  forward class (super)
+::method '[]'
+  say '[] of the subclass'
+  forward class (super)
+::method items
+  say 'items of the subclass'
+  forward class (super)
+```
+
+```output defect=#153
+hasIndex i1
+put c i1
+hasIndex i2
+put q i2
 ```
 
 r[class.collection.operand.map]
@@ -899,27 +947,34 @@ difference items 3 -> BOX
 r[class.collection.operand.logical]
 `union`, `intersection` and `xor` use what `hasIndex` answers as a logical
 value. An answer that is neither 0 nor 1 raises `SYNTAX 34.901` from `union`,
-and `SYNTAX 34.1` from `intersection` and `xor`, and so from `disjoint`, which
-reads its argument through `intersection`. The answer of `isA` is used in the
-same way, as [the isA rule](r:class.collection.operand.isa) says.
+except `.nil`, which raises `SYNTAX 93.948` there, and `SYNTAX 34.1` from
+`intersection` and `xor`, `.nil` included, and so from `disjoint`, which reads
+its argument through `intersection`. The answer of `isA` is used in the same
+way, as [the isA rule](r:class.collection.operand.isa) says.
 
 ```rexx
-do op over 'union intersection xor disjoint'~makearray(' ')
-  call try op
+do v over .array~of('maybe', .nil)
+  do op over 'union intersection xor disjoint'~makearray(' ')
+    call try op, v
+  end
 end
 exit
 try:
   signal on syntax name bad
-  r = .message~new(.hb~new, arg(1), 'I', .array~of('p'))~send
-  say arg(1) '=> ok'
+  r = .message~new(.hb~new(arg(2)), arg(1), 'I', .array~of('p'))~send
+  say arg(1) arg(2)~string '=> ok'
   return
-bad: say arg(1) '=>' condition('o')~code
+bad: say arg(1) arg(2)~string '=>' condition('o')~code
   return
 ::class hb inherit collection
+::method init
+  expose v
+  use arg v
 ::method copy
   return self
 ::method hasindex
-  return 'maybe'
+  expose v
+  return v
 ::method put
   nop
 ::method remove
@@ -929,10 +984,14 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-union => 34.901
-intersection => 34.1
-xor => 34.1
-disjoint => 34.1
+union maybe => 34.901
+intersection maybe => 34.1
+xor maybe => 34.1
+disjoint maybe => 34.1
+union The NIL object => 93.948
+intersection The NIL object => 34.1
+xor The NIL object => 34.1
+disjoint The NIL object => 34.1
 ```
 
 r[class.collection.operand.error]
@@ -1614,21 +1673,22 @@ makeArray
 ```
 
 r[class.collection.subset]
-`subset(other)` answers 1 when each item that the receiver's `makeArray`
-answers is equal to an element that the argument supplies, and 0 otherwise.
-The argument is read as [the operand rule](r:class.collection.operand) says,
-so for a plain or ordered argument the elements are its items, and a receiver
-with no items is a subset of every collection. An item and an element are
-equal as `==` compares strings: `1` and `1.0` differ, and so do `a` and `A`.
-For an argument that is read through `allIndexes`, the elements are its
-indexes, and an item of the receiver that is one of them must also have a
-matching entry: the receiver's entry at that index is sent `\=` with the
-argument's entry at that index, and an answer of 1 makes the result 0, so a
-receiver whose entries do not override `\=` compares them as `=` does, where
-`1` and `1.0` are equal and `a` and `A` are not. When `isA` says that the
-argument is a `Set`, its entries are not compared, because an index and its
-item are the same there. The answer of `\=` is used as a logical value: what
-is neither 0 nor 1 raises `SYNTAX 34.6`.
+`subset(other)` answers 1 when each item that the receiver's `makeArray` answers
+is equal to an element that the argument supplies, and 0 otherwise. The argument
+is read as [the operand rule](r:class.collection.operand) says, so for a plain
+or ordered argument the elements are its items, and a receiver with no items is
+a subset of every collection. An item and an element are equal as `==` compares
+strings: `1` and `1.0` differ, and so do `a` and `A`. For an argument that is
+read through `allIndexes`, the elements are its indexes, and an item of the
+receiver that is one of them must also have a matching entry: the receiver's
+entry at that index is sent `\=` with the argument's entry at that index, and an
+answer of 1 makes the result 0, so a receiver whose entries do not override `\=`
+compares them as `=` does, where `1` and `1.0` are equal and `a` and `A` are
+not. When `isA` says that the argument is a `Set`, its entries are not compared,
+because an index and its item are the same there. The answer of that `isA` is
+used as a logical value: one that is neither 0 nor 1 raises `SYNTAX 34.901`, and
+`.nil` raises `SYNTAX 93.948`. The answer of `\=` is used as a logical value:
+what is neither 0 nor 1 raises `SYNTAX 34.6`.
 
 ```rexx
 a = .box~new('a b')
@@ -1644,6 +1704,25 @@ t = .table~new
 t['k'] = 'k'
 t['m'] = 'm'
 say x~subset(t)
+signal on syntax name bad
+say x~subset(.setliar~new(2))
+bad: say condition('o')~code
+signal on syntax name bad2
+say x~subset(.setliar~new(.nil))
+bad2: say condition('o')~code
+exit
+::class setliar inherit mapcollection
+::method init
+  expose answer
+  use arg answer
+::method isa
+  expose answer
+  if arg(1) == .set then return answer
+  forward class (super)
+::method allindexes
+  return .array~of('k')
+::method items
+  return 1
 ::class map inherit mapcollection
 ::method init
   expose d
@@ -1703,25 +1782,29 @@ say x~subset(t)
 0
 1
 0
+34.901
+93.948
 ```
 
 r[class.collection.subset.sends]
-`subset` first reads the argument: it sends `isA` with `OrderedCollection`
-and, when that does not answer 1, `isA` with `MapCollection`, then `allItems`,
+`subset` first reads the argument: it sends `isA` with `OrderedCollection` and,
+when that does not answer 1, `isA` with `MapCollection`, then `allItems`,
 `allIndexes` or `makeArray` as [the operand rule](r:class.collection.operand)
 says. For a map it then sends `isA` with `Set`. Then it sends `copy` to the
-receiver, `items` to the argument and `makeArray` to the receiver, each with
-no argument, and uses none of the first two answers. A `copy` that answers
-anything and an `items` that answers anything do not matter, but an argument
-that does not understand `items` raises `SYNTAX 93.948`. The answer of the
-receiver's `makeArray` is read as [`DO OVER`](r:instr.do.over) reads it, and
-for each item in it, in order, `subset` sends `hasItem` with the item to the
-answer of the first step, and answers 0 at the first item for which that
+receiver, `items` to the argument and `makeArray` to the receiver, each with no
+argument, and uses none of the first two answers. A `copy` that answers anything
+and an `items` that answers anything do not matter, but an argument that does
+not understand `items` raises `SYNTAX 93.948`. The answer of the receiver's
+`makeArray` has to be an `Array` of that class itself: an instance of a subclass
+of `Array` raises `SYNTAX 98.913`, and nothing is sent to it. `subset` reads its
+positions from 1 up to its `last`, a position that holds nothing giving the item
+`.nil`, and for each item, in order, `subset` sends `hasItem` with the item to
+the answer of the first step, and answers 0 at the first item for which that
 answers 0, sending nothing more. For a map that is not a `Set`, when `hasItem`
 answers 1 it sends `[]` with the item to the receiver and then `[]` with the
 item to the argument itself, and then `\=` to the receiver's entry with the
-argument's entry as the argument. An answer of 1 ends the operation with 0.
-When every item has passed the answer is 1.
+argument's entry as the argument. An answer of 1 ends the operation with 0. When
+every item has passed the answer is 1.
 
 ```rexx
 a = .lmap~new('me', 'k', .e~new('one'), 'm', .e~new('two'))
@@ -1802,6 +1885,54 @@ me.[] m
 arg.[] m
   \= two 2
 0
+```
+
+r[class.collection.subset.receiver]
+The array that the receiver's `makeArray` answers is read by position, as [the
+sends rule](r:class.collection.subset.sends) says: an empty position before the
+last item is the item `.nil`, and `hasItem` is sent with it; an instance of a
+subclass of `Array` is refused with `SYNTAX 98.913` before anything is sent to
+it.
+
+```rexx
+say .hole~new~subset(.pa~new)
+signal on syntax name bad
+say .sub~new~subset(.pa~new)
+bad: say condition('o')~code
+::class hole inherit collection
+::method copy
+  return self
+::method makearray
+  h = .array~new(4)
+  h[1] = 'a'
+  h[3] = 'b'
+  return h
+::class sub subclass hole
+::method makearray
+  return .larr~of('a')
+::class larr subclass array
+::method makearray
+  say 'makeArray of the subclass'
+  forward class (super)
+::class pa
+::method isa
+  return 0
+::method items
+  return 0
+::method makearray
+  return .ans~new
+::class ans
+::method hasitem
+  say 'hasItem' arg(1)~string
+  return 1
+```
+
+```output defect=#154
+hasItem a
+hasItem The NIL object
+hasItem b
+1
+98.913
 ```
 
 r[class.collection.disjoint]

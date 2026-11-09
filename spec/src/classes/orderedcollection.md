@@ -418,13 +418,13 @@ a~xor(1, 2) => 93.902
 r[class.orderedcollection.operand.isa]
 Each of the five operations asks the argument what it is by sending
 [`isA`](r:class.object.isa) with the class `Collection`, and nothing else: an
-answer of 1 makes the argument a list that is sent `allItems`, and any other
-answer makes it an object that is sent `makeArray`. The answer decides, not
-the classes the object inherits: an object that inherits no mixin and answers
-1 is read through `allItems`, and an instance of a class that inherits
-`Collection` and answers 0 is read through `makeArray`. The answer is used as
-a logical value: one that is neither 0 nor 1 raises `SYNTAX 34.901`, and
-`.nil` raises `SYNTAX 93.948`. `appendAll` does not send `isA`.
+answer of 1 makes the argument a list that is sent `allItems`, and an answer of
+0 makes it an object that is sent `makeArray`. The answer decides, not the
+classes the object inherits: an object that inherits no mixin and answers 1 is
+read through `allItems`, and an instance of a class that inherits `Collection`
+and answers 0 is read through `makeArray`. The answer is used as a logical
+value: one that is neither 0 nor 1 raises `SYNTAX 34.901`, and `.nil` raises
+`SYNTAX 93.948`. `appendAll` does not send `isA`.
 
 ```rexx
 a = .seq~new('a')
