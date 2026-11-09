@@ -101,6 +101,8 @@
   - [SetCollection](classes/setcollection.md)
   - [Array](classes/array.md)
   - [List](classes/list.md)
+  - [Queue](classes/queue.md)
+  - [CircularQueue](classes/circularqueue.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
