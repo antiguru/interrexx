@@ -116,14 +116,14 @@ r[class.object.copy]
 `copy` answers a new object of the same class. The copy has the object
 variables of the receiver, each holding the same object that the receiver's
 variable holds, so the copy is shallow, and it has the same methods, the
-receiver's own methods included, and the same name. The copy has a table of
-its own methods of its own, holding the same method objects, and the variables
-of those methods are copied as the others are, so a change to one object's own
-methods or to those variables does not reach the other. It does not send
-`init`, and takes no argument: with one it raises `SYNTAX 93.902`. A subclass
-of `Object` whose instances hold more than variables, as the collection
-classes do, defines its own `copy` on its page. A class object cannot be
-copied, as [the copy rule](r:class.class.copy) says.
+receiver's own methods included, and the same name. The copy has its own table
+of the object's own methods, holding the same method objects, and the
+variables of those methods are copied as the others are, so a change to one
+object's own methods or to those variables does not reach the other. It does
+not send `init`, and takes no argument: with one it raises `SYNTAX 93.902`. A
+subclass of `Object` whose instances hold more than variables, as the
+collection classes do, defines its own `copy` on its page. A class object
+cannot be copied, as [the copy rule](r:class.class.copy) says.
 
 ```rexx
 a = .box~new
@@ -969,14 +969,15 @@ argument and answers what it answers, whatever that is, and the answer is not
 checked: a method may answer `.nil` or an object of another class. The message
 is checked for access as if the code that sent `request` had sent it, as for
 [`send`](r:class.object.send): a `PRIVATE` method runs when `request` is sent
-from a method of its class and raises `SYNTAX 97.2` from elsewhere, and a
-`PACKAGE` method raises `97.3` when `request` is sent from another package.
-When there is no such method, `UNKNOWN` plays no part, the method compares the
-name with the id of the receiver's class, without regard to case: when they
-are equal it answers the receiver itself, and otherwise `.nil`. The id is that
-of the class of the receiver only, not of its superclasses. The argument is
-checked as for `hasMethod`: none raises `93.903`, `.nil` and objects without a
-string value `88.909`, and a second argument `93.902`.
+by code that [the access rule](r:dir.method.access) lets send it, a method of
+a subclass included, and raises `SYNTAX 97.2` otherwise, and a `PACKAGE`
+method raises `97.3` when `request` is sent from another package. When there
+is no such method, `UNKNOWN` plays no part, the method compares the name with
+the id of the receiver's class, without regard to case: when they are equal it
+answers the receiver itself, and otherwise `.nil`. The id is that of the class
+of the receiver only, not of its superclasses. The argument is checked as for
+`hasMethod`: none raises `93.903`, `.nil` and objects without a string value
+`88.909`, and a second argument `93.902`.
 
 ```rexx
 o = .doc~new
@@ -1463,20 +1464,22 @@ converted as any other object is. Any other object is sent `request` with the
 argument `ARRAY`, and the array it answers is used; when it answers no array,
 it is sent `request` with the argument `STRING`, and a string answer is used
 as the source ([the sends rule](r:class.object.setmethod.sends)). `.nil`, and
-an object that answers neither, raise `SYNTAX 93.974`, so a subclass of
-`Method` is refused. A method object is copied: the object gets a copy whose
-scope is set as [the scope rule](r:class.methods.object.scope) says, and the
-argument itself is not changed, so `instanceMethod` answers the copy. The
-checks run in this order: the number of arguments, the name, the method, the
-scope. With no second argument the name is hidden for the receiver. The third
-argument is the scope, `FLOAT` or `OBJECT` as
-[the scope rule](r:class.methods.object.scope) says; another value raises
-`88.916`, and `.nil` raises `88.909`. A fourth argument raises `93.902`. A
-source that does not translate raises the translation error from `setMethod`.
-The code of a method made from a source runs with the scope `FLOAT`, whose
-object variables are separate from those of any class: the methods that the
-receiver got by `setMethod` with `FLOAT`, by `run` and by `enhanced` share one
-set, which is kept for the receiver.
+an object whose `request` with `STRING` answers `.nil`, raise `SYNTAX 93.974`.
+An answer that is another object that is not a string is not specified, as
+[the string conversion](r:conv.string.object) leaves it. So a subclass of
+`Method` that declares neither `MAKEARRAY` nor `MAKESTRING` is refused. A
+method object is copied: the object gets a copy whose scope is set as
+[the scope rule](r:class.methods.object.scope) says, and the argument keeps
+its scope, so `instanceMethod` answers the copy. The checks run in this order:
+the number of arguments, the name, the method, the scope. With no second
+argument the name is hidden for the receiver. The third argument is the scope,
+`FLOAT` or `OBJECT` as [the scope rule](r:class.methods.object.scope) says;
+another value raises `88.916`, and `.nil` raises `88.909`. A fourth argument
+raises `93.902`. A source that does not translate raises the translation error
+from `setMethod`. The code of a method made from a source runs with the scope
+`FLOAT`, whose object variables are separate from those of any class: the
+methods that the receiver got by `setMethod` with `FLOAT`, by `run` and by
+`enhanced` share one set, which is kept for the receiver.
 
 ```rexx
 o = .w~new
@@ -1587,8 +1590,8 @@ r[class.object.setmethod.sends]
 `setMethod` sends the message `request` with the argument `ARRAY`, once, to a
 second argument that is not an instance of `Method`, `String` or `Array`
 itself, and uses the array it answers. When that answers no array, it sends
-`request` with the argument `STRING`, once, and uses the string it answers as
-the source. It sends nothing to the receiver.
+`request` with the argument `STRING`, once, and uses a string answer as the
+source. It sends nothing to the receiver.
 
 ```rexx
 o = .w~new
@@ -1814,7 +1817,7 @@ r[class.object.run.sends]
 `run` sends the message `request` with the argument `ARRAY`, once, to a method
 argument that is not an instance of `Method`, `String` or `Array` itself, and
 uses the array it answers; when that answers no array, it sends `request` with
-the argument `STRING`, once, and uses the string it answers as the source, as
+the argument `STRING`, once, and uses a string answer as the source, as
 [`setMethod`](r:class.object.setmethod.sends) does. It also sends `request`
 with the argument `ARRAY`, once, to the third argument of the option `A`, and
 uses the array it answers. It sends nothing to the receiver.
@@ -1972,26 +1975,6 @@ say a~sort~makestring('l', ' ')
 GOODBYE HELLO
 ```
 
-r[class.object.deviation.105]
-A message that `start` or `startWith` sends is checked for `PRIVATE` and
-`PACKAGE` access as the same message sent directly by the code that started
-it, as [the Deviation 105 rule](r:dir.method.deviation.105) states; ooRexx
-raises `97.2` for every started private message and `97.1` for every started
-`PACKAGE` message.
-
-```rexx
-say .safe~new~open
-::class safe
-::method open unguarded
-  return self~startWith('inner', .array~of(7))~result
-::method inner private
-  return 'inner got' arg(1)
-```
-
-```output
-inner got 7
-```
-
 r[class.object.deviation.36]
 `objectName=` sent to a String that is no instance of a subclass and not
 enhanced, a number included, ends the program with exit code 120, as [the
@@ -2012,4 +1995,24 @@ say 'after'
 ```output rc=120
 named
 before
+```
+
+r[class.object.deviation.105]
+A message that `start` or `startWith` sends is checked for `PRIVATE` and
+`PACKAGE` access as the same message sent directly by the code that started
+it, as [the Deviation 105 rule](r:dir.method.deviation.105) states; ooRexx
+raises `97.2` for every started private message and `97.1` for every started
+`PACKAGE` message.
+
+```rexx
+say .safe~new~open
+::class safe
+::method open unguarded
+  return self~startWith('inner', .array~of(7))~result
+::method inner private
+  return 'inner got' arg(1)
+```
+
+```output
+inner got 7
 ```
