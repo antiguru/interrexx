@@ -1,0 +1,2025 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Message - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html" class="active"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="message"><a class="header" href="#message">Message</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; Message Class; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; arguments; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; completed; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; errorCondition; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; halt; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; hasError; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; hasResult; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; messageComplete; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; messageName; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; notify; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; reply; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; replyWith; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; result; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; send; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; sendWith; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; start; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; startWith; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; target; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; triggered; Builtin Classes &gt; Fundamental Classes &gt; Message Class &gt; wait; Builtin Classes &gt; Utility Classes &gt; AlarmNotification Class &gt; cancel</p>
+<p class="deviations">Deviations: D105, D107, D109</p>
+<p>A <code>Message</code> object is a message that has been written down as an object: a
+target, the name of a message and its arguments. A program makes one with
+<code>new</code>, or gets one from the <code>start</code> and <code>startWith</code> methods of
+<a href="object.html"><code>Object</code></a>, and then decides when the message is sent. It can send
+the message and wait for the answer, start it so that another activity runs
+it while the sender goes on, or start a copy of it. Afterwards the object
+keeps what the message answered, or the error that ended it, and a program
+can ask for them, wait for them, or be told when they are there.</p>
+<p>The page specifies the class method that makes a message object, the methods
+that read what it holds, the methods that run it, the methods that wait for
+it, stop it or ask for a notification when it is done, and the three methods
+the class has because it implements the notification interfaces of
+<a href="messagenotification.html"><code>MessageNotification</code></a> and
+<a href="alarmnotification.html"><code>AlarmNotification</code></a>. How an activity is scheduled,
+when a started message begins to run, and how it interleaves with the activity
+that started it is specified in the environment chapter. The examples on this
+page therefore show only results that no scheduling can change: they wait for
+a message with <code>result</code> or <code>wait</code>, or park the activity of the message on a
+guard that the example opens, before they print anything that depends on it.
+The methods that an example waits for, or that the waiting activity calls
+meanwhile, are <code>UNGUARDED</code>, so that the waiting activity and the activity of
+the message can both use the object (<a href="../instructions/guard.html#r-instr.guard.exclusion">the guard
+rule</a>).</p>
+<p>The examples that show an error use a routine <code>try</code> that interprets the clause
+in its argument and prints the clause with the error code, or with the class
+of the answer when no error is raised.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.message.creation"><a href="#r-class.message.creation">[class.message.creation]</a></div>
+<p><code>Message</code> is a class whose superclass is <code>Object</code> and which inherits the
+mixin classes <code>MessageNotification</code> and <code>AlarmNotification</code>; it is not itself
+a mixin class. An instance made by <code>new</code> has the default name <code>a Message</code>, and
+so has its string value (<a href="index.html#r-class.index.string">the string rule</a>). A message
+object that has not been run holds its target, its name and its arguments, has
+not completed, has no result and has no error.</p>
+<pre><code class="language-rexx">m = .message~new(.object~new, 'string')
+say m~class~id '|' m~string '|' m~defaultName
+say .message~superclass~id .message~superclasses~items,
+  .message~queryMixinClass
+say m~isInstanceOf(.messagenotification) m~isInstanceOf(.alarmnotification)
+say m~completed m~hasResult m~hasError m~errorCondition~isNil
+say .object~new~start('string')~class~id
+</code></pre>
+<pre><code class="language-output">Message | a Message | a Message
+Object 3 0
+1 1
+0 0 0 1
+Message
+</code></pre>
+<div class="rule" id="r-class.message.started"><a href="#r-class.message.started">[class.message.started]</a></div>
+<p>A message object that has been given <code>start</code> or <code>startWith</code> is a started
+message. Every later <code>send</code>, <code>sendWith</code>, <code>start</code>, <code>startWith</code>, <code>reply</code>,
+<code>replyWith</code>, <code>messageComplete</code> or <code>triggered</code> to it raises <code>SYNTAX 98.915</code>,
+whether or not the first run has ended. No other method refuses it. A message
+object that has only been sent, that has only received <code>reply</code> or <code>replyWith</code>
+(its copy was started, and not it), or that has only been run by
+<code>messageComplete</code> or <code>triggered</code>, is not a started message, and these methods
+do not refuse it. The copy that <code>reply</code> and <code>replyWith</code> answer is a started
+message.</p>
+<pre><code class="language-rexx">t = .t~new
+a = .message~new(t, 'hello')
+a~start
+a~wait
+call try 'a~send'
+call try 'a~sendWith(, .array~new)'
+call try 'a~start'
+call try 'a~startWith(, .array~new)'
+call try 'a~reply'
+call try 'a~replyWith(, .array~new)'
+call try 'a~messageComplete(1)'
+call try 'a~triggered(1)'
+say a~completed a~hasResult a~result a~target~class~id
+b = .message~new(t, 'hello')
+b~send
+b~start
+b~wait
+say b~result
+call try 'b~send'
+c = .message~new(t, 'hello')
+r = c~reply
+call try 'r~send'
+call try 'r~start'
+call try 'r~reply'
+call try 'r~messageComplete(1)'
+c~send
+c~reply
+d = .message~new(t, 'hello')
+d~messageComplete
+say d~result
+d~send
+say 'unmarked'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; no error'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method hello unguarded
+  return 'hello'
+</code></pre>
+<pre><code class="language-output">a~send =&gt; 98.915
+a~sendWith(, .array~new) =&gt; 98.915
+a~start =&gt; 98.915
+a~startWith(, .array~new) =&gt; 98.915
+a~reply =&gt; 98.915
+a~replyWith(, .array~new) =&gt; 98.915
+a~messageComplete(1) =&gt; 98.915
+a~triggered(1) =&gt; 98.915
+1 1 hello T
+hello
+b~send =&gt; 98.915
+r~send =&gt; 98.915
+r~start =&gt; 98.915
+r~reply =&gt; 98.915
+r~messageComplete(1) =&gt; 98.915
+hello
+unmarked
+</code></pre>
+<h2 id="class-methods"><a class="header" href="#class-methods">Class methods</a></h2>
+<h3 id="new"><a class="header" href="#new">new</a></h3>
+<div class="rule" id="r-class.message.new"><a href="#r-class.message.new">[class.message.new]</a></div>
+<p><code>new(target, name, option, ...)</code> makes a message object that has not been run.
+It needs at least two arguments: fewer raise <code>SYNTAX 93.901</code>, and an omitted
+target raises <code>88.901</code>. The target is any object, <code>.nil</code> included. The name is
+checked next, after the target, as <a href="object.html#r-class.object.send">the <code>send</code> rule</a>
+checks it: a string,
+or an array of two items, the name and a class that starts the search (<a href="methods.html#r-class.methods.scoped.send">the
+scoped send rule</a>). A name that is not a
+string is read as <a href="object.html#r-class.object.send">the <code>send</code> rule</a> reads it, through
+<code>request</code> with <code>ARRAY</code>; <code>.nil</code> and an object that answers <code>.nil</code> raise
+<code>93.972</code>, an array of another size <code>93.946</code>, an
+array whose first item is missing <code>88.901</code>, an array with a first item that
+has no string value <code>88.909</code> and one with a
+second item that is not a class <code>88.914</code>. The null string is a name. The
+option that follows is the third argument, which says how the remaining
+arguments are read, as the next rule states. With no option, the message has
+no arguments. The answer is the new object, and what the object holds is shown
+by <a href="#r-class.message.messagename"><code>messageName</code></a>,
+<a href="#r-class.message.target"><code>target</code></a> and
+<a href="#r-class.message.arguments"><code>arguments</code></a>.</p>
+<pre><code class="language-rexx">t = .t~new
+call try '.message~new(t, "hello")'
+call try '.message~new(.nil, "hello")'
+call try '.message~new(t, "")'
+call try '.message~new(t, .array~of("hello", .t))'
+call try '.message~new'
+call try '.message~new(t)'
+call try '.message~new(, "hello")'
+call try '.message~new(t, .nil)'
+call try '.message~new(t, .array~of("hello"))'
+call try '.message~new(t, .array~of(.nil, .t))'
+call try '.message~new(t, .array~of("hello", 3))'
+call try '.message~new(t, .nil, "Z")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r~class~id
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method hello
+  return 'hello'
+</code></pre>
+<pre><code class="language-output">.message~new(t, "hello") =&gt; Message
+.message~new(.nil, "hello") =&gt; Message
+.message~new(t, "") =&gt; Message
+.message~new(t, .array~of("hello", .t)) =&gt; Message
+.message~new =&gt; 93.901
+.message~new(t) =&gt; 93.901
+.message~new(, "hello") =&gt; 88.901
+.message~new(t, .nil) =&gt; 93.972
+.message~new(t, .array~of("hello")) =&gt; 93.946
+.message~new(t, .array~of(.nil, .t)) =&gt; 88.909
+.message~new(t, .array~of("hello", 3)) =&gt; 88.914
+.message~new(t, .nil, "Z") =&gt; 93.972
+</code></pre>
+<div class="rule" id="r-class.message.new.options"><a href="#r-class.message.new.options">[class.message.new.options]</a></div>
+<p>The option is a string whose first letter, in either case, is <code>I</code> (individual)
+or <code>A</code> (array); the other letters are not looked at, so <code>Individual</code> and
+<code>array</code> are options. Any other string, the null string, and a number raise
+<code>SYNTAX 93.915</code>, and an option that has no string value raises <code>88.909</code>; the
+option is checked after the name. An omitted option with an argument after it
+raises <code>88.901</code>. With <code>I</code>, every argument after the option is an argument of
+the message, in order, and an omitted place stays omitted; omitted places at
+the end add nothing to the count, as
+<a href="index.html#r-class.index.args.count">the count rule</a> says, and an argument may be any
+object, <code>.nil</code> included. With <code>A</code>, the fourth argument is required
+(<code>SYNTAX 93.901</code>) and is the only argument that may follow: a fifth raises
+<code>93.902</code>, also when the fourth is omitted. It holds the arguments of the
+message: it is an array, or an object that answers an array to the message
+<code>request</code> with the argument <code>ARRAY</code>, and the items of the array are the
+arguments in order. An object that answers no array, <code>.nil</code> and an array of
+more than one dimension among them, raises <code>SYNTAX 88.913</code>.</p>
+<pre><code class="language-rexx">t = .t~new
+say .message~new(t, 'show')~send
+say .message~new(t, 'show', 'I', 1, , 3)~send
+say .message~new(t, 'show', 'individual', 1, )~send
+say .message~new(t, 'show', 'I', , )~send
+say .message~new(t, 'show', 'I', 'x', .nil)~send
+say .message~new(t, 'show', 'Array', .array~of(4, 5, 6))~send
+say .message~new(t, 'show', 'a', .list~of(7, 8))~send
+say .message~new(t, 'show', 'A', 'xyz')~send
+call try '.message~new(t, "show", "Z")'
+call try '.message~new(t, "show", "")'
+call try '.message~new(t, "show", 1)'
+call try '.message~new(t, "show", .nil)'
+call try '.message~new(t, "show", "Z", .nil)'
+call try '.message~new(t, "show", , 1)'
+call try '.message~new(t, "show", "A")'
+call try '.message~new(t, "show", "A", .nil)'
+call try '.message~new(t, "show", "A", .array~new(2, 2))'
+call try '.message~new(t, "show", "A", .array~of(1), 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r~class~id
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method show
+  s = arg()':'
+  do i = 1 to arg()
+    if arg(i, 'e') then s = s arg(i)
+    else s = s '.'
+  end
+  return s
+</code></pre>
+<pre><code class="language-output">0:
+3: 1 . 3
+1: 1
+0:
+2: x The NIL object
+3: 4 5 6
+2: 7 8
+1: xyz
+.message~new(t, "show", "Z") =&gt; 93.915
+.message~new(t, "show", "") =&gt; 93.915
+.message~new(t, "show", 1) =&gt; 93.915
+.message~new(t, "show", .nil) =&gt; 88.909
+.message~new(t, "show", "Z", .nil) =&gt; 93.915
+.message~new(t, "show", , 1) =&gt; 88.901
+.message~new(t, "show", "A") =&gt; 93.901
+.message~new(t, "show", "A", .nil) =&gt; 88.913
+.message~new(t, "show", "A", .array~new(2, 2)) =&gt; 88.913
+.message~new(t, "show", "A", .array~of(1), 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.message.new.sends"><a href="#r-class.message.new.sends">[class.message.new.sends]</a></div>
+<p><code>new</code> sends the message <code>request</code> with the argument <code>ARRAY</code> to the fourth
+argument of the option <code>A</code>, once, before it sends <code>init</code>, and uses the array
+that <code>request</code> answers. It sends no message to the target or to the arguments
+of <code>I</code>, and to the name only the <code>request</code> that <a href="object.html#r-class.object.send.sends">the Object sends
+rule</a> states, before the option is read. It then
+sends the new object the message <code>init</code> with no argument, whatever arguments
+<code>new</code> had, so a subclass of <code>Message</code>
+that declares <code>init</code> sees none of them; the object that <code>init</code> runs on already
+holds its target, its name and its arguments. The answer of <code>init</code> is not
+used, and <code>new</code> answers the new object, as <a href="index.html#r-class.index.new">the new
+rule</a> says for every class. <code>new</code> makes an instance of the
+class that received it, so a subclass of <code>Message</code> makes instances of itself. A
+name that is no string is sent <code>request</code> once, at <code>new</code>; the message then holds
+the name the answer gives, and running it sends nothing more. The second
+example shows it.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .mine~new(t, 'show', 'A', .logged~new)
+say 'new answered' m~class~id
+m = .mine~new(t, 'show', 'I', 'q', 'r')
+say m~send
+m = .mine~new(.logged~new, 'show', 'I', .logged~new)
+say 'no message to the target or the argument'
+
+::class t
+::method show
+  return 'show' arg()
+::class logged
+::method request
+  say 'request' arg(1)
+  forward class (super)
+::method makearray
+  say 'makearray'
+  return .array~of(1, 2)
+::class mine subclass message
+::method init
+  say 'init' arg() self~messageName self~target~class~id self~arguments~items
+  forward class (super) continue
+</code></pre>
+<pre><code class="language-output">request ARRAY
+makearray
+init 0 SHOW T 2
+new answered MINE
+init 0 SHOW T 2
+show 2
+init 0 SHOW LOGGED 1
+no message to the target or the argument
+</code></pre>
+<pre><code class="language-rexx">o = .w~new
+m = .message~new(o, .duck~new, 'I', 5)
+say 'made'
+say m~send
+say m~messageName
+::class w
+::method count
+  return 'count got' arg()
+::class duck
+::method request
+  say 'duck request' arg(1)
+  return .array~of('count', .w)
+</code></pre>
+<pre><code class="language-output defect=#149">duck request ARRAY
+made
+count got 1
+COUNT
+</code></pre>
+<h2 id="methods"><a class="header" href="#methods">Methods</a></h2>
+<h3 id="what-the-object-holds"><a class="header" href="#what-the-object-holds">What the object holds</a></h3>
+<div class="rule" id="r-class.message.messagename"><a href="#r-class.message.messagename">[class.message.messagename]</a></div>
+<p><code>messageName</code> answers the name of the message as a string, in upper case. For
+a name that was given as an array of two items, it is the first item. It does
+not change when the message is run, and it takes no argument (<code>SYNTAX 93.902</code>
+for one).</p>
+<pre><code class="language-rexx">t = .t~new
+say .message~new(t, 'show')~messageName
+say .message~new(t, 'MixedCase')~messageName
+say .message~new(t, .array~of('inLeaf', .t))~messageName
+say '['.message~new(t, '')~messageName']'
+m = .message~new(t, 'show')
+m~send
+say m~messageName
+call try 'm~messageName(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method show
+  return 1
+</code></pre>
+<pre><code class="language-output">SHOW
+MIXEDCASE
+INLEAF
+[]
+SHOW
+m~messageName(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.message.target"><a href="#r-class.message.target">[class.message.target]</a></div>
+<p><code>target</code> answers the object that the message is sent to, the object that
+<code>new</code> was given as the target. A message that has a scoped name sends to this
+object too, and its target is not the class of the scope. The methods that
+run the message change the target when they are given one, as the rules for
+<a href="#r-class.message.send"><code>send</code></a> and the others state. <code>target</code> takes no
+argument.</p>
+<pre><code class="language-rexx">t = .t~new
+u = .u~new
+m = .message~new(t, .array~of('show', .t))
+say (m~target == t) (m~target == u)
+say .message~new(.nil, 'show')~target~isNil
+m~send(u)
+say (m~target == t) (m~target == u)
+call try 'm~target(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method show
+  return 1
+::class u subclass t
+</code></pre>
+<pre><code class="language-output">1 0
+1
+0 1
+m~target(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.message.arguments"><a href="#r-class.message.arguments">[class.message.arguments]</a></div>
+<p><code>arguments</code> answers an array that holds the arguments of the message, in
+order, with the places of omitted arguments empty; it is empty when the
+message has no arguments. The array is a new one each time the method is
+sent, so changing it changes nothing in the message. The methods that run the
+message replace the arguments when they are given some, and the array
+answers the new ones afterwards. <code>arguments</code> takes no argument.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'show', 'I', 'a', , 'c')
+a = m~arguments
+say a~class~id a~items a~hasIndex(2) a[1] a[3]
+say (a == m~arguments)
+a~append('d')
+say m~arguments~items m~send
+say .message~new(t, 'show')~arguments~items
+m~send(, 'x')
+say m~arguments~items m~arguments[1]
+call try 'm~arguments(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method show
+  return arg() arg(1, 'e') arg(2, 'e') arg(3, 'e')
+</code></pre>
+<pre><code class="language-output">Array 2 0 a c
+0
+2 3 1 0 1
+0
+1 x
+m~arguments(1) =&gt; 93.902
+</code></pre>
+<h3 id="what-became-of-the-message"><a class="header" href="#what-became-of-the-message">What became of the message</a></h3>
+<div class="rule" id="r-class.message.completed"><a href="#r-class.message.completed">[class.message.completed]</a></div>
+<p><code>completed</code> answers 1 when the message has been run and has ended, whether it
+answered, answered nothing or raised an error, and 0 when it has not been run,
+or its latest run has not ended. It takes no argument.</p>
+<pre><code class="language-rexx">g = .gate~new
+m = .message~new(g, 'work')
+say m~completed
+m~start
+g~await
+say m~completed
+g~release
+m~wait
+say m~completed
+e = .message~new(g, 'boom')
+signal on syntax name caught
+e~send
+caught: say e~completed
+::class gate
+::method init
+  expose up go
+  up = .false
+  go = .false
+::method await unguarded
+  expose up
+  guard on when up
+::method release unguarded
+  expose go
+  go = .true
+::method work unguarded
+  expose up go
+  up = .true
+  guard on when go
+::method boom
+  return 1/0
+</code></pre>
+<pre><code class="language-output">0
+0
+1
+1
+</code></pre>
+<div class="rule" id="r-class.message.hasresult"><a href="#r-class.message.hasresult">[class.message.hasresult]</a></div>
+<p><code>hasResult</code> answers 1 when the message has been run, has ended without an
+error and answered a value, and 0 when it has not ended, ended with an error,
+or answered nothing. The value <code>.nil</code> and the null string are values. It
+takes no argument. The answer is that of the latest run.</p>
+<pre><code class="language-rexx">t = .t~new
+do n over 'yes nil none empty boom'~makearray(' ')
+  m = .message~new(t, n)
+  call attempt m
+  say n m~hasResult m~completed
+end
+say .message~new(t, 'yes')~hasResult
+exit
+attempt:
+  signal on syntax name caught
+  arg(1)~send
+caught: return
+::class t
+::method yes
+  return 'yes'
+::method nil
+  return .nil
+::method none
+  return
+::method empty
+  return ''
+::method boom
+  return 1/0
+</code></pre>
+<pre><code class="language-output">yes 1 1
+nil 1 1
+none 0 1
+empty 1 1
+boom 0 1
+0
+</code></pre>
+<div class="rule" id="r-class.message.haserror"><a href="#r-class.message.haserror">[class.message.haserror]</a></div>
+<p><code>hasError</code> answers 1 when the latest run ended with an error condition and 0
+when the message has not been run, has not ended, or ended without one. The
+error is a SYNTAX condition that the code of the message raised and nothing
+trapped there, including the <code>97.1</code> of a message that no method of the target
+understands, and a HALT that nothing trapped, which is the error <code>4.1</code>
+(<a href="#r-class.message.halt">halt</a>). Any other condition that nothing traps ends
+the method as <a href="../instructions/raise.html#r-instr.raise.exit">the RAISE rule</a> says and is not an error:
+the message has completed, with no result and no error. The error of an
+argument that <code>sendWith</code> or the other methods refuse is raised to their caller
+and is not an error of the message, which is then not run. It takes no
+argument. The answer, like those of <code>completed</code>, <code>hasResult</code> and
+<code>errorCondition</code>, is that of the latest run: a message that is sent again
+starts from the state of one that has not been run.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'ok')
+say m~hasError
+m~send
+say m~hasError
+m = .message~new(t, 'boom')
+call attempt m
+say m~hasError
+m = .message~new(t, 'nosuchzz')
+call attempt m
+say m~hasError
+m = t~start('boom')
+m~wait
+say m~hasError
+m = .message~new(t, 'usr')
+call attempt m
+say m~completed m~hasError m~hasResult
+f = .message~new(t, 'flip')
+do 3
+  call attempt f
+  say f~completed f~hasError f~hasResult f~errorCondition~isNil
+end
+g = .message~new(t, 'ok')
+call try 'g~sendWith(t, .nil)'
+say g~completed g~hasError
+exit
+attempt:
+  signal on syntax name caught
+  arg(1)~send
+caught: return
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method init
+  expose n
+  n = 0
+::method ok
+  return 1
+::method boom
+  return 1/0
+::method usr
+  raise user foo
+  return 'not reached'
+::method flip
+  expose n
+  n = n + 1
+  if n = 2 then return 1/0
+  return n
+</code></pre>
+<pre><code class="language-output">0
+0
+1
+1
+1
+1 0 0
+1 0 1 1
+1 1 0 0
+1 0 1 1
+g~sendWith(t, .nil) =&gt; 88.913
+0 0
+</code></pre>
+<div class="rule" id="r-class.message.errorcondition"><a href="#r-class.message.errorcondition">[class.message.errorcondition]</a></div>
+<p><code>errorCondition</code> answers the condition object of the error that ended the
+latest run, and <code>.nil</code> when there is none: when the message has not been run,
+has not ended, or ended without an error. The object has the entries of a
+SYNTAX condition, as <a href="../conditions/information.html#r-cond.information.object">the entries rule</a> lists
+them: for the division by zero of the example <code>CODE</code> is <code>42.3</code>, <code>RC</code> is <code>42</code>
+and <code>CONDITION</code> is <code>SYNTAX</code>; for a message that no method of the target
+understands <code>CODE</code> is <code>97.1</code> and the entry <code>ADDITIONAL</code> holds the string value
+of the target and the name. It takes no argument.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'boom')
+say m~errorCondition~isNil
+signal on syntax name c1
+m~send
+c1: c = m~errorCondition
+say c~class~id c~code c~rc c~condition
+n = t~start('nosuchzz')
+n~wait
+say n~errorCondition~code n~errorCondition~additional[1],
+  n~errorCondition~additional[2]
+say .message~new(t, 'ok')~~send~errorCondition~isNil
+::class t
+::method boom
+  return 1/0
+::method ok
+  return 1
+</code></pre>
+<pre><code class="language-output">1
+Directory 42.3 42 SYNTAX
+97.1 a T NOSUCHZZ
+1
+</code></pre>
+<h3 id="running-the-message"><a class="header" href="#running-the-message">Running the message</a></h3>
+<div class="rule" id="r-class.message.send"><a href="#r-class.message.send">[class.message.send]</a></div>
+<p><code>send(target, argument, ...)</code> sends the message in the activity of the sender
+and does not answer until the message has ended. It answers what the message
+answers, and nothing when the message answers nothing, so that a use of the
+answer as a value then raises <code>SYNTAX 91.999</code>. An error that the message
+raises is raised at the clause that sent <code>send</code>, as the error of an ordinary
+message would be, and is also kept: <code>hasError</code> answers 1 and <code>result</code> raises
+it again. The first argument, when it is not omitted, replaces the target of
+the message for this and every later run, and it may be <code>.nil</code>. When the call
+has more than one argument, as <a href="index.html#r-class.index.args.count">the count rule</a>
+counts them, the arguments after the first replace the arguments of the
+message likewise; with only a target, or none, the message keeps its
+arguments. The message is found by <a href="methods.html#r-class.methods.search">the search rule</a>
+in the target, goes to <code>UNKNOWN</code> when nothing is found, raises NOMETHOD
+(<code>SYNTAX 97.1</code> when untrapped) when there is none, and is checked for
+<code>PRIVATE</code> and <code>PACKAGE</code> access as if the code that called <code>send</code> had sent it.
+A scoped name starts the search at its class, and raises <code>93.957</code> when the
+target is not an instance of that class; that error is raised to the caller
+of <code>send</code>, <code>start</code> or the other run methods before the message runs, and is
+not an error of the message. Each <code>send</code> is a new run: the message
+can be sent again, and the result, the error and the completion are those of
+the latest run.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'show', 'I', 'a', 'b')
+say m~send
+say m~send(, 'X')
+say m~send(.u~new)
+say m~target~class~id m~arguments~items m~arguments[1]
+call try 'm~send(.nil)'
+say m~target~isNil
+call try 'x = .message~new(t, "none")~send'
+call try 'x = .message~new(t, "boom")~send'
+call try 'x = .message~new(t, "secret")~send'
+call try 'x = .message~new(t, "nosuchzz")~send'
+call try 'x = .message~new(.u~new, .array~of("show", .t), "I", 7)~send'
+call try 'x = .message~new(t, .array~of("show", .u))~send'
+say .message~new(.v~new, 'nosuchzz', 'I', 1, 2)~send
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok' x
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method show
+  return self~class~id arg() arg(1)
+::method none
+::method boom
+  return 1/0
+::method secret private
+  return 'secret'
+::class u subclass t
+::method show
+  return 'u' arg() arg(1)
+::class v
+::method unknown
+  return 'unknown' arg(1) arg(2)~items
+</code></pre>
+<pre><code class="language-output">T 2 a
+T 1 X
+u 1 X
+U 1 X
+m~send(.nil) =&gt; 97.1
+1
+x = .message~new(t, "none")~send =&gt; 91.999
+x = .message~new(t, "boom")~send =&gt; 42.3
+x = .message~new(t, "secret")~send =&gt; 97.2
+x = .message~new(t, "nosuchzz")~send =&gt; 97.1
+x = .message~new(.u~new, .array~of("show", .t), "I", 7)~send =&gt; ok U 1 7
+x = .message~new(t, .array~of("show", .u))~send =&gt; 93.957
+unknown NOSUCHZZ 2
+</code></pre>
+<div class="rule" id="r-class.message.sendwith"><a href="#r-class.message.sendwith">[class.message.sendwith]</a></div>
+<p><code>sendWith(target, array)</code> is <code>send</code> with the arguments of the message in an
+array, and it replaces the arguments always. The array is required
+(<code>SYNTAX 88.901</code> when it is missing), a third argument raises <code>93.902</code>, and
+the first argument is the target, which is replaced as <code>send</code> does when it is
+not omitted. The second argument is an array, or an object that answers an
+array to the message <code>request</code> with the argument <code>ARRAY</code>; an object that
+answers anything else, <code>.nil</code> included, and an array of more than one
+dimension raise <code>SYNTAX 88.913</code>. The items are the arguments in order. The
+target is replaced before the array is checked, so a call that is refused
+leaves its target in the message; the arguments and what the latest run left
+are unchanged. Apart from the arguments, <code>sendWith</code> runs the message as <code>send</code>
+does, answers as it does, and a run replaces the state of the message in the
+same way.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'show', 'I', 'old')
+say m~sendWith(, .array~of(1, 2, 3))
+say m~arguments~items m~arguments[3]
+say m~sendWith(.u~new, .array~of(5))
+say m~target~class~id
+say m~sendWith(, .list~of(6, 7))
+say m~sendWith(, 'abc')
+call try 'm~sendWith'
+call try 'm~sendWith(t)'
+call try 'm~sendWith(t, .nil)'
+call try 'm~sendWith(t, .array~new(2, 2))'
+call try 'm~sendWith(t, .array~new, 1)'
+r = .message~new(t, 'show')
+call try 'r~sendWith(.u~new, .nil)'
+say r~target~class~id
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method show
+  s = arg()':'
+  do i = 1 to arg()
+    if arg(i, 'e') then s = s arg(i)
+    else s = s '.'
+  end
+  return s
+::class u subclass t
+::method show
+  return 'u' arg() arg(1)
+</code></pre>
+<pre><code class="language-output">3: 1 2 3
+3 3
+u 1 5
+U
+u 2 6
+u 1 abc
+m~sendWith =&gt; 88.901
+m~sendWith(t) =&gt; 88.901
+m~sendWith(t, .nil) =&gt; 88.913
+m~sendWith(t, .array~new(2, 2)) =&gt; 88.913
+m~sendWith(t, .array~new, 1) =&gt; 93.902
+r~sendWith(.u~new, .nil) =&gt; 88.913
+U
+</code></pre>
+<div class="rule" id="r-class.message.sendwith.sends"><a href="#r-class.message.sendwith.sends">[class.message.sendwith.sends]</a></div>
+<p><code>sendWith</code> sends its second argument the message <code>request</code> with the argument
+<code>ARRAY</code>, once, before it runs the message, and it uses the array that
+<code>request</code> answers.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'count')
+say m~sendWith(, .logged~new)
+::class t
+::method count
+  return 'count got' arg()
+::class logged
+::method request
+  say 'request' arg(1)
+  forward class (super)
+::method makearray
+  say 'makearray'
+  return .array~of(1, 2)
+</code></pre>
+<pre><code class="language-output">request ARRAY
+makearray
+count got 2
+</code></pre>
+<div class="rule" id="r-class.message.start"><a href="#r-class.message.start">[class.message.start]</a></div>
+<p><code>start(target, argument, ...)</code> starts the message so that another activity
+runs it, and answers nothing; it does not wait for the message to run. The
+target and the arguments are taken as <code>send</code> takes them, and a message that
+has been started is a started message
+(<a href="#r-class.message.started">the started rule</a>). Until the message ends,
+<code>completed</code> and <code>hasResult</code> answer 0, and <code>hasError</code> answers 0 and
+<code>errorCondition</code> <code>.nil</code>. When it ends, the message object holds its answer
+or its error as <code>send</code> leaves them, but an error of the message is not
+raised to the caller of <code>start</code>: it is kept, and raised to the caller of
+<a href="#r-class.message.result"><code>result</code></a>. The notifications that <code>notify</code> asked for
+are sent when the message has ended. The access check is that of
+<a href="#r-class.message.deviation.105">Deviation 105</a>.</p>
+<pre><code class="language-rexx">g = .gate~new
+q = .message~new(g, 'quick')
+signal on syntax name c1
+x = q~start
+c1: say 'start answered nothing:' condition('o')~code
+q~wait
+m = .message~new(g, 'work', 'I', 'job')
+m~start
+g~await
+say m~completed m~hasResult m~hasError m~errorCondition~isNil
+g~release
+say m~result
+say m~completed m~hasResult m~hasError
+e = .message~new(g, 'boom')
+e~start
+e~wait
+say e~completed e~hasError e~errorCondition~code
+::class gate
+::method init
+  expose up go
+  up = .false
+  go = .false
+::method await unguarded
+  expose up
+  guard on when up
+::method release unguarded
+  expose go
+  go = .true
+::method work unguarded
+  expose up go
+  up = .true
+  guard on when go
+  return 'worked on' arg(1)
+::method quick unguarded
+  return 'quick'
+::method boom unguarded
+  return 1/0
+</code></pre>
+<pre><code class="language-output">start answered nothing: 91.999
+0 0 0 1
+worked on job
+1 1 0
+1 1 42.3
+</code></pre>
+<blockquote>
+<p><strong>Note.</strong> The error of a started message that nobody asks for is reported on
+the error stream when the message ends, and the line that the report names
+is the case of <a href="../deviations.html#67-the-line-a-started-messages-error-names">Deviation
+67</a>: ooRexx's
+report often names the line of the activity that waits for the message, and
+the report of interrexx names the line that raised the error.</p>
+</blockquote>
+<div class="rule" id="r-class.message.startwith"><a href="#r-class.message.startwith">[class.message.startwith]</a></div>
+<p><code>startWith(target, array)</code> is <code>start</code> with the arguments in an array, as
+<code>sendWith</code> is <code>send</code>: the arguments always replace those of the message, the
+array is required (<code>SYNTAX 88.901</code>), a third argument raises <code>93.902</code>, and an
+array that is not one, <code>.nil</code> for instance, or has more than one dimension
+raises <code>88.913</code>. These errors are raised by <code>startWith</code> itself, at the call,
+and the message is not started when one is raised, though a target given to
+the call has replaced the message's target. The answer is nothing, and
+the rest is as for <a href="#r-class.message.start"><code>start</code></a>.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'show', 'I', 'old')
+m~startWith(, .array~of(1, 2, 3))
+say m~result
+call try '.message~new(t, "show")~startWith'
+call try '.message~new(t, "show")~startWith(t)'
+call try '.message~new(t, "show")~startWith(t, .nil)'
+call try '.message~new(t, "show")~startWith(t, .array~new(2, 2))'
+call try '.message~new(t, "show")~startWith(t, .array~new, 1)'
+n = .message~new(t, "show")
+call try 'n~startWith(t, .nil)'
+n~startWith(t, .array~of(9))
+say n~result
+r = .message~new(t, 'show')
+call try 'r~startWith(.u~new, .nil)'
+say r~target~class~id
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method show
+  s = arg()':'
+  do i = 1 to arg()
+    if arg(i, 'e') then s = s arg(i)
+    else s = s '.'
+  end
+  return s
+::class u subclass t
+</code></pre>
+<pre><code class="language-output">3: 1 2 3
+.message~new(t, "show")~startWith =&gt; 88.901
+.message~new(t, "show")~startWith(t) =&gt; 88.901
+.message~new(t, "show")~startWith(t, .nil) =&gt; 88.913
+.message~new(t, "show")~startWith(t, .array~new(2, 2)) =&gt; 88.913
+.message~new(t, "show")~startWith(t, .array~new, 1) =&gt; 93.902
+n~startWith(t, .nil) =&gt; 88.913
+1: 9
+r~startWith(.u~new, .nil) =&gt; 88.913
+U
+</code></pre>
+<div class="rule" id="r-class.message.startwith.sends"><a href="#r-class.message.startwith.sends">[class.message.startwith.sends]</a></div>
+<p><code>startWith</code> sends its second argument the message <code>request</code> with the argument
+<code>ARRAY</code>, once, at the call, before the message is started and not when it
+runs.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'count')
+m~startWith(, .logged~new)
+say 'started'
+say m~result
+::class t
+::method count
+  return 'count got' arg()
+::class logged
+::method request
+  say 'request' arg(1)
+  forward class (super)
+::method makearray
+  say 'makearray'
+  return .array~of(1, 2)
+</code></pre>
+<pre><code class="language-output">request ARRAY
+makearray
+started
+count got 2
+</code></pre>
+<div class="rule" id="r-class.message.reply"><a href="#r-class.message.reply">[class.message.reply]</a></div>
+<p><code>reply(target, argument, ...)</code> makes a copy of the message, starts the copy
+as <code>start</code> does, and answers the copy at once, so that the sender goes on.
+The target and arguments are taken as <code>send</code> takes them, and when they are
+given they replace those of the message and of the copy alike. The copy has
+the same name and notifications as the message, is a started message
+(<a href="#r-class.message.started">the started rule</a>), and is the object that
+holds the answer or the error of the run: the message that received <code>reply</code>
+is not run, and does not complete. It can therefore be given <code>reply</code> again,
+which starts another copy, and it is <a href="#r-class.message.send"><code>send</code></a> or
+<a href="#r-class.message.start"><code>start</code></a> that run the message object itself. A
+program that waits for the answer asks the copy.</p>
+<pre><code class="language-rexx">t = .t~new
+n = .message~new(t, 'show', 'I', 'b')
+c = n~reply
+say c~class~id (c == n) c~result
+say n~completed n~hasResult c~completed c~hasResult
+c2 = n~reply
+say c2~result (c2 == c)
+d = n~reply(.u~new, 'z')
+say d~result n~target~class~id n~arguments[1] d~target~class~id
+e = n~reply(, 'w1', 'w2')
+say e~result n~arguments~items e~arguments~items
+n~send
+say n~result n~completed
+::class t
+::method show
+  return self~class~id arg() arg(1)
+::class u subclass t
+</code></pre>
+<pre><code class="language-output">Message 0 T 1 b
+0 0 1 1
+T 1 b 0
+U 1 z U z U
+U 2 w1 2 2
+U 2 w1 1
+</code></pre>
+<div class="rule" id="r-class.message.replywith"><a href="#r-class.message.replywith">[class.message.replywith]</a></div>
+<p><code>replyWith(target, array)</code> is <code>reply</code> with the arguments in an array, as
+<code>startWith</code> is <code>start</code>: the array is required (<code>SYNTAX 88.901</code>), a third
+argument raises <code>93.902</code>, and an array that is not one raises <code>88.913</code>, all at
+the call. The arguments of the message and of the copy are those of the
+array, and the copy is answered.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'show', 'I', 'old')
+c = m~replyWith(, .array~of('a', 'b'))
+say c~result m~arguments~items
+call try 'm~replyWith'
+call try 'm~replyWith(t)'
+call try 'm~replyWith(t, .nil)'
+call try 'm~replyWith(t, .array~new, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method show
+  return arg() arg(1) arg(2)
+</code></pre>
+<pre><code class="language-output">2 a b 2
+m~replyWith =&gt; 88.901
+m~replyWith(t) =&gt; 88.901
+m~replyWith(t, .nil) =&gt; 88.913
+m~replyWith(t, .array~new, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.message.replywith.sends"><a href="#r-class.message.replywith.sends">[class.message.replywith.sends]</a></div>
+<p><code>replyWith</code> sends its second argument the message <code>request</code> with the argument
+<code>ARRAY</code>, once, at the call.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'count')
+c = m~replyWith(, .logged~new)
+say 'replied'
+say c~result
+::class t
+::method count
+  return 'count got' arg()
+::class logged
+::method request
+  say 'request' arg(1)
+  forward class (super)
+::method makearray
+  say 'makearray'
+  return .array~of(1, 2)
+</code></pre>
+<pre><code class="language-output">request ARRAY
+makearray
+replied
+count got 2
+</code></pre>
+<h3 id="waiting-for-the-message"><a class="header" href="#waiting-for-the-message">Waiting for the message</a></h3>
+<div class="rule" id="r-class.message.result"><a href="#r-class.message.result">[class.message.result]</a></div>
+<p><code>result</code> answers what the message answered, and waits first when the message
+has been started and has not ended. When the message answered nothing it
+answers <code>.nil</code>, so that <code>hasResult</code> is the way to tell the two apart. When the
+latest run ended with an error, <code>result</code> raises that error again, in the
+activity of its caller, with the code of the error that the message raised:
+the trap there sees a new condition object each time, with the <code>CODE</code>, <code>RC</code>,
+<code>CONDITION</code>, <code>DESCRIPTION</code>, <code>ADDITIONAL</code>, <code>ERRORTEXT</code> and <code>MESSAGE</code> of the
+object that <code>errorCondition</code> answers, which is the same object each time, so
+that the <code>SYNTAX 42.3</code> of a division by zero in the message is <code>42.3</code> at the
+clause that asked for <code>result</code>, and asking again raises it again. <code>result</code>
+takes no argument. What <code>result</code> does for a message that nothing will run,
+such as one that has never been sent or the original of a <code>reply</code>, is the case
+of <a href="../deviations.html#20-a-wait-nothing-can-end">Deviation 20</a>.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'show')
+m~send
+say m~result m~result
+say .message~new(t, 'none')~~send~result~isNil
+e = t~start('boom')
+signal on syntax name c1
+say e~result
+c1: say 'raised' condition('o')~code
+signal on syntax name c2
+say e~result
+c2: say 'again' condition('o')~code
+n = t~start('nosuchzz')
+signal on syntax name c3
+say n~result
+c3: say 'raised' condition('o')~code
+call try 'm~result(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method show unguarded
+  return 'shown'
+::method none unguarded
+::method boom unguarded
+  return 1/0
+</code></pre>
+<pre><code class="language-output">shown shown
+1
+raised 42.3
+again 42.3
+raised 97.1
+m~result(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.message.wait"><a href="#r-class.message.wait">[class.message.wait]</a></div>
+<p><code>wait</code> waits until the message has ended, answers nothing and raises no error,
+also when the message ended with one: the error is asked for with <code>hasError</code>
+and <code>errorCondition</code>, or raised by <code>result</code>. It returns at once for a message
+that has ended. It takes no argument. What <code>wait</code> does for a message that
+nothing will run, such as one that has never been sent or the original of a
+<code>reply</code>, is the case of
+<a href="../deviations.html#20-a-wait-nothing-can-end">Deviation 20</a>.</p>
+<pre><code class="language-rexx">g = .gate~new
+m = .message~new(g, 'work')
+m~start
+g~await
+r = .message~new(g, 'release')
+r~start
+m~wait
+say m~completed m~result
+m~wait
+e = g~start('boom')
+e~wait
+say e~hasError
+signal on syntax name c1
+x = m~wait
+c1: say 'wait answered nothing:' condition('o')~code
+call try 'm~wait(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class gate
+::method init
+  expose up go
+  up = .false
+  go = .false
+::method await unguarded
+  expose up
+  guard on when up
+::method release unguarded
+  expose go
+  go = .true
+::method work unguarded
+  expose up go
+  up = .true
+  guard on when go
+  return 'worked'
+::method boom unguarded
+  return 1/0
+</code></pre>
+<pre><code class="language-output">1 worked
+1
+wait answered nothing: 91.999
+m~wait(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.message.halt"><a href="#r-class.message.halt">[class.message.halt]</a></div>
+<p><code>halt(description)</code> asks for the HALT condition to be raised in the activity
+that is running the message, and answers 1 when a run of the message is in
+progress, started or sent (a sent message runs in the sender's activity, which
+then gets the HALT), and 0 when the message has not been run. The description
+is optional and is a string, which the condition has as <code>CONDITION('D')</code>;
+without one that is the null string. <code>.nil</code> as the description raises
+<code>SYNTAX 88.909</code>, and a second argument <code>93.902</code>. Code of the message that
+traps HALT, as <a href="../conditions/halt.html#r-cond.halt.signal">the HALT page</a> describes, handles it as
+for any HALT. A HALT nothing traps ends the message with the error <code>4.1</code>,
+which <code>hasError</code>, <code>errorCondition</code> and <code>result</code> then show as for any other
+error of a message. For a message that has ended, <code>halt</code> answers 1: a message
+that <code>send</code> ran gets the HALT raised in the activity that sent it, with the
+description, and that activity ends with error <code>4.1</code> when nothing traps it,
+and for a message that was started nothing happens, so that <code>hasError</code>,
+<code>hasResult</code> and <code>result</code> stay as they were. The second example shows both.</p>
+<pre><code class="language-rexx">g = .gate~new
+m = .message~new(g, 'work')
+say 'not started:' m~halt
+m~start
+g~await
+call try 'm~halt(.nil)'
+call try 'm~halt("a", "b")'
+say 'halt:' m~halt('time is up')
+say m~result
+say m~completed m~hasError m~hasResult
+h = .gate~new
+w = .message~new(h, 'work')
+w~start
+h~await
+w~halt
+say w~result
+n = .message~new(g, 'plain')
+n~start
+g~await2
+say n~halt
+n~wait
+say n~hasError n~errorCondition~code n~errorCondition~condition
+signal on syntax name c1
+say n~result
+c1: say 'result raises' condition('o')~code
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class gate
+::method init
+  expose up up2
+  up = .false
+  up2 = .false
+::method await unguarded
+  expose up
+  guard on when up
+::method await2 unguarded
+  expose up2
+  guard on when up2
+::method work unguarded
+  expose up
+  signal on halt
+  up = .true
+  do forever
+    nop
+  end
+  halt:
+  return 'halted:' condition('d') condition('c')
+::method plain unguarded
+  expose up2
+  up2 = .true
+  do forever
+    nop
+  end
+</code></pre>
+<pre><code class="language-output">not started: 0
+m~halt(.nil) =&gt; 88.909
+m~halt("a", "b") =&gt; 93.902
+halt: 1
+halted: time is up HALT
+1 0 1
+halted:  HALT
+1
+1 4.1 SYNTAX
+result raises 4.1
+</code></pre>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'show')
+m~send
+signal on halt name caught
+say 'sent:' m~halt('stop')
+nop
+say 'not reached'
+caught:
+say 'HALT' condition('d') m~hasError m~result
+signal off halt
+s = .message~new(t, 'show')
+s~start
+s~wait
+say 'started:' s~halt('stop2')
+nop
+say 'continued' s~hasError s~result
+::class t
+::method show unguarded
+  return 'shown'
+</code></pre>
+<pre><code class="language-output">sent: 1
+HALT stop 0 shown
+started: 1
+continued 0 shown
+</code></pre>
+<h3 id="being-told-when-the-message-has-ended"><a class="header" href="#being-told-when-the-message-has-ended">Being told when the message has ended</a></h3>
+<div class="rule" id="r-class.message.notify"><a href="#r-class.message.notify">[class.message.notify]</a></div>
+<p><code>notify(target)</code> asks for a notification when the message ends: the object
+<code>target</code> is sent the message <code>messageComplete</code> with the message object as its
+only argument. The target must be an instance of
+<a href="messagenotification.html"><code>MessageNotification</code></a>, a class that inherits it or a
+subclass of one; any other object, <code>.nil</code> included, raises <code>SYNTAX 88.914</code>, no
+target <code>88.901</code> and a second argument <code>93.902</code>. <code>notify</code> answers nothing and
+can be sent any number of times: the targets are kept in the order of the
+calls, and each is sent <code>messageComplete</code> each time the message ends, in that
+order. A run of <code>send</code> or <code>sendWith</code> sends them before it returns, in the
+activity of the sender, and an error that a <code>messageComplete</code> raises is raised
+there, so that it ends the <code>send</code> clause; the targets after the one that
+raised it are not sent <code>messageComplete</code>, and when the message itself ended
+with an error, the sender sees the error of the <code>messageComplete</code>, while
+<code>errorCondition</code> keeps that of the message. The error does not become an error
+of a sent message, which has ended without one. When a message that has ended
+is given a target, the target is sent <code>messageComplete</code> at once, in the
+activity that called <code>notify</code>. For a started message the targets are sent it
+in the activity that ran the message; when that happens relative to the
+activity that waits for the message is a matter of scheduling. For a started
+message, an error that a <code>messageComplete</code> raises becomes the error of the
+message: <code>hasError</code> answers 1, <code>errorCondition</code> answers the condition of that
+error and <code>result</code> raises it, while <code>hasResult</code> keeps the 1 of the run. The
+targets after the one that raised it are not sent <code>messageComplete</code>; whether
+the target that raised it is sent it again, and how often, is not specified.
+<code>hasError</code> answers 1 once the error has been recorded, which may be after
+<code>wait</code> has returned. A copy made by <code>reply</code>
+has the targets of the message, and so has the one that
+<a href="#r-class.message.copy"><code>copy</code></a> makes. The message the target is sent is the
+completed message object, so <code>completed</code> answers 1 in it.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'show', 'I', 'a')
+m~notify(.rec~new('one'))
+m~notify(.rec~new('two'))
+say m~send
+say 'after send'
+say m~send
+f = .message~new(t, 'show', 'I', 'b')
+f~notify(.rec~new('first'))
+f~notify(.bad~new)
+f~notify(.rec~new('third'))
+signal on syntax name c1
+f~send
+say 'not reached'
+c1: say 'handler:' condition('o')~code f~completed f~hasError f~result
+g = .message~new(t, 'boom')
+g~notify(.bad~new)
+signal on syntax name c2
+g~send
+c2: say 'sender' condition('o')~code 'message' g~errorCondition~code
+late = .message~new(t, 'show', 'I', 'c')
+late~send
+late~notify(.rec~new('late'))
+say 'registered'
+call try 'm~notify'
+call try 'm~notify(.nil)'
+call try 'm~notify(.object~new)'
+call try 'm~notify(.t~new)'
+call try 'm~notify(.rec)'
+call try 'm~notify(.rec~new("x"), 1)'
+call try 'm~notify(.sub~new("s"))'
+nm = .message~new(t, "quiet")
+call try 'm~notify(nm)'
+nm~wait
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method show
+  say 'running' arg(1)
+  return 'shown' arg(1)
+::method quiet unguarded
+  return 'quiet'
+::method boom
+  return 1/0
+::class rec inherit MessageNotification
+::method init
+  expose name
+  use arg name
+::method messageComplete
+  expose name
+  use arg msg
+  say 'messageComplete' name msg~class~id msg~completed msg~result
+::class sub subclass rec
+::class bad inherit MessageNotification
+::method messageComplete
+  raise syntax 93.900 array('refused')
+</code></pre>
+<pre><code class="language-output">running a
+messageComplete one Message 1 shown a
+messageComplete two Message 1 shown a
+shown a
+after send
+running a
+messageComplete one Message 1 shown a
+messageComplete two Message 1 shown a
+shown a
+running b
+messageComplete first Message 1 shown b
+handler: 93.900 1 0 shown b
+sender 93.900 message 42.3
+running c
+messageComplete late Message 1 shown c
+registered
+m~notify =&gt; 88.901
+m~notify(.nil) =&gt; 88.914
+m~notify(.object~new) =&gt; 88.914
+m~notify(.t~new) =&gt; 88.914
+m~notify(.rec) =&gt; 88.914
+m~notify(.rec~new("x"), 1) =&gt; 93.902
+messageComplete s Message 1 shown a
+m~notify(.sub~new("s")) =&gt; ok
+m~notify(nm) =&gt; ok
+</code></pre>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'show', 'I', 'a')
+r = .rec~new('first')
+m~notify(r)
+d = m~copy
+d~send
+c = m~reply
+r~await
+say c~result
+::class t
+::method show unguarded
+  return 'shown' arg(1)
+::class rec inherit MessageNotification
+::method init
+  expose name count
+  use arg name
+  count = 0
+::method messageComplete unguarded
+  expose name count
+  say 'messageComplete' name
+  count = count + 1
+::method await unguarded
+  expose count
+  guard on when count &gt;= 2
+</code></pre>
+<pre><code class="language-output">messageComplete first
+messageComplete first
+shown a
+</code></pre>
+<pre><code class="language-rexx">t = .t~new
+s = .message~new(t, 'show')
+b = .bad~new
+r = .rec~new
+s~notify(b)
+s~notify(r)
+s~start
+s~wait
+do until s~hasError
+  call syssleep 0.01
+end
+say 'failing target sent:' (b~count &gt; 0) 'next target sent:' (r~count &gt; 0)
+say s~completed s~hasError s~hasResult
+say 'error' s~errorCondition~code
+signal on syntax name c1
+say s~result
+c1: say 'result raised' condition('o')~code
+exit
+::class t
+::method show unguarded
+  return 'shown'
+::class bad inherit MessageNotification
+::method init
+  expose n
+  n = 0
+::method count unguarded
+  expose n
+  return n
+::method messageComplete unguarded
+  expose n
+  n = n + 1
+  raise syntax 93.900 array('refused')
+::class rec inherit MessageNotification
+::method init
+  expose n
+  n = 0
+::method count unguarded
+  expose n
+  return n
+::method messageComplete unguarded
+  expose n
+  n = n + 1
+</code></pre>
+<pre><code class="language-output">failing target sent: 1 next target sent: 0
+1 1 1
+error 93.900
+result raised 93.900
+</code></pre>
+<div class="rule" id="r-class.message.notify.sends"><a href="#r-class.message.notify.sends">[class.message.notify.sends]</a></div>
+<p><code>notify</code> sends the target no message: whether the target is a
+<code>MessageNotification</code> is decided from its class, so an override of <code>isA</code> or
+<code>isInstanceOf</code> in the target is not sent, and an object that only has a method
+<code>messageComplete</code> raises <code>88.914</code>. The message <code>messageComplete</code> is sent to
+each target, with the message object as its only argument, when the message
+ends, as <a href="#r-class.message.notify">the <code>notify</code> rule</a> says, and at once by a
+<code>notify</code> on a message that has ended. In the example <code>LIAR</code> answers 1 to <code>isA</code>
+and does not inherit the class, and <code>HONEST</code> inherits it and answers 0.</p>
+<pre><code class="language-rexx">m = .message~new(.t~new, 'show', 'I', 'a')
+call try 'm~notify(.liar~new)'
+call try 'm~notify(.duck~new)'
+call try 'm~notify(.honest~new)'
+say 'before send'
+say m~send
+say 'ended'
+m~notify(.honest~new)
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method show
+  return 'shown' arg(1)
+::class liar
+::method isa
+  say 'liar isA' arg(1)~id
+  return 1
+::method messagecomplete
+  say 'liar messageComplete'
+::class honest inherit messagenotification
+::method isa
+  say 'honest isA'
+  return 0
+::method isinstanceof
+  say 'honest isInstanceOf'
+  return 0
+::method messagecomplete
+  say 'honest messageComplete' arg(1)~class~id arg()
+::class duck
+::method messagecomplete
+  say 'duck messageComplete'
+</code></pre>
+<pre><code class="language-output">m~notify(.liar~new) =&gt; 88.914
+m~notify(.duck~new) =&gt; 88.914
+m~notify(.honest~new) =&gt; ok
+before send
+honest messageComplete Message 1
+shown a
+ended
+honest messageComplete Message 1
+</code></pre>
+<div class="rule" id="r-class.message.messagecomplete"><a href="#r-class.message.messagecomplete">[class.message.messagecomplete]</a></div>
+<p><code>messageComplete(source)</code> is the method of the notification interface that a
+message has itself: a message that is the target of a <code>notify</code> is sent
+<code>messageComplete</code> when the message it waited for has ended, and starts. It
+runs the message that received it, as <code>start</code> would, in another activity, and
+answers nothing at once. The argument, the completed message, is not used and
+may be omitted; two arguments raise <code>SYNTAX 93.902</code>. The message that
+receives it is not made a started message, so <code>send</code> can run it afterwards,
+and one that has been given <code>start</code> or <code>startWith</code> raises <code>98.915</code>, as
+<a href="#r-class.message.started">the started rule</a> says.</p>
+<pre><code class="language-rexx">t = .t~new
+a = .message~new(t, 'show', 'I', 'first')
+b = .message~new(t, 'show', 'I', 'second')
+a~notify(b)
+a~send
+say b~result
+c = .message~new(t, 'show', 'I', 'third')
+c~messageComplete
+say c~result
+say c~send
+d = .message~new(t, 'show', 'I', 'fourth')
+d~messageComplete(.object~new)
+say d~result
+signal on syntax name c1
+d~messageComplete(1, 2)
+c1: say condition('o')~code
+e = .message~new(t, 'show', 'I', 'fifth')
+signal on syntax name c2
+x = e~messageComplete(1)
+c2: say 'answered nothing:' condition('o')~code
+::class t
+::method show unguarded
+  return 'shown' arg(1)
+</code></pre>
+<pre><code class="language-output">shown second
+shown third
+shown third
+shown fourth
+93.902
+answered nothing: 91.999
+</code></pre>
+<div class="rule" id="r-class.message.triggered"><a href="#r-class.message.triggered">[class.message.triggered]</a></div>
+<p><code>triggered(source)</code> is the method of the alarm notification interface that a
+message has itself: an <code>Alarm</code> or <code>Ticker</code> whose target is the message calls
+it when the alarm goes off. It does what
+<a href="#r-class.message.messagecomplete"><code>messageComplete</code></a> does: it starts the
+message on another activity, answers nothing, takes one optional argument that
+it does not use (<code>SYNTAX 93.902</code> for two), and raises <code>98.915</code> for a message
+that was started with <code>start</code> or <code>startWith</code>. Scheduling, and the classes
+<code>Alarm</code> and <code>Ticker</code>, are specified apart from this page.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'show', 'I', 'alarm')
+m~triggered(.object~new)
+say m~result
+n = .message~new(t, 'show', 'I', 'byAlarm')
+a = .alarm~new(0.02, n, 'att')
+say n~result a~attachment
+call try 'm~triggered(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class t
+::method show unguarded
+  return 'shown' arg(1)
+</code></pre>
+<pre><code class="language-output">shown alarm
+shown byAlarm att
+m~triggered(1, 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.message.cancel"><a href="#r-class.message.cancel">[class.message.cancel]</a></div>
+<p><code>cancel(source)</code> is the method of the alarm notification interface that is
+called when an <code>Alarm</code> or <code>Ticker</code> is cancelled; it is the method that
+<a href="alarmnotification.html"><code>AlarmNotification</code></a> defines, and a message has no
+version of its own. It does nothing and answers nothing, whatever arguments it
+is sent: the message is not started, and nothing about it changes.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .message~new(t, 'show')
+m~cancel
+m~cancel(1, 2, 3, 4)
+say m~completed m~hasResult
+b = .message~new(t, 'show')
+a = .alarm~new(60, b)
+a~cancel
+say b~completed b~hasResult t~runs
+signal on syntax name c1
+x = m~cancel
+c1: say 'answered nothing:' condition('o')~code
+::class t
+::method init
+  expose n
+  n = 0
+::method show unguarded
+  expose n
+  n = n + 1
+  return 'shown'
+::method runs unguarded
+  expose n
+  return n
+</code></pre>
+<pre><code class="language-output">0 0
+0 0 0
+answered nothing: 91.999
+</code></pre>
+<div class="rule" id="r-class.message.copy"><a href="#r-class.message.copy">[class.message.copy]</a></div>
+<p><code>copy</code> answers a message object with the target, the name, the arguments
+(the same objects) and the notification targets of the message, as a message
+that has not been run: it has not completed, has no result and no error, and
+is not a started message even when the message was. A target that <code>notify</code>
+later adds to one of the two is not added to the other.</p>
+<pre><code class="language-rexx">t = .t~new
+s = .message~new(t, 'show', 'I', t)
+s~start
+s~wait
+k = s~copy
+say 'copy of started:' k~completed k~hasResult k~hasError
+say (k~target == t) (k~arguments[1] == t) k~messageName
+say k~send k~completed
+m = .message~new(t, 'show', 'I', 1)
+m~notify(.rec~new('original'))
+c = m~copy
+c~notify(.rec~new('copy'))
+say '-- send copy'
+c~send
+say '-- send original'
+m~send
+::class t
+::method show unguarded
+  return 'shown'
+::class rec inherit MessageNotification
+::method init
+  expose name
+  use arg name
+::method messageComplete unguarded
+  expose name
+  say 'messageComplete' name
+</code></pre>
+<pre><code class="language-output">copy of started: 0 0 0
+1 1 SHOW
+shown 1
+-- send copy
+messageComplete original
+messageComplete copy
+-- send original
+messageComplete original
+</code></pre>
+<h2 id="sends"><a class="header" href="#sends">Sends</a></h2>
+<div class="rule" id="r-class.message.sends"><a href="#r-class.message.sends">[class.message.sends]</a></div>
+<p>No method of <code>Message</code> sends a message to the message object itself, so a
+subclass that overrides <code>send</code>, <code>start</code>, <code>startWith</code>, <code>reply</code>, <code>replyWith</code>,
+<code>notify</code> or any other method sees it called only by a program:
+<code>messageComplete</code> and <code>triggered</code> start the message without sending <code>start</code>,
+<code>reply</code> starts a copy without sending <code>send</code> or <code>start</code>, and the notification
+of a message sent with <code>notify</code> sends <code>messageComplete</code> to the target, which
+is where an override of that method in the target shows. The messages that
+methods of the class send to other objects are stated by the rules of
+<a href="#r-class.message.new.sends"><code>new</code></a>,
+<a href="#r-class.message.sendwith.sends"><code>sendWith</code></a>,
+<a href="#r-class.message.startwith.sends"><code>startWith</code></a>,
+<a href="#r-class.message.replywith.sends"><code>replyWith</code></a> and
+<a href="#r-class.message.notify"><code>notify</code></a>.</p>
+<pre><code class="language-rexx">t = .t~new
+m = .mine~new(t, 'show', 'I', 'x')
+m~messageComplete(1)
+m~wait
+say '--'
+m~triggered(1)
+m~wait
+say '--'
+m~send
+m~sendWith(, .array~of(1))
+say '--'
+c = m~reply
+c~wait
+say '--'
+s = .mine~new(t, 'show', 'I', 's')
+s~startWith(, .array~of(1))
+s~wait
+say '--'
+r = .mine~new(t, 'show', 'I', 'r')
+c = r~replyWith(, .array~of(1))
+c~wait
+say '--'
+q = .mine~new(t, 'show', 'I', 'q')
+q~start
+q~wait
+say '--'
+m~notify(.mine~new(t, 'show', 'I', 'notified'))
+m~send
+::class t
+::method show unguarded
+  return 'show' arg(1)
+::class mine subclass message
+::method send
+  say 'send override'
+  forward class (super)
+::method sendWith
+  say 'sendWith override'
+  forward class (super)
+::method start
+  say 'start override'
+  forward class (super)
+::method startWith
+  say 'startWith override'
+  forward class (super)
+::method reply
+  say 'reply override'
+  forward class (super)
+::method replyWith
+  say 'replyWith override'
+  forward class (super)
+::method notify
+  say 'notify override'
+  forward class (super)
+::method messageComplete
+  say 'messageComplete override'
+  forward class (super)
+::method triggered
+  say 'triggered override'
+  forward class (super)
+</code></pre>
+<pre><code class="language-output">messageComplete override
+--
+triggered override
+--
+send override
+sendWith override
+--
+reply override
+--
+startWith override
+--
+replyWith override
+--
+start override
+--
+notify override
+send override
+messageComplete override
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.message.deviation.105"><a href="#r-class.message.deviation.105">[class.message.deviation.105]</a></div>
+<p>A message that <code>start</code>, <code>startWith</code>, <code>reply</code> or <code>replyWith</code> runs is checked
+for <code>PRIVATE</code> and <code>PACKAGE</code> access as the same message sent by <code>send</code> from the
+code that called it, as <a href="../directives/method.html#r-dir.method.access">the access rule</a> states for a
+started message: the code of a class can start a private message to its own
+objects, and a <code>PACKAGE</code> message to an object of the same package. ooRexx
+raises <code>97.2</code> for every private message and <code>97.1</code> for every <code>PACKAGE</code> message
+that is started (<a href="../deviations.html#105-access-checks-of-started-messages">Deviation
+105</a>).</p>
+<pre><code class="language-rexx">o = .w~new
+say o~viaStart('secret')
+say o~viaStart('pack')
+say o~viaReply('secret')
+say .message~new(o, 'pack')~~start~result
+::class w
+::method viaStart unguarded
+  m = .message~new(self, arg(1))
+  m~start
+  return m~result
+::method viaReply unguarded
+  return .message~new(self, arg(1))~reply~result
+::method secret private
+  return 'secret ran'
+::method pack package
+  return 'pack ran'
+</code></pre>
+<pre><code class="language-output">secret ran
+pack ran
+secret ran
+pack ran
+</code></pre>
+<div class="rule" id="r-class.message.deviation.107"><a href="#r-class.message.deviation.107">[class.message.deviation.107]</a></div>
+<p>A string that names a number is the same string to every message, as
+<a href="object.html#r-class.object.deviation.107">the Object rule</a> states, and a number literal
+such as <code>12</code> is accepted as the name of <code>new</code>: the message object has the
+name <code>12</code>, and runs the method of that name. ooRexx raises <code>SYNTAX 93.946</code>
+for a name stored as a whole number, as a literal or arithmetic gives, and for
+the same characters in quotes once the literal occurs in the program
+(<a href="../deviations.html#107-number-literals-are-ordinary-strings">Deviation 107</a>).</p>
+<pre><code class="language-rexx">o = .w~new
+m = .message~new(o, 12, 'I', 'a')
+say m~messageName m~send
+say .message~new(o, 3 + 4, 'I', 'b')~send
+::class w
+::method 12
+  return 'ran 12' arg(1)
+::method 7
+  return 'ran 7' arg(1)
+</code></pre>
+<pre><code class="language-output">12 ran 12 a
+ran 7 b
+</code></pre>
+<div class="rule" id="r-class.message.deviation.109"><a href="#r-class.message.deviation.109">[class.message.deviation.109]</a></div>
+<p>An instance of a subclass of <code>String</code> that is the message name of <code>new</code> is
+read by its own characters, and <code>MAKESTRING</code> and <code>STRING</code> are not sent to it
+(<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). ooRexx sends it <code>request</code>
+with the argument <code>ARRAY</code>, as
+<a href="object.html#r-class.object.deviation.109">the Object rule</a> states for <code>send</code>, and raises
+<code>SYNTAX 93.946</code>. In the example <code>MAKESTRING</code>
+answers another name.</p>
+<pre><code class="language-rexx">m = .message~new(.w~new, .name~new('count'))
+say m~messageName m~send
+::class w
+::method count
+  return 'count got' arg()
+::class name subclass string
+::method makestring
+  return 'other'
+</code></pre>
+<pre><code class="language-output defect=#140">COUNT count got 0
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/package.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/messagenotification.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/package.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/messagenotification.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

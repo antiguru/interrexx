@@ -1,0 +1,1850 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Method search - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html" class="active"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="method-search"><a class="header" href="#method-search">Method search</a></h1>
+<p class="references">rexxref: Objects and Classes &gt; Default Search Order for Method Selection; Objects and Classes &gt; Changing the Search Order for Methods; Objects and Classes &gt; Defining an UNKNOWN Method; Objects and Classes &gt; Mixin Classes; Objects and Classes &gt; Metaclasses; Objects and Classes &gt; Defining Instance Methods with SETMETHOD or ENHANCED; Objects and Classes &gt; Public, Package-Scope, and Private Methods; Special Variables &gt; SUPER; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; setMethod; Builtin Classes &gt; Fundamental Classes &gt; Object Class &gt; unsetMethod; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; define; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; defineMethods; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; delete; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; enhanced; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; inherit; Builtin Classes &gt; Fundamental Classes &gt; Class Class (Metaclass) &gt; uninherit</p>
+<p class="deviations">Deviations: D32, D105, D110</p>
+<p>Every message goes to an object, and the object's class decides which method
+answers it. This page specifies the whole search: which methods an object
+has of its own, in which order its class and the classes it descends from are
+looked at, how a message can start the search part of the way down, what
+<code>UNKNOWN</code> receives when nothing is found, how a class object finds the class
+methods it answers, and what a change to a class does to objects that already
+exist. The pages of the classes <code>Object</code> and <code>Class</code> specify the arguments of
+the methods that make these changes; this page specifies what the changes do
+to the search. The <a href="index.html">classes chapter</a> lists which class inherits
+which. The directives that create classes and methods are in
+<a href="../directives/class.html"><code>::CLASS</code></a> and
+<a href="../directives/method.html"><code>::METHOD</code></a>, and
+<a href="../directives/class.html#r-dir.class.search">the search rule</a> of the first gives the simple cases.</p>
+<p>Two words are used throughout. The <strong>method table</strong> of a class is the list of
+names the class itself holds: the methods that its <code>::METHOD</code> directives
+declare and that <code>define</code> and <code>defineMethods</code> add. An entry of a table is
+either a method or a mark that hides the name (see <a href="#r-class.methods.hidden">hidden
+names</a>). The <strong>order</strong> of a class is the list of
+classes whose tables a message to one of its instances is looked up in.</p>
+<h2 id="the-order-of-a-class"><a class="header" href="#the-order-of-a-class">The order of a class</a></h2>
+<div class="rule" id="r-class.methods.order"><a href="#r-class.methods.order">[class.methods.order]</a></div>
+<p>The order of <code>Object</code> holds only <code>Object</code>. The order of any other class <code>C</code>
+starts with <code>C</code> itself and goes on with the orders of the classes in the list
+of superclasses that <code>C</code> holds, the list its <code>superClasses</code> method reports,
+one after the other, in the order of that list: the superclass and then the
+mixin classes in the order they were inherited, except that a mixin class that
+<code>inherit</code> placed in front of another class of the list, the superclass
+included, stands there (<a href="#r-class.methods.order.change">the change rule</a>). A
+class that this makes occur more than once keeps only its last place. The
+order therefore ends with <code>Object</code>, and a class stands after every class that
+has it as a superclass or inherits it. The list is read from what the class
+holds, and no message is sent to a class for it: the search, <code>isA</code>,
+<code>isInstanceOf</code>, <code>inherit</code> and <code>uninherit</code> send none of <code>superClasses</code>,
+<code>isSubclassOf</code>, <code>queryMixinClass</code> or <code>baseClass</code>, so a metaclass that
+overrides them changes what a program that sends them gets and nothing else.
+In the second example the metaclass <code>META</code> announces each of those messages
+and answers falsely; the only announcement is the one for the <code>superClasses</code>
+that the program sends itself.</p>
+<blockquote>
+<p><strong>Note.</strong> The first example prints the order of two classes. Each <code>who</code>
+method names its own class and sends <code>who</code> on to the class that follows it,
+using the special variable <code>SUPER</code>, which
+<a href="#r-class.methods.super">the SUPER rule</a> specifies, so that the line shows
+the classes of the order in turn, <code>Object</code> left out. <code>LEAF2</code> lists the same
+mixin classes as <code>LEAF</code> the other way round.</p>
+</blockquote>
+<pre><code class="language-rexx">call show .leaf, .leaf2
+exit
+show:
+  do c over arg(1, 'A')
+    say c~id':' c~new~who
+  end
+  return
+::routine step
+  use arg id, obj, scope
+  signal on nomethod name last
+  return id obj~who:scope
+last: return id
+::class top
+::method who
+  return step('TOP', self, super)
+::class mid subclass top
+::method who
+  return step('MID', self, super)
+::class ma mixinclass object
+::method who
+  return step('MA', self, super)
+::class mb mixinclass object
+::method who
+  return step('MB', self, super)
+::class leaf subclass mid inherit ma mb
+::method who
+  return step('LEAF', self, super)
+::class leaf2 subclass mid inherit mb ma
+::method who
+  return step('LEAF2', self, super)
+</code></pre>
+<pre><code class="language-output">LEAF: LEAF MID TOP MA MB
+LEAF2: LEAF2 MID TOP MB MA
+</code></pre>
+<pre><code class="language-rexx">o = .k~new
+say o~hello o~mx o~isA(.base) o~isA(.mx) o~isInstanceOf(.base)
+say .k~superClasses~items
+.k~uninherit(.mx)
+say o~isA(.mx) o~hasMethod('mx')
+signal on syntax name e1
+.k2~inherit(.fake)
+e1: say condition('o')~code
+.k2~inherit(.mx2)
+say .k2~new~pong
+::class meta subclass class
+::method superclasses
+  say '[superClasses sent]'
+  return .array~of(.object)
+::method isSubclassOf
+  say '[isSubclassOf sent]'
+  return 0
+::method querymixinclass
+  say '[queryMixinClass sent]'
+  return 1
+::method baseclass
+  say '[baseClass sent]'
+  return .object
+::class base
+::method hello
+  return 'base hello'
+::class mx mixinclass object
+::method mx
+  return 'mx'
+::class k metaclass meta subclass base inherit mx
+::class fake subclass object metaclass meta
+::class k2
+::class mx2 mixinclass object metaclass meta
+::method pong
+  return 'mx2 pong'
+</code></pre>
+<pre><code class="language-output">base hello mx 1 1 1
+[superClasses sent]
+1
+0 0
+98.942
+mx2 pong
+</code></pre>
+<div class="rule" id="r-class.methods.order.base"><a href="#r-class.methods.order.base">[class.methods.order.base]</a></div>
+<p>A mixin class has a base class: the class that its MIXINCLASS option names,
+or, when that is a mixin class too, the base class of that one, and so on
+until a class that is not a mixin class is reached; the INHERIT list of the
+mixin class does not enter into it. The base class comes behind the mixin
+class in its own order. By <a href="#r-class.methods.order">the order rule</a> a mixin
+class that a class lists, and that no class listed after it reaches, therefore
+stands in front of every class of its own order, its base class among them,
+and of every class of the order of each class listed after it, and behind the
+other classes of the superclass's order; its methods hide those of the first
+and lose to those of the second. A mixin class based on an ancestor of the
+superclass thus hides the methods of that ancestor and of the classes above
+it, and loses to the classes of the chain below that ancestor unless the order
+of a class listed after it holds them; a mixin class based on <code>Object</code> loses
+in the same way to every class of the superclass's chain but <code>Object</code>.
+<a href="../directives/class.html#r-dir.class.search">The search rule</a> of the directive describes the case in
+which each listed class is a mixin class whose MIXINCLASS option names
+<code>Object</code> and that inherits none. In the example, <code>LEAF</code> lists the
+<code>Object</code>-based mixin class <code>OM</code> first, so it stands in front of <code>BASE</code>, and
+<code>LEAF2</code> lists it last, so it stays behind. <code>MO</code> is based on <code>BASE</code> through
+<code>MX</code> and inherits <code>OM</code>, so in <code>LEAF4</code> it stands in front of <code>MX</code> and <code>BASE</code>,
+and <code>OM</code> stands behind them. In the second example <code>MT</code> is based on <code>TOP</code> and
+listed in front of <code>MM</code>, which is based on the lower class <code>MID</code>; <code>MT</code> stands
+in front of <code>TOP</code>, and also in front of <code>MID</code>, because a class listed after it
+reaches <code>MID</code>, but behind <code>LOW</code>.</p>
+<pre><code class="language-rexx">call show .leaf, .leaf2, .leaf3, .leaf4
+exit
+show:
+  do c over arg(1, 'A')
+    say c~id':' c~new~who
+  end
+  return
+::routine step
+  use arg id, obj, scope
+  signal on nomethod name last
+  return id obj~who:scope
+last: return id
+::class base
+::method who
+  return step('BASE', self, super)
+::class mid subclass base
+::method who
+  return step('MID', self, super)
+::class mx mixinclass base
+::method who
+  return step('MX', self, super)
+::class om mixinclass object
+::method who
+  return step('OM', self, super)
+::class leaf subclass mid inherit om mx
+::method who
+  return step('LEAF', self, super)
+::class leaf2 subclass mid inherit mx om
+::method who
+  return step('LEAF2', self, super)
+::class leaf3 subclass mid inherit mx
+::method who
+  return step('LEAF3', self, super)
+::class mo mixinclass mx inherit om
+::method who
+  return step('MO', self, super)
+::class leaf4 subclass mid inherit mo
+::method who
+  return step('LEAF4', self, super)
+</code></pre>
+<pre><code class="language-output">LEAF: LEAF MID OM MX BASE
+LEAF2: LEAF2 MID MX BASE OM
+LEAF3: LEAF3 MID MX BASE
+LEAF4: LEAF4 MID MO MX BASE OM
+</code></pre>
+<pre><code class="language-rexx">say .leaf~new~who
+::routine step
+  use arg id, obj, scope
+  signal on nomethod name last
+  return id obj~who:scope
+last: return id
+::class top
+::method who
+  return step('TOP', self, super)
+::class mid subclass top
+::method who
+  return step('MID', self, super)
+::class low subclass mid
+::method who
+  return step('LOW', self, super)
+::class mt mixinclass top
+::method who
+  return step('MT', self, super)
+::class mm mixinclass mid
+::method who
+  return step('MM', self, super)
+::class leaf subclass low inherit mt mm
+::method who
+  return step('LEAF', self, super)
+</code></pre>
+<pre><code class="language-output">LEAF LOW MT MM MID TOP
+</code></pre>
+<div class="rule" id="r-class.methods.order.shared"><a href="#r-class.methods.order.shared">[class.methods.order.shared]</a></div>
+<p>A class that can be reached by more than one path stands in the order once,
+behind every class that reaches it. Two mixin classes that inherit the same
+mixin class, and a subclass that inherits a mixin class whose own mixin class
+its superclass already has, are the usual cases. A class cannot be inherited
+twice by naming it twice or by inheriting it when it is already an ancestor:
+<a href="../directives/class.html#r-dir.class.mixin">the mixin rule</a> gives <code>SYNTAX 98.944</code> for a class that is
+listed twice or is the superclass, and the same code is raised when the class
+named is an ancestor of the receiving class at its turn in the list. Listing a
+mixin class after one that inherits it is therefore the error
+(<code>INHERIT left shared</code> in the second example), and listing it in front of that
+one is not (<code>INHERIT shared left</code>).</p>
+<pre><code class="language-rexx">call show .both, .kid, .late
+exit
+show:
+  do c over arg(1, 'A')
+    say c~id':' c~new~who
+  end
+  return
+::routine step
+  use arg id, obj, scope
+  signal on nomethod name last
+  return id obj~who:scope
+last: return id
+::class shared mixinclass object
+::method who
+  return step('SHARED', self, super)
+::class left mixinclass object inherit shared
+::method who
+  return step('LEFT', self, super)
+::class right mixinclass object inherit shared
+::method who
+  return step('RIGHT', self, super)
+::class both inherit left right
+::method who
+  return step('BOTH', self, super)
+::class both2 inherit left
+::method who
+  return step('BOTH2', self, super)
+::class kid subclass both2 inherit right
+::method who
+  return step('KID', self, super)
+::class late inherit shared left
+::method who
+  return step('LATE', self, super)
+</code></pre>
+<pre><code class="language-output">BOTH: BOTH LEFT RIGHT SHARED
+KID: KID BOTH2 LEFT RIGHT SHARED
+LATE: LATE LEFT SHARED
+</code></pre>
+<pre><code class="language-rexx">call try 'inherit left shared'
+call try 'inherit shared left'
+call try 'inherit left left'
+call try 'subclass both inherit left'
+exit
+try:
+  signal on syntax name e
+  src = .array~of('::class shared mixinclass object', -
+    '::class left mixinclass object inherit shared', -
+    '::class both inherit left', '::class c' arg(1))
+  p = .package~new('spec-methods-inherit', src)
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">inherit left shared =&gt; 98.944
+inherit shared left =&gt; ok
+inherit left left =&gt; 98.944
+subclass both inherit left =&gt; 98.944
+</code></pre>
+<div class="rule" id="r-class.methods.order.change"><a href="#r-class.methods.order.change">[class.methods.order.change]</a></div>
+<p>The order of a class is worked out again whenever its list of superclasses
+changes, and so is the order of every class below it. The <code>inherit</code> method of
+<code>Class</code> adds a mixin class at the end of the list, or immediately in front of
+the class that its second argument names, which may be the superclass; the
+<code>uninherit</code> method takes one out. A mixin class put in front of the superclass
+then comes first in <code>superClasses</code>, <code>superClass</code> answers it, and its methods
+hide the superclass's. An <code>uninherit</code> of a mixin class that another class of
+the order still inherits takes it out of the list of superclasses and leaves
+it in the order; the first class of the list stays, and
+<a href="class.html#r-class.class.uninherit">the <code>uninherit</code> rule</a> gives the errors for a class
+that cannot be taken out. The first example prints the
+order of <code>C</code> and of its subclass <code>SUB</code> and the list of superclasses after each
+change; its last line shows that the step <code>inherit ma before mx</code> has put the
+mixin class <code>MA</code>, which is based on <code>Object</code>, in front of <code>P1</code>, so that
+<code>superClass</code> answers <code>MA</code>, and that <code>MA</code>, standing first, can no longer be
+taken out. The second example sends <code>uninherit</code> twice for a mixin class that
+<code>C</code> has by two paths, and once for <code>Object</code>, which is not a mixin class.</p>
+<pre><code class="language-rexx">call show 'start'
+.c~inherit(.mb)
+call show 'inherit mb'
+.c~inherit(.mx, .p1)
+call show 'inherit mx before p1'
+.c~uninherit(.ma)
+call show 'uninherit ma'
+.c~inherit(.ma, .mx)
+call show 'inherit ma before mx'
+.c~uninherit(.mb)
+call show 'uninherit mb'
+say 'superclass:' .c~superclass~id
+signal on syntax name e
+.c~uninherit(.ma)
+e: say 'uninherit ma:' condition('o')~code
+exit
+show:
+  s = ''
+  do x over .c~superclasses
+    s = s x~id
+  end
+  say arg(1)':' s~strip '/' .c~new~who '/' .sub~new~who
+  return
+::routine step
+  use arg id, obj, scope
+  signal on nomethod name last
+  return id obj~who:scope
+last: return id
+::class p1
+::method who
+  return step('P1', self, super)
+::class ma mixinclass object
+::method who
+  return step('MA', self, super)
+::class mb mixinclass object
+::method who
+  return step('MB', self, super)
+::class mx mixinclass p1
+::method who
+  return step('MX', self, super)
+::class c subclass p1 inherit ma
+::method who
+  return step('C', self, super)
+::class sub subclass c
+::method who
+  return step('SUB', self, super)
+</code></pre>
+<pre><code class="language-output">start: P1 MA / C P1 MA / SUB C P1 MA
+inherit mb: P1 MA MB / C P1 MA MB / SUB C P1 MA MB
+inherit mx before p1: MX P1 MA MB / C MX P1 MA MB / SUB C MX P1 MA MB
+uninherit ma: MX P1 MB / C MX P1 MB / SUB C MX P1 MB
+inherit ma before mx: MA MX P1 MB / C MA MX P1 MB / SUB C MA MX P1 MB
+uninherit mb: MA MX P1 / C MA MX P1 / SUB C MA MX P1
+superclass: MA
+uninherit ma: 98.945
+</code></pre>
+<pre><code class="language-rexx">call show 'start'
+.c~uninherit(.shared)
+call show 'uninherit shared'
+signal on syntax name e
+.c~uninherit(.shared)
+say 'second uninherit shared: ok'
+e: say 'second uninherit shared:' condition('o')~code
+signal on syntax name f
+.c~uninherit(.object)
+f: say 'uninherit object:' condition('o')~code
+exit
+show:
+  s = ''
+  do x over .c~superclasses
+    s = s x~id
+  end
+  say arg(1)':' s~strip '/' .c~new~who
+  return
+::routine step
+  use arg id, obj, scope
+  signal on nomethod name last
+  return id obj~who:scope
+last: return id
+::class shared mixinclass object
+::method who
+  return step('SHARED', self, super)
+::class left mixinclass object inherit shared
+::method who
+  return step('LEFT', self, super)
+::class c inherit shared left
+::method who
+  return step('C', self, super)
+</code></pre>
+<pre><code class="language-output">start: Object SHARED LEFT / C LEFT SHARED
+uninherit shared: Object LEFT / C LEFT SHARED
+second uninherit shared: 98.945
+uninherit object: 98.942
+</code></pre>
+<h2 id="the-search-for-a-message"><a class="header" href="#the-search-for-a-message">The search for a message</a></h2>
+<div class="rule" id="r-class.methods.search"><a href="#r-class.methods.search">[class.methods.search]</a></div>
+<p>A message to an object is looked up in this sequence. First come the object's
+own methods, those that <code>setMethod</code> gave it and those that <code>enhanced</code> made it
+with. Then come the tables of the classes of the order of the object's class,
+one after another. The name of the message is compared in upper case. The
+first table that has an entry for the name decides: when the entry is a method
+that the sender may run, that method runs; when the entry hides the name, or
+the method is one the sender may not run, the name counts as not found and the
+search for the name ends, without going on to the classes behind. A name that
+counts as not found goes to <code>UNKNOWN</code>, as
+<a href="#r-class.methods.unknown">the unknown rule</a> says. The same sequence serves
+<code>send</code> and the other methods that send a message, and the operators, which are
+messages. The first example shows each step: a table that is reached first
+wins, a superclass before a mixin class, and an object's own method before all
+of them. The message name is written in several cases. The second example
+sends operators, which find their methods in the same sequence, also when the
+message is written with a scope or an object has set the operator itself; an
+operator that finds no method goes to <code>UNKNOWN</code> like any message, with an
+array of one item for the infix form and an empty one for the prefix form
+(<a href="../expressions/messages.html#r-expr.messages.operator">the operator messages</a>).</p>
+<pre><code class="language-rexx">o = .sub~new
+say o~one '|' o~TWO '|' o~Three '|' o~four
+o~put('one', 'return "object one"')
+o~put('four', 'return "object four"')
+say o~one '|' o~two '|' o~three '|' o~four
+say .sub~new~one '|' .sub~new~four
+::class base
+::method one
+  return 'base one'
+::method two
+  return 'base two'
+::method three
+  return 'base three'
+::class mx mixinclass object
+::method two
+  return 'mx two'
+::method three
+  return 'mx three'
+::method four
+  return 'mx four'
+::class sub subclass base inherit mx
+::method one
+  return 'sub one'
+::method put
+  self~setMethod(arg(1), arg(2))
+</code></pre>
+<pre><code class="language-output">sub one | base two | base three | mx four
+object one | base two | base three | object four
+sub one | mx four
+</code></pre>
+<pre><code class="language-rexx">a = .k~new
+say (a + 1) '|' a~'+'(2) '|' (-a) '|' a~"+":.base(3)
+o = .k~new
+o~put('+', 'return "own plus" arg(1)')
+say o + 9
+say (.u~new + 4) '|' (- .u~new)
+::class base
+::method '+'
+  if arg() = 0 then return 'base prefix +'
+  return 'base +' arg(1)
+::method '-'
+  if arg() = 0 then return 'base prefix -'
+  return 'base -' arg(1)
+::class mx mixinclass base
+::method '+'
+  return 'mx + &gt;' self~"+":super(arg(1))
+::class k subclass base inherit mx
+::method put
+  self~setMethod(arg(1), arg(2))
+::class u
+::method unknown
+  use arg n, a
+  return n'('a~size')'
+</code></pre>
+<pre><code class="language-output">mx + &gt; base + 1 | mx + &gt; base + 2 | base prefix - | base + 3
+own plus 9
++(1) | -(0)
+</code></pre>
+<div class="rule" id="r-class.methods.search.access"><a href="#r-class.methods.search.access">[class.methods.search.access]</a></div>
+<p>A method that the sender may not run, because it is <code>PRIVATE</code> or <code>PACKAGE</code>
+as <a href="../directives/method.html#r-dir.method.access">the access rule</a> says, does not let the search go on:
+the name counts as not found, even when a class behind has a public method of
+that name. The message goes to <code>UNKNOWN</code> when there is one, and otherwise
+<a href="../conditions/nomethod.html#r-cond.nomethod.raise">raises</a> the error that the access rule gives, <code>97.2</code>
+for the private method of the example. The sender that may run the method
+still finds it, and a scoped send from the method reaches a method behind it.
+A message that START sends is checked as <a href="../directives/method.html#r-dir.method.deviation.105">Deviation
+105</a> states.</p>
+<pre><code class="language-rexx">o = .sub~new
+call try 'say o~m'
+call try 'say o~inside'
+call try 'say o~behind'
+call try 'say .withunk~new~m'
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+::class base
+::method m
+  return 'base m'
+::class sub subclass base
+::method m private
+  return 'sub m'
+::method inside
+  return self~m
+::method behind
+  return self~m:super
+::class withunk subclass sub
+::method unknown
+  use arg name
+  return 'unknown took' name
+</code></pre>
+<pre><code class="language-output">say o~m =&gt; 97.2
+sub m
+base m
+unknown took M
+</code></pre>
+<div class="rule" id="r-class.methods.hidden"><a href="#r-class.methods.hidden">[class.methods.hidden]</a></div>
+<p>A name can be hidden instead of given a method: the search stops at it, and
+the name counts as not found. <code>define</code> with no method, an item <code>.nil</code> in the
+collection that <code>defineMethods</code> or <code>enhanced</code> receives, and, for the object's
+own methods, <code>setMethod</code> with no method leave a mark in the table. <code>define</code>
+with <code>.nil</code> as the method hides the name as well, but the table then holds no
+entry that <a href="class.html#r-class.class.method"><code>method</code></a> could answer, as <a href="class.html#r-class.class.define">the <code>define</code>
+rule</a> says. The <code>delete</code> method of <code>Class</code> removes the
+mark or the method that the table of the class it is sent to holds for a name,
+and the name is then looked up in the classes behind.
+A name the table does not hold is left as it is; <code>delete</code> does not remove a
+method that only a class behind holds. The example hides a method that the
+superclass holds, shows that <code>UNKNOWN</code> receives the hidden name, and brings
+the method back with <code>delete</code>. A second example hides an inherited name with
+<code>.nil</code> as the method of <code>define</code>.</p>
+<pre><code class="language-rexx">.sub~define('m')
+.sub~defineMethods(.directory~new~~put(.nil, 'N'))
+o = .sub~new
+say t(o, 'm') '|' t(o, 'n') '|' t(o, 'k') '|' o~hasMethod('m')
+e = .sub~enhanced(.directory~new~~put(.nil, 'K'))
+say t(e, 'k') '|' t(e, 'm')
+.sub~delete('m')
+.sub~delete('k')
+say t(.sub~new, 'm') '|' t(.sub~new, 'n') '|' t(.sub~new, 'k')
+say t(.sub~new, 'zz')
+exit
+t:
+  return arg(1)~send(arg(2))
+::class base
+::method m
+  return 'base m'
+::method n
+  return 'base n'
+::method k
+  return 'base k'
+::class sub subclass base
+::method unknown
+  return 'unknown' arg(1)
+</code></pre>
+<pre><code class="language-output">unknown M | unknown N | base k | 0
+unknown K | unknown M
+base m | unknown N | base k
+unknown ZZ
+</code></pre>
+<pre><code class="language-rexx">.sub~define('m', .nil)
+say .sub~new~send('m') '|' .base~new~m
+::class base
+::method m
+  return 'base m'
+::class sub subclass base
+::method unknown
+  return 'unknown' arg(1)
+</code></pre>
+<pre><code class="language-output defect=#129">unknown M | base m
+</code></pre>
+<h2 id="the-objects-own-methods"><a class="header" href="#the-objects-own-methods">The object's own methods</a></h2>
+<div class="rule" id="r-class.methods.object"><a href="#r-class.methods.object">[class.methods.object]</a></div>
+<p><code>setMethod</code> gives the receiving object a method of its own, found before any
+class. Its first argument is the name, which is used in upper case, and its
+second is the method: a method object, a string that is the source of the
+method, or an array of strings, one for each line, from which a method is
+made. A second <code>setMethod</code> of the same name replaces the method; the call with
+no second argument hides the name for the object, so that the search stops
+there and the message goes to <code>UNKNOWN</code>. <code>unsetMethod</code> takes the name off the
+object again: the name is looked up in the classes as if <code>setMethod</code> had never
+been sent, and <code>unsetMethod</code> of a name the object has not set is not an error.
+<code>setMethod</code> and <code>unsetMethod</code> are private methods with a further restriction,
+which <a href="#r-class.methods.object.access">the next rule</a> gives. A <code>define</code> of the
+same name that is sent to the class afterwards is not seen while the object's
+own method of that name stands, and is seen after <code>unsetMethod</code>, as
+<a href="#r-class.methods.late">the rule on changes</a> says; the second example shows the
+object's own method and the class's method of the same name.
+<a href="#r-class.methods.deviation.110">Deviation 110</a> has the example for the
+<code>define</code> that is seen after <code>unsetMethod</code>.</p>
+<pre><code class="language-rexx">o = .k~new
+o~put('m', 'return "from a string"')
+o~put('a', .array~of('parse arg x', 'return x * 2'))
+o~put('n', .method~new('n', 'return "from a method object"'))
+say o~m '|' o~a(21) '|' o~n '|' o~old
+o~put('m', 'return "replaced"')
+say o~m '|' o~old
+o~put('old')
+say t(o, 'old')
+o~unset('old')
+o~unset('m')
+o~unset('never_set')
+say o~old '|' t(o, 'm')
+exit
+t:
+  return arg(1)~send(arg(2))
+::class k
+::method old
+  return 'k old'
+::method m
+  return 'k m'
+::method put
+  if arg(2, 'E') then self~setMethod(arg(1), arg(2))
+  else self~setMethod(arg(1))
+::method unset
+  self~unsetMethod(arg(1))
+::method unknown
+  return 'unknown' arg(1)
+</code></pre>
+<pre><code class="language-output">from a string | 42 | from a method object | k old
+replaced | k old
+unknown OLD
+k old | k m
+</code></pre>
+<pre><code class="language-rexx">o = .k~new
+o~put('m', 'return "own m"')
+say o~m '|' o~m:.k '|' .k~new~m
+o~unset('m')
+say o~m
+::class k
+::method m
+  return 'k m'
+::method put
+  self~setMethod(arg(1), arg(2))
+::method unset
+  self~unsetMethod(arg(1))
+</code></pre>
+<pre><code class="language-output">own m | k m | k m
+k m
+</code></pre>
+<div class="rule" id="r-class.methods.object.access"><a href="#r-class.methods.object.access">[class.methods.object.access]</a></div>
+<p><code>setMethod</code> and <code>unsetMethod</code> are accepted from a method that runs with the
+object itself as <code>SELF</code>, and from a method that runs with a class as <code>SELF</code>
+when the object is an instance of that class, directly or through a subclass,
+which includes a class method that the object's class inherits.
+A message from the prolog or from a routine raises <code>SYNTAX 97.2</code>, as for any
+private method, and from any other method it raises <code>98.991</code>.</p>
+<pre><code class="language-rexx">x = .k~new
+y = .k~new
+call try 'x~setMethod("a", "return 1")'
+call try 'x~self'
+call try 'x~other(y)'
+call try 'x~other(x)'
+call try '.sub~cset(x)'
+call try '.k~cset(x)'
+call try '.k~cset(.sub~new)'
+call try '.sub~cset(.sub~new)'
+call try '.sub~cset(.other~new)'
+call try '.sub~cset(.k~new)'
+call try 'x~scoped("bogus")'
+call try 'x~scoped("object")'
+call try 'x~scoped("FLOAT")'
+call try 'p()'
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+::routine p
+  .k~new~setMethod('z', 'return 1')
+::class k
+::method self
+  self~setMethod('z', 'return 1')
+::method other
+  use arg o
+  o~setMethod('z', 'return 1')
+::method scoped
+  self~setMethod('z', 'return 1', arg(1))
+::method cset class
+  use arg o
+  o~setMethod('z', 'return 1')
+::class sub subclass k
+::class other
+</code></pre>
+<pre><code class="language-output">x~setMethod("a", "return 1") =&gt; 97.2
+x~self =&gt; ok
+x~other(y) =&gt; 98.991
+x~other(x) =&gt; ok
+.sub~cset(x) =&gt; 98.991
+.k~cset(x) =&gt; ok
+.k~cset(.sub~new) =&gt; ok
+.sub~cset(.sub~new) =&gt; ok
+.sub~cset(.other~new) =&gt; 98.991
+.sub~cset(.k~new) =&gt; 98.991
+x~scoped("bogus") =&gt; 88.916
+x~scoped("object") =&gt; ok
+x~scoped("FLOAT") =&gt; ok
+p() =&gt; 97.2
+</code></pre>
+<div class="rule" id="r-class.methods.object.scope"><a href="#r-class.methods.object.scope">[class.methods.object.scope]</a></div>
+<p>The scope argument of <code>setMethod</code> decides which class a scoped send from the
+method starts behind. A method set with the scope <code>FLOAT</code>, the default,
+belongs to no class of the order, and <code>SUPER</code> in it is the object's own class,
+so that <code>self~m:super</code> runs the class's <code>m</code>. A method set with <code>OBJECT</code> takes
+the place of a method of the object's class, and <code>SUPER</code> in it is the class
+that follows the object's class in the order. It takes the place also for a
+search that starts at the object's class: a scoped message, <code>send</code> with a
+scope, or FORWARD CLASS naming that class finds it ahead of the class's own
+entry, while a search that starts at another class does not. A hiding
+<code>setMethod</code> with <code>OBJECT</code> is not seen there, and a <code>FLOAT</code> method is found by
+none of these searches. The second example shows both. A method that
+<code>enhanced</code> adds behaves as one with <code>FLOAT</code>. The scoped send is specified by
+<a href="#r-class.methods.scoped">the scoped send rule</a>.</p>
+<pre><code class="language-rexx">o = .k~new
+o~put('m', 'return "float m &gt;" self~m:super', 'FLOAT')
+o~put('n', 'return "object n &gt;" self~n:super', 'OBJECT')
+o~put('s1', 'return super', 'FLOAT')
+o~put('s2', 'return super', 'OBJECT')
+say o~m '|' o~n
+say o~s1~id o~s2~id
+m = .directory~new~~put('return "enhanced m &gt;" self~m:super', 'M')
+e = .k~enhanced(m)
+say e~m
+::class base
+::method m
+  return 'base m'
+::method n
+  return 'base n'
+::class k subclass base
+::method m
+  return 'k m'
+::method n
+  return 'k n'
+::method put
+  self~setMethod(arg(1), arg(2), arg(3))
+</code></pre>
+<pre><code class="language-output">float m &gt; k m | object n &gt; base n
+K BASE
+enhanced m &gt; k m
+</code></pre>
+<pre><code class="language-rexx">o = .k~new
+o~put('w', 'return "own w"', 'OBJECT')
+say 'plain:' o~w '| scoped k:' o~w:.k '| scoped base:' o~w:.base
+say 'forward class k:' o~fk '| send with array:' o~send(.array~of('w', .k))
+p = .k~new
+p~put('w', 'return "float w"', 'FLOAT')
+say 'float, scoped k:' p~w:.k
+q = .sub~new
+q~put('w', 'return "own w on sub"', 'OBJECT')
+say 'sub scoped sub:' q~w:.sub '| sub scoped k:' q~w:.k
+r = .k~new
+r~hide('old')
+signal on syntax name e
+say 'hiding mark, scoped k:' r~old:.k
+say 'hiding mark, plain:' r~old
+e: say 'hiding mark, plain:' condition('o')~code
+::class base
+::method w
+  return 'base w'
+::class k subclass base
+::method w
+  return 'k w'
+::method old
+  return 'k old'
+::method fk
+  forward class (.k) message 'w'
+::method hide
+  self~setMethod(arg(1), , 'OBJECT')
+::method put
+  self~setMethod(arg(1), arg(2), arg(3))
+::class sub subclass k
+::method w
+  return 'sub w'
+</code></pre>
+<pre><code class="language-output defect=#131">plain: own w | scoped k: own w | scoped base: base w
+forward class k: own w | send with array: own w
+float, scoped k: k w
+sub scoped sub: own w on sub | sub scoped k: k w
+hiding mark, scoped k: k old
+hiding mark, plain: 97.1
+</code></pre>
+<div class="rule" id="r-class.methods.enhanced"><a href="#r-class.methods.enhanced">[class.methods.enhanced]</a></div>
+<p><code>enhanced</code> answers a new object of the receiving class that has, in addition
+to the class's methods, the methods of the collection it receives, whose
+indexes are the names and whose items are method objects, strings or arrays,
+or <code>.nil</code> to hide a name. It sends the message <code>new</code> to the receiving class
+with the arguments that follow the collection, so a class method <code>new</code> of the
+class runs and <code>init</code> receives those arguments, and it gives the object that
+<code>new</code> answers the added methods. Its class is the receiving class. The
+added methods are the object's own methods, so they are found before the
+class's, and <code>unsetMethod</code> leaves them: after a <code>setMethod</code> has replaced one,
+<code>unsetMethod</code> brings the added method back. The object follows the later
+changes to the class, to its superclasses and to its mixin classes, and
+<code>inherit</code> and <code>uninherit</code>, as <a href="#r-class.methods.late">every instance does</a>.</p>
+<pre><code class="language-rexx">c = .k~new
+e = .k~enhanced(.directory~new~~put('return "added"', 'EXTRA'), 7, 8)
+say e~class~id (e~class == c~class) e~extra e~args
+say c~hasMethod('EXTRA') e~hasMethod('EXTRA')
+e~set('extra', 'return "set"')
+say e~extra
+e~unset('extra')
+say e~extra
+e~unset('extra')
+say e~extra
+f = .k~enhanced(.directory~new)
+.k~define('later', 'return "later"')
+.base~define('earlier', 'return "earlier"')
+say f~later f~earlier
+::class base
+::class k subclass base
+::method new class
+  if arg() &gt; 0 then say 'new' arg(1, 'A')~makestring('l', ',')
+  forward class (super)
+::method init
+  expose args
+  args = arg(1, 'A')~makestring('l', ',')
+::method args
+  expose args
+  return args
+::method set
+  self~setMethod(arg(1), arg(2))
+::method unset
+  self~unsetMethod(arg(1))
+</code></pre>
+<pre><code class="language-output">new 7,8
+K 1 added 7,8
+0 1
+set
+added
+added
+later earlier
+</code></pre>
+<h2 id="changes-after-objects-exist"><a class="header" href="#changes-after-objects-exist">Changes after objects exist</a></h2>
+<div class="rule" id="r-class.methods.late"><a href="#r-class.methods.late">[class.methods.late]</a></div>
+<p>An object follows every change made to the methods that its class finds, at
+any time. A <code>define</code>, <code>defineMethods</code> or <code>delete</code> sent to a class <code>C</code>, an
+<code>inherit</code> or <code>uninherit</code> sent to <code>C</code>, and a change to the table of a
+superclass of <code>C</code> or of a mixin class in the order of <code>C</code>, all change what
+the instances of <code>C</code> answer: the instances made before the change as well as
+those made after it, however many changes came before, and also an object
+that has methods of its own from <code>setMethod</code> or <code>enhanced</code>. The own methods
+stay first in the search (<a href="#r-class.methods.object">the object rule</a>).
+<a href="#r-class.methods.deviation.110">Deviation 110</a> gives the examples of the
+changes to the table of <code>C</code> itself.</p>
+<blockquote>
+<p><strong>Note.</strong> In the example, <code>A</code> is an instance of <code>K</code> and <code>S</code> is an
+instance of a subclass. Both are made first, and each line gives, for each
+name, what <code>A</code> and <code>S</code> answer after a change to the superclass or to a mixin
+class, or after <code>inherit</code> or <code>uninherit</code>, with <code>-</code> where the name is not
+found.</p>
+</blockquote>
+<pre><code class="language-rexx">a = .k~new
+s = .sub~new
+call show 'start'
+.base~define('two', 'return "t"')
+call show 'base define two'
+.mx~define('three', 'return "h"')
+call show 'mixin define three'
+.k~inherit(.my)
+call show 'k inherit my'
+.k~uninherit(.mx)
+call show 'k uninherit mx'
+.base~define('two', 'return "T"')
+call show 'base define two again'
+exit
+show:
+  say arg(1)':'
+  do n over 'TWO THREE FOUR'~makearray(' ')
+    say ' ' n f(a, n)'/'f(s, n)
+  end
+  return
+f:
+  signal on syntax name e
+  return arg(1)~send(arg(2))
+e: return '-'
+::class base
+::class mx mixinclass object
+::class my mixinclass object
+::method four
+  return 'f'
+::class k subclass base inherit mx
+::class sub subclass k
+</code></pre>
+<pre><code class="language-output">start:
+  TWO -/-
+  THREE -/-
+  FOUR -/-
+base define two:
+  TWO t/t
+  THREE -/-
+  FOUR -/-
+mixin define three:
+  TWO t/t
+  THREE h/h
+  FOUR -/-
+k inherit my:
+  TWO t/t
+  THREE h/h
+  FOUR f/f
+k uninherit mx:
+  TWO t/t
+  THREE -/-
+  FOUR f/f
+base define two again:
+  TWO T/T
+  THREE -/-
+  FOUR f/f
+</code></pre>
+<div class="rule" id="r-class.methods.library"><a href="#r-class.methods.library">[class.methods.library]</a></div>
+<p>The classes of the class library accept no change to their methods or their
+lists of superclasses: <code>define</code>, <code>defineMethods</code>, <code>delete</code>, <code>inherit</code> and
+<code>uninherit</code> sent to one of them raise <code>SYNTAX 98.985</code>, so their orders and
+tables stay as the library made them. Sending <code>inherit</code> to another class with
+a library class that is not a mixin class raises <code>98.942</code>, as
+<a href="../directives/class.html#r-dir.class.mixin">the mixin rule</a> says for the directive.</p>
+<pre><code class="language-rexx">call try '.array~define("zork", "return 1")'
+call try '.array~defineMethods(.directory~new)'
+call try '.array~delete("zork")'
+call try '.array~inherit(.mm)'
+call try '.array~uninherit(.orderedcollection)'
+call try '.object~define("zork", "return 1")'
+call try '.mm~inherit(.array)'
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+::class mm mixinclass object
+</code></pre>
+<pre><code class="language-output">.array~define("zork", "return 1") =&gt; 98.985
+.array~defineMethods(.directory~new) =&gt; 98.985
+.array~delete("zork") =&gt; 98.985
+.array~inherit(.mm) =&gt; 98.985
+.array~uninherit(.orderedcollection) =&gt; 98.985
+.object~define("zork", "return 1") =&gt; 98.985
+.mm~inherit(.array) =&gt; 98.942
+</code></pre>
+<h2 id="starting-the-search-at-a-class"><a class="header" href="#starting-the-search-at-a-class">Starting the search at a class</a></h2>
+<div class="rule" id="r-class.methods.scoped"><a href="#r-class.methods.scoped">[class.methods.scoped]</a></div>
+<p>A message written <code>object~name:scope</code> starts the search at a class. The
+<code>scope</code> is a variable symbol, simple or compound, or an environment symbol
+such as <code>.base</code>, and its value is evaluated like that of any term; a string, a
+number or a parenthesized expression there makes the program unreadable with
+<code>SYNTAX 20.917</code>. The value must be a class that stands in the order of the
+object's class, that is the class itself, a superclass, an inherited mixin
+class or <code>Object</code>. Another value raises <code>SYNTAX 88.914</code> when it is not a
+class, and <code>93.957</code> when it is a class that does not stand in the order. The
+object's own methods are not looked at, except a method that <code>setMethod</code> gave
+it with the scope <code>OBJECT</code>, which counts as an entry of the table of the
+object's class and is found ahead of that table's own entry when the search
+starts at that class, as <a href="#r-class.methods.object.scope">the scope rule</a> says.
+The search begins with the table of the named class and goes on through the
+classes that follow it in the order of the object's class, whichever class the
+sending method belongs to. It ends as
+<a href="#r-class.methods.search">the search rule</a> says, and a name that is not found
+goes to <code>UNKNOWN</code> through the plain search for that name, and without one
+raises NOMETHOD, <code>SYNTAX 97.1</code> when untrapped. A scoped message can be sent
+from any code, and the object need not be <code>SELF</code>.</p>
+<blockquote>
+<p><strong>Note.</strong> In the first example <code>o</code> has a method of its own, and the scoped
+messages skip it. <code>ONLYMX</code> is held by a mixin class that stands behind
+<code>BASE</code>, so a search that starts at <code>BASE</code> reaches it, and <code>ONLYBASE</code> is held
+by a class in front of <code>MX</code>, so a search that starts at <code>MX</code> does not.</p>
+</blockquote>
+<pre><code class="language-rexx">o = .leaf~new
+o~put('hello', 'return "object hello"')
+say o~hello '|' o~hello:.leaf '|' o~hello:.mid '|' o~hello:.base
+say o~hello:.mx '|' o~onlymx:.base '|' o~onlymx:.mx
+call try 'say o~onlybase:.mx'
+call try 'say o~onlybase:.base'
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+::class base
+::method hello
+  return 'base hello'
+::method onlybase
+  return 'only base'
+::class mid subclass base
+::method hello
+  return 'mid hello'
+::class mx mixinclass object
+::method hello
+  return 'mx hello'
+::method onlymx
+  return 'only mx'
+::class leaf subclass mid inherit mx
+::method hello
+  return 'leaf hello'
+::method put
+  self~setMethod(arg(1), arg(2))
+</code></pre>
+<pre><code class="language-output">object hello | leaf hello | mid hello | base hello
+mx hello | only mx | only mx
+say o~onlybase:.mx =&gt; 97.1
+only base
+</code></pre>
+<pre><code class="language-rexx">o = .leaf~new
+name = 'mid'
+call try 'say o~hello:.other'
+call try 'say o~hello:.nil'
+call try 'say o~hello:nosuchvariable'
+call try 'say o~hello:name'
+call try 'say o~hello:o'
+call try 'say o~hello:.object'
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+::class mid
+::method hello
+  return 'mid hello'
+::class leaf subclass mid
+::class other
+::method hello
+  return 'other hello'
+</code></pre>
+<pre><code class="language-output">say o~hello:.other =&gt; 93.957
+say o~hello:.nil =&gt; 88.914
+say o~hello:nosuchvariable =&gt; 88.914
+say o~hello:name =&gt; 88.914
+say o~hello:o =&gt; 88.914
+say o~hello:.object =&gt; 97.1
+</code></pre>
+<pre><code class="language-rexx">o = .mid~new
+say o~hello:"MID"
+::class mid
+::method hello
+  return 'mid hello'
+</code></pre>
+<pre><code class="language-output rc=236"></code></pre>
+<div class="rule" id="r-class.methods.scoped.send"><a href="#r-class.methods.scoped.send">[class.methods.scoped.send]</a></div>
+<p>The message name that <code>send</code> and <code>sendWith</code> receive may be an array of two
+items instead of a string: the name, and a class that starts the search the
+way the <code>scope</code> of a scoped message does, with the same errors for a value
+that is not a class (<code>88.914</code>) or a class outside the order (<code>93.957</code>). An
+array of any other size raises <code>SYNTAX 93.946</code>.</p>
+<pre><code class="language-rexx">o = .leaf~new
+say o~send(.array~of('hello', .leaf)) '|' o~send(.array~of('hello', .mid))
+say o~sendWith(.array~of('hello', .mid), .array~new)
+call try 'o~send(.array~of("hello"))'
+call try 'o~send(.array~of("hello", .mid, 3))'
+call try 'o~send(.array~new)'
+call try 'o~send(.array~of("hello", 3))'
+call try 'o~send(.array~of("hello", .other))'
+exit
+try:
+  signal on syntax name e
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+::class mid
+::method hello
+  return 'mid hello'
+::class leaf subclass mid
+::method hello
+  return 'leaf hello'
+::class other
+::method hello
+  return 'other hello'
+</code></pre>
+<pre><code class="language-output">leaf hello | mid hello
+mid hello
+o~send(.array~of("hello")) =&gt; 93.946
+o~send(.array~of("hello", .mid, 3)) =&gt; 93.946
+o~send(.array~new) =&gt; 93.946
+o~send(.array~of("hello", 3)) =&gt; 88.914
+o~send(.array~of("hello", .other)) =&gt; 93.957
+</code></pre>
+<div class="rule" id="r-class.methods.super"><a href="#r-class.methods.super">[class.methods.super]</a></div>
+<p><code>SUPER</code> is a variable that every method starts with. Its value is the class
+that follows, in the order of the receiver's class, the class whose table the
+running method came from; that is <code>Object</code> for the last class. It is the
+usual scope of a message that runs the method an override replaces. The
+value belongs to the activation and depends on the receiver: one mixin class
+method sees a different class behind it for receivers of different orders.
+A method that was set with <code>setMethod</code> and the scope <code>FLOAT</code>, and a method
+that <code>enhanced</code> added, has the receiver's own class as <code>SUPER</code>, and one set
+with <code>OBJECT</code> has the class that follows the receiver's class, as
+<a href="#r-class.methods.object.scope">the scope rule</a> says. <code>SUPER</code> can be assigned
+like any variable, and the new value counts for the rest of the activation. In
+the prolog and in a routine <code>SUPER</code> is not set, so that it holds its own name,
+and a message with the scope <code>super</code> there raises <code>SYNTAX 88.914</code>, because
+that value is not a class.</p>
+<pre><code class="language-rexx">say .one~new~who '|' .two~new~who
+say .c~new~plain '|' .c~new~skip
+say .last~new~up
+signal on syntax name e
+say .last~new~who:super
+e: say condition('o')~code
+say 'super is' super rr()
+::routine rr
+  return super
+::routine step
+  use arg id, obj, scope
+  signal on nomethod name last
+  return id obj~who:scope
+last: return id
+::class mx mixinclass object
+::method who
+  return step('MX', self, super)
+::class m1 mixinclass object
+::method who
+  return step('M1', self, super)
+::class m2 mixinclass object
+::method who
+  return step('M2', self, super)
+::class one inherit mx m1
+::method who
+  return step('ONE', self, super)
+::class two inherit mx m2
+::method who
+  return step('TWO', self, super)
+::class a
+::method go
+  return 'a go'
+::class b subclass a
+::method go
+  return 'b go'
+::class c subclass b
+::method plain
+  return self~go:super
+::method skip
+  super = .a
+  return self~go:super
+::class last
+::method up
+  return super~id
+</code></pre>
+<pre><code class="language-output">ONE MX M1 | TWO MX M2
+b go | a go
+Object
+88.914
+super is SUPER SUPER
+</code></pre>
+<h2 id="forwarding-to-a-class"><a class="header" href="#forwarding-to-a-class">Forwarding to a class</a></h2>
+<div class="rule" id="r-class.methods.forward"><a href="#r-class.methods.forward">[class.methods.forward]</a></div>
+<p>The <code>CLASS</code> option of <a href="../instructions/forward.html#r-instr.forward.class">FORWARD</a> names the class that
+starts the search, and it starts it as the scope of a scoped message does: the
+object's own methods are skipped as for a scoped message, the table of the
+named class comes first, and the classes behind it in the order of the
+receiver's class follow. <code>forward class (super)</code> therefore runs the method
+that the running one overrides. The class must be one the receiver is an
+instance of, or the instruction raises <code>93.957</code> as the FORWARD page says. In
+the example, <code>GO3</code> of the first mixin class forwards to the class behind it in
+the order of <code>LEAF</code>, which is the second mixin class, and <code>GO4</code> of <code>LEAF</code>
+forwards to the second mixin class by name.</p>
+<pre><code class="language-rexx">o = .leaf~new
+say o~go '|' o~go3 '|' o~go4
+::class base
+::method go
+  return 'base go'
+::class m1 mixinclass object
+::method go
+  return 'm1 go'
+::method go3
+  forward class (super)
+::class m2 mixinclass object
+::method go
+  return 'm2 go'
+::method go3
+  return 'm2 go3'
+::method go4
+  return 'm2 go4'
+::class leaf subclass base inherit m1 m2
+::method go4
+  forward class (.m2) message 'go4'
+</code></pre>
+<pre><code class="language-output">base go | m2 go3 | m2 go4
+</code></pre>
+<h2 id="when-nothing-is-found"><a class="header" href="#when-nothing-is-found">When nothing is found</a></h2>
+<div class="rule" id="r-class.methods.unknown"><a href="#r-class.methods.unknown">[class.methods.unknown]</a></div>
+<p>When the search for a name ends without a method, because no table holds it, a
+mark hides it, or the sender may not run the method that was found, the search
+is made again for the name <code>UNKNOWN</code>, over the object's own methods and then
+the order of its class, whatever scope the first message had. The search for
+<code>UNKNOWN</code> makes no access check: a <code>PRIVATE</code> or <code>PACKAGE</code> <code>UNKNOWN</code> runs for
+any sender, and a mark that hides <code>UNKNOWN</code> ends the search as if there were
+none. The first <code>UNKNOWN</code> found runs, with two arguments: the name of the
+message in upper case, and a new array that holds the arguments of the message
+at their positions. The array has as many places as the position of the last
+argument that was not <a href="../conventions.html#r-conv.arg.omitted">omitted</a>, and a place of an omitted
+argument holds nothing; for a message with no arguments the array is empty and
+has dimension 1. The answer of <code>UNKNOWN</code> is the answer of the message, and a
+message to an <code>UNKNOWN</code> that answers nothing answers nothing, so that using it
+as a value, as SAY does, raises <code>SYNTAX 91.999</code>. A class in front of another
+in the order wins also here, so an <code>UNKNOWN</code> of a superclass hides the one of
+a mixin class and the object's own <code>UNKNOWN</code> hides both. When no <code>UNKNOWN</code> is
+found, <a href="../conditions/nomethod.html#r-cond.nomethod.raise">NOMETHOD is raised</a>. A message to a class
+object is looked up in the class-side order the same way. The second example
+sends to objects whose <code>UNKNOWN</code> is <code>PRIVATE</code>, is <code>PACKAGE</code> and is hidden,
+once from the code of another package; the third gives the dimension of the
+array.</p>
+<pre><code class="language-rexx">o = .c~new
+say o~foo(1, , 3, )
+say o~FoO '|' o~"mixed Name"(.nil)
+say o~foo:.p(1) '|' o~viasuper
+s = .sub~new
+say s~zz '|' s~m
+o~put('unknown', 'return "own unknown" arg(1)')
+say o~foo '|' o~nothing:.p
+signal on syntax name e
+say .quiet~new~anything
+e: say condition('o')~code
+say .meta~whatever
+::class p
+::method unknown
+  use arg n, a
+  return 'p.unk' n 'size' a~size 'items' a~items 'has2' a~hasIndex(2)
+::class c subclass p
+::method viasuper
+  return self~nothing:super
+::method put
+  self~setMethod(arg(1), arg(2))
+::class mix mixinclass object
+::method unknown
+  return 'mix.unknown' arg(1)
+::method m
+  return 'mix m'
+::class base
+::method unknown
+  return 'base.unknown' arg(1)
+::class sub subclass base inherit mix
+::class quiet
+::method unknown
+::class meta
+::method unknown class
+  return 'class-side unknown' arg(1)
+</code></pre>
+<pre><code class="language-output">p.unk FOO size 3 items 2 has2 0
+p.unk FOO size 0 items 0 has2 0 | p.unk MIXED NAME size 1 items 1 has2 0
+p.unk FOO size 1 items 1 has2 0 | p.unk NOTHING size 0 items 0 has2 0
+base.unknown ZZ | mix m
+own unknown FOO | own unknown NOTHING
+91.999
+class-side unknown WHATEVER
+</code></pre>
+<pre><code class="language-rexx">call t '.pu~new~zz'
+call t '.pu~new~callzz'
+call t '.k~new~zz'
+call t '.pu~new~unknown("A", .array~of(1))'
+.hid~define('unknown')
+call t '.hid~new~zz'
+src = .array~of('::routine far public', 'return arg(1)~zz')
+p = .package~new('far-away-package', src)
+say 'from another package:' p~findRoutine('far')~call(.pk~new) p~findRoutine('far')~call(.k~new)
+exit
+t:
+  signal on syntax name e
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+e: say arg(1) '=&gt; error' condition('o')~code
+  return
+::class pu
+::method unknown private
+  return 'private unknown' arg(1)
+::method callzz
+  return self~zz
+::class base
+::method unknown
+  return 'base unknown' arg(1)
+::class hid subclass base
+::class k subclass base
+::method zz private
+  return 'k private zz'
+::class pk
+::method unknown package
+  return 'package unknown' arg(1)
+</code></pre>
+<pre><code class="language-output">.pu~new~zz =&gt; private unknown ZZ
+.pu~new~callzz =&gt; private unknown ZZ
+.k~new~zz =&gt; base unknown ZZ
+.pu~new~unknown("A", .array~of(1)) =&gt; private unknown UNKNOWN
+.hid~new~zz =&gt; error 97.1
+from another package: package unknown ZZ base unknown ZZ
+</code></pre>
+<pre><code class="language-rexx">say .c~new~foo '|' .c~new~foo(1)
+::class c
+::method unknown
+  use arg n, a
+  return a~dimension
+</code></pre>
+<pre><code class="language-output defect=#130">1 | 1
+</code></pre>
+<h2 id="messages-to-a-class"><a class="header" href="#messages-to-a-class">Messages to a class</a></h2>
+<div class="rule" id="r-class.methods.class-side"><a href="#r-class.methods.class-side">[class.methods.class-side]</a></div>
+<p>A message to a class object is looked up the same way as one to an instance,
+with a class-side order in place of the order. The class-side order of a class
+<code>C</code> starts with <code>C</code>, standing for the class methods that <code>C</code> declares with
+<code>CLASS</code>. It goes on with the order of the metaclass of <code>C</code>, each class of it
+standing for its instance methods, which are class methods of <code>C</code>; then the
+class-side orders of the superclass of <code>C</code> and of its inherited mixin classes,
+in the order of <code>superClasses</code>. A class that occurs more than once keeps its
+last place. The metaclass of <code>C</code> is the one <code>METACLASS</code> names, otherwise that
+of its superclass, otherwise <code>Class</code>, and the order of a metaclass is an
+ordinary order that ends with <code>Class</code> and <code>Object</code>. When a subclass has
+the metaclass of its superclass, the class methods of the subclass come first,
+those of the superclass next, then the methods of the metaclass, and last
+those of the inherited mixin classes. Naming another metaclass for the
+subclass puts that metaclass in front of the class methods of the superclass
+and keeps the metaclass of the superclass behind them. In the example, <code>SUB</code>
+inherits <code>MIX</code> and has the metaclass of <code>BASE</code>, <code>SUB2</code> names a metaclass of
+its own, and <code>SUB3</code> declares nothing, so it answers with the class method of
+<code>BASE</code> and then the method of the metaclass.</p>
+<pre><code class="language-rexx">call show .sub, .sub2, .sub3
+exit
+show:
+  do c over arg(1, 'A')
+    say c~id':' c~who
+  end
+  return
+::routine step
+  use arg id, obj, scope
+  signal on nomethod name last
+  return id obj~who:scope
+last: return id
+::class meta subclass class
+::method who
+  return step('META', self, super)
+::class meta2 subclass class
+::method who
+  return step('META2', self, super)
+::class base metaclass meta
+::method who class
+  return step('BASE', self, super)
+::class mix mixinclass object
+::method who class
+  return step('MIX', self, super)
+::class sub subclass base inherit mix
+::method who class
+  return step('SUB', self, super)
+::class sub2 subclass base metaclass meta2 inherit mix
+::method who class
+  return step('SUB2', self, super)
+::class sub3 subclass base
+</code></pre>
+<pre><code class="language-output">SUB: SUB BASE META MIX
+SUB2: SUB2 META2 BASE META MIX
+SUB3: BASE META
+</code></pre>
+<div class="rule" id="r-class.methods.class-side.change"><a href="#r-class.methods.class-side.change">[class.methods.class-side.change]</a></div>
+<p>The class methods a class has follow the same changes as its order does. A
+class that inherits a mixin class at run time gets the class methods of the
+mixin class, and loses them with <code>uninherit</code>; the class methods of its
+subclasses change with it. The instance methods of a metaclass can be changed
+with <code>define</code> like those of any class, and a class object follows every change
+made to its metaclass or to a class of its order, as <a href="#r-class.methods.late">any other
+object</a> follows the changes to its class; a class made
+afterwards gets them too. <a href="#r-class.methods.deviation.110">Deviation 110</a> has
+the example of the changes to a metaclass.</p>
+<pre><code class="language-rexx">say 'start:' t(.c, 'who') t(.c, 'later') t(.d, 'later')
+.meta~define('later', 'return "meta later"')
+say 'new class:' t(.meta~new('e'), 'later')
+say 'before inherit:' t(.c, 'mixcls') t(.sub, 'mixcls')
+.c~inherit(.mix)
+say 'after inherit:' t(.c, 'mixcls') t(.sub, 'mixcls')
+.c~uninherit(.mix)
+say 'after uninherit:' t(.c, 'mixcls') t(.sub, 'mixcls')
+.sbase~define('later2', 'return "sbase later2"')
+.mxm~define('later3', 'return "mxm later3"')
+.meta~inherit(.my)
+say 'meta inherit:' t(.meta~new('g'), 'four')
+say 'new class:' t(.meta~new('f'), 'later2') t(.meta~new('h'), 'later3')
+exit
+t:
+  signal on syntax name e
+  return arg(1)~send(arg(2))
+e: return '-'
+::class sbase subclass class
+::class mxm mixinclass class
+::class my mixinclass class
+::method four
+  return 'four'
+::class meta subclass sbase inherit mxm
+::method who
+  return 'meta who'
+::class c metaclass meta
+::class d metaclass meta
+::class sub subclass c
+::class mix mixinclass object
+::method mixcls class
+  return 'mixcls'
+</code></pre>
+<pre><code class="language-output">start: meta who - -
+new class: meta later
+before inherit: - -
+after inherit: mixcls mixcls
+after uninherit: - -
+meta inherit: four
+new class: sbase later2 mxm later3
+</code></pre>
+<div class="rule" id="r-class.methods.class-side.roles"><a href="#r-class.methods.class-side.roles">[class.methods.class-side.roles]</a></div>
+<p>A class that stands in a class-side order both as a metaclass and as a class
+with class methods occupies one place, the last one, and stands there for its
+class methods only; its instance methods are not found there (<code>97.1</code> in the
+example). In the example, <code>T</code> is both the superclass and the metaclass of <code>W</code>.</p>
+<pre><code class="language-rexx">say .w~who
+signal on syntax name e
+say .w~instmeth
+e: say condition('o')~code
+::class t subclass class
+::method who
+  return 'instance method of t'
+::method instmeth
+  return 'instance only'
+::method who class
+  return 'class method of t'
+::class w subclass t metaclass t
+</code></pre>
+<pre><code class="language-output">class method of t
+97.1
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.methods.deviation.32"><a href="#r-class.methods.deviation.32">[class.methods.deviation.32]</a></div>
+<p>When the <code>new</code> that <code>enhanced</code> sends answers an object the class did not
+build, interrexx answers that object unchanged, as
+<a href="index.html#r-class.index.deviation.32">the Deviation 32 rule</a> states; ooRexx marks the
+object enhanced, which changes every object of its class. No method is added
+to the object, and the search for the messages to it is the search of its own
+class.</p>
+<pre><code class="language-rexx">m = .table~new; m['HI'] = 'return "hi"'
+q = .odd~enhanced(m)
+say q~class~id q~hasMethod('HI')
+::class odd
+::method new class
+  return 'abc'
+</code></pre>
+<pre><code class="language-output">String 0
+</code></pre>
+<div class="rule" id="r-class.methods.deviation.105"><a href="#r-class.methods.deviation.105">[class.methods.deviation.105]</a></div>
+<p>The access check of <a href="#r-class.methods.search.access">the access rule</a> for a
+message that START sends is made as for the same message sent by the code that
+starts it, as <a href="../directives/method.html#r-dir.method.deviation.105">the Deviation 105 rule</a> states;
+ooRexx raises <code>97.2</code> for every started private message and <code>97.1</code> for every
+started PACKAGE message.</p>
+<pre><code class="language-rexx">say .vault~new~open
+::class vault
+::method open unguarded
+  m = self~start('code')
+  return m~result
+::method code private
+  return 'private answer'
+</code></pre>
+<pre><code class="language-output">private answer
+</code></pre>
+<div class="rule" id="r-class.methods.deviation.110"><a href="#r-class.methods.deviation.110">[class.methods.deviation.110]</a></div>
+<p>This Deviation is provisional. An object sees every change made, at any time,
+to the methods of its class, of that class's superclasses and of their mixin
+classes, by <code>define</code>, <code>defineMethods</code>, <code>delete</code>, <code>inherit</code> and <code>uninherit</code>
+(<a href="#r-class.methods.late">the rule on changes</a>): also when the object has
+methods of its own from <code>setMethod</code> or <code>enhanced</code>, and when the class has been
+changed before. A class object follows its metaclass in the same way. ooRexx
+copies the method table into existing instances. A <code>define</code>, <code>defineMethods</code>
+or <code>delete</code> sent to a class, even one that changes nothing, does not reach the
+instances that exist already, and no later change reaches them after it: not
+to the class, not to its superclasses or their mixin classes, and not
+<code>inherit</code> or <code>uninherit</code>. An object given a method by <code>setMethod</code> sees no
+later change to its class or to the classes behind it. A class object sees no
+change to its metaclass or to the classes behind it that is made after the
+class itself (<a href="../deviations.html">Deviation 110</a>). The first example is the one
+of the rule on changes, with a <code>define</code> sent to <code>K</code> itself and an instance <code>B</code>
+that is made after it: <code>A</code>, <code>B</code> and <code>S</code> answer alike after every change. The
+second example gives an object an own method with <code>setMethod</code> and another with
+<code>enhanced</code>, and changes the class afterwards. The third follows a class object
+over changes to its metaclass.</p>
+<pre><code class="language-rexx">a = .k~new
+s = .sub~new
+call show 'start'
+.k~define('one', 'return "o1"')
+b = .k~new
+call show 'k define one'
+.base~define('two', 'return "t"')
+call show 'base define two'
+.mx~define('three', 'return "h"')
+call show 'mixin define three'
+.k~inherit(.my)
+call show 'k inherit my'
+.k~uninherit(.mx)
+call show 'k uninherit mx'
+.k~define('one', 'return "o2"')
+.base~define('two', 'return "T"')
+call show 'k define one again'
+exit
+show:
+  say arg(1)':'
+  do n over 'ONE TWO THREE FOUR'~makearray(' ')
+    say ' ' n f(a, n)'/'f(b, n)'/'f(s, n)
+  end
+  return
+f:
+  signal on syntax name e
+  return arg(1)~send(arg(2))
+e: return '-'
+::class base
+::class mx mixinclass object
+::class my mixinclass object
+::method four
+  return 'f'
+::class k subclass base inherit mx
+::class sub subclass k
+</code></pre>
+<pre><code class="language-output defect=#141">start:
+  ONE -/-/-
+  TWO -/-/-
+  THREE -/-/-
+  FOUR -/-/-
+k define one:
+  ONE o1/o1/o1
+  TWO -/-/-
+  THREE -/-/-
+  FOUR -/-/-
+base define two:
+  ONE o1/o1/o1
+  TWO t/t/t
+  THREE -/-/-
+  FOUR -/-/-
+mixin define three:
+  ONE o1/o1/o1
+  TWO t/t/t
+  THREE h/h/h
+  FOUR -/-/-
+k inherit my:
+  ONE o1/o1/o1
+  TWO t/t/t
+  THREE h/h/h
+  FOUR f/f/f
+k uninherit mx:
+  ONE o1/o1/o1
+  TWO t/t/t
+  THREE -/-/-
+  FOUR f/f/f
+k define one again:
+  ONE o2/o2/o2
+  TWO T/T/T
+  THREE -/-/-
+  FOUR f/f/f
+</code></pre>
+<pre><code class="language-rexx">a = .k~new
+a~give('OWN', 'return "own"')
+a~give('ONE', 'return "a one"')
+e = .k~enhanced(.directory~new~~put('return "en"', 'EN'))
+.k~define('ONE', 'return "o1"')
+.base~define('TWO', 'return "t"')
+.k~delete('ONE')
+.k~define('THREE', 'return "h"')
+say t(a, 'OWN') t(a, 'ONE') t(a, 'TWO') t(a, 'THREE')
+say t(e, 'EN') t(e, 'ONE') t(e, 'TWO') t(e, 'THREE')
+.k~define('ONE', 'return "k1"')
+a~drop('ONE')
+say t(a, 'ONE')
+exit
+t:
+  signal on syntax name x
+  return arg(1)~send(arg(2))
+x: return '-'
+::class base
+::class k subclass base
+::method give
+  self~setMethod(arg(1), arg(2))
+::method drop
+  self~unsetMethod(arg(1))
+</code></pre>
+<pre><code class="language-output defect=#141">own a one t h
+en - t h
+k1
+</code></pre>
+<pre><code class="language-rexx">say t(.c, 'who') t(.c, 'later') t(.d, 'later')
+.meta~define('later', 'return "meta later"')
+say t(.c, 'later') t(.d, 'later')
+.sbase~define('later2', 'return "sbase later2"')
+.mxm~define('later3', 'return "mxm later3"')
+say t(.c, 'later2') t(.d, 'later3')
+.meta~inherit(.my)
+say t(.c, 'four') t(.d, 'four')
+exit
+t:
+  signal on syntax name e
+  return arg(1)~send(arg(2))
+e: return '-'
+::class sbase subclass class
+::class mxm mixinclass class
+::class my mixinclass class
+::method four
+  return 'four'
+::class meta subclass sbase inherit mxm
+::method who
+  return 'meta who'
+::class c metaclass meta
+::class d metaclass meta
+</code></pre>
+<pre><code class="language-output defect=#141">meta who - -
+meta later meta later
+sbase later2 mxm later3
+four four
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/object.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/object.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

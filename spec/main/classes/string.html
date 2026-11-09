@@ -1,0 +1,1839 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>String - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html" class="active"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="string"><a class="header" href="#string">String</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; String Class; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; alnum (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; alpha (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; blank (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; cntrl (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; cr (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; digit (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; graph (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; lower (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; nl (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; null (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; print (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; punct (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; space (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; tab (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; upper (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; xdigit (Class Method); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; Arithmetic Methods; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; Comparison Methods; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; Concatenation Methods; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; Logical Methods; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; []; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; ? (inline if); Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; abbrev; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; abs; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; append; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; b2x; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; bitAnd; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; bitOr; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; bitXor; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; c2d; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; c2x; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessAbbrev; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessChangeStr; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessCompare; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessCompareTo; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessContains; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessContainsWord; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessCountStr; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessEndsWith; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessEquals; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessLastPos; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessMatch; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessMatchChar; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessPos; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessStartsWith; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; caselessWordPos; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; ceiling; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; center/centre; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; changeStr; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; compare; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; compareTo; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; contains; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; containsWord; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; copies; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; countStr; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; d2c; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; d2x; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; dataType; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; decodeBase64; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; delStr; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; delWord; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; encodeBase64; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; endsWith; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; equals; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; floor; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; format; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; hashCode; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; insert; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; lastPos; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; left; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; length; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; lower; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; makeArray; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; makeString; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; match; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; matchChar; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; max; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; min; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; modulo; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; overlay; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; pos; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; replaceAt; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; reverse; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; right; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; round; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; sign; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; space; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; startsWith; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; strip; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; subChar; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; substr; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; subWord; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; subWords; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; translate; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; trunc; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; upper; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; verify; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; word; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; wordIndex; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; wordLength; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; wordPos; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; words; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; x2b; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; x2c; Builtin Classes &gt; Fundamental Classes &gt; String Class &gt; x2d</p>
+<p class="deviations">Deviations: D4, D36, D109</p>
+<p><code>String</code> is the class of every string of characters: a literal, a number, and
+the result of any operation that makes text. A program never needs to make
+one with <code>new</code>, but it can, and it can subclass <code>String</code> to give strings
+more behavior. <code>String</code> is a subclass of <code>Object</code> and inherits
+<code>Comparable</code>, so a string also understands the methods of
+<a href="object.html">Object</a>.</p>
+<p>Most methods of <code>String</code> are the methods that a built-in function runs, such
+as <code>left</code> and <code>pos</code>. The behavior of each belongs to the page of its function,
+and <a href="#r-class.string.builtins">one rule</a> lists them, with what changes when one
+is sent as a message. The operator methods, such as <code>+</code> and <code>||</code>, belong to
+the expressions chapter, and <a href="#r-class.string.operators">one rule</a> lists them
+too. The class methods that name sets of characters and make strings, and the
+methods that only the class has, such as <code>caselessEquals</code>, <code>makeArray</code> and
+<code>[]</code>, are specified in full below. Examples that show an error use a small
+routine <code>try</code>, as the builtin pages do.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.string.value"><a href="#r-class.string.value">[class.string.value]</a></div>
+<p>Every string is an instance of <code>String</code>, whether it is a literal, a number,
+the result of a calculation or of a comparison, or the answer of a method:
+<code>class</code> answers <code>String</code> for all of them, and there is no separate class for
+numbers. A string is its own string value, so <code>string</code> and <code>makeString</code> answer
+a string with the same characters.</p>
+<pre><code class="language-rexx">say 'abc'~class~id 12~class~id (3 + 4)~class~id (1 = 1)~class~id
+say ('a' || 'b')~class~id 'a'~c2x~class~id .string~new('x')~class~id
+say 12~isA(.string) 'abc'~isInstanceOf(.string) 12~string 12~makeString
+</code></pre>
+<pre><code class="language-output">String String String String
+String String String
+1 1 12 12
+</code></pre>
+<div class="rule" id="r-class.string.hierarchy"><a href="#r-class.string.hierarchy">[class.string.hierarchy]</a></div>
+<p>The superclass of <code>String</code> is <code>Object</code>, and its list of superclasses ends with
+the mixin class <code>Comparable</code>, as <a href="index.html#r-class.index.hierarchy">the hierarchy
+rule</a> lists. A string is therefore an instance of
+<code>Comparable</code> too. <code>String</code> is a class of the library, which accepts no change
+to its methods or superclasses (<a href="methods.html#r-class.methods.library">the library
+rule</a>).</p>
+<pre><code class="language-rexx">say .string~superclasses~items .string~superclass~id
+say .string~superclasses~at(2)~id
+say 'a'~isA(.comparable) 'a'~isA(.object) 12~isA(.comparable)
+signal on syntax name e
+.string~inherit(.comparable)
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">2 Object
+Comparable
+1 1 1
+98.985
+</code></pre>
+<div class="rule" id="r-class.string.subclass"><a href="#r-class.string.subclass">[class.string.subclass]</a></div>
+<p>A program makes a subclass of <code>String</code> with
+<a href="../directives/class.html#r-dir.class.subclass">the directive</a> or with the <code>subclass</code> method of
+<code>Class</code>. An instance is made with <a href="#r-class.string.new"><code>new</code></a>, takes the
+characters given there, and has the class of the receiver of <code>new</code>. It is a
+string wherever a string is wanted, and the class-side methods of <code>String</code> are
+understood by the subclass. A String method sent to the instance works on the
+characters of the instance and answers a new string of class <code>String</code>, not an
+instance of the subclass, and <code>copy</code>, which <code>Object</code> supplies, answers another
+instance of the subclass. Wherever a string, a number, a logical value or a
+whole number is read from the instance, as the receiver or as an argument, its
+own characters are read and neither <code>MAKESTRING</code> nor <code>STRING</code> is sent to it
+(<a href="#r-class.string.deviation.109">Deviation 109</a>). The instance may have
+attributes and methods of its own, and an object name
+(<a href="#r-class.string.deviation.36">Deviation 36</a>).</p>
+<pre><code class="language-rexx">x = .shout~new('abc')
+say x~class~id x~length x~left(2) x~left(2)~class~id x~shout
+say .shout~nl~c2x (x || 'd')~class~id (x = 'abc') x~copy~class~id
+::class shout subclass string
+::method shout
+  return self~upper'!'
+</code></pre>
+<pre><code class="language-output">SHOUT 3 ab String ABC!
+0A String 1 SHOUT
+</code></pre>
+<div class="rule" id="r-class.string.args"><a href="#r-class.string.args">[class.string.args]</a></div>
+<p>A position, length or count argument of a method of <code>String</code> is read as
+<a href="../conventions.html#r-conv.whole.form">a whole-number argument</a> of a builtin function is, with
+the value that <a href="../conventions.html#r-conv.whole.digits">the digits rule</a> gives and
+<a href="../numbers/limits.html#r-num.limits.whole">its limit</a>. This holds for the methods that only <code>String</code>
+has as well as for the builtin ones. An instance of a subclass of <code>String</code>
+given as such an argument is read by its own characters
+(<a href="#r-class.string.deviation.109">Deviation 109</a>). A failure of either raises
+the range code of the argument (<code>SYNTAX 93.924</code>, <code>93.923</code> or <code>93.906</code>), not
+40.12.</p>
+<pre><code class="language-rexx">say 'abc'~"[]"('1.0000000000000000001') 'abc'~subChar(' +2 ')
+say '['||'abc'~"[]"(1000)']'
+numeric digits 3
+say '['||'abcdef'~"[]"(1000)']' 'abcdef'~"[]"('2e0')
+signal on syntax name a
+say 'abc'~"[]"(1000000000000000000)
+a: say condition('o')~code
+signal on syntax name b
+say 'abc'~"[]"(1, 1000000000000000000)
+b: say condition('o')~code
+signal on syntax name c
+say 'abc'~match(1.5, 'a')
+c: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">a b
+[]
+[] b
+93.924
+93.923
+93.924
+</code></pre>
+<h2 id="class-methods"><a class="header" href="#class-methods">Class methods</a></h2>
+<div class="rule" id="r-class.string.new"><a href="#r-class.string.new">[class.string.new]</a></div>
+<p><code>new</code> makes a string. Its first argument is required, and gives the
+characters: the string value of the argument, which is the argument itself for
+a string, a number and an instance of a subclass of <code>String</code> included, and its
+<code>MAKESTRING</code> answer for another object. For another object <code>new</code> uses
+<code>MAKESTRING</code> only, as the methods that take a string argument do
+(<a href="index.html#r-class.index.string">the string-value rule</a>). Without an argument <code>new</code>
+raises <code>SYNTAX 93.903</code>, and with an argument that has no <code>MAKESTRING</code> method,
+<code>.nil</code> and an object with only a <code>string</code> method included, <code>SYNTAX 88.909</code>.
+The object that <code>new</code> makes has the class of the receiver, and the characters
+are in place before <code>init</code> runs, so an <code>init</code> of a subclass can use them.
+<code>init</code> is sent the arguments after the first, as
+<a href="index.html#r-class.index.new">the new rule</a> says, so a second argument raises
+<code>SYNTAX 93.902</code> for a class whose <code>init</code> is that of <code>Object</code>.</p>
+<pre><code class="language-rexx">say .string~new('abc') .string~new(12)~class~id .string~new('')~length
+call try ".string~new"
+call try ".string~new(.nil)"
+call try ".string~new(.object~new)"
+call try ".string~new(.st~new)"
+call try ".string~new('a', 'b')"
+call try ".string~new('a', )"
+x = .si~new('abc', 1, 2)
+say x
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class si subclass string
+::method init
+  say 'init' self~length self 'with' arg() 'arguments'
+::class st
+::method string
+  return 'q'
+</code></pre>
+<pre><code class="language-output">abc String 0
+.string~new =&gt; 93.903
+.string~new(.nil) =&gt; 88.909
+.string~new(.object~new) =&gt; 88.909
+.string~new(.st~new) =&gt; 88.909
+.string~new('a', 'b') =&gt; 93.902
+.string~new('a', ) =&gt; a
+init 3 abc with 2 arguments
+abc
+</code></pre>
+<div class="rule" id="r-class.string.new.makestring"><a href="#r-class.string.new.makestring">[class.string.new.makestring]</a></div>
+<p>An argument whose <code>MAKESTRING</code> answers an instance of a subclass of <code>String</code>
+gives that instance's characters to <a href="#r-class.string.new"><code>new</code></a>, as it does to
+the other methods that take a string.</p>
+<pre><code class="language-rexx">say .string~new(.mk~new)
+say .string~new(.mk~new)~class~id
+::class strsub subclass string
+::class mk
+::method makestring
+  return .strsub~new('ss')
+</code></pre>
+<pre><code class="language-output defect=#89">ss
+String
+</code></pre>
+<div class="rule" id="r-class.string.constants"><a href="#r-class.string.constants">[class.string.constants]</a></div>
+<p>The class-side methods <code>alnum</code>, <code>alpha</code>, <code>blank</code>, <code>cntrl</code>, <code>cr</code>, <code>digit</code>,
+<code>graph</code>, <code>lower</code>, <code>nl</code>, <code>null</code>, <code>print</code>, <code>punct</code>, <code>space</code>, <code>tab</code>, <code>upper</code> and
+<code>xdigit</code> each answer a string of characters, a character class. None takes an
+argument (<code>SYNTAX 93.902</code>), and an instance of <code>String</code> does not understand
+them (<code>SYNTAX 97.1</code>), though a subclass of <code>String</code> understands them as the
+class does. Only ASCII characters are in any class, and they are written here
+by code, in ascending order unless the list says otherwise. <code>alnum</code> is the
+digits <code>0</code> to <code>9</code>, then <code>A</code> to <code>Z</code>, then <code>a</code> to <code>z</code>; <code>alpha</code> is <code>A</code> to <code>Z</code>,
+then <code>a</code> to <code>z</code>; <code>blank</code> is the tab <code>'09'x</code> and the blank <code>'20'x</code>; <code>cntrl</code> is
+<code>'00'x</code> to <code>'1F'x</code> and <code>'7F'x</code>; <code>cr</code> is <code>'0D'x</code>, <code>nl</code> is <code>'0A'x</code>, <code>null</code> is
+<code>'00'x</code> and <code>tab</code> is <code>'09'x</code>; <code>digit</code> is <code>0</code> to <code>9</code>, and <code>xdigit</code> is <code>0</code> to
+<code>9</code>, <code>A</code> to <code>F</code>, then <code>a</code> to <code>f</code>; <code>graph</code> is <code>'21'x</code> to <code>'7E'x</code> and <code>print</code> is
+<code>'20'x</code> to <code>'7E'x</code>; <code>lower</code> is <code>a</code> to <code>z</code> and <code>upper</code> is <code>A</code> to <code>Z</code>; <code>punct</code>
+is the characters of <code>graph</code> that are not in <code>alnum</code>; and <code>space</code> is <code>'09'x</code>
+to <code>'0D'x</code> and <code>'20'x</code>. The instance methods <code>lower</code> and <code>upper</code> are different
+methods that <a href="../builtins/lower.html#r-bif.lower.method">a builtin</a> runs.</p>
+<pre><code class="language-rexx">say .string~alnum
+say .string~alpha
+say .string~digit .string~xdigit
+say .string~lower .string~upper
+say .string~punct
+say .string~cntrl~length .string~cntrl~left(2)~c2x .string~cntrl~right(1)~c2x
+say .string~graph~length .string~print~length .string~print~left(2)~c2x
+say .string~blank~c2x .string~space~c2x .string~tab~c2x
+say .string~cr~c2x .string~nl~c2x .string~null~c2x
+say .shout~tab~c2x 'ABC'~lower
+call try ".string~nl(1)"
+call try "'abc'~nl"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class shout subclass string
+</code></pre>
+<pre><code class="language-output">0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+0123456789 0123456789ABCDEFabcdef
+abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ
+!"#$%&amp;'()*+,-./:;&lt;=&gt;?@[\]^_`{|}~
+33 0001 7F
+94 95 2021
+0920 090A0B0C0D20 09
+0D 0A 00
+09 abc
+.string~nl(1) =&gt; 93.902
+'abc'~nl =&gt; 97.1
+</code></pre>
+<h2 id="methods"><a class="header" href="#methods">Methods</a></h2>
+<h3 id="making-other-objects-and-numbers-of-a-string"><a class="header" href="#making-other-objects-and-numbers-of-a-string">Making other objects and numbers of a string</a></h3>
+<div class="rule" id="r-class.string.makestring"><a href="#r-class.string.makestring">[class.string.makestring]</a></div>
+<p><code>makeString</code> answers a string with the characters of the receiver, and takes
+no argument (<code>SYNTAX 93.902</code>). For an instance of a subclass the answer has
+the class <code>String</code>. Whether the answer for a string of class <code>String</code> is the
+receiver itself or another string is not specified (<a href="#r-class.string.deviation.4">Deviation
+4</a>).</p>
+<pre><code class="language-rexx">x = .shout~new('abc')
+y = x~makeString
+say y y~class~id x~class~id 12~makeString '['||''~makeString||']'
+call try "'abc'~makeString(1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class shout subclass string
+</code></pre>
+<pre><code class="language-output">abc String SHOUT 12 []
+'abc'~makeString(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.makearray"><a href="#r-class.string.makearray">[class.string.makearray]</a></div>
+<p><code>makeArray</code> answers a new array of strings, the parts of the receiver, and
+takes at most one argument, the separator, whose string value is taken like
+that of an argument of <a href="#r-class.string.new"><code>new</code></a> (<code>SYNTAX 88.909</code> for an
+object with none). Without a separator, or when it is omitted, the parts are
+the lines: the text is cut at each line feed, <code>'0A'x</code>, and a carriage return
+<code>'0D'x</code> right before a line feed is not part of the line. A carriage return
+alone is part of its line. With a separator the text is cut at each occurrence
+of the whole separator, found from the left and without overlap, and the case
+of letters matters; the null string as the separator makes each character a
+part. The text before the first cut is the first part, so a text that starts
+with a separator has an empty first part, and a text that ends with one has no
+empty part after it. A receiver that is the null string answers an array with
+no part. A subclass instance and a plain string answer the same.</p>
+<pre><code class="language-rexx">a = ('one' || '0A'x || 'two' || '0D0A'x || 'three' || '0D'x)~makeArray
+say a~items a~at(1) a~at(2) a~at(3)~c2x
+b = ('a' || '0A'x || '0A'x || 'b' || '0A'x)~makeArray
+say b~items '['||b~at(2)||']' b~at(3)
+c = 'abXYcdXYXYef'~makeArray('XY')
+say c~items c~at(1) c~at(2) '['||c~at(3)||']' c~at(4)
+d = 'XYab'~makeArray('XY')
+say d~items '['||d~at(1)||']' d~at(2)
+say 'a,b;c'~makeArray(',;')~items 'abc'~makeArray('')~items
+say 'aaa'~makeArray('aa')~items 'AbA'~makeArray('a')~items
+say ''~makeArray~items ''~makeArray('x')~items
+say .shout~new('a b')~makeArray~items
+call try "'abc'~makeArray(.nil)"
+call try "'abc'~makeArray(',', 1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class shout subclass string
+</code></pre>
+<pre><code class="language-output">3 one two 74687265650D
+3 [] b
+4 ab cd [] ef
+2 [] ab
+1 3
+2 1
+0 0
+1
+'abc'~makeArray(.nil) =&gt; 88.909
+'abc'~makeArray(',', 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.hashcode"><a href="#r-class.string.hashcode">[class.string.hashcode]</a></div>
+<p><code>hashCode</code> answers a string, the hash code of the receiver's characters, and
+takes no argument (<code>SYNTAX 93.902</code>). Strings with the same characters have the
+same hash code, including an instance of a subclass and a plain string, and
+the collection classes that hash their indexes use it with <code>==</code>, as <a href="object.html#r-class.object.hashcode">the
+object rule</a> says. Strings with different characters
+may have equal codes. The characters of the answer are not specified.</p>
+<pre><code class="language-rexx">a = 'ab' || 'c'
+say (a~hashCode == 'abc'~hashCode) (a~hashCode == 'abd'~hashCode)
+say (.shout~new('abc')~hashCode == 'abc'~hashCode)
+say ('ABC'~hashCode == a~hashCode)
+say (12~hashCode == '12'~hashCode) ('1'~hashCode == '1.0'~hashCode)
+signal on syntax name e
+say a~hashCode(1)
+e: say condition('o')~code
+::class shout subclass string
+</code></pre>
+<pre><code class="language-output">1 0
+1
+0
+1 0
+93.902
+</code></pre>
+<h3 id="joining-and-picking"><a class="header" href="#joining-and-picking">Joining and picking</a></h3>
+<div class="rule" id="r-class.string.append"><a href="#r-class.string.append">[class.string.append]</a></div>
+<p><code>append</code> answers a new string, the characters of the receiver followed by the
+string value of its argument. The argument is required (<code>SYNTAX 93.903</code>) and a
+second raises <code>93.902</code>. The string value is found as the joining operators
+find it, so an object with no <code>MAKESTRING</code> method gives its <code>string</code> answer,
+and <code>.nil</code> gives <code>The NIL object</code>: no error is raised for an argument that has
+no <code>MAKESTRING</code> method. The answer has the class <code>String</code> even for an instance
+of a subclass.</p>
+<pre><code class="language-rexx">say 'abc'~append('def') 'abc'~append(12) '['||'abc'~append('')']'
+say 'abc'~append(.nil) '|' 'abc'~append(.object~new) '|' 'x'~append(.st~new)
+say .shout~new('ab')~append('c')~class~id
+call try "'abc'~append"
+call try "'abc'~append('d', 'e')"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class shout subclass string
+::class st
+::method string
+  return 'told'
+</code></pre>
+<pre><code class="language-output">abcdef abc12 [abc]
+abcThe NIL object | abcan Object | xtold
+String
+'abc'~append =&gt; 93.903
+'abc'~append('d', 'e') =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.brackets"><a href="#r-class.string.brackets">[class.string.brackets]</a></div>
+<p>The method <code>[]</code>, which the subscript syntax <code>string[n]</code> and <code>string[n, len]</code>
+send (<a href="../expressions/messages.html#r-expr.messages.subscript">the subscript rule</a>), answers part of the
+receiver. With one argument <code>n</code> it answers the character at position <code>n</code>, and
+with two it answers the <code>len</code> characters from position <code>n</code>. The part is cut at
+the end of the receiver and is not padded, so a position past the end answers
+the null string. <code>n</code> must be a positive whole number (<code>SYNTAX 93.924</code>) and
+<code>len</code> a non-negative whole number (<code>93.923</code>); a value that is not a number at
+all raises the same error as one out of range, and the arguments are checked
+from left to right. An omitted <code>n</code> raises <code>93.903</code>, an omitted <code>len</code> is as no
+<code>len</code>, and a third argument raises <code>93.902</code>.</p>
+<pre><code class="language-rexx">say 'abcdef'[2] 'abcdef'[2, 3] '['||'abcdef'[7]']' 'abcdef'[5, 9] 12345[2, 3]
+say '['||'abcdef'[2, 0]']' 'abcdef'~"[]"(1, ) 'abcdef'[2.0, '2']
+call try "'abc'[0]"
+call try "'abc'[0, -1]"
+call try "'abc'[1, -1]"
+call try "'abc'['x']"
+call try "'abc'[1, 'x']"
+call try "'abc'[1000000000000000000]"
+call try "'abc'~'[]'"
+call try "'abc'~'[]'(, 1)"
+call try "'abc'~'[]'(1, 2, 3)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">b bcd [] ef 234
+[] a bc
+'abc'[0] =&gt; 93.924
+'abc'[0, -1] =&gt; 93.924
+'abc'[1, -1] =&gt; 93.923
+'abc'['x'] =&gt; 93.924
+'abc'[1, 'x'] =&gt; 93.923
+'abc'[1000000000000000000] =&gt; 93.924
+'abc'~'[]' =&gt; 93.903
+'abc'~'[]'(, 1) =&gt; 93.903
+'abc'~'[]'(1, 2, 3) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.iif"><a href="#r-class.string.iif">[class.string.iif]</a></div>
+<p><code>?</code>, the inline if, answers its first argument when the receiver is <code>1</code> and
+its second when the receiver is <code>0</code>; the receiver must be a <a href="../expressions/logical.html#r-expr.logical.value">logical
+value</a> (<code>SYNTAX 34.901</code>). Both arguments are required,
+and a missing or omitted one raises <code>SYNTAX 88.901</code> whichever the receiver is;
+a third raises <code>93.902</code>. The argument not chosen is not looked at, so it may
+be any object. The answer is the argument itself. When the receiver is an
+instance of a subclass of <code>String</code>, <code>?</code> tests its own characters and sends
+it nothing (<a href="#r-class.string.deviation.109">Deviation 109</a>).</p>
+<pre><code class="language-rexx">say (1 = 1)~?('yes', 'no') (1 = 2)~?('yes', 'no') '1'~"?"('a', 'b')
+say '0'~?(.nil, 'second')~class~id (1 = 1)~?('first', .nil)
+call try "'1'~?('only')"
+call try "'0'~?(, 'b')"
+call try "'1'~?('a', 'b', 'c')"
+call try "'2'~?('a', 'b')"
+call try "'1'~?"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">yes no a
+String first
+'1'~?('only') =&gt; 88.901
+'0'~?(, 'b') =&gt; 88.901
+'1'~?('a', 'b', 'c') =&gt; 93.902
+'2'~?('a', 'b') =&gt; 34.901
+'1'~? =&gt; 88.901
+</code></pre>
+<h3 id="equality-and-order"><a class="header" href="#equality-and-order">Equality and order</a></h3>
+<div class="rule" id="r-class.string.equals"><a href="#r-class.string.equals">[class.string.equals]</a></div>
+<p><code>equals</code> answers 1 when the argument has exactly the characters of the
+receiver, and 0 otherwise. It is a strict comparison of text: case matters, a
+trailing blank matters, and numbers are not compared as numbers, so <code>1</code> and
+<code>1.0</code> are not equal. The argument is required (<code>SYNTAX 93.903</code>) and a second
+raises <code>93.902</code>. The argument's string value is found as the joining operators
+find it, so an object with no <code>MAKESTRING</code> method is compared by its <code>string</code>
+text and <code>.nil</code> as the text <code>The NIL object</code>; no argument is refused.</p>
+<pre><code class="language-rexx">say 'abc'~equals('abc') 'abc'~equals('ABC') 'abc'~equals('abc ')
+say '1'~equals('1.0') 12~equals('12') 'abc'~equals(.nil)
+say 'an Object'~equals(.object~new)
+say .shout~new('abc')~equals('abc') 'abc'~equals(.shout~new('abc'))
+call try "'abc'~equals"
+call try "'abc'~equals('a', 'b')"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class shout subclass string
+</code></pre>
+<pre><code class="language-output">1 0 0
+0 1 0
+1
+1 1
+'abc'~equals =&gt; 93.903
+'abc'~equals('a', 'b') =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.caselessequals"><a href="#r-class.string.caselessequals">[class.string.caselessequals]</a></div>
+<p><code>caselessEquals</code> is <a href="#r-class.string.equals"><code>equals</code></a> with upper and lower
+case letters taken as equal. Only the letters <code>A</code> to <code>Z</code> have a lower-case
+form; a character of another script is compared as it is.</p>
+<pre><code class="language-rexx">say 'abc'~caselessEquals('ABC') 'abc'~caselessEquals('ABD')
+say 'abc'~caselessEquals('abc ') 'a1'~caselessEquals('A1')
+say 'é'~caselessEquals('É') 'abc'~caselessEquals(.nil)
+signal on syntax name e
+say 'abc'~caselessEquals
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">1 0
+0 1
+0 0
+93.903
+</code></pre>
+<div class="rule" id="r-class.string.compareto"><a href="#r-class.string.compareto">[class.string.compareto]</a></div>
+<p><code>compareTo</code> compares the receiver with its first argument and answers <code>0</code> when
+they are equal, <code>1</code> when the receiver is the greater and <code>-1</code> when it is the
+lesser. The comparison is of characters by their codes, unsigned, so case
+matters and <code>'FF'x</code> is greater than <code>'00'x</code>, and a string that is a leading
+part of another is the lesser, whatever follows; numbers are not compared as
+numbers. The second argument <code>start</code> is the position, 1 by default, from which
+both strings are compared, and the third <code>length</code> is the number of characters
+compared of each, by default all that are left. A part that runs past the end
+of a string is cut there. The arguments are checked from left to right: the
+first, <code>other</code>, is required (<code>SYNTAX 93.903</code>) and has a string value as the
+conversion rule says (<code>88.909</code>, as for <code>.nil</code>; its <code>MAKESTRING</code> only is used,
+and then only for an object that is no string); <code>start</code> must be a positive
+whole number (<code>93.924</code>) and <code>length</code> a non-negative whole number (<code>93.923</code>); a
+fourth argument raises <code>93.902</code>.</p>
+<pre><code class="language-rexx">say 'abc'~compareTo('abc') 'b'~compareTo('a') 'a'~compareTo('b')
+say 'abc'~compareTo('aBc') 'abc'~compareTo('abcd') 'abcd'~compareTo('abc')
+say '10'~compareTo('9') ('FF'x)~compareTo('00'x) ''~compareTo('')
+say '000abc000'~compareTo('111abc111', 4, 3) 'abc'~compareTo('abd', 1, 2)
+say 'abc'~compareTo('abd', 3) 'abc'~compareTo('abd', 4)
+say 'abc'~compareTo('abd', 1, 0)
+call try "'abc'~compareTo"
+call try "'abc'~compareTo(.nil, 0, -1)"
+call try "'abc'~compareTo('a', 0, -1)"
+call try "'abc'~compareTo('a', 1, -1)"
+call try "'abc'~compareTo('a', 1, 1, 1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0 1 -1
+1 -1 1
+-1 1 0
+0 0
+-1 0
+0
+'abc'~compareTo =&gt; 93.903
+'abc'~compareTo(.nil, 0, -1) =&gt; 88.909
+'abc'~compareTo('a', 0, -1) =&gt; 93.924
+'abc'~compareTo('a', 1, -1) =&gt; 93.923
+'abc'~compareTo('a', 1, 1, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.caselesscompareto"><a href="#r-class.string.caselesscompareto">[class.string.caselesscompareto]</a></div>
+<p><code>caselessCompareTo</code> is <a href="#r-class.string.compareto"><code>compareTo</code></a> with upper and
+lower case letters taken as equal. A lower-case letter is compared as its
+upper-case form, so the case of a letter never decides the answer. A
+character that lies between <code>Z</code> and <code>a</code> in code order, such as <code>[</code>, is the
+greater of any letter here, though it is the lesser of a lower-case letter
+in <code>compareTo</code>.</p>
+<pre><code class="language-rexx">say 'abc'~caselessCompareTo('ABC') 'abd'~caselessCompareTo('ABC')
+say 'abb'~caselessCompareTo('ABC')
+say '000abc000'~caselessCompareTo('111ABC111', 4, 3)
+say '['~caselessCompareTo('a') '['~compareTo('a')
+signal on syntax name e
+say 'abc'~caselessCompareTo('ABD', 0)
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">0 1
+-1
+0
+1 -1
+93.924
+</code></pre>
+<div class="rule" id="r-class.string.caselesscompare"><a href="#r-class.string.caselesscompare">[class.string.caselesscompare]</a></div>
+<p><code>caselessCompare</code> is <a href="../builtins/compare.html#r-bif.compare.method"><code>compare</code></a> with upper and lower
+case letters taken as equal: it answers 0 when the strings are the same apart
+from case, and otherwise the position of the first character that differs
+once case is ignored. The shorter string is padded with the <code>pad</code> argument
+before they are compared, a blank by default, and the pad is compared without
+regard to case too. The pad must be a single character (<code>SYNTAX 93.922</code>); the
+other is required (<code>93.903</code>), and a third argument raises <code>93.902</code>.</p>
+<pre><code class="language-rexx">say 'Hello'~caselessCompare('hELLO') 'Hello'~caselessCompare('hELLo!')
+say 'Hello'~caselessCompare('hELL', 'O') 'Hello'~caselessCompare('hELL', 'x')
+say 'Hello'~caselessCompare('hELLx', 'o') 'Hello'~compare('hello')
+call try "'Hello'~caselessCompare"
+call try "'Hello'~caselessCompare('a', '**')"
+call try "'Hello'~caselessCompare('a', '')"
+call try "'Hello'~caselessCompare('a', 'b', 'c')"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0 6
+0 5
+5 1
+'Hello'~caselessCompare =&gt; 93.903
+'Hello'~caselessCompare('a', '**') =&gt; 93.922
+'Hello'~caselessCompare('a', '') =&gt; 93.922
+'Hello'~caselessCompare('a', 'b', 'c') =&gt; 93.902
+</code></pre>
+<h3 id="containing-and-matching"><a class="header" href="#containing-and-matching">Containing and matching</a></h3>
+<div class="rule" id="r-class.string.contains"><a href="#r-class.string.contains">[class.string.contains]</a></div>
+<p><code>contains</code> answers 1 when its first argument, the needle, occurs in the
+receiver, and 0 otherwise; a needle that is the null string is never found.
+The search covers the whole receiver unless <code>start</code>, a position, and <code>length</code>,
+a number of characters from it, limit it, and then the needle must lie within
+that part. A <code>start</code> or a <code>length</code> that reaches past the end is cut there. The
+needle is required (<code>SYNTAX 93.903</code>) and is a string or else uses its
+<code>MAKESTRING</code> answer (<code>88.909</code> for <code>.nil</code>), <code>start</code> must be a positive whole
+number (<code>93.924</code>) and <code>length</code> a non-negative whole number (<code>93.923</code>); the
+arguments are checked from left to right, and a fourth argument raises
+<code>93.902</code>. Case matters.</p>
+<pre><code class="language-rexx">t = '-abcdef-'
+say t~contains('ef') t~contains('-', 2) t~contains('-', 2, 6)
+say t~contains('-', 2, 7)
+say 'abc'~contains('c', 3, 0) 'abc'~contains('c', 9)
+say 'abc'~contains('c', 3, 99)
+say 'abc'~contains('') 'abc'~contains('B') '12345'~contains(23)
+call try "'abc'~contains"
+call try "'abc'~contains('b', 0)"
+call try "'abc'~contains('b', 1, -1)"
+call try "'abc'~contains(.nil, 0, -1)"
+call try "'abc'~contains('b', 1, 1, 1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 1 0
+1
+0 0
+1
+0 0 1
+'abc'~contains =&gt; 93.903
+'abc'~contains('b', 0) =&gt; 93.924
+'abc'~contains('b', 1, -1) =&gt; 93.923
+'abc'~contains(.nil, 0, -1) =&gt; 88.909
+'abc'~contains('b', 1, 1, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.caselesscontains"><a href="#r-class.string.caselesscontains">[class.string.caselesscontains]</a></div>
+<p><code>caselessContains</code> is <a href="#r-class.string.contains"><code>contains</code></a> with upper and
+lower case letters taken as equal.</p>
+<pre><code class="language-rexx">say 'abc'~caselessContains('B') 'abc'~caselessContains('B', 3)
+say 'abc'~caselessContains('') 'ABC'~caselessContains('bc', 2, 2)
+signal on syntax name e
+say 'abc'~caselessContains
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">1 0
+0 1
+93.903
+</code></pre>
+<div class="rule" id="r-class.string.startswith"><a href="#r-class.string.startswith">[class.string.startswith]</a></div>
+<p><code>startsWith</code> answers 1 when the receiver begins with its argument, and 0
+otherwise; the null string is never a prefix, not even of the null string. The
+argument is required, and without it <code>startsWith</code> raises <code>SYNTAX 88.901</code>; a
+second raises <code>93.902</code>. The argument is a string or else uses its <code>MAKESTRING</code>
+answer (<code>88.909</code> for <code>.nil</code>). Case matters.</p>
+<pre><code class="language-rexx">say 'abc'~startsWith('ab') 'abc'~startsWith('AB') 'abc'~startsWith('abc')
+say 'abc'~startsWith('abcd') 'abc'~startsWith('') ''~startsWith('')
+say '12abc'~startsWith(12) 'abc'~startsWith(12)
+call try "'abc'~startsWith"
+call try "'abc'~startsWith(.nil)"
+call try "'abc'~startsWith('a', 'b')"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 0 1
+0 0 0
+1 0
+'abc'~startsWith =&gt; 88.901
+'abc'~startsWith(.nil) =&gt; 88.909
+'abc'~startsWith('a', 'b') =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.caselessstartswith"><a href="#r-class.string.caselessstartswith">[class.string.caselessstartswith]</a></div>
+<p><code>caselessStartsWith</code> is <a href="#r-class.string.startswith"><code>startsWith</code></a> with upper
+and lower case letters taken as equal, with the same arguments and errors.</p>
+<pre><code class="language-rexx">say 'abc'~caselessStartsWith('AB') 'abc'~caselessStartsWith('')
+signal on syntax name e
+say 'abc'~caselessStartsWith
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">1 0
+88.901
+</code></pre>
+<div class="rule" id="r-class.string.endswith"><a href="#r-class.string.endswith">[class.string.endswith]</a></div>
+<p><code>endsWith</code> answers 1 when the receiver ends with its argument, and 0
+otherwise; the null string is never a suffix. It takes its argument and raises
+its errors as <a href="#r-class.string.startswith"><code>startsWith</code></a> does. Case matters.</p>
+<pre><code class="language-rexx">say 'abc'~endsWith('bc') 'abc'~endsWith('BC') 'abc'~endsWith('abc')
+say 'abc'~endsWith('xabc') 'abc'~endsWith('') 'a12'~endsWith(12)
+call try "'abc'~endsWith"
+call try "'abc'~endsWith(.nil)"
+call try "'abc'~endsWith('a', 'b')"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 0 1
+0 0 1
+'abc'~endsWith =&gt; 88.901
+'abc'~endsWith(.nil) =&gt; 88.909
+'abc'~endsWith('a', 'b') =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.caselessendswith"><a href="#r-class.string.caselessendswith">[class.string.caselessendswith]</a></div>
+<p><code>caselessEndsWith</code> is <a href="#r-class.string.endswith"><code>endsWith</code></a> with upper and
+lower case letters taken as equal, with the same arguments and errors.</p>
+<pre><code class="language-rexx">say 'abc'~caselessEndsWith('BC') 'abc'~caselessEndsWith('')
+signal on syntax name e
+say 'abc'~caselessEndsWith
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">1 0
+88.901
+</code></pre>
+<div class="rule" id="r-class.string.containsword"><a href="#r-class.string.containsword">[class.string.containsword]</a></div>
+<p><code>containsWord</code> answers 1 when the words of its first argument, the phrase,
+occur in the receiver as whole words in the same order, and 0 otherwise. The
+phrase and the receiver are cut into <a href="../builtins/index.html#r-bif.index.words.split">words</a> in the
+same way, so the blanks between the words of the phrase need not equal those
+of the receiver. A phrase with no words is never found. The search begins at
+the word <code>start</code>, 1 by default, which is a
+<a href="../builtins/index.html#r-bif.index.words.number">word number</a>: a phrase that begins before it is not
+found. The phrase is required (<code>SYNTAX 93.903</code>) and is a string or else uses
+its <code>MAKESTRING</code> answer (<code>88.909</code>), <code>start</code> must be a positive whole number
+(<code>93.924</code>), and a third argument raises <code>93.902</code>. Case matters.</p>
+<pre><code class="language-rexx">t = 'the quick fox'
+say t~containsWord('quick') t~containsWord('qui') t~containsWord('QUICK')
+say t~containsWord('  quick   fox ') t~containsWord('fox quick')
+say t~containsWord('') t~containsWord('quick', 2) t~containsWord('quick', 3)
+say t~containsWord('fox', 4)
+say ('a' || '0A'x || 'b')~containsWord('b') 'a 12 b'~containsWord(12)
+call try "t~containsWord"
+call try "t~containsWord('fox', 0)"
+call try "t~containsWord(.nil)"
+call try "t~containsWord('fox', 1, 1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 0 0
+1 0
+0 1 0
+0
+0 1
+t~containsWord =&gt; 93.903
+t~containsWord('fox', 0) =&gt; 93.924
+t~containsWord(.nil) =&gt; 88.909
+t~containsWord('fox', 1, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.caselesscontainsword"><a href="#r-class.string.caselesscontainsword">[class.string.caselesscontainsword]</a></div>
+<p><code>caselessContainsWord</code> is <a href="#r-class.string.containsword"><code>containsWord</code></a> with
+upper and lower case letters taken as equal.</p>
+<pre><code class="language-rexx">t = 'the quick fox'
+say t~caselessContainsWord('QUICK') t~caselessContainsWord('QUICK', 3)
+say t~caselessContainsWord('') t~caselessContainsWord('Quick FOX')
+signal on syntax name e
+say t~caselessContainsWord
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">1 0
+0 1
+93.903
+</code></pre>
+<div class="rule" id="r-class.string.match"><a href="#r-class.string.match">[class.string.match]</a></div>
+<p><code>match</code> tests whether a part of its second argument occurs at a given place in
+the receiver. The arguments are <code>start</code>, the position in the receiver,
+<code>other</code>, the string, <code>n</code>, the position in <code>other</code> where the part begins (1 by
+default), and <code>length</code>, the number of characters in the part (by default all
+that are left from <code>n</code>). The answer is 1 when the part is not empty, lies
+wholly within <code>other</code> and wholly within the receiver counted from <code>start</code>, and
+has the characters that the receiver has there, and 0 otherwise. A part that
+is empty, begins after the end of <code>other</code>, or runs past the end of either
+string is not an error: the answer is 0. The arguments are checked from left
+to right: <code>start</code> and <code>n</code> must be positive whole numbers (<code>SYNTAX 93.924</code>),
+<code>other</code> is required, as <code>start</code> is (<code>93.903</code>), and is a string or else uses
+its <code>MAKESTRING</code> answer (<code>88.909</code>), and <code>length</code> must be a non-negative whole
+number (<code>93.923</code>); a fifth argument raises <code>93.902</code>. Case matters.</p>
+<pre><code class="language-rexx">t = 'Wednesday'
+say t~match(4, 'nes') t~match(4, 'NES') t~match(4, 'honest', 3, 3)
+say t~match(4, 'nesting', 1, 3) t~match(4, 'nesting', 1, 4)
+say t~match(4, 'nesday')
+say t~match(9, 'y') t~match(9, 'yz') t~match(1, '') t~match(1, 'W', 2)
+say t~match(1, 'W', 1, 0) t~match(1, 'W', 1, 2) t~match(1, 'W', , 1)
+call try "t~match"
+call try "t~match(1)"
+call try "t~match(0, 'W')"
+call try "t~match(1, .nil, 0, -1)"
+call try "t~match(1, 'W', 0, -1)"
+call try "t~match(1, 'W', 1, -1)"
+call try "t~match(1, 'W', 1, 1, 1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 0 1
+1 0
+1
+1 0 0 0
+0 0 1
+t~match =&gt; 93.903
+t~match(1) =&gt; 93.903
+t~match(0, 'W') =&gt; 93.924
+t~match(1, .nil, 0, -1) =&gt; 88.909
+t~match(1, 'W', 0, -1) =&gt; 93.924
+t~match(1, 'W', 1, -1) =&gt; 93.923
+t~match(1, 'W', 1, 1, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.caselessmatch"><a href="#r-class.string.caselessmatch">[class.string.caselessmatch]</a></div>
+<p><code>caselessMatch</code> is <a href="#r-class.string.match"><code>match</code></a> with upper and lower case
+letters taken as equal.</p>
+<pre><code class="language-rexx">t = 'Wednesday'
+say t~caselessMatch(1, 'wed') t~caselessMatch(4, 'HONEST', 3, 3)
+say t~caselessMatch(1, '') t~match(1, 'wed')
+signal on syntax name e
+say t~caselessMatch(0, 'W')
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">1 1
+0 0
+93.924
+</code></pre>
+<div class="rule" id="r-class.string.matchchar"><a href="#r-class.string.matchchar">[class.string.matchchar]</a></div>
+<p><code>matchChar</code> answers 1 when the character of the receiver at position <code>n</code> is
+one of the characters of its second argument, the set, and 0 otherwise: when
+it is not in the set, when the set is the null string, and when <code>n</code> is past
+the end of the receiver. Both arguments are required (<code>SYNTAX 93.903</code>), <code>n</code>
+must be a positive whole number (<code>93.924</code>) and is checked first, the set is a
+string or else uses its <code>MAKESTRING</code> answer (<code>88.909</code>), and a third argument
+raises <code>93.902</code>. Case matters.</p>
+<pre><code class="language-rexx">t = 'Saturday'
+say t~matchChar(1, 'xyzS') t~matchChar(2, 'A') t~matchChar(2, 'a')
+say t~matchChar(3, '')
+say t~matchChar(9, 'y') t~matchChar(8, 'y') '12'~matchChar(2, 12)
+call try "t~matchChar(1)"
+call try "t~matchChar(0, .nil)"
+call try "t~matchChar(1, .nil)"
+call try "t~matchChar(1, 'a', 'b')"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 0 1
+0
+0 1 1
+t~matchChar(1) =&gt; 93.903
+t~matchChar(0, .nil) =&gt; 93.924
+t~matchChar(1, .nil) =&gt; 88.909
+t~matchChar(1, 'a', 'b') =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.caselessmatchchar"><a href="#r-class.string.caselessmatchchar">[class.string.caselessmatchchar]</a></div>
+<p><code>caselessMatchChar</code> is <a href="#r-class.string.matchchar"><code>matchChar</code></a> with upper and
+lower case letters taken as equal.</p>
+<pre><code class="language-rexx">t = 'Saturday'
+say t~caselessMatchChar(2, 'A') t~caselessMatchChar(1, 's')
+say t~caselessMatchChar(9, 's')
+signal on syntax name e
+say t~caselessMatchChar(0, 's')
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">1 1
+0
+93.924
+</code></pre>
+<h3 id="searching-without-regard-to-case"><a class="header" href="#searching-without-regard-to-case">Searching without regard to case</a></h3>
+<div class="rule" id="r-class.string.caselesspos"><a href="#r-class.string.caselesspos">[class.string.caselesspos]</a></div>
+<p><code>caselessPos</code> is <a href="../builtins/pos.html#r-bif.pos.method"><code>pos</code></a> with upper and lower case letters
+taken as equal: it takes the same needle, <code>start</code> and <code>length</code>, defaults and
+checks, answers the position of the first occurrence in the receiver, and 0
+when there is none. The receiver is the haystack.</p>
+<pre><code class="language-rexx">say 'Hello'~caselessPos('L') 'Hello'~caselessPos('L', 4)
+say 'Hello'~caselessPos('L', 5)
+say 'Hello'~caselessPos('L', 1, 3) 'Hello'~caselessPos('L', 1, 2)
+say 'Hello'~caselessPos('') 'Hello'~pos('L')
+signal on syntax name e
+say 'Hello'~caselessPos('L', 0)
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">3 4
+0
+3 0
+0 0
+93.924
+</code></pre>
+<div class="rule" id="r-class.string.caselesslastpos"><a href="#r-class.string.caselesslastpos">[class.string.caselesslastpos]</a></div>
+<p><code>caselessLastPos</code> is <a href="../builtins/lastpos.html#r-bif.lastpos.method"><code>lastPos</code></a> with upper and lower
+case letters taken as equal, with the same arguments, defaults and checks. It
+answers the position of the last occurrence, as <code>lastPos</code> does.</p>
+<pre><code class="language-rexx">say 'Hello'~caselessLastPos('L') 'Hello'~caselessLastPos('L', 3)
+say 'Hello'~caselessLastPos('L', 3, 2) 'Hello'~caselessLastPos('')
+say 'Hello'~lastPos('L')
+signal on syntax name e
+say 'Hello'~caselessLastPos('L', 1, -1)
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">4 3
+3 0
+0
+93.923
+</code></pre>
+<div class="rule" id="r-class.string.caselesscountstr"><a href="#r-class.string.caselesscountstr">[class.string.caselesscountstr]</a></div>
+<p><code>caselessCountStr</code> is <a href="../builtins/countstr.html#r-bif.countstr.method"><code>countStr</code></a> with upper and lower
+case letters taken as equal: it answers how many times its argument occurs in
+the receiver without overlap. It takes one argument (<code>SYNTAX 93.903</code> if
+missing, <code>93.902</code> if two).</p>
+<pre><code class="language-rexx">say 'Hello'~caselessCountStr('L') 'Hello'~caselessCountStr('LL')
+say 'aaa'~caselessCountStr('AA') 'Hello'~caselessCountStr('')
+say 'Hello'~countStr('L')
+call try "'Hello'~caselessCountStr"
+call try "'Hello'~caselessCountStr('l', 1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2 1
+1 0
+0
+'Hello'~caselessCountStr =&gt; 93.903
+'Hello'~caselessCountStr('l', 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.caselesschangestr"><a href="#r-class.string.caselesschangestr">[class.string.caselesschangestr]</a></div>
+<p><code>caselessChangeStr</code> is <a href="../builtins/changestr.html#r-bif.changestr.method"><code>changeStr</code></a> with upper and
+lower case letters taken as equal in the search: it answers the receiver with
+occurrences of the needle replaced by the new string, the first <code>count</code> of
+them when <code>count</code> is given. The replacement is put in as written, whatever
+case the text it replaces had. A needle that is the null string changes
+nothing. <code>count</code> must not be negative (<code>SYNTAX 93.906</code>); the arguments are
+checked from left to right, the first two are required (<code>93.903</code>), and a
+fourth raises <code>93.902</code>.</p>
+<pre><code class="language-rexx">say 'Hello'~caselessChangeStr('L', 'x') 'Hello'~caselessChangeStr('L', 'x', 1)
+say 'Hello'~caselessChangeStr('L', 'x', 0) 'Hello'~caselessChangeStr('', 'x')
+say 'Hello'~caselessChangeStr('L', '') 'Hello'~changeStr('L', 'x')
+call try "'Hello'~caselessChangeStr('L')"
+call try "'Hello'~caselessChangeStr('L', 'x', -1)"
+call try "'Hello'~caselessChangeStr(.nil, 'x', -1)"
+call try "'Hello'~caselessChangeStr('L', 'x', 1, 1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">Hexxo Hexlo
+Hello Hello
+Heo Hello
+'Hello'~caselessChangeStr('L') =&gt; 93.903
+'Hello'~caselessChangeStr('L', 'x', -1) =&gt; 93.906
+'Hello'~caselessChangeStr(.nil, 'x', -1) =&gt; 88.909
+'Hello'~caselessChangeStr('L', 'x', 1, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.caselessabbrev"><a href="#r-class.string.caselessabbrev">[class.string.caselessabbrev]</a></div>
+<p><code>caselessAbbrev</code> is <a href="../builtins/abbrev.html#r-bif.abbrev.method"><code>abbrev</code></a> with upper and lower case
+letters taken as equal: it answers 1 when its first argument, the information,
+is the beginning of the receiver and is at least <code>length</code> characters long, 0
+otherwise, with the defaults and checks of <code>abbrev</code>. The receiver is the full
+word.</p>
+<pre><code class="language-rexx">say 'Hello'~caselessAbbrev('HEL') 'Hello'~caselessAbbrev('HEL', 4)
+say 'Hello'~caselessAbbrev('HEL', 3) 'Hello'~caselessAbbrev('HELLOO')
+say 'Hello'~caselessAbbrev('') 'Hello'~caselessAbbrev('', 1)
+say 'Hello'~abbrev('HEL')
+signal on syntax name e
+say 'Hello'~caselessAbbrev('HEL', -1)
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">1 0
+1 0
+1 0
+0
+93.923
+</code></pre>
+<div class="rule" id="r-class.string.caselesswordpos"><a href="#r-class.string.caselesswordpos">[class.string.caselesswordpos]</a></div>
+<p><code>caselessWordPos</code> is <a href="../builtins/wordpos.html#r-bif.wordpos.method"><code>wordPos</code></a> with upper and lower
+case letters taken as equal: it answers the number of the word of the receiver
+where its first argument, the phrase, begins, or 0, with the default and
+checks of <code>wordPos</code>.</p>
+<pre><code class="language-rexx">say 'a b c'~caselessWordPos('B') 'a b c'~caselessWordPos('B C')
+say 'a b c'~caselessWordPos('B', 3) 'a b c'~caselessWordPos('')
+say 'a b c'~wordPos('B')
+signal on syntax name e
+say 'a b c'~caselessWordPos('B', 0)
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">2 2
+0 0
+0
+93.924
+</code></pre>
+<h3 id="parts-of-a-string"><a class="header" href="#parts-of-a-string">Parts of a string</a></h3>
+<div class="rule" id="r-class.string.subchar"><a href="#r-class.string.subchar">[class.string.subchar]</a></div>
+<p><code>subChar</code> answers the character at position <code>n</code> as a string of one character,
+and the null string when <code>n</code> is past the end of the receiver. <code>n</code> is required
+(<code>SYNTAX 93.903</code>) and must be a positive whole number (<code>93.924</code>), and a second
+argument raises <code>93.902</code>. The answer has the class <code>String</code>, also for the
+instance of a subclass.</p>
+<pre><code class="language-rexx">say 'Hello'~subChar(1) 'Hello'~subChar(5) '['||'Hello'~subChar(6)']'
+say .shout~new('Hello')~subChar(2)~class~id ''~subChar(1)~length
+call try "'Hello'~subChar"
+call try "'Hello'~subChar(0)"
+call try "'Hello'~subChar('x')"
+call try "'Hello'~subChar(1, 1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class shout subclass string
+</code></pre>
+<pre><code class="language-output">H o []
+String 0
+'Hello'~subChar =&gt; 93.903
+'Hello'~subChar(0) =&gt; 93.924
+'Hello'~subChar('x') =&gt; 93.924
+'Hello'~subChar(1, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.subwords"><a href="#r-class.string.subwords">[class.string.subwords]</a></div>
+<p><code>subWords</code> answers a new array of strings, the words of the receiver from the
+word <code>n</code>, 1 by default, up to <code>count</code> words, by default all that are left.
+Words are those of <a href="../builtins/index.html#r-bif.index.words.split">the word rule</a>: they are
+separated by blanks and tabs, and the white space around them is not part of
+them. A <code>n</code> past the last word, and a <code>count</code> of 0, answer an empty array;
+a <code>count</code> larger than the number of words left is cut. <code>n</code> must be a positive
+whole number (<code>SYNTAX 93.924</code>) and <code>count</code> a non-negative whole number
+(<code>93.923</code>), checked in that order; a third argument raises <code>93.902</code>. The
+items are strings of class <code>String</code>.</p>
+<pre><code class="language-rexx">t = 'a b c d'
+say t~subWords~items t~subWords(2)~items t~subWords(2)~at(1)
+say t~subWords(2, 2)~at(2)
+say t~subWords(2, 0)~items t~subWords(5)~items t~subWords(2, 99)~items
+say '  a   b  '~subWords~items '  a   b  '~subWords~at(1) ''~subWords~items
+say t~subWords(,2)~items t~subWords(2)~at(1)~class~id
+call try "t~subWords(0)"
+call try "t~subWords(1, -1)"
+call try "t~subWords('x', 'y')"
+call try "t~subWords(1, 1, 1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">4 3 b
+c
+0 0 3
+2 a 0
+2 String
+t~subWords(0) =&gt; 93.924
+t~subWords(1, -1) =&gt; 93.923
+t~subWords('x', 'y') =&gt; 93.924
+t~subWords(1, 1, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.replaceat"><a href="#r-class.string.replaceat">[class.string.replaceat]</a></div>
+<p><code>replaceAt</code> answers a new string in which <code>length</code> characters of the receiver
+from position <code>position</code> are replaced by the first argument, <code>newstr</code>. The
+default <code>length</code> is the length of <code>newstr</code>, and a part that runs past the end
+of the receiver is cut there. When <code>position</code> is more than one past the end of
+the receiver, the gap is filled with the pad, a blank by default. <code>newstr</code> and
+<code>position</code> are required (<code>SYNTAX 93.903</code>), and <code>newstr</code> is a string or else
+uses its <code>MAKESTRING</code> answer (<code>88.909</code>), <code>position</code> must be a positive whole
+number (<code>93.924</code>), <code>length</code> a non-negative whole number (<code>93.923</code>) and the pad
+a single character (<code>93.922</code>); the arguments are checked from left to right,
+and a fifth raises <code>93.902</code>. A <code>length</code> of 0 inserts <code>newstr</code>.</p>
+<pre><code class="language-rexx">s = 'abcdef'
+say s~replaceAt('XY', 3) s~replaceAt('XY', 3, 1) s~replaceAt('XY', 3, 0)
+say s~replaceAt('XY', 3, 3) s~replaceAt('XY', 3, 9) s~replaceAt('XY', 1, 2)
+say s~replaceAt('XY', 7) s~replaceAt('', 3, 2) s~replaceAt(12, 3)
+say s~replaceAt('XY', 9)'|' s~replaceAt('XY', 9, 1, '*')
+call try "s~replaceAt"
+call try "s~replaceAt('XY')"
+call try "s~replaceAt(.nil, 0, -1, '**')"
+call try "s~replaceAt('X', 0, -1, '**')"
+call try "s~replaceAt('X', 1, -1, '**')"
+call try "s~replaceAt('X', 1, 1, '**')"
+call try "s~replaceAt('X', 1, 1, '')"
+call try "s~replaceAt('X', 1, 1, '*', 1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">abXYef abXYdef abXYcdef
+abXYf abXY XYcdef
+abcdefXY abef ab12ef
+abcdef  XY| abcdef**XY
+s~replaceAt =&gt; 93.903
+s~replaceAt('XY') =&gt; 93.903
+s~replaceAt(.nil, 0, -1, '**') =&gt; 88.909
+s~replaceAt('X', 0, -1, '**') =&gt; 93.924
+s~replaceAt('X', 1, -1, '**') =&gt; 93.923
+s~replaceAt('X', 1, 1, '**') =&gt; 93.922
+s~replaceAt('X', 1, 1, '') =&gt; 93.922
+s~replaceAt('X', 1, 1, '*', 1) =&gt; 93.902
+</code></pre>
+<h3 id="numbers"><a class="header" href="#numbers">Numbers</a></h3>
+<div class="rule" id="r-class.string.ceiling"><a href="#r-class.string.ceiling">[class.string.ceiling]</a></div>
+<p><code>ceiling</code> answers the smallest whole number that is not less than the
+receiver, which must be a number (<code>SYNTAX 93.943</code>). The receiver is first
+rounded to <code>NUMERIC DIGITS</code> digits, as the addition of 0 does, and the answer
+is written without an exponent and without a decimal point. A result with no
+non-zero digit is <code>0</code>, never <code>-0</code>. It takes no argument (<code>93.902</code>).</p>
+<pre><code class="language-rexx">say 12.3~ceiling '-12.3'~ceiling '-0.1'~ceiling '0.1'~ceiling
+say 2~ceiling '1.2e3'~ceiling
+say '-0.00'~ceiling ' 5.5 '~ceiling '99999999999999999999.9'~ceiling
+numeric digits 3
+say '12355'~ceiling '12301'~ceiling '1e10'~ceiling '-0.0004'~ceiling
+call try "'abc'~ceiling"
+call try "''~ceiling"
+call try "2~ceiling(1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">13 -12 0 1
+2 1200
+0 6 100000000000000000000
+12400 12300 10000000000 0
+'abc'~ceiling =&gt; 93.943
+''~ceiling =&gt; 93.943
+2~ceiling(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.floor"><a href="#r-class.string.floor">[class.string.floor]</a></div>
+<p><code>floor</code> answers the largest whole number that is not greater than the
+receiver. It is otherwise as <a href="#r-class.string.ceiling"><code>ceiling</code></a> is: a
+receiver that is a number (<code>SYNTAX 93.943</code>), rounded first to <code>NUMERIC DIGITS</code>
+digits, no exponent, no <code>-0</code>, and no argument (<code>93.902</code>).</p>
+<pre><code class="language-rexx">say 12.3~floor '-12.3'~floor '-0.1'~floor '0.1'~floor 2~floor '1e3'~floor
+say '-0'~floor '-.5'~floor '123456789012'~floor '99999999999999999999.9'~floor
+numeric digits 3
+say '12355'~floor '1e10'~floor '1e-10'~floor '-0.0004'~floor
+call try "'abc'~floor"
+call try "2~floor(1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">12 -13 -1 0 2 1000
+0 -1 123456789000 100000000000000000000
+12400 10000000000 0 -1
+'abc'~floor =&gt; 93.943
+2~floor(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.round"><a href="#r-class.string.round">[class.string.round]</a></div>
+<p><code>round</code> answers the whole number nearest to the receiver; a half is rounded
+away from zero. It is otherwise as <a href="#r-class.string.ceiling"><code>ceiling</code></a> is:
+a receiver that is a number (<code>SYNTAX 93.943</code>), rounded first to <code>NUMERIC DIGITS</code> digits, no exponent, no <code>-0</code>, and no argument (<code>93.902</code>).</p>
+<pre><code class="language-rexx">say 2.4~round 2.5~round '-2.4'~round '-2.5'~round
+say '-0.1'~round '.5'~round '-.5'~round
+say '123.456'~round '1e3'~round '0.49999999999'~round
+numeric digits 3
+say '1234.5'~round '-1234.5'~round '5e-1'~round
+call try "'abc'~round"
+call try "2~round(1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2 3 -2 -3
+0 1 -1
+123 1000 1
+1230 -1230 1
+'abc'~round =&gt; 93.943
+2~round(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.string.modulo"><a href="#r-class.string.modulo">[class.string.modulo]</a></div>
+<p><code>modulo</code> answers the remainder of the receiver divided by its argument <code>n</code>.
+The answer is never negative and is less than <code>n</code>, so for a negative receiver
+<code>(-7)~modulo(4)</code> is 1. The receiver must be a number (<code>SYNTAX 93.943</code>) and a
+whole number (<code>93.940</code>): a number written with no period and no exponent is a
+whole number whatever its length, and any other number must be exactly whole,
+without rounding, and its value must have at most <code>NUMERIC DIGITS</code> digits. The
+argument is required (<code>93.903</code>) and must be a positive whole number (<code>93.907</code>)
+in the same sense, checked after the receiver; a second argument raises
+<code>93.902</code>. An argument that is not a string is converted to a number as
+<a href="../conventions.html#r-conv.string.object">the conversion rule</a> says, as the other numeric
+arguments are. The remainder is found as
+<a href="../numbers/arithmetic.html#r-num.arithmetic.integer">the <code>//</code> operator</a> finds it, and written as that
+operator writes it, so a quotient wider than <code>NUMERIC DIGITS</code> raises
+<code>SYNTAX 26.12</code>, for a negative receiver too.</p>
+<pre><code class="language-rexx">say 9~modulo(4) (-7)~modulo(4) 0~modulo(5) '1e2'~modulo(7) 12~modulo(' 5 ')
+say '1.0'~modulo(5) 9~modulo(5.0) '11.0'~modulo(5) (9 // 4)
+call try "10~modulo"
+call try "10~modulo(0)"
+call try "10~modulo(-3)"
+call try "10~modulo(3.5)"
+call try "10~modulo('x')"
+call try "10.5~modulo(3)"
+call try "10.5~modulo(0)"
+call try "'x'~modulo('y')"
+call try "'1E+30'~modulo(7)"
+call try "10~modulo(3, 4)"
+numeric digits 3
+say '1000'~modulo(7) '1.0000'~modulo(7)
+call try "'1E+3'~modulo(7)"
+call try "'7000'~modulo(7)"
+call try "'-7006'~modulo(7)"
+call try "'1000000'~modulo('1E+3')"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 1 0 2 2
+1.0 4.0 1.0 1
+10~modulo =&gt; 93.903
+10~modulo(0) =&gt; 93.907
+10~modulo(-3) =&gt; 93.907
+10~modulo(3.5) =&gt; 93.907
+10~modulo('x') =&gt; 93.907
+10.5~modulo(3) =&gt; 93.940
+10.5~modulo(0) =&gt; 93.940
+'x'~modulo('y') =&gt; 93.943
+'1E+30'~modulo(7) =&gt; 93.940
+10~modulo(3, 4) =&gt; 93.902
+6 1.00
+'1E+3'~modulo(7) =&gt; 93.940
+'7000'~modulo(7) =&gt; 26.12
+'-7006'~modulo(7) =&gt; 26.12
+'1000000'~modulo('1E+3') =&gt; 93.907
+</code></pre>
+<pre><code class="language-rexx">say '17'~modulo(.five~new) '17'~modulo(.six~new)
+::class five
+::method makestring
+  return 5
+::class six
+::method string
+  return 6
+</code></pre>
+<pre><code class="language-output defect=#138">2 5
+</code></pre>
+<h3 id="base-64"><a class="header" href="#base-64">Base 64</a></h3>
+<div class="rule" id="r-class.string.encodebase64"><a href="#r-class.string.encodebase64">[class.string.encodebase64]</a></div>
+<p><code>encodeBase64</code> answers the receiver written in base 64: groups of three bytes,
+taken as the receiver's characters, become four characters of the alphabet <code>A</code>
+to <code>Z</code>, <code>a</code> to <code>z</code>, <code>0</code> to <code>9</code>, <code>+</code> and <code>/</code>, and a final group of one or two
+bytes is completed with <code>=</code> signs to four characters. The null string gives
+the null string. It takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">say 'Man'~encodeBase64 'Ma'~encodeBase64 'M'~encodeBase64
+say '['||''~encodeBase64']'
+say 'Hello, World!'~encodeBase64 ('FF00FE'x)~encodeBase64 12~encodeBase64
+signal on syntax name e
+say 'Man'~encodeBase64(1)
+e: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">TWFu TWE= TQ==
+[]
+SGVsbG8sIFdvcmxkIQ== /wD+ MTI=
+93.902
+</code></pre>
+<div class="rule" id="r-class.string.decodebase64"><a href="#r-class.string.decodebase64">[class.string.decodebase64]</a></div>
+<p><code>decodeBase64</code> undoes <a href="#r-class.string.encodebase64"><code>encodeBase64</code></a>: it
+answers the bytes that the receiver, a text in base 64, stands for, and the
+null string for the null string. The text must have a length that is a
+multiple of 4, characters of that alphabet, and <code>=</code> signs only at the end, one
+or two of them, to complete the last group; the bits of the last character
+that the group does not need are ignored, so <code>'TR=='</code> decodes as <code>'TQ=='</code>
+does. A blank, a line end, any other character, or <code>=</code> in another place raises
+<code>SYNTAX 93.962</code>. It takes no argument (<code>93.902</code>).</p>
+<pre><code class="language-rexx">say 'TWFu'~decodeBase64 'TWE='~decodeBase64 'TQ=='~decodeBase64
+say '['||''~decodeBase64']' 'TWFuTQ=='~decodeBase64 '/+8='~decodeBase64~c2x
+say 'TR=='~decodeBase64~c2x 'TWF='~decodeBase64~c2x
+say 'abc'~encodeBase64~decodeBase64
+call try "'TWE'~decodeBase64"
+call try "'TWE=='~decodeBase64"
+call try "'TW=u'~decodeBase64"
+call try "'TWFu TWFu'~decodeBase64"
+call try "' TWFu'~decodeBase64"
+call try "'TWFu='~decodeBase64"
+call try "'TWFu'~decodeBase64(1)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">Man Ma M
+[] ManM FFEF
+4D 4D61
+abc
+'TWE'~decodeBase64 =&gt; 93.962
+'TWE=='~decodeBase64 =&gt; 93.962
+'TW=u'~decodeBase64 =&gt; 93.962
+'TWFu TWFu'~decodeBase64 =&gt; 93.962
+' TWFu'~decodeBase64 =&gt; 93.962
+'TWFu='~decodeBase64 =&gt; 93.962
+'TWFu'~decodeBase64(1) =&gt; 93.902
+</code></pre>
+<h3 id="methods-that-a-builtin-function-runs"><a class="header" href="#methods-that-a-builtin-function-runs">Methods that a builtin function runs</a></h3>
+<div class="rule" id="r-class.string.builtins"><a href="#r-class.string.builtins">[class.string.builtins]</a></div>
+<p>A built-in function that <a href="../conventions.html#r-conv.method">runs as a String method</a> is also a
+method of <code>String</code> with the name of the function, and the behavior of the
+method is stated on the page of the function: what it accepts, its defaults,
+its results and the checks it makes. The pages say it as a function call and
+show the method form beside it. The methods are
+<a href="../builtins/abbrev.html#r-bif.abbrev.method"><code>abbrev</code></a>, <a href="../builtins/abs.html#r-bif.abs.method"><code>abs</code></a>,
+<a href="../builtins/b2x.html#r-bif.b2x.method"><code>b2x</code></a>, <a href="../builtins/bitand.html#r-bif.bitand.method"><code>bitAnd</code></a>,
+<a href="../builtins/bitor.html#r-bif.bitor.method"><code>bitOr</code></a>, <a href="../builtins/bitxor.html#r-bif.bitxor.method"><code>bitXor</code></a>,
+<a href="../builtins/c2d.html#r-bif.c2d.method"><code>c2d</code></a>, <a href="../builtins/c2x.html#r-bif.c2x.method"><code>c2x</code></a>,
+<a href="../builtins/center.html#r-bif.center.method"><code>center</code></a>, <a href="../builtins/center.html#r-bif.center.centre"><code>centre</code></a>,
+<a href="../builtins/changestr.html#r-bif.changestr.method"><code>changeStr</code></a>, <a href="../builtins/compare.html#r-bif.compare.method"><code>compare</code></a>,
+<a href="../builtins/copies.html#r-bif.copies.method"><code>copies</code></a>, <a href="../builtins/countstr.html#r-bif.countstr.method"><code>countStr</code></a>,
+<a href="../builtins/d2c.html#r-bif.d2c.method"><code>d2c</code></a>, <a href="../builtins/d2x.html#r-bif.d2x.method"><code>d2x</code></a>,
+<a href="../builtins/datatype.html#r-bif.datatype.method"><code>dataType</code></a>, <a href="../builtins/delstr.html#r-bif.delstr.method"><code>delStr</code></a>,
+<a href="../builtins/delword.html#r-bif.delword.method"><code>delWord</code></a>, <a href="../builtins/format.html#r-bif.format.method"><code>format</code></a>,
+<a href="../builtins/insert.html#r-bif.insert.method"><code>insert</code></a>, <a href="../builtins/lastpos.html#r-bif.lastpos.method"><code>lastPos</code></a>,
+<a href="../builtins/left.html#r-bif.left.method"><code>left</code></a>, <a href="../builtins/length.html#r-bif.length.method"><code>length</code></a>,
+<a href="../builtins/lower.html#r-bif.lower.method"><code>lower</code></a>, <a href="../builtins/max.html#r-bif.max.method"><code>max</code></a>,
+<a href="../builtins/min.html#r-bif.min.method"><code>min</code></a>, <a href="../builtins/overlay.html#r-bif.overlay.method"><code>overlay</code></a>,
+<a href="../builtins/pos.html#r-bif.pos.method"><code>pos</code></a>, <a href="../builtins/reverse.html#r-bif.reverse.method"><code>reverse</code></a>,
+<a href="../builtins/right.html#r-bif.right.method"><code>right</code></a>, <a href="../builtins/sign.html#r-bif.sign.method"><code>sign</code></a>,
+<a href="../builtins/space.html#r-bif.space.method"><code>space</code></a>, <a href="../builtins/strip.html#r-bif.strip.method"><code>strip</code></a>,
+<a href="../builtins/subword.html#r-bif.subword.method"><code>subWord</code></a>, <a href="../builtins/substr.html#r-bif.substr.method"><code>substr</code></a>,
+<a href="../builtins/translate.html#r-bif.translate.method"><code>translate</code></a>, <a href="../builtins/trunc.html#r-bif.trunc.method"><code>trunc</code></a>,
+<a href="../builtins/upper.html#r-bif.upper.method"><code>upper</code></a>, <a href="../builtins/verify.html#r-bif.verify.method"><code>verify</code></a>,
+<a href="../builtins/word.html#r-bif.word.method"><code>word</code></a>, <a href="../builtins/wordindex.html#r-bif.wordindex.method"><code>wordIndex</code></a>,
+<a href="../builtins/wordlength.html#r-bif.wordlength.method"><code>wordLength</code></a>, <a href="../builtins/wordpos.html#r-bif.wordpos.method"><code>wordPos</code></a>,
+<a href="../builtins/words.html#r-bif.words.method"><code>words</code></a>, <a href="../builtins/x2b.html#r-bif.x2b.method"><code>x2b</code></a>,
+<a href="../builtins/x2c.html#r-bif.x2c.method"><code>x2c</code></a> and <a href="../builtins/x2d.html#r-bif.x2d.method"><code>x2d</code></a>, each with the rule
+that opens its page. A method of this kind needs no rule of its own here, but
+the rules that follow state what is the same for all of them when they are
+sent as messages: their errors (<a href="#r-class.string.builtins.errors">the message
+rule</a>) and their receiver (<a href="#r-class.string.builtins.receiver">the receiver
+rule</a>). Functions that a program calls but a
+string does not understand as a message, such as <code>arg</code> and <code>xrange</code>, are not
+among them: their pages say so.</p>
+<pre><code class="language-rexx">say 'Hello'~left(3) 'Hello'~pos('l') 'Hello'~reverse 'a b c'~words
+say 'abc'~centre(7, '.') '255'~d2x 'ff'~x2d 'abc'~substr(2, 1) 'ABC'~lower
+say '3.14159'~format(2, 2) '-4.7'~trunc '4'~max(9, 2) '-4'~sign 'abc'~length
+say 'a-b'~translate('+', '-') 'hello world'~wordIndex(2) 'ab'~copies(3)
+</code></pre>
+<pre><code class="language-output">Hel 3 olleH 3
+..abc.. FF 255 b abc
+ 3.14 -4 9 -1 3
+a+b 7 ababab
+</code></pre>
+<div class="rule" id="r-class.string.builtins.errors"><a href="#r-class.string.builtins.errors">[class.string.builtins.errors]</a></div>
+<p>A method of the list is checked as the method itself checks it, argument by
+argument and from left to right, without the earlier check that a function
+call makes. The function form first checks the form of its arguments, as
+<a href="../conventions.html#r-conv.check.order">the order rule</a> says, and raises the codes of
+<a href="../conventions.html#r-conv.whole.form">the whole-number</a>, <a href="../conventions.html#r-conv.pad">pad</a> and
+<a href="../builtins/index.html#r-bif.index.call.count">argument count</a> rules. In the message form an
+argument that fails its form raises the code of its range check. The message
+form raises these errors: for a position that is not a positive whole number,
+<code>SYNTAX 93.924</code> whatever the value is, <code>abc</code> or 0 or 1.5; for a length that is
+not a non-negative whole number, <code>93.923</code>; for a pad that is not a single
+character, <code>93.922</code>; for a missing argument, or an omitted one that is
+followed by another, <code>93.903</code>; and for too many arguments, <code>93.902</code>, as
+<a href="index.html#r-class.index.args.count">the argument rules</a> say. A count or a number of
+copies that is not a non-negative whole number raises <code>93.906</code>, and the other
+arguments raise the code that the page of the builtin gives. Because the
+message form checks one argument at a time, a bad position before a length
+that is not a number is the error raised, where the function form raises 40.12
+for the length first.</p>
+<pre><code class="language-rexx">call try "'abc'~substr('x')"
+call try "substr('abc', 'x')"
+call try "'abc'~substr(0, 'x')"
+call try "substr('abc', 0, 'x')"
+call try "'abc'~left('x')"
+call try "left('abc', 'x')"
+call try "'abc'~left(1, '**')"
+call try "left('abc', 1, '**')"
+call try "'abc'~left"
+call try "left('abc')"
+call try "'abc'~left(, 2)"
+call try "left('abc', , 2)"
+call try "'abc'~left(1, 'x', 3)"
+call try "left('abc', 1, 'x', 3)"
+call try "'abc'~copies('x')"
+call try "'abc'~word(1.5)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">'abc'~substr('x') =&gt; 93.924
+substr('abc', 'x') =&gt; 40.12
+'abc'~substr(0, 'x') =&gt; 93.924
+substr('abc', 0, 'x') =&gt; 40.12
+'abc'~left('x') =&gt; 93.923
+left('abc', 'x') =&gt; 40.12
+'abc'~left(1, '**') =&gt; 93.922
+left('abc', 1, '**') =&gt; 40.23
+'abc'~left =&gt; 93.903
+left('abc') =&gt; 40.3
+'abc'~left(, 2) =&gt; 93.903
+left('abc', , 2) =&gt; 40.5
+'abc'~left(1, 'x', 3) =&gt; 93.902
+left('abc', 1, 'x', 3) =&gt; 40.4
+'abc'~copies('x') =&gt; 93.906
+'abc'~word(1.5) =&gt; 93.924
+</code></pre>
+<div class="rule" id="r-class.string.builtins.receiver"><a href="#r-class.string.builtins.receiver">[class.string.builtins.receiver]</a></div>
+<p>When the receiver or an argument of such a method is an instance of a
+subclass of <code>String</code>, the method works on the characters of the instance
+itself, and answers a new string of class <code>String</code>. This holds for the message
+form and for the function form, and for the methods that read a number, such
+as <code>abs</code> and <code>max</code>, and <code>dataType</code> as well. The characters it reads are never
+the answer of the instance's <code>MAKESTRING</code> or <code>STRING</code> method, even when the
+subclass declares one, and neither is sent to the instance
+(<a href="#r-class.string.deviation.109">Deviation 109</a> has the example for the
+arguments and the function form).</p>
+<pre><code class="language-rexx">x = .over~new('Hello')
+say x~left(3) x~length x~pos('l') x~c2x~left(4) x~reverse x~left(3)~class~id
+say x~makeString (x || '!')
+::class over subclass string
+::method makestring
+  return 'MADE'
+</code></pre>
+<pre><code class="language-output">Hel 5 3 4865 olleH String
+MADE Hello!
+</code></pre>
+<h3 id="the-operators"><a class="header" href="#the-operators">The operators</a></h3>
+<div class="rule" id="r-class.string.operators"><a href="#r-class.string.operators">[class.string.operators]</a></div>
+<p>Each operator is also a method of <code>String</code> with the name of the operator, as
+<a href="../expressions/messages.html#r-expr.messages.operator">the operator rule</a> says, and what it does belongs
+to the page of its operator: the arithmetic operators <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>%</code>,
+<code>//</code> and <code>**</code> (<a href="../expressions/arithmetic.html#r-expr.arithmetic.infix">infix</a>,
+<a href="../expressions/arithmetic.html#r-expr.arithmetic.prefix">prefix</a> and
+<a href="../expressions/arithmetic.html#r-expr.arithmetic.exponent">exponent</a>); the comparisons <code>=</code>, <code>\=</code>, <code>&lt;&gt;</code>,
+<code>&gt;&lt;</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>, <code>\&lt;</code> and <code>\&gt;</code> (<a href="../expressions/comparison.html#r-expr.comparison.kind">the normal
+comparisons</a>) and <code>==</code>, <code>\==</code>, <code>&lt;&lt;</code>, <code>&gt;&gt;</code>, <code>&lt;&lt;=</code>,
+<code>&gt;&gt;=</code>, <code>\&lt;&lt;</code> and <code>\&gt;&gt;</code> (<a href="../expressions/comparison.html#r-expr.comparison.strict">the strict ones</a>); the
+logical operators <code>&amp;</code>, <code>|</code>, <code>&amp;&amp;</code> and <code>\</code> (<a href="../expressions/logical.html#r-expr.logical.operators">the logical
+rules</a>); and the three joining methods <code>||</code>, the
+blank and the null string, which is the abuttal (<a href="../expressions/concatenation.html#r-expr.concatenation.operator">the concatenation
+rules</a>). How many arguments each takes when it
+is sent as a message, and the errors for too few or too many, are <a href="../expressions/messages.html#r-expr.messages.string">the message
+rule</a>. An argument that is not a string is converted
+as <a href="../conventions.html#r-conv.string.object">the conversion rule</a> says.</p>
+<pre><code class="language-rexx">say '3'~"+"(4) '3'~"-" '3'~"*"(4) '3'~"/"(4)
+say '3'~"%"(2) '3'~"//"(2) '3'~"**"(2)
+say '3'~"="(3.0) '3'~"=="(3.0) 'abc'~"&lt;"('abd') 'abc'~"&gt;&gt;"('ab') 'a'~"\="('a')
+say '1'~"&amp;"('1') '1'~"|"('0') '1'~"&amp;&amp;"('1') '1'~"\"
+say 'ab'~"||"('c') 'ab'~" "('c') 'ab'~""('c')
+call try "'3'~'+'(4, 5)"
+call try "'3'~'*'"
+call try "'3'~'**'(.5)"
+call try "'3'~'/'(0)"
+call try "'x'~'+'(1)"
+call try "'2'~'&amp;'('1')"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=&gt;' r
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">7 -3 12 0.75
+1 1 9
+1 0 1 1 0
+1 1 0 0
+abc ab c abc
+'3'~'+'(4, 5) =&gt; 93.902
+'3'~'*' =&gt; 93.903
+'3'~'**'(.5) =&gt; 26.8
+'3'~'/'(0) =&gt; 42.3
+'x'~'+'(1) =&gt; 41.1
+'2'~'&amp;'('1') =&gt; 34.901
+</code></pre>
+<div class="rule" id="r-class.string.operators.receiver"><a href="#r-class.string.operators.receiver">[class.string.operators.receiver]</a></div>
+<p>When the receiver or the argument of an operator method is an instance of a
+subclass of <code>String</code>, the method uses the characters of the instance itself,
+and not the answer of its <code>MAKESTRING</code> or <code>STRING</code> method, as
+<a href="#r-class.string.builtins.receiver">the receiver rule</a> says of the builtin
+methods. This holds for every operator: the joining methods and the strict
+comparisons, which read a string, the arithmetic operators and the normal
+comparisons, which read a number, and the logical operators, which read a
+logical value. The joining methods answer a new string of class <code>String</code>.
+<a href="#r-class.string.deviation.109">Deviation 109</a> has the example for the
+arguments and the numbers.</p>
+<pre><code class="language-rexx">x = .over~new('Hello')
+say x~"||"('!') x~"=="('Hello') x~"=="('MADE')
+say x~" "('!') x~""('!') (x || '!')~class~id (x == 'Hello')
+::class over subclass string
+::method makestring
+  return 'MADE'
+</code></pre>
+<pre><code class="language-output">Hello! 1 0
+Hello ! Hello! String 1
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.string.deviation.4"><a href="#r-class.string.deviation.4">[class.string.deviation.4]</a></div>
+<p>Whether two strings with the same characters that were built separately are
+one object, whether a method that leaves its receiver as it was, such as
+<code>makeString</code>, <code>strip</code> of a string with nothing to strip, or <code>copy</code>, answers
+the receiver or a new string, and whether a number and a string with its
+digits are one object, are not specified, and show only through <code>identityHash</code>
+and the identity collections (<a href="../deviations.html">Deviation 4</a>). The characters
+and the value comparisons are specified, and the hash codes of equal strings
+are equal. ooRexx answers a new object in many cases where interrexx answers
+the existing one.</p>
+<pre><code class="language-rexx">a = 'ab' || 'c'
+b = 'a' || 'bc'
+say (a == b) (a~hashCode == b~hashCode) (a~makeString == a) (a~copy == a)
+say (12~makeString == '12') (12~hashCode == '12'~hashCode)
+say ('abc'~strip == 'abc') ('abc'~substr(1) == 'abc')
+</code></pre>
+<pre><code class="language-output">1 1 1 1
+1 1
+1 1
+</code></pre>
+<div class="rule" id="r-class.string.deviation.36"><a href="#r-class.string.deviation.36">[class.string.deviation.36]</a></div>
+<p><code>objectName=</code> sent to a string that is no instance of a subclass and not
+enhanced is refused, and the program ends with exit code 120, as <a href="index.html#r-class.index.deviation.36">the chapter
+rule</a> says: a number is such a string, and so is a
+string that <code>new</code> made. An instance of a subclass takes a name, and so does a
+string that <code>enhanced</code> made. ooRexx gives the name to the string, and an equal
+string elsewhere can show it.</p>
+<pre><code class="language-rexx">s = .sub~new('abc')
+s~objectName = 'named'
+say s~objectName s
+say 'before'
+t = .string~new('abc')
+t~objectName = 'named'
+say 'after'
+::class sub subclass string
+</code></pre>
+<pre><code class="language-output rc=120">named abc
+before
+</code></pre>
+<div class="rule" id="r-class.string.deviation.109"><a href="#r-class.string.deviation.109">[class.string.deviation.109]</a></div>
+<p>An instance of a subclass of <code>String</code> is read by its own characters wherever a
+string, a number, a logical value or a whole number is needed, as the receiver
+and as an argument, in the message form, in the function form and in the
+operators; <code>MAKESTRING</code> and <code>STRING</code> are not sent to it for that
+(<a href="../deviations.html">Deviation 109</a>). In the example the subclass declares both
+methods and counts the sends: the instance <code>n</code> is the number 2, <code>b</code> is the
+logical value 1 and <code>s</code> is the string <code>ab</code>, and no send is made. ooRexx reads
+such an instance through its <code>MAKESTRING</code> method when it is an argument, of a
+method, an operator or a builtin function, and when it is the receiver of the
+numeric methods and operators, the logical operators, <code>dataType</code> and <code>?</code>, and
+in <code>new</code>; as the receiver of the other methods, of the strict comparisons and
+of the joining operators it reads the instance's own characters, so one
+instance can answer differently to <code>=</code> and to <code>==</code>.</p>
+<pre><code class="language-rexx">.local~sent = 0
+n = .num~new('2')
+b = .num~new('1')
+s = .num~new('ab')
+say 'abcdef'~left(n) left('abcdef', n) 'abcdef'[n] 'a b c'~word(n)
+say 'x' || s 'xaby'~pos(s) pos(s, 'xaby') compare(s, 'ab') (s == 'ab')
+say 1 + n (n + 1) (n * n) ('2' = n) abs(n) max(n, 1)
+say ('1' &amp; b) (b | '0') (\b) b~?('y', 'n') n~dataType datatype(n)
+say .string~new(s) .string~new(s)~class~id s
+say 'sends' .local~sent
+::class num subclass string
+::method makestring
+  .local~sent = .local~sent + 1
+  return 7
+::method string
+  .local~sent = .local~sent + 1
+  return 'str'
+</code></pre>
+<pre><code class="language-output defect=#140">ab ab b b
+xab 2 2 0 1
+3 3 4 1 2 2
+1 1 0 y NUM NUM
+ab String ab
+sends 0
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/class.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/method.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/class.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/method.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

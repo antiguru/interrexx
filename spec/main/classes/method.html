@@ -1,0 +1,1377 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Method - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html" class="active"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="method"><a class="header" href="#method">Method</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; Method Class; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; newFile (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; loadExternalMethod (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; annotation; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; annotations; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isAbstract; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isAttribute; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isConstant; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isGuarded; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isPackage; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isPrivate; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; isProtected; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; package; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; scope; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setGuarded; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setPrivate; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setProtected; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setSecurityManager; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; setUnguarded; Builtin Classes &gt; Fundamental Classes &gt; Method Class &gt; source</p>
+<p class="deviations">Deviations: D41, D109</p>
+<p>A <code>Method</code> object is the code of one method together with the facts that
+decide who may send it and how it runs: whether it is private, package-scope,
+protected or guarded, which class it belongs to, and the package whose classes
+and routines its code can name. A class holds its methods as <code>Method</code> objects,
+<code>::METHOD</code> makes one for each directive, and a program makes one of its own
+from source text with <code>new</code>, from a file with <code>newFile</code>, or from a native
+library with <code>loadExternalMethod</code>.</p>
+<p>The page specifies those three class methods, with the checks they make, the
+messages they send and what the new method may see, and the methods that ask
+or change what a method object is. The directive that makes a method object
+is <a href="../directives/method.html"><code>::METHOD</code></a>, the annotations come from
+<a href="../directives/annotate.html"><code>::ANNOTATE</code></a>, how a message finds a method is
+<a href="methods.html">the method search</a>, and the methods of <code>Class</code> that install a
+method object, <a href="class.html#r-class.class.define"><code>define</code></a> and
+<a href="object.html#r-class.object.setmethod"><code>setMethod</code></a>, are on the pages of <code>Object</code> and
+<code>Class</code>. The messages every object understands are those of
+<a href="object.html"><code>Object</code></a>. The search for a file or a library that <code>newFile</code> and
+<code>loadExternalMethod</code> start is specified in the environment chapter; the
+examples here name a file that they create themselves, or a library that every
+installation has.</p>
+<p>The examples that show an error use a routine <code>try</code> that sends the message in
+its argument and prints the answer, or the error code when the message raises
+one, as the pages of the other classes do.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.method.creation"><a href="#r-class.method.creation">[class.method.creation]</a></div>
+<p>A method object made by <code>new</code> or <code>newFile</code> is public, guarded and not
+protected, belongs to no class (its <code>scope</code> is <code>.nil</code>), has no annotations,
+and holds the source it was made from. It has no code that runs by itself: it
+runs when it is installed in a class or an object, and a message that finds it
+there runs its code. A <code>Method</code> object is an ordinary object otherwise, so it
+understands the methods of <a href="object.html"><code>Object</code></a> and has the default name
+<code>a Method</code>. The class <code>Method</code> has the superclass <code>Object</code> and no mixin class.</p>
+<pre><code class="language-rexx">m = .method~new('greet', 'return "hello" arg(1)')
+say m~class~id m~isGuarded m~isPrivate m~isPackage m~isProtected
+say m~isAbstract m~isAttribute m~isConstant m~scope~isNil
+say m~source~items m~annotations~items m~annotation('x')~isNil
+say m~defaultName m .method~superclass~id .method~superclasses~items
+.holder~define('GREET', m)
+say .holder~new~greet('world')
+::class holder
+</code></pre>
+<pre><code class="language-output">Method 1 0 0 0
+0 0 0 1
+1 0 1
+a Method a Method Object 1
+hello world
+</code></pre>
+<h2 id="class-methods"><a class="header" href="#class-methods">Class methods</a></h2>
+<h3 id="new"><a class="header" href="#new">new</a></h3>
+<div class="rule" id="r-class.method.new"><a href="#r-class.method.new">[class.method.new]</a></div>
+<p><code>new</code> makes a method object from a name, a source and a context. The name is
+required (<code>SYNTAX 88.901</code>), and is a string, or the <code>MAKESTRING</code> answer of its
+argument: an object with no <code>MAKESTRING</code> method, <code>.nil</code> among them, raises
+<code>88.909</code>, and a number is a name like any other string. The name becomes the
+name of the method's package, which <code>package</code> shows. The source is required
+too (<code>88.901</code>) and is read as <a href="#r-class.method.new.source">the source rule</a>
+says. The context is <code>PROGRAMSCOPE</code> in any case, or omitted, or a <code>Method</code>, a
+<code>Routine</code> or a <code>Package</code> object, and decides what the code can see, as
+<a href="#r-class.method.new.context">the context rule</a> says; another value raises
+<code>40.904</code>. The checks run in this order: the name, the source, the context, and
+then the source is translated, so a source of <code>.nil</code> raises <code>93.961</code> whatever
+the context is, and a source that does not translate raises its translation
+error (<code>35.1</code> for an invalid expression, <code>13.1</code> for an invalid character)
+after the context has been accepted, and <code>new</code> runs none of the code. The
+arguments from the fourth on are passed to <code>init</code> as
+<a href="#r-class.method.new.sends">the sends rule</a> says. The answer is the new method
+object.</p>
+<pre><code class="language-rexx">m = .method~new('greet', 'return "hello" arg(1)')
+say m~class~id m~package~name m~source[1]
+call try '.method~new()'
+call try '.method~new("n")'
+call try '.method~new(.nil, "nop")'
+call try '.method~new(12, "nop")~package~name'
+call try '.method~new("n", "nop", "programscope")~class~id'
+call try '.method~new("n", "nop", "other")'
+call try '.method~new("n", "nop", .object~new)'
+call try '.method~new("n", "nop", .nil)'
+call try '.method~new("n", "say (")'
+call try '.method~new("n", "nop", "PROGRAMSCOPE", 1)'
+call try '.method~new(.list~new, "nop")'
+call try '.method~new(.onlystr~new, "nop")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class onlystr
+::method string
+  return 'onlystr'
+</code></pre>
+<pre><code class="language-output">Method greet return "hello" arg(1)
+.method~new() =&gt; 88.901
+.method~new("n") =&gt; 88.901
+.method~new(.nil, "nop") =&gt; 88.909
+.method~new(12, "nop")~package~name =&gt; 12
+.method~new("n", "nop", "programscope")~class~id =&gt; Method
+.method~new("n", "nop", "other") =&gt; 40.904
+.method~new("n", "nop", .object~new) =&gt; 40.904
+.method~new("n", "nop", .nil) =&gt; 40.904
+.method~new("n", "say (") =&gt; 35.1
+.method~new("n", "nop", "PROGRAMSCOPE", 1) =&gt; 93.902
+.method~new(.list~new, "nop") =&gt; 88.909
+.method~new(.onlystr~new, "nop") =&gt; 88.909
+</code></pre>
+<pre><code class="language-rexx">call try '.method~new("n", .nil, 7)'
+call try '.method~new("n", "nop", 7)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output defect=#143">.method~new("n", .nil, 7) =&gt; 93.961
+.method~new("n", "nop", 7) =&gt; 40.904
+</code></pre>
+<div class="rule" id="r-class.method.new.source"><a href="#r-class.method.new.source">[class.method.new.source]</a></div>
+<p>The source is one string, or an array of strings. A string is a single line of
+code, and the method's <code>source</code> is an array of that one line; a string is not
+split at line ends, and a line end character in a line, <code>'0A'x</code>, <code>'0D'x</code> or
+<code>'1A'x</code>, makes the translation raise <code>SYNTAX 13.1</code>, while a tab is an ordinary
+character. An empty string is a source of no lines. An array holds the lines
+in the order of its indexes. Each item is converted by <code>MAKESTRING</code> and the
+answer is the line: a string is its own line, a number is a line like any
+string, a <code>MutableBuffer</code> is the line of its text, and so is an instance of a
+subclass of <code>String</code>; an item that has no <code>MAKESTRING</code> method, <code>.nil</code> among
+them, or a hole that is followed by an item, raises <code>SYNTAX 93.952</code>. The
+answer of <code>MAKESTRING</code> is a line like any other, so an item whose answer has a
+line end, such as an array (its <code>makeString</code> joins its items with line ends),
+raises <code>13.1</code>. An empty array is a source of no lines. A source that is
+neither a string nor an array is converted as
+<a href="#r-class.method.new.sends">the sends rule</a> says; <code>.nil</code> raises <code>93.961</code>. An
+instance of a subclass of <code>String</code> is such a source: it is not used as the one
+line that a string is, but is converted by
+<a href="string.html#r-class.string.makearray">its <code>makeArray</code></a>, so it is split at its line ends,
+and a null one is a source of no lines.</p>
+<pre><code class="language-rexx">call try '.method~new("n", "return 1")~source~items'
+call try '.method~new("n", .array~of("a = 1", "return a"))~source~items'
+call try '.method~new("n", .array~of("a = 1", "return a"))~source[2]'
+call try '.method~new("n", .array~new)~source~items'
+call try '.method~new("n", "")~source~items'
+call try '.method~new("n", 5)~source[1]'
+call try '.method~new("n", .array~of("x", 3))~source[2]'
+call try '.method~new("n", .array~of("x", .object~new))'
+call try '.method~new("n", .array~new(2)~~put("nop", 2))'
+call try '.method~new("n", "a" || "09"x || "b")~source~items'
+call try '.method~new("n", "a" || "0A"x || "b")'
+call try '.method~new("n", "a" || "0D"x)'
+call try '.method~new("n", "a" || "1A"x)'
+call try '.method~new("n", .nil)'
+call try '.method~new("n", .array~of("a" || "0A"x || "b"))'
+call try '.method~new("n", .array~of(.onlystr~new))'
+ssrc = .ss~new("a = 1" || "0A"x || "return a")
+call try '.method~new("n", ssrc)~source~items'
+call try '.method~new("n", .ss~new(""))~source~items'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class onlystr
+::method string
+  return 'onlystr'
+::class ss subclass string
+</code></pre>
+<pre><code class="language-output">.method~new("n", "return 1")~source~items =&gt; 1
+.method~new("n", .array~of("a = 1", "return a"))~source~items =&gt; 2
+.method~new("n", .array~of("a = 1", "return a"))~source[2] =&gt; return a
+.method~new("n", .array~new)~source~items =&gt; 0
+.method~new("n", "")~source~items =&gt; 0
+.method~new("n", 5)~source[1] =&gt; 5
+.method~new("n", .array~of("x", 3))~source[2] =&gt; 3
+.method~new("n", .array~of("x", .object~new)) =&gt; 93.952
+.method~new("n", .array~new(2)~~put("nop", 2)) =&gt; 93.952
+.method~new("n", "a" || "09"x || "b")~source~items =&gt; 1
+.method~new("n", "a" || "0A"x || "b") =&gt; 13.1
+.method~new("n", "a" || "0D"x) =&gt; 13.1
+.method~new("n", "a" || "1A"x) =&gt; 13.1
+.method~new("n", .nil) =&gt; 93.961
+.method~new("n", .array~of("a" || "0A"x || "b")) =&gt; 13.1
+.method~new("n", .array~of(.onlystr~new)) =&gt; 93.952
+.method~new("n", ssrc)~source~items =&gt; 2
+.method~new("n", .ss~new(""))~source~items =&gt; 0
+</code></pre>
+<pre><code class="language-rexx">call try '.method~new("n", .array~of("a", .mk~new))~source[2]'
+call try '.method~new("n", .array~of(.ss~new("x")))~source[1]'
+call try '.method~new("n", .array~of(.mutablebuffer~new("mb")))~source[1]'
+call try '.method~new("n", .array~of(.array~of("a", "b")))'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class mk
+::method makestring
+  return 'from makestring'
+::class ss subclass string
+</code></pre>
+<pre><code class="language-output defect=#142">.method~new("n", .array~of("a", .mk~new))~source[2] =&gt; from makestring
+.method~new("n", .array~of(.ss~new("x")))~source[1] =&gt; x
+.method~new("n", .array~of(.mutablebuffer~new("mb")))~source[1] =&gt; mb
+.method~new("n", .array~of(.array~of("a", "b"))) =&gt; 13.1
+</code></pre>
+<div class="rule" id="r-class.method.new.sends"><a href="#r-class.method.new.sends">[class.method.new.sends]</a></div>
+<p><code>new</code> sends messages to its source and to the object it makes. A source that
+is not a string and not an array, and an instance of a subclass of <code>String</code> or
+<code>Array</code>, is sent <code>request</code> with the argument <code>ARRAY</code>; when that answers an
+array its items are the lines, read as
+<a href="#r-class.method.new.source">the source rule</a> reads an array. When it answers
+<code>.nil</code> the source is sent <code>request</code> with the argument <code>STRING</code>: an answer that
+is a string is the one-line source, and for any other answer its <code>objectName</code>
+is the line, with no <code>MAKESTRING</code> or <code>string</code> message sent to it; <code>.nil</code> from
+both raises <code>SYNTAX 93.961</code>. A string that is an instance
+of <code>String</code> itself and an array that is an instance of <code>Array</code> itself are used
+directly, without a message. The <code>request</code> of <code>Object</code> sends <code>makeArray</code> for
+the argument <code>ARRAY</code> and <code>makeString</code> for <code>STRING</code>, as
+<a href="object.html#r-class.object.request.sends">its rule</a> says, so an object that declares
+<code>makeArray</code> or <code>makeString</code> is a source. When the method is made, <code>new</code> sends
+the new object the message <code>init</code> with the arguments of <code>new</code> from the fourth
+on, so that a subclass of <code>Method</code> that declares <code>init</code> receives them; the
+<code>init</code> of <code>Object</code> accepts none, and a fourth argument raises <code>SYNTAX 93.902</code>
+after the source has been translated. The class that received <code>new</code> decides
+the class of the answer: a subclass of <code>Method</code> makes instances of itself.</p>
+<pre><code class="language-rexx">call try '.method~new("n", .src~new(.array~of("return 1"), .nil))'
+call try '.method~new("n", .src~new(.nil, "return 2"))~source[1]'
+call try '.method~new("n", .src~new(.nil, .nil))'
+call try '.method~new("n", .arrsub~of("return 3"))~source[1]'
+call try '.method~new("n", .src~new(.nil, .loud~new))~source[1]'
+call try '.method~new("n", .src~new(.nil, .named~new))~source[1]'
+call try '.method~new("n", .src~new(.nil, 12))~source[1]'
+say .mine~new('n', 'return 5', 'PROGRAMSCOPE', 'a', 'b')~class~id
+say .mine~new('n', 'return 5')~source[1]
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class src
+::method init
+  expose arr str
+  use arg arr, str
+::method request
+  expose arr str
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return arr
+  return str
+::class arrsub subclass array
+::method makearray
+  say 'makearray'
+  return .array~of('return 33')
+::class loud
+::method makestring
+  say 'makestring'
+  return 'return 1'
+::method string
+  say 'string'
+  return 'return 1'
+::class named
+::method objectname
+  return 'return 4'
+::class mine subclass method
+::method init
+  say 'init' arg() arg(1) arg(2)
+</code></pre>
+<pre><code class="language-output">request ARRAY
+.method~new("n", .src~new(.array~of("return 1"), .nil)) =&gt; a Method
+request ARRAY
+request STRING
+.method~new("n", .src~new(.nil, "return 2"))~source[1] =&gt; return 2
+request ARRAY
+request STRING
+.method~new("n", .src~new(.nil, .nil)) =&gt; 93.961
+makearray
+.method~new("n", .arrsub~of("return 3"))~source[1] =&gt; return 33
+request ARRAY
+request STRING
+.method~new("n", .src~new(.nil, .loud~new))~source[1] =&gt; a LOUD
+request ARRAY
+request STRING
+.method~new("n", .src~new(.nil, .named~new))~source[1] =&gt; return 4
+request ARRAY
+request STRING
+.method~new("n", .src~new(.nil, 12))~source[1] =&gt; 12
+init 2 a b
+MINE
+init 0  
+return 5
+</code></pre>
+<div class="rule" id="r-class.method.new.context"><a href="#r-class.method.new.context">[class.method.new.context]</a></div>
+<p>The context decides which classes and routines the code of the method can
+name, as the classes and routines of a package do. The method has a package of
+its own, a new package named by the name argument, whose source is the source
+of the method. That package has no classes or routines of its own, and a name
+that it does not hold is looked up in the package of the context, among the
+classes and routines that package finds: its own, public or not, and the
+public ones of the packages it imports. With <code>PROGRAMSCOPE</code>, or with the
+argument omitted, that is the package of the code that sent <code>new</code>: the method
+sees the classes and routines of the program that made it. With a <code>Package</code>
+object it is that package, with a <code>Routine</code> or a <code>Method</code> object it is the
+package of that object, and the classes and routines of the program that sent
+<code>new</code> are no longer visible: a class name that is not found is the string of
+that name, and a routine that is not found raises <code>SYNTAX 43.1</code>. The package
+of the context is not the package of the new method: <code>package</code> answers another
+object. A <code>Method</code> or <code>Routine</code> context whose <code>package</code> is <code>.nil</code>, one that
+<code>loadExternalMethod</code> or <code>loadExternalRoutine</code> made, gives a package whose
+lookup through the context is not specified.</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::class there', '::routine thereproc')
+src~append('  return "there routine"')
+p = .package~new('other', src)
+rout = .routine~new('rr', 'return 1', p)
+default = .method~new('m1', 'return .here~class~id here()')
+inpkg = .method~new('m2', 'return .there~class~id thereproc()', p)
+inrout = .method~new('m3', 'return .there~class~id', rout)
+inmeth = .method~new('m4', 'return .there~class~id', inpkg)
+lost = .method~new('m5', 'return .here~class~id', p)
+nohere = .method~new('m6', 'return here()', p)
+say run(default)
+say run(inpkg)
+say run(inrout) run(inmeth)
+say run(lost)
+say run(nohere)
+say (default~package == .context~package) (inpkg~package == p)
+say default~package~name inpkg~package~name
+exit
+run:
+  signal on syntax name bad
+  .runner~define('GO', arg(1))
+  return .runner~new~go
+bad: return 'error' condition('o')~code
+::class here
+::routine here
+  return 'here routine'
+::class runner
+</code></pre>
+<pre><code class="language-output">Class here routine
+Class there routine
+Class Class
+String
+error 43.1
+0 0
+m1 m2
+</code></pre>
+<h3 id="newfile"><a class="header" href="#newfile">newFile</a></h3>
+<div class="rule" id="r-class.method.newfile"><a href="#r-class.method.newfile">[class.method.newfile]</a></div>
+<p><code>newFile</code> makes a method object from the lines of a file. The file name is
+required (<code>SYNTAX 88.901</code>) and is a string, or an object with a <code>MAKESTRING</code>
+method (<code>.nil</code> and others with none raise <code>88.909</code>), and the context is the
+second argument, with the same values and the same error <code>40.904</code> as for
+<a href="#r-class.method.new.context"><code>new</code></a>. <code>newFile</code> takes no other argument: a
+third raises <code>SYNTAX 93.902</code> before the file is looked for. The checks run in
+this order: the number of arguments, the name, the context, and then the file
+is found and read; a file that cannot be read raises <code>SYNTAX 3.1</code>, and a file
+that does not translate raises its translation error. The method's package is
+named by the file name as it was given, and its source is the lines of the
+file that come before its first directive, except that a first line that
+begins with <code>#!</code> is not part of the source. A directive in the file still
+makes the classes and routines of the method's package, which the package
+answers to <code>classes</code> and <code>routines</code>, and the code of the method sees them. The
+context is used as for <code>new</code>. How the file is searched for is specified in the
+environment chapter. <code>newFile</code> sends <code>init</code> with no argument to the new
+object, and a subclass of <code>Method</code> makes instances of itself.</p>
+<pre><code class="language-rexx">f = 'class_method_newfile_zq.tmp'
+call sysfiledelete f
+call lineout f, 'say "file method" arg(1)'
+call lineout f, 'return .fromfile~new~hi'
+call lineout f, '::class fromfile'
+call lineout f, '::method hi'
+call lineout f, '  return "hi from the file"'
+call lineout f
+m = .method~newFile(f)
+say m~class~id m~source~items m~source[2] (m~package~name == f)
+say m~package~classes~items m~package~classes~allindexes~makearray~items
+.runner~define('GO', m)
+say .runner~new~go('x')
+say .mine~newFile(f)~class~id
+call sysfiledelete f
+call try '.method~newFile("class_method_newfile_none.tmp")'
+call try '.method~newFile()'
+call try '.method~newFile(.nil)'
+call try '.method~newFile(f, "PROGRAMSCOPE", 1)'
+call try '.method~newFile("class_method_newfile_none.tmp", "bad")'
+call try '.method~newFile("class_method_newfile_none.tmp", "PROGRAMSCOPE")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class runner
+::class mine subclass method
+::method init
+  say 'init' arg()
+</code></pre>
+<pre><code class="language-output">Method 2 return .fromfile~new~hi 1
+1 1
+file method x
+hi from the file
+init 0
+MINE
+.method~newFile("class_method_newfile_none.tmp") =&gt; 3.1
+.method~newFile() =&gt; 88.901
+.method~newFile(.nil) =&gt; 88.909
+.method~newFile(f, "PROGRAMSCOPE", 1) =&gt; 93.902
+.method~newFile("class_method_newfile_none.tmp", "bad") =&gt; 40.904
+.method~newFile("class_method_newfile_none.tmp", "PROGRAMSCOPE") =&gt; 3.1
+</code></pre>
+<pre><code class="language-rexx">f = 'class_method_shebang_zq.tmp'
+call sysfiledelete f
+call lineout f, '#!/usr/bin/rexx'
+call lineout f, 'return "after the first line"'
+call lineout f
+m = .method~newFile(f)
+say m~source~items m~source[1]
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output defect=#144">1 return "after the first line"
+</code></pre>
+<div class="rule" id="r-class.method.newfile.sends"><a href="#r-class.method.newfile.sends">[class.method.newfile.sends]</a></div>
+<p><code>newFile</code> sends the new object the message <code>init</code> with no argument, after the
+file has been read and translated, so that a subclass of <code>Method</code> that
+declares <code>init</code> runs it once for each <code>newFile</code>. A file name that is an object
+with a <code>MAKESTRING</code> method is sent that message for its string value, once,
+before <code>init</code>; no other message is sent. The arguments of <code>newFile</code> are only
+the name and the context, so no argument reaches <code>init</code>.</p>
+<pre><code class="language-rexx">f = 'class_method_newfilesends_zq.tmp'
+call sysfiledelete f
+call lineout f, 'return 1'
+call lineout f
+say .mine~newFile(f)~class~id
+say .mine~newFile(.named~new(f))~class~id
+call sysfiledelete f
+::class mine subclass method
+::method init
+  say 'init' arg()
+::class named
+::method init
+  expose n
+  use arg n
+::method makestring
+  expose n
+  say 'makestring'
+  return n
+</code></pre>
+<pre><code class="language-output">init 0
+MINE
+makestring
+init 0
+MINE
+</code></pre>
+<h3 id="loadexternalmethod"><a class="header" href="#loadexternalmethod">loadExternalMethod</a></h3>
+<div class="rule" id="r-class.method.loadexternalmethod"><a href="#r-class.method.loadexternalmethod">[class.method.loadexternalmethod]</a></div>
+<p><code>loadExternalMethod</code> makes a method object whose code is a routine of a native
+library, the same kind of method that
+<a href="../directives/method.html#r-dir.method.external"><code>::METHOD EXTERNAL</code></a> declares. It takes a name and a
+descriptor and no other argument (a third raises <code>SYNTAX 93.902</code>). Both are
+required (<code>88.901</code>), and each is a string or an object with a <code>MAKESTRING</code>
+method (<code>88.909</code> for <code>.nil</code> and for an object with none). The descriptor has
+the form that the directive's operand has: the word <code>LIBRARY</code> in any case, the
+name of the library, and optionally the name of the entry in it, which is the
+method name when it is left out; a descriptor of another form raises
+<code>SYNTAX 99.917</code>. When the library cannot be loaded, or has no entry of that
+name, the answer is <code>.nil</code> and nothing is raised. Otherwise the answer is a
+method object that is public and guarded, whose <code>source</code> is an empty array and
+whose <code>package</code> is <code>.nil</code>. Where the library is searched for, and whether its
+name is case sensitive, is specified in the environment chapter. The result is
+an instance of <code>Method</code> also when a subclass received the message, and no
+<code>init</code> is sent.</p>
+<pre><code class="language-rexx">m = .method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Pos')
+say m~class~id m~source~items m~package~isNil m~isGuarded m~isPrivate
+m = .method~loadExternalMethod('m', 'library rxregexp regexp_pos')
+say m~class~id
+say .method~loadExternalMethod('m', 'LIBRARY rxregexp')~isNil
+say .method~loadExternalMethod('m', 'LIBRARY rxregexp nosuchentry')~isNil
+say .method~loadExternalMethod('m', 'LIBRARY nosuchlibraryzq nosuch')~isNil
+say .mine~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Pos')~class~id
+call try '.method~loadExternalMethod("m", "REGISTERED rxregexp")'
+call try '.method~loadExternalMethod("m", "LIBRARY")'
+call try '.method~loadExternalMethod("m", "")'
+call try '.method~loadExternalMethod("m")'
+call try '.method~loadExternalMethod()'
+call try '.method~loadExternalMethod(.nil, "LIBRARY rxregexp RegExp_Pos")'
+call try '.method~loadExternalMethod("m", .nil)'
+call try '.method~loadExternalMethod("m", "LIBRARY rxregexp RegExp_Pos", 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class mine subclass method
+::method init
+  say 'init'
+</code></pre>
+<pre><code class="language-output">Method 0 1 1 0
+Method
+1
+1
+1
+Method
+.method~loadExternalMethod("m", "REGISTERED rxregexp") =&gt; 99.917
+.method~loadExternalMethod("m", "LIBRARY") =&gt; 99.917
+.method~loadExternalMethod("m", "") =&gt; 99.917
+.method~loadExternalMethod("m") =&gt; 88.901
+.method~loadExternalMethod() =&gt; 88.901
+.method~loadExternalMethod(.nil, "LIBRARY rxregexp RegExp_Pos") =&gt; 88.909
+.method~loadExternalMethod("m", .nil) =&gt; 88.909
+.method~loadExternalMethod("m", "LIBRARY rxregexp RegExp_Pos", 1) =&gt; 93.902
+</code></pre>
+<h2 id="methods"><a class="header" href="#methods">Methods</a></h2>
+<h3 id="what-the-method-is"><a class="header" href="#what-the-method-is">What the method is</a></h3>
+<div class="rule" id="r-class.method.source"><a href="#r-class.method.source">[class.method.source]</a></div>
+<p><code>source</code> answers a new array that holds the lines of the method's source, one
+string for each line, so changing the array changes nothing in the method. A
+method made by <code>new</code> has the lines of its source argument, one made by
+<code>newFile</code> the lines of its file before the first directive, without a first
+line that begins with <code>#!</code>, and one that a <code>::METHOD</code> directive makes has the
+lines of its section. Text that follows the <code>;</code> of the directive on its line
+is the first line of the section, blank included, and the last line of a
+section is left out when it is empty; a line of blanks is kept. A method that
+has no Rexx code of its own, such as an attribute method, a constant method,
+an abstract method, a method of a library class and one that
+<code>loadExternalMethod</code> loaded, answers an array of no items. The method takes no
+argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">m = .method~new('n', .array~of('say 1', 'return 2'))
+a = m~source
+say a~class~id a~items (a == m~source)
+a~put('changed', 1)
+say m~source[1]
+say .k~method('plain')~source~items .k~method('plain')~source[1]~strip
+say .k~method('at')~source~items .k~method('abs')~source~items
+say .k~method('cc')~source~items .array~method('append')~source~items
+call try 'm~source(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+::method plain
+  return 'plain'
+::attribute at
+::method abs abstract
+::constant cc 5
+</code></pre>
+<pre><code class="language-output">Array 2 0
+say 1
+1 return 'plain'
+0 0
+0 0
+m~source(1) =&gt; 93.902
+</code></pre>
+<pre><code class="language-rexx">src = .array~of('::method same; say "x"', '::method tail', '  say "a"', '')
+src~append('::method blank')
+src~append('  say "b"')
+src~append('  ')
+src~append('::method last')
+p = .package~new('n', src)
+t = p~definedMethods
+do n over .array~of('SAME', 'TAIL', 'BLANK')
+  say n t[n]~source~items '['t[n]~source~makeString('l', '|')']'
+end
+</code></pre>
+<pre><code class="language-output">SAME 1 [ say "x"]
+TAIL 1 [  say "a"]
+BLANK 2 [  say "b"|  ]
+</code></pre>
+<pre><code class="language-rexx">p = .package~new('n', .array~of('nop', '::method f ;', '::method g'))
+say p~definedMethods['F']~source~items
+</code></pre>
+<pre><code class="language-output defect=#147">0
+</code></pre>
+<div class="rule" id="r-class.method.package"><a href="#r-class.method.package">[class.method.package]</a></div>
+<p><code>package</code> answers the package that holds the method's code, which decides
+which classes and routines the code names. For a method that a <code>::METHOD</code>
+directive makes it is the package of the program that holds the directive. For
+a method made by <code>new</code> or <code>newFile</code> it is the package that <code>new</code> made, as
+<a href="#r-class.method.new.context">the context rule</a> says, which is named by the
+name argument or the file name and is the same object every time. For a method
+of a library class it is the package named <code>REXX</code>, and for one that
+<code>loadExternalMethod</code> made it is <code>.nil</code>. The method takes no argument.</p>
+<pre><code class="language-rexx">me = .context~package
+m = .k~method('plain')
+say (m~package == me) (m~package == m~package)
+n = .method~new('named', 'nop')
+say n~package~class~id n~package~name (n~package == n~package)
+say .array~method('append')~package~name
+ext = .method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Pos')
+say ext~package~isNil
+call try 'n~package(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+::method plain
+</code></pre>
+<pre><code class="language-output">1 1
+Package named 1
+REXX
+1
+n~package(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.method.scope"><a href="#r-class.method.scope">[class.method.scope]</a></div>
+<p><code>scope</code> answers the class that the method belongs to, which is the class whose
+<code>::METHOD</code> directive or <code>define</code> gave it to the class, and <code>.nil</code> for a method
+that belongs to no class, such as one made by <code>new</code> or <code>newFile</code>. A method
+that a class inherits from a superclass or a mixin class keeps the scope of
+the class that defined it, so <code>instanceMethod</code> of an instance of a subclass
+shows the superclass. The method that <a href="class.html#r-class.class.define"><code>define</code></a>
+installs runs the code of the method object that is given, with the class as
+its scope, so <code>method</code> of the class answers a method with that scope. The
+method that <a href="object.html#r-class.object.setmethod"><code>setMethod</code></a> installs runs the code
+with the scope that <a href="methods.html#r-class.methods.object.scope">the scope rule</a> says, which
+is none for <code>FLOAT</code>. Whether the installed method is the argument or a copy of
+it, and what scope the argument answers afterwards, is not specified. The
+method takes no argument.</p>
+<pre><code class="language-rexx">say .sub~method('own')~scope~id .sub~new~instanceMethod('inherited')~scope~id
+say .sub~new~instanceMethod('mixed')~scope~id
+say .array~method('append')~scope~id
+say .method~new('n', 'nop')~scope~isNil
+m = .method~new('d', 'return 1')
+.sub~define('D', m)
+say .sub~method('D')~scope~id
+n = .method~new('s', 'return 2')
+o = .sub~new
+o~put('S', n)
+say o~instanceMethod('S')~scope~isNil
+call try '.sub~method("own")~scope(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class mix mixinclass object
+::method mixed
+::class base
+::method inherited
+::class sub subclass base inherit mix
+::method own
+::method put
+  use arg name, meth
+  self~setMethod(name, meth)
+</code></pre>
+<pre><code class="language-output">SUB BASE
+MIX
+Array
+1
+SUB
+1
+.sub~method("own")~scope(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.method.annotation"><a href="#r-class.method.annotation">[class.method.annotation]</a></div>
+<p><code>annotation</code> answers the value of the annotation of the method that has the
+name it is given, and <code>.nil</code> when there is none, as
+<a href="../directives/annotate.html#r-dir.annotate.read">the annotation rule</a> says: the name is taken in upper
+case, and a method made by <code>new</code>, <code>newFile</code> or <code>loadExternalMethod</code> has no
+annotations: the answer for one is <code>.nil</code>, and its <code>annotations</code> table is
+empty. The name is required (<code>SYNTAX 88.901</code>), an object with no <code>MAKESTRING</code>
+method, <code>.nil</code> among them, raises <code>88.909</code>, and a second argument raises
+<code>93.902</code>. A name that is a number or a string that names no annotation answers
+<code>.nil</code>.</p>
+<pre><code class="language-rexx">m = .k~method('m')
+say m~annotation('Version') m~annotation('VERSION') m~annotation('who')
+say m~annotation('none')~isNil m~annotation(12)~isNil
+say .method~new('n', 'nop')~annotation('version')~isNil
+call try 'm~annotation'
+call try 'm~annotation(.nil)'
+call try 'm~annotation("a", "b")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+::method m
+::annotate method m Version 3
+::annotate method m who 'me'
+</code></pre>
+<pre><code class="language-output">3 3 me
+1 1
+1
+m~annotation =&gt; 88.901
+m~annotation(.nil) =&gt; 88.909
+m~annotation("a", "b") =&gt; 93.902
+</code></pre>
+<pre><code class="language-rexx">m = .method~loadExternalMethod('m', 'LIBRARY rxregexp RegExp_Pos')
+say m~annotation('x')~isNil m~annotations~items
+</code></pre>
+<pre><code class="language-output defect=#146">1 0
+</code></pre>
+<div class="rule" id="r-class.method.annotations"><a href="#r-class.method.annotations">[class.method.annotations]</a></div>
+<p><code>annotations</code> answers the <code>StringTable</code> that holds every annotation of the
+method, indexed by the upper case name, as <a href="../directives/annotate.html#r-dir.annotate.read">the annotation
+rule</a> says. It is the table that the method keeps: the
+same object every time, so an entry put into it is an annotation that
+<code>annotation</code> answers. A method with none has an empty table. The method takes
+no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">t = .k~method('m')~annotations
+say t~class~id t~items t['VERSION'] t['WHO']
+say t~allIndexes~sort~makeArray~makeString('l', ',')
+say (t == .k~method('m')~annotations)
+t~put('later', 'ADDED')
+say .k~method('m')~annotation('added') .k~method('m')~annotations~items
+say .method~new('n', 'nop')~annotations~items
+call try '.k~method("m")~annotations(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+::method m
+::annotate method m Version 3
+::annotate method m who 'me'
+</code></pre>
+<pre><code class="language-output">StringTable 2 3 me
+VERSION,WHO
+1
+later 3
+0
+.k~method("m")~annotations(1) =&gt; 93.902
+</code></pre>
+<h3 id="what-the-method-is-declared-as"><a class="header" href="#what-the-method-is-declared-as">What the method is declared as</a></h3>
+<div class="rule" id="r-class.method.isabstract"><a href="#r-class.method.isabstract">[class.method.isabstract]</a></div>
+<p><code>isAbstract</code> answers <code>1</code> for a method that <code>::METHOD ... ABSTRACT</code> declared
+and <code>0</code> for every other, a method made by <code>new</code> included. It takes no argument
+(<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">say .k~method('absm')~isAbstract .k~method('real')~isAbstract
+say .method~new('n', 'nop')~isAbstract
+call try '.k~method("absm")~isAbstract(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+::method absm abstract
+::method real
+</code></pre>
+<pre><code class="language-output">1 0
+0
+.k~method("absm")~isAbstract(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.method.isattribute"><a href="#r-class.method.isattribute">[class.method.isattribute]</a></div>
+<p><code>isAttribute</code> answers <code>1</code> for a method that an <code>::ATTRIBUTE</code> directive made,
+the one that reads and the one that assigns, and for the methods that
+<code>::METHOD ... ATTRIBUTE</code> made, and <code>0</code> for every other. It takes no argument
+(<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">say .k~method('at')~isAttribute .k~method('at=')~isAttribute
+say .k~method('viaoption')~isAttribute .k~method('plain')~isAttribute
+say .k~method('cc')~isAttribute
+say .method~new('n', 'nop')~isAttribute
+call try '.k~method("at")~isAttribute(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+::attribute at
+::method viaoption attribute
+::method plain
+::constant cc 5
+</code></pre>
+<pre><code class="language-output">1 1
+1 0
+0
+0
+.k~method("at")~isAttribute(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.method.isconstant"><a href="#r-class.method.isconstant">[class.method.isconstant]</a></div>
+<p><code>isConstant</code> answers <code>1</code> for the method that a <code>::CONSTANT</code> directive made and
+<code>0</code> for every other, an attribute method and a method made by <code>new</code> included.
+It takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">say .k~method('cc')~isConstant .k~method('at')~isConstant
+say .k~method('plain')~isConstant .method~new('n', 'nop')~isConstant
+call try '.k~method("cc")~isConstant(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+::constant cc 5
+::attribute at
+::method plain
+</code></pre>
+<pre><code class="language-output">1 0
+0 0
+.k~method("cc")~isConstant(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.method.isguarded"><a href="#r-class.method.isguarded">[class.method.isguarded]</a></div>
+<p><code>isGuarded</code> answers <code>1</code> for a guarded method and <code>0</code> for an unguarded one. A
+method is guarded unless <code>UNGUARDED</code> was declared, a <code>::CONSTANT</code> directive
+made it, or <a href="#r-class.method.setunguarded"><code>setUnguarded</code></a> was sent; a method
+made by <code>new</code> is guarded, and so are an attribute method and an abstract
+method. What guarding does when messages run at the same time is specified in
+the environment chapter. The method takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">say .k~method('g')~isGuarded .k~method('u')~isGuarded
+say .k~method('plain')~isGuarded .method~new('n', 'nop')~isGuarded
+say .k~method('cc')~isGuarded .k~method('at')~isGuarded
+say .k~method('abs')~isGuarded
+call try '.k~method("g")~isGuarded(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+::method g guarded
+::method u unguarded
+::method plain
+::constant cc 5
+::attribute at
+::method abs abstract
+</code></pre>
+<pre><code class="language-output">1 0
+1 1
+0 1
+1
+.k~method("g")~isGuarded(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.method.ispackage"><a href="#r-class.method.ispackage">[class.method.ispackage]</a></div>
+<p><code>isPackage</code> answers <code>1</code> for a method declared <code>PACKAGE</code> and <code>0</code> for every
+other. <a href="../directives/method.html#r-dir.method.access">The access rule</a> says who may send a package
+method. <code>isPackage</code> is independent of <code>isPrivate</code>: sending
+<a href="#r-class.method.setprivate"><code>setPrivate</code></a> to a package method makes both
+answer <code>1</code>. The method takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">m = .k~method('pk')
+say m~isPackage m~isPrivate
+m~setPrivate
+say m~isPackage m~isPrivate
+say .k~method('plain')~isPackage .method~new('n', 'nop')~isPackage
+call try '.k~method("plain")~isPackage(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+::method pk package
+::method plain
+</code></pre>
+<pre><code class="language-output">1 0
+1 1
+0 0
+.k~method("plain")~isPackage(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.method.isprivate"><a href="#r-class.method.isprivate">[class.method.isprivate]</a></div>
+<p><code>isPrivate</code> answers <code>1</code> for a private method and <code>0</code> for every other. A method
+is private when <code>PRIVATE</code> was declared or
+<a href="#r-class.method.setprivate"><code>setPrivate</code></a> was sent. <a href="../directives/method.html#r-dir.method.access">The access
+rule</a> says who may send a private method. The method
+takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">say .k~method('pr')~isPrivate .k~method('plain')~isPrivate
+say .method~new('n', 'nop')~isPrivate
+say .k~method('pk')~isPrivate
+call try '.k~method("pr")~isPrivate(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+::method pr private
+::method plain
+::method pk package
+</code></pre>
+<pre><code class="language-output">1 0
+0
+0
+.k~method("pr")~isPrivate(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.method.isprotected"><a href="#r-class.method.isprotected">[class.method.isprotected]</a></div>
+<p><code>isProtected</code> answers <code>1</code> for a protected method and <code>0</code> for every other. A
+method is protected when <code>PROTECTED</code> was declared or
+<a href="#r-class.method.setprotected"><code>setProtected</code></a> was sent. The method takes no
+argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">say .k~method('pro')~isProtected .k~method('plain')~isProtected
+say .method~new('n', 'nop')~isProtected
+call try '.k~method("pro")~isProtected(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+::method pro protected
+::method plain
+</code></pre>
+<pre><code class="language-output">1 0
+0
+.k~method("pro")~isProtected(1) =&gt; 93.902
+</code></pre>
+<h3 id="changing-the-method"><a class="header" href="#changing-the-method">Changing the method</a></h3>
+<div class="rule" id="r-class.method.setguarded"><a href="#r-class.method.setguarded">[class.method.setguarded]</a></div>
+<p><code>setGuarded</code> makes the method guarded and answers no value, so using its
+answer as a term raises <code>SYNTAX 91.999</code>. It has no effect on a method that is
+guarded already. It takes no argument (<code>SYNTAX 93.902</code>). The method object
+that <code>method</code> of a class answers is the one the class holds, so the example
+sees the change through the class.</p>
+<pre><code class="language-rexx">m = .k~method('u')
+say m~isGuarded
+m~setGuarded
+say m~isGuarded .k~method('u')~isGuarded
+m~setGuarded
+say m~isGuarded
+call try 'm~setGuarded(1)'
+call try 'x = m~setGuarded'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+::method u unguarded
+</code></pre>
+<pre><code class="language-output">0
+1 1
+1
+m~setGuarded(1) =&gt; 93.902
+x = m~setGuarded =&gt; 91.999
+</code></pre>
+<div class="rule" id="r-class.method.setunguarded"><a href="#r-class.method.setunguarded">[class.method.setunguarded]</a></div>
+<p><code>setUnguarded</code> makes the method unguarded and answers no value, so using its
+answer raises <code>SYNTAX 91.999</code>. It has no effect on a method that is unguarded
+already. It takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">m = .method~new('n', 'nop')
+say m~isGuarded
+m~setUnguarded
+say m~isGuarded
+m~setUnguarded
+say m~isGuarded
+call try 'm~setUnguarded(1)'
+call try 'x = m~setUnguarded'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1
+0
+0
+m~setUnguarded(1) =&gt; 93.902
+x = m~setUnguarded =&gt; 91.999
+</code></pre>
+<div class="rule" id="r-class.method.setprivate"><a href="#r-class.method.setprivate">[class.method.setprivate]</a></div>
+<p><code>setPrivate</code> makes the method private and answers no value, so using its
+answer raises <code>SYNTAX 91.999</code>. It changes nothing else, so a package method
+stays a package method. It takes no argument (<code>SYNTAX 93.902</code>). A message to
+an installed method that was private raises the error of
+<a href="../directives/method.html#r-dir.method.access">the access rule</a> from then on, as the example shows by
+sending <code>setPrivate</code> to the method that a class holds.</p>
+<pre><code class="language-rexx">o = .k~new
+say o~hello
+.k~method('hello')~setPrivate
+say .k~method('hello')~isPrivate
+call try 'o~hello'
+call try '.k~method("hello")~setPrivate(1)'
+call try 'x = .method~new("n", "nop")~setPrivate'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+::method hello
+  return 'hello'
+</code></pre>
+<pre><code class="language-output">hello
+1
+o~hello =&gt; 97.2
+.k~method("hello")~setPrivate(1) =&gt; 93.902
+x = .method~new("n", "nop")~setPrivate =&gt; 91.999
+</code></pre>
+<div class="rule" id="r-class.method.setprotected"><a href="#r-class.method.setprotected">[class.method.setprotected]</a></div>
+<p><code>setProtected</code> makes the method protected and answers no value, so using its
+answer raises <code>SYNTAX 91.999</code>. It takes no argument (<code>SYNTAX 93.902</code>). A
+protected method runs like any other until the code that sends the message to
+it is under a security manager: the manager is then sent <code>METHOD</code> before the
+method runs, as <a href="routine.html#r-class.routine.setsecuritymanager.method">the checkpoint
+rule</a> says.</p>
+<pre><code class="language-rexx">m = .method~new('n', 'return "ran"')
+say m~isProtected
+m~setProtected
+say m~isProtected
+.k~define('PROT', m)
+say .k~new~prot
+call try 'm~setProtected(1)'
+call try 'x = m~setProtected'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+</code></pre>
+<pre><code class="language-output">0
+1
+ran
+m~setProtected(1) =&gt; 93.902
+x = m~setProtected =&gt; 91.999
+</code></pre>
+<div class="rule" id="r-class.method.setsecuritymanager"><a href="#r-class.method.setsecuritymanager">[class.method.setsecuritymanager]</a></div>
+<p><code>setSecurityManager</code> gives the method a security manager, or with no argument
+removes the one it has, and answers <code>1</code>. It is a protected method. The manager
+is any object, <code>.nil</code> as well, and it is not checked when it is set: <code>.nil</code> is
+an object like any other, which is sent the checkpoints and does not
+understand them (<code>SYNTAX 97.1</code>), so only a call with no argument removes the
+manager. A second argument raises <code>SYNTAX 93.902</code>. While the code of the
+method runs, and in the internal routines of that code, the actions that
+<a href="routine.html#r-class.routine.setsecuritymanager.checkpoints">the checkpoint rules</a> name
+are offered to the manager first; the code of other packages that the method
+calls is not under the manager. A manager that was set before
+<a href="class.html#r-class.class.define"><code>define</code></a> installed the method stays with the
+installed method, as the example shows.</p>
+<pre><code class="language-rexx">m = .method~new('n', 'address system "echo not run"; return "ran"')
+say m~setSecurityManager(.guard~new)
+.k~define('GO', m)
+say .k~new~go
+say m~setSecurityManager
+say .method~new('x', 'nop')~setSecurityManager(.nil)
+call try 'm~setSecurityManager(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class k
+::class guard
+::method command
+  use arg info
+  say 'command asked:' info~command
+  info~rc = 3
+  return 1
+</code></pre>
+<pre><code class="language-output">1
+command asked: echo not run
+ran
+1
+1
+m~setSecurityManager(1, 2) =&gt; 93.902
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.method.deviation.41"><a href="#r-class.method.deviation.41">[class.method.deviation.41]</a></div>
+<p>A source that is an encoded program image, which has the line
+<code>#!/usr/bin/env rexx</code>, the marker line <code>/**/@REXX@</code> and then encoded text, and
+whose decoded bytes lack the tag of an image, raises <code>SYNTAX 3.903</code> from
+<code>new</code>, as <a href="../deviations.html#41-a-damaged-compiled-image">the deviation</a> says
+for a program. ooRexx translates the partly decoded bytes as source, with
+results that are not predictable: it raises <code>13.1</code> for the source of the
+example.</p>
+<pre><code class="language-rexx">img = .array~of('#!/usr/bin/env rexx', '/**/@REXX@', 'c2F5ICdkZWNvZGVkJw==')
+signal on syntax name bad
+m = .method~new('n', img)
+say 'made'
+exit
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">3.903
+</code></pre>
+<div class="rule" id="r-class.method.deviation.109"><a href="#r-class.method.deviation.109">[class.method.deviation.109]</a></div>
+<p>An instance of a subclass of <code>String</code> that is the name or the source of <code>new</code>
+is read by its own characters, and <code>MAKESTRING</code> and <code>STRING</code> are not sent to
+it (<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). ooRexx reads the name
+through its <code>MAKESTRING</code> method; the source is read as the instance's own
+characters on both. In the example <code>MAKESTRING</code> answers another name.</p>
+<pre><code class="language-rexx">m = .method~new(.name~new('Foo'), .name~new('say "src"'))
+say m~package~name m~source[1]
+::class name subclass string
+::method makestring
+  return 'other'
+</code></pre>
+<pre><code class="language-output defect=#140">Foo say "src"
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/string.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/routine.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/string.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/routine.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

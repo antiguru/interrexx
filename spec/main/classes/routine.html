@@ -1,0 +1,1410 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Routine - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html" class="active"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="routine"><a class="header" href="#routine">Routine</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; Routine Class; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; newFile (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; loadExternalRoutine (Class method); Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; []; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; annotation; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; annotations; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; call; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; callWith; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; package; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; setSecurityManager; Builtin Classes &gt; Fundamental Classes &gt; Routine Class &gt; source; The Security Manager</p>
+<p class="deviations">Deviations: D41, D109</p>
+<p>A <code>Routine</code> object is a piece of code that is called with arguments and
+answers a value, as a routine of a program is. A <code>::ROUTINE</code> directive makes
+one for each directive, and a program makes one of its own from source text
+with <code>new</code>, from a file with <code>newFile</code>, or from a native library with
+<code>loadExternalRoutine</code>. A routine object is called by the messages <code>call</code>,
+<code>callWith</code> and <code>[]</code>, and every call is a call of an external routine: the code
+runs in a variable pool of its own, sees nothing of its caller's variables,
+and finds classes and routines through its package.</p>
+<p>The page specifies the class methods that make a routine, the messages that
+call it and ask about it, and the security manager that a routine can be put
+under. The routine that a directive makes is specified by
+<a href="../directives/routine.html"><code>::ROUTINE</code></a>, the annotations by
+<a href="../directives/annotate.html"><code>::ANNOTATE</code></a>, and the instruction that calls a
+routine by name by <a href="../instructions/call.html">CALL</a>. A routine is made from
+source in the way a method is, so the rules of <a href="method.html">the Method
+page</a> for the source and the context apply to <code>new</code> and <code>newFile</code>
+here, and this page states what is its own. The search for a file or a library
+that <code>newFile</code> and <code>loadExternalRoutine</code> start is specified in the
+environment chapter; the examples here name a file that they create
+themselves, or a library that every installation has.</p>
+<p>The examples that show an error use a routine <code>try</code> that sends the message in
+its argument and prints the answer, or the error code when the message raises
+one.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.routine.creation"><a href="#r-class.routine.creation">[class.routine.creation]</a></div>
+<p>A routine object made by <code>new</code> or <code>newFile</code> is called by sending it <code>call</code>,
+and holds the source it was made from. It has no annotations and belongs to a
+package of its own, as <a href="method.html#r-class.method.new.context">the context rule</a> says for
+a method. A <code>Routine</code> object is an ordinary object otherwise, so it
+understands the methods of <a href="object.html"><code>Object</code></a> and has the default name
+<code>a Routine</code>. The class <code>Routine</code> has the superclass <code>Object</code> and no mixin
+class.</p>
+<pre><code class="language-rexx">r = .routine~new('adder', 'use arg a, b; return a + b')
+say r~class~id r~defaultName r~call(2, 3)
+say r~source~items r~annotations~items r~package~class~id r~package~name
+say .routine~superclass~id .routine~superclasses~items
+</code></pre>
+<pre><code class="language-output">Routine a Routine 5
+1 0 Package adder
+Object 1
+</code></pre>
+<h2 id="class-methods"><a class="header" href="#class-methods">Class methods</a></h2>
+<h3 id="new"><a class="header" href="#new">new</a></h3>
+<div class="rule" id="r-class.routine.new"><a href="#r-class.routine.new">[class.routine.new]</a></div>
+<p><code>new</code> makes a routine from a name, a source and a context, with the same
+arguments, the same checks, in the same order, and the same errors as
+<a href="method.html#r-class.method.new">the <code>new</code> of <code>Method</code></a>: the name and the source are
+required (<code>SYNTAX 88.901</code>), a name with no <code>MAKESTRING</code> method, <code>.nil</code> among
+them, raises <code>88.909</code>, a context that is not <code>PROGRAMSCOPE</code>, a <code>Method</code>, a
+<code>Routine</code> or a <code>Package</code> raises <code>40.904</code>, and a source that does not translate
+raises its translation error, and the code does not run. The source is read as
+<a href="method.html#r-class.method.new.source">the source rule</a> says, with the messages of
+<a href="method.html#r-class.method.new.sends">the sends rule</a>, and the context decides what the
+routine finds as <a href="method.html#r-class.method.new.context">the context rule</a> says. The
+arguments from the fourth on are passed to <code>init</code> of the new object, and the
+class that received <code>new</code> is the class of the answer, as for a method. The
+name is the name of the routine's package.</p>
+<pre><code class="language-rexx">r = .routine~new('who', 'return "I am" .context~executable~class~id')
+say r~call r~package~name
+d = .routine~new('d', 'return helper() .here~class~id')
+say d~call
+call try '.routine~new()'
+call try '.routine~new("n")'
+call try '.routine~new(.nil, "nop")'
+call try '.routine~new("n", .nil)'
+call try '.routine~new("n", "nop", "other")'
+call try '.routine~new("n", "say (")'
+call try '.routine~new("n", "nop", "PROGRAMSCOPE", 1)'
+call try '.routine~new("n", .array~of("return 7"))~call'
+call try '.routine~new("n", "return" || "0A"x)'
+say .mine~new('n', 'nop', , 'a', 'b')~class~id
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::routine helper
+  return 'help'
+::class here
+::class mine subclass routine
+::method init
+  say 'init' arg() arg(1) arg(2)
+</code></pre>
+<pre><code class="language-output">I am Routine who
+help Class
+.routine~new() =&gt; 88.901
+.routine~new("n") =&gt; 88.901
+.routine~new(.nil, "nop") =&gt; 88.909
+.routine~new("n", .nil) =&gt; 93.961
+.routine~new("n", "nop", "other") =&gt; 40.904
+.routine~new("n", "say (") =&gt; 35.1
+.routine~new("n", "nop", "PROGRAMSCOPE", 1) =&gt; 93.902
+.routine~new("n", .array~of("return 7"))~call =&gt; 7
+.routine~new("n", "return" || "0A"x) =&gt; 13.1
+init 2 a b
+MINE
+</code></pre>
+<pre><code class="language-rexx">call try '.routine~new("n", .nil, 7)'
+call try '.routine~new("n", "nop", 7)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output defect=#143">.routine~new("n", .nil, 7) =&gt; 93.961
+.routine~new("n", "nop", 7) =&gt; 40.904
+</code></pre>
+<div class="rule" id="r-class.routine.new.sends"><a href="#r-class.routine.new.sends">[class.routine.new.sends]</a></div>
+<p><code>new</code> sends the messages that
+<a href="method.html#r-class.method.new.sends">the sends rule of <code>Method</code></a> states, in the same
+order: <code>request</code> with <code>ARRAY</code> and then with <code>STRING</code> to a source that is not a
+string and not an array (the line is a string answer itself, and any other
+answer's <code>objectName</code>), and, when the routine has been made, <code>init</code> with the
+arguments of <code>new</code> from the fourth on.</p>
+<pre><code class="language-rexx">call try '.routine~new("n", .src~new(.array~of("return 1"), .nil))~call'
+call try '.routine~new("n", .src~new(.nil, "return 2"))~call'
+call try '.routine~new("n", .src~new(.nil, .nil))'
+say .mine~new('n', 'return 5', 'PROGRAMSCOPE', 'a', 'b')~class~id
+say .mine~new('n', 'return 5')~call
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class src
+::method init
+  expose arr str
+  use arg arr, str
+::method request
+  expose arr str
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return arr
+  return str
+::class mine subclass routine
+::method init
+  say 'init' arg() arg(1) arg(2)
+</code></pre>
+<pre><code class="language-output">request ARRAY
+.routine~new("n", .src~new(.array~of("return 1"), .nil))~call =&gt; 1
+request ARRAY
+request STRING
+.routine~new("n", .src~new(.nil, "return 2"))~call =&gt; 2
+request ARRAY
+request STRING
+.routine~new("n", .src~new(.nil, .nil)) =&gt; 93.961
+init 2 a b
+MINE
+init 0  
+5
+</code></pre>
+<h3 id="newfile"><a class="header" href="#newfile">newFile</a></h3>
+<div class="rule" id="r-class.routine.newfile"><a href="#r-class.routine.newfile">[class.routine.newfile]</a></div>
+<p><code>newFile</code> makes a routine from the lines of a file, with the arguments, the
+checks, their order and the errors of
+<a href="method.html#r-class.method.newfile">the <code>newFile</code> of <code>Method</code></a>: the file name and an
+optional context, no third argument (<code>SYNTAX 93.902</code>), <code>.nil</code> or an object
+with no <code>MAKESTRING</code> method as the name raises <code>88.909</code>, a context that does
+not fit raises <code>40.904</code> before the file is looked for, and a file that cannot
+be read raises <code>SYNTAX 3.1</code>. The routine's package is named by the file name
+as it was given. Its source is the lines of the file before the first
+directive, except that a first line that begins with <code>#!</code> is not part of it,
+and the directives of the file still make the classes and routines of its
+package, which its code can name. <code>call</code> runs the lines before the first
+directive. How the file is searched for is specified in the environment
+chapter. <code>newFile</code> sends <code>init</code> with no argument to the new object, and a
+subclass of <code>Routine</code> makes instances of itself.</p>
+<pre><code class="language-rexx">f = 'class_routine_newfile_zq.tmp'
+call sysfiledelete f
+call lineout f, 'say "file routine" arg(1)'
+call lineout f, 'return .fromfile~new~hi'
+call lineout f, '::class fromfile'
+call lineout f, '::method hi'
+call lineout f, '  return "hi from the file"'
+call lineout f
+r = .routine~newFile(f)
+say r~class~id r~source~items (r~package~name == f)
+say r~package~classes~items r~package~routines~items
+say r~call('x')
+say .mine~newFile(f)~class~id
+call sysfiledelete f
+call try '.routine~newFile("class_routine_newfile_none.tmp")'
+call try '.routine~newFile()'
+call try '.routine~newFile(.nil)'
+call try '.routine~newFile(f, "PROGRAMSCOPE", 1)'
+call try '.routine~newFile("class_routine_newfile_none.tmp", "bad")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class mine subclass routine
+::method init
+  say 'init' arg()
+</code></pre>
+<pre><code class="language-output">Routine 2 1
+1 0
+file routine x
+hi from the file
+init 0
+MINE
+.routine~newFile("class_routine_newfile_none.tmp") =&gt; 3.1
+.routine~newFile() =&gt; 88.901
+.routine~newFile(.nil) =&gt; 88.909
+.routine~newFile(f, "PROGRAMSCOPE", 1) =&gt; 93.902
+.routine~newFile("class_routine_newfile_none.tmp", "bad") =&gt; 40.904
+</code></pre>
+<pre><code class="language-rexx">f = 'class_routine_shebang_zq.tmp'
+call sysfiledelete f
+call lineout f, '#!/usr/bin/rexx'
+call lineout f, 'return "after the first line"'
+call lineout f
+r = .routine~newFile(f)
+say r~source~items r~source[1]
+say r~call
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output defect=#144">1 return "after the first line"
+after the first line
+</code></pre>
+<div class="rule" id="r-class.routine.newfile.sends"><a href="#r-class.routine.newfile.sends">[class.routine.newfile.sends]</a></div>
+<p><code>newFile</code> sends the new object the message <code>init</code> with no argument, after the
+file has been read and translated, and a file name that is an object with a
+<code>MAKESTRING</code> method is sent that message once, before <code>init</code>; no other message
+is sent, as <a href="method.html#r-class.method.newfile.sends">the rule of <code>Method</code></a> says.</p>
+<pre><code class="language-rexx">f = 'class_routine_newfilesends_zq.tmp'
+call sysfiledelete f
+call lineout f, 'return 1'
+call lineout f
+say .mine~newFile(f)~class~id
+say .mine~newFile(.named~new(f))~class~id
+call sysfiledelete f
+::class mine subclass routine
+::method init
+  say 'init' arg()
+::class named
+::method init
+  expose n
+  use arg n
+::method makestring
+  expose n
+  say 'makestring'
+  return n
+</code></pre>
+<pre><code class="language-output">init 0
+MINE
+makestring
+init 0
+MINE
+</code></pre>
+<h3 id="loadexternalroutine"><a class="header" href="#loadexternalroutine">loadExternalRoutine</a></h3>
+<div class="rule" id="r-class.routine.loadexternalroutine"><a href="#r-class.routine.loadexternalroutine">[class.routine.loadexternalroutine]</a></div>
+<p><code>loadExternalRoutine</code> makes a routine object whose code is a routine of a
+native library, the same kind of routine that
+<a href="../directives/routine.html#r-dir.routine.external"><code>::ROUTINE EXTERNAL</code></a> declares. It takes a name and a
+descriptor, with the checks, the descriptor form and the errors of
+<a href="method.html#r-class.method.loadexternalmethod"><code>loadExternalMethod</code></a>: the word <code>LIBRARY</code>
+in any case, the library, and optionally the entry in it, which is the name of
+the routine when it is left out. A third argument raises <code>SYNTAX 93.902</code>, a
+missing argument <code>88.901</code>, a <code>.nil</code> argument or one with no <code>MAKESTRING</code>
+method <code>88.909</code> and a descriptor of another form <code>99.917</code>. When the library
+cannot be loaded or has no entry of that name, the answer is <code>.nil</code>. The
+answer is an instance of <code>Routine</code> also when a subclass received the message,
+and no <code>init</code> is sent. The routine can be called, with the arguments that the
+library routine takes, and its <code>source</code> is an empty array and its <code>package</code> is
+<code>.nil</code>. Where the library is searched for, and whether its name is case
+sensitive, is specified in the environment chapter.</p>
+<pre><code class="language-rexx">p = .routine~loadExternalRoutine('pi', 'LIBRARY rxmath rxcalcpi')
+say p~class~id p~call(5) p~callWith(.array~of(8)) p[3]
+say p~source~items p~package~isNil
+q = .routine~loadExternalRoutine('rxcalcpi', 'library rxmath')
+say q~call(4)
+say .routine~loadExternalRoutine('x', 'LIBRARY rxmath')~isNil
+say .routine~loadExternalRoutine('x', 'LIBRARY rxmath nosuchentry')~isNil
+say .routine~loadExternalRoutine('x', 'LIBRARY nosuchlibraryzq x')~isNil
+say .mine~loadExternalRoutine('pi', 'LIBRARY rxmath rxcalcpi')~class~id
+call try '.routine~loadExternalRoutine("x", "REGISTERED rxmath")'
+call try '.routine~loadExternalRoutine("x", "LIBRARY")'
+call try '.routine~loadExternalRoutine("x", "")'
+call try '.routine~loadExternalRoutine("x")'
+call try '.routine~loadExternalRoutine()'
+call try '.routine~loadExternalRoutine(.nil, "LIBRARY rxmath")'
+call try '.routine~loadExternalRoutine("x", .nil)'
+call try '.routine~loadExternalRoutine("x", "LIBRARY rxmath x", 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class mine subclass routine
+::method init
+  say 'init'
+</code></pre>
+<pre><code class="language-output">Routine 3.1416 3.1415927 3.14
+0 1
+3.142
+1
+1
+1
+Routine
+.routine~loadExternalRoutine("x", "REGISTERED rxmath") =&gt; 99.917
+.routine~loadExternalRoutine("x", "LIBRARY") =&gt; 99.917
+.routine~loadExternalRoutine("x", "") =&gt; 99.917
+.routine~loadExternalRoutine("x") =&gt; 88.901
+.routine~loadExternalRoutine() =&gt; 88.901
+.routine~loadExternalRoutine(.nil, "LIBRARY rxmath") =&gt; 88.909
+.routine~loadExternalRoutine("x", .nil) =&gt; 88.909
+.routine~loadExternalRoutine("x", "LIBRARY rxmath x", 1) =&gt; 93.902
+</code></pre>
+<h2 id="methods"><a class="header" href="#methods">Methods</a></h2>
+<h3 id="calling-the-routine"><a class="header" href="#calling-the-routine">Calling the routine</a></h3>
+<div class="rule" id="r-class.routine.call"><a href="#r-class.routine.call">[class.routine.call]</a></div>
+<p><code>call</code> runs the routine with its arguments and answers what it returns. The
+arguments are the arguments of the message, and the argument count is the
+position of the last one that is not <a href="../conventions.html#r-conv.arg.omitted">omitted</a>: an
+omitted place before it stays omitted for <code>ARG</code> and <code>use arg</code>, and omitted
+places at the end add nothing. The code runs as the code of an external
+routine does: it has variables of its own and cannot see those of the program
+that called it, the classes and routines it names are those of its package,
+and <code>exit</code> ends the routine and answers the value it gives. A routine that
+returns no value answers no value, so using the answer of its <code>call</code> as a term
+raises <code>SYNTAX 91.999</code>. A condition that the routine raises and does not trap
+reaches the sender of <code>call</code> as it would reach the caller of an external
+routine; the example shows <code>42.3</code> from a division by zero. A routine that was
+made by <code>loadExternalRoutine</code> calls the library routine with the arguments.</p>
+<pre><code class="language-rexx">r = .routine~new('n', 'return arg() "&lt;"arg(1)"&gt;&lt;"arg(2)"&gt;&lt;"arg(3)"&gt;"')
+call try 'r~call'
+call try 'r~call(1)'
+call try 'r~call(, 2)'
+call try 'r~call(1, , 3)'
+call try 'r~call(1, )'
+call try 'r~call(, )'
+call try '.routine~new("n", "return arg() arg(1, ""e"")")~call(, "x")'
+x = 'caller variable'
+call try '.routine~new("n", "return symbol(""X"") var(""X"")")~call'
+call try '.routine~new("n", "x = 5; return x")~call'
+say x
+call try '.routine~new("n", "exit 6")~call'
+call try '.routine~new("n", "return 1/0")~call'
+call try '.routine~new("n", "nop")~call'
+call try '.routine~new("n", "return")~call'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">r~call =&gt; 0 &lt;&gt;&lt;&gt;&lt;&gt;
+r~call(1) =&gt; 1 &lt;1&gt;&lt;&gt;&lt;&gt;
+r~call(, 2) =&gt; 2 &lt;&gt;&lt;2&gt;&lt;&gt;
+r~call(1, , 3) =&gt; 3 &lt;1&gt;&lt;&gt;&lt;3&gt;
+r~call(1, ) =&gt; 1 &lt;1&gt;&lt;&gt;&lt;&gt;
+r~call(, ) =&gt; 0 &lt;&gt;&lt;&gt;&lt;&gt;
+.routine~new("n", "return arg() arg(1, ""e"")")~call(, "x") =&gt; 2 0
+.routine~new("n", "return symbol(""X"") var(""X"")")~call =&gt; LIT 0
+.routine~new("n", "x = 5; return x")~call =&gt; 5
+caller variable
+.routine~new("n", "exit 6")~call =&gt; 6
+.routine~new("n", "return 1/0")~call =&gt; 42.3
+.routine~new("n", "nop")~call =&gt; 91.999
+.routine~new("n", "return")~call =&gt; 91.999
+</code></pre>
+<div class="rule" id="r-class.routine.brackets"><a href="#r-class.routine.brackets">[class.routine.brackets]</a></div>
+<p><code>[]</code> is the same message as <code>call</code> and takes the same arguments: the
+expression <code>r[1, 2]</code> and the message <code>r~'[]'(1, 2)</code> and the message
+<code>r~call(1, 2)</code> answer the same, with the same omitted places and the same
+errors. The routine has both methods.</p>
+<pre><code class="language-rexx">r = .routine~new('n', 'return arg() "&lt;"arg(1)"&gt;&lt;"arg(2)"&gt;"')
+say r[1, 2] r~'[]'(1, 2) r~call(1, 2)
+say r[, 5] r~'[]'(, 5)
+say r[] r~'[]'
+say r~hasMethod('[]') r~hasMethod('CALL')
+call try '.routine~new("n", "return 1/0")[]'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2 &lt;1&gt;&lt;2&gt; 2 &lt;1&gt;&lt;2&gt; 2 &lt;1&gt;&lt;2&gt;
+2 &lt;&gt;&lt;5&gt; 2 &lt;&gt;&lt;5&gt;
+0 &lt;&gt;&lt;&gt; 0 &lt;&gt;&lt;&gt;
+1 1
+.routine~new("n", "return 1/0")[] =&gt; 42.3
+</code></pre>
+<div class="rule" id="r-class.routine.callwith"><a href="#r-class.routine.callwith">[class.routine.callwith]</a></div>
+<p><code>callWith</code> runs the routine as <code>call</code> does with the arguments that its one
+argument holds. The argument is required (<code>SYNTAX 93.903</code>) and a second raises
+<code>93.902</code>. An instance of <code>Array</code> is used as it is. Any other object, an
+instance of a subclass of <code>Array</code> included, is sent <code>request</code> with the
+argument <code>ARRAY</code>, and the array that answers is used; an object for which that
+answers <code>.nil</code>, and <code>.nil</code> itself, and an array of more than one dimension
+raise <code>SYNTAX 98.913</code>. A string is converted by its
+<a href="string.html#r-class.string.makearray"><code>makeArray</code></a>, one argument for each line, so a
+string with no line end is one argument and the null string has none; the
+empty <code>StringTable</code> and <code>Directory</code> have no items. The arguments are the items
+of the array by position: a hole is an omitted argument, and the argument
+count is the highest index that holds an item, as the count of a message is
+for <a href="#r-class.routine.call"><code>call</code></a>, so an array with no items gives a routine
+with no arguments, however large it was made.</p>
+<pre><code class="language-rexx">r = .routine~new('n', 'return arg() "&lt;"arg(1)"&gt;&lt;"arg(2)"&gt;&lt;"arg(3)"&gt;"')
+call try 'r~callWith(.array~of(1, 2))'
+call try 'r~callWith(.array~new)'
+call try 'r~callWith(.array~new(3))'
+call try 'r~callWith(.array~new(3)~~put("a", 3))'
+call try 'r~callWith(.array~of(1, 2)~~put("z", 5))'
+call try 'r~callWith("a b")'
+call try 'r~callWith("a" || "0A"x || "b")'
+call try 'r~callWith("")'
+call try 'r~callWith(.stringtable~new)'
+call try 'r~callWith(.holder~new)'
+call try 'r~callWith(.arrsub~of(1, 2))'
+call try 'r~callWith'
+call try 'r~callWith(.nil)'
+call try 'r~callWith(.object~new)'
+call try 'r~callWith(.array~new(1, 1))'
+call try 'r~callWith(.array~of(1), 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class holder
+::method request
+  say 'request' arg(1)
+  return .array~of('r1', 'r2')
+::class arrsub subclass array
+::method makearray
+  say 'makearray'
+  return .array~of('z')
+</code></pre>
+<pre><code class="language-output">r~callWith(.array~of(1, 2)) =&gt; 2 &lt;1&gt;&lt;2&gt;&lt;&gt;
+r~callWith(.array~new) =&gt; 0 &lt;&gt;&lt;&gt;&lt;&gt;
+r~callWith(.array~new(3)) =&gt; 0 &lt;&gt;&lt;&gt;&lt;&gt;
+r~callWith(.array~new(3)~~put("a", 3)) =&gt; 3 &lt;&gt;&lt;&gt;&lt;a&gt;
+r~callWith(.array~of(1, 2)~~put("z", 5)) =&gt; 5 &lt;1&gt;&lt;2&gt;&lt;&gt;
+r~callWith("a b") =&gt; 1 &lt;a b&gt;&lt;&gt;&lt;&gt;
+r~callWith("a" || "0A"x || "b") =&gt; 2 &lt;a&gt;&lt;b&gt;&lt;&gt;
+r~callWith("") =&gt; 0 &lt;&gt;&lt;&gt;&lt;&gt;
+r~callWith(.stringtable~new) =&gt; 0 &lt;&gt;&lt;&gt;&lt;&gt;
+request ARRAY
+r~callWith(.holder~new) =&gt; 2 &lt;r1&gt;&lt;r2&gt;&lt;&gt;
+makearray
+r~callWith(.arrsub~of(1, 2)) =&gt; 1 &lt;z&gt;&lt;&gt;&lt;&gt;
+r~callWith =&gt; 93.903
+r~callWith(.nil) =&gt; 98.913
+r~callWith(.object~new) =&gt; 98.913
+r~callWith(.array~new(1, 1)) =&gt; 98.913
+r~callWith(.array~of(1), 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.routine.callwith.sends"><a href="#r-class.routine.callwith.sends">[class.routine.callwith.sends]</a></div>
+<p><code>callWith</code> sends <code>request</code> with the argument <code>ARRAY</code> to its argument when that
+is not an instance of <code>Array</code> itself, once, before the routine runs, and no
+other message to it; an instance of <code>Array</code> is not sent any message, and the
+routine's code is run with the items of the array that was answered. An
+override of <code>makeArray</code> shows through the <code>request</code> of <code>Object</code>, which sends
+it.</p>
+<pre><code class="language-rexx">r = .routine~new('n', 'return arg() "&lt;"arg(1)"&gt;&lt;"arg(2)"&gt;"')
+say r~callWith(.holder~new)
+say r~callWith(.maker~new)
+say r~callWith(.array~of('plain', 'array'))
+::class holder
+::method request
+  say 'request' arg(1)
+  return .array~of('r1', 'r2')
+::class maker
+::method makearray
+  say 'makearray'
+  return .array~of('m1', 'm2')
+</code></pre>
+<pre><code class="language-output">request ARRAY
+2 &lt;r1&gt;&lt;r2&gt;
+makearray
+2 &lt;m1&gt;&lt;m2&gt;
+2 &lt;plain&gt;&lt;array&gt;
+</code></pre>
+<h3 id="what-the-routine-is"><a class="header" href="#what-the-routine-is">What the routine is</a></h3>
+<div class="rule" id="r-class.routine.source"><a href="#r-class.routine.source">[class.routine.source]</a></div>
+<p><code>source</code> answers a new array that holds the lines of the routine's source, one
+string for each line, so changing the array changes nothing in the routine. A
+routine made by <code>new</code> has the lines of its source argument (an empty string
+and an empty array are a source of no lines), one made by <code>newFile</code> the lines
+of its file before the first directive, without a first line that begins with
+<code>#!</code>, and one that a <code>::ROUTINE</code> directive makes has the lines of its section,
+which <a href="method.html#r-class.method.source">the rule of <code>Method</code></a> reads as it does for a
+method: the text after the <code>;</code> of the directive is the first line, and an
+empty last line is left out, so a directive with nothing after its <code>;</code> and
+no lines has an empty source. A routine that <code>loadExternalRoutine</code> loaded, and
+an external routine, answer an array of no items. The method takes no argument
+(<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">r = .routine~new('n', .array~of('say 1', 'return 2'))
+a = r~source
+say a~class~id a~items (a == r~source)
+a~put('changed', 1)
+say r~source[1]
+say .routine~new('n', '')~source~items,
+  .routine~new('n', .array~new)~source~items
+say .context~package~findRoutine('PLAIN')~source[1]~strip
+say .context~package~findRoutine('PLAIN')~source~items
+call try 'r~source(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::routine plain
+  return 'plain'
+</code></pre>
+<pre><code class="language-output">Array 2 0
+say 1
+0 0
+return 'plain'
+1
+r~source(1) =&gt; 93.902
+</code></pre>
+<pre><code class="language-rexx">p = .package~new('n', .array~of('nop', '::routine r ;', '::routine s'))
+say p~routines['R']~source~items
+</code></pre>
+<pre><code class="language-output defect=#147">0
+</code></pre>
+<div class="rule" id="r-class.routine.package"><a href="#r-class.routine.package">[class.routine.package]</a></div>
+<p><code>package</code> answers the package that holds the routine's code, which decides
+which classes and routines the code names. For a routine that a <code>::ROUTINE</code>
+directive makes it is the package of the program that holds the directive. For
+a routine made by <code>new</code> or <code>newFile</code> it is the package that <code>new</code> made, as
+<a href="method.html#r-class.method.new.context">the context rule</a> says, which is named by the
+name argument or the file name, and is the same object every time. For
+<code>loadExternalRoutine</code> it is <code>.nil</code>. The method takes no argument.</p>
+<pre><code class="language-rexx">me = .context~package
+r = me~findRoutine('PLAIN')
+say (r~package == me) (r~package == r~package)
+n = .routine~new('named', 'nop')
+say n~package~class~id n~package~name (n~package == n~package)
+p = .routine~loadExternalRoutine('pi', 'LIBRARY rxmath rxcalcpi')
+say p~package~isNil
+call try 'n~package(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::routine plain
+</code></pre>
+<pre><code class="language-output">1 1
+Package named 1
+1
+n~package(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.routine.annotation"><a href="#r-class.routine.annotation">[class.routine.annotation]</a></div>
+<p><code>annotation</code> answers the value of the annotation of the routine that has the
+name it is given, and <code>.nil</code> when there is none, as
+<a href="../directives/annotate.html#r-dir.annotate.read">the annotation rule</a> says: the name is taken in upper
+case, and a routine made by <code>new</code>, <code>newFile</code> or <code>loadExternalRoutine</code> has no
+annotations: the answer for one is <code>.nil</code>, and its <code>annotations</code> table is
+empty. The name is required (<code>SYNTAX 88.901</code>), an object with no <code>MAKESTRING</code>
+method, <code>.nil</code> among them, raises <code>88.909</code>, and a second argument raises
+<code>93.902</code>. A number or a string that names no annotation answers <code>.nil</code>.</p>
+<pre><code class="language-rexx">r = .context~package~findRoutine('NOTED')
+say r~annotation('Version') r~annotation('VERSION') r~annotation('who')
+say r~annotation('none')~isNil r~annotation(12)~isNil
+say .routine~new('n', 'nop')~annotation('version')~isNil
+call try 'r~annotation'
+call try 'r~annotation(.nil)'
+call try 'r~annotation("a", "b")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::routine noted
+::annotate routine noted Version 3
+::annotate routine noted who 'me'
+</code></pre>
+<pre><code class="language-output">3 3 me
+1 1
+1
+r~annotation =&gt; 88.901
+r~annotation(.nil) =&gt; 88.909
+r~annotation("a", "b") =&gt; 93.902
+</code></pre>
+<pre><code class="language-rexx">r = .routine~loadExternalRoutine('pi', 'LIBRARY rxmath rxcalcpi')
+say r~annotation('x')~isNil r~annotations~items
+</code></pre>
+<pre><code class="language-output">1 0
+</code></pre>
+<div class="rule" id="r-class.routine.annotations"><a href="#r-class.routine.annotations">[class.routine.annotations]</a></div>
+<p><code>annotations</code> answers the <code>StringTable</code> that holds every annotation of the
+routine, indexed by the upper case name, as <a href="../directives/annotate.html#r-dir.annotate.read">the annotation
+rule</a> says. It is the table that the routine keeps: the
+same object every time, so an entry put into it is an annotation that
+<code>annotation</code> answers. A routine with none has an empty table. The method takes
+no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">t = .context~package~findRoutine('NOTED')~annotations
+say t~class~id t~items t['VERSION'] t['WHO']
+say t~allIndexes~sort~makeArray~makeString('l', ',')
+say (t == .context~package~findRoutine('NOTED')~annotations)
+t~put('later', 'ADDED')
+say .context~package~findRoutine('NOTED')~annotation('added')
+say .routine~new('n', 'nop')~annotations~items
+call try '.context~package~findRoutine("NOTED")~annotations(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::routine noted
+::annotate routine noted Version 3
+::annotate routine noted who 'me'
+</code></pre>
+<pre><code class="language-output">StringTable 2 3 me
+VERSION,WHO
+1
+later
+0
+.context~package~findRoutine("NOTED")~annotations(1) =&gt; 93.902
+</code></pre>
+<h3 id="the-security-manager"><a class="header" href="#the-security-manager">The security manager</a></h3>
+<div class="rule" id="r-class.routine.setsecuritymanager"><a href="#r-class.routine.setsecuritymanager">[class.routine.setsecuritymanager]</a></div>
+<p><code>setSecurityManager</code> gives the routine a security manager, or with no argument
+removes the one it has, and answers <code>1</code>. It is a protected method. The manager
+can be any object, <code>.nil</code> as well, and it is not checked when it is set;
+<code>.nil</code> is an object like any other and is sent the checkpoints, which it does
+not understand (<code>SYNTAX 97.1</code>), so only a call with no argument removes the
+manager. A second argument raises <code>SYNTAX 93.902</code>. While the code of the
+routine runs, and in the internal routines of that code, the actions that <a href="#r-class.routine.setsecuritymanager.checkpoints">the
+checkpoint rules</a> name are
+offered to the manager first. The code of other packages, those of the classes
+and routines that the routine calls, and the packages that it makes, are not
+under the manager. A manager that is removed no longer sees the actions.</p>
+<pre><code class="language-rexx">src = 'address system "echo hidden"; return "done"'
+r = .routine~new('agent', src)
+say r~setSecurityManager(.guard~new)
+say r~call
+say r~setSecurityManager
+say r~call
+say r~setSecurityManager(.nil)
+call try 'r~call'
+call try 'r~setSecurityManager(.guard~new, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class guard
+::method command
+  use arg info
+  say 'manager saw' info~command
+  info~rc = 0
+  return 1
+</code></pre>
+<pre><code class="language-output">1
+manager saw echo hidden
+done
+1
+hidden
+done
+1
+r~call =&gt; 97.1
+r~setSecurityManager(.guard~new, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.routine.setsecuritymanager.checkpoints"><a href="#r-class.routine.setsecuritymanager.checkpoints">[class.routine.setsecuritymanager.checkpoints]</a></div>
+<p>The actions that are offered to the manager are the checkpoints: an external
+routine call (<code>CALL</code>), a command (<code>COMMAND</code>), a <code>loadPackage</code> (<code>REQUIRES</code>), a
+name looked up in <code>.local</code> (<code>LOCAL</code>) or in <code>.environment</code> (<code>ENVIRONMENT</code>), a
+stream name of a stream function (<code>STREAM</code>) and a message to a protected
+method (<code>METHOD</code>). The rules for each name the entries of its information
+directory. The interpreter sends the manager the message of the checkpoint's
+name with one argument, a <code>Directory</code> that holds the entries; the manager
+answers <code>1</code> to say it handled the action, and the entries that the checkpoint
+reads from the directory are used, or <code>0</code> to let the action go on as it would.
+An answer that is neither <code>0</code> nor <code>1</code> raises <code>SYNTAX 34.903</code>, and an answer of
+no value raises <code>SYNTAX 91.999</code>. A manager that has no method of the
+checkpoint's name is sent <code>UNKNOWN</code> as any object is, with the name and an
+array that holds the directory; when it has none either, the message raises
+<code>SYNTAX 97.1</code> at the clause that caused the action. A manager may raise a
+condition instead of answering: the usual one is <code>SYNTAX 98.948</code>, and it
+reaches the code of the routine as any error of its clause does.</p>
+<pre><code class="language-rexx">src = 'signal on syntax; address system "true"; return "ran"; '
+src = src || 'syntax: return "error" condition("o")~code'
+mgrs = .array~of(.none~new, .zero~new, .one~new, .five~new, .nothing~new)
+mgrs~append(.raiser~new)
+mgrs~append(.generic~new)
+do mgr over mgrs
+  r = .routine~new('agent', src)
+  r~setSecurityManager(mgr)
+  say mgr~class~id '=&gt;' r~call
+end
+exit
+::class none
+::class zero
+::method command
+  return 0
+::class one
+::method command
+  return 1
+::class five
+::method command
+  return 5
+::class nothing
+::method command
+  nop
+::class raiser
+::method command
+  raise syntax 98.948 array('no way')
+::class generic
+::method unknown
+  use arg name, args
+  say 'unknown got' name args[1]~class~id
+  return 1
+</code></pre>
+<pre><code class="language-output">NONE =&gt; error 97.1
+ZERO =&gt; ran
+ONE =&gt; ran
+FIVE =&gt; error 34.903
+NOTHING =&gt; error 91.999
+RAISER =&gt; error 98.948
+unknown got COMMAND Directory
+GENERIC =&gt; ran
+</code></pre>
+<div class="rule" id="r-class.routine.setsecuritymanager.call"><a href="#r-class.routine.setsecuritymanager.call">[class.routine.setsecuritymanager.call]</a></div>
+<p>The <code>CALL</code> checkpoint is offered for the call of an external routine: one that
+is not a label in the code, not a built-in function and not a routine that the
+routine's package or its context package finds, its own and those it imports;
+a function of a native library is offered. The directory holds <code>NAME</code>, the
+upper case name of the routine, and <code>ARGUMENTS</code>, an array of the arguments. A
+manager that answers <code>1</code> takes the call over: the entry <code>RESULT</code>, when the
+manager set one, is the value of the call, and with no <code>RESULT</code> the call
+answers no value, which raises <code>SYNTAX 44.1</code> where the value is used. A
+manager that answers <code>0</code> lets the call go on, which raises <code>SYNTAX 43.1</code> for a
+routine that does not exist. A routine that the package or its context finds
+is not offered, as the call of <code>known</code> in the example shows, and neither is
+one that they import, as the second example shows.</p>
+<pre><code class="language-rexx">src = 'say left("abc", 2) lab(1) known(); say zqprovided(4, 5); '
+src = src || 'say zqtwice(); say "end"; exit; lab: return "lab" arg(1)'
+r = .routine~new('agent', src)
+r~setSecurityManager(.mgr~new)
+call try 'r~call'
+r = .routine~new('agent', 'return zqmissing()')
+r~setSecurityManager(.mgr~new)
+call try 'r~call'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::routine known
+  return 'known'
+::class mgr
+::method call
+  use arg info
+  say 'call' info~name info~arguments~items
+  if info~name == 'ZQPROVIDED' then do
+    info~result = 'replaced' info~arguments[2]
+    return 1
+  end
+  if info~name == 'ZQTWICE' then return 1
+  return 0
+</code></pre>
+<pre><code class="language-output">ab lab 1 known
+call ZQPROVIDED 2
+replaced 5
+call ZQTWICE 0
+r~call =&gt; 44.1
+call ZQMISSING 0
+r~call =&gt; 43.1
+</code></pre>
+<pre><code class="language-rexx">src = .array~of('nop', '::routine zqpub public', '  return "pub"')
+lib = .package~new('zqlib', src)
+ctx = .package~new('zqctx', 'nop')
+ctx~addPackage(lib)
+src = 'say zqpub(); say sysfileexists("zq_nofile_zz")'
+r = .routine~new('agent', src, ctx)
+r~setSecurityManager(.mgr~new)
+r~call
+exit
+::class mgr
+::method call
+  use arg info
+  say 'call' info~name
+  return 0
+</code></pre>
+<pre><code class="language-output">pub
+call SYSFILEEXISTS
+0
+</code></pre>
+<div class="rule" id="r-class.routine.setsecuritymanager.command"><a href="#r-class.routine.setsecuritymanager.command">[class.routine.setsecuritymanager.command]</a></div>
+<p>The <code>COMMAND</code> checkpoint is offered for a command that goes to an <code>ADDRESS</code>
+environment. The directory holds <code>COMMAND</code>, the command string, and <code>ADDRESS</code>,
+the name of the environment in upper case. A manager that answers <code>1</code> has run
+the command itself: the entry <code>RC</code>, when it is set, is the return code, and
+<code>0</code> is used when it is not. The entry <code>FAILURE</code>, when it is set alone, raises
+the FAILURE condition for the command, and the entry <code>ERROR</code>, when it is set
+alone, raises ERROR; when both are set, FAILURE is raised and ERROR is not.
+The manager answers <code>0</code> to let the interpreter run the command. The default
+environment that a command goes to when the code names no <code>ADDRESS</code> is that of
+the host and is not specified.</p>
+<pre><code class="language-rexx">src = 'address system "echo one"; say "rc" rc; signal on failure name fail; '
+src = src || 'address system "echo two"; say "not here"; '
+src = src || 'fail: say "failure" rc; signal on error name err; '
+src = src || 'address system "echo three"; say "not here"; '
+src = src || 'err: say "error" rc; signal on failure name fail2; '
+src = src || 'signal on error name err2; address system "echo four"; '
+src = src || 'say "not here"; fail2: say "both failure" rc; exit; '
+src = src || 'err2: say "both error" rc'
+r = .routine~new('agent', src)
+r~setSecurityManager(.mgr~new)
+r~call
+exit
+::class mgr
+::method command
+  use arg info
+  say 'command' info~address '&gt;'info~command'&lt;'
+  say '  entries' info~allIndexes~sort~makearray~makestring('l', ',')
+  select
+    when info~command = 'echo one' then info~rc = 11
+    when info~command = 'echo two' then do
+      info~rc = 12
+      info~failure = 1
+    end
+    when info~command = 'echo three' then do
+      info~rc = 13
+      info~error = 1
+    end
+    when info~command = 'echo four' then do
+      info~rc = 14
+      info~failure = 1
+      info~error = 1
+    end
+  end
+  return 1
+</code></pre>
+<pre><code class="language-output">command SYSTEM &gt;echo one&lt;
+  entries ADDRESS,COMMAND
+rc 11
+command SYSTEM &gt;echo two&lt;
+  entries ADDRESS,COMMAND
+failure 12
+command SYSTEM &gt;echo three&lt;
+  entries ADDRESS,COMMAND
+error 13
+command SYSTEM &gt;echo four&lt;
+  entries ADDRESS,COMMAND
+both failure 14
+</code></pre>
+<div class="rule" id="r-class.routine.setsecuritymanager.local"><a href="#r-class.routine.setsecuritymanager.local">[class.routine.setsecuritymanager.local]</a></div>
+<p>The <code>LOCAL</code> checkpoint is offered when the code names an object of <code>.local</code>,
+with the entry <code>NAME</code>, the upper case name, before <code>.local</code> is searched. It is
+offered for a name that <a href="package.html#r-class.package.findclass"><code>findClass</code></a> takes from
+<code>.local</code> or <code>.environment</code> or does not find, except <code>.nil</code>, <code>.true</code> and
+<code>.false</code>, which are never offered, not for a name that a class of the package,
+of its context, of the packages it imports or of the library gives, and not
+for a name in the <code>local</code> directory of the package, which is searched first. A
+manager that answers <code>1</code> with an entry <code>RESULT</code> provides the object; one that
+answers <code>1</code> with no <code>RESULT</code> is read as the name not being found, and the
+lookup goes on with the <code>ENVIRONMENT</code> checkpoint. The code of the routine is
+the code that is under the manager; the program that called it is not.</p>
+<pre><code class="language-rexx">.local~zqvalue = 'in local'
+r = .routine~new('agent', 'return .zqvalue "|" .zqother "|" .zqnone')
+r~setSecurityManager(.mgr~new)
+say r~call
+exit
+::class mgr
+::method local
+  use arg info
+  say 'local' info~name
+  if info~name = 'ZQOTHER' then do
+    info~result = 'provided'
+    return 1
+  end
+  if info~name = 'ZQNONE' then return 1
+  return 0
+::method environment
+  use arg info
+  say 'environment' info~name
+  return 0
+</code></pre>
+<pre><code class="language-output">local ZQVALUE
+local ZQOTHER
+local ZQNONE
+environment ZQNONE
+in local | provided | .ZQNONE
+</code></pre>
+<pre><code class="language-rexx">src = .array~of('nop', '::class libpub public', '::class libpriv')
+lib = .package~new('lib', src)
+ctx = .package~new('ctx', .array~of('nop', '::class ctxpriv'))
+ctx~addPackage(lib)
+src = 'x = .nil; x = .false; x = .ctxpriv; x = .libpub; x = .string; '
+src = src || 'x = .zqpkg; x = .libpriv; x = .rexxinfo; x = .stdout; '
+src = src || 'x = .local'
+r = .routine~new('agent', src, ctx)
+r~package~local~put('in package', 'ZQPKG')
+r~setSecurityManager(.mgr~new)
+r~call
+exit
+::class mgr
+::method unknown
+  use arg name, args
+  say name args[1]~name
+  return 0
+</code></pre>
+<pre><code class="language-output">LOCAL LIBPRIV
+ENVIRONMENT LIBPRIV
+LOCAL REXXINFO
+ENVIRONMENT REXXINFO
+LOCAL STDOUT
+LOCAL LOCAL
+ENVIRONMENT LOCAL
+</code></pre>
+<div class="rule" id="r-class.routine.setsecuritymanager.environment"><a href="#r-class.routine.setsecuritymanager.environment">[class.routine.setsecuritymanager.environment]</a></div>
+<p>The <code>ENVIRONMENT</code> checkpoint is offered, after the <code>LOCAL</code> one answered <code>0</code> or
+did not provide the name, for a name that is looked up in <code>.environment</code>: the
+entry <code>NAME</code> is the upper case name, <code>RESULT</code> and the answer have the same
+meaning as for <code>LOCAL</code>. A name that <code>LOCAL</code> provided is not offered to
+<code>ENVIRONMENT</code>, and neither is a name that <code>.local</code> holds, such as <code>.stdout</code>,
+when <code>LOCAL</code> answered <code>0</code>.</p>
+<pre><code class="language-rexx">.environment~zqenvvalue = 'in environment'
+r = .routine~new('agent', 'return .zqenvvalue "|" .zqprov "|" .zqloc')
+r~setSecurityManager(.mgr~new)
+say r~call
+exit
+::class mgr
+::method local
+  use arg info
+  say 'local' info~name
+  if info~name = 'ZQLOC' then do
+    info~result = 'from local'
+    return 1
+  end
+  return 0
+::method environment
+  use arg info
+  say 'environment' info~name
+  if info~name = 'ZQPROV' then do
+    info~result = 'from environment'
+    return 1
+  end
+  return 0
+</code></pre>
+<pre><code class="language-output">local ZQENVVALUE
+environment ZQENVVALUE
+local ZQPROV
+environment ZQPROV
+local ZQLOC
+in environment | from environment | from local
+</code></pre>
+<div class="rule" id="r-class.routine.setsecuritymanager.stream"><a href="#r-class.routine.setsecuritymanager.stream">[class.routine.setsecuritymanager.stream]</a></div>
+<p>The <code>STREAM</code> checkpoint is offered when a stream function (<code>CHARIN</code>,
+<code>CHAROUT</code>, <code>CHARS</code>, <code>LINEIN</code>, <code>LINEOUT</code>, <code>LINES</code> or <code>STREAM</code>) resolves a
+stream name, the first time that the code of the routine names it in a call.
+The directory holds <code>NAME</code>, the name. A manager that answers <code>1</code> has chosen
+the stream: the entry <code>STREAM</code> is the object that the function then uses, and
+it must understand the messages of a stream. A manager that answers <code>0</code> lets
+the function open the name itself.</p>
+<pre><code class="language-rexx">f = 'class_routine_stream_zq.tmp'
+call sysfiledelete f
+call lineout f, 'real line one'
+call lineout f, 'real line two'
+call lineout f
+src = 'say linein("zq_virtual_name"); say linein("zq_virtual_name"); ' ||,
+  'say lines("zq_virtual_name"); return "end"'
+r = .routine~new('agent', src)
+r~setSecurityManager(.mgr~new(f))
+say r~call
+call sysfiledelete f
+exit
+::class mgr
+::method init
+  expose file
+  use arg file
+::method stream
+  expose file
+  use arg info
+  say 'stream asked for' info~name~right(15)
+  info~stream = .stream~new(file)
+  return 1
+</code></pre>
+<pre><code class="language-output">stream asked for zq_virtual_name
+real line one
+real line two
+0
+end
+</code></pre>
+<div class="rule" id="r-class.routine.setsecuritymanager.requires"><a href="#r-class.routine.setsecuritymanager.requires">[class.routine.setsecuritymanager.requires]</a></div>
+<p>The <code>REQUIRES</code> checkpoint is offered when the code of the routine loads a
+package from a file, with <code>loadPackage</code> or with the <code>new</code> of <code>Package</code> and a
+file name. The directory holds <code>NAME</code>, the name of the file. The checkpoint is
+offered twice for a file that is found, first with the name as it was given
+and then with its absolute name, and once, with the name as it was given, for
+a file that is not found, before the load raises <code>SYNTAX 43.901</code>. A package
+that was loaded before is not loaded again and is not offered, and neither is
+a <code>loadPackage</code> that has a source, and a <code>::REQUIRES</code> of a package that the
+code makes from a source is not offered either. A manager that answers <code>0</code>
+lets the load go on, and so does one that answers <code>1</code> and leaves <code>NAME</code> as it
+is.</p>
+<pre><code class="language-rexx">f = 'class_routine_requires_zq.tmp'
+call sysfiledelete f
+call lineout f, 'say "loaded body"'
+call lineout f
+g = 'class_routine_requires_n_zq.tmp'
+call sysfiledelete g
+call lineout g, 'say "new body"'
+call lineout g
+m = 'class_routine_requires_m_zq.tmp'
+call sysfiledelete m
+call lineout m, 'say "m body"'
+call lineout m
+h = 'class_routine_requires_b_zq.tmp'
+call sysfiledelete h
+call lineout h, 'say "required body"'
+call lineout h
+src = 'p = .package~new("p", "nop"); signal on syntax name bad; '
+src = src || 'say p~loadPackage("class_routine_requires_zq.tmp")~class~id; '
+src = src || 'say p~loadPackage("class_routine_requires_zq.tmp")~class~id; '
+src = src || 'say p~loadPackage("class_routine_requires_src_zq.tmp", '
+src = src || '"nop")~class~id; '
+src = src || 'say .package~new("class_routine_requires_n_zq.tmp")~class~id; '
+src = src || 'x = .package~new("x", .array~of("nop", '
+src = src || '"::requires ""class_routine_requires_b_zq.tmp"""));'
+src = src || 'say p~loadPackage("class_routine_requires_gone_zq.tmp"); '
+src = src || 'bad: say condition("o")~code'
+r = .routine~new('agent', src)
+r~setSecurityManager(.mgr~new)
+r~call
+src = 'say .package~new("class_routine_requires_m_zq.tmp")~class~id'
+r = .routine~new('agent2', src)
+r~setSecurityManager(.mgr1~new)
+r~call
+call sysfiledelete f
+call sysfiledelete g
+call sysfiledelete h
+call sysfiledelete m
+exit
+::class mgr
+::method requires
+  use arg info
+  say 'requires, absolute name:' (info~name == qualify(info~name))
+  return 0
+::class mgr1
+::method requires
+  use arg info
+  say 'requires, answer 1:' (info~name == qualify(info~name))
+  return 1
+</code></pre>
+<pre><code class="language-output">requires, absolute name: 0
+requires, absolute name: 1
+loaded body
+Package
+Package
+Package
+requires, absolute name: 0
+requires, absolute name: 1
+new body
+Package
+required body
+requires, absolute name: 0
+43.901
+requires, answer 1: 0
+requires, answer 1: 1
+m body
+Package
+</code></pre>
+<div class="rule" id="r-class.routine.setsecuritymanager.method"><a href="#r-class.routine.setsecuritymanager.method">[class.routine.setsecuritymanager.method]</a></div>
+<p>The <code>METHOD</code> checkpoint is offered when the code of the routine sends a
+message to a <a href="../directives/method.html#r-dir.method.protected">protected method</a>, before the method
+runs. The directory holds <code>OBJECT</code>, the receiver, <code>NAME</code>, the upper case name
+of the method, and <code>ARGUMENTS</code>, an array of the arguments. A manager that
+answers <code>1</code> has run the message itself: the entry <code>RESULT</code>, when it is set, is
+what the message answers, and with no <code>RESULT</code> the message answers no value,
+so that using the answer raises <code>SYNTAX 91.999</code>. A manager that answers <code>0</code>
+lets the method run. A message to a protected method from code that is not
+under a manager runs the method, and so does a message to a method that is not
+protected.</p>
+<pre><code class="language-rexx">r = .routine~new('agent', 'o = .box~new; return o~locked(1, 2) o~open')
+r~setSecurityManager(.mgr~new)
+say r~call
+say .box~new~locked(1, 2)
+exit
+::class box
+::method locked protected
+  return 'locked ran'
+::method open
+  return 'open ran'
+::class mgr
+::method method
+  use arg info
+  say 'method' info~name info~object~class~id info~arguments~items
+  info~result = 'replaced'
+  return 1
+</code></pre>
+<pre><code class="language-output">method LOCKED BOX 2
+replaced open ran
+locked ran
+</code></pre>
+<pre><code class="language-rexx">r = .routine~new('agent', 'return .box~new~locked')
+r~setSecurityManager(.mgr~new)
+signal on syntax name bad
+say r~call
+exit
+bad: say condition('o')~code
+::class box
+::method locked protected
+  return 'locked ran'
+::class mgr
+::method method
+  return 1
+</code></pre>
+<pre><code class="language-output">91.999
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.routine.deviation.41"><a href="#r-class.routine.deviation.41">[class.routine.deviation.41]</a></div>
+<p>A source that is an encoded program image whose decoded bytes lack the tag of
+an image raises <code>SYNTAX 3.903</code> from <code>new</code>, as <a href="method.html#r-class.method.deviation.41">the rule of
+<code>Method</code></a> says; ooRexx translates the partly
+decoded bytes as source.</p>
+<pre><code class="language-rexx">img = .array~of('#!/usr/bin/env rexx', '/**/@REXX@', 'c2F5ICdkZWNvZGVkJw==')
+signal on syntax name bad
+r = .routine~new('n', img)
+say 'made'
+exit
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">3.903
+</code></pre>
+<div class="rule" id="r-class.routine.deviation.109"><a href="#r-class.routine.deviation.109">[class.routine.deviation.109]</a></div>
+<p>An instance of a subclass of <code>String</code> that is the name or the source of <code>new</code>
+is read by its own characters, and <code>MAKESTRING</code> and <code>STRING</code> are not sent to
+it (<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). ooRexx reads the name
+through its <code>MAKESTRING</code> method; the source is read as the instance's own
+characters on both. In the example <code>MAKESTRING</code> answers another name.</p>
+<pre><code class="language-rexx">r = .routine~new(.name~new('Foo'), .name~new('say "src"'))
+say r~package~name r~source[1]
+::class name subclass string
+::method makestring
+  return 'other'
+</code></pre>
+<pre><code class="language-output defect=#140">Foo say "src"
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/method.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/package.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/method.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/package.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

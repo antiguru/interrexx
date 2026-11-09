@@ -1,0 +1,2671 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Package - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../classes/index.html"><strong aria-hidden="true">10.</strong> Classes</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../classes/methods.html"><strong aria-hidden="true">10.1.</strong> Method search</a></li><li class="chapter-item expanded "><a href="../classes/object.html"><strong aria-hidden="true">10.2.</strong> Object</a></li><li class="chapter-item expanded "><a href="../classes/class.html"><strong aria-hidden="true">10.3.</strong> Class</a></li><li class="chapter-item expanded "><a href="../classes/string.html"><strong aria-hidden="true">10.4.</strong> String</a></li><li class="chapter-item expanded "><a href="../classes/method.html"><strong aria-hidden="true">10.5.</strong> Method</a></li><li class="chapter-item expanded "><a href="../classes/routine.html"><strong aria-hidden="true">10.6.</strong> Routine</a></li><li class="chapter-item expanded "><a href="../classes/package.html" class="active"><strong aria-hidden="true">10.7.</strong> Package</a></li><li class="chapter-item expanded "><a href="../classes/message.html"><strong aria-hidden="true">10.8.</strong> Message</a></li><li class="chapter-item expanded "><a href="../classes/messagenotification.html"><strong aria-hidden="true">10.9.</strong> MessageNotification</a></li><li class="chapter-item expanded "><a href="../classes/alarmnotification.html"><strong aria-hidden="true">10.10.</strong> AlarmNotification</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">11.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">11.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">11.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">11.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">11.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">11.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">11.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">11.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">11.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">11.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">11.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">11.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">11.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">11.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">11.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">11.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">11.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">11.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">11.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">11.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">11.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">11.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">11.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">11.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">11.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">11.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">11.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">11.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">11.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">11.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">11.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">11.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">11.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">11.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">11.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">11.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">11.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">11.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">11.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">11.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">11.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">11.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">11.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">11.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">11.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">11.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">11.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">11.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">11.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">11.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">11.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">11.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">11.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">11.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">11.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">11.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">11.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">11.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">11.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">11.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">11.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">11.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">11.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">11.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">11.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">11.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">11.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">11.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">11.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">11.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">11.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">11.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">11.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">11.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">11.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">11.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">11.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">11.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">11.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">11.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">11.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">11.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">11.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">11.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">12.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="package"><a class="header" href="#package">Package</a></h1>
+<p class="references">rexxref: Builtin Classes &gt; Fundamental Classes &gt; Package Class; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; new (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; defaultOptions (Class Method); Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addClass; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addPackage; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addPublicClass; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addPublicRoutine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; addRoutine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; annotation; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; annotations; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; classes; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; definedMethods; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; digits; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findClass; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findNamespace; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findProgram; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findPublicClass; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findPublicRoutine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; findRoutine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; form; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; fuzz; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; importedClasses; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; importedPackages; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; importedRoutines; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; loadLibrary; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; loadPackage; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; local; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; name; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; namespaces; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; options; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; prolog; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; publicClasses; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; publicRoutines; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; resource; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; resources; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; routines; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; setSecurityManager; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; source; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; sourceLine; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; sourceSize; Builtin Classes &gt; Fundamental Classes &gt; Package Class &gt; trace</p>
+<p class="deviations">Deviations: D41, D109</p>
+<p>A <code>Package</code> object is a unit of code that the interpreter loads: the program
+that a user runs, a file that <code>::REQUIRES</code> loads, a source that <code>new</code> is
+given. It holds the source text, the classes, routines and unattached methods
+that its directives declare, the resources and annotations, the packages it
+imports and the namespaces it names them by, the initial settings of the
+numeric and condition options and of tracing, and the code that comes before
+its first directive, which is called its prolog. The classes and routines that
+its code can name are found through the package.</p>
+<p>The page specifies the class methods that make a package and set the default
+options of the packages that are made afterwards, and the methods that ask a
+package what it holds, find a class, a routine or a namespace in it, add to
+it, and read or change its options. The directives that fill a package are
+specified by <a href="../directives/class.html"><code>::CLASS</code></a>,
+<a href="../directives/routine.html"><code>::ROUTINE</code></a>,
+<a href="../directives/method.html"><code>::METHOD</code></a>,
+<a href="../directives/requires.html"><code>::REQUIRES</code></a>,
+<a href="../directives/options.html"><code>::OPTIONS</code></a>,
+<a href="../directives/resource.html"><code>::RESOURCE</code></a> and
+<a href="../directives/annotate.html"><code>::ANNOTATE</code></a>, and the page links them instead of
+repeating them. A package's source is the source of a method or routine made
+in the way <a href="method.html">the Method page</a> describes, and its rules for the
+source apply here where this page says so. The search for a file or a library
+that <code>new</code>, <code>loadPackage</code>, <code>loadLibrary</code> and <code>findProgram</code> start is specified
+in the environment chapter; the examples here name files that they create
+themselves, or a library that every installation has. The message a package
+sends to a security manager is specified on <a href="routine.html">the Routine page</a>,
+which also specifies the checkpoints.</p>
+<p>The examples that show an error use a routine <code>try</code> that sends the message in
+its argument and prints the answer, or the error code when the message raises
+one. A message that answers <code>.nil</code> prints <code>The NIL object</code>.</p>
+<h2 id="the-class"><a class="header" href="#the-class">The class</a></h2>
+<div class="rule" id="r-class.package.creation"><a href="#r-class.package.creation">[class.package.creation]</a></div>
+<p>A package is made by <code>new</code>, by the interpreter for the program that runs, by
+<code>::REQUIRES</code> and by <code>loadPackage</code>, and the library classes belong to a package
+named <code>REXX</code>. A package made by <code>new</code> is an ordinary object otherwise: it has
+the default name <code>a Package</code>, and the class <code>Package</code> has the superclass
+<code>Object</code> and no mixin class. The package of the library, which
+<code>.object~package</code> answers, holds the classes of the library, is named <code>REXX</code>,
+has no source, and is found by <code>findNamespace</code> under that name from any
+package.</p>
+<pre><code class="language-rexx">p = .package~new('first', 'return 5')
+say p~class~id p~defaultName p~name p~source[1]
+say .package~superclass~id .package~superclasses~items
+rp = .object~package
+say rp~name .array~package~name (rp == .string~package)
+say rp~source~items rp~sourceSize rp~publicClasses~hasIndex('STRING')
+say (p~findNamespace('REXX') == rp) (p~findNamespace('rexx') == rp)
+</code></pre>
+<pre><code class="language-output">Package a Package first return 5
+Object 1
+REXX REXX 1
+0 0 1
+1 1
+</code></pre>
+<h2 id="class-methods"><a class="header" href="#class-methods">Class methods</a></h2>
+<h3 id="new"><a class="header" href="#new">new</a></h3>
+<div class="rule" id="r-class.package.new"><a href="#r-class.package.new">[class.package.new]</a></div>
+<p><code>new</code> makes a package from a name and, optionally, a source and a context. The
+name is required (<code>SYNTAX 88.901</code>), and is a string or the <code>MAKESTRING</code> answer
+of its argument: an object with no <code>MAKESTRING</code> method, <code>.nil</code> among them,
+raises <code>88.909</code>. With a source, the name is only the name of the package, and
+the package is always a new object. With no source, the name is the name of a
+file, which <code>new</code> looks for and reads, as
+<a href="#r-class.package.new.file">the file rule</a> says, and there is no context: the
+arguments from the third on go to <code>init</code>. The context is the third argument.
+It is a <code>Method</code>, a <code>Routine</code> or a <code>Package</code> object, or omitted; any other
+value, <code>.nil</code> and <code>PROGRAMSCOPE</code> included, raises <code>SYNTAX 93.953</code>. The checks
+run in this order: the name, the context, the source (a source that is <code>.nil</code>
+raises <code>93.961</code>), and then the source is translated, so that a source that
+does not translate raises its translation error, and <code>new</code> then installs the
+package as <a href="#r-class.package.new.install">the install rule</a> says. The arguments
+from the fourth on are passed to <code>init</code> of the new package, and so are the
+arguments from the third on when the source is omitted; the <code>init</code> of <code>Object</code>
+accepts none, and one argument raises <code>SYNTAX 93.902</code> after the package is
+installed. A subclass of <code>Package</code> makes instances of itself. The answer is
+the new package.</p>
+<pre><code class="language-rexx">p = .package~new('named', 'return 1')
+say p~class~id p~name
+call try '.package~new()'
+call try '.package~new(.nil, "nop")'
+call try '.package~new(.list~new, "nop")'
+call try '.package~new(.onlystr~new, "nop")'
+call try '.package~new("n", .nil)'
+call try '.package~new("n", "nop", .nil)'
+call try '.package~new("n", "nop", "PROGRAMSCOPE")'
+call try '.package~new("n", "nop", 5)'
+call try '.package~new("n", "nop", .object~new)'
+call try '.package~new("n", "nop", .routine~new("r", "nop"))~class~id'
+call try '.package~new("n", "say (")'
+call try '.package~new("n", "nop", , 1)'
+call try '.package~new("n", "nop", .package~new("c", "nop"), 1)'
+call try '.package~new("n", .nil, 5)'
+say .mine~new('n', 'nop', , 'a', 'b')~class~id
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class mine subclass package
+::method init
+  say 'init' arg() arg(1) arg(2)
+::class onlystr
+::method string
+  return 'onlystr'
+</code></pre>
+<pre><code class="language-output">Package named
+.package~new() =&gt; 88.901
+.package~new(.nil, "nop") =&gt; 88.909
+.package~new(.list~new, "nop") =&gt; 88.909
+.package~new(.onlystr~new, "nop") =&gt; 88.909
+.package~new("n", .nil) =&gt; 93.961
+.package~new("n", "nop", .nil) =&gt; 93.953
+.package~new("n", "nop", "PROGRAMSCOPE") =&gt; 93.953
+.package~new("n", "nop", 5) =&gt; 93.953
+.package~new("n", "nop", .object~new) =&gt; 93.953
+.package~new("n", "nop", .routine~new("r", "nop"))~class~id =&gt; Package
+.package~new("n", "say (") =&gt; 35.1
+.package~new("n", "nop", , 1) =&gt; 93.902
+.package~new("n", "nop", .package~new("c", "nop"), 1) =&gt; 93.902
+.package~new("n", .nil, 5) =&gt; 93.953
+init 2 a b
+MINE
+</code></pre>
+<div class="rule" id="r-class.package.new.sends"><a href="#r-class.package.new.sends">[class.package.new.sends]</a></div>
+<p><code>new</code> sends the messages that
+<a href="method.html#r-class.method.new.sends">the sends rule of <code>Method</code></a> states for a source
+that is not a string and not an array, <code>request</code> with <code>ARRAY</code> and then with
+<code>STRING</code> (the line is a string answer itself, and any other answer's
+<code>objectName</code>), and then sends the new package <code>init</code>, after the package has
+been installed, with the arguments from the fourth on, or from the third on
+when the source is omitted. The name is converted by the string conversion
+when it has a <code>MAKESTRING</code> method, once.</p>
+<pre><code class="language-rexx">f = 'class_package_sends_zq.tmp'
+call sysfiledelete f
+call lineout f, 'say "file prolog"'
+call lineout f
+say .mine~new('n', .src~new('say "source prolog"'), , 'a', 'b')~class~id
+say .mine~new(f, , , 'c')~class~id
+call sysfiledelete f
+say .mine~new(.named~new('m'), 'nop')~name
+::class src
+::method init
+  expose line
+  use arg line
+::method request
+  expose line
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return .nil
+  return line
+::class mine subclass package
+::method init
+  say 'init' arg() arg(1) arg(2)
+::class named
+::method init
+  expose n
+  use arg n
+::method makestring
+  expose n
+  say 'makestring'
+  return n
+</code></pre>
+<pre><code class="language-output">request ARRAY
+request STRING
+source prolog
+init 2 a b
+MINE
+file prolog
+init 2  c
+MINE
+makestring
+init 0  
+m
+</code></pre>
+<div class="rule" id="r-class.package.new.source"><a href="#r-class.package.new.source">[class.package.new.source]</a></div>
+<p>The source is a string or an array of strings, read as
+<a href="method.html#r-class.method.new.source">the source rule of <code>Method</code></a> says: a string is one
+line and is not split at line ends, an array holds one line for each item,
+converted by <code>MAKESTRING</code>, a line end character (<code>'0A'x</code>, <code>'0D'x</code> or <code>'1A'x</code>)
+in a line raises <code>SYNTAX 13.1</code>, an item that has no <code>MAKESTRING</code> method,
+<code>.nil</code> among them, or a hole before an item, raises <code>93.952</code>, and any other
+object, an instance of a subclass of <code>String</code> included, is converted by
+<a href="method.html#r-class.method.new.sends">the sends rule</a>: <code>request</code> with <code>ARRAY</code>, then with
+<code>STRING</code>. What differs is that the lines of a package are the whole text,
+directives included, so <code>source</code> answers the same lines, and that an empty
+string is one empty line where an empty array is none. A line that the package
+does not translate raises its error from <code>new</code>.</p>
+<pre><code class="language-rexx">call try '.package~new("n", "return 1")~source~items'
+call try '.package~new("n", .array~of("a = 1", "return a"))~source[2]'
+call try '.package~new("n", "")~source~items'
+call try '.package~new("n", .array~new)~source~items'
+call try '.package~new("n", .array~of("::class k", "::method m"))~sourceSize'
+call try '.package~new("n", .array~of("return 1", .object~new))'
+call try '.package~new("n", "a" || "0A"x || "b")'
+call try '.package~new("n", .array~of("a" || "0D"x))'
+call try '.package~new("n", .src~new(.array~of("return 2")))~source[1]'
+call try '.package~new("n", .array~of(.onlystr~new))'
+ssrc = .ss~new("nop" || "0A"x || "return 3")
+call try '.package~new("n", ssrc)~sourceSize'
+call try '.package~new("n", .ss~new(""))~sourceSize'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class src
+::method init
+  expose arr
+  use arg arr
+::method request
+  expose arr
+  say 'request' arg(1)
+  return arr
+::class onlystr
+::method string
+  return 'onlystr'
+::class ss subclass string
+</code></pre>
+<pre><code class="language-output">.package~new("n", "return 1")~source~items =&gt; 1
+.package~new("n", .array~of("a = 1", "return a"))~source[2] =&gt; return a
+.package~new("n", "")~source~items =&gt; 1
+.package~new("n", .array~new)~source~items =&gt; 0
+.package~new("n", .array~of("::class k", "::method m"))~sourceSize =&gt; 2
+.package~new("n", .array~of("return 1", .object~new)) =&gt; 93.952
+.package~new("n", "a" || "0A"x || "b") =&gt; 13.1
+.package~new("n", .array~of("a" || "0D"x)) =&gt; 13.1
+request ARRAY
+.package~new("n", .src~new(.array~of("return 2")))~source[1] =&gt; return 2
+.package~new("n", .array~of(.onlystr~new)) =&gt; 93.952
+.package~new("n", ssrc)~sourceSize =&gt; 2
+.package~new("n", .ss~new(""))~sourceSize =&gt; 0
+</code></pre>
+<pre><code class="language-rexx">call try '.package~new("n", .array~of("nop", .mk~new))~source[2]'
+call try '.package~new("n", .array~of(.ss~new("nop")))~source[1]'
+call try '.package~new("n", .array~of(.mutablebuffer~new("nop")))~source[1]'
+call try '.package~new("n", .array~of(.array~of("nop", "nop")))'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class mk
+::method makestring
+  return 'return 1'
+::class ss subclass string
+</code></pre>
+<pre><code class="language-output defect=#142">.package~new("n", .array~of("nop", .mk~new))~source[2] =&gt; return 1
+.package~new("n", .array~of(.ss~new("nop")))~source[1] =&gt; nop
+.package~new("n", .array~of(.mutablebuffer~new("nop")))~source[1] =&gt; nop
+.package~new("n", .array~of(.array~of("nop", "nop"))) =&gt; 13.1
+</code></pre>
+<div class="rule" id="r-class.package.new.context"><a href="#r-class.package.new.context">[class.package.new.context]</a></div>
+<p>The context decides which classes and routines the code of the package can
+name besides its own and those of the library. A package made with no context
+sees nothing of the package of the code that made it: a class name that it
+does not hold is the string of that name, and a routine that it does not hold
+raises <code>SYNTAX 43.1</code>. With a <code>Package</code> object as the context the package
+finds, after its own, the classes and routines that the context package finds,
+its own, those it imports and what its own context finds, and with a <code>Routine</code>
+or a <code>Method</code> it finds those of the package of that object. A context that is
+a <code>Method</code> or a <code>Routine</code> whose <code>package</code> is <code>.nil</code>, one that
+<code>loadExternalMethod</code> or <code>loadExternalRoutine</code> made, gives a package whose
+lookup through the context is not specified. The context package is not one of
+the <code>importedPackages</code> of the new package, and its classes and routines are
+not among the <code>classes</code> and <code>routines</code> of the new package.</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::class there', '::routine thereproc')
+src~append('  return "there routine"')
+p = .package~new('other', src)
+r = .routine~new('r', 'return 1', p)
+none = .package~new('a', 'say .here~class~id')
+via = .package~new('b', 'say .there~class~id thereproc()', p)
+viar = .package~new('c', 'say .there~class~id thereproc()', r)
+call try '.package~new("d", "say here()")'
+call try '.package~new("d", "say here()", p)'
+c = .package~new('e', 'return 1', p)
+say c~classes~items c~routines~items c~importedPackages~items
+say c~findClass('THERE')~id (c~findClass('HERE') == .nil)
+say c~findRoutine('THEREPROC')~class~id
+src = .array~of('nop', '::class c2cls', '::routine c2r', '  return "c2"')
+c2 = .package~new('c2', src)
+c1 = .package~new('c1', 'nop', c2)
+pc = .package~new('pc', 'nop', c1)
+say pc~findClass('C2CLS')~isNil pc~findRoutine('C2R')~isNil
+src = .array~of('return 1', '::class libpub public')
+src~append('::routine libproc public')
+src~append('  return "lib routine"')
+p~addPackage(.package~new('lib', src))
+imp = .package~new('f', 'say .libpub~class~id libproc()', p)
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class here
+::routine here
+  return 'here routine'
+</code></pre>
+<pre><code class="language-output">String
+Class there routine
+Class there routine
+.package~new("d", "say here()") =&gt; 43.1
+.package~new("d", "say here()", p) =&gt; 43.1
+0 0 0
+THERE 1
+Routine
+0 0
+Class lib routine
+</code></pre>
+<div class="rule" id="r-class.package.new.file"><a href="#r-class.package.new.file">[class.package.new.file]</a></div>
+<p>With no source, the name is the name of a file, which <code>new</code> looks for as
+<a href="../directives/requires.html#r-dir.requires.create">the search rule</a> of <code>::REQUIRES</code> does, reads and
+installs. A file that cannot be found raises <code>SYNTAX 43.901</code>. The name of the
+package is the name of the file as the search resolved it, an absolute name,
+and not the name that was given. A file that was loaded before, by <code>new</code>, by
+<code>loadPackage</code> or by a <code>::REQUIRES</code>, is not read or run again: <code>new</code> answers
+the same package, which is also the answer when the file is given by another
+name that resolves to the same file. A package that <code>new</code> made from a source
+is never found that way, even when it has the name of a file; a package that
+<a href="#r-class.package.loadpackage"><code>loadPackage</code></a> installed from a source is found
+by its name, as the rule of <code>loadPackage</code> says. How a file is searched for is
+specified in the environment chapter.</p>
+<pre><code class="language-rexx">f = 'class_package_file_zq.tmp'
+call sysfiledelete f
+call lineout f, 'say "file body ran"'
+call lineout f, '::class fromfile public'
+call lineout f
+p = .package~new(f)
+say p~class~id p~classes~items (p~name == qualify(f)) (p~name == f)
+q = .package~new(f)
+say (p == q) (p == .package~new('./' || f))
+say (p == p~loadPackage(f)) (p == .package~new(f, 'say "from source"'))
+call sysfiledelete f
+call try '.package~new("class_package_file_none.tmp")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">file body ran
+Package 1 1 0
+1 1
+from source
+1 0
+.package~new("class_package_file_none.tmp") =&gt; 43.901
+</code></pre>
+<div class="rule" id="r-class.package.new.install"><a href="#r-class.package.new.install">[class.package.new.install]</a></div>
+<p>When <code>new</code> has read the source it installs the package as the program is
+installed when it runs. The packages of its <code>::REQUIRES</code> directives are loaded
+first, each as this rule says, then the classes of its <code>::CLASS</code> directives
+are made, and then, unless <code>::OPTIONS NOPROLOG</code> was given, the prolog runs,
+which is the code before the first directive. An error in any of these is
+raised from <code>new</code>, and a package whose prolog ended with <code>EXIT</code> or <code>RETURN</code> is
+made as it is; the value is dropped. A package that was made has been
+installed, so a class of the package has had its class <code>init</code> run before the
+prolog starts. The installation of the directives is specified by <a href="../directives/index.html">the
+directive pages</a>.</p>
+<pre><code class="language-rexx">f = 'class_package_order_zq.tmp'
+call sysfiledelete f
+call lineout f, 'say "required prolog"'
+call lineout f, '::class reqclass public'
+call lineout f, '::method init class'
+call lineout f, '  say "required class init"'
+call lineout f
+src = .array~of('say "prolog"', '::requires "' || f || '"')
+src~append('::class own')
+src~append('::method init class')
+src~append('  say "own class init"')
+p = .package~new('order', src)
+say 'made' p~classes~items
+q = .package~new('quiet', .array~of('say "never"', '::options noprolog'))
+say 'quiet made' q~prolog~class~id
+call try '.package~new("e1", "say 1; say 1/0")'
+src = .array~of('say 2', '::requires "class_package_none.cls"')
+call try '.package~new("e2", src)'
+call try '.package~new("e3", "exit 5")~class~id'
+call try '.package~new("e4", "return 5")~class~id'
+call sysfiledelete f
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">required class init
+required prolog
+own class init
+prolog
+made 1
+quiet made Routine
+1
+.package~new("e1", "say 1; say 1/0") =&gt; 42.3
+.package~new("e2", src) =&gt; 43.901
+.package~new("e3", "exit 5")~class~id =&gt; Package
+.package~new("e4", "return 5")~class~id =&gt; Package
+</code></pre>
+<h3 id="defaultoptions"><a class="header" href="#defaultoptions">defaultOptions</a></h3>
+<div class="rule" id="r-class.package.defaultoptions"><a href="#r-class.package.defaultoptions">[class.package.defaultoptions]</a></div>
+<p><code>defaultOptions</code> reads and sets the options that a package gets when it is
+made without the corresponding <code>::OPTIONS</code>. It takes an option name and
+optionally a value, and no further argument (<code>SYNTAX 93.902</code>). The name is
+required (<code>88.901</code>), an object with no <code>MAKESTRING</code> method, <code>.nil</code> among them,
+raises <code>88.909</code>, and only its first letter counts: <code>D</code> names
+<code>DefineDefaultOptions</code> and <code>C</code> names <code>CountOverrides</code>, in any case; another
+name raises <code>SYNTAX 93.914</code>. With no value the call answers the current value,
+and with a value it sets it and answers the previous one.
+<code>DefineDefaultOptions</code> is a string in the form of an <code>::OPTIONS</code> directive,
+which is the same form that <a href="#r-class.package.options.settings"><code>options</code></a>
+answers; a string that is not one <code>::OPTIONS</code> directive, in any case and
+after optional blanks, raises <code>93.900</code>, as a string of two directives does, a
+string whose options the directive refuses raises the error of the directive
+(<code>25.924</code> for an unknown option), and a directive with no options leaves every
+option at its initial value. The initial value names <code>DIGITS 9</code>,
+<code>FORM SCIENTIFIC</code>, <code>FUZZ 0</code>, <code>NUMERIC NOINHERIT</code>, each of the six condition
+options with <code>CONDITION</code>, <code>PROLOG</code> and <code>TRACE NORMAL</code>, as
+<a href="#r-class.package.options"><code>options</code></a> lists them. <code>CountOverrides</code> is a whole
+number whose initial value is <code>0</code>; a value that is not a whole number raises
+<code>93.905</code>. While it is positive, every package that is made, by <code>new</code> and by
+the <code>new</code> and <code>newFile</code> of <code>Method</code> and of <code>Routine</code>, which make a package of
+their own, gets the default options in place of the initial ones and reduces
+the count by one; a package that gives an option in a directive keeps its own
+value for that option. A count that is <code>0</code> leaves the packages that are made
+with the initial options, and a negative count applies the defaults to every
+package that is made, and is reduced by one for each, so that it stays
+negative.</p>
+<pre><code class="language-rexx">say .package~defaultOptions('CountOverrides')
+say .package~defaultOptions('DefineDefaultOptions')~subword(1, 3)
+old = .package~defaultOptions('DefineDefaultOptions', '::OPTIONS DIGITS 20')
+say old~subword(1, 3)
+say .package~defaultOptions('D')~subword(1, 3)
+say .package~defaultOptions('CountOverrides', 3)
+p = .package~new('first', 'nop')
+q = .package~new('second', .array~of('nop', '::options digits 11'))
+r = .routine~new('third', 'return digits()')
+say p~digits q~digits r~call r~package~digits
+say .package~defaultOptions('CountOverrides')
+s = .package~new('fourth', 'nop')
+say s~digits .package~defaultOptions('CountOverrides')
+f = 'class_package_defaults_zq.tmp'
+call sysfiledelete f
+call lineout f, 'return 1'
+call lineout f
+.package~defaultOptions('CountOverrides', 2)
+say .routine~newFile(f)~package~digits .method~newFile(f)~package~digits
+say .package~defaultOptions('CountOverrides')
+call sysfiledelete f
+.package~defaultOptions('CountOverrides', -1)
+t = .package~new('fifth', 'nop')
+u = .package~new('sixth', 'nop')
+say t~digits u~digits .package~defaultOptions('CountOverrides')
+.package~defaultOptions('CountOverrides', 0)
+say .package~defaultOptions('DefineDefaultOptions', '::OPTIONS')~subword(1, 3)
+say .package~defaultOptions('DefineDefaultOptions')~subword(1, 3)
+call try '.package~defaultOptions'
+call try '.package~defaultOptions(.nil)'
+call try '.package~defaultOptions("Other")'
+call try '.package~defaultOptions("D", "text")'
+call try '.package~defaultOptions("D", "OPTIONS DIGITS 5")'
+two = '::OPTIONS DIGITS 7; ::OPTIONS FORM ENGINEERING'
+call try '.package~defaultOptions("D", two)'
+call try '.package~defaultOptions("D", "::OPTIONS BADWORD")'
+call try '.package~defaultOptions("C", "text")'
+call try '.package~defaultOptions("C", 1.5)'
+call try '.package~defaultOptions("C", 0, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">0
+::OPTIONS DIGITS 9
+::OPTIONS DIGITS 9
+::OPTIONS DIGITS 20
+0
+20 11 20 20
+0
+9 0
+20 20
+0
+20 20 -3
+::OPTIONS DIGITS 20
+::OPTIONS DIGITS 9
+.package~defaultOptions =&gt; 88.901
+.package~defaultOptions(.nil) =&gt; 88.909
+.package~defaultOptions("Other") =&gt; 93.914
+.package~defaultOptions("D", "text") =&gt; 93.900
+.package~defaultOptions("D", "OPTIONS DIGITS 5") =&gt; 93.900
+.package~defaultOptions("D", two) =&gt; 93.900
+.package~defaultOptions("D", "::OPTIONS BADWORD") =&gt; 25.924
+.package~defaultOptions("C", "text") =&gt; 93.905
+.package~defaultOptions("C", 1.5) =&gt; 93.905
+.package~defaultOptions("C", 0, 1) =&gt; 93.902
+</code></pre>
+<h2 id="methods"><a class="header" href="#methods">Methods</a></h2>
+<h3 id="what-the-package-is"><a class="header" href="#what-the-package-is">What the package is</a></h3>
+<div class="rule" id="r-class.package.name"><a href="#r-class.package.name">[class.package.name]</a></div>
+<p><code>name</code> answers the name of the package: the name that <code>new</code> was given for a
+package made from a source, the name of the source for a package that
+<code>loadPackage</code> loaded from a source, the resolved file name for a package made
+from a file or loaded by <code>::REQUIRES</code>, and <code>REXX</code> for the package of the
+library classes. The package of a method or a routine that <code>new</code> or <code>newFile</code>
+made has the name that was given to the method or routine, as <a href="method.html#r-class.method.new.context">the context
+rule</a> says. The method takes no argument
+(<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">say .package~new('given', 'nop')~name .package~new('1', 'nop')~name
+f = 'class_package_name_zq.tmp'
+call sysfiledelete f
+call lineout f, 'nop'
+call lineout f
+say (.package~new(f)~name == qualify(f))
+say (.routine~newFile(f)~package~name == f)
+call sysfiledelete f
+say .object~package~name .routine~new('rt', 'nop')~package~name
+call try '.package~new("n", "nop")~name(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">given 1
+1
+1
+REXX rt
+.package~new("n", "nop")~name(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.source"><a href="#r-class.package.source">[class.package.source]</a></div>
+<p><code>source</code> answers a new array that holds the lines of the package's source, one
+string for each line, directives included, so changing the array changes
+nothing in the package. A package whose source is not available, such as the
+package of the library classes, answers an array of no items. The method takes
+no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">p = .package~new('n', .array~of('nop', '::class k', '::method m'))
+a = p~source
+say a~class~id a~items (a == p~source) a[2]
+a~put('changed', 1)
+say p~source[1]
+say .object~package~source~items
+call try 'p~source(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">Array 3 0 ::class k
+nop
+0
+p~source(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.sourceline"><a href="#r-class.package.sourceline">[class.package.sourceline]</a></div>
+<p><code>sourceLine</code> answers the line of the source that has the number it is given,
+counted from 1. A number beyond the last line answers the null string, as
+does any line of a package whose source is not available. The argument is
+required (<code>SYNTAX 93.903</code>) and must be a positive whole number: zero, a
+negative number, a number with a fraction and a value that is not a number,
+<code>.nil</code> included, raise <code>SYNTAX 93.924</code>; a second argument raises <code>93.902</code>.</p>
+<pre><code class="language-rexx">p = .package~new('n', .array~of('nop', '', '  nop  /* a', ' b */'))
+say '['p~sourceLine(1)']' '['p~sourceLine(2)']' '['p~sourceLine(3)']'
+say '['p~sourceLine(4)']' '['p~sourceLine(5)']' '['p~sourceLine(500)']'
+say '['.object~package~sourceLine(1)']'
+call try 'p~sourceLine'
+call try 'p~sourceLine(0)'
+call try 'p~sourceLine(-1)'
+call try 'p~sourceLine(1.5)'
+call try 'p~sourceLine("a")'
+call try 'p~sourceLine(.nil)'
+call try 'p~sourceLine(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">[nop] [] [  nop  /* a]
+[ b */] [] []
+[]
+p~sourceLine =&gt; 93.903
+p~sourceLine(0) =&gt; 93.924
+p~sourceLine(-1) =&gt; 93.924
+p~sourceLine(1.5) =&gt; 93.924
+p~sourceLine("a") =&gt; 93.924
+p~sourceLine(.nil) =&gt; 93.924
+p~sourceLine(1, 2) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.sourcesize"><a href="#r-class.package.sourcesize">[class.package.sourcesize]</a></div>
+<p><code>sourceSize</code> answers the number of lines of the source, which is the number of
+items that <code>source</code> answers, and <code>0</code> for a package whose source is not
+available. The method takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">say .package~new('n', .array~of('a = 1', 'b = 2'))~sourceSize
+say .package~new('n', 'nop')~sourceSize .package~new('n', '')~sourceSize
+say .package~new('n', .array~new)~sourceSize .object~package~sourceSize
+call try '.package~new("n", "nop")~sourceSize(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2
+1 1
+0 0
+.package~new("n", "nop")~sourceSize(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.prolog"><a href="#r-class.package.prolog">[class.package.prolog]</a></div>
+<p><code>prolog</code> answers a <code>Routine</code> that holds the code of the package that comes
+before its first directive: its source is those lines, and its package is the
+package. It is the same object every time. Sending <code>call</code> to it runs the
+prolog again, as <code>call</code> of a routine does, with the answer of the code. The
+routine exists also for a package with no code before its first directive,
+whose source is empty, and for a package with <code>NOPROLOG</code>, whose prolog did not
+run when the package was made. A first line that begins with <code>#!</code> is not part
+of the prolog's source, though it stays in the package's own <code>source</code>. The
+library package, and the package of a method or routine that <code>new</code> or
+<code>newFile</code> of <code>Method</code> or <code>Routine</code> made, have no prolog: <code>prolog</code> answers
+<code>.nil</code>. The method takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">p = .package~new('n', .array~of('say "prolog ran"', 'return 9', '::class k'))
+r = p~prolog
+say r~class~id r~source~items (r == p~prolog) (r~package == p)
+say r~call
+q = .package~new('q', .array~of('::class k'))
+say q~prolog~class~id q~prolog~source~items
+src = .array~of('say "not run at make"', 'return 8', '::options noprolog')
+n = .package~new('n2', src)
+say n~prolog~call
+say .object~package~prolog
+say .method~new('mm', 'return 2')~package~prolog~isNil
+say .routine~new('rr', 'return 7')~package~prolog~isNil
+call try 'p~prolog(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">prolog ran
+Routine 2 1 1
+prolog ran
+9
+Routine 0
+not run at make
+8
+The NIL object
+1
+1
+p~prolog(1) =&gt; 93.902
+</code></pre>
+<pre><code class="language-rexx">f = 'class_package_shebang_zq.tmp'
+call sysfiledelete f
+call lineout f, '#!/usr/bin/rexx'
+call lineout f, 'return "after the first line"'
+call lineout f
+p = .package~new(f)
+say p~prolog~source~items p~prolog~source[1]
+say p~source~items p~source[1] p~sourceSize '['p~sourceLine(1)']'
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output defect=#144">1 return "after the first line"
+2 #!/usr/bin/rexx 2 [#!/usr/bin/rexx]
+</code></pre>
+<h3 id="what-the-package-holds"><a class="header" href="#what-the-package-holds">What the package holds</a></h3>
+<div class="rule" id="r-class.package.classes"><a href="#r-class.package.classes">[class.package.classes]</a></div>
+<p><code>classes</code> answers a new <code>StringTable</code> of the classes that the package's
+<code>::CLASS</code> directives made, public or not, indexed by the upper case class
+name, together with the classes that <code>addClass</code> and <code>addPublicClass</code> added.
+The classes that the package imports are not among them. Changing the table
+does not change the package. The method takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::class pub public', '::class priv')
+p = .package~new('n', src)
+t = p~classes
+say t~class~id t~items t['PUB']~id t['PRIV']~id
+t~put(.object, 'EXTRA')
+say p~classes~items (p~classes == p~classes)
+say .package~new('empty', 'nop')~classes~items
+call try 'p~classes(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">StringTable 2 PUB PRIV
+2 0
+0
+p~classes(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.publicclasses"><a href="#r-class.package.publicclasses">[class.package.publicclasses]</a></div>
+<p><code>publicClasses</code> answers a new <code>StringTable</code> of the classes of the package that
+are public, whether a <code>::CLASS ... PUBLIC</code> directive or <code>addPublicClass</code> made
+them public, indexed by the upper case class name. The method takes no
+argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::class pub public', '::class priv')
+p = .package~new('n', src)
+t = p~publicClasses
+say t~class~id t~items t['PUB']~id (t~hasIndex('PRIV'))
+p~addPublicClass('Added', .object)
+say p~publicClasses~allIndexes~sort~makeArray~makeString('l', ',')
+say p~classes~allIndexes~sort~makeArray~makeString('l', ',')
+say .object~package~publicClasses~hasIndex('ARRAY')
+call try 'p~publicClasses(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">StringTable 1 PUB 0
+ADDED,PUB
+ADDED,PRIV,PUB
+1
+p~publicClasses(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.routines"><a href="#r-class.package.routines">[class.package.routines]</a></div>
+<p><code>routines</code> answers a new <code>StringTable</code> of the routines of the package,
+public or not, indexed by the upper case routine name: those that its
+<code>::ROUTINE</code> directives made and those that <code>addRoutine</code> and <code>addPublicRoutine</code>
+added. The routines that the package imports are not among them. The method
+takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::routine pubr public', '  return "p"')
+src~append('::routine privr')
+src~append('  return "q"')
+p = .package~new('n', src)
+t = p~routines
+say t~class~id t~items t['PUBR']~call t['PRIVR']~call
+say (p~routines == p~routines)
+say .package~new('empty', 'nop')~routines~items
+call try 'p~routines(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">StringTable 2 p q
+0
+0
+p~routines(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.publicroutines"><a href="#r-class.package.publicroutines">[class.package.publicroutines]</a></div>
+<p><code>publicRoutines</code> answers a new <code>StringTable</code> of the routines of the package
+that are public, indexed by the upper case routine name: those that a
+<code>::ROUTINE ... PUBLIC</code> directive or <code>addPublicRoutine</code> made public. The method
+takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::routine pubr public', '  return "p"')
+src~append('::routine privr')
+src~append('  return "q"')
+p = .package~new('n', src)
+t = p~publicRoutines
+say t~class~id t~items t['PUBR']~call (t~hasIndex('PRIVR'))
+p~addPublicRoutine('Added', t['PUBR'])
+say p~publicRoutines~allIndexes~sort~makeArray~makeString('l', ',')
+say .object~package~publicRoutines~items
+call try 'p~publicRoutines(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">StringTable 1 p 0
+ADDED,PUBR
+0
+p~publicRoutines(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.definedmethods"><a href="#r-class.package.definedmethods">[class.package.definedmethods]</a></div>
+<p><code>definedMethods</code> answers a new <code>StringTable</code> of the methods that the package's
+<code>::METHOD</code>, <code>::ATTRIBUTE</code> and <code>::CONSTANT</code> directives declared outside any
+<code>::CLASS</code>, the methods that belong to no class, indexed by the upper case
+method name; they are there also when a <code>::ROUTINE</code> directive comes before
+them, and an attribute makes the two methods of its name and its name with an
+equals sign. A method that a class holds is not among them. The method takes
+no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">src = .array~of('::method fm1', '  return 1', '::method fm2 private')
+src~append('::class k')
+src~append('::method inclass')
+p = .package~new('n', src)
+t = p~definedMethods
+say t~class~id t~items t['FM1']~class~id t['FM2']~isPrivate
+say t['FM1']~scope~isNil (t['FM1']~package == p)
+say p~classes['K']~method('INCLASS')~scope~id
+say .package~new('empty', 'nop')~definedMethods~items
+src = .array~of('nop', '::routine r1', '  return 1', '::method afterroutine')
+src~append('::attribute fa')
+src~append('::constant fc 3')
+src~append('::class k')
+src~append('::method inclass')
+t = .package~new('n2', src)~definedMethods
+say t~items t~allIndexes~sort~makeArray~makeString('l', ',')
+call try 'p~definedMethods(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">StringTable 2 Method 1
+1 1
+K
+0
+4 AFTERROUTINE,FA,FA=,FC
+p~definedMethods(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.resources"><a href="#r-class.package.resources">[class.package.resources]</a></div>
+<p><code>resources</code> answers a new <code>StringTable</code> of the data resources that the
+package's <code>::RESOURCE</code> directives made, as <a href="../directives/resource.html#r-dir.resource.access">the
+directive</a> says, indexed by the upper case resource
+name, each value an array of the lines. A package with none answers an empty
+table. The method takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::resource first', 'line a', 'line b', '::END')
+src~append('::resource "second one"')
+src~append('only line')
+src~append('::END')
+p = .package~new('n', src)
+t = p~resources
+say t~class~id t~items
+say t~allIndexes~sort~makeArray~makeString('l', ',')
+say t['FIRST']~class~id t['FIRST']~items t['FIRST'][2]
+say .package~new('none', 'nop')~resources~items
+call try 'p~resources(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">StringTable 2
+FIRST,SECOND ONE
+Array 2 line b
+0
+p~resources(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.resource"><a href="#r-class.package.resource">[class.package.resource]</a></div>
+<p><code>resource</code> answers the array of lines of the resource that has the name it is
+given, as <a href="../directives/resource.html#r-dir.resource.access">the directive</a> says, and <code>.nil</code> when the
+package has no resource of that name; the name is taken in upper case. The
+name is required (<code>SYNTAX 88.901</code>), an object with no <code>MAKESTRING</code> method,
+<code>.nil</code> among them, raises <code>88.909</code>, and a second argument raises <code>93.902</code>.</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::resource first', 'line a', 'line b', '::END')
+p = .package~new('n', src)
+say p~resource('first')~items p~resource('FIRST')[1] p~resource('First')[2]
+say p~resource('nothere')~isNil
+call try 'p~resource'
+call try 'p~resource(.nil)'
+call try 'p~resource("first", 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2 line a line b
+1
+p~resource =&gt; 88.901
+p~resource(.nil) =&gt; 88.909
+p~resource("first", 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.annotation"><a href="#r-class.package.annotation">[class.package.annotation]</a></div>
+<p><code>annotation</code> answers the value of the annotation of the package that has the
+name it is given, and <code>.nil</code> when there is none, as
+<a href="../directives/annotate.html#r-dir.annotate.read">the annotation rule</a> says: the name is taken in upper
+case. The name is required (<code>SYNTAX 88.901</code>), an object with no <code>MAKESTRING</code>
+method, <code>.nil</code> among them, raises <code>88.909</code>, and a second argument raises
+<code>93.902</code>.</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::annotate package Version 3')
+p = .package~new('n', src)
+say p~annotation('Version') p~annotation('VERSION') p~annotation('none')~isNil
+call try 'p~annotation'
+call try 'p~annotation(.nil)'
+call try 'p~annotation("a", "b")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">3 3 1
+p~annotation =&gt; 88.901
+p~annotation(.nil) =&gt; 88.909
+p~annotation("a", "b") =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.annotations"><a href="#r-class.package.annotations">[class.package.annotations]</a></div>
+<p><code>annotations</code> answers the <code>StringTable</code> that holds every annotation of the
+package, indexed by the upper case name, as
+<a href="../directives/annotate.html#r-dir.annotate.read">the annotation rule</a> says. It is the table that the
+package keeps: the same object every time, so an entry put into it is an
+annotation that <code>annotation</code> answers. A package with none has an empty table.
+The method takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::annotate package Version 3')
+p = .package~new('n', src)
+t = p~annotations
+say t~class~id t~items t['VERSION'] (t == p~annotations)
+t~put('later', 'ADDED')
+say p~annotation('added') p~annotations~items
+say .package~new('none', 'nop')~annotations~items
+call try 'p~annotations(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">StringTable 1 3 1
+later 2
+0
+p~annotations(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.local"><a href="#r-class.package.local">[class.package.local]</a></div>
+<p><code>local</code> answers a <code>Directory</code> that holds objects local to the package, the
+same object every time, empty when the package is made. It is not <code>.local</code>. An
+object that is put into it under an upper case name is found by the code of
+the package when it names that object with <code>.name</code>, before <code>.local</code> and
+<code>.environment</code> are searched, and the other packages do not see it. The method
+takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::routine rd', '  return .zqv')
+p = .package~new('n', src)
+q = .package~new('q', src)
+say p~local~class~id p~local~items (p~local == p~local) (p~local == .local)
+say p~findRoutine('RD')~call
+p~local~put('package value', 'ZQV')
+say p~findRoutine('RD')~call q~findRoutine('RD')~call
+.local~zqv = 'in local'
+say p~findRoutine('RD')~call q~findRoutine('RD')~call
+call try 'p~local(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">Directory 0 1 0
+.ZQV
+package value .ZQV
+package value in local
+p~local(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.namespaces"><a href="#r-class.package.namespaces">[class.package.namespaces]</a></div>
+<p><code>namespaces</code> answers a new <code>StringTable</code> of the namespaces that the package
+names, indexed by the upper case name, each value the package that was added
+under the name by a <code>::REQUIRES ... NAMESPACE</code> directive or by <code>addPackage</code>
+with a namespace. A package that names none answers an empty table: the <code>REXX</code>
+namespace, which every package knows, is not in it unless <code>addPackage</code> was
+given that name. The method takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">p = .package~new('n', 'return 1')
+say p~namespaces~class~id p~namespaces~items
+other = .package~new('other', 'return 2')
+p~addPackage(other, 'tagged')
+say p~namespaces~items p~namespaces~allIndexes~makeArray~makeString('l', ',')
+say (p~namespaces['TAGGED'] == other) (p~namespaces == p~namespaces)
+call try 'p~namespaces(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">StringTable 0
+1 TAGGED
+1 0
+p~namespaces(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.importedclasses"><a href="#r-class.package.importedclasses">[class.package.importedclasses]</a></div>
+<p><code>importedClasses</code> answers a new <code>StringTable</code> of the public classes that the
+package imports from the packages of its <code>::REQUIRES</code> directives, of
+<code>loadPackage</code> and of <code>addPackage</code>, indexed by the upper case class name, and
+among them the public classes of the packages that those import, as
+<a href="../directives/class.html#r-dir.class.visibility">the visibility rule</a> says. When two imported packages
+have a public class of one name, the one of the package that was imported
+first is the entry. The classes that the package itself made are not among
+them. The method takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::class shown public', '::class hidden')
+lib = .package~new('lib', src)
+p = .package~new('n', 'return 1')
+say p~importedClasses~class~id p~importedClasses~items
+p~addPackage(lib)
+t = p~importedClasses
+say t~items t~allIndexes~makeArray~makeString('l', ',') t['SHOWN']~id
+say p~classes~items (p~importedClasses == p~importedClasses)
+call try 'p~importedClasses(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">StringTable 0
+1 SHOWN SHOWN
+0 0
+p~importedClasses(1) =&gt; 93.902
+</code></pre>
+<pre><code class="language-rexx">src = .array~of('nop', '::class deep public', '::class dup public')
+a = .package~new('a', src)
+b = .package~new('b', .array~of('nop', '::class mid public'))
+b~addPackage(a)
+p = .package~new('p', 'nop')
+p~addPackage(b)
+say p~importedClasses~allIndexes~sort~makeArray~makeString('l', ',')
+say p~importedPackages~items (p~importedPackages[1] == b)
+x = .package~new('x', .array~of('nop', '::class dup public'))
+y = .package~new('y', .array~of('nop', '::class dup public'))
+q = .package~new('q', 'nop')
+q~addPackage(x)
+q~addPackage(y)
+say (q~importedClasses['DUP'] == x~classes['DUP'])
+</code></pre>
+<pre><code class="language-output">DEEP,DUP,MID
+1 1
+1
+</code></pre>
+<div class="rule" id="r-class.package.importedroutines"><a href="#r-class.package.importedroutines">[class.package.importedroutines]</a></div>
+<p><code>importedRoutines</code> answers a new <code>StringTable</code> of the public routines that the
+package imports from the packages of its <code>::REQUIRES</code> directives, of
+<code>loadPackage</code> and of <code>addPackage</code>, indexed by the upper case routine name, and
+among them the public routines of the packages that those import. When two
+imported packages have a public routine of one name, the one of the package
+that was imported first is the entry. The routines that the package itself
+made are not among them. The method takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::routine shown public', '  return "s"')
+src~append('::routine hidden')
+src~append('  return "h"')
+lib = .package~new('lib', src)
+p = .package~new('n', 'return 1')
+say p~importedRoutines~class~id p~importedRoutines~items
+p~addPackage(lib)
+t = p~importedRoutines
+say t~items t~allIndexes~makeArray~makeString('l', ',') t['SHOWN']~call
+say p~routines~items (p~importedRoutines == p~importedRoutines)
+call try 'p~importedRoutines(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">StringTable 0
+1 SHOWN s
+0 0
+p~importedRoutines(1) =&gt; 93.902
+</code></pre>
+<pre><code class="language-rexx">src = .array~of('nop', '::routine rdeep public', '  return "d"')
+a = .package~new('a', src)
+b = .package~new('b', 'nop')
+b~addPackage(a)
+p = .package~new('p', 'nop')
+p~addPackage(b)
+say p~importedRoutines~allIndexes~makeArray~makeString('l', ',')
+say p~importedPackages~items p~findRoutine('RDEEP')~call
+src = .array~of('nop', '::routine rdup public', '  return "from x"')
+x = .package~new('x', src)
+src = .array~of('nop', '::routine rdup public', '  return "from y"')
+y = .package~new('y', src)
+q = .package~new('q', 'nop')
+q~addPackage(x)
+q~addPackage(y)
+say q~importedRoutines['RDUP']~call q~findRoutine('RDUP')~call
+</code></pre>
+<pre><code class="language-output">RDEEP
+1 d
+from x from x
+</code></pre>
+<div class="rule" id="r-class.package.importedpackages"><a href="#r-class.package.importedpackages">[class.package.importedpackages]</a></div>
+<p><code>importedPackages</code> answers a new <code>Array</code> of the packages that the package
+imports, in the order that it imported them: those of its <code>::REQUIRES</code>
+directives, of <code>loadPackage</code> and of <code>addPackage</code>. A package that is imported
+twice is in the array once. The array holds only the packages that the
+receiver imported itself: a package that one of those imports is not in it.
+The package of the library classes is not among them. The method takes no
+argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">a = .package~new('a', 'return 1')
+b = .package~new('b', 'return 1')
+p = .package~new('n', 'return 1')
+say p~importedPackages~class~id p~importedPackages~items
+p~addPackage(b)
+p~addPackage(a)
+p~addPackage(b)
+x = p~importedPackages
+say x~items (x[1] == b) (x[2] == a) (p~importedPackages == x)
+c = .package~new('c', 'return 1')
+b~addPackage(c)
+say p~importedPackages~items (b~importedPackages[1] == c)
+call try 'p~importedPackages(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">Array 0
+2 1 1 0
+2 1
+p~importedPackages(1) =&gt; 93.902
+</code></pre>
+<h3 id="finding"><a class="header" href="#finding">Finding</a></h3>
+<div class="rule" id="r-class.package.findclass"><a href="#r-class.package.findclass">[class.package.findclass]</a></div>
+<p><code>findClass</code> looks a name up as the environment symbol of the same name is
+looked up in the package's code, and answers what it finds, or <code>.nil</code>. The
+name is taken in upper case. The places that are searched, in this order, are
+the classes of the package, public or not; the classes that the package of its
+context finds, which are its own, public or not, the public ones of the
+packages it imports, and what its own context finds; the public classes of the
+packages it imports, the one imported first winning among equal names; the
+public classes of the library; the package's <a href="#r-class.package.local"><code>local</code></a>
+directory; and then <code>.local</code> and <code>.environment</code>, so the answer may be an
+object that is not a class, such as <code>.nil</code>, <code>.true</code> or <code>.local</code>, and a name
+that nothing holds answers <code>.nil</code>. The first place that holds the name
+decides. The name is required (<code>SYNTAX 88.901</code>), an object with no
+<code>MAKESTRING</code> method, <code>.nil</code> among them, raises <code>88.909</code>, and a second argument
+raises <code>93.902</code>. Any string is a name: a name with a blank or a period is
+found when <code>addClass</code>, <code>addPublicClass</code> or a directory holds it under that
+name. A name that has a colon is not looked up through a namespace: <code>tg:shown</code>
+and <code>rexx:string</code> answer <code>.nil</code>, even when a package that holds a public class
+<code>SHOWN</code> was added under the namespace <code>TG</code>.</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::class own public', '::class priv')
+p = .package~new('n', src)
+say p~findClass('OWN')~id p~findClass('own')~id p~findClass('PRIV')~id
+say p~findClass('String')~id p~findClass('RexxInfo')~class~id
+say p~findClass('TRUE') p~findClass('nil')~isNil
+say p~findClass('LOCAL')~class~id p~findClass('ENVIRONMENT')~class~id
+p~addClass('a.b', .array)
+say p~findClass('nothere')~isNil p~findClass('a.b')~id
+.local~zqfind = 'from local'
+say p~findClass('ZQFIND')
+o = .package~new('o', .array~of('nop', '::class shown public'))
+p~addPackage(o, 'tg')
+say p~findClass('SHOWN')~id p~findClass('tg:shown')~isNil
+say p~findClass('rexx:string')~isNil p~findClass('rexx:')~isNil
+call try 'p~findClass'
+call try 'p~findClass(.nil)'
+call try 'p~findClass("x", 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">OWN OWN PRIV
+String RexxInfo
+1 1
+Directory Directory
+1 Array
+from local
+SHOWN 1
+1 1
+p~findClass =&gt; 88.901
+p~findClass(.nil) =&gt; 88.909
+p~findClass("x", 1) =&gt; 93.902
+</code></pre>
+<pre><code class="language-rexx">src = .array~of('return 1', '::class cx', '::class same', '::class array')
+ctx = .package~new('ctx', src)
+src = .array~of('return 1', '::class same public', '::class array public')
+lib = .package~new('lib', src)
+lib2 = .package~new('lib2', .array~of('return 1', '::class libc public'))
+ctx~addPackage(lib2)
+p = .package~new('own', .array~of('return 1', '::class mine'), ctx)
+p~addPackage(lib)
+say (p~findClass('MINE') == p~classes['MINE'])
+say (p~findClass('CX') == ctx~classes['CX'])
+say (p~findClass('SAME') == ctx~classes['SAME'])
+say (p~findClass('ARRAY') == ctx~classes['ARRAY'])
+say (p~findClass('ARRAY') == .array)
+q = .package~new('q', 'return 1')
+q~addPackage(lib)
+say (q~findClass('ARRAY') == lib~classes['ARRAY'])
+say (q~findClass('STRING') == .string) (q~findClass('ARRAY') == .array)
+say (p~findClass('LIBC') == lib2~classes['LIBC'])
+say .package~new('z', 'nop', .package~new('y', 'nop', p))~findClass('MINE')~id
+lib3 = .package~new('lib3', .array~of('return 1', '::class same public'))
+q~addPackage(lib3)
+say (q~findClass('SAME') == lib~classes['SAME'])
+q~local~put('package local', 'ZQSTR')
+.local~zqstr = 'in local'
+.local~zqonly = 'only in local'
+.environment~zqonly = 'in environment'
+say q~findClass('ZQSTR') '/' q~findClass('ZQONLY')
+</code></pre>
+<pre><code class="language-output">1
+1
+1
+1
+0
+1
+1 0
+1
+MINE
+1
+package local / only in local
+</code></pre>
+<div class="rule" id="r-class.package.findpublicclass"><a href="#r-class.package.findpublicclass">[class.package.findpublicclass]</a></div>
+<p><code>findPublicClass</code> answers the public class that has the name it is given, or
+<code>.nil</code>: a public class of the package, a public class that the package of its
+context finds, one of the packages it imports (the one imported first winning
+among equal names), and the classes of the library that are public; a class
+that is not public, a library class that is not public, such as <code>RexxInfo</code>,
+and a name that is not a class answer <code>.nil</code>. The name is taken in upper case.
+The name is required (<code>SYNTAX 88.901</code>), an object with no <code>MAKESTRING</code> method,
+<code>.nil</code> among them, raises <code>88.909</code>, and a second argument raises <code>93.902</code>. A
+name that has a colon is not looked up through a namespace, as for
+<a href="#r-class.package.findclass"><code>findClass</code></a>: <code>tg:shown</code> answers <code>.nil</code>.</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::class own public', '::class priv')
+p = .package~new('n', src)
+say p~findPublicClass('own')~id p~findPublicClass('String')~id
+say p~findPublicClass('PRIV')~isNil p~findPublicClass('RexxInfo')~isNil
+say p~findPublicClass('NIL')~isNil p~findPublicClass('nothere')~isNil
+q = .package~new('q', 'return 1')
+q~addPackage(p)
+say q~findPublicClass('OWN')~id q~findPublicClass('PRIV')~isNil
+src = .array~of('nop', '::class cpub public', '::class cpriv')
+c = .package~new('c', 'nop', .package~new('ctx', src))
+say c~findPublicClass('CPUB')~id c~findPublicClass('CPRIV')~isNil
+src = .array~of('nop', '::class deep public', '::routine deepr public')
+src~append('  return "deep"')
+d2 = .package~new('d2', src)
+d = .package~new('d', 'nop', .package~new('d1', 'nop', d2))
+say d~findPublicClass('DEEP')~id d~findPublicRoutine('DEEPR')~call
+o = .package~new('o', .array~of('nop', '::class shown public'))
+p~addPackage(o, 'tg')
+say p~findPublicClass('tg:shown')~isNil p~findPublicClass('shown')~id
+p~addPublicClass('c:d', .array)
+say p~findPublicClass('c:d')~id
+call try 'p~findPublicClass'
+call try 'p~findPublicClass(.nil)'
+call try 'p~findPublicClass("x", 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">OWN String
+1 1
+1 1
+OWN 1
+CPUB 1
+DEEP deep
+1 SHOWN
+Array
+p~findPublicClass =&gt; 88.901
+p~findPublicClass(.nil) =&gt; 88.909
+p~findPublicClass("x", 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.findroutine"><a href="#r-class.package.findroutine">[class.package.findroutine]</a></div>
+<p><code>findRoutine</code> answers the routine that has the name it is given, or <code>.nil</code>.
+The name is taken in upper case. The routines it looks through, in this order,
+are those of the package, public or not, those that were added to it, the
+routines that the package of its context finds, which are its own, public or
+not, the public ones of the packages it imports, and what its own context
+finds, and the public routines of the packages it imports, the one imported
+first winning among equal names; the first that holds the name decides.
+Built-in functions and the functions of native libraries are not routine
+objects: they answer <code>.nil</code>. A name that has a colon is not looked up through
+a namespace: <code>tg:rr</code> answers <code>.nil</code> even when a package that holds a public
+routine <code>RR</code> was added under the namespace <code>TG</code>; a routine that was added
+under a name with a colon is found by that name. The name is required
+(<code>SYNTAX 88.901</code>), an object with no <code>MAKESTRING</code> method, <code>.nil</code> among them,
+raises <code>88.909</code>, and a second argument raises <code>93.902</code>.</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::routine pubr public', '  return "p"')
+src~append('::routine privr')
+src~append('  return "q"')
+p = .package~new('n', src)
+say p~findRoutine('PUBR')~call p~findRoutine('privr')~call
+say (p~findRoutine('pubr') == p~routines['PUBR'])
+say p~findRoutine('nothere')~isNil p~findRoutine('')~isNil
+o = .package~new('o', .array~of('nop', '::routine rr public'))
+p~addPackage(o, 'tg')
+say p~findRoutine('RR')~class~id p~findRoutine('tg:rr')~isNil
+say p~findRoutine('LEFT')~isNil p~findRoutine('SysSleep')~isNil
+p~addRoutine('e:f', .routine~new('x', 'return "ef"'))
+say p~findRoutine('e:f')~call
+q = .package~new('q', 'return 1')
+q~addPackage(p)
+say q~findRoutine('PUBR')~call q~findRoutine('PRIVR')~isNil
+call try 'p~findRoutine'
+call try 'p~findRoutine(.nil)'
+call try 'p~findRoutine("x", 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">p q
+1
+1 1
+Routine 1
+1 1
+ef
+p 1
+p~findRoutine =&gt; 88.901
+p~findRoutine(.nil) =&gt; 88.909
+p~findRoutine("x", 1) =&gt; 93.902
+</code></pre>
+<pre><code class="language-rexx">src = .array~of('return 1', '::routine same', '  return "ctx"')
+src~append('::routine s2')
+src~append('  return "ctx2"')
+ctx = .package~new('ctx', src)
+src = .array~of('return 1', '::routine same public', '  return "lib"')
+src~append('::routine s2 public')
+src~append('  return "lib2"')
+src~append('::routine libonly public')
+src~append('  return "libonly"')
+lib = .package~new('lib', src)
+src = .array~of('return 1', '::routine ctxlib public', '  return "ctxlib"')
+ctx~addPackage(.package~new('lib2', src))
+src = .array~of('return 1', '::routine same', '  return "own"')
+p = .package~new('own', src, ctx)
+p~addPackage(lib)
+say p~findRoutine('SAME')~call p~findRoutine('S2')~call
+say p~findRoutine('LIBONLY')~call p~findPublicRoutine('S2')~call
+say p~findPublicRoutine('SAME')~call p~findRoutine('CTXLIB')~call
+src = .array~of('nop', '::routine rdup public', '  return "from x"')
+x = .package~new('x', src)
+src = .array~of('nop', '::routine rdup public', '  return "from y"')
+y = .package~new('y', src)
+q = .package~new('q', 'nop')
+q~addPackage(x)
+q~addPackage(y)
+say q~findRoutine('RDUP')~call
+</code></pre>
+<pre><code class="language-output">own ctx2
+libonly ctx2
+own ctxlib
+from x
+</code></pre>
+<div class="rule" id="r-class.package.findpublicroutine"><a href="#r-class.package.findpublicroutine">[class.package.findpublicroutine]</a></div>
+<p><code>findPublicRoutine</code> answers the same routine as
+<a href="#r-class.package.findroutine"><code>findRoutine</code></a> does for the name it is given, or
+<code>.nil</code>: a routine that the package holds or that its context finds answers
+public or not, and a routine that an imported package holds answers only when
+it is public there. The name is required (<code>SYNTAX 88.901</code>), an object with no
+<code>MAKESTRING</code> method, <code>.nil</code> among them, raises <code>88.909</code>, and a second argument
+raises <code>93.902</code>.</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::routine pubr public', '  return "p"')
+src~append('::routine privr')
+src~append('  return "q"')
+p = .package~new('n', src)
+say p~findPublicRoutine('PUBR')~call p~findPublicRoutine('privr')~call
+say p~findPublicRoutine('nothere')~isNil
+q = .package~new('q', 'return 1')
+q~addPackage(p)
+say q~findPublicRoutine('PUBR')~call q~findPublicRoutine('PRIVR')~isNil
+call try 'p~findPublicRoutine'
+call try 'p~findPublicRoutine(.nil)'
+call try 'p~findPublicRoutine("x", 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">p q
+1
+p 1
+p~findPublicRoutine =&gt; 88.901
+p~findPublicRoutine(.nil) =&gt; 88.909
+p~findPublicRoutine("x", 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.findnamespace"><a href="#r-class.package.findnamespace">[class.package.findnamespace]</a></div>
+<p><code>findNamespace</code> answers the package that is tagged with the namespace name it
+is given, or <code>.nil</code>. The name is taken in upper case. The namespace <code>REXX</code> is
+the package of the library classes in every package; other namespaces are
+those that <code>namespaces</code> lists. The name is required (<code>SYNTAX 88.901</code>), an
+object with no <code>MAKESTRING</code> method, <code>.nil</code> among them, raises <code>88.909</code>, and a
+second argument raises <code>93.902</code>.</p>
+<pre><code class="language-rexx">p = .package~new('n', 'return 1')
+other = .package~new('other', 'return 2')
+p~addPackage(other, 'Tagged')
+say (p~findNamespace('TAGGED') == other) (p~findNamespace('tagged') == other)
+say (p~findNamespace('rexx') == .object~package) p~findNamespace('none')~isNil
+call try 'p~findNamespace'
+call try 'p~findNamespace(.nil)'
+call try 'p~findNamespace("x", 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 1
+1 1
+p~findNamespace =&gt; 88.901
+p~findNamespace(.nil) =&gt; 88.909
+p~findNamespace("x", 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.findprogram"><a href="#r-class.package.findprogram">[class.package.findprogram]</a></div>
+<p><code>findProgram</code> answers the file name that the search for the program that is
+named finds, in the absolute form that <code>new</code> gives a package for the file, or
+<code>.nil</code> when the file is not found. The name is required (<code>SYNTAX 88.901</code>), an
+object with no <code>MAKESTRING</code> method, <code>.nil</code> among them, raises <code>88.909</code>, and a
+second argument raises <code>93.902</code>. The search is specified in the environment
+chapter; it starts from the directory of the receiver's file, so packages that
+were loaded from different directories can answer differently.</p>
+<pre><code class="language-rexx">f = 'class_package_find_zq.tmp'
+call sysfiledelete f
+call lineout f, 'nop'
+call lineout f
+p = .package~new('n', 'return 1')
+say (p~findProgram(f) == qualify(f)) (p~findProgram('./' || f) == qualify(f))
+say p~findProgram('class_package_find_none.tmp')~isNil
+say (p~findProgram(f) == .package~new('other', 'nop')~findProgram(f))
+call sysfiledelete f
+d = 'class_package_dir_zq'
+call sysmkdir d
+call lineout d'/class_package_dir_in.tmp', 'nop'
+call lineout d'/class_package_dir_in.tmp'
+call lineout d'/class_package_dir_pk.cls', '::routine x public'
+call lineout d'/class_package_dir_pk.cls'
+sub = .package~new(d'/class_package_dir_pk.cls')
+say sub~findProgram('class_package_dir_in.tmp')~isNil
+say .context~package~findProgram('class_package_dir_in.tmp')~isNil
+found = sub~findProgram('class_package_dir_in.tmp')
+say (found == qualify(d'/class_package_dir_in.tmp'))
+call sysfiledelete d'/class_package_dir_in.tmp'
+call sysfiledelete d'/class_package_dir_pk.cls'
+call sysrmdir d
+call try 'p~findProgram'
+call try 'p~findProgram(.nil)'
+call try 'p~findProgram(f, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 1
+1
+1
+0
+1
+1
+p~findProgram =&gt; 88.901
+p~findProgram(.nil) =&gt; 88.909
+p~findProgram(f, 1) =&gt; 93.902
+</code></pre>
+<h3 id="adding"><a class="header" href="#adding">Adding</a></h3>
+<div class="rule" id="r-class.package.addclass"><a href="#r-class.package.addclass">[class.package.addclass]</a></div>
+<p><code>addClass</code> adds a class to the package under a name, as a class that is not
+public, and answers the package. The name is required (<code>SYNTAX 88.901</code>), an
+object with no <code>MAKESTRING</code> method, <code>.nil</code> among them, raises <code>88.909</code>, and
+the class is required too (<code>88.901</code>) and must be a class (<code>SYNTAX 88.914</code>;
+<code>.nil</code>, a number and an instance that is not a class do not qualify); a third
+argument raises <code>93.902</code>. The checks run in that order. The name is taken in
+upper case, any string is a name, and a class that is added under a name that
+the package holds replaces the class that was there. The class is in
+<code>classes</code>, <code>findClass</code> finds it, and the code of the package names it with
+<code>.name</code>; it is not in <code>publicClasses</code>.</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::routine r', '  return .zk~id')
+p = .package~new('n', src)
+say (p~addClass('zk', .object) == p)
+say p~findClass('ZK')~id p~classes['ZK']~id p~publicClasses~items
+say p~findRoutine('R')~call
+p~addClass('zk', .array)
+say p~findClass('ZK')~id p~classes~items
+p~addClass('has blank', .object)
+say p~classes~items p~classes~hasIndex('HAS BLANK')
+call try 'p~addClass("a")'
+call try 'p~addClass(, .object)'
+call try 'p~addClass(.nil, .object)'
+call try 'p~addClass("a", .nil)'
+call try 'p~addClass("a", 5)'
+call try 'p~addClass("a", .object~new)'
+call try 'p~addClass("a", .object, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1
+Object Object 0
+Object
+Array 1
+2 1
+p~addClass("a") =&gt; 88.901
+p~addClass(, .object) =&gt; 88.901
+p~addClass(.nil, .object) =&gt; 88.909
+p~addClass("a", .nil) =&gt; 88.914
+p~addClass("a", 5) =&gt; 88.914
+p~addClass("a", .object~new) =&gt; 88.914
+p~addClass("a", .object, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.addpublicclass"><a href="#r-class.package.addpublicclass">[class.package.addpublicclass]</a></div>
+<p><code>addPublicClass</code> adds a class to the package under a name, as a public class,
+with the same arguments, checks and errors as
+<a href="#r-class.package.addclass"><code>addClass</code></a>, and answers the package. The class is
+in <code>classes</code> and in <code>publicClasses</code>, and a package that imports this one
+afterwards finds it with <code>findClass</code> and <code>findPublicClass</code>; one that imported
+this package before does not.</p>
+<pre><code class="language-rexx">p = .package~new('n', 'return 1')
+say (p~addPublicClass('shown', .array) == p)
+say p~classes~items p~publicClasses~items p~publicClasses['SHOWN']~id
+say p~findPublicClass('SHOWN')~id
+q = .package~new('q', 'return 1')
+q~addPackage(p)
+say q~findClass('SHOWN')~id q~findPublicClass('SHOWN')~id
+p~addPublicClass('late', .array)
+say q~findClass('LATE')~isNil
+q2 = .package~new('q2', 'return 1')
+q2~addPackage(p)
+say q2~findClass('LATE')~id
+call try 'p~addPublicClass("a")'
+call try 'p~addPublicClass(.nil, .object)'
+call try 'p~addPublicClass("a", 5)'
+call try 'p~addPublicClass("a", .object, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1
+1 1 Array
+Array
+Array Array
+1
+Array
+p~addPublicClass("a") =&gt; 88.901
+p~addPublicClass(.nil, .object) =&gt; 88.909
+p~addPublicClass("a", 5) =&gt; 88.914
+p~addPublicClass("a", .object, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.addroutine"><a href="#r-class.package.addroutine">[class.package.addroutine]</a></div>
+<p><code>addRoutine</code> adds a routine to the package under a name, as a routine that is
+not public, and answers the package. The name is required (<code>SYNTAX 88.901</code>),
+an object with no <code>MAKESTRING</code> method, <code>.nil</code> among them, raises <code>88.909</code>, and
+the routine is required too (<code>88.901</code>) and must be a <code>Routine</code>
+(<code>SYNTAX 88.914</code>; a method, <code>.nil</code> or another object do not qualify); a third
+argument raises <code>93.902</code>. The name is taken in upper case, any string is a
+name, and a routine that is added under a name that the package holds replaces
+the routine that was there. The routine is in <code>routines</code>, <code>findRoutine</code> finds
+it, and the code of the package calls it by name; it is not in
+<code>publicRoutines</code>.</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::routine caller', '  return xr()')
+p = .package~new('n', src)
+x = .routine~new('xr', 'return "xr called"')
+say (p~addRoutine('xr', x) == p)
+say (p~findRoutine('XR') == x) (p~routines['XR'] == x) p~publicRoutines~items
+say p~findRoutine('CALLER')~call
+p~addRoutine('xr', .routine~new('other', 'return "replaced"'))
+say p~routines['XR']~call p~findRoutine('XR')~call p~routines~items
+call try 'p~addRoutine("a")'
+call try 'p~addRoutine(, x)'
+call try 'p~addRoutine(.nil, x)'
+call try 'p~addRoutine("a", .nil)'
+call try 'p~addRoutine("a", .method~new("m", "nop"))'
+call try 'p~addRoutine("a", x, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1
+1 1 0
+xr called
+replaced replaced 2
+p~addRoutine("a") =&gt; 88.901
+p~addRoutine(, x) =&gt; 88.901
+p~addRoutine(.nil, x) =&gt; 88.909
+p~addRoutine("a", .nil) =&gt; 88.914
+p~addRoutine("a", .method~new("m", "nop")) =&gt; 88.914
+p~addRoutine("a", x, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.addpublicroutine"><a href="#r-class.package.addpublicroutine">[class.package.addpublicroutine]</a></div>
+<p><code>addPublicRoutine</code> adds a routine to the package under a name, as a public
+routine, with the same arguments, checks and errors as
+<a href="#r-class.package.addroutine"><code>addRoutine</code></a>, and answers the package. The
+routine is in <code>routines</code> and in <code>publicRoutines</code>, and a package that imports
+this one afterwards finds it; one that imported this package before does not.
+Adding a routine with <code>addRoutine</code> under a name that was added as public
+leaves the public table unchanged, so <code>routines</code> and <code>publicRoutines</code> can then
+hold different routines for the name.</p>
+<pre><code class="language-rexx">p = .package~new('n', 'return 1')
+x = .routine~new('xr', 'return "first"')
+say (p~addPublicRoutine('pr', x) == p)
+say p~routines~items p~publicRoutines~items p~publicRoutines['PR']~call
+q = .package~new('q', 'return 1')
+q~addPackage(p)
+say q~findRoutine('PR')~call q~importedRoutines~items
+p~addRoutine('pr', .routine~new('y', 'return "second"'))
+say p~routines['PR']~call p~publicRoutines['PR']~call
+p~addPublicRoutine('later', .routine~new('z', 'return "z"'))
+say q~findRoutine('LATER')~isNil q~importedRoutines~items
+q2 = .package~new('q2', 'return 1')
+q2~addPackage(p)
+say q2~findRoutine('LATER')~call
+call try 'p~addPublicRoutine("a")'
+call try 'p~addPublicRoutine(.nil, x)'
+call try 'p~addPublicRoutine("a", 4)'
+call try 'p~addPublicRoutine("a", x, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1
+1 1 first
+first 1
+second first
+1 1
+z
+p~addPublicRoutine("a") =&gt; 88.901
+p~addPublicRoutine(.nil, x) =&gt; 88.909
+p~addPublicRoutine("a", 4) =&gt; 88.914
+p~addPublicRoutine("a", x, 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.addpackage"><a href="#r-class.package.addpackage">[class.package.addpackage]</a></div>
+<p><code>addPackage</code> adds a package to the packages that the receiver imports, as a
+<code>::REQUIRES</code> of it would, and answers the receiver. The public classes and
+routines of the added package are then found by the receiver, and appear in
+<code>importedClasses</code>, <code>importedRoutines</code> and <code>importedPackages</code>. The package is
+required (<code>SYNTAX 88.901</code>) and must be a <code>Package</code> (<code>SYNTAX 88.914</code>; <code>.nil</code>
+and other objects do not qualify). The second argument is a namespace name, a
+string or an object with a <code>MAKESTRING</code> method (<code>88.909</code> for <code>.nil</code> and for an
+object with none), which names the package in <code>namespaces</code> and for
+<code>findNamespace</code>; a third argument raises <code>SYNTAX 93.902</code>. A package that was
+already added is not added again, so it is in <code>importedPackages</code> once, and a
+package may be added to itself. The namespace is taken in upper case. The
+namespace may be <code>REXX</code> or the null string: <code>addPackage</code> accepts both and
+<code>namespaces</code> lists them, but <code>findNamespace</code> with <code>REXX</code> still answers the
+package of the library classes. A <code>::REQUIRES</code> that gives the namespace <code>REXX</code>
+raises <code>99.944</code>, as <a href="../directives/requires.html#r-dir.requires.namespace">the namespace rule</a> says.</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::routine shown public', '  return "s"')
+lib = .package~new('lib', src)
+p = .package~new('n', 'return 1')
+say (p~addPackage(lib) == p) p~importedPackages~items
+say p~findRoutine('SHOWN')~call p~importedRoutines~items
+p~addPackage(lib)
+say p~importedPackages~items p~namespaces~items
+p~addPackage(lib, 'ns1')
+say p~importedPackages~items p~namespaces~allIndexes~makeArray~makeString
+say (p~findNamespace('NS1') == lib)
+p~addPackage(p)
+say p~importedPackages~items
+q = .package~new('q', 'return 1')
+say (q~addPackage(lib, 'rexx') == q) (q~addPackage(lib, '') == q)
+say q~namespaces~allIndexes~sort~makeArray~makeString('l', ',')
+say (q~findNamespace('REXX') == .object~package) (q~findNamespace('') == lib)
+call try 'p~addPackage'
+call try 'p~addPackage(.nil)'
+call try 'p~addPackage(5)'
+call try 'p~addPackage(.object~new)'
+call try 'p~addPackage(lib, .nil)'
+call try 'p~addPackage(lib, "x", 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 1
+s 1
+1 0
+1 NS1
+1
+2
+1 1
+,REXX
+1 1
+p~addPackage =&gt; 88.901
+p~addPackage(.nil) =&gt; 88.914
+p~addPackage(5) =&gt; 88.914
+p~addPackage(.object~new) =&gt; 88.914
+p~addPackage(lib, .nil) =&gt; 88.909
+p~addPackage(lib, "x", 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.loadpackage"><a href="#r-class.package.loadpackage">[class.package.loadpackage]</a></div>
+<p><code>loadPackage</code> loads a package by name as a <code>::REQUIRES</code> of the receiver would,
+adds it to the packages that the receiver imports, as
+<a href="#r-class.package.addpackage"><code>addPackage</code></a> does, and answers the loaded
+package. The name is required (<code>SYNTAX 93.903</code>); an object with no
+<code>MAKESTRING</code> method, <code>.nil</code> among them, raises <code>88.909</code>. With no second
+argument the name is the name of a file, which is found, read and installed as
+<a href="#r-class.package.new.file">the file rule</a> of <code>new</code> says, so a file that was
+loaded before is not read or run again: the answer is the same package. A file
+that cannot be found raises <code>SYNTAX 43.901</code>. The second argument is a source,
+which is installed under the name in place of the file. A source that is not
+an instance of <code>Array</code> itself, a string included, is sent <code>request</code> with the
+argument <code>ARRAY</code>, once, and an <code>Array</code> is used as it is, with no message. A
+string is therefore split at its line ends by
+<a href="string.html#r-class.string.makearray">its <code>makeArray</code></a>, and the null string is a source
+of no lines, where for <code>new</code> a string is one line. The items of an array are
+the lines, and a string item is its line. An object for which <code>request</code>
+answers <code>.nil</code>, <code>.nil</code> itself among them, raises <code>SYNTAX 88.913</code>, and
+<code>request</code> is not sent with <code>STRING</code>. A source that does not translate raises
+its translation error. A package that is installed from a source is found
+afterwards by its name: a <code>loadPackage</code> of that name with no source, the <code>new</code>
+of <code>Package</code> with that name and a <code>::REQUIRES</code> of it answer that package and
+run nothing. A <code>loadPackage</code> with a source for a name that was already loaded,
+from a file or from a source, answers the package that was loaded first: the
+new source is not read, translated or run, and no class or routine of it is
+added. A third argument raises <code>93.902</code>. How the file is searched for is
+specified in the environment chapter. The checkpoint that a security manager
+sees is that of
+<a href="routine.html#r-class.routine.setsecuritymanager.requires">the <code>REQUIRES</code> rule</a>.</p>
+<pre><code class="language-rexx">f = 'class_package_load_zq.tmp'
+call sysfiledelete f
+call lineout f, 'say "loaded file"'
+call lineout f, '::class loaded public'
+call lineout f, '::routine shown public'
+call lineout f, '  return "shown"'
+call lineout f
+p = .package~new('n', 'return 1')
+l = p~loadPackage(f)
+say l~class~id (l~name == qualify(f)) p~importedPackages~items
+say p~findClass('LOADED')~id p~findRoutine('SHOWN')~call
+say (p~loadPackage(f) == l) p~importedPackages~items
+say (.package~new(f) == l)
+s = p~loadPackage('class_package_src_zq.cls', 'say "from source"; return 1')
+say s~name s~sourceSize p~importedPackages~items
+a = p~loadPackage('class_package_arr_zq.cls', .array~of('say "array source"'))
+say a~name a~source~items
+call sysfiledelete f
+call try 'p~loadPackage'
+call try 'p~loadPackage(.nil)'
+call try 'p~loadPackage("class_package_load_none.tmp")'
+call try 'p~loadPackage("class_package_x1.cls", .nil)'
+call try 'p~loadPackage("class_package_x2.cls", .object~new)'
+call try 'p~loadPackage("class_package_x3.cls", "say (")'
+call try 'p~loadPackage("class_package_x4.cls", "nop", 1)'
+call try 'p~loadPackage("class_package_x5.cls", .mk~new)~source[1]'
+call try 'p~loadPackage("class_package_x6.cls", .src~new(.nil, "nop"))'
+call try 'p~loadPackage("class_package_x7.cls", .ms~new)'
+call try 'p~loadPackage("class_package_x8.cls", .ssub~new("nop"))~source[1]'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class mk
+::method makearray
+  say 'mk makearray'
+  return .array~of('return 1')
+::class src
+::method init
+  expose arr str
+  use arg arr, str
+::method request
+  expose arr str
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return arr
+  return str
+::class ms
+::method makestring
+  say 'ms makestring'
+  return 'return 1'
+::class ssub subclass string
+</code></pre>
+<pre><code class="language-output">loaded file
+Package 1 1
+LOADED shown
+1 1
+1
+from source
+class_package_src_zq.cls 1 2
+array source
+class_package_arr_zq.cls 1
+p~loadPackage =&gt; 93.903
+p~loadPackage(.nil) =&gt; 88.909
+p~loadPackage("class_package_load_none.tmp") =&gt; 43.901
+p~loadPackage("class_package_x1.cls", .nil) =&gt; 88.913
+p~loadPackage("class_package_x2.cls", .object~new) =&gt; 88.913
+p~loadPackage("class_package_x3.cls", "say (") =&gt; 35.1
+p~loadPackage("class_package_x4.cls", "nop", 1) =&gt; 93.902
+mk makearray
+p~loadPackage("class_package_x5.cls", .mk~new)~source[1] =&gt; return 1
+request ARRAY
+p~loadPackage("class_package_x6.cls", .src~new(.nil, "nop")) =&gt; 88.913
+p~loadPackage("class_package_x7.cls", .ms~new) =&gt; 88.913
+p~loadPackage("class_package_x8.cls", .ssub~new("nop"))~source[1] =&gt; nop
+</code></pre>
+<pre><code class="language-rexx">p = .package~new('n', 'nop')
+body = 'say "first body"; ::class first public'
+a = p~loadPackage('class_package_found_zq.cls', body)
+src = .array~of('say "second body"', '::class second public')
+b = p~loadPackage('class_package_found_zq.cls', src)
+say (a == b) p~findClass('SECOND')~isNil p~importedPackages~items
+say (a == p~loadPackage('class_package_found_zq.cls'))
+say (a == .package~new('class_package_found_zq.cls'))
+src = .array~of('nop', '::requires "class_package_found_zq.cls"')
+q = .package~new('q', src)
+say (q~importedPackages[1] == a)
+</code></pre>
+<pre><code class="language-output defect=#145">first body
+1 1 1
+1
+1
+1
+</code></pre>
+<pre><code class="language-rexx">p = .package~new('n', 'nop')
+say p~loadPackage('class_package_empty_zq.cls', '')~sourceSize
+</code></pre>
+<pre><code class="language-output defect=#147">0
+</code></pre>
+<pre><code class="language-rexx">p = .package~new('n', 'nop')
+src = 'nop' || '0A'x || 'return 1'
+say p~loadPackage('class_package_split_zq.cls', src)~sourceSize
+</code></pre>
+<pre><code class="language-output defect=#148">2
+</code></pre>
+<div class="rule" id="r-class.package.loadpackage.sends"><a href="#r-class.package.loadpackage.sends">[class.package.loadpackage.sends]</a></div>
+<p><code>loadPackage</code> sends a source that is not an instance of <code>Array</code> itself the
+message <code>request</code> with the argument <code>ARRAY</code>, once, and uses the array that is
+answered; an <code>Array</code> is sent nothing, and the array answered is sent nothing
+either. An instance of a subclass of <code>Array</code> is sent <code>request</code>, and what that
+sends in turn is stated by <a href="object.html#r-class.object.request.sends">the <code>request</code> rule</a>.
+The message is sent after the name has been read and before the source is
+translated. The example uses an instance of an <code>Array</code> subclass, an object
+that answers an array of its own, one that answers an instance of an <code>Array</code>
+subclass, and an <code>Array</code>.</p>
+<pre><code class="language-rexx">p = .package~new('n', 'nop')
+q = p~loadPackage('class_package_sends_a_zq.cls', .arr~of('nop', 'return 1'))
+say q~source~items
+q = p~loadPackage('class_package_sends_b_zq.cls', .own~new)
+say q~source[1]
+q = p~loadPackage('class_package_sends_d_zq.cls', .own2~new)
+say q~source~items
+q = p~loadPackage('class_package_sends_c_zq.cls', .array~of('nop'))
+say q~source[1]
+::class arr subclass array
+::method request
+  say 'arr request' arg(1)
+  forward class (super)
+::method makearray
+  say 'arr makearray'
+  forward class (super)
+::class own
+::method request
+  say 'own request' arg(1)
+  return .array~of('return 2')
+::class own2
+::method request
+  say 'own2 request' arg(1)
+  return .arr~of('nop', 'nop')
+</code></pre>
+<pre><code class="language-output defect=#151">arr request ARRAY
+arr makearray
+2
+own request ARRAY
+return 2
+own2 request ARRAY
+2
+nop
+</code></pre>
+<div class="rule" id="r-class.package.loadlibrary"><a href="#r-class.package.loadlibrary">[class.package.loadlibrary]</a></div>
+<p><code>loadLibrary</code> loads a native library by name as a <code>::REQUIRES ... LIBRARY</code>
+does, and answers <code>1</code> when the library was loaded and <code>0</code> when it was not. A
+library that cannot be loaded does not raise an error. The name is required
+(<code>SYNTAX 88.901</code>), an object with no <code>MAKESTRING</code> method, <code>.nil</code> among them,
+raises <code>88.909</code>, and a second argument raises <code>93.902</code>. The library is loaded
+for the interpreter, not for the package, and adds no routine to
+<code>importedRoutines</code>. Where libraries are searched for, and whether the name is
+case sensitive, is specified in the environment chapter.</p>
+<pre><code class="language-rexx">p = .package~new('n', 'return 1')
+say p~loadLibrary('rexxutil') p~loadLibrary('rexxutil')
+say p~loadLibrary('nosuchlibraryzq') p~loadLibrary('')
+say p~importedRoutines~items p~importedPackages~items
+call try 'p~loadLibrary'
+call try 'p~loadLibrary(.nil)'
+call try 'p~loadLibrary("rexxutil", 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">1 1
+0 0
+0 0
+p~loadLibrary =&gt; 88.901
+p~loadLibrary(.nil) =&gt; 88.909
+p~loadLibrary("rexxutil", 1) =&gt; 93.902
+</code></pre>
+<h3 id="settings"><a class="header" href="#settings">Settings</a></h3>
+<div class="rule" id="r-class.package.digits"><a href="#r-class.package.digits">[class.package.digits]</a></div>
+<p><code>digits</code> answers the initial <code>NUMERIC DIGITS</code> setting of the code of the
+package, as a whole number string: <code>9</code> unless the package gave another by an
+<code>::OPTIONS</code>, by <a href="#r-class.package.options.settings"><code>options</code></a> or by
+<a href="#r-class.package.defaultoptions"><code>defaultOptions</code></a>. The method takes no
+argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">p = .package~new('n', .array~of('return 1', '::options digits 12'))
+say p~digits .package~new('m', 'return 1')~digits
+p~options('Digits', 20)
+say p~digits
+say .object~package~digits
+call try 'p~digits(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">12 9
+20
+9
+p~digits(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.form"><a href="#r-class.package.form">[class.package.form]</a></div>
+<p><code>form</code> answers the initial <code>NUMERIC FORM</code> setting of the code of the package,
+<code>SCIENTIFIC</code> unless the package gave <code>ENGINEERING</code>. The method takes no
+argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">p = .package~new('n', .array~of('return 1', '::options form engineering'))
+say p~form .package~new('m', 'return 1')~form
+p~options('Form', 'Scientific')
+say p~form
+call try 'p~form(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">ENGINEERING SCIENTIFIC
+SCIENTIFIC
+p~form(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.fuzz"><a href="#r-class.package.fuzz">[class.package.fuzz]</a></div>
+<p><code>fuzz</code> answers the initial <code>NUMERIC FUZZ</code> setting of the code of the package,
+<code>0</code> unless the package gave another. The method takes no argument
+(<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">p = .package~new('n', .array~of('return 1', '::options fuzz 2'))
+say p~fuzz .package~new('m', 'return 1')~fuzz
+p~options('Fuzz', 3)
+say p~fuzz
+call try 'p~fuzz(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">2 0
+3
+p~fuzz(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.trace"><a href="#r-class.package.trace">[class.package.trace]</a></div>
+<p><code>trace</code> answers the initial trace setting of the code of the package as one
+letter, the first letter of the setting: <code>N</code> for <code>NORMAL</code>, which a package
+has unless it gave another, and <code>A</code>, <code>C</code>, <code>E</code>, <code>F</code>, <code>I</code>, <code>L</code>, <code>O</code> and <code>R</code> for
+<code>ALL</code>, <code>COMMANDS</code>, <code>ERROR</code>, <code>FAILURE</code>, <code>INTERMEDIATES</code>, <code>LABELS</code>, <code>OFF</code> and
+<code>RESULTS</code>. The package of the library classes answers the null string. The
+method takes no argument (<code>SYNTAX 93.902</code>).</p>
+<pre><code class="language-rexx">p = .package~new('n', 'return 1')
+say p~trace
+p~options('Trace', 'Results')
+say p~trace
+p~options('Trace', 'Off')
+say p~trace
+say '['.object~package~trace']'
+call try 'p~trace(1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">N
+R
+O
+[]
+p~trace(1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.options"><a href="#r-class.package.options">[class.package.options]</a></div>
+<p><code>options</code> reads and changes the settings of the package that the <code>::OPTIONS</code>
+directive gives, while the program runs. With no argument it answers the
+current settings as a string in the form of an <code>::OPTIONS</code> directive. The
+string starts with
+<code>::OPTIONS DIGITS 9 FORM SCIENTIFIC FUZZ 0 NUMERIC NOINHERIT</code> for a package
+that has the initial settings, goes on with the six condition options <code>ERROR</code>,
+<code>FAILURE</code>, <code>LOSTDIGITS</code>, <code>NOSTRING</code>, <code>NOTREADY</code> and <code>NOVALUE</code>, each followed
+by <code>CONDITION</code> or <code>SYNTAX</code>, and ends with <code>PROLOG</code> or <code>NOPROLOG</code> and <code>TRACE</code>
+and its setting, so the initial string ends with <code>PROLOG TRACE NORMAL</code>. With
+one argument, the option, it answers the current setting of that option, and
+with a second argument it sets the option to that value and answers the
+previous setting. More than two arguments raise <code>SYNTAX 93.902</code>. The option
+name is a string, an object with no <code>MAKESTRING</code> method, <code>.nil</code> among them,
+raises <code>88.909</code>, and a name that is not an option raises <code>SYNTAX 93.914</code>.
+<a href="#r-class.package.options.names">The names rule</a> says which strings name which
+option, and <a href="#r-class.package.options.settings">the settings rule</a> says what
+the settings are. A change takes effect for the code of the package that
+starts afterwards: a routine or a method of the package that runs next runs
+under the new settings.</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::routine rd')
+src~append('  return digits() form() fuzz() trace()')
+p = .package~new('n', src)
+say p~options~subword(1, 7)
+rd = p~findRoutine('RD')
+say rd~call
+say p~options('Digits', 20) p~options('Digits')
+say rd~call
+say p~options('Form', 'Engineering') p~options('Form')
+say rd~call
+say p~options('Trace', 'Results') p~options('Trace')
+call try 'p~options("Zzz")'
+call try 'p~options(.nil)'
+call try 'p~options("Digits", 5, 6)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">::OPTIONS DIGITS 9 FORM SCIENTIFIC FUZZ 0
+9 SCIENTIFIC 0 N
+9 20
+20 SCIENTIFIC 0 N
+SCIENTIFIC ENGINEERING
+20 ENGINEERING 0 N
+NORMAL RESULTS
+p~options("Zzz") =&gt; 93.914
+p~options(.nil) =&gt; 88.909
+p~options("Digits", 5, 6) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.options.names"><a href="#r-class.package.options.names">[class.package.options.names]</a></div>
+<p>The option name is matched by its first letters, in any case, and the letters
+after them are ignored. The names are <code>Digits</code> (<code>D</code>), <code>Form</code> (<code>FO</code>), <code>Fuzz</code>
+(<code>FU</code>), <code>Trace</code> (<code>T</code>), <code>Numeric</code> (<code>NU</code>), <code>Error</code> (<code>E</code>), <code>Failure</code> (<code>FA</code>),
+<code>Lostdigits</code> (<code>L</code>), <code>NOString</code> (<code>NOS</code>), <code>NOTready</code> (<code>NOT</code>), <code>NOValue</code> (<code>NOV</code>),
+<code>Prolog</code> (<code>P</code>), and the names that are not settings, <code>All</code> (<code>A</code>),
+<code>InitialPackageSettings</code> (<code>I</code>), <code>Reset</code> (<code>R</code>), <code>SetPackageSettings</code> (<code>S</code>) and
+<code>X</code> (<code>X</code>). A name that stops after <code>F</code> or <code>N</code>, or after <code>NO</code>, is not enough to
+choose, and raises <code>SYNTAX 93.914</code>, as the other strings that are not a name
+do. A name that has more letters than the ones that choose is taken by the
+choosing ones: <code>Digitz</code> names <code>Digits</code>.</p>
+<pre><code class="language-rexx">p = .package~new('n', 'return 1')
+names = 'D d DI Digitz FO FU T Tr NU Num E Err FA Fail L Lo NOS NOT NOV P'
+do n over names~makeArray(' ')
+  say n~left(6) p~options(n)
+end
+call try 'p~options("F")'
+call try 'p~options("N")'
+call try 'p~options("NO")'
+call try 'p~options("")'
+call try 'p~options("Digit5")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">D      9
+d      9
+DI     9
+Digitz 9
+FO     SCIENTIFIC
+FU     0
+T      NORMAL
+Tr     NORMAL
+NU     NOINHERIT
+Num    NOINHERIT
+E      CONDITION
+Err    CONDITION
+FA     CONDITION
+Fail   CONDITION
+L      CONDITION
+Lo     CONDITION
+NOS    CONDITION
+NOT    CONDITION
+NOV    CONDITION
+P      PROLOG
+p~options("F") =&gt; 93.914
+p~options("N") =&gt; 93.914
+p~options("NO") =&gt; 93.914
+p~options("") =&gt; 93.914
+p~options("Digit5") =&gt; 9
+</code></pre>
+<div class="rule" id="r-class.package.options.settings"><a href="#r-class.package.options.settings">[class.package.options.settings]</a></div>
+<p>The settings that <code>options</code> reads and sets are these, each with the values
+that the second argument may take, matched by their first letters and in any
+case: <code>Digits</code>, a positive whole number, and <code>Fuzz</code>, a whole number that is
+not negative and is less than <code>Digits</code>; <code>Form</code>, <code>Scientific</code> or <code>Engineering</code>;
+<code>Numeric</code>, <code>Inherit</code> or <code>Noinherit</code>; <code>Error</code>, <code>Failure</code>, <code>Lostdigits</code>,
+<code>NOString</code>, <code>NOTready</code> and <code>NOValue</code>, each <code>Condition</code> or <code>Syntax</code>, which is
+what the directive <a href="../directives/options.html#r-dir.options.condition"><code>::OPTIONS</code></a> gives; <code>Prolog</code>,
+<code>Prolog</code> or <code>Noprolog</code>; and <code>Trace</code>, one of the settings of
+<a href="../directives/options.html#r-dir.options.trace">the trace rule</a>. The answer for an option is the string
+of its setting in upper case, <code>INHERIT</code>, <code>NOINHERIT</code>, <code>CONDITION</code>, <code>SYNTAX</code>,
+<code>PROLOG</code> or <code>NOPROLOG</code>, and the full name of a trace setting; a number is a
+decimal string. The second argument raises an error when it is not an
+acceptable value: <code>SYNTAX 93.900</code> for the null string, <code>88.909</code> for <code>.nil</code>,
+<code>93.905</code> for a <code>Digits</code> value that is not a whole number, <code>93.907</code> when it is
+a whole number that is less than 1, <code>93.906</code> for a <code>Fuzz</code> value that is not a
+whole number that is not negative, <code>26.900</code> when a <code>Fuzz</code> value would not be
+less than <code>Digits</code>, and <code>33.1</code> when a <code>Digits</code> value would not be greater than
+<code>Fuzz</code> (the numeric setting that would be invalid is refused), <code>93.914</code> for
+another value of an option that takes words, and <code>24.1</code> for a trace setting
+that <a href="../directives/options.html#r-dir.options.trace">the directive</a> refuses, a number included. The
+<code>All</code> setting sets the six condition options at once, to <code>Condition</code> or
+<code>Syntax</code>, and answers the previous six as a string of six names and values,
+such as <code>ERROR CONDITION FAILURE CONDITION</code> and so on; <code>All</code> cannot be read
+(<code>SYNTAX 93.903</code>).</p>
+<pre><code class="language-rexx">p = .package~new('n', 'return 1')
+say p~options('Digits', 12)~right(3) p~options('Digits', ' 7.0 ')~right(3)
+say p~options('Digits')~right(3) p~options('Digits', 1E1)~right(3)
+say p~options('Fuzz', 3) p~options('Fuzz', 9)
+p~options('Fuzz', 0)
+say p~options('Form', 'e') p~options('Form', 'Scientific')
+say p~options('Numeric', 'Inherit') p~options('Numeric', 'No')
+say p~options('Error', 'syntax') p~options('Error', 'C')
+say p~options('Prolog', 'Noprolog') p~options('Prolog', 'P')
+say p~options('Trace', 'Results') p~options('Trace', 'Off')
+say p~options('All', 'Syntax')~subword(1, 4)
+say p~options('All', 'Condition')~subword(1, 4)
+say p~options('All', 'Syntax')~words p~options('Novalue')
+call try 'p~options("Digits", "abc")'
+call try 'p~options("Digits", 0)'
+call try 'p~options("Digits", 1.5)'
+call try 'p~options("Digits", "")'
+call try 'p~options("Digits", .nil)'
+call try 'p~options("Digits", 3)'
+call try 'p~options("Fuzz", -1)'
+call try 'p~options("Fuzz", 1.5)'
+call try 'p~options("Fuzz", 5)'
+p~~options('Digits', 20)
+p~~options('Fuzz', 5)
+call try 'p~options("Digits", 5)'
+call try 'p~options("Digits", 4)'
+call try 'p~options("Form", "zzz")'
+call try 'p~options("Error", "zzz")'
+call try 'p~options("Numeric", "zzz")'
+call try 'p~options("Prolog", "zzz")'
+call try 'p~options("Trace", "zzz")'
+call try 'p~options("Trace", "")'
+call try 'p~options("All")'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">  9  12
+  7   7
+0 3
+SCIENTIFIC ENGINEERING
+NOINHERIT INHERIT
+CONDITION SYNTAX
+PROLOG NOPROLOG
+NORMAL RESULTS
+ERROR CONDITION FAILURE CONDITION
+ERROR SYNTAX FAILURE SYNTAX
+12 SYNTAX
+p~options("Digits", "abc") =&gt; 93.905
+p~options("Digits", 0) =&gt; 93.907
+p~options("Digits", 1.5) =&gt; 93.905
+p~options("Digits", "") =&gt; 93.900
+p~options("Digits", .nil) =&gt; 88.909
+p~options("Digits", 3) =&gt; 10
+p~options("Fuzz", -1) =&gt; 93.906
+p~options("Fuzz", 1.5) =&gt; 93.906
+p~options("Fuzz", 5) =&gt; 26.900
+p~options("Digits", 5) =&gt; 33.1
+p~options("Digits", 4) =&gt; 33.1
+p~options("Form", "zzz") =&gt; 93.914
+p~options("Error", "zzz") =&gt; 93.914
+p~options("Numeric", "zzz") =&gt; 93.914
+p~options("Prolog", "zzz") =&gt; 93.914
+p~options("Trace", "zzz") =&gt; 24.1
+p~options("Trace", "") =&gt; 93.900
+p~options("All") =&gt; 93.903
+</code></pre>
+<div class="rule" id="r-class.package.options.special"><a href="#r-class.package.options.special">[class.package.options.special]</a></div>
+<p>Four names of <code>options</code> take a string of the directive form and not a setting.
+<code>X</code> takes no second argument and answers the options that the package gave
+explicitly by an <code>::OPTIONS</code> directive, as their names separated by blanks, in
+the order <code>DIGITS</code>, <code>FORM</code>, <code>FUZZ</code>, <code>NUMERIC</code>, <code>ERROR</code>, <code>FAILURE</code>,
+<code>LOSTDIGITS</code>, <code>NOSTRING</code>, <code>NOTREADY</code>, <code>NOVALUE</code>, <code>PROLOG</code> or <code>NOPROLOG</code>, and
+<code>TRACE</code>, and answers the null string when it gave none; a setting that
+<code>options</code> or <code>defaultOptions</code> gave is not explicit. <code>InitialPackageSettings</code>
+takes no second argument and answers the settings the package had after it was
+made, in the form of the directive. <code>Reset</code> takes no second argument, answers
+the current settings in that form, and sets every option back to what
+<code>InitialPackageSettings</code> answers. <code>SetPackageSettings</code> takes the directive
+text as its argument, which is required (<code>SYNTAX 93.901</code>) and must begin with
+<code>::OPTIONS</code> (<code>SYNTAX 93.900</code> otherwise); it sets the options that the text
+gives, resets every other option to its initial value (<code>DIGITS 9</code>,
+<code>FORM SCIENTIFIC</code>, <code>FUZZ 0</code> and so on to <code>TRACE NORMAL</code>, as the initial string
+of <a href="#r-class.package.options"><code>options</code></a> lists them), and answers the previous
+settings. A second argument on the three raises <code>93.902</code>.</p>
+<pre><code class="language-rexx">p = .package~new('n', .array~of('return 1', '::options digits 15 trace r'))
+say p~options('X')
+p~options('Digits', 20)
+say p~options('Digits') '|' p~options('X')
+say p~options('InitialPackageSettings')~subword(1, 3)
+say p~options('Reset')~subword(1, 3)
+say p~options('Digits') p~options('Trace')
+say .package~new('m', 'return 1')~options('X')'|'
+say p~options('SetPackageSettings', '::OPTIONS DIGITS 7 FUZZ 2')~subword(1, 3)
+say p~options~subword(1, 7) p~options('Trace')
+say p~options('SetPackageSettings', '::OPTIONS')~subword(1, 3)
+say p~options~subword(1, 7)
+call try 'p~options("SetPackageSettings")'
+call try 'p~options("SetPackageSettings", "DIGITS 7")'
+call try 'p~options("SetPackageSettings", "")'
+call try 'p~options("X", 1)'
+call try 'p~options("Reset", 1)'
+call try 'p~options("InitialPackageSettings", 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">DIGITS TRACE
+20 | DIGITS TRACE
+::OPTIONS DIGITS 15
+::OPTIONS DIGITS 20
+15 RESULTS
+|
+::OPTIONS DIGITS 15
+::OPTIONS DIGITS 7 FORM SCIENTIFIC FUZZ 2 NORMAL
+::OPTIONS DIGITS 7
+::OPTIONS DIGITS 9 FORM SCIENTIFIC FUZZ 0
+p~options("SetPackageSettings") =&gt; 93.901
+p~options("SetPackageSettings", "DIGITS 7") =&gt; 93.900
+p~options("SetPackageSettings", "") =&gt; 93.900
+p~options("X", 1) =&gt; 93.902
+p~options("Reset", 1) =&gt; 93.902
+p~options("InitialPackageSettings", 1) =&gt; 93.902
+</code></pre>
+<div class="rule" id="r-class.package.setsecuritymanager"><a href="#r-class.package.setsecuritymanager">[class.package.setsecuritymanager]</a></div>
+<p><code>setSecurityManager</code> gives the package a security manager, or with no argument
+removes the one it has, and answers <code>1</code>. It is a protected method. The manager
+is any object, <code>.nil</code> as well, which is an object like another and is sent the
+checkpoints, as <a href="routine.html#r-class.routine.setsecuritymanager">the Routine rule</a> says;
+it is not checked when it is set. A second argument raises <code>SYNTAX 93.902</code>.
+The checkpoints that <a href="routine.html#r-class.routine.setsecuritymanager.checkpoints">the checkpoint
+rules</a> name are offered to the
+manager for the code of the package that runs after the manager was set, the
+routines and methods of the package included, and not for the code of other
+packages.</p>
+<pre><code class="language-rexx">src = .array~of('return 1', '::routine agent')
+src~append('  address system "echo hidden"')
+src~append('  return "done"')
+p = .package~new('n', src)
+say p~setSecurityManager(.guard~new)
+say p~findRoutine('AGENT')~call
+say p~setSecurityManager
+say p~findRoutine('AGENT')~call
+say p~setSecurityManager(.nil) p~setSecurityManager
+call try 'p~setSecurityManager(.guard~new, 1)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=&gt;' zres
+  return
+bad: say arg(1) '=&gt;' condition('o')~code
+  return
+::class guard
+::method command
+  use arg info
+  say 'manager saw' info~command
+  info~rc = 0
+  return 1
+</code></pre>
+<pre><code class="language-output">1
+manager saw echo hidden
+done
+1
+hidden
+done
+1 1
+p~setSecurityManager(.guard~new, 1) =&gt; 93.902
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-class.package.deviation.41"><a href="#r-class.package.deviation.41">[class.package.deviation.41]</a></div>
+<p>A source that is an encoded program image whose decoded bytes lack the tag of
+an image raises <code>SYNTAX 3.903</code> from <code>new</code>, as <a href="method.html#r-class.method.deviation.41">the rule of
+<code>Method</code></a> says; ooRexx translates the partly
+decoded bytes as source.</p>
+<pre><code class="language-rexx">img = .array~of('#!/usr/bin/env rexx', '/**/@REXX@', 'c2F5ICdkZWNvZGVkJw==')
+signal on syntax name bad
+p = .package~new('n', img)
+say 'made'
+exit
+bad: say condition('o')~code
+</code></pre>
+<pre><code class="language-output">3.903
+</code></pre>
+<div class="rule" id="r-class.package.deviation.109"><a href="#r-class.package.deviation.109">[class.package.deviation.109]</a></div>
+<p>An instance of a subclass of <code>String</code> that is the name of <code>new</code>, of
+<code>addRoutine</code>, <code>addPublicRoutine</code>, <code>addClass</code> or <code>addPublicClass</code> is read by
+its own characters, and <code>MAKESTRING</code> and <code>STRING</code> are not sent to it
+(<a href="string.html#r-class.string.deviation.109">Deviation 109</a>). ooRexx reads it through its
+<code>MAKESTRING</code> method. A source of <code>new</code> that is such an instance is read on
+both as <a href="#r-class.package.new.source">the source rule</a> states. In the example
+<code>MAKESTRING</code> answers another name.</p>
+<pre><code class="language-rexx">p = .package~new(.name~new('Foo'), 'nop')
+say p~name
+p~addRoutine(.name~new('Bar'), .routine~new('r', 'return 1'))
+say p~findRoutine('BAR')~isNil
+say .package~new('q', .name~new('nop'))~source[1]
+::class name subclass string
+::method makestring
+  return 'other'
+</code></pre>
+<pre><code class="language-output defect=#140">Foo
+0
+nop
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../classes/routine.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../classes/message.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../classes/routine.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../classes/message.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>
