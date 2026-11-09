@@ -1650,7 +1650,7 @@ e: return '-'
 ::class sub subclass k
 ```
 
-```output defect=#0
+```output defect=#141
 start:
   ONE -/-/-
   TWO -/-/-
@@ -1709,7 +1709,7 @@ x: return '-'
   self~setMethod(arg(1), arg(2))
 ```
 
-```output defect=#0
+```output defect=#141
 own - t h
 en - t h
 ```
@@ -1740,7 +1740,7 @@ e: return '-'
 ::class d metaclass meta
 ```
 
-```output defect=#0
+```output defect=#141
 meta who - -
 meta later meta later
 sbase later2 mxm later3

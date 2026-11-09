@@ -713,17 +713,22 @@ was written or computed. A number literal such as `12` used as the message
 name of `send` or `start` names the message `12`, and `request('ARRAY')`
 sent to it answers the array that `makeArray` answers. ooRexx raises
 `SYNTAX 93.946` for the first and answers `.nil` for the second when the
-number came from a whole-number literal or from arithmetic, and treats the
-same characters written as a quoted string as interrexx does.
+number is stored as a whole number, as a whole-number literal or the result
+of arithmetic is. Equal literals of a program share one stored value, so a
+quoted `'12'` behaves the same way when the literal `12` was used before it.
 
 ## 108. A supplier that is not a Supplier
 
 When `subclass`, `mixinclass` or `defineMethods` takes the methods of an
 object through its `supplier` method, the object that `supplier` answers is
-used through the messages `available`, `index`, `item` and `next`, whatever
-its class; an object that does not answer one of them raises `SYNTAX 97.1` as
-for any message. ooRexx reads the answer as a Supplier without checking it
-and crashes when it is not one.
+used through the messages `available`, `index`, `item` and `next` when it is
+not a `Supplier`; an object that does not answer one of them raises
+`SYNTAX 97.1` as for any message. A `Supplier`, an instance of a subclass
+included, is read directly, as a String subclass instance is read by its
+characters
+([Deviation 109](#109-string-subclass-instances-are-their-characters)). ooRexx
+reads the answer as a Supplier without checking it and crashes when it is not
+one.
 
 ## 109. String subclass instances are their characters
 

@@ -2027,9 +2027,10 @@ was written or computed. A number literal such as `12` used as the message
 name of `send` or `start` names the message `12`, and `request('ARRAY')` sent
 to it answers the array that `makeArray` answers, as it does for the string
 `'12'` and for the result of arithmetic. ooRexx raises `SYNTAX 93.946` for the
-first and answers `.nil` for the second when the number came from a
-whole-number literal or from arithmetic, and treats the same characters
-written as a quoted string as interrexx does
+first and answers `.nil` for the second when the number is stored as a whole
+number, as a whole-number literal or the result of arithmetic is; equal
+literals of a program share one stored value, so a quoted `'12'` behaves the
+same way when the literal `12` was used before it
 ([Deviation 107](../deviations.md)).
 
 ```rexx

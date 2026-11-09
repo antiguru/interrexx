@@ -1890,7 +1890,7 @@ say 'sends' .local~sent
   return 'str'
 ```
 
-```output defect=#0
+```output defect=#140
 ab ab b b
 xab 2 2 0 1
 3 3 4 1 2 2

@@ -2132,7 +2132,7 @@ bad: say condition('o')~code
   return 'return 9'
 ```
 
-```output defect=#0
+```output defect=#139
 1 2 available index item next
 1 2
 97.1
