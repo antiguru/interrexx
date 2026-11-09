@@ -2,17 +2,18 @@
 element: "Object"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Object Class; Builtin Classes > Fundamental Classes > Object Class > new (Class Method); Builtin Classes > Fundamental Classes > Object Class > Comparison Methods; Builtin Classes > Fundamental Classes > Object Class > Concatenation Methods; Builtin Classes > Fundamental Classes > Object Class > class; Builtin Classes > Fundamental Classes > Object Class > copy; Builtin Classes > Fundamental Classes > Object Class > defaultName; Builtin Classes > Fundamental Classes > Object Class > hashCode; Builtin Classes > Fundamental Classes > Object Class > hasMethod; Builtin Classes > Fundamental Classes > Object Class > identityHash; Builtin Classes > Fundamental Classes > Object Class > init; Builtin Classes > Fundamental Classes > Object Class > instanceMethod; Builtin Classes > Fundamental Classes > Object Class > instanceMethods; Builtin Classes > Fundamental Classes > Object Class > isA; Builtin Classes > Fundamental Classes > Object Class > isInstanceOf; Builtin Classes > Fundamental Classes > Object Class > isNil; Builtin Classes > Fundamental Classes > Object Class > objectName; Builtin Classes > Fundamental Classes > Object Class > objectName=; Builtin Classes > Fundamental Classes > Object Class > request; Builtin Classes > Fundamental Classes > Object Class > run (Private Method); Builtin Classes > Fundamental Classes > Object Class > send; Builtin Classes > Fundamental Classes > Object Class > sendWith; Builtin Classes > Fundamental Classes > Object Class > setMethod (Private Method); Builtin Classes > Fundamental Classes > Object Class > start; Builtin Classes > Fundamental Classes > Object Class > startWith; Builtin Classes > Fundamental Classes > Object Class > string; Builtin Classes > Fundamental Classes > Object Class > unsetMethod (Private Method)"
-deviations: [4, 28, 30, 32, 36]
+deviations: [4, 28, 30, 32, 33, 36, 105]
 ---
 
 # Object
 
 `Object` is the root of the class hierarchy: every class has it among its
 ancestors, so every object understands the methods of this page, and every
-class understands its class method `new`. The page specifies each of them:
-what it accepts, in which order it checks, what it answers, and which messages
-it sends to its receiver or to its arguments, so that a class which overrides
-a method that another one sends can predict what happens.
+class but those that `Class~new` makes understands its class method `new`. The
+page specifies each of them: what it accepts, in which order it checks, what
+it answers, and which messages it sends to its receiver or to its arguments,
+so that a class which overrides a method that another one sends can predict
+what happens.
 
 The names that a program gives an object, its string value and its default
 name belong to [the chapter index](index.md); the rules below link to them.
@@ -115,11 +116,14 @@ r[class.object.copy]
 `copy` answers a new object of the same class. The copy has the object
 variables of the receiver, each holding the same object that the receiver's
 variable holds, so the copy is shallow, and it has the same methods, the
-receiver's own methods included, and the same name. It does not send `init`,
-and takes no argument: with one it raises `SYNTAX 93.902`. A subclass of
-`Object` whose instances hold more than variables, as the collection classes
-do, defines its own `copy` on its page. A class object cannot be copied, as
-[the copy rule](r:class.class.copy) says.
+receiver's own methods included, and the same name. The copy has a table of
+its own methods of its own, holding the same method objects, and the variables
+of those methods are copied as the others are, so a change to one object's own
+methods or to those variables does not reach the other. It does not send
+`init`, and takes no argument: with one it raises `SYNTAX 93.902`. A subclass
+of `Object` whose instances hold more than variables, as the collection
+classes do, defines its own `copy` on its page. A class object cannot be
+copied, as [the copy rule](r:class.class.copy) says.
 
 ```rexx
 a = .box~new
@@ -132,6 +136,14 @@ say b~class~id (b == a) (b~items == a~items) b~n b~objectName b~greet
 b~n = 6
 b~items~append(3)
 say a~n b~n a~items~items
+b~give('ONLYB', 'return "only b"')
+say a~hasMethod('onlyb') b~hasMethod('onlyb')
+a~give('SETF', 'expose f; f = arg(1)')
+a~give('GETF', 'expose f; return f')
+a~setf('fa')
+c = a~copy
+c~setf('fc')
+say a~getf c~getf
 call try 'a~copy(1)'
 exit
 try:
@@ -155,6 +167,8 @@ bad: say arg(1) '=>' condition('o')~code
 init
 BOX 0 1 5 boxed hello from boxed
 5 6 3
+0 1
+fa fc
 a~copy(1) => 93.902
 ```
 
@@ -534,22 +548,28 @@ a~hashCode(1) => 93.902
 ```
 
 r[class.object.identityhash]
-`identityHash` answers a whole number that identifies the receiver and takes
-no argument. One object answers the same number every time, and objects that
-exist at the same time answer different numbers. The number is not specified
-further: its size and its sign are not. The method is not changed by a
-`hashCode` or `==` that the class declares, and the identity collection
-classes use it. Whether equal strings or equal numbers that were built
-separately have one identity is not specified ([Deviation
-4](r:class.object.deviation.4)).
+`identityHash` answers an integer that identifies the receiver, written as
+digits with an optional leading minus sign, that may have more digits than
+`NUMERIC DIGITS` allows, and takes no argument. One object answers the same
+number every time, and objects that exist at the same time answer different
+numbers. The number is not specified further: its size and its sign are not.
+The method is not changed by a `hashCode` or `==` that the class declares. The
+identity collection classes compare objects by the identity that it reports,
+without sending it, so a class that declares `identityHash` does not change
+them. Whether equal strings or equal numbers that were built separately have
+one identity is not specified ([Deviation 4](r:class.object.deviation.4)).
 
 ```rexx
 a = .fixed~new
 b = .fixed~new
 x = a~identityHash
 say (x == a~identityHash) (x == b~identityHash) (a~copy~identityHash == x)
-say (a~identityHash == b~identityHash)
+say (a~identityHash == b~identityHash) (verify(x, '-0123456789') == 0)
 call try 'a~identityHash(1)'
+it = .identitytable~new
+k = .key~new
+it[k] = 1
+say it[k] it~hasIndex(.key~new)
 exit
 try:
   signal on syntax name bad
@@ -563,12 +583,17 @@ bad: say arg(1) '=>' condition('o')~code
   return 'ABCD'
 ::method "=="
   return 1
+::class key
+::method identityHash
+  say 'identityHash sent'
+  return 7
 ```
 
 ```output
 1 0 0
-0
+0 1
 a~identityHash(1) => 93.902
+1 0
 ```
 
 r[class.object.isnil]
@@ -691,7 +716,8 @@ m = a~instanceMethod('hello')
 say m~class~id m~source[1]~strip
 say (m == a~instanceMethod('HELLO')) (m == .box~method('hello'))
 say a~instanceMethod('secret')~isPrivate a~instanceMethod('nosuchzz')~isNil
-say a~instanceMethod('copy')~class~id (a~instanceMethod('copy')~scope == .object)
+say a~instanceMethod('copy')~class~id,
+  (a~instanceMethod('copy')~scope == .object)
 say .sub~new~instanceMethod('hello')~source[1]~strip
 a~give('OWN', 'return "own"')
 say a~instanceMethod('own')~source[1] .box~new~instanceMethod('own')~isNil
@@ -742,15 +768,18 @@ r[class.object.instancemethods]
 `instanceMethods` answers a supplier whose indexes are method names in upper
 case and whose items are method objects. It lists names that exist when it is
 sent, and a later change to a class or to the receiver does not reach the
-supplier. The order of its entries is not specified. Without an argument it
-lists every method of the receiver's own methods and of every class of its
-order, so a name that more than one of them holds is listed once for each.
-With a class that is in the order of the receiver as its argument, it lists
-the methods of that class's table, and with `.nil` the receiver's own methods.
-With any other argument, a number or a string or a class outside the order
-included, the supplier has no entries. Names that are hidden are not listed.
-The argument may be given once: a second raises `SYNTAX 93.902`. For a class
-receiver the order is the [class-side one](r:class.methods.class-side).
+supplier. The order of its entries is not specified
+([Deviation 33](../deviations.md)). Without an argument it lists every method
+of the receiver's own methods and of every class of its order, so a name that
+more than one of them holds is listed once for each. With a class that is in
+the order of the receiver as its argument, it lists the methods of that
+class's table, and with `.nil` the receiver's own methods. With any other
+argument, a number or a string or a class outside the order included, the
+supplier has no entries. A table entry that hides a name is not listed; the
+name is still listed from every other table of the order that holds a method
+for it, so the listing does not show what the search finds. The argument may
+be given once: a second raises `SYNTAX 93.902`. For a class receiver the order
+is the [class-side one](r:class.methods.class-side).
 
 ```rexx
 call show .box~new~instanceMethods(.box), 'box'
@@ -778,6 +807,15 @@ do while t~available
   t~next
 end
 say 'HELLO listed' n 'times'
+h = .sub~new
+h~hide('HELLO')
+n = 0
+t = h~instanceMethods
+do while t~available
+  if t~index == 'HELLO' then n = n + 1
+  t~next
+end
+say 'hidden HELLO listed' n 'times' h~hasMethod('hello')
 exit
 show:
   t = arg(1)
@@ -794,6 +832,8 @@ show:
 ::method give
   use arg name, src
   self~setMethod(name, src)
+::method hide
+  self~setMethod(arg(1))
 ::class mix mixinclass object
 ::method mixed
   return 1
@@ -808,9 +848,9 @@ show:
 ```
 
 ```output
-box: 2 GIVE=Method HELLO=Method
+box: 3 GIVE=Method HELLO=Method HIDE=Method
 sub: 2 HELLO=Method M2=Method
-sub as box: 2 GIVE=Method HELLO=Method
+sub as box: 3 GIVE=Method HELLO=Method HIDE=Method
 sub as mix: 1 MIXED=Method
 box as sub: 0 
 box own: 0 
@@ -823,6 +863,7 @@ own: 1 OWN=Method
 snapshot: 2 HELLO=Method M2=Method
 after: 2 HELLO=Method M2=Method
 HELLO listed 2 times
+hidden HELLO listed 2 times 0
 ```
 
 r[class.object.isa]
@@ -837,9 +878,11 @@ the other.
 
 ```rexx
 a = .sub~new
-say a~isA(.sub) a~isA(.box) a~isA(.object) a~isA(.mix) a~isA(.other) a~isA(.class)
+say a~isA(.sub) a~isA(.box) a~isA(.object) a~isA(.mix) a~isA(.other),
+  a~isA(.class)
 say .sub~isA(.class) .sub~isA(.object) .sub~isA(.sub) .sub~isA(.box)
-say 'abc'~isA(.string) 'abc'~isA(.comparable) .array~new~isA(.orderedcollection)
+say 'abc'~isA(.string) 'abc'~isA(.comparable),
+  .array~new~isA(.orderedcollection)
 say .twist~new~isA(.twist) .twist~new~isInstanceOf(.twist)
 call try 'a~isA'
 call try 'a~isA(1)'
@@ -882,7 +925,8 @@ changed by a class that declares `isA`.
 
 ```rexx
 a = .sub~new
-say a~isInstanceOf(.sub) a~isInstanceOf(.box) a~isInstanceOf(.mix) a~isInstanceOf(.other)
+say a~isInstanceOf(.sub) a~isInstanceOf(.box) a~isInstanceOf(.mix),
+  a~isInstanceOf(.other)
 say .sub~isInstanceOf(.class) .sub~isInstanceOf(.sub)
 say .twist~new~isInstanceOf(.twist) .twist~new~isA(.twist)
 call try 'a~isInstanceOf'
@@ -922,24 +966,29 @@ argument names, or `.nil`. The argument is a string, taken in upper case. The
 method first asks whether the receiver has a method named `MAKE` followed by
 that name; if it has, `request` sends that message to the receiver with no
 argument and answers what it answers, whatever that is, and the answer is not
-checked: a method may answer `.nil` or an object of another class. A method
-that is `PRIVATE` is not one `request` may run, and raises `SYNTAX 97.2`. When
-there is no such method, `UNKNOWN` plays no part, the method compares the name
-with the id of the receiver's class, without regard to case: when they are
-equal it answers the receiver itself, and otherwise `.nil`. The id is that of
-the class of the receiver only, not of its superclasses. The argument is
+checked: a method may answer `.nil` or an object of another class. The message
+is checked for access as if the code that sent `request` had sent it, as for
+[`send`](r:class.object.send): a `PRIVATE` method runs when `request` is sent
+from a method of its class and raises `SYNTAX 97.2` from elsewhere, and a
+`PACKAGE` method raises `97.3` when `request` is sent from another package.
+When there is no such method, `UNKNOWN` plays no part, the method compares the
+name with the id of the receiver's class, without regard to case: when they
+are equal it answers the receiver itself, and otherwise `.nil`. The id is that
+of the class of the receiver only, not of its superclasses. The argument is
 checked as for `hasMethod`: none raises `93.903`, `.nil` and objects without a
 string value `88.909`, and a second argument `93.902`.
 
 ```rexx
 o = .doc~new
-say o~request('string') '|' o~request('Array')~class~id '|' o~request('doc')~class~id
+say o~request('string') '|' o~request('Array')~class~id '|',
+  o~request('doc')~class~id
 say o~request('nosuchzz') '|' o~request('') '|' o~request('object')
 say .sub~new~request('doc') '|' .sub~new~request('sub')~class~id
 say .doc~new~request('plain') '|' .doc~new~request('lazy')
 say .doc~new~request('wild')~class~id
 say .catchall~new~request('anything')
-say 'abc'~request('string') '|' 12~request('integer') '|' 'x'~request('string')~class~id
+say 'abc'~request('string') '|' 12~request('integer') '|',
+  'x'~request('string')~class~id
 call try 'o~request'
 call try 'o~request(.nil)'
 call try 'o~request(.object~new)'
@@ -987,15 +1036,52 @@ o~request("string", 1) => 93.902
 o~request("secret") => 97.2
 ```
 
+r[class.object.request.access]
+The access check of `request` is that of the code that sent it. In the
+example, a class in a package of its own has a method that sends `request`
+and reaches the `PRIVATE` and `PACKAGE` methods, and the program of another
+package does not.
+
+```rexx
+f = 'spec-class-object-request-zq.tmp'
+call sysfiledelete f
+call lineout f, '::class doc public'
+call lineout f, '::method makepk package'
+call lineout f, '  return "pk ran"'
+call lineout f, '::method makesecret private'
+call lineout f, '  return "secret ran"'
+call lineout f, '::method inner'
+call lineout f, '  signal on syntax name b'
+call lineout f, '  return self~request(arg(1))'
+call lineout f, 'b: return condition("o")~code'
+call lineout f
+src = .array~of('o = .doc~new', -
+  'say o~inner("pk") o~inner("secret")', -
+  'signal on syntax name b', -
+  'say o~request("pk")', -
+  'b: say condition("o")~code', -
+  'signal on syntax name c', -
+  'say o~request("secret")', -
+  'c: say condition("o")~code', -
+  '::requires "'f'"')
+p = .package~new('spec-class-object-request-main', src)
+call sysfiledelete f
+```
+
+```output
+pk ran secret ran
+97.3
+97.2
+```
+
 r[class.object.request.sends]
 `request` sends one message to its receiver: `MAKE` followed by the upper case
 name of its argument, with no argument, when the receiver has a method of that
 name (see [`hasMethod`](r:class.object.hasmethod)). It sends nothing else to
 the receiver: it does not send `class`, so a class that declares `class` does
-not change which id is compared, and it sends no `UNKNOWN`. The message is an
-ordinary one from `Object`, so a `PACKAGE` method of the class runs. `request`
-sends nothing to the argument other than what the [string
-conversion](r:conv.string.object) sends.
+not change which id is compared, and it sends no `UNKNOWN`. `request` sends
+nothing to the argument other than what the
+[string conversion](r:conv.string.object) sends.
 
 ```rexx
 o = .watch~new
@@ -1051,8 +1137,12 @@ private method that no `UNKNOWN` takes. The name is taken in upper case. The
 first argument is a string, or an array of two items, the name and a class,
 which starts the search at that class as [the scoped send
 rule](r:class.methods.scoped.send) says; `.nil` raises `SYNTAX 93.972`, an
-array of another size `93.946`, the null string `93.903`, and no argument
-`88.901`. An array whose second item is not a class raises `88.914`. A message
+array of another size `93.946`, an array whose first item is missing
+`88.901` and one whose first item has no string value `88.909`, and no
+argument `88.901`. The null string is a name like any other: it names the
+abuttal method ([the joining rule](r:class.object.concat)), so
+`send('', 'x')` joins and `send('')` raises that method's `93.903`. An array
+whose second item is not a class raises `88.914`. A message
 that answers nothing makes `send` answer nothing.
 
 ```rexx
@@ -1066,10 +1156,14 @@ say u~send('nosuchzz', 1, 2)
 say o~send('inside', 'secret') o~send('pack')
 call try 'o~send'
 call try 'o~send(.nil)'
+call try 'o~send("", "x")'
 call try 'o~send("")'
 call try 'o~send("nosuchzz")'
 call try 'o~send(.array~of("count"))'
 call try 'o~send(.array~of("count", .w, 3))'
+call try 'o~send(.array~of(.nil, .w))'
+call try 'o~send(.array~of(.object~new, .w))'
+call try 'o~send(.array~new(2)~~put(.w, 2))'
 call try 'o~send("secret")'
 call try 'o~send("nothing")'
 call try 'o~send(.array~of("count", 1))'
@@ -1108,10 +1202,14 @@ unknown NOSUCHZZ 2
 secret ran pack ran
 o~send => 88.901
 o~send(.nil) => 93.972
+o~send("", "x") => a Wx
 o~send("") => 93.903
 o~send("nosuchzz") => 97.1
 o~send(.array~of("count")) => 93.946
 o~send(.array~of("count", .w, 3)) => 93.946
+o~send(.array~of(.nil, .w)) => 88.909
+o~send(.array~of(.object~new, .w)) => 88.909
+o~send(.array~new(2)~~put(.w, 2)) => 88.901
 o~send("secret") => 97.2
 o~send("nothing") => 91.999
 o~send(.array~of("count", 1)) => 88.914
@@ -1215,13 +1313,15 @@ r[class.object.start]
 with the remaining arguments, and starts it so that it is run by another
 activity, while the sender goes on. It answers the message object at once and
 does not wait for the message to run. The name and the arguments are checked
-by `start` as `send` does, with the same errors raised at the call to `start`;
-an error in the message itself, such as a name with no method, is not raised
-by `start`: the message object keeps it, and it is raised when the result is
-asked for. The access check is that of [Deviation
-105](r:dir.method.deviation.105). How the message is scheduled and what the
-message object offers is specified in the environment chapter and with the
-`Message` class; the examples show only results that no scheduling changes.
+by `start` as `send` does, with the same errors raised at the call to `start`,
+except that the null string is a name like any other, so `start('')` answers a
+message object; an error in the message itself, such as a name with no method
+or the abuttal method's missing argument, is not raised by `start`: the
+message object keeps it, and it is raised when the result is asked for. The
+access check is that of [Deviation 105](r:dir.method.deviation.105). How the
+message is scheduled and what the message object offers is specified in the
+environment chapter and with the `Message` class; the examples show only
+results that no scheduling changes.
 
 ```rexx
 o = .w~new
@@ -1232,7 +1332,7 @@ say m~result
 m = o~start('nothing')
 say m~result~isNil
 m = o~start('nosuchzz')
-say m~class~id
+say m~class~id o~start('')~class~id
 signal on syntax name late
 x = m~result
 say 'no error'
@@ -1263,7 +1363,7 @@ bad: say arg(1) '=>' condition('o')~code
 Message Hello W, I am F
 3 | 1 0 1
 1
-Message
+Message Message
 raised by result: 97.1
 o~start => 88.901
 o~start(.nil) => 93.972
@@ -1350,18 +1450,27 @@ count got 2
 ### The receiver's own methods
 
 r[class.object.setmethod]
-`setMethod` gives the receiver a method of its own, as [the object method
-rule](r:class.methods.object) says, and answers no value. It is private, with
-the restriction that [the access rule](r:class.methods.object.access) gives.
-The first argument is the name and is required (`SYNTAX 88.901`); an object
-that is no string and has no `MAKESTRING` method raises `88.909`. The second
-is the method: a method object, a string that holds the source of a method, or
-an array of strings, one for each line; any other object is asked for an array
-with the message `request` with the argument `ARRAY` and the answer is used
-([the sends rule](r:class.object.setmethod.sends)). `.nil` and an object that
-answers no array raise `SYNTAX 93.974`. With no second argument the name is
-hidden for the receiver. The third argument is the scope, `FLOAT` or `OBJECT`
-as [the scope rule](r:class.methods.object.scope) says; another value raises
+`setMethod` gives the receiver a method of its own, as
+[the object method rule](r:class.methods.object) says, and answers no value.
+It is private, with the restriction that
+[the access rule](r:class.methods.object.access) gives. The first argument is
+the name and is required (`SYNTAX 88.901`); an object that is no string and
+has no `MAKESTRING` method raises `88.909`. The second is the method: a method
+object, a string that holds the source of a method, or an array of strings,
+one for each line. These are instances of `Method`, `String` and `Array`
+themselves; an instance of a subclass of one of them, `Method` included, is
+converted as any other object is. Any other object is sent `request` with the
+argument `ARRAY`, and the array it answers is used; when it answers no array,
+it is sent `request` with the argument `STRING`, and a string answer is used
+as the source ([the sends rule](r:class.object.setmethod.sends)). `.nil`, and
+an object that answers neither, raise `SYNTAX 93.974`, so a subclass of
+`Method` is refused. A method object is copied: the object gets a copy whose
+scope is set as [the scope rule](r:class.methods.object.scope) says, and the
+argument itself is not changed, so `instanceMethod` answers the copy. The
+checks run in this order: the number of arguments, the name, the method, the
+scope. With no second argument the name is hidden for the receiver. The third
+argument is the scope, `FLOAT` or `OBJECT` as
+[the scope rule](r:class.methods.object.scope) says; another value raises
 `88.916`, and `.nil` raises `88.909`. A fourth argument raises `93.902`. A
 source that does not translate raises the translation error from `setMethod`.
 The code of a method made from a source runs with the scope `FLOAT`, whose
@@ -1392,6 +1501,15 @@ call try 'o~sm("a9", "return 1", "f", 4)'
 call try 'o~sm'
 call try 'o~sm(.nil)'
 call try 'o~sm("a9", "if then")'
+call try 'o~sm(.nil, .nil)'
+call try 'o~sm("a9", .nil, "x")'
+call try 'o~sm("a9", "if then", "x")'
+call try 'o~sm("a9", .lmeth~new("", "return 1"))'
+m = .method~new("", 'return "mobj"')
+o~sm('M1', m)
+o~sm('M1b', m)
+say (o~instanceMethod('M1') == m),
+  (o~instanceMethod('M1') == o~instanceMethod('M1b')) m~scope
 o~sm('SETX', 'expose x; x = 41; return x')
 o~sm('GETX', 'expose x; return x + 1')
 say o~setx o~getx o~x
@@ -1417,6 +1535,7 @@ bad: say arg(1) '=>' condition('o')~code
   else self~setMethod(arg(1), arg(2), arg(3), arg(4))
 ::method smv
   return self~setMethod('V', 'return 1')
+::class lmeth subclass method
 ```
 
 ```output
@@ -1441,19 +1560,42 @@ o~sm("a9", "return 1", "f", 4) => 93.902
 o~sm => 88.901
 o~sm(.nil) => 88.909
 o~sm("a9", "if then") => 35.929
+o~sm(.nil, .nil) => 88.909
+o~sm("a9", .nil, "x") => 93.974
+o~sm("a9", "if then", "x") => 35.929
+o~sm("a9", .lmeth~new("", "return 1")) => 93.974
+0 0 The NIL object
 41 42 class x
 o~setMethod("outside", "return 1") => 97.2
 ```
 
+r[class.object.setmethod.private]
+The method objects of `run`, `setMethod` and `unsetMethod`, which are
+private, answer 1 to `isPrivate`.
+
+```rexx
+say .object~new~instanceMethod('RUN')~isPrivate,
+  .object~method('SETMETHOD')~isPrivate,
+  .object~method('UNSETMETHOD')~isPrivate
+```
+
+```output defect=#133
+1 1 1
+```
+
 r[class.object.setmethod.sends]
-`setMethod` sends the message `request` with the argument `ARRAY` to a second
-argument that is neither a method object, a string nor an array, once, and
-uses the array it answers. It sends nothing to the receiver.
+`setMethod` sends the message `request` with the argument `ARRAY`, once, to a
+second argument that is not an instance of `Method`, `String` or `Array`
+itself, and uses the array it answers. When that answers no array, it sends
+`request` with the argument `STRING`, once, and uses the string it answers as
+the source. It sends nothing to the receiver.
 
 ```rexx
 o = .w~new
 o~sm('M', .logged~new)
 say o~m
+o~sm('N', .src~new)
+say o~n
 ::class w
 ::method sm
   self~setMethod(arg(1), arg(2))
@@ -1464,24 +1606,36 @@ say o~m
 ::method makearray
   say 'makearray sent'
   return .array~of('return "made by array"')
+::class src subclass logged
+::method makestring
+  say 'makestring sent'
+  return 'return "made by string"'
+::method makearray
+  return .nil
 ```
 
 ```output
 request ARRAY
 makearray sent
 made by array
+request ARRAY
+request STRING
+makestring sent
+made by string
 ```
 
 r[class.object.unsetmethod]
-`unsetMethod` takes the name off the receiver again, as [the object method
-rule](r:class.methods.object) says, and answers no value. It is private with
-the restriction of [the access rule](r:class.methods.object.access). The
-argument is the name, required (`SYNTAX 88.901`), and a value that is no
-string raises `88.909`. A second argument raises `93.902`. The name is taken
-in upper case. A name for which the receiver has no method of its own is not
-an error and changes nothing, and so does a name that only a class holds: the
-class's method stays. A name that `setMethod` replaced twice is taken off with
-one `unsetMethod`.
+`unsetMethod` takes the name off the receiver again, as
+[the object method rule](r:class.methods.object) says, and answers no value.
+It is private with the restriction of
+[the access rule](r:class.methods.object.access). The argument is the name,
+required (`SYNTAX 88.901`), and a value that is no string raises `88.909`. A
+second argument raises `93.902`, and the number of arguments is checked first,
+so a second argument raises it even when the name is missing. The name is
+taken in upper case. A name for which the receiver has no method of its own is
+not an error and changes nothing, and so does a name that only a class holds:
+the class's method stays. A name that `setMethod` replaced twice is taken off
+with one `unsetMethod`.
 
 ```rexx
 o = .w~new
@@ -1502,6 +1656,7 @@ say o~base
 call try 'o~um'
 call try 'o~um(.nil)'
 call try 'o~um("a1", 2)'
+call try 'o~um(, 2)'
 call try 'o~unsetMethod("outside")'
 exit
 try:
@@ -1537,27 +1692,32 @@ class base
 o~um => 88.901
 o~um(.nil) => 88.909
 o~um("a1", 2) => 93.902
+o~um(, 2) => 93.902
 o~unsetMethod("outside") => 97.2
 ```
 
 r[class.object.run]
 `run` runs a method on the receiver once and answers what that method answers.
-It is private, with the restriction of [the access
-rule](r:class.methods.object.access). The first argument is the method: a
-method object, a string that holds the source of a method, or an array of
-strings, one for each line, which `run` turns into a method as `setMethod`
-does ([the argument rule](r:class.object.setmethod)) with the same errors for
-a value that is no method or fails to translate, and `SYNTAX 88.901` when the
-argument is missing. The method is not kept. The second argument is an option,
-whose first letter counts and the rest is ignored: `I` passes the remaining
-arguments to the method one for each, in order, with omitted ones omitted, and
-`A` passes the items of the array that is the third argument, which is
-required and may be any object that answers an array to `makeArray`, a sparse
-array's empty places being omitted arguments. Without an option the method
-gets no arguments. Any other option, the null string included, raises
-`SYNTAX 93.915`; `.nil` raises `88.909`. The code runs with the scope `FLOAT`:
-its object variables are those of `setMethod`'s floating methods, not those of
-any class. When the method answers nothing, `run` answers nothing.
+It is private, with the restriction of
+[the access rule](r:class.methods.object.access). The first argument is the
+method: a method object, a string that holds the source of a method, or an
+array of strings, one for each line, which `run` turns into a method as
+`setMethod` does ([the argument rule](r:class.object.setmethod)), with the
+same conversions and the same errors for a value that is no method or fails to
+translate, and `SYNTAX 88.901` when the argument is missing. The method is not
+kept. The second argument is an option, whose first letter counts and the rest
+is ignored: `I` passes the remaining arguments to the method one for each, in
+order, with omitted ones omitted, and `A` passes the items of the third
+argument, converted as [`sendWith`](r:class.object.sendwith) converts its
+array: a missing array raises `SYNTAX 88.901`, and one that converts to no
+array, or to an array of more than one dimension, raises `88.913`. A sparse
+array's empty places are omitted arguments. Without an option the method gets
+no arguments, and arguments after an omitted option raise `88.901`. Any other
+option, the null string included, raises `SYNTAX 93.915`; `.nil` raises
+`88.909`. The checks run in this order: the method, the option, the array. The
+code runs with the scope `FLOAT`: its object variables are those of
+`setMethod`'s floating methods, not those of any class. When the method
+answers nothing, `run` answers nothing.
 
 ```rexx
 o = .w~new
@@ -1565,7 +1725,8 @@ say o~go('return "plain" arg()')
 say o~go('return arg() "|" arg(1) arg(2)', 'I', 'a', 'b')
 say o~go('return arg() "|" arg(1) arg(2)', 'individual', 'a', 'b')
 say o~go('return arg() "|" arg(1) arg(2)', 'Array', .array~of('a', 'b'))
-say o~go('return arg() "|" arg(1, "e") arg(2, "e") arg(3, "e")', 'a', .array~of(1, , 3))
+say o~go('return arg() "|" arg(1, "e") arg(2, "e") arg(3, "e")', 'a', -
+  .array~of(1, , 3))
 say o~go('return arg() "|" arg(1, "e") arg(2, "e")', 'i', 1, )
 say o~go('return arg()', 'A', .array~new)
 say o~go('return arg()', 'A', .list~of(1, 2, 3))
@@ -1583,6 +1744,11 @@ call try 'o~go("return 1", "")'
 call try 'o~go("return 1", .nil)'
 call try 'o~go("return 1", "A")'
 call try 'o~go("return 1", "A", .nil)'
+call try 'o~go("return 1", "A", .array~new(2, 2))'
+call try 'o~go2("return arg()", 1)'
+call try 'o~go(.object~new, "x")'
+call try 'o~go("return 1", "x", .nil)'
+call try 'o~go(.lmeth~new("", "return 1"))'
 call try 'o~go("return 1", "I", 1, 2)'
 call try 'o~go("if then")'
 call try 'o~go("say 1")'
@@ -1605,6 +1771,9 @@ bad: say arg(1) '=>' condition('o')~code
   if arg() = 2 then return self~run(arg(1), arg(2))
   if arg() = 3 then return self~run(arg(1), arg(2), arg(3))
   return self~run(arg(1), arg(2), arg(3), arg(4))
+::method go2
+  return self~run(arg(1), , arg(2))
+::class lmeth subclass method
 ```
 
 ```output
@@ -1630,6 +1799,11 @@ o~go("return 1", "") => 93.915
 o~go("return 1", .nil) => 88.909
 o~go("return 1", "A") => 88.901
 o~go("return 1", "A", .nil) => 88.913
+o~go("return 1", "A", .array~new(2, 2)) => 88.913
+o~go2("return arg()", 1) => 88.901
+o~go(.object~new, "x") => 93.974
+o~go("return 1", "x", .nil) => 93.915
+o~go(.lmeth~new("", "return 1")) => 93.974
 o~go("return 1", "I", 1, 2) => 1
 o~go("if then") => 35.929
 1
@@ -1638,14 +1812,18 @@ o~go("say 1") => 91.999
 
 r[class.object.run.sends]
 `run` sends the message `request` with the argument `ARRAY`, once, to a method
-argument that is neither a method object, a string nor an array, and to the
-third argument of the option `A`, and uses the array each answers. It sends
-nothing to the receiver.
+argument that is not an instance of `Method`, `String` or `Array` itself, and
+uses the array it answers; when that answers no array, it sends `request` with
+the argument `STRING`, once, and uses the string it answers as the source, as
+[`setMethod`](r:class.object.setmethod.sends) does. It also sends `request`
+with the argument `ARRAY`, once, to the third argument of the option `A`, and
+uses the array it answers. It sends nothing to the receiver.
 
 ```rexx
 o = .w~new
 say o~go(.logged~new)
 say o~go('return arg()', 'A', .logged~new)
+say o~go(.src~new)
 ::class w
 ::method go
   if arg() = 1 then return self~run(arg(1))
@@ -1657,6 +1835,12 @@ say o~go('return arg()', 'A', .logged~new)
 ::method makearray
   say 'makearray sent'
   return .array~of('return 1', 'return 2')
+::class src subclass logged
+::method makestring
+  say 'makestring sent'
+  return 'return "from string"'
+::method makearray
+  return .nil
 ```
 
 ```output
@@ -1666,6 +1850,10 @@ makearray sent
 request ARRAY
 makearray sent
 2
+request ARRAY
+request STRING
+makestring sent
+from string
 ```
 
 ## Deviations
@@ -1758,6 +1946,50 @@ say 'xyz'~class~id 'xyz'~hasMethod('HI')
 ```output
 String 0
 String 0
+```
+
+r[class.object.deviation.33]
+The order of the entries that `instanceMethods` yields is not specified and
+may differ from ooRexx's ([Deviation 33](../deviations.md)); which names are
+listed, and how often, is specified.
+
+```rexx
+t = .box~new~instanceMethods(.box)
+a = .array~new
+do while t~available
+  a~append(t~index)
+  t~next
+end
+say a~sort~makestring('l', ' ')
+::class box
+::method hello
+  return 1
+::method goodbye
+  return 2
+```
+
+```output
+GOODBYE HELLO
+```
+
+r[class.object.deviation.105]
+A message that `start` or `startWith` sends is checked for `PRIVATE` and
+`PACKAGE` access as the same message sent directly by the code that started
+it, as [the Deviation 105 rule](r:dir.method.deviation.105) states; ooRexx
+raises `97.2` for every started private message and `97.1` for every started
+`PACKAGE` message.
+
+```rexx
+say .safe~new~open
+::class safe
+::method open unguarded
+  return self~startWith('inner', .array~of(7))~result
+::method inner private
+  return 'inner got' arg(1)
+```
+
+```output
+inner got 7
 ```
 
 r[class.object.deviation.36]
