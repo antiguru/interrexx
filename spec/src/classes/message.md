@@ -2006,11 +2006,13 @@ r[class.message.deviation.113]
 `new` with the option `A` keeps a copy of the array of arguments, so that a
 change to the caller's array after `new` does not reach the message, and the
 number of arguments of the message is the position of the last item present.
-ooRexx keeps the caller's array itself, so that a change to it reaches the
-message, and passes the size of the array as the number of arguments, with the
-empty places at its end counted. In the example the array of the first message
-gets a new first item and one more item after `new`, and the array of the second
-message has room for four items and holds one.
+The arrays of arguments that `sendWith`, `startWith` and `replyWith` take are
+counted the same way. ooRexx keeps the caller's array itself, so that a change
+to it reaches the message, and passes the size of the array as the number of
+arguments, with the empty places at its end counted, for all four methods. In
+the example the array of the first message gets a new first item and one more
+item after `new`, and the arrays of the second message and of `sendWith` have
+room for four items and hold one.
 
 ```rexx
 t = .t~new
@@ -2022,6 +2024,7 @@ say m~send
 b = .array~new(4)
 b[1] = 'p'
 say .message~new(t, 'show', 'A', b)~send
+say .message~new(t, 'show')~sendWith(t, b)
 ::class t
 ::method show
   s = arg()':'
@@ -2034,6 +2037,7 @@ say .message~new(t, 'show', 'A', b)~send
 
 ```output
 2: x y
+1: p
 1: p
 ```
 

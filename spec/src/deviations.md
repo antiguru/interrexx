@@ -774,9 +774,11 @@ is not a string raises the same error as there. ooRexx uses the item's
 
 `Message~new` with the option `A` keeps a copy of the argument array, so later
 changes to the caller's array do not reach the message, and the number of
-arguments is the position of the last item present, as for `sendWith`. ooRexx
-keeps the caller's array itself and passes its size as the number of
-arguments, trailing empty positions included.
+arguments is the position of the last item present, as for `Object~sendWith`;
+the arguments that `Message~sendWith`, `startWith` and `replyWith` take as an
+array are counted the same way. ooRexx keeps the caller's array itself and
+passes its size as the number of arguments, trailing empty positions included,
+in all four.
 
 ## 114. A metaclass NEW that answers an object that is not a class
 
