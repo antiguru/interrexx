@@ -2,7 +2,7 @@
 element: "Array"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Array Class; Builtin Classes > Collection Classes > Array Class > new (Class Method); Builtin Classes > Collection Classes > Array Class > of (Class Method); Builtin Classes > Collection Classes > Array Class > []; Builtin Classes > Collection Classes > Array Class > []=; Builtin Classes > Collection Classes > Array Class > allIndexes; Builtin Classes > Collection Classes > Array Class > allItems; Builtin Classes > Collection Classes > Array Class > append; Builtin Classes > Collection Classes > Array Class > at; Builtin Classes > Collection Classes > Array Class > delete; Builtin Classes > Collection Classes > Array Class > dimension; Builtin Classes > Collection Classes > Array Class > dimensions; Builtin Classes > Collection Classes > Array Class > empty; Builtin Classes > Collection Classes > Array Class > fill; Builtin Classes > Collection Classes > Array Class > first; Builtin Classes > Collection Classes > Array Class > firstItem; Builtin Classes > Collection Classes > Array Class > hasIndex; Builtin Classes > Collection Classes > Array Class > hasItem; Builtin Classes > Collection Classes > Array Class > index; Builtin Classes > Collection Classes > Array Class > insert; Builtin Classes > Collection Classes > Array Class > isEmpty; Builtin Classes > Collection Classes > Array Class > items; Builtin Classes > Collection Classes > Array Class > last; Builtin Classes > Collection Classes > Array Class > lastItem; Builtin Classes > Collection Classes > Array Class > makeArray; Builtin Classes > Collection Classes > Array Class > makeString; Builtin Classes > Collection Classes > Array Class > next; Builtin Classes > Collection Classes > Array Class > previous; Builtin Classes > Collection Classes > Array Class > put; Builtin Classes > Collection Classes > Array Class > remove; Builtin Classes > Collection Classes > Array Class > removeItem; Builtin Classes > Collection Classes > Array Class > section; Builtin Classes > Collection Classes > Array Class > size; Builtin Classes > Collection Classes > Array Class > sort; Builtin Classes > Collection Classes > Array Class > sortWith; Builtin Classes > Collection Classes > Array Class > stableSort; Builtin Classes > Collection Classes > Array Class > stableSortWith; Builtin Classes > Collection Classes > Array Class > supplier; Builtin Classes > Collection Classes > Array Class > toString"
-deviations: [109]
+deviations: [107, 109]
 ---
 
 # Array
@@ -72,7 +72,8 @@ that is not a whole number that is not negative raises `SYNTAX 93.906`, and so
 does an array of sizes that holds one, or an instance of a subclass; an
 omitted argument followed by a given one raises `SYNTAX 93.903`, while omitted
 arguments at the end count for nothing. A size of 0 is allowed and makes a
-dimension with no room: `new(0)` has `dimension` 1 and `size` 0.
+dimension with no room: `new(0)` has `dimension` 1 and `size` 0. A size is
+read as [the index rule](r:class.array.indexes) reads an index.
 
 ```rexx
 a = .array~new
@@ -185,8 +186,12 @@ as one `Array` that holds them all; `at(2, 3)` and `at(.array~of(2, 3))` name
 the same entry. Only an instance of `Array` itself is such a list: an instance
 of a subclass is one argument like any other object. Each index is a whole
 number of at least 1, read from the string value of the argument ([the
-conversion rule](r:conv.string.object)), so `"2"` and `2.0` are as good as
-`2`. The number of indexes must be the number of dimensions of the array: too
+conversion rule](r:conv.string.object)) as a whole-number argument of a builtin
+is ([the form rule](r:conv.whole.form), [the digits
+rule](r:conv.whole.digits)), so `"2"`, `' + 2 '` and `2.0` are as good as `2`
+and NUMERIC DIGITS plays no part; an argument those rules refuse raises the
+error this rule names, not `SYNTAX 40.12`. The number of indexes must be the
+number of dimensions of the array: too
 few raise `SYNTAX 93.925` and too many `SYNTAX 93.926`. An index that is not a
 whole number of at least 1 raises `SYNTAX 93.907` when the array has one
 dimension, and `SYNTAX 93.924` when it has more. No index at all, or an empty
@@ -210,6 +215,7 @@ call try '.array~of(7)~at(.nil)'
 call try '.array~of(7)~at(1, 1)'
 call try '.array~of(7)~at'
 call try '.array~of(7)~at(.array~of)'
+call try '.array~of(7)~at(1000000000000000000)'
 say .array~new~at(0, 0) .array~new~at(5, 5, 5)
 call try 'a~at(.pair~of(2, 1))'
 exit
@@ -234,6 +240,7 @@ a~at(1, "q") => 93.924
 .array~of(7)~at(1, 1) => 93.926
 .array~of(7)~at => 93.901
 .array~of(7)~at(.array~of) => 93.901
+.array~of(7)~at(1000000000000000000) => 93.907
 The NIL object The NIL object
 a~at(.pair~of(2, 1)) => 93.925
 ```
@@ -374,9 +381,13 @@ index, and the method answers the index of the new item. An `index` of `.nil`
 puts the item first, at index 1, and an omitted `index` puts it after the
 highest index that holds an item. An `index` beyond the highest index of the
 array is allowed: the item goes to the index after it. The size of the array
-is the larger of what it was and the highest index in use, so it grows only
-when an entry is pushed past its last place. The index is read as [the index
-rule](r:class.array.indexes) says, so an array of one index is accepted. The
+becomes the larger of what it was and the highest index the insert uses, the
+new one's or that of an entry it moved, so it grows only when an entry is
+pushed past its last place. An omitted item, or no argument at all, makes the
+new slot empty, and the answer, the size and the moving of the entries after
+it are as for an item ([the omitted item rule](r:class.array.insert.omitted)).
+The index is read as [the index rule](r:class.array.indexes) says, so an array
+of one index is accepted. The
 method takes one or two arguments: a third raises `SYNTAX 93.902`; an array of
 more than one dimension raises `SYNTAX 93.954` whatever the index is, after
 the argument count has been checked. An index that is not a whole number of at
@@ -421,6 +432,26 @@ bad: say arg(1) '=>' condition('o')~code
 .array~of(1)~insert(1, 1, 1) => 93.902
 .array~new(2, 2)~insert(1, 0) => 93.954
 .array~new(2, 2)~insert(1, 1, 1) => 93.902
+```
+
+r[class.array.insert.omitted]
+An `insert` whose item is omitted makes an empty slot where the item would
+go: the entries after it move up, the answer is the index of the empty slot,
+and the size grows to that index when it lies beyond the size.
+
+```rexx
+a = .array~of('a')
+say a~insert(, 2) a~size a~items a~hasIndex(3)
+b = .array~of('a', 'b')
+say b~insert(, 1) b~size b~items b~hasIndex(2) b[3]
+c = .array~of('a')
+say c~insert() c~size c~items c~hasIndex(2)
+```
+
+```output defect=#161
+3 3 1 0
+2 3 2 0 b
+2 2 1 0
 ```
 
 r[class.array.delete]
@@ -688,6 +719,44 @@ a~index(1, 2) => 93.902
 
 ## Walking the array
 
+r[class.array.order]
+The entries of an array of more than one dimension have one order: the order
+of their slots with the first dimension changing fastest, so that in a 2 by 2
+array (1,1) comes first, then (2,1), (1,2) and (2,2). Every method that walks
+the entries follows it, for the indexes as for the items: `allItems`,
+`makeArray` and `allIndexes`, `supplier`, `first`, `last`, `firstItem` and
+`lastItem`, `next` and `previous`, the search of `hasItem`, `index` and
+`removeItem`, `makeString` and the sorts.
+
+```rexx
+a = .array~new(2, 2)
+a[1, 2] = 'r'; a[2, 1] = 'q'
+say a~allItems~makeString('L', ',')
+do i over a~allIndexes
+  say i~makeString('L', ',') a[i]
+end
+s = a~supplier
+say s~index~makeString('L', ',') s~item
+say a~first~makeString('L', ',') a~last~makeString('L', ',')
+say a~next(2, 1)~makeString('L', ',') a~previous(1, 2)~makeString('L', ',')
+b = .array~new(2, 2)
+b[2, 1] = 7; b[1, 2] = 7
+say b~index(7)~makeString('L', ',')
+b~removeItem(7)
+say b~first~makeString('L', ',')
+```
+
+```output defect=#159
+q,r
+2,1 q
+1,2 r
+2,1 q
+2,1 1,2
+1,2 2,1
+2,1
+1,2
+```
+
 r[class.array.first]
 `first` answers the lowest index that holds an item and `last` the highest,
 and `firstItem` and `lastItem` answer the items there; all four answer `.nil`
@@ -725,9 +794,10 @@ a~lastItem(1) => 93.902
 r[class.array.next]
 `next(index)` answers the index of the first item after the index, passing
 over empty slots, and `.nil` when there is none; `previous(index)` answers the
-last item before it. The index need not hold an item, or exist: `next` of an
-index beyond the array answers `.nil`, and `previous` of one beyond the array
-answers the index of the last item of a one-dimensional array. The index is
+index of the last item before it. The index need not hold an item, or exist:
+`next` of an index beyond the array answers `.nil`, and `previous` of one
+beyond the array answers the index of the last item ([the rule for an index
+beyond the array](r:class.array.next.beyond)). The index is
 read as [the index rule](r:class.array.indexes) says, with `SYNTAX 93.901` for
 no index and `SYNTAX 93.907` for an index that is not a whole number of at
 least 1; so index 0 is an error, and `previous(1)` is `.nil`.
@@ -759,6 +829,21 @@ a~next => 93.901
 a~next(0) => 93.907
 a~previous(.nil) => 93.907
 a~next(1, 2) => 93.926
+```
+
+r[class.array.next.beyond]
+`previous` of an index that lies beyond the array answers the index of the
+last item, in an array of more than one dimension as in one of one dimension,
+when the index is beyond every dimension.
+
+```rexx
+a = .array~new(2, 2)
+a[1, 1] = 'p'; a[2, 2] = 's'
+say a~previous(5, 5)~makeString('L', ',') .array~of('x', 'y')~previous(9)
+```
+
+```output defect=#160
+2,2 2
 ```
 ## Size, dimensions and filling
 
@@ -873,8 +958,9 @@ r[class.array.dimension]
 `dimension` with no argument answers the number of dimensions: 0 for an array
 that has none yet, 1 for a one-dimensional array. `dimension(n)` answers the
 size of dimension `n`, and 0 when the array has fewer dimensions than `n`; `n`
-is read from its string value and must be a whole number of at least 1, or
-`SYNTAX 93.907` is raised. `dimensions` answers a new `Array` that holds the
+is read as [the index rule](r:class.array.indexes) reads an index and must be
+a whole number of at least 1, or `SYNTAX 93.907` is raised. `dimensions` answers
+a new `Array` that holds the
 size of each dimension, in order, and for an array that has no dimension yet
 an array that holds 0. A second argument to `dimension`, or any argument to
 `dimensions`, raises `SYNTAX 93.902`. The size of a dimension is the highest
@@ -925,8 +1011,9 @@ items are the receiver's own objects, and the receiver is not changed. A
 with no entries and no dimension. The index is read as [the index
 rule](r:class.array.indexes) says, so an array of one index is accepted, and
 `SYNTAX 93.907` is raised for a `start` that is not a whole number of at least
-1. The `count` must be a whole number of 0 or more, or `SYNTAX 93.923` is
-raised. No `start`, or an omitted one, raises `SYNTAX 93.903`, and a third
+1. The `count` is read as [the index rule](r:class.array.indexes) reads an
+index and must be a whole number of 0 or more, or `SYNTAX 93.923` is raised. No
+`start`, or an omitted one, raises `SYNTAX 93.903`, and a third
 argument `SYNTAX 93.902`; for an array of more than one dimension
 `SYNTAX 93.954` is raised after the count of arguments has been checked,
 whatever they are. The answer is an instance of the class of the receiver.
@@ -1011,8 +1098,8 @@ init 0
 r[class.array.makearray]
 `makeArray` and `allItems` answer a new `Array` that holds the items of the
 receiver in the order of its indexes, without the empty slots; the first is at
-index 1. In an array of more than one dimension that order is the order of its
-slots with the first dimension changing fastest. `allIndexes` answers a new
+index 1. In an array of more than one dimension that order is the one [the order
+rule](r:class.array.order) gives. `allIndexes` answers a new
 `Array` of the indexes that hold an item, in the same order: whole numbers, or
 arrays of indexes in a multi-dimensional array. The three answer an `Array`
 whatever the class of the receiver is, never the receiver, and do not follow
@@ -1107,10 +1194,14 @@ omitted, and `C` joins the items directly. The separator is read from its
 string value and is the line end `'0A'x` when it is omitted; it may be the
 null string. A `mode` that does not begin with `L` or `C` raises
 `SYNTAX 93.915`; a separator with `C`, even a null one, raises
-`SYNTAX 93.902`, as a third argument does; a separator that has no string
-value raises `SYNTAX 88.909`. An item that is a string is used as it is, and
+`SYNTAX 93.902`, as a third argument does; a mode or a separator that has no
+string value raises `SYNTAX 88.909`. The mode is checked first, its string
+value and then its letter, and the separator after it. An item that is a string
+is used as it is, and
 any other object, `.nil` included, gives the answer of its `objectName`
-message. An empty slot gives nothing, and no separator is added for it, but an
+message (a whole-number answer is written as its digits, [Deviation
+107](r:class.array.deviation.107)). An empty slot gives nothing, and no
+separator is added for it, but an
 item that is the null string still takes its separator. An array with no item
 answers the null string.
 
@@ -1126,6 +1217,7 @@ say .array~of(.nil, 'n')~makeString('L', ' ')
 b = .array~new(2, 2)
 b[1, 1] = 'p'; b[2, 1] = 'q'; b[1, 2] = 'r'; b[2, 2] = 's'
 say b~makeString('L', '')
+call try 'a~makeString(.nil)'
 call try 'a~makeString("x")'
 call try 'a~makeString(" l")'
 call try 'a~makeString("c", "-")'
@@ -1150,6 +1242,7 @@ x--y
 [] []
 The NIL object n
 pqrs
+a~makeString(.nil) => 88.909
 a~makeString("x") => 93.915
 a~makeString(" l") => 93.915
 a~makeString("c", "-") => 93.902
@@ -1229,7 +1322,10 @@ multi-dimensional array the first dimension changing fastest), so an array
 whose items are not in the first slots, with an empty slot before an item,
 raises `SYNTAX 98.975` before any comparison and stays as it was; empty slots
 after the items stay empty, and the size does not change. An array of fewer
-than two items is not compared and the comparator is not looked at. `sort` and
+than two items is not compared; `sortWith` and `stableSortWith` then answer at
+once, before the slot check and without looking at the comparator, while `sort`
+and `stableSort` still make the slot check, so `.array~of(, 5)~sort` raises
+`SYNTAX 98.975` and `.array~of(, 5)~sortWith(.nil)` does not. `sort` and
 `stableSort` take no argument: any raises `SYNTAX 93.902`. `sortWith` and
 `stableSortWith` take exactly one: none, or an omitted one, raises
 `SYNTAX 93.903` and a second `SYNTAX 93.902`. An item or comparator that does
@@ -1254,6 +1350,7 @@ c[1, 1] = 'd'; c[2, 1] = 'c'; c[1, 2] = 'b'; c[2, 2] = 'a'
 c~sort
 say c[1, 1] c[2, 1] c[1, 2] c[2, 2]
 call try '.array~of(2, , 1)~sort'
+call try '.array~of(, 5)~sort'
 call try '.array~of(2, 1)~sort(1)'
 call try '.array~of(2, 1)~sortWith'
 call try '.array~of(2, 1)~sortWith(.cmp~new, 1)'
@@ -1261,6 +1358,7 @@ call try '.array~of(2, 1)~sortWith(.nil)'
 call try '.array~of(2, 1)~sortWith(.badcmp~new)'
 call try '.array~of(.badlike~new, .badlike~new)~sort'
 say .array~of(5)~sortWith(.nil)~items
+say .array~of(, 5)~sortWith(.nil)~items
 exit
 try:
   signal on syntax name bad
@@ -1291,12 +1389,14 @@ x,y,z
 5 2 p q
 a b c d
 .array~of(2, , 1)~sort => 98.975
+.array~of(, 5)~sort => 98.975
 .array~of(2, 1)~sort(1) => 93.902
 .array~of(2, 1)~sortWith => 93.903
 .array~of(2, 1)~sortWith(.cmp~new, 1) => 93.902
 .array~of(2, 1)~sortWith(.nil) => 97.1
 .array~of(2, 1)~sortWith(.badcmp~new) => 26.903
 .array~of(.badlike~new, .badlike~new)~sort => 26.902
+1
 1
 ```
 r[class.array.sort.sends]
@@ -1394,14 +1494,18 @@ MANY 3 2 T 0 1
 
 r[class.array.inherited]
 The methods `union`, `difference`, `intersection`, `xor`, `subset`, `disjoint`
-and `equivalent` and `appendAll` are not declared by `Array`. The first five
-are those of [`OrderedCollection`](orderedcollection.md) and the other three
-those of [`Collection`](collection.md), as the pages of the mixins say, and an
+and `equivalent` and `appendAll` are not declared by `Array`. The methods
+`union`, `difference`, `intersection`, `xor`, `subset` and `appendAll` are
+those of [`OrderedCollection`](orderedcollection.md), and `disjoint` and
+`equivalent` those of [`Collection`](collection.md), as the pages of the
+mixins say, and an
 array is one of the collections they take as an argument, so that
-`.array~of(1)~union(.list~of(2))` is an array of 1 and 2. The answers of
-`union`, `difference` and `xor` are instances of `Array`, also when the
-receiver is an instance of a subclass; the answer of `intersection` is an
-instance of the class of the receiver; `appendAll` answers the receiver.
+`.array~of(1)~union(.list~of(2))` is an array of 1 and 2. `union`,
+`difference` and `xor` send the copy they work on `isA` with the class `Array`
+and answer its `makeArray` when that answers 1, as their rules say, so for an
+array, an instance of a subclass included, the answer is a new `Array`;
+`intersection` answers the copy itself, an instance of the class of the
+receiver. `appendAll` answers the receiver.
 
 ```rexx
 a = .many~of(1, 2, 2)
@@ -1489,8 +1593,30 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 ```
 ## Deviations
 
+r[class.array.deviation.107]
+An item whose `objectName` answers a string that names a number is written
+by `makeString` and `toString` as the characters of that string, however the
+number was written or computed, as [the Object
+rule](r:class.object.deviation.107) says of every string. ooRexx writes bytes
+of its stored form instead when the answer is a whole-number literal or the
+result of arithmetic ([Deviation 107](../deviations.md)).
+
+```rexx
+say .array~of(.n3~new, 'x')~makeString('L', '-')
+say .array~of(.n3~new)~toString~c2x
+::class n3
+::method objectName
+  return 3
+```
+
+```output
+3-x
+33
+```
+
 r[class.array.deviation.109]
-An index, a mode or a separator that is an instance of a subclass of `String`
+An index, a size, a count, a mode or a separator that is an instance of a
+subclass of `String`
 is read by its own characters, and `MAKESTRING` is not sent to it ([Deviation
 109](r:class.string.deviation.109)). ooRexx reads such an instance through its
 `MAKESTRING` method. In the example `MAKESTRING` answers another number,

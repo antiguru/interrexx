@@ -10,9 +10,10 @@ deviations: [109, 118]
 `OrderedCollection` is the mixin class of the collections whose entries have
 an order of their own: the arrays, the lists, the queues and the circular
 queues. It inherits [`Collection`](collection.md) and declares twenty methods
-of its own. Fourteen are abstract: the ones that walk and change a sequence,
-`first`, `last`, `next`, `previous`, `append`, `insert`, `delete`, `section`
-and their relatives, and the four sorts. The other six are `appendAll` and
+of its own. The ones that walk and change a sequence, `first`, `firstItem`,
+`last`, `lastItem`, `next`, `previous`, `append`, `insert`, `delete` and
+`section`, are abstract, and the four sorts are written in terms of other
+messages. The rest are `appendAll` and
 the set operations `union`, `difference`, `intersection`, `xor` and `subset`,
 which replace the versions of [`Collection`](collection.md) for a class that
 inherits this mixin. `disjoint` and `equivalent` are not replaced: they are
@@ -117,12 +118,21 @@ c~section(1, 2) => 93.965
 ```
 
 r[class.orderedcollection.sort]
-The methods `sort`, `stableSort`, `sortWith` and `stableSortWith` are
-abstract too, but they check the number of their arguments first. `sort` and
-`stableSort` take none: an argument raises `SYNTAX 93.902`. `sortWith` and
-`stableSortWith` take exactly one: none raises `SYNTAX 93.901` and a second
-raises `SYNTAX 93.902`. With the right count each raises `SYNTAX 93.965`,
-whatever the argument is: it is not checked to be a comparator.
+The methods `sort`, `stableSort`, `sortWith` and `stableSortWith` sort any
+receiver through other messages; a class that inherits the mixin and has no
+sorts of its own, such as `List`, uses them. They check the number of their
+arguments first: `sort` and `stableSort` take none, and an argument raises
+`SYNTAX 93.902`; `sortWith` and `stableSortWith` take exactly one, none raises
+`SYNTAX 93.901` and a second `SYNTAX 93.902`, and the argument is not checked
+to be a comparator. `sort` sends `stableSort` to the receiver, and `sortWith`
+sends `stableSortWith` with its argument. `stableSort` sends `makeArray` to
+the receiver and `sort` to the answer; `stableSortWith` sends that answer
+`sortWith` with the comparator. Then the receiver is sent `first`, the sorted
+array `size`, and for each place from 1 to that size the array is sent `[]`
+with the place, the receiver `[]=` with that item and the current index, and
+then `next` with that index, which gives the index for the next item. The
+receiver answers itself. A receiver whose `makeArray` reaches an abstract
+method, an instance of the mixin itself among them, raises `SYNTAX 93.965`.
 
 ```rexx
 c = .orderedcollection~new
@@ -159,6 +169,64 @@ c~sortWith(1, 2) => 93.902
 c~stableSortWith => 93.901
 c~stableSortWith("not a comparator") => 93.965
 c~stableSortWith(1, 2) => 93.902
+```
+
+```rexx
+c = .oc~new
+say 'sort' c~sort~class~id
+say c~string
+call try 'c~sort(1)'
+call try '.oc2~new~stableSortWith'
+call try '.oc2~new~stableSort'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class oc inherit orderedcollection
+::method init
+  expose a
+  a = .array~of('c', 'a', 'b')
+::method makearray
+  expose a
+  say 'makeArray'
+  return a~copy
+::method first
+  say 'first'
+  return 1
+::method next
+  use arg i
+  say 'next' i
+  if i < 3 then return i + 1
+  return .nil
+::method '[]='
+  expose a
+  use arg v, i
+  say '[]=' v i
+  a[i] = v
+::method string
+  expose a
+  return a~makestring('L', ',')
+::class oc2 inherit orderedcollection
+```
+
+```output
+makeArray
+first
+[]= a 1
+next 1
+[]= b 2
+next 2
+[]= c 3
+next 3
+sort OC
+a,b,c
+c~sort(1) => 93.902
+.oc2~new~stableSortWith => 93.901
+.oc2~new~stableSort => 93.965
 ```
 
 ## Adding
@@ -581,7 +649,10 @@ r[class.orderedcollection.union]
 answers, with every item of the argument appended to it, in the order the
 argument gives them. An item that the receiver already has is appended again,
 so the result has as many copies of an item as the receiver and the argument
-have together. The receiver is not changed.
+have together. The receiver is not changed. When the last item has been
+appended, the copy is sent `isA` with the class `Array`; when it answers 1 the
+answer is what the copy answers to `makeArray`, sent with no argument, and
+otherwise the answer is the copy.
 
 ```rexx
 a = .seq~new('a b b')
@@ -629,8 +700,9 @@ the class `Collection`, then `allItems` to the argument when that answered 1,
 and otherwise `makeArray` to the argument and `allItems` to what that
 answered. It sends `makeArray` once to the answer of `allItems`, as
 [`DO OVER`](r:instr.do.over) does, and then sends `append` to the copy once
-for each item present in the array that came back, in order. Nothing else is
-sent: no item is tested before it is appended.
+for each item present in the array that came back, in order. Then it sends
+`isA` with `Array` to the copy, and `makeArray` to it when that answered 1;
+nothing else is sent: no item is tested before it is appended.
 
 ```rexx
 a = .lseq~new('a b')
@@ -705,13 +777,69 @@ append x
 a b b x
 ```
 
+```rexx
+a = .isaseq~new('a b')
+r = a~union(.array~of('b', 'x'))
+say r~class~id r
+::class seq inherit orderedcollection
+::method init
+  expose a
+  a = .array~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); a~append(w); end
+::method copy
+  return self~class~new(self~string)
+::method string
+  expose a
+  return a~makestring('L', ' ')
+::method append
+  expose a
+  return a~append(arg(1))
+::method removeitem
+  expose a
+  return a~removeitem(arg(1))
+::method allitems
+  expose a
+  return a~allitems
+::method items
+  expose a
+  return a~items
+::method isempty
+  expose a
+  return a~items = 0
+::class isaseq subclass seq
+::method isa
+  say 'isA' arg(1)~id
+  forward class (super) continue
+  return 1
+::method makearray
+  say 'makeArray'
+  return .array~of('MA')
+::method append
+  say 'append' arg(1)
+  forward class (super)
+::method removeitem
+  say 'removeItem' arg(1)
+  forward class (super)
+```
+
+```output
+append b
+append x
+isA Array
+makeArray
+Array MA
+```
+
 r[class.orderedcollection.difference]
 `difference(other)` answers a new collection: the object that the receiver's
 `copy` answers, from which, for each item of the argument in order, one
 occurrence of the item has been removed by `removeItem`. An item of the
 argument that the copy no longer has removes nothing. The receiver is not
 changed. `removeItem` is not declared by the mixin: a receiver without it
-raises `SYNTAX 93.948` at the first removal.
+raises `SYNTAX 93.948` at the first removal. When the last item has been
+removed, the copy is sent `isA` with the class `Array`; when it answers 1 the
+answer is what the copy answers to `makeArray`, sent with no argument, and
+otherwise the answer is the copy.
 
 ```rexx
 a = .seq~new('a b b c')
@@ -769,7 +897,9 @@ r[class.orderedcollection.difference.sends]
 operand rule](r:class.orderedcollection.operand) says, and sends `makeArray`
 once to the answer of `allItems`, as [`DO OVER`](r:instr.do.over) does. It
 then sends `removeItem` to the copy with each item present in the array that
-came back, in order, whether or not the copy has it. Nothing else is sent.
+came back, in order, whether or not the copy has it. Then it sends `isA` with
+`Array` to the copy, and `makeArray` to it when that answered 1; nothing else
+is sent.
 
 ```rexx
 a = .lseq~new('a b')
@@ -842,6 +972,59 @@ makeArray of the allItems answer
 removeItem b
 removeItem x
 a
+```
+
+```rexx
+a = .isaseq~new('a b')
+r = a~difference(.array~of('b', 'x'))
+say r~class~id r
+::class seq inherit orderedcollection
+::method init
+  expose a
+  a = .array~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); a~append(w); end
+::method copy
+  return self~class~new(self~string)
+::method string
+  expose a
+  return a~makestring('L', ' ')
+::method append
+  expose a
+  return a~append(arg(1))
+::method removeitem
+  expose a
+  return a~removeitem(arg(1))
+::method allitems
+  expose a
+  return a~allitems
+::method items
+  expose a
+  return a~items
+::method isempty
+  expose a
+  return a~items = 0
+::class isaseq subclass seq
+::method isa
+  say 'isA' arg(1)~id
+  forward class (super) continue
+  return 1
+::method makearray
+  say 'makeArray'
+  return .array~of('MA')
+::method append
+  say 'append' arg(1)
+  forward class (super)
+::method removeitem
+  say 'removeItem' arg(1)
+  forward class (super)
+```
+
+```output
+removeItem b
+removeItem x
+isA Array
+makeArray
+Array MA
 ```
 
 r[class.orderedcollection.intersection]
@@ -990,7 +1173,10 @@ answers, in which each item of the argument, in order, cancels one occurrence
 of itself when a working copy of the receiver still has one, and is appended
 otherwise. Occurrences therefore cancel one against one: an item that the
 argument has more often than the receiver has it is appended once for each
-occurrence left over. The receiver is not changed.
+occurrence left over. The receiver is not changed. When the last item has been
+appended or removed, the result is sent `isA` with the class `Array`; when it
+answers 1 the answer is what the result answers to `makeArray`, sent with no
+argument, and otherwise the answer is the result.
 
 ```rexx
 a = .seq~new('a b b c')
@@ -1038,7 +1224,8 @@ the answer of `allItems`, as [`DO OVER`](r:instr.do.over) does. For each item
 present in the array that came back, in order, it sends `hasItem` to the
 working copy; when that answers 1 it sends `removeItem` with the item to the
 result and then to the working copy, and otherwise it sends `append` with the
-item to the result. Nothing else is sent.
+item to the result. Then it sends `isA` with `Array` to the result, and
+`makeArray` to it when that answered 1; nothing else is sent.
 
 ```rexx
 a = .lseq~new('a b')
@@ -1115,6 +1302,60 @@ removeItem b
 hasItem x
 append x
 a x
+```
+
+```rexx
+a = .isaseq~new('a b')
+r = a~xor(.array~of('b', 'x'))
+say r~class~id r
+::class seq inherit orderedcollection
+::method init
+  expose a
+  a = .array~new
+  if arg(1, 'E') then do w over arg(1)~makearray(' '); a~append(w); end
+::method copy
+  return self~class~new(self~string)
+::method string
+  expose a
+  return a~makestring('L', ' ')
+::method append
+  expose a
+  return a~append(arg(1))
+::method removeitem
+  expose a
+  return a~removeitem(arg(1))
+::method allitems
+  expose a
+  return a~allitems
+::method items
+  expose a
+  return a~items
+::method isempty
+  expose a
+  return a~items = 0
+::class isaseq subclass seq
+::method isa
+  say 'isA' arg(1)~id
+  forward class (super) continue
+  return 1
+::method makearray
+  say 'makeArray'
+  return .array~of('MA')
+::method append
+  say 'append' arg(1)
+  forward class (super)
+::method removeitem
+  say 'removeItem' arg(1)
+  forward class (super)
+```
+
+```output
+removeItem b
+removeItem b
+append x
+isA Array
+makeArray
+Array MA
 ```
 
 r[class.orderedcollection.subset]

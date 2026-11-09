@@ -61,8 +61,9 @@ List 8 1 0
 
 r[class.list.new]
 `new` makes an empty list. Its optional argument is a hint for how large the
-list will grow and changes nothing the program can see; it must be a whole
-number that is not negative, or `SYNTAX 93.923` is raised. A second argument
+list will grow and changes nothing the program can see; it is read as [the
+index rule](r:class.list.indexes) reads an index and must be a whole number
+that is not negative, or `SYNTAX 93.923` is raised. A second argument
 raises `SYNTAX 93.902`, and omitted arguments at the end count for nothing.
 `new` sends `init` to the new object with the arguments it received, so a
 subclass's `init` sees the hint, unlike the `init` of an array ([the new
@@ -165,9 +166,12 @@ r[class.list.indexes]
 An index of a list is a whole number of 0 or more, chosen by the list when an
 entry is created and kept until the entry is removed. A method that takes an
 index reads it from its string value ([the conversion
-rule](r:conv.string.object)): `"1"` and `1.0` are as good as `1`, and anything
-that is not a whole number of 0 or more, `.nil` included, raises
-`SYNTAX 93.918`. A valid index that names no entry is not an error for the
+rule](r:conv.string.object)) as a whole-number argument of a builtin is ([the
+form rule](r:conv.whole.form), [the digits rule](r:conv.whole.digits)): `"1"`,
+`' + 1 '` and `1.0` are as good as `1`, NUMERIC DIGITS plays no part, and
+anything that is not a whole number of 0 or more, `.nil` included, or that
+those rules refuse, raises `SYNTAX 93.918`. A valid index that names no entry is
+not an error for the
 methods that look entries up: `at`, `next`, `previous`, `delete` and `remove`
 answer `.nil` and `hasIndex` answers 0; the methods that must have an entry,
 `put`, `insert` and `section`, raise `SYNTAX 93.918`. When an entry is removed
@@ -195,6 +199,7 @@ call try 'm~at(-1)'
 call try 'm~at("x")'
 call try 'm~at(1.5)'
 call try 'm~at(.nil)'
+call try 'm~at(1000000000000000000)'
 call try 'm~put("t", 9)'
 call try 'm~insert("t", 9)'
 call try 'm~section(9)'
@@ -219,6 +224,7 @@ m~at(-1) => 93.918
 m~at("x") => 93.918
 m~at(1.5) => 93.918
 m~at(.nil) => 93.918
+m~at(1000000000000000000) => 93.918
 m~put("t", 9) => 93.918
 m~insert("t", 9) => 93.918
 m~section(9) => 93.918
@@ -689,8 +695,10 @@ an empty list. The new list has its own indexes, handed out from 0 as for any
 list ([the index rule](r:class.list.indexes)), the items are the receiver's
 own objects, and the receiver is not changed. The `start` must name an entry,
 or `SYNTAX 93.918` is raised, as for any index that is not a whole number of 0
-or more; the `count` must be a whole number that is not negative, or
-`SYNTAX 93.923`. No `start`, or an omitted one, raises `SYNTAX 93.903`, and a
+or more; the `count`, read as [the index rule](r:class.list.indexes) reads an
+index,
+must be a whole number that is not negative, or `SYNTAX 93.923`. No `start`, or
+an omitted one, raises `SYNTAX 93.903`, and a
 third argument `SYNTAX 93.902`. The answer is an instance of `List`, whatever
 the class of the receiver is, and no `new` or `init` is sent for it.
 
@@ -877,24 +885,17 @@ of a list are the methods of [`OrderedCollection`](orderedcollection.md), and
 they sort the list in place and answer the receiver. The entries keep their
 indexes and their places in the list, and the items change places among them:
 after a sort the first entry of the list holds the first item in the new
-order, and so on down the list. They are written in terms of other messages,
-and a subclass that overrides one of them sees the others. `sort` sends
-`stableSort` to the receiver, with no argument, and `sortWith` sends
-`stableSortWith` with its argument. `stableSort` sends `makeArray`, with no
-argument, to the receiver, then sends `sort` to the answer, and
-`stableSortWith` sends `sortWith` with the comparator instead; after that the
-receiver is sent `first`, and then for each item of the sorted array, in
-order, the receiver is sent `[]=` with the item and the index of the entry and
-then `next` with that index, which gives the index for the following item. The
-sorted array is read by `size`, sent once after the sort, and `[]` with 1, 2
-and so on, so the answer of `makeArray` can be any object that understands
-`sort` or `sortWith`, `size` and `[]`. The rest, comparing items by
-`compareTo` or by the comparator, is what an array's sort does ([the array
-rule](r:class.array.sort)). If the answer holds fewer items than the list has
+order, and so on down the list. They are written in terms of other messages, as
+[the sort
+rule](r:class.orderedcollection.sort) says: the list's `makeArray`, `first`,
+`next` and `[]=`, and the `sort` or `sortWith`, `size` and `[]` of the array
+that `makeArray` answers, which compares the items as [the array
+rule](r:class.array.sort) says. If the answer holds fewer items than the list
+has
 entries the last entries are left as they were, and when it holds more the
 `[]=` for the first item without an entry raises `SYNTAX 93.918`. The methods
-check their arguments as [the abstract rule for the
-sorts](r:class.orderedcollection.sort) says: `sort` and `stableSort` take
+check their arguments as [the sort rule](r:class.orderedcollection.sort) says:
+`sort` and `stableSort` take
 none, and `sortWith` and `stableSortWith` take one, `SYNTAX 93.901` being
 raised when it is missing; the comparator is not looked at, so the string
 `"x"` is accepted by a list of one item.
@@ -935,6 +936,28 @@ l~stableSort(1) => 93.902
 l~sortWith => 93.901
 l~stableSortWith(1, 2) => 93.902
 l~sortWith(.nil) => 97.1
+```
+
+```rexx
+l = .few~of('c', 'b', 'a')
+l~sort
+say l~allItems~makeString('L', ',')
+m = .more~of('c', 'b')
+signal on syntax name e
+m~sort
+exit
+e: say condition('o')~code m~allItems~makeString('L', ',')
+::class few subclass list
+::method makeArray
+  return .array~of('z', 'y')
+::class more subclass list
+::method makeArray
+  return .array~of('z', 'y', 'x')
+```
+
+```output
+y,z,a
+93.918 x,y
 ```
 
 r[class.list.sort.sends]
@@ -1019,13 +1042,16 @@ next 1
 
 r[class.list.inherited]
 The methods `union`, `difference`, `intersection`, `xor`, `subset`, `disjoint`
-and `equivalent` and `appendAll` are not declared by `List`. The first five
-are those of [`OrderedCollection`](orderedcollection.md) and the other three
-those of [`Collection`](collection.md), as the pages of the mixins say, and a
+and `equivalent` and `appendAll` are not declared by `List`. The methods
+`union`, `difference`, `intersection`, `xor`, `subset` and `appendAll` are
+those of [`OrderedCollection`](orderedcollection.md), and `disjoint` and
+`equivalent` those of [`Collection`](collection.md), as the pages of the
+mixins say, and a
 list is one of the collections they take as an argument, so that
-`.list~of(1)~union(.array~of(2))` is a list of 1 and 2. The answers of
-`union`, `difference`, `intersection` and `xor` are instances of the class of
-the receiver, and `appendAll` answers the receiver.
+`.list~of(1)~union(.array~of(2))` is a list of 1 and 2. A list answers 0 to
+`isA` with `Array`, so the answers of `union`, `difference`, `intersection` and
+`xor` are the copies they work on, instances of the class of the receiver, and
+`appendAll` answers the receiver.
 
 ```rexx
 a = .many~of(1, 2, 2)
@@ -1108,7 +1134,8 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 ## Deviations
 
 r[class.list.deviation.109]
-An index that is an instance of a subclass of `String` is read by its own
+An index, a count or the size hint of `new` that is an instance of a subclass of
+`String` is read by its own
 characters, and `MAKESTRING` is not sent to it ([Deviation
 109](r:class.string.deviation.109)). ooRexx reads such an instance as an index
 through its `MAKESTRING` method. In the example `MAKESTRING` answers another
@@ -1132,7 +1159,7 @@ wherever an array is wanted. `DO OVER` sends it `makeArray`, as [the loop
 rule](r:instr.do.over) says, and the methods that read an argument array with
 `request('ARRAY')` send it `request`, among them `sendWith`, so an override of
 either is used ([Deviation 118](r:instr.do.deviation.118)). ooRexx sends such
-an instance neither message and uses the items it holds, as it does not for
+an instance neither message and uses the items it holds; it does send them to
 the subclasses of the other collection classes. The method `makeArray` itself
 is the one this page specifies, and a program that sends it gets the override.
 In the example the subclasses answer other items than they hold.
