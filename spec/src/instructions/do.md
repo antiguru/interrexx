@@ -1298,8 +1298,8 @@ numeric digits 8; do 4294967296; leave; end => 26.2
 r[instr.do.deviation.118]
 `DO OVER` sends `MAKEARRAY` to an instance of a subclass of `List` as it does to
 an instance of any other collection class, so that a `MAKEARRAY` of the subclass
-is used and its answer decides the items. ooRexx reads such an instance as a
-`List` directly and sends it no `MAKEARRAY`, unlike the subclasses of the other
+is used and its answer decides the items. ooRexx uses the items such an
+instance holds and sends it no `MAKEARRAY`, unlike the subclasses of the other
 collection classes. In the example the subclasses answer other items than they
 hold.
 

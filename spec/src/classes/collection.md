@@ -2318,8 +2318,8 @@ r[class.collection.deviation.118]
 An instance of a subclass of `List` that `makeArray` answers to `union`,
 `intersection`, `xor` or `disjoint` is sent `makeArray`, twice, so that the
 `makeArray` of the subclass is used, as [the list
-rule](r:class.collection.operand.list) says. ooRexx reads such an instance as a
-`List` directly and sends it no `makeArray`. In the example the subclass answers
+rule](r:class.collection.operand.list) says. ooRexx uses the items such an
+instance holds and sends it no `makeArray`. In the example the subclass answers
 other items than it holds.
 
 ```rexx

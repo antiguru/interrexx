@@ -996,9 +996,9 @@ When `subclass` or `mixinclass` sends `new` to a metaclass and the answer is not
 a class, `SYNTAX 98.900` is raised by the message, in the program that sent it,
 where it can be trapped. The object that `new` answered may be any object, a
 string and `.nil` included. ooRexx crashes. The metaclass answers a string for
-the first class of the example, `.nil` for the second and an object of its own
-for the third. For a `::CLASS` directive with METACLASS see
-[Deviation 114](../deviations.md).
+the first class of the example, `.nil` for the second and an instance of
+`Object` for the third, and makes the class `K` of the directive as `Class`
+does. The directive case is [the METACLASS rule](r:dir.class.deviation.114).
 
 ```rexx
 call try '.k~subclass("S")'
@@ -1016,7 +1016,8 @@ e: say arg(1) '=>' condition('o')~code
 ::method new class
   if arg(1) = 'S' then return 'a string'
   if arg(1) = 'N' then return .nil
-  return .object~new
+  if arg(1) = 'O' then return .object~new
+  forward class (super)
 ::class k metaclass meta
 ```
 

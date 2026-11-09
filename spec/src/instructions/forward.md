@@ -3,6 +3,7 @@ element: FORWARD
 kind: instruction
 syntax: "FORWARD [TO expr] [MESSAGE expr] [ARGUMENTS expr | ARRAY (expr, ...)] [CLASS expr] [CONTINUE]"
 rexxref: "Keyword Instructions > FORWARD"
+deviations: [118]
 ---
 
 # FORWARD
@@ -523,4 +524,34 @@ forward array 1, 2 => 35.924
 forward to self => 35.1
 forward message m => 35.1
 forward to (a => 36.901
+```
+
+## Deviations
+
+r[instr.forward.deviation.118]
+The value of ARGUMENTS that is an instance of a subclass of `List` is sent
+the message `request` with the argument `ARRAY`, as for any other object that
+is not an array ([Deviation 118](../deviations.md)), so that an
+override is used. ooRexx sends the instance no `request` and uses the items it
+holds, so the example answers 1 on ooRexx. The `request` of the class `ll`
+answers two items.
+
+```rexx
+l = .ll~new
+l~append('held')
+say .w~new~relay(l)
+::class ll subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('a', 'b')
+::class w
+::method count
+  return arg()
+::method relay
+  forward message 'count' arguments (arg(1))
+```
+
+```output
+request ARRAY
+2
 ```

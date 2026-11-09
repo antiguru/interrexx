@@ -2,7 +2,7 @@
 element: "Message"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Message Class; Builtin Classes > Fundamental Classes > Message Class > new (Class Method); Builtin Classes > Fundamental Classes > Message Class > arguments; Builtin Classes > Fundamental Classes > Message Class > completed; Builtin Classes > Fundamental Classes > Message Class > errorCondition; Builtin Classes > Fundamental Classes > Message Class > halt; Builtin Classes > Fundamental Classes > Message Class > hasError; Builtin Classes > Fundamental Classes > Message Class > hasResult; Builtin Classes > Fundamental Classes > Message Class > messageComplete; Builtin Classes > Fundamental Classes > Message Class > messageName; Builtin Classes > Fundamental Classes > Message Class > notify; Builtin Classes > Fundamental Classes > Message Class > reply; Builtin Classes > Fundamental Classes > Message Class > replyWith; Builtin Classes > Fundamental Classes > Message Class > result; Builtin Classes > Fundamental Classes > Message Class > send; Builtin Classes > Fundamental Classes > Message Class > sendWith; Builtin Classes > Fundamental Classes > Message Class > start; Builtin Classes > Fundamental Classes > Message Class > startWith; Builtin Classes > Fundamental Classes > Message Class > target; Builtin Classes > Fundamental Classes > Message Class > triggered; Builtin Classes > Fundamental Classes > Message Class > wait; Builtin Classes > Utility Classes > AlarmNotification Class > cancel"
-deviations: [105, 107, 109, 113, 116]
+deviations: [105, 107, 109, 113, 116, 118]
 ---
 
 # Message
@@ -781,7 +781,10 @@ not omitted. The second argument is an array, or an object that answers an
 array to the message `request` with the argument `ARRAY`; an object that
 answers anything else, `.nil` included, and an array of more than one
 dimension raise `SYNTAX 88.913`. The items are the arguments in order. The
-target is replaced before the array is checked, so a call that is refused
+message keeps a copy of the array, so a later change to it does not reach the
+message, and the number of arguments is the position of the last item present,
+as [the count rule](r:class.index.args.count) says
+([Deviation 113](r:class.message.deviation.113)). The target is replaced before the array is checked, so a call that is refused
 leaves its target in the message; the arguments and what the latest run left
 are unchanged. Apart from the arguments, `sendWith` runs the message as `send`
 does, answers as it does, and a run replaces the state of the message in the
@@ -1073,7 +1076,8 @@ r[class.message.replywith]
 `startWith` is `start`: the array is required (`SYNTAX 88.901`), a third
 argument raises `93.902`, and an array that is not one raises `88.913`, all at
 the call. The arguments of the message and of the copy are those of the
-array, and the copy is answered.
+array, copied and counted as for [`sendWith`](r:class.message.sendwith), and
+the copy is answered.
 
 ```rexx
 t = .t~new
@@ -2007,7 +2011,7 @@ r[class.message.deviation.113]
 change to the caller's array after `new` does not reach the message, and the
 number of arguments of the message is the position of the last item present.
 The arrays of arguments that `sendWith`, `startWith` and `replyWith` take are
-counted the same way. ooRexx keeps the caller's array itself, so that a change
+copied and counted the same way. ooRexx keeps the caller's array itself, so that a change
 to it reaches the message, and passes the size of the array as the number of
 arguments, with the empty places at its end counted, for all four methods. In
 the example the array of the first message gets a new first item and one more
@@ -2078,4 +2082,43 @@ say 'failing target sent' b~count
 
 ```output defect=#158
 failing target sent 1
+```
+
+r[class.message.deviation.118]
+`new` with the option `A`, `sendWith` and `startWith` send an instance of a
+subclass of `List` given as the array of arguments the message `request` with
+the argument `ARRAY`, as [the sends rule of
+`sendWith`](r:class.message.sendwith.sends) states for any other object, so
+that an override is used ([Deviation 118](r:class.message.deviation.118)).
+ooRexx sends the instance no `request` and uses the items it holds, so each
+line of the example answers 1 on ooRexx. The `request` of the class `ll`
+answers two items.
+
+```rexx
+l = .ll~new
+l~append('held')
+t = .w~new
+m = .message~new(t, 'count', 'A', l)
+say m~send
+m = .message~new(t, 'count')
+say m~sendWith(t, l)
+m = .message~new(t, 'count')
+m~startWith(t, l)
+say m~result
+::class ll subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('a', 'b')
+::class w
+::method count
+  return arg()
+```
+
+```output
+request ARRAY
+2
+request ARRAY
+2
+request ARRAY
+2
 ```

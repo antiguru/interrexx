@@ -2,7 +2,7 @@
 element: "Object"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Object Class; Builtin Classes > Fundamental Classes > Object Class > new (Class Method); Builtin Classes > Fundamental Classes > Object Class > Comparison Methods; Builtin Classes > Fundamental Classes > Object Class > Concatenation Methods; Builtin Classes > Fundamental Classes > Object Class > class; Builtin Classes > Fundamental Classes > Object Class > copy; Builtin Classes > Fundamental Classes > Object Class > defaultName; Builtin Classes > Fundamental Classes > Object Class > hashCode; Builtin Classes > Fundamental Classes > Object Class > hasMethod; Builtin Classes > Fundamental Classes > Object Class > identityHash; Builtin Classes > Fundamental Classes > Object Class > init; Builtin Classes > Fundamental Classes > Object Class > instanceMethod; Builtin Classes > Fundamental Classes > Object Class > instanceMethods; Builtin Classes > Fundamental Classes > Object Class > isA; Builtin Classes > Fundamental Classes > Object Class > isInstanceOf; Builtin Classes > Fundamental Classes > Object Class > isNil; Builtin Classes > Fundamental Classes > Object Class > objectName; Builtin Classes > Fundamental Classes > Object Class > objectName=; Builtin Classes > Fundamental Classes > Object Class > request; Builtin Classes > Fundamental Classes > Object Class > run (Private Method); Builtin Classes > Fundamental Classes > Object Class > send; Builtin Classes > Fundamental Classes > Object Class > sendWith; Builtin Classes > Fundamental Classes > Object Class > setMethod (Private Method); Builtin Classes > Fundamental Classes > Object Class > start; Builtin Classes > Fundamental Classes > Object Class > startWith; Builtin Classes > Fundamental Classes > Object Class > string; Builtin Classes > Fundamental Classes > Object Class > unsetMethod (Private Method)"
-deviations: [4, 28, 30, 32, 33, 36, 105, 107, 109, 110]
+deviations: [4, 28, 30, 32, 33, 36, 105, 107, 109, 110, 118]
 ---
 
 # Object
@@ -2200,4 +2200,36 @@ say o~own o~later
 
 ```output defect=#141
 own later
+```
+
+r[class.object.deviation.118]
+`sendWith` and `startWith` send an instance of a subclass of `List` given as
+the array the message `request` with the argument `ARRAY`, as
+[the sends rule of `sendWith`](r:class.object.sendwith.sends) and
+[that of `startWith`](r:class.object.startwith.sends) say for any other
+object, so that an override is used
+([Deviation 118](r:class.object.deviation.118)). ooRexx sends the instance
+no `request` and uses the items it holds, so the example answers 1 on ooRexx.
+The `request` of the class `ll` answers two items.
+
+```rexx
+l = .ll~new
+l~append('held')
+say .w~new~sendWith('count', l)
+say 'start'
+.w~new~startWith('count', l)
+::class ll subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('a', 'b')
+::class w
+::method count
+  return arg()
+```
+
+```output
+request ARRAY
+2
+start
+request ARRAY
 ```

@@ -1336,7 +1336,7 @@ An instance of a subclass of `List` that `appendAll` or one of the operations
 that read a list gets as the answer of `allItems` is sent `makeArray`, so that
 its own `makeArray` is used, as [the answer
 rule](r:class.orderedcollection.operand.answer) says for any collection. ooRexx
-reads such an instance as a `List` directly and sends it no `makeArray`. In the
+uses the items such an instance holds and sends it no `makeArray`. In the
 example the subclass answers other items than it holds.
 
 ```rexx

@@ -2,7 +2,7 @@
 element: "Routine"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Routine Class; Builtin Classes > Fundamental Classes > Routine Class > new (Class Method); Builtin Classes > Fundamental Classes > Routine Class > newFile (Class Method); Builtin Classes > Fundamental Classes > Routine Class > loadExternalRoutine (Class method); Builtin Classes > Fundamental Classes > Routine Class > []; Builtin Classes > Fundamental Classes > Routine Class > annotation; Builtin Classes > Fundamental Classes > Routine Class > annotations; Builtin Classes > Fundamental Classes > Routine Class > call; Builtin Classes > Fundamental Classes > Routine Class > callWith; Builtin Classes > Fundamental Classes > Routine Class > package; Builtin Classes > Fundamental Classes > Routine Class > setSecurityManager; Builtin Classes > Fundamental Classes > Routine Class > source; The Security Manager"
-deviations: [41, 109, 115]
+deviations: [41, 109, 115, 118]
 ---
 
 # Routine
@@ -1356,9 +1356,9 @@ Foo say "src"
 
 r[class.routine.deviation.115]
 A `new` whose source answers `request` with `ARRAY` by an object that is neither
-an array nor `.nil` raises `SYNTAX 88.913`, as [the sends rule of
+an array nor `.nil` raises `SYNTAX 88.913`, as [the rule of
 `Method`](r:class.method.deviation.115) states, and no `request` with `STRING`
-is sent. ooRexx reads the answer as an array without checking it and crashes.
+is sent. ooRexx crashes.
 The examples have `request` answer a string, a list and an object that is none
 of them.
 
@@ -1399,4 +1399,28 @@ request ARRAY
 request ARRAY
 request STRING
 .routine~new("n", .src~new(.nil))~call => 2
+```
+
+r[class.routine.deviation.118]
+A source that is an instance of a subclass of `List` is sent `request` with
+the argument `ARRAY`, as [the sends rule](r:class.routine.new.sends) states,
+and the lines are the items of the array that it answers
+([Deviation 118](r:class.routine.deviation.118)). ooRexx sends the instance no
+`request` and takes the items it holds as the lines, so the example writes
+`held` on ooRexx.
+
+```rexx
+l = .ll~new
+l~append('held')
+r = .routine~new('r', l)
+say r~source[1]
+::class ll subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('say "answered"')
+```
+
+```output
+request ARRAY
+say "answered"
 ```

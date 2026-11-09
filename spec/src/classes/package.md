@@ -2029,8 +2029,8 @@ and the null string is a source of no lines, where for `new` a string is one
 line. The items of an array are the lines, and an item is read as [the source
 rule of `new`](r:class.package.new.source) reads one: a string is its own line,
 and any other item is converted by `MAKESTRING`, so that an item with no
-`MAKESTRING` method, `.nil` among them, raises `SYNTAX 93.952` and an answer
-that has a line end raises `13.1` ([Deviation
+`MAKESTRING` method, `.nil` among them, or a hole before an item, raises
+`SYNTAX 93.952` and an answer that has a line end raises `13.1` ([Deviation
 112](r:class.package.deviation.112)). An object for which `request` answers
 `.nil`, `.nil` itself among them, raises `SYNTAX 88.913`, and `request` is not
 sent with `STRING`. A source that does not translate raises its translation
@@ -2768,10 +2768,14 @@ through `MAKESTRING`, as [the rule of
 `loadPackage`](r:class.package.loadpackage) says and the source rule of `new`
 reads an item: an instance of a subclass of `String` or a `MutableBuffer` is its
 own text, an object that declares `MAKESTRING` is the string it answers, and an
-object that has none raises `SYNTAX 93.952`. ooRexx uses the `objectName` of the
-item as the line, so that the line of an object that answers a name such as
-`a MK` is code that the package then runs. The example gives the objects a
-package source line each.
+object that has none raises `SYNTAX 93.952`. ooRexx reads an instance of a
+subclass of `String` and a `MutableBuffer` by their text as well. Any other
+item it sends `objectName`, not `MAKESTRING`, and uses the answer as the line,
+so the default name of an object, such as `a MK`, is a line that the package
+runs as a command, and an item with no `MAKESTRING` method, `.nil` among them,
+raises no error. A hole followed by an item raises the error that the source
+rule of `new` gives for it, and crashes ooRexx. The example gives the objects a
+package source line each; on ooRexx only the second line differs.
 
 ```rexx
 p = .package~new('n', 'nop')
@@ -2811,8 +2815,7 @@ r[class.package.deviation.115]
 A source that answers `request` with `ARRAY` by an object that is neither an
 array nor `.nil` makes `new` raise `SYNTAX 88.913`, as [the rule of
 `Method`](r:class.method.deviation.115) says, and no `request` with `STRING` is
-sent after it. ooRexx reads the answer as an array without checking it and
-crashes. The examples have `request` answer a string and a list.
+sent after it. ooRexx crashes. The examples have `request` answer a string and a list.
 
 ```rexx
 call try '.package~new("n", .src~new("nop"))'

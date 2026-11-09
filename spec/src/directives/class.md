@@ -3,7 +3,7 @@ element: "::CLASS"
 kind: directive
 syntax: "::CLASS name [METACLASS m] [SUBCLASS s | MIXINCLASS s] [PUBLIC | PRIVATE] [ABSTRACT] [INHERIT i ...]"
 rexxref: "Directives > ::CLASS"
-deviations: [32]
+deviations: [32, 114]
 ---
 
 # ::CLASS
@@ -427,7 +427,9 @@ nowhere raises `SYNTAX 98.908`, where SUBCLASS, MIXINCLASS and INHERIT raise
 `98.909`. A name that is found and is not a subclass of `Class` raises
 `SYNTAX 99.927` when the package is installed, after the classes created
 before it have received INIT as [the failure rule](r:dir.index.failure) says,
-and a metaclass that is the class itself raises `98.911`.
+and a metaclass that is the class itself raises `98.911`. A `new` of the
+METACLASS that answers an object that is not a class raises `SYNTAX 98.900`
+when the package is installed ([Deviation 114](r:dir.class.deviation.114)).
 
 ```rexx
 say .k~hello .k~both
@@ -648,4 +650,22 @@ say 'before'
 ```
 
 ```output rc=120
+```
+
+r[dir.class.deviation.114]
+When the `new` of the METACLASS answers an object that is not a class, the
+package is not installed: `SYNTAX 98.900` is raised while the directive is
+read, so the program writes nothing, as
+[the chapter rule](r:class.index.deviation.114) states for `subclass` and
+`mixinclass`. ooRexx crashes.
+
+```rexx
+say 'before'
+::class meta subclass class
+::method new class
+  return .nil
+::class k metaclass meta
+```
+
+```output defect=#156 rc=158
 ```

@@ -2,7 +2,7 @@
 element: "Method"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Method Class; Builtin Classes > Fundamental Classes > Method Class > new (Class Method); Builtin Classes > Fundamental Classes > Method Class > newFile (Class Method); Builtin Classes > Fundamental Classes > Method Class > loadExternalMethod (Class Method); Builtin Classes > Fundamental Classes > Method Class > annotation; Builtin Classes > Fundamental Classes > Method Class > annotations; Builtin Classes > Fundamental Classes > Method Class > isAbstract; Builtin Classes > Fundamental Classes > Method Class > isAttribute; Builtin Classes > Fundamental Classes > Method Class > isConstant; Builtin Classes > Fundamental Classes > Method Class > isGuarded; Builtin Classes > Fundamental Classes > Method Class > isPackage; Builtin Classes > Fundamental Classes > Method Class > isPrivate; Builtin Classes > Fundamental Classes > Method Class > isProtected; Builtin Classes > Fundamental Classes > Method Class > package; Builtin Classes > Fundamental Classes > Method Class > scope; Builtin Classes > Fundamental Classes > Method Class > setGuarded; Builtin Classes > Fundamental Classes > Method Class > setPrivate; Builtin Classes > Fundamental Classes > Method Class > setProtected; Builtin Classes > Fundamental Classes > Method Class > setSecurityManager; Builtin Classes > Fundamental Classes > Method Class > setUnguarded; Builtin Classes > Fundamental Classes > Method Class > source"
-deviations: [41, 109, 115]
+deviations: [41, 109, 115, 118]
 ---
 
 # Method
@@ -1331,7 +1331,7 @@ r[class.method.deviation.115]
 A source that answers `request` with `ARRAY` by an object that is neither an
 array nor `.nil` makes `new` raise `SYNTAX 88.913`, whatever the object is: a
 string, a list or any other object, and no `request` with `STRING` is sent after
-it. ooRexx reads the answer as an array without checking it and crashes. [The
+it. ooRexx crashes. [The
 Routine page rule](r:class.routine.deviation.115) has the examples for
 `Routine~new`; the examples here have `request` answer a string and a directory.
 
@@ -1369,4 +1369,29 @@ request ARRAY
 request ARRAY
 request STRING
 .method~new("n", .src~new(.nil))~source[1] => return 2
+```
+
+r[class.method.deviation.118]
+A source that is an instance of a subclass of `List` is sent `request` with
+the argument `ARRAY`, as [the sends rule](r:class.method.new.sends) states for
+any other object that is not a string and not an array, and the lines are the
+items of the array that it answers ([Deviation
+118](r:class.method.deviation.118)). ooRexx sends the instance no `request` and
+takes the items it holds as the lines, so the example writes `held` on
+ooRexx.
+
+```rexx
+l = .ll~new
+l~append('held')
+m = .method~new('m', l)
+say m~source[1]
+::class ll subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('say "answered"')
+```
+
+```output
+request ARRAY
+say "answered"
 ```
