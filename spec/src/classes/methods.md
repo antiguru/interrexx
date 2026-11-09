@@ -32,22 +32,29 @@ classes whose tables a message to one of its instances is looked up in.
 
 r[class.methods.order]
 The order of `Object` holds only `Object`. The order of any other class `C`
-starts with `C` itself and goes on with the orders of the classes that its
-`superClasses` method answers, one after the other, in the order of that list:
-the superclass and then the mixin classes in the order they were inherited,
-except that a mixin class that `inherit` placed in front of another class of
-the list, the superclass included, stands there
-([the change rule](r:class.methods.order.change)). A class that this makes
-occur more than once keeps only its last place. The order therefore ends with
-`Object`, and a class stands after every class that has it as a superclass or
-inherits it.
+starts with `C` itself and goes on with the orders of the classes in the list
+of superclasses that `C` holds, the list its `superClasses` method reports,
+one after the other, in the order of that list: the superclass and then the
+mixin classes in the order they were inherited, except that a mixin class that
+`inherit` placed in front of another class of the list, the superclass
+included, stands there ([the change rule](r:class.methods.order.change)). A
+class that this makes occur more than once keeps only its last place. The
+order therefore ends with `Object`, and a class stands after every class that
+has it as a superclass or inherits it. The list is read from what the class
+holds, and no message is sent to a class for it: the search, `isA`,
+`isInstanceOf`, `inherit` and `uninherit` send none of `superClasses`,
+`isSubclassOf`, `queryMixinClass` or `baseClass`, so a metaclass that
+overrides them changes what a program that sends them gets and nothing else.
+In the second example the metaclass `META` announces each of those messages
+and answers falsely; the only announcement is the one for the `superClasses`
+that the program sends itself.
 
-> **Note.** The example prints the order of two classes. Each `who` method
-> names its own class and sends `who` on to the class that follows it, using
-> the special variable `SUPER`, which [the SUPER rule](r:class.methods.super)
-> specifies, so that the line shows the classes of the order in turn, `Object`
-> left out. `LEAF2` lists the same mixin classes as `LEAF` the other way
-> round.
+> **Note.** The first example prints the order of two classes. Each `who`
+> method names its own class and sends `who` on to the class that follows it,
+> using the special variable `SUPER`, which
+> [the SUPER rule](r:class.methods.super) specifies, so that the line shows
+> the classes of the order in turn, `Object` left out. `LEAF2` lists the same
+> mixin classes as `LEAF` the other way round.
 
 ```rexx
 call show .leaf, .leaf2
@@ -85,6 +92,53 @@ last: return id
 ```output
 LEAF: LEAF MID TOP MA MB
 LEAF2: LEAF2 MID TOP MB MA
+```
+
+```rexx
+o = .k~new
+say o~hello o~mx o~isA(.base) o~isA(.mx) o~isInstanceOf(.base)
+say .k~superClasses~items
+.k~uninherit(.mx)
+say o~isA(.mx) o~hasMethod('mx')
+signal on syntax name e1
+.k2~inherit(.fake)
+e1: say condition('o')~code
+.k2~inherit(.mx2)
+say .k2~new~pong
+::class meta subclass class
+::method superclasses
+  say '[superClasses sent]'
+  return .array~of(.object)
+::method isSubclassOf
+  say '[isSubclassOf sent]'
+  return 0
+::method querymixinclass
+  say '[queryMixinClass sent]'
+  return 1
+::method baseclass
+  say '[baseClass sent]'
+  return .object
+::class base
+::method hello
+  return 'base hello'
+::class mx mixinclass object
+::method mx
+  return 'mx'
+::class k metaclass meta subclass base inherit mx
+::class fake subclass object metaclass meta
+::class k2
+::class mx2 mixinclass object metaclass meta
+::method pong
+  return 'mx2 pong'
+```
+
+```output
+base hello mx 1 1 1
+[superClasses sent]
+1
+0 0
+98.942
+mx2 pong
 ```
 
 r[class.methods.order.base]
@@ -282,10 +336,9 @@ the class that its second argument names, which may be the superclass; the
 then comes first in `superClasses`, `superClass` answers it, and its methods
 hide the superclass's. An `uninherit` of a mixin class that another class of
 the order still inherits takes it out of the list of superclasses and leaves
-it in the order, and an `uninherit` of a mixin class that the list does not
-hold, or that stands first in it so that `superClass` answers it, raises
-`SYNTAX 98.945`, and one whose argument is not a mixin class raises `98.942`;
-the first class of the list therefore stays. The first example prints the
+it in the order; the first class of the list stays, and
+[the `uninherit` rule](r:class.class.uninherit) gives the errors for a class
+that cannot be taken out. The first example prints the
 order of `C` and of its subclass `SUB` and the list of superclasses after each
 change; its last line shows that the step `inherit ma before mx` has put the
 mixin class `MA`, which is based on `Object`, in front of `P1`, so that
@@ -532,18 +585,20 @@ unknown took M
 ```
 
 r[class.methods.hidden]
-A table can hold a mark that hides a name instead of a method: the search
-stops at it, and the name counts as not found. The marks are made by `define`
-with no method or with `.nil` as the method, by an item `.nil` in the
+A name can be hidden instead of given a method: the search stops at it, and
+the name counts as not found. `define` with no method, an item `.nil` in the
 collection that `defineMethods` or `enhanced` receives, and, for the object's
-own methods, by `setMethod` with no method. The `delete` method of `Class`
-removes the entry of a name from the table of the class it is sent to, whether
-it is a method or a mark, and the name is then looked up in the classes
-behind. A name the table does not hold is left as it is; `delete` does not
-remove a method that only a class behind holds. The example hides a method
-that the superclass holds, shows that `UNKNOWN` receives the hidden name, and
-brings the method back with `delete`. A second example hides an inherited name
-with `.nil` as the method of `define`.
+own methods, `setMethod` with no method leave a mark in the table. `define`
+with `.nil` as the method hides the name as well, but the table then holds no
+entry that [`method`](r:class.class.method) could answer, as [the `define`
+rule](r:class.class.define) says. The `delete` method of `Class` ends the
+hiding that the table of the class it is sent to holds for a name, and removes
+a method of that table, and the name is then looked up in the classes behind.
+A name the table does not hold is left as it is; `delete` does not remove a
+method that only a class behind holds. The example hides a method that the
+superclass holds, shows that `UNKNOWN` receives the hidden name, and brings
+the method back with `delete`. A second example hides an inherited name with
+`.nil` as the method of `define`.
 
 ```rexx
 .sub~define('m')
@@ -678,9 +733,7 @@ object itself as `SELF`, and from a method that runs with a class as `SELF`
 when the object is an instance of that class, directly or through a subclass,
 which includes a class method that the object's class inherits.
 A message from the prolog or from a routine raises `SYNTAX 97.2`, as for any
-private method, and from any other method it raises `98.991`. A method that
-`setMethod` receives with a scope argument other than `FLOAT` or `OBJECT`, in
-either case, raises `88.916`.
+private method, and from any other method it raises `98.991`.
 
 ```rexx
 x = .k~new

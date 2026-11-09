@@ -216,7 +216,8 @@ Replaced by [Deviation 36](#36-strings-and-numbers-are-value-based).
 When a class-side NEW reached through `enhanced` answers an object it did
 not build, that object comes back unchanged; ooRexx marks it enhanced, which
 changes every object of its class, every String for example. A metaclass NEW
-that answers an existing class while a class with that metaclass is made, by
+that answers a class that already has a superclass, such as `Array` or a class
+that `subclass` made, while a class with that metaclass is made, by
 `subclass`, by `mixinclass` or by a `::CLASS` directive with METACLASS, is
 refused, exit code 120, where ooRexx rewires that class in place.
 
@@ -710,7 +711,8 @@ that name as the entry spells it.
 
 A string that names a number is the same string to every message, however it
 was written or computed. A number literal such as `12` used as the message
-name of `send`, `start` or `Message~new` names the message `12`, and
+name of `send`, `sendWith`, `start`, `startWith` or `Message~new` names the
+message `12`, and
 `request('ARRAY')` sent to it answers the array that `makeArray` answers.
 ooRexx raises `SYNTAX 93.946` for the first and answers `.nil` for the second
 when the number is stored as a whole number, as a whole-number literal or the
@@ -720,8 +722,8 @@ it.
 
 ## 108. A supplier that is not a Supplier
 
-When `subclass`, `mixinclass` or `defineMethods` takes the methods of an
-object through its `supplier` method, the object that `supplier` answers is
+When `subclass`, `mixinclass`, `defineMethods` or `enhanced` takes the methods
+of an object through its `supplier` method, the object that `supplier` answers is
 used through the messages `available`, `index`, `item` and `next` when it is
 not a `Supplier`; an object that does not answer one of them raises
 `SYNTAX 97.1` as for any message. A `Supplier`, an instance of a subclass

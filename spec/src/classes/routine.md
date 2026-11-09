@@ -2,7 +2,7 @@
 element: "Routine"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Routine Class; Builtin Classes > Fundamental Classes > Routine Class > new (Class Method); Builtin Classes > Fundamental Classes > Routine Class > newFile (Class Method); Builtin Classes > Fundamental Classes > Routine Class > loadExternalRoutine (Class method); Builtin Classes > Fundamental Classes > Routine Class > []; Builtin Classes > Fundamental Classes > Routine Class > annotation; Builtin Classes > Fundamental Classes > Routine Class > annotations; Builtin Classes > Fundamental Classes > Routine Class > call; Builtin Classes > Fundamental Classes > Routine Class > callWith; Builtin Classes > Fundamental Classes > Routine Class > package; Builtin Classes > Fundamental Classes > Routine Class > setSecurityManager; Builtin Classes > Fundamental Classes > Routine Class > source; The Security Manager"
-deviations: [41]
+deviations: [41, 109]
 ---
 
 # Routine
@@ -478,8 +478,7 @@ argument holds. The argument is required (`SYNTAX 93.903`) and a second raises
 instance of a subclass of `Array` included, is sent `request` with the
 argument `ARRAY`, and the array that answers is used; an object for which that
 answers `.nil`, and `.nil` itself, and an array of more than one dimension
-raise `SYNTAX 98.913`. What `request` does when its answer is neither an array
-nor `.nil` is not specified. A string is converted by its
+raise `SYNTAX 98.913`. A string is converted by its
 [`makeArray`](r:class.string.makearray), one argument for each line, so a
 string with no line end is one argument and the null string has none; the
 empty `StringTable` and `Directory` have no items. The arguments are the items
@@ -1332,4 +1331,23 @@ bad: say condition('o')~code
 
 ```output
 3.903
+```
+
+r[class.routine.deviation.109]
+An instance of a subclass of `String` that is the name or the source of `new`
+is read by its own characters, and `MAKESTRING` and `STRING` are not sent to
+it ([Deviation 109](r:class.string.deviation.109)). ooRexx reads the name
+through its `MAKESTRING` method; the source is read as the instance's own
+characters on both. In the example `MAKESTRING` answers another name.
+
+```rexx
+r = .routine~new(.name~new('Foo'), .name~new('say "src"'))
+say r~package~name r~source[1]
+::class name subclass string
+::method makestring
+  return 'other'
+```
+
+```output defect=#140
+Foo say "src"
 ```

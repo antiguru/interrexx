@@ -645,8 +645,10 @@ A class method named `new` that a class declares answers the message `new`
 in place of the one `Class` supplies, as the
 [metaclass rule](r:dir.class.metaclass) says for a class method that hides
 another. The one `Class` supplies is reached from it with FORWARD CLASS to
-`super`. The override may answer any object, except as
-[Deviation 32](r:class.index.deviation.32) states.
+`super`. A program that sends `new` itself gets the object that the override
+answers, whatever it is. What `subclass`, `mixinclass` and a directive make of
+the answer is stated for a class that already has a superclass by
+[Deviation 32](r:class.index.deviation.32).
 
 ```rexx
 say .counted~new~class~id .counted~new~class~id .counted~made
@@ -856,11 +858,11 @@ to an object it makes, has a rule `class.<page>.<method>.sends`. That rule
 names the messages, their receivers, their arguments and their order, and says
 whether the number of times each is sent is specified, with an example in
 which an override shows each message. A method with no such rule sends no
-message that a program can override, other than what
-[the conversion rule](r:conv.string.object) sends to its string arguments. The
-methods named here are stated in this rule instead: the `new` that `Class`
-supplies sends `init`, as [the new rule](r:class.index.new) says; the `string`
-method of `Object` sends `objectName` to the object, and `objectName` sends
+message that a program can override, other than what [the string-value
+rule](r:class.index.string) sends to its string arguments. The methods named
+here are stated in this rule instead: the `new` that `Class` supplies sends
+`init`, as [the new rule](r:class.index.new) says; the `string` method of
+`Object` sends `objectName` to the object, and `objectName` sends
 `defaultName` when no name was set; `appendAll` sends `allItems` to its
 argument and appends what it answers; and `putAll` sends `supplier` to its
 argument and puts what it answers.
@@ -920,8 +922,9 @@ before
 r[class.index.deviation.32]
 When a class-side `new` reached through `enhanced` answers an object it did
 not build, interrexx answers that object unchanged; ooRexx marks it enhanced,
-which changes every object of its class. When a metaclass `new` answers an
-existing class while a class with that metaclass is made, by `subclass`, by
+which changes every object of its class. When a metaclass `new` answers a
+class that already has a superclass, such as `Array` or a class that
+`subclass` made, while a class with that metaclass is made, by `subclass`, by
 `mixinclass` or by a `::CLASS` directive with METACLASS, interrexx ends the
 program with exit code 120; ooRexx rewires the existing class in place, so
 that `y~id` in the first example answers `Array`. A directive is read before

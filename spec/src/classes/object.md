@@ -2,7 +2,7 @@
 element: "Object"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Object Class; Builtin Classes > Fundamental Classes > Object Class > new (Class Method); Builtin Classes > Fundamental Classes > Object Class > Comparison Methods; Builtin Classes > Fundamental Classes > Object Class > Concatenation Methods; Builtin Classes > Fundamental Classes > Object Class > class; Builtin Classes > Fundamental Classes > Object Class > copy; Builtin Classes > Fundamental Classes > Object Class > defaultName; Builtin Classes > Fundamental Classes > Object Class > hashCode; Builtin Classes > Fundamental Classes > Object Class > hasMethod; Builtin Classes > Fundamental Classes > Object Class > identityHash; Builtin Classes > Fundamental Classes > Object Class > init; Builtin Classes > Fundamental Classes > Object Class > instanceMethod; Builtin Classes > Fundamental Classes > Object Class > instanceMethods; Builtin Classes > Fundamental Classes > Object Class > isA; Builtin Classes > Fundamental Classes > Object Class > isInstanceOf; Builtin Classes > Fundamental Classes > Object Class > isNil; Builtin Classes > Fundamental Classes > Object Class > objectName; Builtin Classes > Fundamental Classes > Object Class > objectName=; Builtin Classes > Fundamental Classes > Object Class > request; Builtin Classes > Fundamental Classes > Object Class > run (Private Method); Builtin Classes > Fundamental Classes > Object Class > send; Builtin Classes > Fundamental Classes > Object Class > sendWith; Builtin Classes > Fundamental Classes > Object Class > setMethod (Private Method); Builtin Classes > Fundamental Classes > Object Class > start; Builtin Classes > Fundamental Classes > Object Class > startWith; Builtin Classes > Fundamental Classes > Object Class > string; Builtin Classes > Fundamental Classes > Object Class > unsetMethod (Private Method)"
-deviations: [4, 28, 30, 32, 33, 36, 105, 107]
+deviations: [4, 28, 30, 32, 33, 36, 105, 107, 109, 110]
 ---
 
 # Object
@@ -1139,9 +1139,15 @@ number literal such as `12` names the message `12`, as the same characters in
 quotes do ([Deviation 107](r:class.object.deviation.107)). The first argument
 is a string, or an array of two items, the name and a class, which starts the
 search at that class as [the scoped send rule](r:class.methods.scoped.send)
-says; `.nil` raises `SYNTAX 93.972`, an array of another size `93.946`, an
-array whose first item is missing `88.901` and one whose first item has no
-string value `88.909`, and no argument `88.901`. The null string is a name
+says. An object that is not a string is sent `request` with the argument
+`ARRAY`, and the answer is used as the two-item form, whatever the class of
+the first argument is ([the sends rule](r:class.object.send.sends); an
+instance of a subclass of `String` is read as
+[Deviation 109](r:class.object.deviation.109) states). `.nil`, and an object
+that answers `.nil`, raise `SYNTAX 93.972`, an answer that is no array and an
+array of another size `93.946`, an array whose first item is missing `88.901`
+and one whose first item has no string value `88.909`, and no argument
+`88.901`. The null string is a name
 like any other: it names the abuttal method
 ([the joining rule](r:class.object.concat)), so `send('', 'x')` joins and
 `send('')` raises that method's `93.903`. An array whose second item is not a
@@ -1216,6 +1222,64 @@ o~send(.array~new(2)~~put(.w, 2)) => 88.901
 o~send("secret") => 97.2
 o~send("nothing") => 91.999
 o~send(.array~of("count", 1)) => 88.914
+```
+
+r[class.object.send.sends]
+`send` sends a first argument that is not a string the message `request` with
+the argument `ARRAY`, once, before it checks anything else; the same holds for
+`sendWith`, `startWith` and `start`, at the call, and for the message name of
+[`Message~new`](r:class.message.new), at `new`. The answer of `request` is
+read as the previous rule says, and the second argument of `sendWith` and
+`startWith` is sent its `request` after that. A first argument that is a
+string is sent nothing. The example shows the messages for an instance of an
+`Array` subclass and for an object that is no array but answers one.
+
+```rexx
+o = .w~new
+call try 'o~sendWith(.duck~new, .logged~new)'
+call try 'o~send(.larr~of("count", .w), 9)'
+call try 'o~send(.wrong~new, 6)'
+call try 'o~send(.none~new, 6)'
+call try 'o~send(.larr~of("count"), 6)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class w
+::method count
+  return 'count got' arg()
+::class duck
+::method request
+  say 'duck request' arg(1)
+  return .array~of('count', .w)
+::class wrong
+::method request
+  return 'count'
+::class none
+::class larr subclass array
+::method request
+  say 'larr request' arg(1)
+  forward class (super)
+::class logged
+::method request
+  say 'logged request' arg(1)
+  return .array~of(1, 2)
+```
+
+```output defect=#149
+duck request ARRAY
+logged request ARRAY
+o~sendWith(.duck~new, .logged~new) => count got 2
+larr request ARRAY
+o~send(.larr~of("count", .w), 9) => count got 1
+o~send(.wrong~new, 6) => 93.946
+o~send(.none~new, 6) => 93.972
+larr request ARRAY
+o~send(.larr~of("count"), 6) => 93.946
 ```
 
 r[class.object.sendwith]
@@ -1642,7 +1706,8 @@ so a second argument raises it even when the name is missing. The name is
 taken in upper case. A name for which the receiver has no method of its own is
 not an error and changes nothing, and so does a name that only a class holds:
 the class's method stays. A name that `setMethod` replaced twice is taken off
-with one `unsetMethod`.
+with one `unsetMethod`. A method that [`enhanced`](r:class.methods.enhanced)
+added to the receiver is not taken off by it, and the receiver keeps it.
 
 ```rexx
 o = .w~new
@@ -1660,6 +1725,9 @@ o~sm('BASE', 'return "own base"')
 say o~base
 o~um('BASE')
 say o~base
+e = .w~enhanced(.directory~new~~put('return "added"', 'EXTRA'))
+e~um('extra')
+say e~extra e~hasMethod('extra')
 call try 'o~um'
 call try 'o~um(.nil)'
 call try 'o~um("a1", 2)'
@@ -1696,6 +1764,7 @@ o~um("base") => no error
 class base
 own base
 class base
+added 1
 o~um => 88.901
 o~um(.nil) => 88.909
 o~um("a1", 2) => 93.902
@@ -2024,7 +2093,8 @@ inner got 7
 r[class.object.deviation.107]
 A string that names a number is the same string to every message, however it
 was written or computed. A number literal such as `12` used as the message
-name of `send` or `start` names the message `12`, and `request('ARRAY')` sent
+name of `send`, `sendWith`, `start` or `startWith` names the message `12`, and
+`request('ARRAY')` sent
 to it answers the array that `makeArray` answers, as it does for the string
 `'12'` and for the result of arithmetic. ooRexx raises `SYNTAX 93.946` for the
 first and answers `.nil` for the second when the number is stored as a whole
@@ -2050,4 +2120,73 @@ ran 12 a ran 12 b
 ran 12 c
 Array Array
 Array Array
+```
+
+r[class.object.deviation.109]
+An instance of a subclass of `String` that names a message, for `send`,
+`sendWith`, `start` and `startWith`, or a method, for `hasMethod` and
+`setMethod`, is read by its own characters, and `MAKESTRING` and `STRING` are
+not sent to it ([Deviation 109](r:class.string.deviation.109) states the
+general case). ooRexx reads it through its `MAKESTRING` method for `hasMethod`
+and `setMethod`, and as a message name it sends it `request` with the argument
+`ARRAY`, as [the sends rule](r:class.object.send.sends) says, so that the
+message name raises `SYNTAX 93.946`. In the example `MAKESTRING` answers
+another name.
+
+```rexx
+o = .w~new
+n = .name~new('count')
+call try 'o~send(n, 1)'
+call try 'o~sendWith(n, .array~of(2))'
+call try 'o~start(n, 3)~result'
+say o~hasMethod(n) o~hasMethod(.name~new('copy'))
+o~sm(.name~new('Foo'), 'return 1')
+say o~hasMethod('FOO') o~hasMethod('OTHER')
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class w
+::method count
+  return 'count got' arg()
+::method sm
+  self~setMethod(arg(1), arg(2))
+::class name subclass string
+::method makestring
+  return 'other'
+```
+
+```output defect=#140
+o~send(n, 1) => count got 1
+o~sendWith(n, .array~of(2)) => count got 1
+o~start(n, 3)~result => count got 1
+1 1
+1 0
+```
+
+r[class.object.deviation.110]
+An object that has a method of its own from `setMethod` sees no change to its
+class or to the classes behind it that is made afterwards in ooRexx, and sees
+every change in interrexx, as
+[the Deviation 110 rule of the search page](r:class.methods.deviation.110)
+states for the objects that exist already; `unsetMethod` leaves nothing of the
+own method behind either way. In the example a `define` follows the
+`setMethod`.
+
+```rexx
+o = .k~new
+o~sm('own', 'return "own"')
+.k~define('later', 'return "later"')
+say o~own o~later
+::class k
+::method sm
+  self~setMethod(arg(1), arg(2))
+```
+
+```output defect=#141
+own later
 ```

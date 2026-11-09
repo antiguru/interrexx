@@ -151,9 +151,12 @@ r[class.alarmnotification.cancel]
 sent, none included; an implementation that wants to hear of cancellations
 declares it. The library sends it, with the `Alarm` or `Ticker` as the
 argument, when the alarm or ticker is cancelled by its `cancel` method while
-it is still waiting: an `Alarm` that has not gone off, or a `Ticker` that has
-not been cancelled before. Whether it is sent for an `Alarm` that has already
-gone off, or for one that was cancelled before, is not specified.
+it is still waiting: an `Alarm` that has not gone off and was not cancelled
+before, or a `Ticker` that has not been cancelled before. A `cancel` of an
+`Alarm` that has already gone off, and a second `cancel` of an `Alarm` or a
+`Ticker`, send nothing more. The second and third examples send `cancel` twice
+to a `Ticker` and to an `Alarm` that is still five seconds away, and the
+implementation prints a line for each message it receives.
 
 ```rexx
 n = .note~new
@@ -204,4 +207,40 @@ c1: say 'answered nothing:' condition('o')~code
 cancel cancelled
 6 ticking
 answered nothing: 91.999
+```
+
+```rexx
+n = .n~new
+t = .ticker~new(5, n)
+t~cancel
+t~cancel
+call syssleep 0.2
+say 'done'
+exit
+::class n inherit alarmnotification
+::method cancel unguarded
+  say 'cancel sent'
+```
+
+```output
+cancel sent
+done
+```
+
+```rexx
+n = .n~new
+a = .alarm~new(5, n)
+a~cancel
+a~cancel
+call syssleep 0.2
+say 'done'
+exit
+::class n inherit alarmnotification
+::method cancel unguarded
+  say 'cancel sent'
+```
+
+```output defect=#150
+cancel sent
+done
 ```

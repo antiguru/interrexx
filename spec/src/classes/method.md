@@ -2,7 +2,7 @@
 element: "Method"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Method Class; Builtin Classes > Fundamental Classes > Method Class > new (Class Method); Builtin Classes > Fundamental Classes > Method Class > newFile (Class Method); Builtin Classes > Fundamental Classes > Method Class > loadExternalMethod (Class Method); Builtin Classes > Fundamental Classes > Method Class > annotation; Builtin Classes > Fundamental Classes > Method Class > annotations; Builtin Classes > Fundamental Classes > Method Class > isAbstract; Builtin Classes > Fundamental Classes > Method Class > isAttribute; Builtin Classes > Fundamental Classes > Method Class > isConstant; Builtin Classes > Fundamental Classes > Method Class > isGuarded; Builtin Classes > Fundamental Classes > Method Class > isPackage; Builtin Classes > Fundamental Classes > Method Class > isPrivate; Builtin Classes > Fundamental Classes > Method Class > isProtected; Builtin Classes > Fundamental Classes > Method Class > package; Builtin Classes > Fundamental Classes > Method Class > scope; Builtin Classes > Fundamental Classes > Method Class > setGuarded; Builtin Classes > Fundamental Classes > Method Class > setPrivate; Builtin Classes > Fundamental Classes > Method Class > setProtected; Builtin Classes > Fundamental Classes > Method Class > setSecurityManager; Builtin Classes > Fundamental Classes > Method Class > setUnguarded; Builtin Classes > Fundamental Classes > Method Class > source"
-deviations: [41]
+deviations: [41, 109]
 ---
 
 # Method
@@ -259,8 +259,7 @@ array its items are the lines, read as
 `.nil` the source is sent `request` with the argument `STRING`: an answer that
 is a string is the one-line source, and for any other answer its `objectName`
 is the line, with no `MAKESTRING` or `string` message sent to it; `.nil` from
-both raises `SYNTAX 93.961`. What `request` answers when its answer to `ARRAY`
-is neither an array nor `.nil` is not specified. A string that is an instance
+both raises `SYNTAX 93.961`. A string that is an instance
 of `String` itself and an array that is an instance of `Array` itself are used
 directly, without a message. The `request` of `Object` sends `makeArray` for
 the argument `ARRAY` and `makeString` for `STRING`, as
@@ -1305,4 +1304,23 @@ bad: say condition('o')~code
 
 ```output
 3.903
+```
+
+r[class.method.deviation.109]
+An instance of a subclass of `String` that is the name or the source of `new`
+is read by its own characters, and `MAKESTRING` and `STRING` are not sent to
+it ([Deviation 109](r:class.string.deviation.109)). ooRexx reads the name
+through its `MAKESTRING` method; the source is read as the instance's own
+characters on both. In the example `MAKESTRING` answers another name.
+
+```rexx
+m = .method~new(.name~new('Foo'), .name~new('say "src"'))
+say m~package~name m~source[1]
+::class name subclass string
+::method makestring
+  return 'other'
+```
+
+```output defect=#140
+Foo say "src"
 ```

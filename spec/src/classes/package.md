@@ -2,7 +2,7 @@
 element: "Package"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Package Class; Builtin Classes > Fundamental Classes > Package Class > new (Class Method); Builtin Classes > Fundamental Classes > Package Class > defaultOptions (Class Method); Builtin Classes > Fundamental Classes > Package Class > addClass; Builtin Classes > Fundamental Classes > Package Class > addPackage; Builtin Classes > Fundamental Classes > Package Class > addPublicClass; Builtin Classes > Fundamental Classes > Package Class > addPublicRoutine; Builtin Classes > Fundamental Classes > Package Class > addRoutine; Builtin Classes > Fundamental Classes > Package Class > annotation; Builtin Classes > Fundamental Classes > Package Class > annotations; Builtin Classes > Fundamental Classes > Package Class > classes; Builtin Classes > Fundamental Classes > Package Class > definedMethods; Builtin Classes > Fundamental Classes > Package Class > digits; Builtin Classes > Fundamental Classes > Package Class > findClass; Builtin Classes > Fundamental Classes > Package Class > findNamespace; Builtin Classes > Fundamental Classes > Package Class > findProgram; Builtin Classes > Fundamental Classes > Package Class > findPublicClass; Builtin Classes > Fundamental Classes > Package Class > findPublicRoutine; Builtin Classes > Fundamental Classes > Package Class > findRoutine; Builtin Classes > Fundamental Classes > Package Class > form; Builtin Classes > Fundamental Classes > Package Class > fuzz; Builtin Classes > Fundamental Classes > Package Class > importedClasses; Builtin Classes > Fundamental Classes > Package Class > importedPackages; Builtin Classes > Fundamental Classes > Package Class > importedRoutines; Builtin Classes > Fundamental Classes > Package Class > loadLibrary; Builtin Classes > Fundamental Classes > Package Class > loadPackage; Builtin Classes > Fundamental Classes > Package Class > local; Builtin Classes > Fundamental Classes > Package Class > name; Builtin Classes > Fundamental Classes > Package Class > namespaces; Builtin Classes > Fundamental Classes > Package Class > options; Builtin Classes > Fundamental Classes > Package Class > prolog; Builtin Classes > Fundamental Classes > Package Class > publicClasses; Builtin Classes > Fundamental Classes > Package Class > publicRoutines; Builtin Classes > Fundamental Classes > Package Class > resource; Builtin Classes > Fundamental Classes > Package Class > resources; Builtin Classes > Fundamental Classes > Package Class > routines; Builtin Classes > Fundamental Classes > Package Class > setSecurityManager; Builtin Classes > Fundamental Classes > Package Class > source; Builtin Classes > Fundamental Classes > Package Class > sourceLine; Builtin Classes > Fundamental Classes > Package Class > sourceSize; Builtin Classes > Fundamental Classes > Package Class > trace"
-deviations: [41]
+deviations: [41, 109]
 ---
 
 # Package
@@ -2163,6 +2163,46 @@ say p~loadPackage('class_package_split_zq.cls', src)~sourceSize
 2
 ```
 
+r[class.package.loadpackage.sends]
+`loadPackage` sends a source that is not an instance of `Array` itself the
+message `request` with the argument `ARRAY`, once, and uses the array that is
+answered; an `Array` is sent nothing, and the array answered is sent nothing
+either. An instance of a subclass of `Array` is sent `request`, and what that
+sends in turn is stated by [the `request` rule](r:class.object.request.sends).
+The message is sent after the name has been read and before the source is
+translated. The example uses an instance of an `Array` subclass, an object
+that answers an array of its own, and an `Array`.
+
+```rexx
+p = .package~new('n', 'nop')
+q = p~loadPackage('class_package_sends_a_zq.cls', .arr~of('nop', 'return 1'))
+say q~source~items
+q = p~loadPackage('class_package_sends_b_zq.cls', .own~new)
+say q~source[1]
+q = p~loadPackage('class_package_sends_c_zq.cls', .array~of('nop'))
+say q~source[1]
+::class arr subclass array
+::method request
+  say 'arr request' arg(1)
+  forward class (super)
+::method makearray
+  say 'arr makearray'
+  forward class (super)
+::class own
+::method request
+  say 'own request' arg(1)
+  return .array~of('return 2')
+```
+
+```output
+arr request ARRAY
+arr makearray
+2
+own request ARRAY
+return 2
+nop
+```
+
 r[class.package.loadlibrary]
 `loadLibrary` loads a native library by name as a `::REQUIRES ... LIBRARY`
 does, and answers `1` when the library was loaded and `0` when it was not. A
@@ -2680,4 +2720,29 @@ bad: say condition('o')~code
 
 ```output
 3.903
+```
+
+r[class.package.deviation.109]
+An instance of a subclass of `String` that is the name of `new`, of
+`addRoutine`, `addPublicRoutine`, `addClass` or `addPublicClass`, or the
+source of `new`, is read by its own characters, and `MAKESTRING` and `STRING`
+are not sent to it ([Deviation 109](r:class.string.deviation.109)). ooRexx
+reads it through its `MAKESTRING` method. In the example `MAKESTRING` answers
+another name.
+
+```rexx
+p = .package~new(.name~new('Foo'), 'nop')
+say p~name
+p~addRoutine(.name~new('Bar'), .routine~new('r', 'return 1'))
+say p~findRoutine('BAR')~isNil
+say .package~new('q', .name~new('nop'))~source[1]
+::class name subclass string
+::method makestring
+  return 'other'
+```
+
+```output defect=#140
+Foo
+0
+nop
 ```

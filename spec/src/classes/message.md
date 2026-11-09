@@ -2,7 +2,7 @@
 element: "Message"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Message Class; Builtin Classes > Fundamental Classes > Message Class > new (Class Method); Builtin Classes > Fundamental Classes > Message Class > arguments; Builtin Classes > Fundamental Classes > Message Class > completed; Builtin Classes > Fundamental Classes > Message Class > errorCondition; Builtin Classes > Fundamental Classes > Message Class > halt; Builtin Classes > Fundamental Classes > Message Class > hasError; Builtin Classes > Fundamental Classes > Message Class > hasResult; Builtin Classes > Fundamental Classes > Message Class > messageComplete; Builtin Classes > Fundamental Classes > Message Class > messageName; Builtin Classes > Fundamental Classes > Message Class > notify; Builtin Classes > Fundamental Classes > Message Class > reply; Builtin Classes > Fundamental Classes > Message Class > replyWith; Builtin Classes > Fundamental Classes > Message Class > result; Builtin Classes > Fundamental Classes > Message Class > send; Builtin Classes > Fundamental Classes > Message Class > sendWith; Builtin Classes > Fundamental Classes > Message Class > start; Builtin Classes > Fundamental Classes > Message Class > startWith; Builtin Classes > Fundamental Classes > Message Class > target; Builtin Classes > Fundamental Classes > Message Class > triggered; Builtin Classes > Fundamental Classes > Message Class > wait; Builtin Classes > Utility Classes > AlarmNotification Class > cancel"
-deviations: [105, 107]
+deviations: [105, 107, 109]
 ---
 
 # Message
@@ -1232,8 +1232,11 @@ without one that is the null string. `.nil` as the description raises
 traps HALT, as [the HALT page](r:cond.halt.signal) describes, handles it as
 for any HALT. A HALT nothing traps ends the message with the error `4.1`,
 which `hasError`, `errorCondition` and `result` then show as for any other
-error of a message. What `halt` answers and does for a message that has ended
-is not specified.
+error of a message. For a message that has ended, `halt` answers 1: a message
+that `send` ran gets the HALT raised in the activity that sent it, with the
+description, and that activity ends with error `4.1` when nothing traps it,
+and for a message that was started nothing happens, so that `hasError`,
+`hasResult` and `result` stay as they were. The second example shows both.
 
 ```rexx
 g = .gate~new
@@ -1308,6 +1311,35 @@ halted:  HALT
 1
 1 4.1 SYNTAX
 result raises 4.1
+```
+
+```rexx
+t = .t~new
+m = .message~new(t, 'show')
+m~send
+signal on halt name caught
+say 'sent:' m~halt('stop')
+nop
+say 'not reached'
+caught:
+say 'HALT' condition('d') m~hasError m~result
+signal off halt
+s = .message~new(t, 'show')
+s~start
+s~wait
+say 'started:' s~halt('stop2')
+nop
+say 'continued' s~hasError s~result
+::class t
+::method show unguarded
+  return 'shown'
+```
+
+```output
+sent: 1
+HALT stop 0 shown
+started: 1
+continued 0 shown
 ```
 
 ### Being told when the message has ended
@@ -1519,6 +1551,67 @@ failing target sent: 1 next target sent: 0
 1 1 1
 error 93.900
 result raised 93.900
+```
+
+r[class.message.notify.sends]
+`notify` sends the target no message: whether the target is a
+`MessageNotification` is decided from its class, so an override of `isA` or
+`isInstanceOf` in the target is not sent, and an object that only has a method
+`messageComplete` raises `88.914`. The message `messageComplete` is sent to
+each target, with the message object as its only argument, when the message
+ends, as [the `notify` rule](r:class.message.notify) says, and at once by a
+`notify` on a message that has ended. In the example `LIAR` answers 1 to `isA`
+and does not inherit the class, and `HONEST` inherits it and answers 0.
+
+```rexx
+m = .message~new(.t~new, 'show', 'I', 'a')
+call try 'm~notify(.liar~new)'
+call try 'm~notify(.duck~new)'
+call try 'm~notify(.honest~new)'
+say 'before send'
+say m~send
+say 'ended'
+m~notify(.honest~new)
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> ok'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class t
+::method show
+  return 'shown' arg(1)
+::class liar
+::method isa
+  say 'liar isA' arg(1)~id
+  return 1
+::method messagecomplete
+  say 'liar messageComplete'
+::class honest inherit messagenotification
+::method isa
+  say 'honest isA'
+  return 0
+::method isinstanceof
+  say 'honest isInstanceOf'
+  return 0
+::method messagecomplete
+  say 'honest messageComplete' arg(1)~class~id arg()
+::class duck
+::method messagecomplete
+  say 'duck messageComplete'
+```
+
+```output
+m~notify(.liar~new) => 88.914
+m~notify(.duck~new) => 88.914
+m~notify(.honest~new) => ok
+before send
+honest messageComplete Message 1
+shown a
+ended
+honest messageComplete Message 1
 ```
 
 r[class.message.messagecomplete]
@@ -1852,4 +1945,28 @@ say .message~new(o, 3 + 4, 'I', 'b')~send
 ```output
 12 ran 12 a
 ran 7 b
+```
+
+r[class.message.deviation.109]
+An instance of a subclass of `String` that is the message name of `new` is
+read by its own characters, and `MAKESTRING` and `STRING` are not sent to it
+([Deviation 109](r:class.string.deviation.109)). ooRexx sends it `request`
+with the argument `ARRAY`, as
+[the Object rule](r:class.object.deviation.109) states for `send`, and raises
+`SYNTAX 93.946`; interrexx raises `93.972`. In the example `MAKESTRING`
+answers another name.
+
+```rexx
+m = .message~new(.w~new, .name~new('count'))
+say m~messageName m~send
+::class w
+::method count
+  return 'count got' arg()
+::class name subclass string
+::method makestring
+  return 'other'
+```
+
+```output defect=#140
+COUNT count got 0
 ```

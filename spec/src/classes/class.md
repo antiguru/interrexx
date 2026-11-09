@@ -2,7 +2,7 @@
 element: "Class"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Class Class (Metaclass); Builtin Classes > Fundamental Classes > Class Class (Metaclass) > Comparison Methods; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > activate; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > annotation; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > annotations; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > baseClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > defaultName; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > define; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > defineMethods; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > delete; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > enhanced; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > id; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > inherit; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > isAbstract; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > isMetaclass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > isSubclassOf; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > metaClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > method; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > methods; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > mixinClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > new; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > package; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > queryMixinClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > subclass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > subclasses; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > superClass; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > superClasses; Builtin Classes > Fundamental Classes > Class Class (Metaclass) > uninherit"
-deviations: [32, 33, 63, 108, 110]
+deviations: [32, 33, 63, 108, 109, 110]
 ---
 
 # Class
@@ -1299,15 +1299,15 @@ supplier sent 0
 r[class.class.delete]
 `delete` removes the entry that the class's own table holds for a name, taken
 in upper case, whether the entry is a method or a mark that hides the name,
-and answers no value. The name is then looked up in the classes behind, as
-[the hidden-name rule](r:class.methods.hidden) says. A name that the table
-does not hold is not an error and changes nothing, and `delete` does not
-remove a method that only a class behind holds. The name is required
-(`SYNTAX 88.901`), `.nil` raises `88.909`, and a second argument raises
-`93.902`. The number of arguments is checked first, then the class, then the
-name. The classes of the class library accept no `delete` ([the library
-rule](r:class.methods.library)); they raise `98.985` before the name is
-checked.
+and ends the hiding that `define` with `.nil` made, and answers no value. The
+name is then looked up in the classes behind, as [the hidden-name
+rule](r:class.methods.hidden) says. A name that the table does not hold is not
+an error and changes nothing, and `delete` does not remove a method that only
+a class behind holds. The name is required (`SYNTAX 88.901`), `.nil` raises
+`88.909`, and a second argument raises `93.902`. The number of arguments is
+checked first, then the class, then the name. The classes of the class library
+accept no `delete` ([the library rule](r:class.methods.library)); they raise
+`98.985` before the name is checked.
 
 ```rexx
 .sub~define('M2', 'return "sub m2"')
@@ -1664,18 +1664,19 @@ d: say condition('o')~code .k~subclasses~items
 r[class.class.subclass.sends]
 `subclass` sends the message `new` to the metaclass, which is the receiver's
 metaclass when there is no metaclass argument, with the id as its only
-argument, and the class that `new` answers is the new class: a class method
-`new` of the metaclass runs ([the new rule](r:class.class.new) specifies the
-one that `Class` supplies). The class that `new` answers receives `init`, from
-that `new`, while it is still a plain class: its superclass is `Object` and it
-has only the methods of its metaclass. `subclass` then sends the third
-argument `supplier`, once, with no argument, as
-[`defineMethods`](r:class.class.definemethods) does. It then makes the
+argument, and the class that `new` builds for it is the new class: a class
+method `new` of the metaclass runs ([the new rule](r:class.class.new)
+specifies the one that `Class` supplies). The class that `new` answers
+receives `init`, from that `new`, while it is still a plain class: its
+superclass is `Object` and it has only the methods of its metaclass.
+`subclass` then sends the third argument `supplier`, once, with no argument,
+as [`defineMethods`](r:class.class.definemethods) does. It then makes the
 receiver the superclass, adds the class methods, sets the package to `.nil`,
 and sends the class `init` a second time, with no argument. A class method
 `init` that the receiver declares is therefore run only by the second `init`.
-`activate` is not sent. A `new` of the metaclass that answers an existing
-class is treated as [Deviation 32](r:class.class.deviation.32) states.
+`activate` is not sent. A `new` of the metaclass that answers a class that
+already has a superclass is treated as [Deviation
+32](r:class.class.deviation.32) states.
 
 ```rexx
 x = .k~subclass('S1')
@@ -1848,14 +1849,17 @@ so an error in one sends no `new`; the arguments after it are the arguments of
 the new object. The method sends the collection the message `supplier`, with
 no argument, and then sends the receiver the message `new` with the remaining
 arguments, so that the class method `new` that the class declares runs and
-`init` gets those arguments. The object that `new` answers gets the methods
-and is the answer. Its class is the receiver; the object follows the rules of
-[the enhanced rule](r:class.methods.enhanced) for the search, and its default
-name is that of [the default name rule](r:class.object.defaultname). The
-abstract property of the receiver is not checked, and the receiver need not
-accept the arguments after the collection: that is the business of its `new`
-and `init`. The collection is required (`SYNTAX 93.901`), and an object with
-no `supplier` method, `.nil` included, raises `97.1`.
+`init` gets those arguments. The answer of `supplier` is read as [the
+`defineMethods` sends rule](r:class.class.definemethods.sends) says: a
+`Supplier` directly, any other object through four messages ([Deviation
+108](r:class.class.deviation.108)). The object that `new` answers gets the
+methods and is the answer. Its class is the receiver; the object follows the
+rules of [the enhanced rule](r:class.methods.enhanced) for the search, and its
+default name is that of [the default name rule](r:class.object.defaultname).
+The abstract property of the receiver is not checked, and the receiver need
+not accept the arguments after the collection: that is the business of its
+`new` and `init`. The collection is required (`SYNTAX 93.901`), and an object
+with no `supplier` method, `.nil` included, raises `97.1`.
 
 ```rexx
 d = .directory~new
@@ -1966,17 +1970,17 @@ enhanced: K
 ## Deviations
 
 r[class.class.deviation.32]
-When the `new` of a metaclass answers a class that `Class` did not build, or
-that another class already took, while `subclass` or `mixinclass` makes a
-class with that metaclass, interrexx ends the program with exit code 120;
-ooRexx rewires the existing class in place, so that `y~id` in the examples
-answers `Array`. A `::CLASS` directive with METACLASS is treated alike, as
-[the chapter rule](r:class.index.deviation.32) says. When a class method `new`
-that `enhanced` reaches answers an object it did not build, interrexx answers
-that object unchanged; ooRexx marks it enhanced, which changes every object of
-its class, as [the chapter rule](r:class.index.deviation.32) says.
-[The Object page rule](r:class.object.deviation.32) has the example for that
-case.
+When the `new` of a metaclass answers a class that already has a superclass,
+such as `Array` or a class that `subclass` made, while `subclass` or
+`mixinclass` makes a class with that metaclass, interrexx ends the program
+with exit code 120; ooRexx rewires the existing class in place, so that `y~id`
+in the examples answers `Array`. A `::CLASS` directive with METACLASS is
+treated alike, as [the chapter rule](r:class.index.deviation.32) says. When a
+class method `new` that `enhanced` reaches answers an object it did not build,
+interrexx answers that object unchanged; ooRexx marks it enhanced, which
+changes every object of its class, as [the chapter
+rule](r:class.index.deviation.32) says. [The Object page
+rule](r:class.object.deviation.32) has the example for that case.
 
 ```rexx
 say 'before'
@@ -2074,17 +2078,17 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.class.deviation.108]
-When `subclass`, `mixinclass` or `defineMethods` takes the methods of an
-object through its `supplier` method, the object that `supplier` answers is
-used through the messages `available`, `index`, `item` and `next` when it is
-not a `Supplier`; an object that does not answer one of them raises
-`SYNTAX 97.1` as for any message ([Deviation 108](../deviations.md)). A
-`Supplier`, an instance of a subclass of `Supplier` included, is read
-directly, as [the sends rule](r:class.class.definemethods.sends) says. ooRexx
-reads the answer as a Supplier without checking it, and crashes when it is not
-one. In the example the `supplier` method of `holder` answers its argument,
-`lister` is no `Supplier` and records the messages sent to it, and `broken`
-lacks `next`.
+When `subclass`, `mixinclass`, `defineMethods` or `enhanced` takes the methods
+of an object through its `supplier` method, the object that `supplier` answers
+is used through the messages `available`, `index`, `item` and `next` when it
+is not a `Supplier`; an object that does not answer one of them raises `SYNTAX
+97.1` as for any message ([Deviation 108](../deviations.md)). A `Supplier`, an
+instance of a subclass of `Supplier` included, is read directly, as [the sends
+rule](r:class.class.definemethods.sends) says. ooRexx reads the answer as a
+Supplier without checking it, and crashes when it is not one. In the first
+example the `supplier` method of `holder` answers its argument, `lister` is no
+`Supplier` and records the messages sent to it, and `broken` lacks `next`. The
+second example gives `enhanced` such a collection.
 
 ```rexx
 .local~seen = .directory~new
@@ -2138,6 +2142,62 @@ bad: say condition('o')~code
 1 2 available index item next
 1 2
 97.1
+```
+
+```rexx
+e = .k~enhanced(.holder~new(.lister~new))
+say e~m1 e~m2 .k~new~hasMethod('m1')
+::class k
+::class holder
+::method init
+  expose obj
+  use arg obj
+::method supplier
+  expose obj
+  return obj
+::class lister
+::method init
+  expose i
+  i = 1
+::method available
+  expose i
+  return i <= 2
+::method index
+  expose i
+  return 'M'i
+::method item
+  expose i
+  return 'return' i
+::method next
+  expose i
+  i = i + 1
+```
+
+```output defect=#139
+1 2 0
+```
+
+r[class.class.deviation.109]
+An instance of a subclass of `String` that is the id of `subclass` or
+`mixinclass`, or the name given to `define`, `method` or `delete`, is read by
+its own characters, and `MAKESTRING` and `STRING` are not sent to it
+([Deviation 109](r:class.string.deviation.109)). ooRexx reads it through its
+`MAKESTRING` method. In the example `MAKESTRING` answers another name.
+
+```rexx
+n = .name~new('Foo')
+k = .object~subclass(n)
+say k~id
+k~define(.name~new('hi'), 'return "hi"')
+say k~method('HI')~class~id k~new~hi
+::class name subclass string
+::method makestring
+  return 'other'
+```
+
+```output defect=#140
+Foo
+Method hi
 ```
 
 r[class.class.deviation.110]
