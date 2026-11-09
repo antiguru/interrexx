@@ -710,12 +710,13 @@ that name as the entry spells it.
 
 A string that names a number is the same string to every message, however it
 was written or computed. A number literal such as `12` used as the message
-name of `send` or `start` names the message `12`, and `request('ARRAY')`
-sent to it answers the array that `makeArray` answers. ooRexx raises
-`SYNTAX 93.946` for the first and answers `.nil` for the second when the
-number is stored as a whole number, as a whole-number literal or the result
-of arithmetic is. Equal literals of a program share one stored value, so a
-quoted `'12'` behaves the same way when the literal `12` was used before it.
+name of `send`, `start` or `Message~new` names the message `12`, and
+`request('ARRAY')` sent to it answers the array that `makeArray` answers.
+ooRexx raises `SYNTAX 93.946` for the first and answers `.nil` for the second
+when the number is stored as a whole number, as a whole-number literal or the
+result of arithmetic is. Equal literals of a program share one stored value,
+so a quoted `'12'` behaves the same way when the literal `12` was used before
+it.
 
 ## 108. A supplier that is not a Supplier
 
