@@ -290,8 +290,9 @@ r[class.message.new.sends]
 argument of the option `A`, once, before it sends `init`, and uses the array
 that `request` answers. It sends no message to the target or to the arguments
 of `I`, and to the name only the `request` that [the Object sends
-rule](r:class.object.send.sends) states, before the option is read. It then sends the new object the message `init`
-with no argument, whatever arguments `new` had, so a subclass of `Message`
+rule](r:class.object.send.sends) states, before the option is read. It then
+sends the new object the message `init` with no argument, whatever arguments
+`new` had, so a subclass of `Message`
 that declares `init` sees none of them; the object that `init` runs on already
 holds its target, its name and its arguments. The answer of `init` is not
 used, and `new` answers the new object, as [the new

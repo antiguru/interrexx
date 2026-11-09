@@ -2733,12 +2733,12 @@ bad: say condition('o')~code
 
 r[class.package.deviation.109]
 An instance of a subclass of `String` that is the name of `new`, of
-`addRoutine`, `addPublicRoutine`, `addClass` or `addPublicClass`, or the
-source of `new`, is read by its own characters, and `MAKESTRING` and `STRING`
-are not sent to it ([Deviation 109](r:class.string.deviation.109)). ooRexx
-reads the names through their `MAKESTRING` method; the source is read as the
-instance's own characters on both. In the example `MAKESTRING` answers
-another name.
+`addRoutine`, `addPublicRoutine`, `addClass` or `addPublicClass` is read by
+its own characters, and `MAKESTRING` and `STRING` are not sent to it
+([Deviation 109](r:class.string.deviation.109)). ooRexx reads it through its
+`MAKESTRING` method. A source of `new` that is such an instance is read on
+both as [the source rule](r:class.package.new.source) states. In the example
+`MAKESTRING` answers another name.
 
 ```rexx
 p = .package~new(.name~new('Foo'), 'nop')

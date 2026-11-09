@@ -1299,15 +1299,15 @@ supplier sent 0
 r[class.class.delete]
 `delete` removes the entry that the class's own table holds for a name, taken
 in upper case, whether the entry is a method or a mark that hides the name,
-and answers no value. The
-name is then looked up in the classes behind, as [the hidden-name
-rule](r:class.methods.hidden) says. A name that the table does not hold is not
-an error and changes nothing, and `delete` does not remove a method that only
-a class behind holds. The name is required (`SYNTAX 88.901`), `.nil` raises
-`88.909`, and a second argument raises `93.902`. The number of arguments is
-checked first, then the class, then the name. The classes of the class library
-accept no `delete` ([the library rule](r:class.methods.library)); they raise
-`98.985` before the name is checked.
+and answers no value. The name is then looked up in the classes behind, as
+[the hidden-name rule](r:class.methods.hidden) says. A name that the table
+does not hold is not an error and changes nothing, and `delete` does not
+remove a method that only a class behind holds. The name is required
+(`SYNTAX 88.901`), `.nil` raises `88.909`, and a second argument raises
+`93.902`. The number of arguments is checked first, then the class, then the
+name. The classes of the class library accept no `delete` ([the library
+rule](r:class.methods.library)); they raise `98.985` before the name is
+checked.
 
 ```rexx
 .sub~define('M2', 'return "sub m2"')
