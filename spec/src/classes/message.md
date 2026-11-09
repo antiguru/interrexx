@@ -1335,8 +1335,10 @@ activity that waits for the message is a matter of scheduling. For a started
 message, an error that a `messageComplete` raises becomes the error of the
 message: `hasError` answers 1, `errorCondition` answers the condition of that
 error and `result` raises it, while `hasResult` keeps the 1 of the run. The
-targets after the one that raised it are not sent `messageComplete`, and the
-target that raised it is sent it three times in all. A copy made by `reply`
+targets after the one that raised it are not sent `messageComplete`; whether
+the target that raised it is sent it again, and how often, is not specified.
+`hasError` answers 1 once the error has been recorded, which may be after
+`wait` has returned. A copy made by `reply`
 has the targets of the message, and so has the one that
 [`copy`](r:class.message.copy) makes. The message the target is sent is the
 completed message object, so `completed` answers 1 in it.
@@ -1476,8 +1478,10 @@ s~notify(b)
 s~notify(r)
 s~start
 s~wait
-call syssleep 0.3
-say 'failing target sent' b~count 'times, the next one' r~count
+do until s~hasError
+  call syssleep 0.01
+end
+say 'failing target sent:' (b~count > 0) 'next target sent:' (r~count > 0)
 say s~completed s~hasError s~hasResult
 say 'error' s~errorCondition~code
 signal on syntax name c1
@@ -1511,7 +1515,7 @@ exit
 ```
 
 ```output
-failing target sent 3 times, the next one 0
+failing target sent: 1 next target sent: 0
 1 1 1
 error 93.900
 result raised 93.900
