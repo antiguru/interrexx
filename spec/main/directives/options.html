@@ -1,0 +1,927 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>::OPTIONS - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html" class="active"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">10.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">10.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">10.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">10.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">10.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">10.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">10.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">10.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">10.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">10.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">10.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">10.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">10.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">10.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">10.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">10.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">10.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">10.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">10.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">10.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">10.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">10.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">10.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">10.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">10.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">10.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">10.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">10.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">10.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">10.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">10.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">10.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">10.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">10.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">10.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">10.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">10.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">10.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">10.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">10.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">10.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">10.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">10.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">10.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">10.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">10.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">10.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">10.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">10.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">10.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">10.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">10.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">10.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">10.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">10.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">10.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">10.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">10.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">10.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">10.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">10.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">10.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">10.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">10.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">10.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">10.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">10.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">10.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">10.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">10.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">10.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">10.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">10.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">10.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">10.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">10.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">10.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">10.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">10.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">10.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">10.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">10.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">10.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">10.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">11.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="options"><a class="header" href="#options">::OPTIONS</a></h1>
+<pre><code>::OPTIONS option ...
+</code></pre>
+<p class="references">rexxref: Directives &gt; ::OPTIONS</p>
+<p class="deviations">Deviations: D103</p>
+<p>::OPTIONS sets the defaults that the code of its package starts with. The
+defaults are the three NUMERIC settings, the TRACE setting, whether a routine
+takes the NUMERIC settings of its caller, the way that six conditions are
+raised, and whether the prolog runs when another package requires this one.
+The settings themselves are specified with <a href="../numbers/settings.html#r-num.settings.effect">NUMERIC</a>
+and <a href="../instructions/trace.html#r-instr.trace.scope">TRACE</a>, and the conditions with their own pages in
+the conditions chapter. This page specifies the form of the directive, what
+each option sets, and how far it reaches.</p>
+<h2 id="the-directive"><a class="header" href="#the-directive">The directive</a></h2>
+<div class="rule" id="r-dir.options.syntax"><a href="#r-dir.options.syntax">[dir.options.syntax]</a></div>
+<p>The words after <code>::OPTIONS</code> are options. An option is a keyword, in any case,
+followed by its value, except PROLOG and NOPROLOG, which stand alone. Any
+number of options may be written in any order, on one directive or on several.
+When an option of one kind occurs twice, in one directive or in two, the one
+that stands later in the text wins, and options of different kinds all stay
+in force. A directive with no option does nothing. A word that is no keyword
+of an option, which a second value after a keyword also is, raises
+<code>SYNTAX 25.924</code>. The directive takes no code of its own: a clause after it
+that is not a null clause raises <code>SYNTAX 99.916</code>, as <a href="index.html#r-dir.index.section">the section
+rule</a> says. The faults are found when the program is
+read, so <a href="../lexical/index.html#r-lex.index.read-first">as the read rule says</a> a program file with
+one writes nothing and exits with 256 minus the error number, 231 for
+<code>25.924</code>.</p>
+<pre><code class="language-rexx">src = .array~of('say digits() fuzz() form()', -
+  '::options digits 23 form engineering', -
+  '::options fuzz 3 digits 15', -
+  '::OPTIONS Digits 11')
+p = .package~new('spec-dir-options-syntax', src)
+src = .array~of('say digits() fuzz() form()', '::options', '::options ;')
+p = .package~new('spec-dir-options-syntax2', src)
+call try '::options bogus'
+call try '::options 5'
+call try '::options "digits" 5'
+call try '::options digits 5 6'
+call try '::options form engineering digits 5'
+call try '::options prolog 5'
+call try '::options digits 5', 'say 1'
+exit
+try:
+  signal on syntax name e
+  src = .array~new
+  do i = 1 to arg()
+    src~append(arg(i))
+  end
+  p = .package~new('spec-dir-options-try', src)
+  say src~makestring('l', ' / ') '=&gt; ok'
+  return
+e: say src~makestring('l', ' / ') '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">11 3 ENGINEERING
+9 0 SCIENTIFIC
+::options bogus =&gt; 25.924
+::options 5 =&gt; 25.924
+::options "digits" 5 =&gt; 25.924
+::options digits 5 6 =&gt; 25.924
+::options form engineering digits 5 =&gt; ok
+::options prolog 5 =&gt; 25.924
+::options digits 5 / say 1 =&gt; 99.916
+</code></pre>
+<pre><code class="language-rexx">say 'before'
+::options bogus
+</code></pre>
+<pre><code class="language-output rc=231"></code></pre>
+<div class="rule" id="r-dir.options.scope"><a href="#r-dir.options.scope">[dir.options.scope]</a></div>
+<p>The options of a package are the starting values of all its code. They reach
+the prolog, every <code>::ROUTINE</code> and every method of the package, wherever the
+directive stands in the file, so that code written before the directive has
+them too. The NUMERIC and TRACE settings that they give are the defaults of
+the package that <a href="../builtins/digits.html#r-bif.digits.default">DIGITS</a>, <a href="../builtins/fuzz.html#r-bif.fuzz.default">FUZZ</a>
+and <a href="../builtins/form.html#r-bif.form.default">FORM</a> name: a NUMERIC instruction without a value
+returns the setting to them. A NUMERIC or TRACE instruction changes only the
+setting of the code that runs it, as <a href="../numbers/settings.html#r-num.settings.call">the scope rule</a>
+says, and the next routine or method that starts is not affected. An internal
+routine and the text of an INTERPRET take the setting of the code that runs
+them, as the scope rules of the settings say, and not the option. The
+instruction TRACE with no value sets <code>N</code>, not the option, as <a href="../instructions/trace.html#r-instr.trace.form.bare">the bare
+form</a> says.</p>
+<pre><code class="language-rexx">say 'prolog' digits() fuzz() form() trace()
+call internal
+say 'routine' r()
+say 'method' .box~new~m()
+numeric digits 20
+numeric fuzz 3
+numeric form scientific
+trace n
+say 'changed' digits() fuzz() form() trace()
+call internal
+say 'routine' r()
+numeric digits
+numeric fuzz
+numeric form
+trace
+say 'reset' digits() fuzz() form() trace()
+interpret 'say "interpret" digits()'
+exit
+internal: say 'internal' digits() fuzz() form() trace(); return
+::options digits 12 fuzz 2 form engineering trace o
+::routine r
+  return digits() fuzz() form() trace()
+::class box
+::method m
+  return digits() fuzz() form() trace()
+</code></pre>
+<pre><code class="language-output">prolog 12 2 ENGINEERING O
+internal 12 2 ENGINEERING O
+routine 12 2 ENGINEERING O
+method 12 2 ENGINEERING O
+changed 20 3 SCIENTIFIC N
+internal 20 3 SCIENTIFIC N
+routine 12 2 ENGINEERING O
+reset 12 2 ENGINEERING N
+interpret 12
+</code></pre>
+<div class="rule" id="r-dir.options.package"><a href="#r-dir.options.package">[dir.options.package]</a></div>
+<p>The options of a package belong to the code that is written in it. They do
+not reach the code of a package that this one requires, and the options of a
+required package do not reach the code that requires it. A routine of one
+package that another package calls starts with the options of the package
+that holds the routine, as <a href="../builtins/digits.html#r-bif.digits.scope">the scope rule</a> says for the
+NUMERIC settings.</p>
+<pre><code class="language-rexx">f = 'spec-dir-options-lib.tmp'
+call sysfiledelete f
+call lineout f, '::options digits 15 fuzz 3 form engineering'
+call lineout f, '::routine libr public'
+call lineout f, '  return digits() fuzz() form()'
+call lineout f
+src = .array~of('say "main" digits() fuzz() form()', -
+  'say "lib" libr()', -
+  '::requires "'f'"', -
+  '::options digits 6')
+p = .package~new('spec-dir-options-main', src)
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">main 6 0 SCIENTIFIC
+lib 15 3 ENGINEERING
+</code></pre>
+<h2 id="the-numeric-options"><a class="header" href="#the-numeric-options">The numeric options</a></h2>
+<div class="rule" id="r-dir.options.numeric"><a href="#r-dir.options.numeric">[dir.options.numeric]</a></div>
+<p>DIGITS, FUZZ and FORM set the NUMERIC settings that the code of the package
+starts with. DIGITS and FUZZ take a symbol or a string that the <a href="../numbers/settings.html#r-num.settings.digits">NUMERIC
+instruction</a> would accept as its value, so that <code>"7"</code>,
+<code>05</code>, <code>1e2</code> and <code>5.0</code> are whole numbers. A value that is not a whole
+number of at least 1 raises <code>SYNTAX 26.5</code> for DIGITS, and one that is not a
+whole number of at least 0 raises <code>26.6</code> for FUZZ. A symbol is never looked
+up as a variable. A missing value, or one that is not a symbol or a string,
+such as a sign or parentheses, raises <code>19.917</code> for DIGITS and <code>19.918</code> for
+FUZZ. FORM takes the symbol SCIENTIFIC or ENGINEERING in any case, and no
+abbreviation. A missing value or a string raises <code>SYNTAX 20.925</code>, and any
+other symbol <code>25.11</code>. The faults are found when the program is read.</p>
+<pre><code class="language-rexx">call try '::options digits "7" fuzz 05'
+call try '::options digits 1e2'
+call try '::options digits 5.0'
+call try '::options digits abc'
+call try '::options digits 1.5'
+call try '::options digits 0'
+call try '::options digits -1'
+call try '::options digits (5)'
+call try '::options digits'
+call try '::options fuzz abc'
+call try '::options fuzz -1'
+call try '::options fuzz'
+call try '::options form Engineering'
+call try '::options form sci'
+call try '::options form "scientific"'
+call try '::options form'
+exit
+try:
+  signal on syntax name e
+  src = .array~of('say digits() fuzz() form()', arg(1))
+  p = .package~new('spec-dir-options-num', src)
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">7 5 SCIENTIFIC
+::options digits "7" fuzz 05 =&gt; ok
+100 0 SCIENTIFIC
+::options digits 1e2 =&gt; ok
+5 0 SCIENTIFIC
+::options digits 5.0 =&gt; ok
+::options digits abc =&gt; 26.5
+::options digits 1.5 =&gt; 26.5
+::options digits 0 =&gt; 26.5
+::options digits -1 =&gt; 19.917
+::options digits (5) =&gt; 19.917
+::options digits =&gt; 19.917
+::options fuzz abc =&gt; 26.6
+::options fuzz -1 =&gt; 19.918
+::options fuzz =&gt; 19.918
+9 0 ENGINEERING
+::options form Engineering =&gt; ok
+::options form sci =&gt; 25.11
+::options form "scientific" =&gt; 20.925
+::options form =&gt; 20.925
+</code></pre>
+<div class="rule" id="r-dir.options.fuzz"><a href="#r-dir.options.fuzz">[dir.options.fuzz]</a></div>
+<p>The two settings must stay apart: after each DIGITS or FUZZ is processed,
+DIGITS must exceed FUZZ, or the directive raises <code>SYNTAX 33.1</code>, as <a href="../builtins/fuzz.html#r-bif.fuzz.result">the fuzz
+rule</a> says for the instruction. The check is made on the
+value that the other setting holds at that point, which is its default of 9 or
+0 until an option sets it, and it is made after every option, so the order of
+the options matters. The error is found when the program is read.</p>
+<pre><code class="language-rexx">call try '::options fuzz 8'
+call try '::options fuzz 9'
+call try '::options digits 4'
+call try '::options digits 5 fuzz 5'
+call try '::options digits 5 fuzz 4'
+call try '::options fuzz 8 digits 10'
+call try '::options digits 10 fuzz 8 digits 8'
+call try '::options digits 10 fuzz 8', '::options digits 7'
+call try '::options digits 24', '::options fuzz 21', '::options digits 21'
+exit
+try:
+  signal on syntax name e
+  src = .array~of('say digits() fuzz()')
+  text = arg(1)
+  src~append(arg(1))
+  do i = 2 to arg()
+    src~append(arg(i))
+    text = text '/' arg(i)
+  end
+  p = .package~new('spec-dir-options-fuzz', src)
+  say text '=&gt; ok'
+  return
+e: say text '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">9 8
+::options fuzz 8 =&gt; ok
+::options fuzz 9 =&gt; 33.1
+4 0
+::options digits 4 =&gt; ok
+::options digits 5 fuzz 5 =&gt; 33.1
+5 4
+::options digits 5 fuzz 4 =&gt; ok
+10 8
+::options fuzz 8 digits 10 =&gt; ok
+::options digits 10 fuzz 8 digits 8 =&gt; 33.1
+::options digits 10 fuzz 8 / ::options digits 7 =&gt; 33.1
+::options digits 24 / ::options fuzz 21 / ::options digits 21 =&gt; 33.1
+</code></pre>
+<div class="rule" id="r-dir.options.inherit"><a href="#r-dir.options.inherit">[dir.options.inherit]</a></div>
+<p>NUMERIC INHERIT makes a routine or a method of the package start with the
+three NUMERIC settings of the code that calls it, and NUMERIC NOINHERIT, which
+is the default, makes it start with the options and defaults of its own
+package. The word after NUMERIC must be INHERIT or NOINHERIT, and the last of
+the two in text order is used. A missing word, or a string, raises
+<code>SYNTAX 20.935</code>, and any other symbol <code>25.935</code>, found when the program is
+read. With INHERIT the settings that DIGITS, FUZZ and FORM give still start
+the prolog, but a <code>::ROUTINE</code> or a method does not use them. A routine of a
+package with INHERIT that a caller from another package calls takes the
+settings of that caller.</p>
+<pre><code class="language-rexx">say 'start' digits()
+numeric digits 5
+numeric fuzz 1
+numeric form engineering
+say 'main' digits() fuzz() form()
+say 'routine' r()
+say 'method' .box~new~m()
+numeric digits 7
+say 'routine' r2()
+f = 'spec-dir-options-inh.tmp'
+call sysfiledelete f
+call lineout f, '::options numeric inherit'
+call lineout f, '::routine libr public'
+call lineout f, '  return digits() fuzz() form()'
+call lineout f
+src = .array~of('numeric digits 6; numeric fuzz 2', -
+  'say "other package" libr()', '::requires "'f'"')
+p = .package~new('spec-dir-options-inh2', src)
+call sysfiledelete f
+call try '::options numeric inherit'
+call try '::options numeric inherit numeric noinherit'
+call try '::options numeric noinherit', '::options numeric inherit'
+call try '::options numeric'
+call try '::options numeric "inherit"'
+call try '::options numeric bogus'
+call try '::options numeric 5'
+exit
+try:
+  signal on syntax name e
+  src = .array~of('numeric digits 5', 'say r()')
+  text = arg(1)
+  src~append(arg(1))
+  if arg() &gt; 1 then do
+    src~append(arg(2))
+    text = text '/' arg(2)
+  end
+  src~append('::routine r')
+  src~append('  return digits()')
+  p = .package~new('spec-dir-options-inh3', src)
+  say text '=&gt; ok'
+  return
+e: say text '=&gt;' condition('o')~code
+  return
+::options numeric inherit digits 15
+::routine r
+  return digits() fuzz() form()
+::routine r2
+  numeric digits 3
+  return r()
+::class box
+::method m
+  return digits() fuzz() form()
+</code></pre>
+<pre><code class="language-output">start 15
+main 5 1 ENGINEERING
+routine 5 1 ENGINEERING
+method 5 1 ENGINEERING
+routine 3 1 ENGINEERING
+other package 6 2 SCIENTIFIC
+5
+::options numeric inherit =&gt; ok
+9
+::options numeric inherit numeric noinherit =&gt; ok
+5
+::options numeric noinherit / ::options numeric inherit =&gt; ok
+::options numeric =&gt; 20.935
+::options numeric "inherit" =&gt; 20.935
+::options numeric bogus =&gt; 25.935
+::options numeric 5 =&gt; 25.935
+</code></pre>
+<h2 id="the-trace-option"><a class="header" href="#the-trace-option">The trace option</a></h2>
+<div class="rule" id="r-dir.options.trace"><a href="#r-dir.options.trace">[dir.options.trace]</a></div>
+<p>TRACE sets the tracing setting that the prolog, every routine and every method
+of the package start with. Its value is a word that the <a href="../instructions/trace.html#r-instr.trace.form.name">TRACE
+instruction</a> accepts, chosen by its first letter, so
+that <code>Off</code> and <code>O</code> are alike, and a letter that is not valid raises <code>SYNTAX 24.1</code>, which a string with a blank before the letter does too. A missing
+value, a sign and a parenthesis raise <code>19.919</code>. The empty string is accepted
+and starts the code with <code>N</code>. The directive is stricter than the instruction
+in one respect: a number is not a setting and raises <code>24.1</code>. The setting is
+what <code>TRACE()</code> returns when the code starts, and a TRACE instruction changes
+it for the running code only, as <a href="../instructions/trace.html#r-instr.trace.scope">the scope rule</a> says.
+A question mark before the letter is accepted, and what interactive tracing
+does belongs to the TRACE instruction. What <code>TRACE()</code> returns when the code
+starts after a question mark with no letter after it is <code>?N</code>, as
+<a href="#r-dir.options.deviation.103">the Deviation</a> states.</p>
+<pre><code class="language-rexx">call try 'o'
+call try 'Off'
+call try 'normal'
+call try 'N'
+call try '"n"'
+call try 'x'
+call try '3'
+call try '""'
+call try '-1'
+call try '+'
+call try '(n)'
+call try '" n"'
+call try ''
+exit
+try:
+  signal on syntax name e
+  src = .array~of('say "start" trace()', 'trace n', -
+    'say "changed" trace() .box~new~m r()', -
+    '::options trace' arg(1), -
+    '::routine r', '  return trace()', -
+    '::class box', '::method m', '  return trace()')
+  p = .package~new('spec-dir-options-trace', src)
+  return
+e: say 'trace' arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">start O
+changed N O O
+start O
+changed N O O
+start N
+changed N N N
+start N
+changed N N N
+start N
+changed N N N
+trace x =&gt; 24.1
+trace 3 =&gt; 24.1
+start N
+changed N N N
+trace -1 =&gt; 19.919
+trace + =&gt; 19.919
+trace (n) =&gt; 19.919
+trace " n" =&gt; 24.1
+trace  =&gt; 19.919
+</code></pre>
+<h2 id="the-condition-options"><a class="header" href="#the-condition-options">The condition options</a></h2>
+<div class="rule" id="r-dir.options.condition"><a href="#r-dir.options.condition">[dir.options.condition]</a></div>
+<p>ERROR, FAILURE, LOSTDIGITS, NOSTRING, NOTREADY and NOVALUE each take the value
+SYNTAX or CONDITION. CONDITION is the default and leaves the condition as the
+conditions chapter specifies it. SYNTAX makes the condition that no trap
+answers raise a SYNTAX condition instead, with these codes: <code>98.970</code> for
+ERROR, <code>98.971</code> for FAILURE, <code>98.972</code> for LOSTDIGITS, <code>98.973</code> for NOSTRING,
+<code>98.974</code> for NOTREADY and <code>98.986</code> for NOVALUE. The clause that raised it ends
+there as <a href="../conditions/syntax.html#r-cond.syntax.raise">the SYNTAX rule</a> says, and <code>RC</code> is 98 in the
+trap that catches it. Without a trap the program ends as
+<a href="../conditions/index.html#r-cond.index.syntax">the rule for an untrapped SYNTAX</a> says, with exit status
+158. A FAILURE raised as SYNTAX is not passed on to the ERROR trap, as the
+second example shows. A FAILURE that no trap answers, which
+<a href="../conditions/index.html#r-cond.index.untrapped">the untrapped rule</a> would ignore, is answered as
+ERROR here, so with ERROR SYNTAX it raises <code>98.970</code> when FAILURE is left at
+CONDITION, as the third example shows. A missing value or a string raises
+<code>SYNTAX 20.929</code> and any other symbol <code>25.927</code>, both when the program is read.</p>
+<pre><code class="language-rexx">call try 'error'
+call try 'failure'
+call try 'lostdigits'
+call try 'nostring'
+call try 'notready'
+call try 'novalue'
+exit
+try:
+  which = arg(1)
+  signal on syntax name e
+  select
+    when which = 'error' then address system 'exit 3'
+    when which = 'failure' then address nosuchenv 'echo x'
+    when which = 'lostdigits' then do; numeric digits 3; say 12345 + 0; end
+    when which = 'nostring' then say 'a' || .nstr~new
+    when which = 'notready' then say linein('nosuchfile.zzz')
+    when which = 'novalue' then say undefinedvar
+  end
+  say which 'went on'
+  return
+e: say which condition('o')~code rc
+  return
+::class nstr
+::method string
+  return .nil
+::options error syntax failure syntax lostdigits syntax
+::options nostring syntax notready syntax novalue syntax
+</code></pre>
+<pre><code class="language-output">error 98.970 98
+failure 98.971 98
+lostdigits 98.972 98
+nostring 98.973 98
+notready 98.974 98
+novalue 98.986 98
+</code></pre>
+<pre><code class="language-rexx">signal on syntax name s
+signal on error name t
+address nosuchenv 'echo x'
+say 'went on'
+exit
+t: say 'error trap' condition('c')
+exit
+s: say 'syntax' condition('o')~code rc
+::options failure syntax
+</code></pre>
+<pre><code class="language-output">syntax 98.971 98
+</code></pre>
+<pre><code class="language-rexx">signal on syntax name e
+address nosuchenv 'echo x'
+say 'went on' rc
+exit
+e: say 'syntax' condition('o')~code
+::options error syntax
+</code></pre>
+<pre><code class="language-output">syntax 98.970
+</code></pre>
+<pre><code class="language-rexx">address system 'exit 3'
+say 'not reached'
+::options error syntax
+</code></pre>
+<pre><code class="language-output rc=158"></code></pre>
+<pre><code class="language-rexx">call try '::options error'
+call try '::options error "syntax"'
+call try '::options error bogus'
+call try '::options novalue 5'
+call try '::options notready condition'
+exit
+try:
+  signal on syntax name e
+  src = .array~of('say "ok"', arg(1))
+  p = .package~new('spec-dir-options-cond', src)
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">::options error =&gt; 20.929
+::options error "syntax" =&gt; 20.929
+::options error bogus =&gt; 25.927
+::options novalue 5 =&gt; 25.927
+ok
+::options notready condition =&gt; ok
+</code></pre>
+<div class="rule" id="r-dir.options.condition.trap"><a href="#r-dir.options.condition.trap">[dir.options.condition.trap]</a></div>
+<p>A trap still answers the condition with its own name: with SIGNAL ON, CALL ON
+or the ANY trap on, the condition is raised as ERROR, FAILURE, LOSTDIGITS,
+NOSTRING, NOTREADY or NOVALUE and not as SYNTAX, and the answering trap is the
+one that <a href="../conditions/traps.html#r-cond.traps.choice">the choice rule</a> picks. The option applies only
+while the trap instructions have left the condition alone: a SIGNAL or CALL
+instruction that turns the trap of the condition <code>ON</code> or <code>OFF</code>, or the trap of
+ANY, ends the option for that condition for the rest of the routine or method
+in which it ran, so that an <code>OFF</code> condition is
+<a href="../conditions/index.html#r-cond.index.untrapped">ignored</a> again. A CALL instruction does so for ERROR,
+FAILURE and NOTREADY, the conditions of the option that CALL can trap, and
+CALL ON or OFF of ANY does so for these three only: for LOSTDIGITS, NOSTRING
+and NOVALUE the option stays in force. An internal routine takes this state
+from its caller, and the instructions that it runs end the option for its own
+code only, so that its caller still has the state it had when the routine
+returns. A SIGNAL or CALL in the text of an INTERPRET ends the option for the
+code that runs the INTERPRET. A <code>::ROUTINE</code> and a method start without the
+state, and the option applies there afresh. A SYNTAX condition that the option
+raises is an ordinary one, which SIGNAL ON SYNTAX answers.</p>
+<pre><code class="language-rexx">call try 1
+call try 2
+call try 3
+call try 4
+call try 5
+call try 6
+call try 7
+call try 8
+call try 9
+call try 10
+call try 11
+call try 12
+call try 13
+call try 14
+call try 15
+exit
+try:
+  which = arg(1)
+  signal on syntax name e
+  select
+    when which = 1 then say 'one' unset1
+    when which = 2 then do; signal on novalue name t; say 'two' unset2; end
+    when which = 3 then do; signal off novalue; say 'three' unset3; end
+    when which = 4 then do; signal on any name t; say 'four' unset4; end
+    when which = 5 then do; signal off any; say 'five' unset5; end
+    when which = 6 then do
+      call on error name tc; address system 'exit 3'
+    end
+    when which = 7 then do; call off error; address system 'exit 3'; end
+    when which = 8 then call inner
+    when which = 9 then do; signal off novalue; call inner; end
+    when which = 10 then do; signal off novalue; call routine10; end
+    when which = 11 then do; call off any; say 'eleven' unset11; end
+    when which = 12 then do; call off any; address system 'exit 3'; end
+    when which = 13 then do; call inner13; say 'thirteen' unset13; end
+    when which = 14 then do
+      interpret 'signal off novalue'
+      say 'fourteen' unset14
+    end
+    when which = 15 then do
+      signal on any name t
+      numeric digits 3
+      say 12345 + 0
+    end
+  end
+  say which 'went on'
+  return
+t: say which 'trap' condition('c')
+  return
+tc: say which 'call trap' condition('c')
+  return
+e: say which 'syntax' condition('o')~code
+  return
+inner: say 'inner' unset8
+  return
+inner13: signal off novalue
+  return
+::routine routine10
+  say 'routine' unset10
+::options novalue syntax error syntax
+</code></pre>
+<pre><code class="language-output">1 syntax 98.986
+2 trap NOVALUE
+three UNSET3
+3 went on
+4 trap NOVALUE
+five UNSET5
+5 went on
+6 call trap ERROR
+6 went on
+7 went on
+8 syntax 98.986
+8 went on
+inner UNSET8
+9 went on
+10 syntax 98.986
+11 syntax 98.986
+12 went on
+13 syntax 98.986
+fourteen UNSET14
+14 went on
+15 trap LOSTDIGITS
+</code></pre>
+<div class="rule" id="r-dir.options.condition.all"><a href="#r-dir.options.condition.all">[dir.options.condition.all]</a></div>
+<p>ALL is a single option that gives its value, SYNTAX or CONDITION, to each of
+the six. It is
+processed in text order like any option, so an option that follows it
+overrides its value for one condition, and one that precedes it is overridden.
+A missing value or a string after ALL raises <code>SYNTAX 20.929</code>, and any other
+symbol <code>25.927</code>.</p>
+<pre><code class="language-rexx">call try 'error'
+call try 'novalue'
+call try 'lostdigits'
+call try 'nothing'
+exit
+try:
+  which = arg(1)
+  signal on syntax name e
+  select
+    when which = 'error' then address system 'exit 3'
+    when which = 'novalue' then say undefinedvar
+    when which = 'lostdigits' then do; numeric digits 3; say 12345 + 0; end
+    otherwise nop
+  end
+  say which 'went on'
+  return
+e: say which condition('o')~code
+  return
+::options error condition all syntax novalue condition
+</code></pre>
+<pre><code class="language-output">error 98.970
+UNDEFINEDVAR
+novalue went on
+lostdigits 98.972
+nothing went on
+</code></pre>
+<h2 id="the-prolog-option"><a class="header" href="#the-prolog-option">The prolog option</a></h2>
+<div class="rule" id="r-dir.options.prolog"><a href="#r-dir.options.prolog">[dir.options.prolog]</a></div>
+<p>PROLOG and NOPROLOG decide what a ::REQUIRES of the package does with its
+prolog: with PROLOG, the default, the prolog runs, and with NOPROLOG it is
+skipped, so that a package of routines and classes can be required without its
+start-up code. The last of the two in text order is used. The installation of
+the package is not affected, so its routines and classes exist all the same.
+The program that was started runs its prolog whatever the option says. Loading
+the text of a package with the <code>Package</code> class follows the same rule as a
+requirement, as the first example shows. The option acts on a package that is
+required or loaded as a package only: a file that a program calls as an
+external routine runs its code from the start, whatever the option says, as
+the third example shows.</p>
+<pre><code class="language-rexx">f = 'spec-dir-options-pro1.tmp'
+call sysfiledelete f
+call lineout f, 'say "prolog of one"'
+call lineout f, '::options noprolog'
+call lineout f, '::routine one public'
+call lineout f, '  return "one"'
+call lineout f, '::class kone public'
+call lineout f, '::method activate class'
+call lineout f, '  say "activate kone"'
+call lineout f
+g = 'spec-dir-options-pro2.tmp'
+call sysfiledelete g
+call lineout g, 'say "prolog of two"'
+call lineout g, '::options noprolog prolog'
+call lineout g, '::routine two public'
+call lineout g, '  return "two"'
+call lineout g
+src = .array~of('say "main prolog"', 'say one() two() .kone~id', -
+  '::requires "'f'"', '::requires "'g'"')
+p = .package~new('spec-dir-options-main3', src)
+src = .array~of('say "never written"', '::options noprolog')
+p = .package~new('spec-dir-options-main4', src)
+call sysfiledelete f
+call sysfiledelete g
+</code></pre>
+<pre><code class="language-output">activate kone
+prolog of two
+main prolog
+one two KONE
+</code></pre>
+<pre><code class="language-rexx">say 'this prolog runs'
+::options noprolog
+</code></pre>
+<pre><code class="language-output">this prolog runs
+</code></pre>
+<pre><code class="language-rexx">f = 'spec-dir-options-pro3.tmp'
+call sysfiledelete f
+call lineout f, 'say "prolog of the file" arg(1)'
+call lineout f, 'return "answer"'
+call lineout f, '::options noprolog'
+call lineout f
+call (f) 'x'
+say 'result' result
+call (f) 'y'
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">prolog of the file x
+result answer
+prolog of the file y
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-dir.options.deviation.103"><a href="#r-dir.options.deviation.103">[dir.options.deviation.103]</a></div>
+<p>Under <code>::OPTIONS TRACE ?</code>, the TRACE builtin answers <code>?N</code> when the code
+starts, as after the instruction <code>trace ?</code> at the start of a program: the
+question mark turns interactive tracing on and the letter stays <code>N</code>, the
+default. ooRexx answers the null string.</p>
+<pre><code class="language-rexx">say trace()
+::options trace ?
+</code></pre>
+<pre><code class="language-output defect=#113">?N
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../directives/requires.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../directives/resource.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../directives/requires.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../directives/resource.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

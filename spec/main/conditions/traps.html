@@ -1,0 +1,880 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Condition traps - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html" class="active"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">10.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">10.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">10.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">10.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">10.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">10.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">10.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">10.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">10.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">10.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">10.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">10.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">10.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">10.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">10.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">10.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">10.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">10.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">10.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">10.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">10.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">10.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">10.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">10.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">10.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">10.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">10.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">10.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">10.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">10.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">10.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">10.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">10.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">10.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">10.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">10.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">10.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">10.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">10.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">10.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">10.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">10.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">10.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">10.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">10.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">10.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">10.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">10.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">10.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">10.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">10.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">10.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">10.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">10.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">10.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">10.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">10.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">10.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">10.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">10.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">10.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">10.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">10.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">10.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">10.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">10.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">10.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">10.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">10.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">10.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">10.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">10.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">10.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">10.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">10.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">10.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">10.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">10.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">10.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">10.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">10.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">10.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">10.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">10.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">11.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="condition-traps"><a class="header" href="#condition-traps">Condition traps</a></h1>
+<p class="references">ANSI: 8.2.4, 8.4.1; rexxref: Conditions and Condition Traps &gt; Action Taken when a Condition Is Trapped</p>
+<p class="deviations">Deviations: D64, D75, D104</p>
+<p>A trap is the setting that tells the interpreter what to do when a condition
+is raised, and there is one for each condition. A SIGNAL trap moves control
+to a label as SIGNAL does and abandons the clause that raised the condition.
+A CALL trap lets the clause finish and then calls a routine, which returns to
+the clause after it. This page specifies which trap answers a condition, what
+each kind of trap does, the state that keeps a CALL trap from calling itself,
+and the code that a trap reaches. What the program learns about the condition
+is on <a href="information.html">the information page</a>, and the syntax that sets a trap
+is on the pages of <a href="../instructions/signal.html">SIGNAL</a> and
+<a href="../instructions/call.html">CALL</a>.</p>
+<h2 id="which-trap-answers"><a class="header" href="#which-trap-answers">Which trap answers</a></h2>
+<div class="rule" id="r-cond.traps.choice"><a href="#r-cond.traps.choice">[cond.traps.choice]</a></div>
+<p>When a condition is raised, the trap of that condition answers it if its state
+is <code>ON</code> or <code>DELAY</code>. When it is <code>OFF</code>, the ANY trap answers instead if its
+state is <code>ON</code> or <code>DELAY</code>. When neither is on, the condition is
+<a href="index.html#r-cond.index.untrapped">untrapped</a>, except that the FAILURE of a command then
+goes to the ERROR trap, as <a href="error.html#r-cond.error.fallback">the fallback rule</a> says. A
+trap that answers a condition changes only its own state, so every other trap,
+ANY included, stays as it was. The two kinds of trap are equal in this: a CALL
+trap for the condition wins over a SIGNAL trap for ANY, and a SIGNAL trap for
+the condition wins over a CALL trap for ANY. A condition that the ANY trap
+catches is still itself: <code>CONDITION('C')</code> answers its own name, and the
+default label or routine of an ANY trap is <code>ANY</code>. A condition whose own trap
+was switched off explicitly does not keep ANY from answering. A CALL trap for
+ANY answers only the conditions that CALL can trap, and a SIGNAL trap for ANY
+answers all of them. A user condition is answered by the trap of its own name,
+and the ANY trap catches the user conditions that have none.</p>
+<pre><code class="language-rexx">call on any name a
+call on user foo name f
+signal on novalue name nv
+call r1
+call r2
+call r3
+x = undefinedvar
+exit
+r1: raise user foo return
+r2: raise user bar return
+r3: raise halt return
+a: say 'a' condition('c'); return
+f: say 'f' condition('c'); return
+nv: say 'nv' condition('c')
+</code></pre>
+<pre><code class="language-output">f USER FOO
+a USER BAR
+a HALT
+nv NOVALUE
+</code></pre>
+<pre><code class="language-rexx">signal on any name a
+call on user foo name f
+call r1
+call r2
+exit
+r1: raise user foo return
+r2: raise user bar return
+f: say 'f' condition('c'); return
+a: say 'a' condition('c')
+</code></pre>
+<pre><code class="language-output">f USER FOO
+a USER BAR
+</code></pre>
+<pre><code class="language-rexx">address system
+call on any name a
+x = undefinedvar
+say 'ignored'
+signal on any
+signal off novalue
+y = undefinedvar2
+any: say 'any' condition('c') condition('s')
+signal on any name other
+z = 'a' + 'b'
+other: say 'other' condition('c')
+exit
+a: say 'a' condition('c'); return
+</code></pre>
+<pre><code class="language-output">ignored
+any NOVALUE OFF
+other SYNTAX
+</code></pre>
+<div class="rule" id="r-cond.traps.replace"><a href="#r-cond.traps.replace">[cond.traps.replace]</a></div>
+<p>A trap has one setting at a time, and the latest SIGNAL ON, SIGNAL OFF, CALL
+ON or CALL OFF for its condition is that setting: the state, the kind (SIGNAL
+or CALL) and the name come from that instruction alone. A CALL ON and a
+SIGNAL ON for the same condition therefore do not coexist, whichever came
+first, and an ON with no NAME has the default name, not the name of an
+earlier ON. The traps of other conditions are not touched.</p>
+<pre><code class="language-rexx">address system
+call on error name viaCall
+signal on error name viaSignal
+'exit 1'
+say 'not reached'
+viaSignal: say 'viaSignal' condition('i')
+call on error name viaCall
+'exit 2'
+say 'after 2'
+call on error name other
+call on error
+'exit 3'
+say 'after 3'
+call off error
+'exit 4'
+say 'after 4'
+exit
+viaCall: say 'viaCall' rc condition('i'); return
+other: say 'other'; return
+error: say 'error' rc; return
+</code></pre>
+<pre><code class="language-output">viaSignal SIGNAL
+viaCall 2 CALL
+after 2
+error 3
+after 3
+after 4
+</code></pre>
+<h2 id="signal-traps"><a class="header" href="#signal-traps">SIGNAL traps</a></h2>
+<div class="rule" id="r-cond.traps.signal"><a href="#r-cond.traps.signal">[cond.traps.signal]</a></div>
+<p>When a SIGNAL trap answers a condition, the clause that raised it ends at
+once, so that an assignment is not made, and a command whose string was being
+evaluated is not sent. A command whose return code raised ERROR or FAILURE has
+already run, and <code>RC</code> holds its return code. The state of the trap becomes
+<code>OFF</code>, the condition is recorded as <a href="information.html#r-cond.information.record">the information
+page</a> says, and control goes to the label of the
+trap as <a href="../instructions/signal.html#r-instr.signal.label">SIGNAL</a> goes to a label, ending the open DO,
+LOOP, SELECT and IF constructs of the routine as <a href="../instructions/signal.html#r-instr.signal.ends">that
+rule</a> says. The label is the one that the NAME option
+gave, and the name of the condition when there was none. The trap is <code>OFF</code>
+at the label, so a second condition of the same kind that the code there
+raises is not trapped unless that code switches the trap on again or an ANY
+trap is <code>ON</code>, which the answer did not change.</p>
+<pre><code class="language-rexx">signal on syntax
+do i = 1 to 3
+  say 'loop' i
+  if i = 2 then x = 1 + 'a'
+end
+say 'not reached'
+exit
+syntax:
+say 'trapped' i symbol('x') sigl rc condition('s')
+x = 1 + 'b'
+say 'not reached either'
+</code></pre>
+<pre><code class="language-output rc=215">loop 1
+loop 2
+trapped 2 LIT 4 41 OFF
+</code></pre>
+<pre><code class="language-rexx">address system
+signal on error name e
+'echo sent; exit 3'
+say 'not reached'
+e: say 'e' rc
+signal on novalue name n
+'echo' unsetvar
+say 'not reached'
+n: say 'n' condition('d')
+</code></pre>
+<pre><code class="language-output">sent
+e 3
+n UNSETVAR
+</code></pre>
+<pre><code class="language-rexx">signal on syntax name s
+signal on any name a
+x = 1 + 'a'
+s: say 's' condition('c') condition('s')
+y = 1 + 'b'
+say 'not reached'
+a: say 'a' condition('c') condition('s')
+</code></pre>
+<pre><code class="language-output defect=#110">s SYNTAX OFF
+a SYNTAX OFF
+</code></pre>
+<div class="rule" id="r-cond.traps.signal.label"><a href="#r-cond.traps.signal.label">[cond.traps.signal.label]</a></div>
+<p>The label of a SIGNAL trap is looked for when the condition is raised, not
+when the trap is switched on. When there is no such label among the labels of
+the code that holds the trap, the trap, which is already <code>OFF</code>, raises <code>SYNTAX 16.1</code> at the same clause, and a SYNTAX trap that is <code>ON</code> catches that error
+as any other. A routine or a method looks among its own labels, so a name
+that is a label of the main program only is no label there.</p>
+<pre><code class="language-rexx">signal on syntax name e
+signal on novalue name nolabel
+x = undefinedvar
+say 'not reached'
+exit
+e: say condition('o')~code sigl condition('c')
+</code></pre>
+<pre><code class="language-output">16.1 3 SYNTAX
+</code></pre>
+<pre><code class="language-rexx">signal on syntax name lbl
+call r
+exit
+lbl: say 'main lbl' condition('o')~code sigl
+::routine r
+  signal on syntax name lbl
+  x = 1 + 'a'
+</code></pre>
+<pre><code class="language-output">main lbl 16.1 2
+</code></pre>
+<pre><code class="language-rexx">say 'before'
+signal on syntax name nolabel
+x = 1 + 'a'
+</code></pre>
+<pre><code class="language-output rc=240">before
+</code></pre>
+<h2 id="call-traps"><a class="header" href="#call-traps">CALL traps</a></h2>
+<div class="rule" id="r-cond.traps.call"><a href="#r-cond.traps.call">[cond.traps.call]</a></div>
+<p>When a CALL trap answers a condition, the clause that raised it finishes
+first, so that a command has run and an assignment has been made. The state of
+the trap becomes <code>DELAY</code>, the condition is recorded, and a routine is called
+before the next clause starts. The next clause is the one after it in the same
+place, so the call is made inside a DO, a SELECT or an IF that holds the
+clause, and between the clauses of the text of an INTERPRET. When the clause
+that raised the condition ends the program, as an EXIT in the main program or
+the last clause does, the routine of the trap is called before the program
+ends. When it is the RETURN of a routine, the routine of the trap is called
+after the value of the RETURN is computed and before the caller goes on, and
+it sees the variables of the routine that returned. The caller then goes on
+with the clause after the CALL, or with the rest of the expression of the
+clause that invoked the routine as a function. What an EXIT inside an internal
+routine does with a pending CALL trap is
+<a href="#r-cond.traps.deviation.104">a Deviation</a>. The routine is the one
+that <a href="../instructions/call.html#r-instr.call.search">CALL</a> finds for the name of the trap, which is the
+name of the condition when there was no NAME. It gets one argument, the
+<a href="information.html#r-cond.information.argument">condition object</a>. The call does not change
+<code>RESULT</code>, and what the routine returns is dropped. When the routine returns,
+the trap is <code>ON</code> again, and the clause after the one that raised the condition
+runs. When the routine is an internal routine, <code>SIGL</code> is set as
+<a href="../instructions/call.html#r-instr.call.sigl">a CALL</a> sets it, to the line of the clause that raised the
+condition, which for a RETURN or an EXIT is that clause itself and not the
+CALL. A routine without PROCEDURE shares the variables of the caller, <code>RC</code>
+among them. When the routine is a <code>::ROUTINE</code>, a built-in function or an
+external routine, <code>SIGL</code> is not set, and it keeps the value it had.</p>
+<pre><code class="language-rexx">address system
+call on error name h
+say 'start'
+if rc = 'RC' then
+  'exit 3'
+say 'after if' rc sigl
+call one
+'exit 4'
+say 'result' result
+do 2
+  select
+    when rc = 4 then 'exit 5'
+    otherwise nop
+  end
+  say 'in loop' rc
+end
+interpret "'exit 6'; say 'in text' rc; say 'text end'"
+say 'after interpret'
+exit
+one: return 'kept'
+h: say 'handler' arg() arg(1)~class condition('c') condition('i'),
+    condition('s') rc sigl
+  return 'dropped'
+</code></pre>
+<pre><code class="language-output">start
+handler 1 The Directory class ERROR CALL DELAY 3 5
+after if 3 5
+handler 1 The Directory class ERROR CALL DELAY 4 8
+result kept
+handler 1 The Directory class ERROR CALL DELAY 5 12
+in loop 5
+in loop 5
+handler 1 The Directory class ERROR CALL DELAY 6 17
+in text 6
+text end
+after interpret
+</code></pre>
+<pre><code class="language-rexx">call on notready name h
+say 'start' sigl
+call sub
+say 'main after' sigl result
+exit
+sub:
+  say 'in sub'
+  return '[' || linein() || ']'
+h: say 'h' sigl condition('s')
+  return
+</code></pre>
+<pre><code class="language-output">start SIGL
+in sub
+h 8 DELAY
+main after 8 []
+</code></pre>
+<pre><code class="language-rexx">call on notready name h
+x = f() g()
+say 'after' sigl x
+exit
+f: return '[' || linein() || ']'
+g: say 'g'; return 'G'
+h: say 'h' sigl condition('s')
+  return
+</code></pre>
+<pre><code class="language-output">h 5 DELAY
+g
+after 2 [] G
+</code></pre>
+<pre><code class="language-rexx">call on notready name h
+exit linein()
+h: say 'h' sigl condition('s')
+  return
+</code></pre>
+<pre><code class="language-output">h 2 DELAY
+</code></pre>
+<pre><code class="language-rexx">address system
+call on error name h
+say 'before' sigl
+'exit 3'
+say 'after' sigl
+exit
+::routine h
+  say 'in h' sigl
+</code></pre>
+<pre><code class="language-output defect=#111">before SIGL
+in h SIGL
+after SIGL
+</code></pre>
+<pre><code class="language-rexx">address system
+call on error name length
+say 'before' sigl
+'exit 3'
+say 'after' sigl
+</code></pre>
+<pre><code class="language-output defect=#111">before SIGL
+after SIGL
+</code></pre>
+<div class="rule" id="r-cond.traps.call.state"><a href="#r-cond.traps.call.state">[cond.traps.call.state]</a></div>
+<p>A handler that a CALL trap calls is a routine like any other, so the changes
+it makes to the states of the traps are undone when it returns: a CALL OFF in
+it does not leave the trap <code>OFF</code>, and a CALL ON with another name does not
+change the name. While it runs, the state of the trap that called it is
+<code>DELAY</code>, as <a href="../builtins/condition.html#r-bif.condition.status">CONDITION</a> shows.</p>
+<pre><code class="language-rexx">n = 0
+call on user foo name h
+call r
+call r
+call r
+exit
+r: raise user foo return
+h: n = n + 1
+  say 'h' n condition('s')
+  if n = 1 then call off user foo
+  if n = 2 then call on user foo name h2
+  say 'leaving' condition('s')
+  return
+h2: say 'not called'
+  return
+</code></pre>
+<pre><code class="language-output">h 1 DELAY
+leaving OFF
+h 2 DELAY
+leaving ON
+h 3 DELAY
+leaving DELAY
+</code></pre>
+<div class="rule" id="r-cond.traps.call.label"><a href="#r-cond.traps.call.label">[cond.traps.call.label]</a></div>
+<p>When the routine of a CALL trap is not found, the call is an ordinary CALL of
+a name that is no routine, and raises <code>SYNTAX 43.1</code> after the clause that
+raised the condition has finished.</p>
+<pre><code class="language-rexx">call on error name nohandlerxyz
+address system 'exit 3'
+</code></pre>
+<pre><code class="language-output rc=213"></code></pre>
+<h2 id="the-delayed-state"><a class="header" href="#the-delayed-state">The delayed state</a></h2>
+<div class="rule" id="r-cond.traps.delay"><a href="#r-cond.traps.delay">[cond.traps.delay]</a></div>
+<p>While the state of a CALL trap is <code>DELAY</code>, a condition that is raised for it
+again does not call the routine. ERROR, FAILURE and NOTREADY raised again are
+ignored. Every other condition that is raised is held, and the held ones are
+answered in the order raised when the state of the trap changes. A CALL OFF
+or SIGNAL OFF for the condition drops them. A CALL ON or SIGNAL ON for the
+condition answers them at the end of that instruction, with the trap that the
+instruction set. When the routine returns, the CALL trap answers them by
+calling the routine again. A SIGNAL trap is never <code>DELAY</code>.
+The held conditions are <a href="#r-cond.traps.deviation.75">Deviation 75</a>.</p>
+<pre><code class="language-rexx">address system
+call on error name h
+'exit 3'
+say 'main' rc
+exit
+h: say 'enter h' rc
+  'exit 4'
+  say 'in h after' rc condition('s')
+  return
+</code></pre>
+<pre><code class="language-output">enter h 3
+in h after 4 DELAY
+main 4
+</code></pre>
+<pre><code class="language-rexx">n = 0
+call on notready name h
+x = linein()
+say 'main after' n
+x = linein()
+say 'main after' n
+exit
+h: n = n + 1
+  say 'enter h' n condition('s')
+  y = linein()
+  say 'leave h' n
+  return
+</code></pre>
+<pre><code class="language-output">enter h 1 DELAY
+leave h 1
+main after 1
+enter h 2 DELAY
+leave h 2
+main after 2
+</code></pre>
+<pre><code class="language-rexx">call on user foo name h
+call r
+say 'main after'
+exit
+r: raise user foo description 'first' return
+h: say 'enter h' condition('d') condition('s')
+  if condition('d') = 'first' then do
+    call r2
+    say 'held, before off'
+    call off user foo
+    say 'after off' condition('s')
+  end
+  say 'leave h' condition('d')
+  return
+r2: raise user foo description 'second' return
+</code></pre>
+<pre><code class="language-output">enter h first DELAY
+held, before off
+after off OFF
+leave h first
+main after
+</code></pre>
+<h2 id="where-a-trap-reaches"><a class="header" href="#where-a-trap-reaches">Where a trap reaches</a></h2>
+<div class="rule" id="r-cond.traps.scope"><a href="#r-cond.traps.scope">[cond.traps.scope]</a></div>
+<p>The states of the traps belong to the code that runs, which is the main
+program, a routine, a method or an internal routine, and each starts with
+states of its own. An internal routine, which a CALL or a function call
+reaches by its label, starts with a copy of the states of its caller, names,
+kinds and <code>DELAY</code> included, and what it does to the copy is not seen by the
+caller after it returns. A <code>::ROUTINE</code>, a method and a routine made from
+other source text start with every trap <code>OFF</code>. The text of an
+<a href="../instructions/interpret.html#r-instr.interpret.scope">INTERPRET</a> runs in the code that holds it and
+shares its states, so a trap that the text switches on stays on after it.
+Because an internal routine has a copy, a SIGNAL trap that answers a
+condition in it jumps to a label of the code that holds the routine, and a
+RETURN there returns from the routine, as <a href="../instructions/signal.html#r-instr.signal.routine">the SIGNAL
+rule</a> says.</p>
+<pre><code class="language-rexx">signal on syntax name h
+call sub
+say 'after call'
+call psub
+say 'after psub'
+exit
+sub:
+  say 'in sub'
+  x = 1 + 'a'
+  say 'not reached'
+  return
+psub: procedure
+  say 'in psub'
+  x = 1 + 'a'
+  return
+h: say 'h' condition('s') sigl
+  return
+</code></pre>
+<pre><code class="language-output">in sub
+h OFF 9
+after call
+in psub
+h OFF 14
+after psub
+</code></pre>
+<pre><code class="language-rexx">address system
+call on error name h
+call inner
+'exit 1'
+say 'main 1' rc
+call ext
+say 'main 2'
+say .o~new~go
+say .routine~new('x', "'exit 7'; return 'made done'")~call
+interpret "call off error; 'exit 2'; say 'in interpret'"
+'exit 3'
+say 'main 3'
+call on error name h
+interpret "'exit 4'"
+exit
+inner: procedure
+  call off error
+  'exit 9'
+  say 'inner off'
+  return
+h: say 'h' rc condition('s'); return
+::routine ext
+  'exit 5'
+  say 'ext done' condition('s')
+::class o
+::method go
+  'exit 6'
+  return 'method done'
+</code></pre>
+<pre><code class="language-output">inner off
+h 1 DELAY
+main 1 1
+ext done 
+main 2
+method done
+made done
+in interpret
+main 3
+h 4 DELAY
+</code></pre>
+<h2 id="deviations"><a class="header" href="#deviations">Deviations</a></h2>
+<div class="rule" id="r-cond.traps.deviation.64"><a href="#r-cond.traps.deviation.64">[cond.traps.deviation.64]</a></div>
+<p>When the CALL that a CALL trap makes fails, and a SYNTAX trap is <code>ON</code> in the
+code that holds the CALL trap, that trap answers the SYNTAX condition at once,
+before the next clause runs, and <code>SIGL</code> is the line of the clause that raised
+the condition. The CALL fails when the routine is not found, which is <code>SYNTAX 43.1</code>, and when a SYNTAX error leaves the routine. In ooRexx the next clause
+runs first, and <code>SIGL</code> is its line.</p>
+<pre><code class="language-rexx">address system
+signal on syntax name s
+call on error name nohandlerxyz
+'exit 3'
+say 'next clause'
+exit
+s: say 'syntax trap' condition('o')~code sigl
+</code></pre>
+<pre><code class="language-output">syntax trap 43.1 4
+</code></pre>
+<pre><code class="language-rexx">address system
+signal on syntax name s
+call on error name ext
+'exit 3'
+say 'next clause'
+exit
+s: say 's' condition('o')~code sigl condition('o')~position
+::routine ext
+  say 'ext'
+  x = 1 + 'a'
+</code></pre>
+<pre><code class="language-output">ext
+s 41.1 4 10
+</code></pre>
+<div class="rule" id="r-cond.traps.deviation.75"><a href="#r-cond.traps.deviation.75">[cond.traps.deviation.75]</a></div>
+<p>A condition that is raised for a CALL trap in the <code>DELAY</code> state, from a
+routine that the handler calls, is held and answered as <a href="#r-cond.traps.delay">the delay
+rule</a> says: the handler is called again when it returns,
+or at once when a CALL ON or a SIGNAL ON for the condition runs, and several
+such conditions are answered one after the other in the order raised. ooRexx
+loses such a condition, and crashes in some programs.</p>
+<pre><code class="language-rexx">call on user foo name h
+call r
+say 'main after'
+exit
+r: raise user foo description 'first' return
+h: say 'enter h' condition('d') condition('s')
+  if condition('d') = 'first' then call r2
+  say 'leave h' condition('d')
+  return
+r2: raise user foo description 'second' return
+</code></pre>
+<pre><code class="language-output">enter h first DELAY
+leave h first
+enter h second DELAY
+leave h second
+main after
+</code></pre>
+<pre><code class="language-rexx">call on user foo name h
+call r
+say 'main after'
+exit
+r: raise user foo description 'first' return
+h: say 'enter h' condition('d') condition('s')
+  if condition('d') = 'first' then do
+    call r2
+    say 'held, before on'
+    call on user foo name h
+    say 'after on'
+  end
+  say 'leave h' condition('d')
+  return
+r2: raise user foo description 'second' return
+</code></pre>
+<pre><code class="language-output">enter h first DELAY
+held, before on
+enter h second DELAY
+leave h second
+after on
+leave h first
+main after
+</code></pre>
+<pre><code class="language-rexx">call on user foo name h
+call r
+say 'main after'
+exit
+r: raise user foo description 'first' return
+h: say 'enter h' condition('d') condition('s')
+  if condition('d') = 'first' then do
+    call r2
+    say 'held, before signal on'
+    signal on user foo name sg
+    say 'not reached'
+  end
+  say 'leave h' condition('d')
+  return
+sg: say 'sg' condition('d') condition('i') condition('s')
+  return
+r2: raise user foo description 'second' return
+</code></pre>
+<pre><code class="language-output">enter h first DELAY
+held, before signal on
+sg second SIGNAL OFF
+main after
+</code></pre>
+<pre><code class="language-rexx">call on user foo name h
+call r 'first'
+say 'main after'
+exit
+r: raise user foo description (arg(1)) return
+h: say 'enter h' condition('d')
+  if condition('d') = 'first' then do
+    call r 'second'
+    call r 'third'
+  end
+  say 'leave h' condition('d')
+  return
+</code></pre>
+<pre><code class="language-output">enter h first
+leave h first
+enter h second
+leave h second
+enter h third
+leave h third
+main after
+</code></pre>
+<div class="rule" id="r-cond.traps.deviation.104"><a href="#r-cond.traps.deviation.104">[cond.traps.deviation.104]</a></div>
+<p>When an EXIT inside an internal routine ends the program while a CALL trap is
+pending, the routine of the trap is called before the program ends, as for an
+EXIT in the main program, and it sees the variables of the routine that holds
+the EXIT, with <code>SIGL</code> the line of the EXIT. ooRexx ends the program without
+calling it.</p>
+<pre><code class="language-rexx">call on notready name h
+say 'start'
+call r
+say 'not reached'
+exit
+r: procedure
+  exit linein('spec-cond-traps-nofile-xq7.tmp')
+h: say 'handler' condition('c')
+  return
+</code></pre>
+<pre><code class="language-output">start
+handler NOTREADY
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../conditions/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../conditions/information.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../conditions/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../conditions/information.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,562 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Directives - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html" class="active"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">10.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">10.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">10.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">10.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">10.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">10.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">10.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">10.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">10.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">10.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">10.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">10.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">10.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">10.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">10.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">10.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">10.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">10.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">10.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">10.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">10.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">10.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">10.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">10.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">10.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">10.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">10.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">10.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">10.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">10.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">10.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">10.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">10.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">10.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">10.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">10.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">10.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">10.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">10.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">10.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">10.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">10.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">10.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">10.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">10.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">10.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">10.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">10.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">10.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">10.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">10.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">10.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">10.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">10.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">10.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">10.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">10.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">10.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">10.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">10.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">10.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">10.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">10.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">10.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">10.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">10.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">10.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">10.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">10.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">10.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">10.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">10.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">10.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">10.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">10.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">10.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">10.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">10.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">10.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">10.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">10.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">10.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">10.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">10.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">11.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="directives"><a class="header" href="#directives">Directives</a></h1>
+<p class="references">rexxref: Directives</p>
+<p>A directive is a clause that starts with two colons. It does not run: it
+declares a piece of the program, such as a class, a method or a routine, and
+the interpreter acts on it before the program's own instructions run. A
+program is a package: a set of declared pieces, and the instructions that come
+before the first directive. This chapter specifies how a program is split by
+its directives, and the pages that follow specify each directive.</p>
+<p>The directives are ANNOTATE, ATTRIBUTE, CLASS, CONSTANT, METHOD, OPTIONS,
+REQUIRES, RESOURCE and ROUTINE. The pages of this chapter are:</p>
+<ul>
+<li><a href="class.html">::CLASS</a>: a class, its superclass, metaclass and inheritance, and
+the order in which the classes of a package come into being.</li>
+<li><a href="method.html">::METHOD</a>: a method of a class, the options that set its access
+and its kind, and a method that belongs to no class.</li>
+<li><a href="attribute.html">::ATTRIBUTE</a>: the methods that read and write an attribute.</li>
+<li><a href="constant.html">::CONSTANT</a>: a constant of a class or of the package.</li>
+<li><a href="routine.html">::ROUTINE</a>: a routine of the package and whether other
+packages see it.</li>
+<li><a href="requires.html">::REQUIRES</a>: the program or library that a package needs.</li>
+<li><a href="options.html">::OPTIONS</a>: the settings that the code of a package starts
+with.</li>
+<li><a href="resource.html">::RESOURCE</a>: a block of text that the package holds as data.</li>
+<li><a href="annotate.html">::ANNOTATE</a>: the annotations on the package, a class, a
+method, an attribute, a constant or a routine.</li>
+</ul>
+<p>The classes that the directives create are objects too, and what their own
+methods do is specified in the classes chapter. This chapter says only what a
+directive makes and what the options on it mean.</p>
+<p>A note on the examples. A directive cannot be run by INTERPRET, and a fault in
+one of them ends a program file before it writes anything. Where an example
+shows which condition a directive raises, it builds the text of a package with
+the <code>Package</code> class and catches the condition that building it raises. That
+class has its own page in the classes chapter, so the examples use it for one
+thing only: <code>.package~new(name, lines)</code> translates the lines as a package,
+installs it as <a href="#r-dir.index.install">the installation rule</a> says and runs its
+instructions before the next clause of the caller.</p>
+<h2 id="what-a-directive-is"><a class="header" href="#what-a-directive-is">What a directive is</a></h2>
+<div class="rule" id="r-dir.index.directive"><a href="#r-dir.index.directive">[dir.index.directive]</a></div>
+<p>A clause is a directive when its first token is <code>::</code>, which may be followed
+by blanks or comments before the keyword. The keyword is not case sensitive.
+A directive begins its clause at the start of a line or after a semicolon;
+after a label on the same line the <code>::</code> is read as part of an expression and
+raises <code>SYNTAX 35.1</code>. A keyword that names no directive raises
+<code>SYNTAX 99.916</code>, and <code>::</code> followed by nothing that is a symbol raises
+<code>SYNTAX 20.916</code>. The error is found when the program is read, so that a
+program file with such a clause writes nothing and exits with 256 minus the
+error number, 157 for 99.916, as <a href="../lexical/index.html#r-lex.index.read-first">the reading rule</a>
+describes for any fault of the text. A directive cannot be part of the text of
+<a href="../instructions/interpret.html#r-instr.interpret.labels">INTERPRET</a>, which refuses it.</p>
+<pre><code class="language-rexx">call try '::class k1'
+call try ':: /* a comment */ Class k2'
+call try '::CLASS k3'
+call try '::frob k4'
+call try '::'
+call try '::"class" k5'
+call try 'lab: ::class k6'
+exit
+try:
+  signal on syntax name e
+  p = .package~new('spec-dir-index-kw', .array~of(arg(1)))
+  say arg(1) '=&gt; ok'
+  return
+e: say arg(1) '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">::class k1 =&gt; ok
+:: /* a comment */ Class k2 =&gt; ok
+::CLASS k3 =&gt; ok
+::frob k4 =&gt; 99.916
+:: =&gt; 20.916
+::"class" k5 =&gt; 20.916
+lab: ::class k6 =&gt; 35.1
+</code></pre>
+<pre><code class="language-rexx">say 'before'
+::frob k
+</code></pre>
+<pre><code class="language-output rc=157"></code></pre>
+<div class="rule" id="r-dir.index.end"><a href="#r-dir.index.end">[dir.index.end]</a></div>
+<p>A directive ends where a clause ends: at the end of the line or at a
+semicolon, and a comma at the end of a line continues it on the next line, as
+<a href="../lexical/clauses.html#r-lex.clauses.end">the clause rules</a> say for any clause. A comment after the
+directive is part of the clause's white space. What follows the semicolon is
+the next clause, so a directive and the first clause of its body can share a
+line.</p>
+<pre><code class="language-rexx">src = .array~of('::class k', '::method one; return 1; ::method two; return 2')
+p = .package~new('spec-dir-index-end', src)
+src = .array~of('say .box~new~m', '::class box,', '  public -- a comment', -
+  '::method m', '  return 3')
+p = .package~new('spec-dir-index-end2', src)
+</code></pre>
+<pre><code class="language-output">3
+</code></pre>
+<h2 id="the-prolog-and-the-sections"><a class="header" href="#the-prolog-and-the-sections">The prolog and the sections</a></h2>
+<div class="rule" id="r-dir.index.prolog"><a href="#r-dir.index.prolog">[dir.index.prolog]</a></div>
+<p>The clauses before the first directive are the prolog, the main code of the
+package. It runs once the package is installed, and its end is the end of the
+program: the interpreter never goes on into the code that follows the first
+directive, which is reached only through the routine or method that it
+declares. A file without directives is all prolog, and a file whose first
+clause is a directive has no prolog. An <code>exit</code> or <code>return</code> in the prolog ends
+the program there, and the directives have been installed all the same.</p>
+<pre><code class="language-rexx">say 'start'
+say .box~new~m
+say 'end of the prolog'
+::class box
+::method m
+  say 'running m'
+  return 'result of m'
+say 'this clause is part of m'
+</code></pre>
+<pre><code class="language-output">start
+running m
+result of m
+end of the prolog
+</code></pre>
+<pre><code class="language-rexx">say 'start'
+exit
+::class box
+::method activate class
+  say 'activated'
+</code></pre>
+<pre><code class="language-output">activated
+start
+</code></pre>
+<div class="rule" id="r-dir.index.section"><a href="#r-dir.index.section">[dir.index.section]</a></div>
+<p>The clauses after a directive, up to the next directive or the end of the
+program, are that directive's section. The section is the body of the method
+or routine that the directive declares, and the directive clause itself is not
+part of it. A directive that declares no code, such as ::CLASS, allows only
+comments and empty lines between it and the next directive. Any other clause
+there raises a <code>SYNTAX</code> error found when the program is read: <code>99.916</code> after
+<code>::class</code>. The
+pages of the directives that take a body or are refused one say which subcode
+their own case raises.</p>
+<pre><code class="language-rexx">call try '::class k', '-- a comment', '', '/* another */', '::method m'
+call try '::class k', 'say 1', '::method m'
+call try '::class k', 'x = 2'
+call try '::class k', '::method m', 'say 1', 'x = 2'
+exit
+try:
+  signal on syntax name e
+  src = .array~new
+  do i = 1 to arg()
+    src~append(arg(i))
+  end
+  p = .package~new('spec-dir-index-sec', src)
+  say src~makestring('l', ' / ') '=&gt; ok'
+  return
+e: say src~makestring('l', ' / ') '=&gt;' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">::class k / -- a comment /  / /* another */ / ::method m =&gt; ok
+::class k / say 1 / ::method m =&gt; 99.916
+::class k / x = 2 =&gt; 99.916
+::class k / ::method m / say 1 / x = 2 =&gt; ok
+</code></pre>
+<div class="rule" id="r-dir.index.unit"><a href="#r-dir.index.unit">[dir.index.unit]</a></div>
+<p>Each section, and the prolog, is a code unit of its own. Its labels are known
+only inside it, its variables are not shared with another unit, and a
+construct that it opens must end inside it: a DO, IF or SELECT that is still
+open at the next directive raises <code>SYNTAX 14.1</code>, <code>14.3</code> or <code>14.2</code>, and an
+ELSE that has no instruction by then raises <code>SYNTAX 14.4</code>, all found when the
+program is read. A routine or method that needs a value of another unit
+receives it as an argument or through an object variable.</p>
+<pre><code class="language-rexx">x = 'prolog variable'
+say r1()
+call try 'do', '::class k'
+call try 'if 1 then', '::class k'
+call try 'select', '::class k'
+exit
+try:
+  signal on syntax name e
+  src = .array~new
+  do i = 1 to arg()
+    src~append(arg(i))
+  end
+  p = .package~new('spec-dir-index-unit', src)
+  say 'ok'
+  return
+e: say src~makestring('l', ' / ') '=&gt;' condition('o')~code
+  return
+::routine r1
+  signal on syntax name lost
+  say symbol('x')
+  call own
+  call prolog
+  return 'not reached'
+own: say 'own label'
+  return
+lost: return 'r1 caught' condition('o')~code
+</code></pre>
+<pre><code class="language-output">LIT
+own label
+r1 caught 43.1
+do / ::class k =&gt; 14.1
+if 1 then / ::class k =&gt; 14.3
+select / ::class k =&gt; 14.2
+</code></pre>
+<h2 id="installation"><a class="header" href="#installation">Installation</a></h2>
+<div class="rule" id="r-dir.index.install"><a href="#r-dir.index.install">[dir.index.install]</a></div>
+<p>The interpreter installs a package before it runs the prolog, in four steps.
+First the ::REQUIRES directives are processed in text order wherever they
+stand, except that <a href="requires.html#r-dir.requires.library">the library rule</a> processes the
+LIBRARY ones before the others, and each required package is installed and
+runs its own prolog before the next step. Then the package's routines become
+known and every class is created, in the order that <a href="class.html#r-dir.class.forward">the class
+rule</a> gives, and each new class object is sent an INIT
+message. When all classes exist, each is sent an ACTIVATE message in the order
+of creation. Only then does the prolog run, so a class method that ACTIVATE
+runs sees every class and routine of the package, and the prolog sees every
+class already activated.
+A class is reachable by its name, as the environment symbol that is a period
+followed by the name, once its INIT message has returned. During the INIT of
+a class the classes created before it are reachable, and the class itself and
+the classes created later are not, so that their symbols have the symbol's own
+text as value. The routines of the package are known from the start. Every
+class is reachable by the time the first ACTIVATE message is sent.</p>
+<pre><code class="language-rexx">f = 'spec-dir-index-lib.tmp'
+call sysfiledelete f
+call lineout f, 'say "lib prolog"'
+call lineout f, '::class libc public'
+call lineout f, '::method activate class'
+call lineout f, '  say "lib activate"'
+call lineout f
+src = .array~of('say "prolog"', -
+  '::class one', -
+  '::method init class', -
+  '  say "init one"', -
+  '::method activate class', -
+  '  say "activate one, routine says" r()', -
+  '::requires "'f'"', -
+  '::class two', -
+  '::method init class', -
+  '  say "init two"', -
+  '::method activate class', -
+  '  say "activate two"', -
+  '::routine r', -
+  '  return "r"')
+p = .package~new('spec-dir-index-main', src)
+call sysfiledelete f
+</code></pre>
+<pre><code class="language-output">lib activate
+lib prolog
+init one
+init two
+activate one, routine says r
+activate two
+prolog
+</code></pre>
+<pre><code class="language-rexx">say 'prolog'
+::class a
+::method init class
+  say 'init a sees' .b r()
+  signal on syntax name e
+  say 'init a sees' .a~id
+  return
+e: say 'init a self' condition('o')~code
+::class b
+::method init class
+  say 'init b sees' .a~id
+  signal on syntax name e
+  say 'init b sees' .b~id
+  return
+e: say 'init b self' condition('o')~code
+::method activate class
+  say 'activate b sees' .a~id .b~id
+::routine r
+  return 'r'
+</code></pre>
+<pre><code class="language-output defect=#112">init a sees .B r
+init a self 97.1
+init b sees A
+init b self 97.1
+activate b sees A B
+prolog
+</code></pre>
+<div class="rule" id="r-dir.index.failure"><a href="#r-dir.index.failure">[dir.index.failure]</a></div>
+<p>A fault found while the package is read stops everything: nothing is installed
+and no prolog runs. A fault raised while the package is installed, such as a
+class that cannot be found or a required file that does not exist, stops
+installation at that step, so that no class activates after it and the prolog
+does not run. The condition is <code>SYNTAX</code> in both cases, and a program file ends
+with 256 minus the error number as its exit status, 158 for <code>98.909</code>, as <a href="../conditions/index.html#r-cond.index.syntax">the
+SYNTAX rule</a> says. The classes created before such a
+fault have received their INIT message, as the next example shows, and have
+received no ACTIVATE message. A class that names itself, directly or through
+the classes it names, is an exception: <a href="class.html#r-dir.class.forward">the order rule</a>
+finds it before any class is created, so no INIT message has been sent.</p>
+<pre><code class="language-rexx">call try '::class k public private'
+call try '::class k', '::class l subclass nosuchsuperclass'
+call try '::requires "spec-dir-index-nosuchfile-xyz.rex"'
+exit
+try:
+  signal on syntax name e
+  src = .array~of('say "prolog"')
+  do i = 1 to arg()
+    src~append(arg(i))
+  end
+  p = .package~new('spec-dir-index-fail', src)
+  say 'ok'
+  return
+e: say 'caught' condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">caught 25.901
+caught 98.909
+caught 43.901
+</code></pre>
+<pre><code class="language-rexx">say 'prolog'
+::class k
+::method init class
+  say 'init k'
+::method activate class
+  say 'activate k'
+::class l subclass nosuchsuperclass
+</code></pre>
+<pre><code class="language-output rc=158">init k
+</code></pre>
+<h2 id="names"><a class="header" href="#names">Names</a></h2>
+<div class="rule" id="r-dir.index.names"><a href="#r-dir.index.names">[dir.index.names]</a></div>
+<p>A name that a directive takes is a symbol or a string. A symbol names the
+element in upper case, and a string names it as written, so <code>::class Box</code>
+creates the class <code>BOX</code> and <code>::class "Box"</code> creates the class <code>Box</code>. A lookup
+of a class or a method by name ignores case, whatever the spelling in the
+directive, and two directives that name one class, or one method of a class,
+in different cases declare it twice. The pages of the directives say what each
+does with a duplicate.</p>
+<pre><code class="language-rexx">say .Widget~id .WIDGET~id .gadget~id .Gadget~id
+::class Widget
+::class "Gadget"
+</code></pre>
+<pre><code class="language-output">WIDGET WIDGET Gadget Gadget
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../parsing/multiple.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../directives/class.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../parsing/multiple.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../directives/class.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>

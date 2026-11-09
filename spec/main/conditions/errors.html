@@ -1,0 +1,774 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Error numbers - The interrexx Language Specification</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../conventions.html"><strong aria-hidden="true">2.</strong> Conventions</a></li><li class="chapter-item expanded "><a href="../lexical/index.html"><strong aria-hidden="true">3.</strong> Lexical structure</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../lexical/characters.html"><strong aria-hidden="true">3.1.</strong> Characters</a></li><li class="chapter-item expanded "><a href="../lexical/comments.html"><strong aria-hidden="true">3.2.</strong> Comments</a></li><li class="chapter-item expanded "><a href="../lexical/literals.html"><strong aria-hidden="true">3.3.</strong> Literals</a></li><li class="chapter-item expanded "><a href="../lexical/symbols.html"><strong aria-hidden="true">3.4.</strong> Symbols</a></li><li class="chapter-item expanded "><a href="../lexical/operators.html"><strong aria-hidden="true">3.5.</strong> Operators and special characters</a></li><li class="chapter-item expanded "><a href="../lexical/clauses.html"><strong aria-hidden="true">3.6.</strong> Clauses</a></li></ol></li><li class="chapter-item expanded "><a href="../numbers/index.html"><strong aria-hidden="true">4.</strong> Numbers</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../numbers/formats.html"><strong aria-hidden="true">4.1.</strong> Formats</a></li><li class="chapter-item expanded "><a href="../numbers/limits.html"><strong aria-hidden="true">4.2.</strong> Limits</a></li><li class="chapter-item expanded "><a href="../numbers/arithmetic.html"><strong aria-hidden="true">4.3.</strong> Arithmetic</a></li><li class="chapter-item expanded "><a href="../numbers/settings.html"><strong aria-hidden="true">4.4.</strong> Settings</a></li><li class="chapter-item expanded "><a href="../numbers/comparison.html"><strong aria-hidden="true">4.5.</strong> Comparison</a></li></ol></li><li class="chapter-item expanded "><a href="../expressions/index.html"><strong aria-hidden="true">5.</strong> Expressions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../expressions/terms.html"><strong aria-hidden="true">5.1.</strong> Terms</a></li><li class="chapter-item expanded "><a href="../expressions/variables.html"><strong aria-hidden="true">5.2.</strong> Variables</a></li><li class="chapter-item expanded "><a href="../expressions/concatenation.html"><strong aria-hidden="true">5.3.</strong> Concatenation</a></li><li class="chapter-item expanded "><a href="../expressions/arithmetic.html"><strong aria-hidden="true">5.4.</strong> Arithmetic operators</a></li><li class="chapter-item expanded "><a href="../expressions/comparison.html"><strong aria-hidden="true">5.5.</strong> Comparison operators</a></li><li class="chapter-item expanded "><a href="../expressions/logical.html"><strong aria-hidden="true">5.6.</strong> Logical operators</a></li><li class="chapter-item expanded "><a href="../expressions/messages.html"><strong aria-hidden="true">5.7.</strong> Message operators</a></li></ol></li><li class="chapter-item expanded "><a href="../instructions/index.html"><strong aria-hidden="true">6.</strong> Instructions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../instructions/address.html"><strong aria-hidden="true">6.1.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../instructions/arg.html"><strong aria-hidden="true">6.2.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../instructions/assignment.html"><strong aria-hidden="true">6.3.</strong> Assignments</a></li><li class="chapter-item expanded "><a href="../instructions/call.html"><strong aria-hidden="true">6.4.</strong> CALL</a></li><li class="chapter-item expanded "><a href="../instructions/command.html"><strong aria-hidden="true">6.5.</strong> Commands</a></li><li class="chapter-item expanded "><a href="../instructions/do.html"><strong aria-hidden="true">6.6.</strong> DO</a></li><li class="chapter-item expanded "><a href="../instructions/drop.html"><strong aria-hidden="true">6.7.</strong> DROP</a></li><li class="chapter-item expanded "><a href="../instructions/exit.html"><strong aria-hidden="true">6.8.</strong> EXIT</a></li><li class="chapter-item expanded "><a href="../instructions/expose.html"><strong aria-hidden="true">6.9.</strong> EXPOSE</a></li><li class="chapter-item expanded "><a href="../instructions/forward.html"><strong aria-hidden="true">6.10.</strong> FORWARD</a></li><li class="chapter-item expanded "><a href="../instructions/guard.html"><strong aria-hidden="true">6.11.</strong> GUARD</a></li><li class="chapter-item expanded "><a href="../instructions/if.html"><strong aria-hidden="true">6.12.</strong> IF</a></li><li class="chapter-item expanded "><a href="../instructions/interpret.html"><strong aria-hidden="true">6.13.</strong> INTERPRET</a></li><li class="chapter-item expanded "><a href="../instructions/iterate.html"><strong aria-hidden="true">6.14.</strong> ITERATE</a></li><li class="chapter-item expanded "><a href="../instructions/leave.html"><strong aria-hidden="true">6.15.</strong> LEAVE</a></li><li class="chapter-item expanded "><a href="../instructions/loop.html"><strong aria-hidden="true">6.16.</strong> LOOP</a></li><li class="chapter-item expanded "><a href="../instructions/message.html"><strong aria-hidden="true">6.17.</strong> Message instructions</a></li><li class="chapter-item expanded "><a href="../instructions/nop.html"><strong aria-hidden="true">6.18.</strong> NOP</a></li><li class="chapter-item expanded "><a href="../instructions/numeric.html"><strong aria-hidden="true">6.19.</strong> NUMERIC</a></li><li class="chapter-item expanded "><a href="../instructions/options.html"><strong aria-hidden="true">6.20.</strong> OPTIONS</a></li><li class="chapter-item expanded "><a href="../instructions/parse.html"><strong aria-hidden="true">6.21.</strong> PARSE</a></li><li class="chapter-item expanded "><a href="../instructions/procedure.html"><strong aria-hidden="true">6.22.</strong> PROCEDURE</a></li><li class="chapter-item expanded "><a href="../instructions/pull.html"><strong aria-hidden="true">6.23.</strong> PULL</a></li><li class="chapter-item expanded "><a href="../instructions/push.html"><strong aria-hidden="true">6.24.</strong> PUSH</a></li><li class="chapter-item expanded "><a href="../instructions/queue.html"><strong aria-hidden="true">6.25.</strong> QUEUE</a></li><li class="chapter-item expanded "><a href="../instructions/raise.html"><strong aria-hidden="true">6.26.</strong> RAISE</a></li><li class="chapter-item expanded "><a href="../instructions/reply.html"><strong aria-hidden="true">6.27.</strong> REPLY</a></li><li class="chapter-item expanded "><a href="../instructions/return.html"><strong aria-hidden="true">6.28.</strong> RETURN</a></li><li class="chapter-item expanded "><a href="../instructions/say.html"><strong aria-hidden="true">6.29.</strong> SAY</a></li><li class="chapter-item expanded "><a href="../instructions/select.html"><strong aria-hidden="true">6.30.</strong> SELECT</a></li><li class="chapter-item expanded "><a href="../instructions/signal.html"><strong aria-hidden="true">6.31.</strong> SIGNAL</a></li><li class="chapter-item expanded "><a href="../instructions/trace.html"><strong aria-hidden="true">6.32.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../instructions/use.html"><strong aria-hidden="true">6.33.</strong> USE</a></li></ol></li><li class="chapter-item expanded "><a href="../parsing/index.html"><strong aria-hidden="true">7.</strong> Parsing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../parsing/templates.html"><strong aria-hidden="true">7.1.</strong> Templates</a></li><li class="chapter-item expanded "><a href="../parsing/patterns.html"><strong aria-hidden="true">7.2.</strong> Patterns</a></li><li class="chapter-item expanded "><a href="../parsing/multiple.html"><strong aria-hidden="true">7.3.</strong> Several strings and case</a></li></ol></li><li class="chapter-item expanded "><a href="../directives/index.html"><strong aria-hidden="true">8.</strong> Directives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../directives/class.html"><strong aria-hidden="true">8.1.</strong> ::CLASS</a></li><li class="chapter-item expanded "><a href="../directives/method.html"><strong aria-hidden="true">8.2.</strong> ::METHOD</a></li><li class="chapter-item expanded "><a href="../directives/attribute.html"><strong aria-hidden="true">8.3.</strong> ::ATTRIBUTE</a></li><li class="chapter-item expanded "><a href="../directives/constant.html"><strong aria-hidden="true">8.4.</strong> ::CONSTANT</a></li><li class="chapter-item expanded "><a href="../directives/routine.html"><strong aria-hidden="true">8.5.</strong> ::ROUTINE</a></li><li class="chapter-item expanded "><a href="../directives/requires.html"><strong aria-hidden="true">8.6.</strong> ::REQUIRES</a></li><li class="chapter-item expanded "><a href="../directives/options.html"><strong aria-hidden="true">8.7.</strong> ::OPTIONS</a></li><li class="chapter-item expanded "><a href="../directives/resource.html"><strong aria-hidden="true">8.8.</strong> ::RESOURCE</a></li><li class="chapter-item expanded "><a href="../directives/annotate.html"><strong aria-hidden="true">8.9.</strong> ::ANNOTATE</a></li></ol></li><li class="chapter-item expanded "><a href="../conditions/index.html"><strong aria-hidden="true">9.</strong> Conditions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../conditions/traps.html"><strong aria-hidden="true">9.1.</strong> Condition traps</a></li><li class="chapter-item expanded "><a href="../conditions/information.html"><strong aria-hidden="true">9.2.</strong> Condition information</a></li><li class="chapter-item expanded "><a href="../conditions/syntax.html"><strong aria-hidden="true">9.3.</strong> SYNTAX</a></li><li class="chapter-item expanded "><a href="../conditions/error.html"><strong aria-hidden="true">9.4.</strong> ERROR and FAILURE</a></li><li class="chapter-item expanded "><a href="../conditions/halt.html"><strong aria-hidden="true">9.5.</strong> HALT</a></li><li class="chapter-item expanded "><a href="../conditions/novalue.html"><strong aria-hidden="true">9.6.</strong> NOVALUE</a></li><li class="chapter-item expanded "><a href="../conditions/nostring.html"><strong aria-hidden="true">9.7.</strong> NOSTRING</a></li><li class="chapter-item expanded "><a href="../conditions/nomethod.html"><strong aria-hidden="true">9.8.</strong> NOMETHOD</a></li><li class="chapter-item expanded "><a href="../conditions/notready.html"><strong aria-hidden="true">9.9.</strong> NOTREADY</a></li><li class="chapter-item expanded "><a href="../conditions/lostdigits.html"><strong aria-hidden="true">9.10.</strong> LOSTDIGITS</a></li><li class="chapter-item expanded "><a href="../conditions/user.html"><strong aria-hidden="true">9.11.</strong> USER conditions</a></li><li class="chapter-item expanded "><a href="../conditions/errors.html" class="active"><strong aria-hidden="true">9.12.</strong> Error numbers</a></li></ol></li><li class="chapter-item expanded "><a href="../builtins/index.html"><strong aria-hidden="true">10.</strong> Built-in functions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../builtins/abbrev.html"><strong aria-hidden="true">10.1.</strong> ABBREV</a></li><li class="chapter-item expanded "><a href="../builtins/abs.html"><strong aria-hidden="true">10.2.</strong> ABS</a></li><li class="chapter-item expanded "><a href="../builtins/address.html"><strong aria-hidden="true">10.3.</strong> ADDRESS</a></li><li class="chapter-item expanded "><a href="../builtins/arg.html"><strong aria-hidden="true">10.4.</strong> ARG</a></li><li class="chapter-item expanded "><a href="../builtins/b2x.html"><strong aria-hidden="true">10.5.</strong> B2X</a></li><li class="chapter-item expanded "><a href="../builtins/beep.html"><strong aria-hidden="true">10.6.</strong> BEEP</a></li><li class="chapter-item expanded "><a href="../builtins/bitand.html"><strong aria-hidden="true">10.7.</strong> BITAND</a></li><li class="chapter-item expanded "><a href="../builtins/bitor.html"><strong aria-hidden="true">10.8.</strong> BITOR</a></li><li class="chapter-item expanded "><a href="../builtins/bitxor.html"><strong aria-hidden="true">10.9.</strong> BITXOR</a></li><li class="chapter-item expanded "><a href="../builtins/c2d.html"><strong aria-hidden="true">10.10.</strong> C2D</a></li><li class="chapter-item expanded "><a href="../builtins/c2x.html"><strong aria-hidden="true">10.11.</strong> C2X</a></li><li class="chapter-item expanded "><a href="../builtins/center.html"><strong aria-hidden="true">10.12.</strong> CENTER</a></li><li class="chapter-item expanded "><a href="../builtins/changestr.html"><strong aria-hidden="true">10.13.</strong> CHANGESTR</a></li><li class="chapter-item expanded "><a href="../builtins/charin.html"><strong aria-hidden="true">10.14.</strong> CHARIN</a></li><li class="chapter-item expanded "><a href="../builtins/charout.html"><strong aria-hidden="true">10.15.</strong> CHAROUT</a></li><li class="chapter-item expanded "><a href="../builtins/chars.html"><strong aria-hidden="true">10.16.</strong> CHARS</a></li><li class="chapter-item expanded "><a href="../builtins/compare.html"><strong aria-hidden="true">10.17.</strong> COMPARE</a></li><li class="chapter-item expanded "><a href="../builtins/condition.html"><strong aria-hidden="true">10.18.</strong> CONDITION</a></li><li class="chapter-item expanded "><a href="../builtins/copies.html"><strong aria-hidden="true">10.19.</strong> COPIES</a></li><li class="chapter-item expanded "><a href="../builtins/countstr.html"><strong aria-hidden="true">10.20.</strong> COUNTSTR</a></li><li class="chapter-item expanded "><a href="../builtins/d2c.html"><strong aria-hidden="true">10.21.</strong> D2C</a></li><li class="chapter-item expanded "><a href="../builtins/d2x.html"><strong aria-hidden="true">10.22.</strong> D2X</a></li><li class="chapter-item expanded "><a href="../builtins/datatype.html"><strong aria-hidden="true">10.23.</strong> DATATYPE</a></li><li class="chapter-item expanded "><a href="../builtins/date.html"><strong aria-hidden="true">10.24.</strong> DATE</a></li><li class="chapter-item expanded "><a href="../builtins/delstr.html"><strong aria-hidden="true">10.25.</strong> DELSTR</a></li><li class="chapter-item expanded "><a href="../builtins/delword.html"><strong aria-hidden="true">10.26.</strong> DELWORD</a></li><li class="chapter-item expanded "><a href="../builtins/digits.html"><strong aria-hidden="true">10.27.</strong> DIGITS</a></li><li class="chapter-item expanded "><a href="../builtins/directory.html"><strong aria-hidden="true">10.28.</strong> DIRECTORY</a></li><li class="chapter-item expanded "><a href="../builtins/endlocal.html"><strong aria-hidden="true">10.29.</strong> ENDLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/errortext.html"><strong aria-hidden="true">10.30.</strong> ERRORTEXT</a></li><li class="chapter-item expanded "><a href="../builtins/filespec.html"><strong aria-hidden="true">10.31.</strong> FILESPEC</a></li><li class="chapter-item expanded "><a href="../builtins/form.html"><strong aria-hidden="true">10.32.</strong> FORM</a></li><li class="chapter-item expanded "><a href="../builtins/format.html"><strong aria-hidden="true">10.33.</strong> FORMAT</a></li><li class="chapter-item expanded "><a href="../builtins/fuzz.html"><strong aria-hidden="true">10.34.</strong> FUZZ</a></li><li class="chapter-item expanded "><a href="../builtins/gc.html"><strong aria-hidden="true">10.35.</strong> GC</a></li><li class="chapter-item expanded "><a href="../builtins/insert.html"><strong aria-hidden="true">10.36.</strong> INSERT</a></li><li class="chapter-item expanded "><a href="../builtins/lastpos.html"><strong aria-hidden="true">10.37.</strong> LASTPOS</a></li><li class="chapter-item expanded "><a href="../builtins/left.html"><strong aria-hidden="true">10.38.</strong> LEFT</a></li><li class="chapter-item expanded "><a href="../builtins/length.html"><strong aria-hidden="true">10.39.</strong> LENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/linein.html"><strong aria-hidden="true">10.40.</strong> LINEIN</a></li><li class="chapter-item expanded "><a href="../builtins/lineout.html"><strong aria-hidden="true">10.41.</strong> LINEOUT</a></li><li class="chapter-item expanded "><a href="../builtins/lines.html"><strong aria-hidden="true">10.42.</strong> LINES</a></li><li class="chapter-item expanded "><a href="../builtins/lower.html"><strong aria-hidden="true">10.43.</strong> LOWER</a></li><li class="chapter-item expanded "><a href="../builtins/max.html"><strong aria-hidden="true">10.44.</strong> MAX</a></li><li class="chapter-item expanded "><a href="../builtins/min.html"><strong aria-hidden="true">10.45.</strong> MIN</a></li><li class="chapter-item expanded "><a href="../builtins/overlay.html"><strong aria-hidden="true">10.46.</strong> OVERLAY</a></li><li class="chapter-item expanded "><a href="../builtins/pos.html"><strong aria-hidden="true">10.47.</strong> POS</a></li><li class="chapter-item expanded "><a href="../builtins/qualify.html"><strong aria-hidden="true">10.48.</strong> QUALIFY</a></li><li class="chapter-item expanded "><a href="../builtins/queued.html"><strong aria-hidden="true">10.49.</strong> QUEUED</a></li><li class="chapter-item expanded "><a href="../builtins/random.html"><strong aria-hidden="true">10.50.</strong> RANDOM</a></li><li class="chapter-item expanded "><a href="../builtins/reverse.html"><strong aria-hidden="true">10.51.</strong> REVERSE</a></li><li class="chapter-item expanded "><a href="../builtins/right.html"><strong aria-hidden="true">10.52.</strong> RIGHT</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncadd.html"><strong aria-hidden="true">10.53.</strong> RXFUNCADD</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncdrop.html"><strong aria-hidden="true">10.54.</strong> RXFUNCDROP</a></li><li class="chapter-item expanded "><a href="../builtins/rxfuncquery.html"><strong aria-hidden="true">10.55.</strong> RXFUNCQUERY</a></li><li class="chapter-item expanded "><a href="../builtins/rxqueue.html"><strong aria-hidden="true">10.56.</strong> RXQUEUE</a></li><li class="chapter-item expanded "><a href="../builtins/setlocal.html"><strong aria-hidden="true">10.57.</strong> SETLOCAL</a></li><li class="chapter-item expanded "><a href="../builtins/sign.html"><strong aria-hidden="true">10.58.</strong> SIGN</a></li><li class="chapter-item expanded "><a href="../builtins/sourceline.html"><strong aria-hidden="true">10.59.</strong> SOURCELINE</a></li><li class="chapter-item expanded "><a href="../builtins/space.html"><strong aria-hidden="true">10.60.</strong> SPACE</a></li><li class="chapter-item expanded "><a href="../builtins/stream.html"><strong aria-hidden="true">10.61.</strong> STREAM</a></li><li class="chapter-item expanded "><a href="../builtins/strip.html"><strong aria-hidden="true">10.62.</strong> STRIP</a></li><li class="chapter-item expanded "><a href="../builtins/substr.html"><strong aria-hidden="true">10.63.</strong> SUBSTR</a></li><li class="chapter-item expanded "><a href="../builtins/subword.html"><strong aria-hidden="true">10.64.</strong> SUBWORD</a></li><li class="chapter-item expanded "><a href="../builtins/symbol.html"><strong aria-hidden="true">10.65.</strong> SYMBOL</a></li><li class="chapter-item expanded "><a href="../builtins/time.html"><strong aria-hidden="true">10.66.</strong> TIME</a></li><li class="chapter-item expanded "><a href="../builtins/trace.html"><strong aria-hidden="true">10.67.</strong> TRACE</a></li><li class="chapter-item expanded "><a href="../builtins/translate.html"><strong aria-hidden="true">10.68.</strong> TRANSLATE</a></li><li class="chapter-item expanded "><a href="../builtins/trunc.html"><strong aria-hidden="true">10.69.</strong> TRUNC</a></li><li class="chapter-item expanded "><a href="../builtins/upper.html"><strong aria-hidden="true">10.70.</strong> UPPER</a></li><li class="chapter-item expanded "><a href="../builtins/userid.html"><strong aria-hidden="true">10.71.</strong> USERID</a></li><li class="chapter-item expanded "><a href="../builtins/value.html"><strong aria-hidden="true">10.72.</strong> VALUE</a></li><li class="chapter-item expanded "><a href="../builtins/var.html"><strong aria-hidden="true">10.73.</strong> VAR</a></li><li class="chapter-item expanded "><a href="../builtins/verify.html"><strong aria-hidden="true">10.74.</strong> VERIFY</a></li><li class="chapter-item expanded "><a href="../builtins/word.html"><strong aria-hidden="true">10.75.</strong> WORD</a></li><li class="chapter-item expanded "><a href="../builtins/wordindex.html"><strong aria-hidden="true">10.76.</strong> WORDINDEX</a></li><li class="chapter-item expanded "><a href="../builtins/wordlength.html"><strong aria-hidden="true">10.77.</strong> WORDLENGTH</a></li><li class="chapter-item expanded "><a href="../builtins/wordpos.html"><strong aria-hidden="true">10.78.</strong> WORDPOS</a></li><li class="chapter-item expanded "><a href="../builtins/words.html"><strong aria-hidden="true">10.79.</strong> WORDS</a></li><li class="chapter-item expanded "><a href="../builtins/x2b.html"><strong aria-hidden="true">10.80.</strong> X2B</a></li><li class="chapter-item expanded "><a href="../builtins/x2c.html"><strong aria-hidden="true">10.81.</strong> X2C</a></li><li class="chapter-item expanded "><a href="../builtins/x2d.html"><strong aria-hidden="true">10.82.</strong> X2D</a></li><li class="chapter-item expanded "><a href="../builtins/xrange.html"><strong aria-hidden="true">10.83.</strong> XRANGE</a></li></ol></li><li class="chapter-item expanded "><a href="../deviations.html"><strong aria-hidden="true">11.</strong> Deviations</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The interrexx Language Specification</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="error-numbers"><a class="header" href="#error-numbers">Error numbers</a></h1>
+<p class="references">ANSI: 8.2.1, 8.4, 8.4.1; rexxref: Conditions and Condition Traps &gt; Condition Information &gt; The Special Variable RC; Error Numbers and Messages</p>
+<p>Every fault that raises the SYNTAX condition has an error number. The number
+says what kind of fault it is, so that a program can answer a kind of error
+without reading a message. This page specifies how a number is built, what a
+program sees of it, and what each of the numbers means. It does not list the
+subcodes: the pages that raise an error name its subcode, and the texts of the
+messages are not specified, as <a href="../conventions.html#r-conv.error.name">the error rule</a> of the
+conventions says. The numbers run from 3 to 99, and the numbers in that range
+that name no kind of fault are the ones that
+<a href="../builtins/errortext.html">ERRORTEXT</a> answers with the null string, as
+<a href="../builtins/errortext.html#r-bif.errortext.undefined">its rule</a> lists them.</p>
+<h2 id="how-a-number-is-built"><a class="header" href="#how-a-number-is-built">How a number is built</a></h2>
+<div class="rule" id="r-cond.errors.scheme"><a href="#r-cond.errors.scheme">[cond.errors.scheme]</a></div>
+<p>An error number has two parts, a major number and a subcode written after a
+point without leading zeros: <code>40.3</code>, <code>93.924</code>. How a trap reads the two parts,
+and why a program tells faults apart by the whole code, is the business of
+<a href="syntax.html#r-cond.syntax.code">the code rule</a>; this page owns what the major numbers
+mean. <code>SIGL</code> is set as <a href="information.html#r-cond.information.sigl">the SIGL rule</a> says. An error
+that no SIGNAL trap answers ends the program with the exit code <code>256</code> minus
+the major number, as <a href="index.html#r-cond.index.syntax">the untrapped rule</a> says, and the
+subcode does not enter it. The error of a fault in the text that is read
+before the program runs is no condition at all, as <a href="../lexical/index.html#r-lex.index.read-first">the reading
+rule</a> says.</p>
+<pre><code class="language-rexx">rc = 'unset'
+signal on syntax name e
+say 'one'
+x = 1 + 'a'
+e: say condition('o')~code rc sigl
+say word(translate(condition('o')~code, ' ', '.'), 1) == rc
+</code></pre>
+<pre><code class="language-output">one
+41.1 41 4
+1
+</code></pre>
+<div class="rule" id="r-cond.errors.subcodes"><a href="#r-cond.errors.subcodes">[cond.errors.subcodes]</a></div>
+<p>The subcodes of an error number are named on the pages of the clauses and
+functions that raise it, in the rule that names the fault. This page names a
+subcode only to show a kind of error.</p>
+<pre><code class="language-rexx">call try 'x = left("abc", -2)'
+call try 'x = copies("ab", -2)'
+call try 'x = d2c(-1)'
+call try 'x = "abc"~substr(0)'
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+e: o = condition('o')
+  say left(arg(1), 26) o~code o~rc
+  return
+</code></pre>
+<pre><code class="language-output">x = left("abc", -2)        93.923 93
+x = copies("ab", -2)       93.906 93
+x = d2c(-1)                93.927 93
+x = "abc"~substr(0)        93.924 93
+</code></pre>
+<h2 id="the-numbers"><a class="header" href="#the-numbers">The numbers</a></h2>
+<blockquote>
+<p>Each entry gives the major number, a short label, constructs that raise it
+with the full code, and a rule of this book that raises it where one is
+written. The grouping is by the usual kind of fault, and a number may have
+subcodes of another kind. The examples run the listed constructs and print
+the code that the trap reads.</p>
+</blockquote>
+<h3 id="faults-in-the-form-of-the-text"><a class="header" href="#faults-in-the-form-of-the-text">Faults in the form of the text</a></h3>
+<blockquote>
+<p>These faults are usually found in the text of a clause, and a clause that is
+a directive or part of a block can raise them too. A fault in the text of a
+program is found when the program is read, and in the text of an INTERPRET
+when it runs, as <a href="index.html#r-cond.index.read">the reading rule</a> says.</p>
+</blockquote>
+<div class="rule" id="r-cond.errors.form"><a href="#r-cond.errors.form">[cond.errors.form]</a></div>
+<p>The numbers below usually name a fault in the form of the text, and some of
+them also have subcodes that are raised by values when the clause runs, such
+as 7.3 and 31.2.</p>
+<ul>
+<li>6, unfinished literal or comment: <code>say 'a</code> 6.2, <code>/* open</code> 6.1;
+<a href="../lexical/index.html#r-lex.index.read-first">rule</a>.</li>
+<li>7, SELECT with no usable branch: <code>select; say 1; end</code> 7.2, <code>select; end</code>
+7.1, <code>select; when 0 then nop; end</code> 7.3; <a href="../instructions/select.html#r-instr.select.syntax">rule</a>,
+<a href="../instructions/select.html#r-instr.select.otherwise">rule</a>.</li>
+<li>8, THEN or ELSE with no partner: <code>then say 1</code> 8.1, <code>else say 1</code> 8.2;
+<a href="../instructions/if.html#r-instr.if.else">rule</a>.</li>
+<li>9, WHEN or OTHERWISE outside SELECT: <code>when 1 then nop</code> 9.1, <code>otherwise nop</code>
+9.2; <a href="../instructions/select.html#r-instr.select.otherwise">rule</a>.</li>
+<li>10, END out of place: <code>end</code> 10.1, <code>do; end x</code> 10.3;
+<a href="../instructions/do.html#r-instr.do.end">rule</a>.</li>
+<li>13, foreign character: <code>say 1 #</code> 13.1, <code>x = 1 ^ 2</code> 13.1;
+<a href="../lexical/characters.html#r-lex.characters.set">rule</a>.</li>
+<li>14, block left open: <code>do; say 1</code> 14.1, <code>if 1 then do; say 2</code> 14.1,
+<code>do 1 to 2 to 3</code> 14.5; <a href="../instructions/do.html#r-instr.do.end">rule</a>.</li>
+<li>15, malformed hex or binary literal: <code>say 'zz'x</code> 15.3, <code>say '12'b</code> 15.4,
+<code>say '1 2'x</code> 15.5; <a href="../lexical/literals.html#r-lex.literals.hex.digit">rule</a>.</li>
+<li>18, IF with no THEN: <code>if 1 say 'a'</code> 18.1, <code>if 1; say 2</code> 18.1;
+<a href="../instructions/if.html#r-instr.if.syntax">rule</a>.</li>
+<li>19, missing operand: <code>call</code> 19.2, <code>signal</code> 19.4; <a href="../instructions/call.html#r-instr.call.error">rule</a>.</li>
+<li>20, wrong token in an operand: <code>drop a b 'c'</code> 20.901, <code>procedure expose 'a'</code>
+20.902, <code>parse var 'x'</code> 20.904, <code>numeric</code> 20.905, <code>drop ()</code> 20.906;
+<a href="../instructions/procedure.html#r-instr.procedure.syntax">rule</a>.</li>
+<li>21, tokens left over: <code>nop 1</code> 21.901, <code>call on error name lbl extra</code> 21.903;
+<a href="../instructions/call.html#r-instr.call.on.error">rule</a>.</li>
+<li>25, keyword not offered: <code>signal on foo</code> 25.3, <code>numeric form foo</code> 25.11,
+<code>parse foo x</code> 25.12, <code>numeric 1</code> 25.15; <a href="../instructions/numeric.html#r-instr.numeric.form.error">rule</a>.</li>
+<li>27, clashing DO parts: <code>do forever x</code> 27.901, <code>do i=1 to 2 until 1 while 1</code>
+27.1; <a href="../instructions/do.html#r-instr.do.syntax">rule</a>.</li>
+<li>30, over-long symbol: <code>x = 1</code> where <code>x</code> is a symbol of 251 characters 30.1;
+<a href="../lexical/symbols.html#r-lex.symbols.length">rule</a>.</li>
+<li>31, constant used as a variable: <code>1x = 2</code> 31.2, <code>drop 1a</code> 31.2,
+<code>parse value 'x' with .a</code> 31.3, <code>x = '1a'; drop (x)</code> 31.2;
+<a href="../lexical/symbols.html#r-lex.symbols.constant">rule</a>.</li>
+<li>35, expression that does not parse: <code>x = 1 +</code> 35.1, <code>x = * 2</code> 35.1, <code>say ()</code>
+35.1; <a href="../expressions/index.html#r-expr.index.syntax">rule</a>.</li>
+<li>36, bracket left open: <code>x = (1</code> 36.901, <code>x = a[1</code> 36.902;
+<a href="../expressions/index.html#r-expr.index.syntax">rule</a>.</li>
+<li>37, closer with no opener: <code>x = ]</code> 37.901, <code>x = (1]</code> 37.901, <code>x = 1)</code> 37.2;
+<a href="../expressions/index.html#r-expr.index.syntax">rule</a>.</li>
+<li>38, malformed template: <code>parse var x a 3 3 b b ) c</code> 38.1,
+<code>parse var x 'a' +</code> 38.901; <a href="../parsing/patterns.html#r-parse.patterns.syntax">rule</a>.</li>
+<li>46, malformed name in parentheses: <code>drop (x y</code> 46.1;
+<a href="../instructions/drop.html#r-instr.drop.syntax">rule</a>.</li>
+<li>47, label in a text that cannot hold one: <code>x: say 1</code> 47.1;
+<a href="../lexical/clauses.html#r-lex.clauses.label">rule</a>.</li>
+</ul>
+<blockquote>
+<p>The numbers 22 and 23 would apply where a string holds a byte that the
+character set cannot hold. Every string of this book may hold any of the
+256 character codes, as <a href="../conventions.html#r-conv.string.chars">the character rule</a> says, so
+this book names no clause that raises them.</p>
+</blockquote>
+<pre><code class="language-rexx">call try "say 'a"
+call try "/* open"
+call try "select; say 1; end"
+call try "select; end"
+call try "select; when 0 then nop; end"
+call try "then say 1"
+call try "else say 1"
+call try "when 1 then nop"
+call try "otherwise nop"
+call try "end"
+call try "do; end x"
+call try "say 1 #"
+call try "x = 1 ^ 2"
+call try "do; say 1"
+call try "if 1 then do; say 2"
+call try "do 1 to 2 to 3"
+call try "say 'zz'x"
+call try "say '12'b"
+call try "say '1 2'x"
+call try "if 1 say 'a'"
+call try "if 1; say 2"
+call try "call"
+call try "signal"
+call try "drop a b 'c'"
+call try "procedure expose 'a'"
+call try "parse var 'x'"
+call try "numeric"
+call try "drop ()"
+call try "nop 1"
+call try "call on error name lbl extra"
+call try "signal on foo"
+call try "numeric form foo"
+call try "parse foo x"
+call try "numeric 1"
+call try "do forever x"
+call try "do i=1 to 2 until 1 while 1"
+call try copies('a', 251) '= 1', '(251 a) = 1'
+call try "1x = 2"
+call try "drop 1a"
+call try "parse value 'x' with .a"
+call try "x = '1a'; drop (x)"
+call try "x = 1 +"
+call try "x = * 2"
+call try "say ()"
+call try "x = (1"
+call try "x = a[1"
+call try "x = ]"
+call try "x = (1]"
+call try "x = 1)"
+call try "parse var x a 3 3 b b ) c"
+call try "parse var x 'a' +"
+call try "drop (x y"
+call try "x: say 1"
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  say left(arg(1), 44) '=&gt; none'
+  return
+e: label = arg(1)
+  if arg(2, 'E') then label = arg(2)
+  say left(label, 44) condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">say 'a                                       6.2
+/* open                                      6.1
+select; say 1; end                           7.2
+select; end                                  7.1
+select; when 0 then nop; end                 7.3
+then say 1                                   8.1
+else say 1                                   8.2
+when 1 then nop                              9.1
+otherwise nop                                9.2
+end                                          10.1
+do; end x                                    10.3
+say 1 #                                      13.1
+x = 1 ^ 2                                    13.1
+do; say 1                                    14.1
+if 1 then do; say 2                          14.1
+do 1 to 2 to 3                               14.5
+say 'zz'x                                    15.3
+say '12'b                                    15.4
+say '1 2'x                                   15.5
+if 1 say 'a'                                 18.1
+if 1; say 2                                  18.1
+call                                         19.2
+signal                                       19.4
+drop a b 'c'                                 20.901
+procedure expose 'a'                         20.902
+parse var 'x'                                20.904
+numeric                                      20.905
+drop ()                                      20.906
+nop 1                                        21.901
+call on error name lbl extra                 21.903
+signal on foo                                25.3
+numeric form foo                             25.11
+parse foo x                                  25.12
+numeric 1                                    25.15
+do forever x                                 27.901
+do i=1 to 2 until 1 while 1                  27.1
+(251 a) = 1                                  30.1
+1x = 2                                       31.2
+drop 1a                                      31.2
+parse value 'x' with .a                      31.3
+x = '1a'; drop (x)                           31.2
+x = 1 +                                      35.1
+x = * 2                                      35.1
+say ()                                       35.1
+x = (1                                       36.901
+x = a[1                                      36.902
+x = ]                                        37.901
+x = (1]                                      37.901
+x = 1)                                       37.2
+parse var x a 3 3 b b ) c                    38.1
+parse var x 'a' +                            38.901
+drop (x y                                    46.1
+x: say 1                                     47.1
+</code></pre>
+<h3 id="faults-in-the-values-and-the-flow"><a class="header" href="#faults-in-the-values-and-the-flow">Faults in the values and the flow</a></h3>
+<blockquote>
+<p>These faults are found while a clause runs, because a value or the state
+of the program does not fit the clause.</p>
+</blockquote>
+<div class="rule" id="r-cond.errors.run"><a href="#r-cond.errors.run">[cond.errors.run]</a></div>
+<p>The numbers below usually name a fault that the values or the flow of control
+cause, at the clause that meets it.</p>
+<ul>
+<li>16, jump to a missing label: <code>signal nolabelhere</code> 16.1, <code>signal value 'zz'</code>
+16.1; <a href="../instructions/signal.html#r-instr.signal.label">rule</a>.</li>
+<li>17, misplaced PROCEDURE: <code>procedure</code> 17.1; <a href="../instructions/procedure.html#r-instr.procedure.first">rule</a>.</li>
+<li>24, unknown TRACE setting: <code>trace x1</code> 24.1; <a href="../instructions/trace.html#r-instr.trace.invalid">rule</a>.</li>
+<li>26, value that is no whole number: <code>numeric digits 'a'</code> 26.5,
+<code>numeric digits 0</code> 26.5, <code>numeric fuzz -1</code> 26.6, <code>x = 2 ** 1.5</code> 26.8;
+<a href="../numbers/settings.html#r-num.settings.digits">rule</a>.</li>
+<li>28, LEAVE or ITERATE with no target: <code>leave</code> 28.1, <code>iterate</code> 28.2,
+<code>leave nosuchzz</code> 28.3, <code>iterate nosuchzz</code> 28.4;
+<a href="../instructions/leave.html#r-instr.leave.target">rule</a>.</li>
+<li>29, over-long ADDRESS name: <code>address value copies('E', 1000)</code> 29.1.</li>
+<li>33, FUZZ not below DIGITS: <code>numeric digits 5; numeric fuzz 5</code> 33.1;
+<a href="../numbers/settings.html#r-num.settings.fuzz">rule</a>.</li>
+<li>34, operand that is no truth value: <code>if 'a' then say 1</code> 34.1, <code>x = 1 &amp; 'a'</code>
+34.901, <code>x = \'a'</code> 34.901; <a href="../expressions/logical.html#r-expr.logical.value">rule</a>.</li>
+<li>40, argument count or value refused: <code>x = abs()</code> 40.3, <code>x = abs(1, 2)</code> 40.4,
+<code>x = left('abc', 'q')</code> 40.12, <code>x = random(5, 1)</code> 40.33;
+<a href="../builtins/index.html#r-bif.index.call.too-few">rule</a>, <a href="../builtins/index.html#r-bif.index.call.too-many">rule</a>.</li>
+<li>41, arithmetic on a non-number: <code>x = 1 + 'a'</code> 41.1, <code>x = -'a'</code> 41.1,
+<code>x = 'a' % 2</code> 41.1; <a href="../numbers/index.html#r-num.index.use">rule</a>.</li>
+<li>42, arithmetic with no result: <code>x = 9 // 0</code> 42.3, <code>x = 1e999999999 * 10</code>
+42.901, <code>x = 1e-999999999 / 10</code> 42.902, <code>x = 0 ** -1</code> 42.903;
+<a href="../numbers/limits.html#r-num.limits.overflow">rule</a>.</li>
+<li>43, call to an unknown routine: <code>x = nosuchroutine_spec_errors()</code> 43.1,
+<code>call nosuchroutine_spec_errors</code> 43.1,
+<code>::requires 'nonexistent_spec_errors_zz.rex'</code> 43.901;
+<a href="../instructions/call.html#r-instr.call.search">rule</a>.</li>
+<li>44, call that gives no value: <code>x = nothing()</code> 44.1, <code>say nothing()</code> 44.1;
+<a href="../expressions/terms.html#r-expr.terms.call.result">rule</a>.</li>
+</ul>
+<blockquote>
+<p>The number 29 has no rule, and the length at which it is raised is not
+specified. The number 45 has no construct here: a call made for a value
+that reaches a RETURN without one raises 44, in an internal routine, a
+::ROUTINE or a program file, as <a href="../expressions/terms.html#r-expr.terms.call.result">the call rule</a>
+says.</p>
+</blockquote>
+<pre><code class="language-rexx">call try "signal nolabelhere"
+call try "signal value 'zz'"
+call try "procedure"
+call try "trace x1"
+call try "numeric digits 'a'"
+call try "numeric digits 0"
+call try "numeric fuzz -1"
+call try "x = 2 ** 1.5"
+call try "leave"
+call try "iterate"
+call try "leave nosuchzz"
+call try "iterate nosuchzz"
+call try "address value copies('E', 1000)"
+call try "numeric digits 5; numeric fuzz 5"
+call try "if 'a' then say 1"
+call try "x = 1 &amp; 'a'"
+call try "x = \'a'"
+call try "x = abs()"
+call try "x = abs(1, 2)"
+call try "x = left('abc', 'q')"
+call try "x = random(5, 1)"
+call try "x = 1 + 'a'"
+call try "x = -'a'"
+call try "x = 'a' % 2"
+call try "x = 9 // 0"
+call try "x = 1e999999999 * 10"
+call try "x = 1e-999999999 / 10"
+call try "x = 0 ** -1"
+call try "x = nosuchroutine_spec_errors()"
+call try "call nosuchroutine_spec_errors"
+call try "x = nothing()"
+call try "say nothing()"
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  say left(arg(1), 44) '=&gt; none'
+  return
+e: label = arg(1)
+  if arg(2, 'E') then label = arg(2)
+  say left(label, 44) condition('o')~code
+  return
+nothing: return
+</code></pre>
+<pre><code class="language-output">signal nolabelhere                           16.1
+signal value 'zz'                            16.1
+procedure                                    17.1
+trace x1                                     24.1
+numeric digits 'a'                           26.5
+numeric digits 0                             26.5
+numeric fuzz -1                              26.6
+x = 2 ** 1.5                                 26.8
+leave                                        28.1
+iterate                                      28.2
+leave nosuchzz                               28.3
+iterate nosuchzz                             28.4
+address value copies('E', 1000)              29.1
+numeric digits 5; numeric fuzz 5             33.1
+if 'a' then say 1                            34.1
+x = 1 &amp; 'a'                                  34.901
+x = \'a'                                     34.901
+x = abs()                                    40.3
+x = abs(1, 2)                                40.4
+x = left('abc', 'q')                         40.12
+x = random(5, 1)                             40.33
+x = 1 + 'a'                                  41.1
+x = -'a'                                     41.1
+x = 'a' % 2                                  41.1
+x = 9 // 0                                   42.3
+x = 1e999999999 * 10                         42.901
+x = 1e-999999999 / 10                        42.902
+x = 0 ** -1                                  42.903
+x = nosuchroutine_spec_errors()              43.1
+call nosuchroutine_spec_errors               43.1
+x = nothing()                                44.1
+say nothing()                                44.1
+</code></pre>
+<h3 id="faults-of-the-interpreter-and-its-services"><a class="header" href="#faults-of-the-interpreter-and-its-services">Faults of the interpreter and its services</a></h3>
+<div class="rule" id="r-cond.errors.system"><a href="#r-cond.errors.system">[cond.errors.system]</a></div>
+<p>The numbers below usually name a fault that is neither in the text nor in a
+value of the program: the interpreter that cannot start the program or go on,
+a program that is stopped, and a request to the system that fails.</p>
+<ul>
+<li>3, a program file that does not exist: 3.901, with the exit status <code>253</code>.</li>
+<li>4, a HALT that no trap answers: <code>raise halt</code> 4.1;
+<a href="halt.html#r-cond.halt.untrapped">rule</a>.</li>
+<li>11, parentheses or calls nested beyond the limit;
+<a href="../expressions/index.html#r-expr.index.nesting">rule</a>.</li>
+<li>48, a request to the system that fails: <code>call rxqueue 'Set', 'nosuchq'</code>
+followed by <code>queue 'x'</code> 48.1; <a href="../instructions/queue.html#r-instr.queue.queue">rule</a>.</li>
+</ul>
+<blockquote>
+<p>The number 3 comes before any clause runs, so no trap sees it. The numbers
+5, 39 and 49 name states that this book does not tie to a clause: how much
+a program can ask for before 5 is raised, how complex an expression can be
+before 39, and what 49 reports are not specified. A RAISE HALT is a
+deterministic way to reach 4.</p>
+</blockquote>
+<pre><code class="language-rexx">call try "call gone; queue 'x'"
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  say arg(1) '=&gt; none'
+  return
+e: say left(arg(1), 40) condition('o')~code
+  return
+gone: call rxqueue 'Set', 'spec_errors_no_such_queue'
+  return
+</code></pre>
+<pre><code class="language-output">call gone; queue 'x'                     48.1
+</code></pre>
+<pre><code class="language-rexx">signal on syntax name e
+raise halt
+say 'not reached'
+e: say condition('o')~code rc
+</code></pre>
+<pre><code class="language-output">4.1 4
+</code></pre>
+<h3 id="faults-of-messages-objects-and-directives"><a class="header" href="#faults-of-messages-objects-and-directives">Faults of messages, objects and directives</a></h3>
+<div class="rule" id="r-cond.errors.objects"><a href="#r-cond.errors.objects">[cond.errors.objects]</a></div>
+<p>The numbers from 88 up usually name faults of messages, of objects and of
+directives.</p>
+<ul>
+<li>88, argument value refused: <code>x = filespec('N')</code> 88.901,
+<code>x = .directory~new~put(1)</code> 88.901, <code>x = charin(, 0, -1)</code> 88.907;
+<a href="../builtins/index.html#r-bif.index.call.native">rule</a>.</li>
+<li>89, USE target of the wrong kind: <code>use arg a, 'b'</code> 89.1, <code>use arg (a)</code> 89.1;
+<a href="../instructions/use.html#r-instr.use.syntax">rule</a>.</li>
+<li>90, EXTERNAL entry that is not there:
+<code>::routine r external 'registered nonezz'</code> 90.999;
+<a href="../directives/routine.html#r-dir.routine.external">rule</a>.</li>
+<li>91, message term with no result: <code>say 'a' .m~new~bar 'b'</code> 91.999;
+<a href="../expressions/messages.html#r-expr.messages.cascade">rule</a>.</li>
+<li>93, argument value refused: <code>x = left('abc', -2)</code> 93.923,
+<code>x = copies('ab', -2)</code> 93.906, <code>x = 'abc'~substr(0)</code> 93.924, <code>x = d2c(-1)</code>
+93.927, <code>x = .array~new('x')</code> 93.906,
+<code>x = stream('nofile_zz', 'c', 'bogus')</code> 93.914;
+<a href="../conventions.html#r-conv.position.check">rule</a>.</li>
+<li>97, message that is not answered: <code>x = 'a'~foo</code> 97.1, <code>x = .nil~foo</code> 97.1,
+<code>.m~new~p</code> 97.2; <a href="../expressions/messages.html#r-expr.messages.name">rule</a>, <a href="../conventions.html#r-conv.string.object">rule</a>.</li>
+<li>98, fault of a running clause or directive: <code>raise propagate</code> 98.918,
+<code>::class a subclass nosuchzzclass</code> 98.909,
+<code>::routine r external 'library nonezz'</code> 98.903;
+<a href="../directives/requires.html#r-dir.requires.failure">rule</a>, <a href="../directives/options.html#r-dir.options.condition">rule</a>.</li>
+<li>99, fault in a directive or its place: <code>::routine zz</code> 99.914, <code>expose x</code>
+99.908, <code>forward to (.nil)</code> 99.923, <code>use local a</code> 99.915,
+<code>::class a (twice)</code> 99.901; <a href="../directives/class.html#r-dir.class.duplicate">rule</a>.</li>
+</ul>
+<blockquote>
+<p>The numbers 40, 88 and 93 all refuse arguments, and which of them a builtin
+or a method raises is named on its own page. The number 92 belongs to a
+platform interface that this book does not specify, so no rule or example
+raises it. The numbers 98 and 99 differ in when the fault is found: 99 is a
+fault of form found when the text is read, and 98 is a fault found when
+the clause or directive takes effect. A directive in the text of an
+INTERPRET is no directive, so it raises 99 there.</p>
+</blockquote>
+<pre><code class="language-rexx">call try "x = filespec('N')"
+call try "x = .directory~new~put(1)"
+call try "x = charin(, 0, -1)"
+call try "use arg a, 'b'"
+call try "use arg (a)"
+call try "x = left('abc', -2)"
+call try "x = copies('ab', -2)"
+call try "x = 'abc'~substr(0)"
+call try "x = d2c(-1)"
+call try "x = .array~new('x')"
+call try "x = stream('nofile_zz', 'c', 'bogus')"
+call try "x = 'a'~foo"
+call try "x = .nil~foo"
+call try "raise propagate"
+call try "::routine zz"
+call try "expose x"
+call try "forward to (.nil)"
+call try "use local a"
+exit
+try:
+  signal on syntax name e
+  interpret arg(1)
+  say left(arg(1), 44) '=&gt; none'
+  return
+e: label = arg(1)
+  if arg(2, 'E') then label = arg(2)
+  say left(label, 44) condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">x = filespec('N')                            88.901
+x = .directory~new~put(1)                    88.901
+x = charin(, 0, -1)                          88.907
+use arg a, 'b'                               89.1
+use arg (a)                                  89.1
+x = left('abc', -2)                          93.923
+x = copies('ab', -2)                         93.906
+x = 'abc'~substr(0)                          93.924
+x = d2c(-1)                                  93.927
+x = .array~new('x')                          93.906
+x = stream('nofile_zz', 'c', 'bogus')        93.914
+x = 'a'~foo                                  97.1
+x = .nil~foo                                 97.1
+raise propagate                              98.918
+::routine zz                                 99.914
+expose x                                     99.908
+forward to (.nil)                            99.923
+use local a                                  99.915
+</code></pre>
+<blockquote>
+<p>The directive constructs run as the source lines of a package, so that the
+fault is found when the package is built.</p>
+</blockquote>
+<pre><code class="language-rexx">call pk "::requires 'nonexistent_spec_errors_zz.rex'"
+call pk "::routine r external 'registered nonezz'"
+call pk "::routine r external 'library nonezz'"
+call pk "::class a subclass nosuchzzclass"
+call pk "::class a", "::class a"
+exit
+pk:
+  signal on syntax name pe
+  src = .array~new
+  do i = 1 to arg()
+    src~append(arg(i))
+  end
+  p = .package~new('n', src)
+  say arg(1) '=&gt; none'
+  return
+pe: say left(arg(1), 44) condition('o')~code
+  return
+</code></pre>
+<pre><code class="language-output">::requires 'nonexistent_spec_errors_zz.rex'  43.901
+::routine r external 'registered nonezz'     90.999
+::routine r external 'library nonezz'        98.903
+::class a subclass nosuchzzclass             98.909
+::class a                                    99.901
+</code></pre>
+<blockquote>
+<p>The numbers 91 and 97.2 need a class to hold the method, so their example
+is a program of its own.</p>
+</blockquote>
+<pre><code class="language-rexx">signal on syntax name e1
+say 'a' .m~new~bar 'b'
+e1: say condition('o')~code
+signal on syntax name e2
+.m~new~p
+e2: say condition('o')~code
+::class m
+::method bar
+  return
+::method p private
+  return
+</code></pre>
+<pre><code class="language-output">91.999
+97.2
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../conditions/user.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../builtins/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../conditions/user.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../builtins/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../assets/version-picker.js"></script>
+
+
+    </div>
+    </body>
+</html>
