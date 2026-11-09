@@ -719,7 +719,9 @@ ooRexx raises `SYNTAX 93.946` for the first and answers `.nil` for the second
 when the number is stored as a whole number, as a whole-number literal or the
 result of arithmetic is. Equal literals of a program share one stored value,
 so a quoted `'12'` behaves the same way when the literal `12` was used before
-it.
+it. The same storage shows where a string is read as text: an item of an
+`Array` whose `objectName` answers such a number is written by `makeString` as
+the digits; ooRexx writes bytes of its stored form.
 
 ## 108. A supplier that is not a Supplier
 
@@ -762,6 +764,19 @@ or their mixin classes, and not `inherit` or `uninherit`. An object given a
 method by `setMethod` sees no later change to its class or to the classes
 behind it. A class object sees no change to its metaclass or to the classes
 behind it that is made after the class itself.
+
+## 111. A REQUIRES name replaced at the first offer chooses the file
+
+A security manager is sent `requires` for a `::REQUIRES` name or a
+`loadPackage` name first with the name as it was written, and then, when
+nothing was replaced, with the full name of the file found for it. A NAME
+replaced in the information of the first message chooses the file: that file
+is loaded, and the manager is not sent a second `requires` message for it, so
+it is never asked to approve its own replacement. A NAME replaced in the
+second message chooses the file as well. ooRexx uses a replacement made at the
+first message only to look for a package that is already loaded under that
+name; otherwise it sends the second message with the full name of the file
+the program asked for, and loads that file.
 
 ## 112. Array items of a loadPackage source are read through makeString
 
@@ -820,3 +835,10 @@ instructions that read an argument array or a source through `request` with
 `Package~new` and `loadPackage`) send it `request`, so an override is used.
 ooRexx sends such an instance neither message and uses the items it holds,
 unlike the subclasses of the other collection classes.
+
+## 119. A second cancel of an Alarm sends nothing
+
+A notification target of an `Alarm` is sent `cancel` once, when the alarm is
+cancelled while it is waiting; a second `cancel` of the same alarm sends it
+nothing, as for a `Ticker`. ooRexx sends the target `cancel` once or twice for
+a second `cancel` of an `Alarm`, depending on timing.
