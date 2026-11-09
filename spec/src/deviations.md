@@ -40,7 +40,7 @@ POS past the end of the haystack: current ooRexx agrees with interrexx.
 Whether two equal strings or numbers produced separately are one object, and
 whether an operation that leaves a value unchanged answers the same object,
 is not specified; it shows only through `identityHash` and the identity
-collections. ooRexx's answers follow how each value was built. An empty
+collection `IdentityTable`. ooRexx's answers follow how each value was built. An empty
 stem's name in `USE ARG` is compared by its characters, where ooRexx
 compares identity.
 
