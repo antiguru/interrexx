@@ -84,6 +84,7 @@
   - [LOSTDIGITS](conditions/lostdigits.md)
   - [USER conditions](conditions/user.md)
   - [Error numbers](conditions/errors.md)
+- [Classes](classes/index.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
