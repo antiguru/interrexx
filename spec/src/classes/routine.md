@@ -2,7 +2,7 @@
 element: "Routine"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Routine Class; Builtin Classes > Fundamental Classes > Routine Class > new (Class Method); Builtin Classes > Fundamental Classes > Routine Class > newFile (Class Method); Builtin Classes > Fundamental Classes > Routine Class > loadExternalRoutine (Class method); Builtin Classes > Fundamental Classes > Routine Class > []; Builtin Classes > Fundamental Classes > Routine Class > annotation; Builtin Classes > Fundamental Classes > Routine Class > annotations; Builtin Classes > Fundamental Classes > Routine Class > call; Builtin Classes > Fundamental Classes > Routine Class > callWith; Builtin Classes > Fundamental Classes > Routine Class > package; Builtin Classes > Fundamental Classes > Routine Class > setSecurityManager; Builtin Classes > Fundamental Classes > Routine Class > source; The Security Manager"
-deviations: [41, 109, 115, 118]
+deviations: [41, 109, 111, 115, 118]
 ---
 
 # Routine
@@ -1188,6 +1188,12 @@ a `loadPackage` that has a source, and a `::REQUIRES` of a package that the
 code makes from a source is not offered either. A manager that answers `0`
 lets the load go on, and so does one that answers `1` and leaves `NAME` as it
 is.
+A manager that replaces `NAME` in the information of the first message and
+answers `1` chooses the file: the file of the new name is the one that is
+loaded, and no second message is sent, so the manager is never asked to
+approve its own replacement ([Deviation 111](r:class.routine.deviation.111)).
+A `NAME` replaced in the second message chooses the file as well, as the
+second example shows.
 
 ```rexx
 f = 'class_routine_requires_zq.tmp'
@@ -1257,6 +1263,45 @@ requires, absolute name: 0
 requires, answer 1: 0
 requires, answer 1: 1
 m body
+Package
+```
+
+```rexx
+call sysfiledelete 'class_routine_req2_a_zq.tmp'
+call lineout 'class_routine_req2_a_zq.tmp', 'say "a body"'
+call lineout 'class_routine_req2_a_zq.tmp'
+call sysfiledelete 'class_routine_req2_b_zq.tmp'
+call lineout 'class_routine_req2_b_zq.tmp', 'say "b body"'
+call lineout 'class_routine_req2_b_zq.tmp'
+src = 'say .package~new("class_routine_req2_a_zq.tmp")~class~id'
+r = .routine~new('agent', src)
+r~setSecurityManager(.mgr~new)
+r~call
+call sysfiledelete 'class_routine_req2_a_zq.tmp'
+call sysfiledelete 'class_routine_req2_b_zq.tmp'
+exit
+::class mgr
+::method init
+  expose count
+  count = 0
+::method call
+  return 0
+::method requires
+  expose count
+  use arg info
+  count = count + 1
+  say 'requires' count 'absolute name:' (info~name == qualify(info~name))
+  if count = 2 then do
+    info~name = qualify('class_routine_req2_b_zq.tmp')
+    return 1
+  end
+  return 0
+```
+
+```output
+requires 1 absolute name: 0
+requires 2 absolute name: 1
+b body
 Package
 ```
 
@@ -1425,4 +1470,54 @@ say r~source[1]
 ```output
 request ARRAY
 say "answered"
+```
+
+r[class.routine.deviation.111]
+A name that the manager replaces in the information of the first `requires`
+message chooses the file that is loaded, and the manager is sent no second
+message for it ([Deviation 111](../deviations.md)). ooRexx uses the new name
+only to look for a package that is already loaded under it. Otherwise it
+sends the second message with the full name of the file that the load asked
+for, and loads that file: the example, whose manager replaces the name at the
+first message, is sent two messages on ooRexx and loads `a`. No replacement,
+and a replacement at the second message, give the same result on both
+([the checkpoint rule](r:class.routine.setsecuritymanager.requires)).
+
+```rexx
+call sysfiledelete 'class_routine_dev111_a_zq.tmp'
+call lineout 'class_routine_dev111_a_zq.tmp', 'say "a body"'
+call lineout 'class_routine_dev111_a_zq.tmp'
+call sysfiledelete 'class_routine_dev111_b_zq.tmp'
+call lineout 'class_routine_dev111_b_zq.tmp', 'say "b body"'
+call lineout 'class_routine_dev111_b_zq.tmp'
+src = 'p = .package~new("p", "nop"); '
+src = src || 'say p~loadPackage("class_routine_dev111_a_zq.tmp")~class~id'
+r = .routine~new('agent', src)
+r~setSecurityManager(.mgr~new)
+r~call
+call sysfiledelete 'class_routine_dev111_a_zq.tmp'
+call sysfiledelete 'class_routine_dev111_b_zq.tmp'
+exit
+::class mgr
+::method init
+  expose count
+  count = 0
+::method call
+  return 0
+::method requires
+  expose count
+  use arg info
+  count = count + 1
+  say 'requires' count 'absolute name:' (info~name == qualify(info~name))
+  if count = 1 then do
+    info~name = 'class_routine_dev111_b_zq.tmp'
+    return 1
+  end
+  return 0
+```
+
+```output defect=#162
+requires 1 absolute name: 0
+b body
+Package
 ```
