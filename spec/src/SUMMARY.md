@@ -85,6 +85,7 @@
   - [USER conditions](conditions/user.md)
   - [Error numbers](conditions/errors.md)
 - [Classes](classes/index.md)
+  - [Method search](classes/methods.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
