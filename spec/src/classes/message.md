@@ -152,8 +152,10 @@ target raises `88.901`. The target is any object, `.nil` included. The name is
 checked next, after the target, as [the `send` rule](r:class.object.send)
 checks it: a string,
 or an array of two items, the name and a class that starts the search ([the
-scoped send rule](r:class.methods.scoped.send)). A name that is neither,
-`.nil` for instance, raises `93.972`, an array of another size `93.946`, an
+scoped send rule](r:class.methods.scoped.send)). A name that is not a
+string is read as [the `send` rule](r:class.object.send) reads it, through
+`request` with `ARRAY`; `.nil` and an object that answers `.nil` raise
+`93.972`, an array of another size `93.946`, an
 array whose first item is missing `88.901`, an array with a first item that
 has no string value `88.909` and one with a
 second item that is not a class `88.914`. The null string is a name. The
@@ -286,14 +288,18 @@ bad: say arg(1) '=>' condition('o')~code
 r[class.message.new.sends]
 `new` sends the message `request` with the argument `ARRAY` to the fourth
 argument of the option `A`, once, before it sends `init`, and uses the array
-that `request` answers. It sends no message to the target, to the name
-or to the arguments of `I`. It then sends the new object the message `init`
+that `request` answers. It sends no message to the target or to the arguments
+of `I`, and to the name only the `request` that [the Object sends
+rule](r:class.object.send.sends) states, before the option is read. It then sends the new object the message `init`
 with no argument, whatever arguments `new` had, so a subclass of `Message`
 that declares `init` sees none of them; the object that `init` runs on already
 holds its target, its name and its arguments. The answer of `init` is not
 used, and `new` answers the new object, as [the new
 rule](r:class.index.new) says for every class. `new` makes an instance of the
-class that received it, so a subclass of `Message` makes instances of itself.
+class that received it, so a subclass of `Message` makes instances of itself. A
+name that is no string is sent `request` once, at `new`; the message then holds
+the name the answer gives, and running it sends nothing more. The second
+example shows it.
 
 ```rexx
 t = .t~new
@@ -329,6 +335,28 @@ init 0 SHOW T 2
 show 2
 init 0 SHOW LOGGED 1
 no message to the target or the argument
+```
+
+```rexx
+o = .w~new
+m = .message~new(o, .duck~new, 'I', 5)
+say 'made'
+say m~send
+say m~messageName
+::class w
+::method count
+  return 'count got' arg()
+::class duck
+::method request
+  say 'duck request' arg(1)
+  return .array~of('count', .w)
+```
+
+```output defect=#149
+duck request ARRAY
+made
+count got 1
+COUNT
 ```
 
 ## Methods
@@ -1953,7 +1981,7 @@ read by its own characters, and `MAKESTRING` and `STRING` are not sent to it
 ([Deviation 109](r:class.string.deviation.109)). ooRexx sends it `request`
 with the argument `ARRAY`, as
 [the Object rule](r:class.object.deviation.109) states for `send`, and raises
-`SYNTAX 93.946`; interrexx raises `93.972`. In the example `MAKESTRING`
+`SYNTAX 93.946`. In the example `MAKESTRING`
 answers another name.
 
 ```rexx

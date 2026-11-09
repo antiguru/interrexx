@@ -647,7 +647,8 @@ in place of the one `Class` supplies, as the
 another. The one `Class` supplies is reached from it with FORWARD CLASS to
 `super`. A program that sends `new` itself gets the object that the override
 answers, whatever it is. What `subclass`, `mixinclass` and a directive make of
-the answer is stated for a class that already has a superclass by
+the answer is stated for a class that `subclass`, `mixinclass` or a `::CLASS` directive has
+already completed, or a class of the library, by
 [Deviation 32](r:class.index.deviation.32).
 
 ```rexx
@@ -923,8 +924,8 @@ r[class.index.deviation.32]
 When a class-side `new` reached through `enhanced` answers an object it did
 not build, interrexx answers that object unchanged; ooRexx marks it enhanced,
 which changes every object of its class. When a metaclass `new` answers a
-class that already has a superclass, such as `Array` or a class that
-`subclass` made, while a class with that metaclass is made, by `subclass`, by
+class that `subclass`, `mixinclass` or a `::CLASS` directive has already
+completed, or a class of the library such as `Array`, while a class with that metaclass is made, by `subclass`, by
 `mixinclass` or by a `::CLASS` directive with METACLASS, interrexx ends the
 program with exit code 120; ooRexx rewires the existing class in place, so
 that `y~id` in the first example answers `Array`. A directive is read before

@@ -1226,17 +1226,24 @@ o~send(.array~of("count", 1)) => 88.914
 
 r[class.object.send.sends]
 `send` sends a first argument that is not a string the message `request` with
-the argument `ARRAY`, once, before it checks anything else; the same holds for
-`sendWith`, `startWith` and `start`, at the call, and for the message name of
-[`Message~new`](r:class.message.new), at `new`. The answer of `request` is
-read as the previous rule says, and the second argument of `sendWith` and
-`startWith` is sent its `request` after that. A first argument that is a
-string is sent nothing. The example shows the messages for an instance of an
-`Array` subclass and for an object that is no array but answers one.
+the argument `ARRAY`; the same holds for `sendWith`, `startWith` and `start`,
+at the call, and for the message name of [`Message~new`](r:class.message.new),
+at `new`. The answer of `request` is read as the previous rule says. The order
+differs by method. `send` and `start` send `request` first. `sendWith` checks
+the number of its arguments, then sends `request` to the name, then sends
+`request` to the second argument. `startWith` checks the number of its
+arguments and that the second is there, sends `request` to the second
+argument, and then to the name, so an error in the array leaves the name
+unasked. `Message~new` sends `request` to the name after checking the target,
+before the option and its arguments are read. A first argument that is a string
+is sent nothing. The example shows the messages for an instance of an `Array`
+subclass and for an object that is no array but answers one.
 
 ```rexx
 o = .w~new
 call try 'o~sendWith(.duck~new, .logged~new)'
+call try 'o~startWith(.duck~new, .logged~new)~result'
+call try 'o~sendWith(.duck~new, .logged~new, 3)'
 call try 'o~send(.larr~of("count", .w), 9)'
 call try 'o~send(.wrong~new, 6)'
 call try 'o~send(.none~new, 6)'
@@ -1274,6 +1281,10 @@ bad: say arg(1) '=>' condition('o')~code
 duck request ARRAY
 logged request ARRAY
 o~sendWith(.duck~new, .logged~new) => count got 2
+logged request ARRAY
+duck request ARRAY
+o~startWith(.duck~new, .logged~new)~result => count got 2
+o~sendWith(.duck~new, .logged~new, 3) => 93.902
 larr request ARRAY
 o~send(.larr~of("count", .w), 9) => count got 1
 o~send(.wrong~new, 6) => 93.946
@@ -2173,8 +2184,8 @@ An object that has a method of its own from `setMethod` sees no change to its
 class or to the classes behind it that is made afterwards in ooRexx, and sees
 every change in interrexx, as
 [the Deviation 110 rule of the search page](r:class.methods.deviation.110)
-states for the objects that exist already; `unsetMethod` leaves nothing of the
-own method behind either way. In the example a `define` follows the
+states for the objects that exist already; in ooRexx the object keeps missing
+later changes after `unsetMethod` too. In the example a `define` follows the
 `setMethod`.
 
 ```rexx

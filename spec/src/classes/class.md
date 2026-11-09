@@ -1299,7 +1299,7 @@ supplier sent 0
 r[class.class.delete]
 `delete` removes the entry that the class's own table holds for a name, taken
 in upper case, whether the entry is a method or a mark that hides the name,
-and ends the hiding that `define` with `.nil` made, and answers no value. The
+and answers no value. The
 name is then looked up in the classes behind, as [the hidden-name
 rule](r:class.methods.hidden) says. A name that the table does not hold is not
 an error and changes nothing, and `delete` does not remove a method that only
@@ -1675,7 +1675,8 @@ receiver the superclass, adds the class methods, sets the package to `.nil`,
 and sends the class `init` a second time, with no argument. A class method
 `init` that the receiver declares is therefore run only by the second `init`.
 `activate` is not sent. A `new` of the metaclass that answers a class that
-already has a superclass is treated as [Deviation
+`subclass`, `mixinclass` or a `::CLASS` directive has already completed, or a
+class of the library, is treated as [Deviation
 32](r:class.class.deviation.32) states.
 
 ```rexx
@@ -1970,8 +1971,9 @@ enhanced: K
 ## Deviations
 
 r[class.class.deviation.32]
-When the `new` of a metaclass answers a class that already has a superclass,
-such as `Array` or a class that `subclass` made, while `subclass` or
+When the `new` of a metaclass answers a class that `subclass`,
+`mixinclass` or a `::CLASS` directive has already completed, or a class of the
+library such as `Array`, while `subclass` or
 `mixinclass` makes a class with that metaclass, interrexx ends the program
 with exit code 120; ooRexx rewires the existing class in place, so that `y~id`
 in the examples answers `Array`. A `::CLASS` directive with METACLASS is

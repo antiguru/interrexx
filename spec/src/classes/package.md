@@ -2171,7 +2171,8 @@ either. An instance of a subclass of `Array` is sent `request`, and what that
 sends in turn is stated by [the `request` rule](r:class.object.request.sends).
 The message is sent after the name has been read and before the source is
 translated. The example uses an instance of an `Array` subclass, an object
-that answers an array of its own, and an `Array`.
+that answers an array of its own, one that answers an instance of an `Array`
+subclass, and an `Array`.
 
 ```rexx
 p = .package~new('n', 'nop')
@@ -2179,6 +2180,8 @@ q = p~loadPackage('class_package_sends_a_zq.cls', .arr~of('nop', 'return 1'))
 say q~source~items
 q = p~loadPackage('class_package_sends_b_zq.cls', .own~new)
 say q~source[1]
+q = p~loadPackage('class_package_sends_d_zq.cls', .own2~new)
+say q~source~items
 q = p~loadPackage('class_package_sends_c_zq.cls', .array~of('nop'))
 say q~source[1]
 ::class arr subclass array
@@ -2192,14 +2195,20 @@ say q~source[1]
 ::method request
   say 'own request' arg(1)
   return .array~of('return 2')
+::class own2
+::method request
+  say 'own2 request' arg(1)
+  return .arr~of('nop', 'nop')
 ```
 
-```output
+```output defect=#151
 arr request ARRAY
 arr makearray
 2
 own request ARRAY
 return 2
+own2 request ARRAY
+2
 nop
 ```
 
@@ -2727,7 +2736,8 @@ An instance of a subclass of `String` that is the name of `new`, of
 `addRoutine`, `addPublicRoutine`, `addClass` or `addPublicClass`, or the
 source of `new`, is read by its own characters, and `MAKESTRING` and `STRING`
 are not sent to it ([Deviation 109](r:class.string.deviation.109)). ooRexx
-reads it through its `MAKESTRING` method. In the example `MAKESTRING` answers
+reads the names through their `MAKESTRING` method; the source is read as the
+instance's own characters on both. In the example `MAKESTRING` answers
 another name.
 
 ```rexx

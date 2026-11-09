@@ -216,10 +216,11 @@ Replaced by [Deviation 36](#36-strings-and-numbers-are-value-based).
 When a class-side NEW reached through `enhanced` answers an object it did
 not build, that object comes back unchanged; ooRexx marks it enhanced, which
 changes every object of its class, every String for example. A metaclass NEW
-that answers a class that already has a superclass, such as `Array` or a class
-that `subclass` made, while a class with that metaclass is made, by
-`subclass`, by `mixinclass` or by a `::CLASS` directive with METACLASS, is
-refused, exit code 120, where ooRexx rewires that class in place.
+that answers a class that `subclass`, `mixinclass` or a `::CLASS` directive has
+already completed, or a class of the library such as `Array`, while a class
+with that metaclass is made, by `subclass`, by `mixinclass` or by a `::CLASS`
+directive with METACLASS, is refused, exit code 120, where ooRexx rewires that
+class in place.
 
 ## 33. Hash iteration order
 

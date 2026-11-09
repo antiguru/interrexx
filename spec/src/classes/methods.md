@@ -591,9 +591,9 @@ collection that `defineMethods` or `enhanced` receives, and, for the object's
 own methods, `setMethod` with no method leave a mark in the table. `define`
 with `.nil` as the method hides the name as well, but the table then holds no
 entry that [`method`](r:class.class.method) could answer, as [the `define`
-rule](r:class.class.define) says. The `delete` method of `Class` ends the
-hiding that the table of the class it is sent to holds for a name, and removes
-a method of that table, and the name is then looked up in the classes behind.
+rule](r:class.class.define) says. The `delete` method of `Class` removes the
+mark or the method that the table of the class it is sent to holds for a name,
+and the name is then looked up in the classes behind.
 A name the table does not hold is left as it is; `delete` does not remove a
 method that only a class behind holds. The example hides a method that the
 superclass holds, shows that `UNKNOWN` receives the hidden name, and brings
