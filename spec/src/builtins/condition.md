@@ -314,8 +314,11 @@ options answer, and more. Its entries `CONDITION`, `DESCRIPTION` and
 when the condition carries additional information. When it carries none, as
 with NOVALUE, the directory has no `ADDITIONAL` entry, and `~additional`
 answers `.nil` as for any absent entry, which is also what `A` answers. The
-directory is not the condition itself: changing it changes nothing that
-CONDITION answers.
+directory is a new copy of the condition's entries on each call, so two calls
+answer two objects, and changing a copy changes nothing that CONDITION answers
+or that another object holds. The condition itself is the object that a CALL
+trap's routine gets as its argument, as [the argument
+rule](r:cond.information.argument) says.
 
 ```rexx
 signal on syntax name s

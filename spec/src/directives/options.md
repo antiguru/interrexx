@@ -3,6 +3,7 @@ element: "::OPTIONS"
 kind: directive
 syntax: "::OPTIONS option ..."
 rexxref: "Directives > ::OPTIONS"
+deviations: [103]
 ---
 
 # ::OPTIONS
@@ -383,7 +384,8 @@ what `TRACE()` returns when the code starts, and a TRACE instruction changes
 it for the running code only, as [the scope rule](r:instr.trace.scope) says.
 A question mark before the letter is accepted, and what interactive tracing
 does belongs to the TRACE instruction. What `TRACE()` returns when the code
-starts after a question mark with no letter after it is not specified.
+starts after a question mark with no letter after it is `?N`, as
+[the Deviation](r:dir.options.deviation.103) states.
 
 ```rexx
 call try 'o'
@@ -777,4 +779,20 @@ call sysfiledelete f
 prolog of the file x
 result answer
 prolog of the file y
+```
+
+## Deviations
+
+r[dir.options.deviation.103]
+Under `::OPTIONS TRACE ?`, the TRACE builtin answers `?N`, as after the
+instruction `trace ?` at the start of a program: the option turns interactive
+tracing on and keeps the setting. ooRexx answers the null string.
+
+```rexx
+say trace()
+::options trace ?
+```
+
+```output defect=#113
+?N
 ```

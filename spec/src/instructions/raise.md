@@ -162,10 +162,10 @@ string: the text of the literal, of the constant symbol in upper case, or of
 the value of the parenthesized expression, with no check that it is a number.
 The code is the value that `RC` has in the code that answers the condition, as
 [the rule for `RC`](r:cond.information.rc) says. The `RC` entry of the
-condition object holds the code when it is a string. When the parenthesized
-expression is an object that is not a string, the variable `RC` has its string
-value, and what the entry holds is not specified. The user conditions take a
-name, which [the name rule](r:cond.user.name) specifies. HALT, LOSTDIGITS,
+condition object holds the code itself: when the parenthesized expression is
+an object that is not a string, the entry holds that object, as it does in
+ooRexx, and the variable `RC` shows its string value. The user conditions take
+a name, which [the name rule](r:cond.user.name) specifies. HALT, LOSTDIGITS,
 NOMETHOD, NOSTRING, NOTREADY and NOVALUE take nothing, and the condition has
 the entries that [the entries rule](r:cond.information.object) lists for a
 condition that an instruction raised.
@@ -209,6 +209,26 @@ NOVALUE => NOVALUE [] 0
 ERROR 12 => ERROR [] 1
 FAILURE 13 => FAILURE [] 1
 USER plain => USER PLAIN [] 0
+```
+
+```rexx
+call on error name h
+call on failure name h
+call r1 .array~of('a', 'b')
+call r2 (3 + 4)
+exit
+h: c = condition('o')
+  say condition('c') c~rc~class
+  return
+::routine r1
+  raise error (arg(1))
+::routine r2
+  raise failure (arg(1))
+```
+
+```output defect=#124
+ERROR The Array class
+FAILURE The String class
 ```
 
 ```rexx
@@ -562,8 +582,9 @@ not depend on the order of the options: the code or the number first, then the
 DESCRIPTION expression, then the ADDITIONAL expression or the ARRAY list from
 left to right, and last the RETURN or EXIT expression. A name of a user
 condition is not evaluated. When the number of a RAISE SYNTAX is not valid,
-the error is raised as [the number rule](r:instr.raise.number) says, and
-whether the expressions after the number are evaluated first is not specified.
+the number is checked as soon as it is evaluated, and the error 33.904 of [the
+number rule](r:instr.raise.number) is raised before the DESCRIPTION,
+ADDITIONAL, ARRAY, RETURN and EXIT expressions are evaluated.
 
 ```rexx
 call on error name h
@@ -592,6 +613,21 @@ evaluate first
 evaluate second
 evaluate value
 handler USER FOO
+```
+
+```rexx
+signal on syntax name s
+raise syntax (t('abc')) description (t('text')) additional (t('extra')),
+      return (t('value'))
+s: say condition('c') condition('o')~code
+exit
+t: say 'evaluate' arg(1)
+  return arg(1)
+```
+
+```output defect=#125
+evaluate abc
+SYNTAX 33.904
 ```
 
 ## Where the condition is raised

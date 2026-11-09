@@ -54,8 +54,12 @@ condition that it answers, so `ARG()` is 1 there and `ARG(1)` is a directory
 with the entries of [the entries rule](r:cond.information.object). A SIGNAL
 trap passes no argument: `ARG()` at its label is what it is at any other place
 of the code, which is the arguments of the routine that holds the label.
-Whether a change to the directory that a handler received is seen by the
-`CONDITION` builtin is not specified.
+That directory is the condition object itself. `CONDITION('O')` answers a new
+copy of it on each call, so two calls answer two objects, none of them the
+argument. The other options of `CONDITION` read the current entries of the
+object itself, so a change that the routine makes to its argument shows in
+what they answer, and in the entries of a copy made after it. A change to a
+copy changes nothing else.
 
 ```rexx
 address system
@@ -77,6 +81,33 @@ n: say 'label' arg() arg(1) condition('c')
 ```output
 handler 1 The Directory class ERROR 3
 label 2 p NOVALUE
+```
+
+```rexx
+call on user foo name h
+call r
+say 'done'
+exit
+h: o = arg(1)
+  say 'same' (condition('o') == o) (condition('o') == condition('o'))
+  o~description = 'changed'
+  say condition('d') condition('o')~description
+  o~extra = 'x'
+  say condition('o')~extra
+  c = condition('o')
+  c~description = 'copy changed'
+  say condition('d') o~description
+  return
+::routine r
+  raise user foo description 'raised'
+```
+
+```output defect=#126
+same 0 0
+changed changed
+x
+changed changed
+done
 ```
 
 ## The condition object

@@ -3,6 +3,7 @@ element: "::METHOD"
 kind: directive
 syntax: "::METHOD name [CLASS] [PUBLIC | PRIVATE | PACKAGE] [GUARDED | UNGUARDED] [PROTECTED | UNPROTECTED] [ATTRIBUTE | ABSTRACT | EXTERNAL spec | DELEGATE var]"
 rexxref: "Directives > ::METHOD"
+deviations: [105]
 ---
 
 # ::METHOD
@@ -217,7 +218,8 @@ method of a superclass that runs with an instance of the superclass as
 `SELF` cannot send a private method of a subclass, and the same method running
 with an instance of the subclass as `SELF` can. A PACKAGE method accepts a
 message from any code of the package that declares it and from no other
-package, which raises `SYNTAX 97.3`.
+package, which raises `SYNTAX 97.3`. A message sent with START is checked as
+[a Deviation](r:dir.method.deviation.105) states.
 
 ```rexx
 a = .acct~new
@@ -696,4 +698,49 @@ The NIL object Method
 ok
 3
 ok
+```
+
+## Deviations
+
+r[dir.method.deviation.105]
+A message sent with START is checked for PRIVATE and PACKAGE access as the
+same message sent directly by the code that starts it. A method of a class
+may start a private method of its own class, and a PACKAGE method started
+from another package raises `SYNTAX 97.3`. ooRexx raises `97.2` for the first
+and `97.1` for the second.
+
+```rexx
+say .vault~new~open
+::class vault
+::method open unguarded
+  m = self~start('code')
+  return m~result
+::method code private
+  return 'private answer'
+```
+
+```output
+private answer
+```
+
+```rexx
+f = 'spec-dir-method-lib2.tmp'
+call sysfiledelete f
+call lineout f, '::class vault public'
+call lineout f, '::method code package'
+call lineout f, '  return "1234"'
+call lineout f
+src = .array~of('v = .vault~new', -
+  'signal on syntax name lost', -
+  'm = v~start("code")', -
+  'say m~result', -
+  'exit', -
+  'lost: say condition("o")~code', -
+  '::requires "'f'"')
+p = .package~new('spec-dir-method-pkg2', src)
+call sysfiledelete f
+```
+
+```output
+97.3
 ```

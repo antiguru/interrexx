@@ -3,7 +3,7 @@ element: "Condition traps"
 kind: concept
 ansi: "8.2.4, 8.4.1"
 rexxref: "Conditions and Condition Traps > Action Taken when a Condition Is Trapped"
-deviations: [64, 75]
+deviations: [64, 75, 104]
 ---
 
 # Condition traps
@@ -272,7 +272,8 @@ after the value of the RETURN is computed and before the caller goes on, and
 it sees the variables of the routine that returned. The caller then goes on
 with the clause after the CALL, or with the rest of the expression of the
 clause that invoked the routine as a function. What an EXIT inside an internal
-routine does with a pending CALL trap is not specified. The routine is the one
+routine does with a pending CALL trap is
+[a Deviation](r:cond.traps.deviation.104). The routine is the one
 that [CALL](r:instr.call.search) finds for the name of the trap, which is the
 name of the condition when there was no NAME. It gets one argument, the
 [condition object](r:cond.information.argument). The call does not change
@@ -771,4 +772,26 @@ leave h second
 enter h third
 leave h third
 main after
+```
+
+r[cond.traps.deviation.104]
+When an EXIT inside an internal routine ends the program while a CALL trap is
+pending, the routine of the trap is called before the program ends, as for an
+EXIT in the main program. ooRexx ends the program without calling it.
+
+```rexx
+call on notready name h
+say 'start'
+call r
+say 'not reached'
+exit
+r: procedure
+  exit linein('spec-cond-traps-nofile-xq7.tmp')
+h: say 'handler' condition('c')
+  return
+```
+
+```output
+start
+handler NOTREADY
 ```
