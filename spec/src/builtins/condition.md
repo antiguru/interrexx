@@ -4,6 +4,7 @@ kind: builtin
 syntax: "CONDITION([option])"
 ansi: "9.5.3"
 rexxref: "Functions > Built-in Functions > CONDITION"
+deviations: [106]
 ---
 
 # CONDITION
@@ -274,7 +275,9 @@ trap for that condition as it is now: `ON`, `OFF` or `DELAY`. A SIGNAL ON trap
 that has caught a condition is `OFF`, and a CALL ON trap is `DELAY` while its
 handler runs. The state changes with the code that follows: a SIGNAL ON or
 CALL ON instruction for the condition makes it `ON`, and a SIGNAL OFF or CALL
-OFF instruction makes it `OFF`.
+OFF instruction makes it `OFF`. A change that the routine of a CALL trap
+makes to the `CONDITION` entry of its argument does not change which trap that
+is, as [a Deviation](r:bif.condition.deviation.106) states.
 
 ```rexx
 signal on syntax name s
@@ -472,3 +475,37 @@ caller USER FOO
 > ooRexx adds `A`, `O` and `R`, and interrexx follows ooRexx. The conditions
 > chapter lists every condition, the information each carries, and the traps
 > that catch them.
+
+## Deviations
+
+r[bif.condition.deviation.106]
+In the routine of a CALL trap, the option `S` of CONDITION answers the state
+of the trap that caught the condition, also after the routine has changed the
+`CONDITION` entry of its argument. ooRexx answers the state of the trap for
+the condition that the entry names at that moment, and `OFF` when no trap has
+that name as the entry spells it.
+
+```rexx
+call on user foo name h
+call on user bar name h2
+call r
+exit
+r: raise user foo return
+h: o = arg(1)
+  say condition('s')
+  o~condition = 'USER BAR'
+  say condition('s')
+  call on user foo name h
+  say condition('s')
+  call off user foo
+  say condition('s')
+  return
+h2: return
+```
+
+```output
+DELAY
+DELAY
+ON
+OFF
+```

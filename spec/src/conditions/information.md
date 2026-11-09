@@ -59,7 +59,8 @@ directory is the condition object itself, and none of the copies that
 answers is the argument. The options `C`, `D`, `I` and `A` of `CONDITION` read
 the current entries of the object itself, so a change that the routine makes
 to its argument shows in what they answer, and in the entries of a copy made
-after it.
+after it. The option `S` reads no entry, and
+[the status rule](r:bif.condition.status) says what it answers.
 
 ```rexx
 address system

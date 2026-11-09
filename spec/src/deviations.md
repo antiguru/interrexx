@@ -696,3 +696,11 @@ start a private method of its own class, code of a package may start a PACKAGE
 method of that package, and a PACKAGE method started from another package
 raises `SYNTAX 97.3`. ooRexx raises `97.2` for every started private message
 and `97.1` for every started PACKAGE message, whichever code starts it.
+
+## 106. CONDITION('S') after a CALL trap's routine renames the condition
+
+In the routine of a CALL trap, the option `S` of CONDITION answers the state
+of the trap that caught the condition, also after the routine has changed the
+`CONDITION` entry of its argument. ooRexx answers the state of the trap for
+the condition that the entry names at that moment, and `OFF` when no trap has
+that name as the entry spells it.
