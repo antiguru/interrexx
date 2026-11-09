@@ -423,8 +423,9 @@ answer of 1 makes the argument a list that is sent `allItems`, and an answer of
 classes the object inherits: an object that inherits no mixin and answers 1 is
 read through `allItems`, and an instance of a class that inherits `Collection`
 and answers 0 is read through `makeArray`. The answer is used as a logical
-value: one that is neither 0 nor 1 raises `SYNTAX 34.901`, and `.nil` raises
-`SYNTAX 93.948`. `appendAll` does not send `isA`.
+value: a string that is neither 0 nor 1 raises `SYNTAX 34.901`, and an answer
+that is not a string, `.nil` included, raises `SYNTAX 93.948` whatever its
+string value. `appendAll` does not send `isA`.
 
 ```rexx
 a = .seq~new('a')
@@ -433,6 +434,9 @@ say a~union(.shy~new)
 signal on syntax name bad
 say a~union(.odd~new)
 bad: say condition('o')~code
+signal on syntax name bad2
+say a~union(.vague~new)
+bad2: say condition('o')~code
 ::class liar
 ::method isa
   say '  isA' arg(1)~id
@@ -456,6 +460,12 @@ bad: say condition('o')~code
 ::class odd
 ::method isa
   return 2
+::class vague
+::method isa
+  return .yes~new
+::class yes
+::method makestring
+  return 1
 ::class seq inherit orderedcollection
 ::method init
   expose a
@@ -492,6 +502,7 @@ a from allItems
   allItems
 a from allItems
 34.901
+93.948
 ```
 
 r[class.orderedcollection.operand.answer]

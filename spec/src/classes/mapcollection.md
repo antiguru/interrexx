@@ -197,10 +197,10 @@ the argument is accepted when both are 1. An argument for which `isA` answers 0,
 `dimension` answers 0; an answer that is neither 0 nor 1 raises `SYNTAX 34.901`,
 which is what a multi-dimensional array answers to `dimension`, and `.nil`
 raises `SYNTAX 97.1`. An argument that is accepted has to answer a number equal
-to 2 to both `items` and `last`, or it raises `SYNTAX 88.924`: an array with a
-hole, such as one with items at positions 1 and 3, has two items but its `last`
-is 3. An argument that is omitted and is followed by another raises
-`SYNTAX 93.903`.
+to 2 at `NUMERIC DIGITS` 9, whatever the caller's setting, to both `items` and
+`last`, or it raises `SYNTAX 88.924`: an array with a hole, such as one with
+items at positions 1 and 3, has two items but its `last` is 3. An argument that
+is omitted and is followed by another raises `SYNTAX 93.903`.
 
 ```rexx
 sparse = .array~new(3)
@@ -223,6 +223,10 @@ call try ".store~of(.pair~new(1, .nil))"
 call try ".store~of(.pair~new(1, 1, 3))"
 call try ".store~of(.pair~new(1, 1, '2.0'))"
 call try ".store~of(.array~of('a', 1), , .array~of('b', 2))"
+numeric digits 5
+call try ".store~of(.pair~new(1, 1, '2.0000001'))"
+numeric digits 12
+call try ".store~of(.pair~new(1, 1, '2.0000000001'))"
 exit
 try:
   signal on syntax name bad
@@ -290,6 +294,15 @@ bad: say arg(1) '=>' condition('o')~code
 .store~of(.pair~new(1, 1, '2.0')) => a STORE
   put 1 a
 .store~of(.array~of('a', 1), , .array~of('b', 2)) => 93.903
+  dimension
+  items
+  last
+.store~of(.pair~new(1, 1, '2.0000001')) => 88.924
+  dimension
+  items
+  last
+  put e2 e1
+.store~of(.pair~new(1, 1, '2.0000000001')) => a STORE
 ```
 
 ## Methods

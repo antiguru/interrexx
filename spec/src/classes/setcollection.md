@@ -57,11 +57,12 @@ r[class.setcollection.operand]
 Inheriting `SetCollection` does not change how an instance is read when it is
 the argument of a [set operation](r:class.collection.operand). The operations
 ask `isA` about `OrderedCollection` and `MapCollection`, and `subset` about
-`Set` as well, which inheriting `SetCollection` does not make an instance ([the
-isA rule](r:class.collection.operand.isa)), so an instance of a class that
-inherits `SetCollection` and not `MapCollection` is read like any other
-collection that is not ordered, through `makeArray`, and an instance of a class
-that inherits both is read as a map, through `supplier` or `allIndexes`.
+`Set` as well, and inheriting `SetCollection` does not make an object an
+instance of `Set` ([the isA rule](r:class.collection.operand.isa)), so an
+instance of a class that inherits `SetCollection` and not `MapCollection` is
+read like any other collection that is not ordered, through `makeArray`, and an
+instance of a class that inherits both is read as a map, through `supplier` or
+`allIndexes`.
 
 ```rexx
 a = .box~new

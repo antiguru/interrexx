@@ -946,14 +946,16 @@ difference items 3 -> BOX
 
 r[class.collection.operand.logical]
 `union`, `intersection` and `xor` use what `hasIndex` answers as a logical
-value. An answer that is neither 0 nor 1 raises `SYNTAX 34.901` from `union`,
-except `.nil`, which raises `SYNTAX 93.948` there, and `SYNTAX 34.1` from
-`intersection` and `xor`, `.nil` included, and so from `disjoint`, which reads
-its argument through `intersection`. The answer of `isA` is used in the same
-way, as [the isA rule](r:class.collection.operand.isa) says.
+value. `union` refuses an answer that is not a string, `.nil` included, with
+`SYNTAX 93.948` whatever its string value, and a string that is neither 0 nor 1
+with `SYNTAX 34.901`. `intersection` and `xor` read an answer that is not a
+string by its string value, and an answer whose value is neither 0 nor 1, `.nil`
+included, raises `SYNTAX 34.1` there, and so from `disjoint`, which reads its
+argument through `intersection`. The answer of `isA` is used in the same way, as
+[the isA rule](r:class.collection.operand.isa) says.
 
 ```rexx
-do v over .array~of('maybe', .nil)
+do v over .array~of('maybe', .nil, .yes~new)
   do op over 'union intersection xor disjoint'~makearray(' ')
     call try op, v
   end
@@ -981,6 +983,9 @@ bad: say arg(1) arg(2)~string '=>' condition('o')~code
   nop
 ::method isempty
   return 1
+::class yes
+::method makestring
+  return 1
 ```
 
 ```output
@@ -992,6 +997,10 @@ union The NIL object => 93.948
 intersection The NIL object => 34.1
 xor The NIL object => 34.1
 disjoint The NIL object => 34.1
+union a YES => 93.948
+intersection a YES => ok
+xor a YES => ok
+disjoint a YES => ok
 ```
 
 r[class.collection.operand.error]
@@ -1686,9 +1695,10 @@ answer of 1 makes the result 0, so a receiver whose entries do not override `\=`
 compares them as `=` does, where `1` and `1.0` are equal and `a` and `A` are
 not. When `isA` says that the argument is a `Set`, its entries are not compared,
 because an index and its item are the same there. The answer of that `isA` is
-used as a logical value: one that is neither 0 nor 1 raises `SYNTAX 34.901`, and
-`.nil` raises `SYNTAX 93.948`. The answer of `\=` is used as a logical value:
-what is neither 0 nor 1 raises `SYNTAX 34.6`.
+used as a logical value: a string that is neither 0 nor 1 raises
+`SYNTAX 34.901`, and an answer that is not a string, `.nil` included, raises
+`SYNTAX 93.948` whatever its string value. The answer of `\=` is used as a
+logical value: what is neither 0 nor 1 raises `SYNTAX 34.6`.
 
 ```rexx
 a = .box~new('a b')
@@ -1710,7 +1720,13 @@ bad: say condition('o')~code
 signal on syntax name bad2
 say x~subset(.setliar~new(.nil))
 bad2: say condition('o')~code
+signal on syntax name bad3
+say x~subset(.setliar~new(.yes~new))
+bad3: say condition('o')~code
 exit
+::class yes
+::method makestring
+  return 1
 ::class setliar inherit mapcollection
 ::method init
   expose answer
@@ -1783,6 +1799,7 @@ exit
 1
 0
 34.901
+93.948
 93.948
 ```
 
