@@ -1,0 +1,87 @@
+# A single program that touches most of the common statement forms at once, so
+# that a slip in how they interact shows up here and not only in the focused
+# cases. It covers: compound variables, two nested controlled loops where the
+# inner one steps by a fraction, a SELECT with an OTHERWISE and one without,
+# LEAVE and ITERATE, PARSE VALUE against column positions, PARSE VAR against a
+# variable used as the pattern, a CALL passing two expressions, TRACE VALUE and
+# ADDRESS VALUE, and SIGNAL ON NOVALUE in force for the whole of it.
+
+program
+signal on novalue
+numeric digits 9
+tr = 'N'
+trace value tr
+env = 'SYSTEM'
+address value env
+say 'address:' address()
+
+tot. = 0
+hits = 0
+do row = 1 to 4
+  do col = 0.5 to 2 by 0.5
+    if row = 3 & col = 1 then iterate col
+    if row = 4 & col > 1 then leave col
+    key = row'.'col
+    tab.key = row * col
+    tot.row = tot.row + tab.key
+    hits = hits + 1
+  end
+  say 'row' row 'total' tot.row
+end
+say 'cells' hits 'sample' tab.2.1.5 tab.1.0.5
+
+do n = -1 to 5 by 2
+  select
+    when n < 0 then kind = 'neg'
+    when n = 1 then kind = 'one'
+    when n > 3 then kind = 'big'
+    otherwise kind = 'mid'
+  end
+  say n kind
+end
+
+do n = 2 to 3
+  select
+    when n = 2 then say 'two'
+    when n = 3 then say 'three'
+  end
+end
+
+parse value 'abcdefghij' with 1 first 4 mid 7 rest
+say first'|'mid'|'rest
+pat = ','
+line = 'x,y,z'
+parse var line a (pat) b (pat) c
+say a b c
+call show 3 + 4, 'sum'
+say 'got' result
+say 'after trace:' trace()
+exit
+
+show: procedure
+parse arg v, label
+say label '=' v
+return v * 2
+
+novalue:
+say 'novalue raised for' condition('D') 'at line' sigl
+exit 1
+----
+rc> 0
+out> address: SYSTEM
+out> row 1 total 5.0
+out> row 2 total 10.0
+out> row 3 total 12.0
+out> row 4 total 6.0
+out> cells 13 sample 3.0 0.5
+out> -1 neg
+out> 1 one
+out> 3 mid
+out> 5 big
+out> two
+out> three
+out> abc|def|ghij
+out> x y z
+out> sum = 7
+out> got 14
+out> after trace: N
