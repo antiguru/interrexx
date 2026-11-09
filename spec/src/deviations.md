@@ -743,7 +743,9 @@ of a method, an operator or a builtin function, and when it is the receiver of
 the numeric methods and operators, the logical operators, `dataType` and `?`,
 and in `new`; as the receiver of the other methods, of the strict comparisons
 and of the joining operators it reads the instance's own characters, so one
-instance can answer differently to `=` and to `==`.
+instance can answer differently to `=` and to `==`. As the message name of
+`send`, `sendWith`, `start`, `startWith` or `Message~new`, ooRexx sends it
+`request('ARRAY')` instead and raises `SYNTAX 93.946`.
 
 ## 110. Instances follow every change to their class
 
