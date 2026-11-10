@@ -2,7 +2,7 @@
 element: "File"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > File Class; Builtin Classes > Utility Classes > File Class > isCaseSensitive (Class Method); Builtin Classes > Utility Classes > File Class > listRoots (Class Method); Builtin Classes > Utility Classes > File Class > pathSeparator (Class Method); Builtin Classes > Utility Classes > File Class > readChars (Class Method); Builtin Classes > Utility Classes > File Class > readLines (Class Method); Builtin Classes > Utility Classes > File Class > searchPath (Class Method); Builtin Classes > Utility Classes > File Class > separator (Class Method); Builtin Classes > Utility Classes > File Class > temporaryPath (Class Method); Builtin Classes > Utility Classes > File Class > writeChars (Class Method); Builtin Classes > Utility Classes > File Class > writeLines (Class Method); Builtin Classes > Utility Classes > File Class > absoluteFile; Builtin Classes > Utility Classes > File Class > absolutePath; Builtin Classes > Utility Classes > File Class > canRead; Builtin Classes > Utility Classes > File Class > canWrite; Builtin Classes > Utility Classes > File Class > compareTo; Builtin Classes > Utility Classes > File Class > delete; Builtin Classes > Utility Classes > File Class > exists; Builtin Classes > Utility Classes > File Class > extension; Builtin Classes > Utility Classes > File Class > hashCode; Builtin Classes > Utility Classes > File Class > init; Builtin Classes > Utility Classes > File Class > isCaseSensitive; Builtin Classes > Utility Classes > File Class > isDirectory; Builtin Classes > Utility Classes > File Class > isFile; Builtin Classes > Utility Classes > File Class > isHidden; Builtin Classes > Utility Classes > File Class > lastAccessed (Attribute); Builtin Classes > Utility Classes > File Class > lastModified (Attribute); Builtin Classes > Utility Classes > File Class > length; Builtin Classes > Utility Classes > File Class > list; Builtin Classes > Utility Classes > File Class > listFiles; Builtin Classes > Utility Classes > File Class > makeDir; Builtin Classes > Utility Classes > File Class > makeDirs; Builtin Classes > Utility Classes > File Class > makeString; Builtin Classes > Utility Classes > File Class > name; Builtin Classes > Utility Classes > File Class > parent; Builtin Classes > Utility Classes > File Class > parentFile; Builtin Classes > Utility Classes > File Class > path; Builtin Classes > Utility Classes > File Class > pathSeparator; Builtin Classes > Utility Classes > File Class > renameTo; Builtin Classes > Utility Classes > File Class > separator; Builtin Classes > Utility Classes > File Class > setReadOnly; Builtin Classes > Utility Classes > File Class > setWritable; Builtin Classes > Utility Classes > File Class > string; Builtin Classes > Utility Classes > Orderable Class > Comparison Methods"
-deviations: [34, 109]
+deviations: [34, 109, 118]
 ---
 
 # File
@@ -11,18 +11,18 @@ A `File` stands for a path to a file or to a directory. The path may name
 something that does not exist: a `File` holds only the path, and a method that
 asks about the file or changes it looks at the file system when it is called.
 The class also has methods that read and write whole files, search a list of
-directories for a file, and name the places where files live. The rules of
-this page are those of a Unix-like system, where the components of a path are
-separated by slashes, as [QUALIFY](../builtins/qualify.md) assumes; the paths
-of other systems are not specified. Nor are the choices of the file system and
-the host: whether names that differ in case are different names, the home
-directory, the temporary directory, the size of a directory, how precisely a
-file keeps its times, and what the user may do with a file that the examples
-did not make. The examples make files and directories under names of their
-own, derive every expected value from what they made, and remove what they
-made. The class inherits `Comparable` and `Orderable`, and orders its
-instances by their absolute paths; the comparison operators of an instance are
-[those of `Orderable`](r:class.orderable.compare).
+directories for a file, and name the places where files live. The rules of this
+page are those of a Unix-like system, where the components of a path are
+separated by slashes, as [QUALIFY](../builtins/qualify.md) assumes; the paths of
+other systems are not specified. Nor are the choices of the file system and the
+host: whether names that differ in case are different names, the home directory,
+the temporary directory, the size of a directory, how precisely a file keeps its
+times, and what the user may do with a file that the examples did not make. The
+examples make files and directories under names of their own, derive every
+expected value from what they made, and remove what they made. The class
+inherits [`Comparable`](r:class.comparable.creation) and `Orderable`, and orders
+its instances by their absolute paths; the comparison operators of an instance
+are [those of `Orderable`](r:class.orderable.compare).
 
 ## The class
 
@@ -158,16 +158,17 @@ dir/second
 
 r[class.file.new.sends]
 `init` sends the receiver `separator` before it forms the path, and the answer
-is the separator that it removes at the end of `path` and `dir` and puts
-between them; the number of times it is sent is not specified. A `File` given
-as `dir` is sent `isA` with the argument `.File` and, when that answers true,
-`absolutePath`, before the first `separator`; any other `dir` is read as a
-string. A `File` given as `path` is read by its `makeString`, after the first
-`separator`, and `path` is sent no `isA`. A `File` that a method of `File`
-makes, such as the answer of `absoluteFile`, is made by `new` sent to the
-class of the receiver, so these messages are sent to it too, and a subclass of
-`File` gets instances of itself. How the absolute path is made when
-`separator` answers something other than a slash is not specified.
+is the separator that it removes at the end of `path` and `dir` and puts between
+them; it is sent once when `dir` is omitted or `.nil` and three times when a
+`dir` is given. A `File` given as `dir` is sent `isA` with the argument `.File`
+and, when that answers true, `absolutePath`, before the first `separator`; any
+other `dir` is read as a string. A `File` given as `path` is read by its
+`makeString`, after the first `separator`, and `path` is sent no `isA`. A `File`
+that a method of `File` makes, such as the answer of `absoluteFile`, is made by
+`new` sent to the class of the receiver, so these messages are sent to it too,
+and a subclass of `File` gets instances of itself. The answer of `separator`
+plays no part in the absolute path, which is made as [the absolute
+rule](r:class.file.absolute) says.
 
 ```rexx
 .environment~log = .array~new
@@ -268,18 +269,14 @@ nm p/q p/q
 r[class.file.absolute]
 `absolutePath` answers the absolute path, a string, and `absoluteFile` a new
 `File` that holds it as its path. Both take no argument. The absolute path is
-worked out when the instance is made, from the current directory at that
-moment, and a later change of the current directory does not change it. It is
-the path itself when that begins with a slash, and otherwise the current
-directory, a slash and the path, and then it is cleaned up: a component that
-is a single period is removed, a repeated slash is one slash, a component `..`
-and the component before it are removed ([Deviation
-34](r:class.file.deviation.34)), a `..` at the root is dropped, and a trailing
-slash is removed unless the path is the root, which is `/`. A path that is the
-empty string has the empty string as its absolute path. What the absolute path
-of a path that begins with `~` is is not specified, but it is not the current
-directory followed by the path. A tilde anywhere else is an ordinary
-character. `absoluteFile` of an absolute `File` holds the same path.
+worked out when the instance is made, from the current directory at that moment,
+and a later change of the current directory does not change it. It is what
+[QUALIFY](r:bif.qualify.relative) answers for the path at that moment: an
+absolute path is [cleaned up](r:bif.qualify.normal) and a relative one is
+qualified against the current directory, the empty path has the empty string as
+its absolute path ([the null rule](r:bif.qualify.null)), and `..` follows
+[Deviation 34](r:class.file.deviation.34). `absoluteFile` of an absolute `File`
+holds the same path.
 
 ```rexx
 here = directory()
@@ -563,15 +560,16 @@ parent separator
 
 r[class.file.exists]
 `exists` answers 1 when something, a file or a directory, is at the absolute
-path, and 0 otherwise, also for the empty path. `isFile` answers 1 when that
-is a file and `isDirectory` when it is a directory, and each answers 0 where
+path, and 0 otherwise, also for the empty path. `isFile` answers 1 when that is
+a file and `isDirectory` when it is a directory, and each answers 0 where
 nothing is. `length` answers the size of a file in bytes, and 0 where nothing
-is; the size of a directory is not specified. `canRead` and `canWrite` answer
-1 when the file exists and the process may read it or write to it, and 0
-otherwise. `isHidden` answers 1 for an existing file or directory when its
-name or the name of one of the directories above it, the current directory
-included, starts with a period, and 0 otherwise, so 0 where nothing is. None
-of them takes an argument; one raises `SYNTAX 93.902`.
+is; the size of a directory is not specified. `canRead` and `canWrite` answer 1
+when the file exists and the process may read it or write to it, and 0
+otherwise. `isHidden` answers 1 for an existing file or directory when its name
+or the name of any directory above it in its absolute path starts with a period,
+so for a relative path the directories of the current directory count, and 0
+otherwise, so 0 where nothing is. None of them takes an argument; one raises
+`SYNTAX 93.902`.
 
 > **Note.** The example assumes that no directory above the examples' current
 > directory has a name that starts with a period, and that the user is not the
@@ -636,11 +634,12 @@ bad: return condition('o')~code
 
 r[class.file.delete]
 `delete` removes the file or the empty directory at the absolute path and
-answers 1, and answers 0 when there is nothing there, when the directory is
-not empty, when it cannot remove it, and when it is a file that the process
-may not write to, a read-only one as `setReadOnly` makes: the permissions of a
-directory do not keep it from being removed. It takes no argument; one raises
-`SYNTAX 93.902`. It sends the receiver `isDirectory`.
+answers 1, and answers 0 when there is nothing there, when the directory is not
+empty, when it cannot remove it, and when it is a file that the process may not
+write to, a read-only one as `setReadOnly` makes: the permissions of a directory
+do not keep it from being removed. It takes no argument; one raises
+`SYNTAX 93.902`. It sends the receiver `isDirectory`, and [the next
+rule](r:class.file.delete.isdirectory) says what its answer decides.
 
 ```rexx
 d = .file~new('spec-file-delete.tmp')
@@ -744,19 +743,48 @@ q makeDirs q exists q makeDir q parentFile
 p makeDirs p exists p makeDir q makeDir
 ```
 
+r[class.file.delete.isdirectory]
+When the answer of `isDirectory` that `delete` is sent is false, `delete`
+removes only a file, and a directory at the path is left, answering 0. When it
+is true, `delete` removes an empty directory or a file.
+
+```rexx
+d = 'spec-file-del-dir.tmp'
+junk = .file~new(d'/one')~makeDirs
+say .no~new(d'/one')~delete .file~new(d'/one')~exists
+call lineout d'/f', 'x'
+call lineout d'/f'
+say .yes~new(d'/f')~delete .file~new(d'/f')~exists
+junk = .file~new(d'/f')~delete
+junk = .file~new(d'/one')~delete
+junk = .file~new(d)~delete
+::class no subclass file
+::method isDirectory
+  return 0
+::class yes subclass file
+::method isDirectory
+  return 1
+```
+
+```output defect=#179
+0 1
+1 0
+```
+
 r[class.file.renameto]
 `renameTo` takes one argument, the `File` that is to take the place of the
 receiver, and moves the file or directory at the absolute path of the receiver
 to the absolute path of the argument. It answers 1 when that was done, and 0
 when it was not: when nothing is at the receiver's path, when the argument's
-parent directory is missing, or when something is at the argument's path
-already, the receiver's own path included. The receiver keeps its own path, so
+parent directory is missing, or when a file is at the argument's path already,
+the receiver's own path included, or a directory as [the next
+rule](r:class.file.renameto.directory) says. The receiver keeps its own path, so
 its `exists` answers 0 afterwards and the argument's answers 1; a directory
 takes its contents along. The argument is sent `isA` with `.File`; one that
 answers false raises `SYNTAX 88.914`, as does a string or `.nil`, and no
-argument raises `SYNTAX 93.901`, a second one `93.902`. Whether a
-directory can replace an empty directory that is at the argument's path is not
-specified.
+argument raises `SYNTAX 93.901`, a second one `93.902`. What happens when a
+directory is at the argument's path is the subject of [the next
+rule](r:class.file.renameto.directory).
 
 ```rexx
 d = 'spec-file-ren.tmp'
@@ -816,6 +844,41 @@ a~renameTo => 93.901
 a~renameTo(b, b) => 93.902
 a~renameTo(.spy~new) => 88.914
 isA File
+```
+
+r[class.file.renameto.directory]
+A directory takes the place of an empty directory that is at the argument's
+path: `renameTo` replaces it and answers 1. It answers 0, and moves nothing,
+when the directory at the argument's path is not empty, when a file is to take
+the place of a directory or a directory the place of a file, and when the
+argument's path lies inside the receiver's directory.
+
+```rexx
+d = 'spec-file-ren-dir.tmp'
+junk = .file~new(d'/from/inner')~makeDirs
+junk = .file~new(d'/empty')~makeDirs
+junk = .file~new(d'/full/x')~makeDirs
+call lineout d'/f', 'x'
+call lineout d'/f'
+say .file~new(d'/from')~renameTo(.file~new(d'/empty')),
+    .file~new(d'/from')~exists .file~new(d'/empty/inner')~exists
+say .file~new(d'/empty')~renameTo(.file~new(d'/full')),
+    .file~new(d'/f')~renameTo(.file~new(d'/full/x')),
+    .file~new(d'/full')~renameTo(.file~new(d'/f')),
+    .file~new(d'/full')~renameTo(.file~new(d'/full/x/in'))
+junk = .file~new(d'/f')~delete
+junk = .file~new(d'/full/x')~delete
+junk = .file~new(d'/full')~delete
+junk = .file~new(d'/empty/inner')~delete
+junk = .file~new(d'/empty')~delete
+junk = .file~new(d'/from/inner')~delete
+junk = .file~new(d'/from')~delete
+junk = .file~new(d)~delete
+```
+
+```output defect=#177
+1 0 1
+0 0 0 0
 ```
 
 r[class.file.permissions]
@@ -1037,15 +1100,17 @@ junk = f~delete
 
 r[class.file.list]
 `list` answers an `Array` of the names of the entries of the directory at the
-absolute path, as strings, without the entries `.` and `..`; hidden entries
-are included. The names are in no order that is specified. An empty directory
+absolute path, as strings, without the entries `.` and `..`; hidden entries are
+included. The names are in no order that is specified. An empty directory
 answers an empty array, and a path that is no directory, a file or nothing,
 answers `.nil`. `listFiles` answers an `Array` of `File` objects for the same
-entries, in the same order, and `.nil` where `list` does. It sends the
-receiver `list`, and makes each `File` by sending `new` to the class of the
-receiver, with the name of the entry as `path` and the absolute path of the
-receiver as `dir`, so the path of each is the absolute path of the directory,
-a slash and the name. Neither takes an argument; one raises `SYNTAX 93.902`.
+entries, in the same order, and `.nil` where `list` does. It sends the receiver
+`list`, and makes each `File` by sending `new` to the class of the receiver,
+with the name of the entry as `path` and the receiver itself as `dir`, which
+`init` sends `isA` and `absolutePath` ([the sends
+rule](r:class.file.new.sends)), so the path of each is the absolute path of the
+directory, a slash and the name. Neither takes an argument; one raises
+`SYNTAX 93.902`.
 
 ```rexx
 d = .file~new('spec-file-list.tmp')
@@ -1114,18 +1179,18 @@ list 4 LOGFILE
 ## Comparing files
 
 r[class.file.compareto]
-`compareTo` takes one argument and answers -1, 0 or 1 as the absolute path of
-the receiver is less than, equal to or greater than the absolute path of the
-argument. The paths are compared character by character, so that a path is
-less than a longer path that it is the start of. The argument is sent `isA`
-with `.File` first, then the receiver is sent `isCaseSensitive`, and then
-`absolutePath` is sent to the receiver and to the argument, in that order.
-When `isCaseSensitive` answers true the comparison tells upper and lower case
-letters apart. When it answers false two paths whose letters differ only in
-case are equal, and the order of the others is that of the paths with their
-letters from `a` to `z` written as capitals. What the method answers for an
-argument that is not a `File` is not specified. No argument raises
-`SYNTAX 93.901`, and a second one `93.902`. The comparison operators of a
+`compareTo`, which takes the place of [the `compareTo` of
+`Comparable`](r:class.comparable.compareto), takes one argument and answers -1,
+0 or 1 as the absolute path of the receiver is less than, equal to or greater
+than the absolute path of the argument. The paths are compared character by
+character, so that a path is less than a longer path that it is the start of.
+The argument is sent `isA` with `.File` first, then the receiver is sent
+`isCaseSensitive`, and then `absolutePath` is sent to the receiver and to the
+argument, in that order. When `isCaseSensitive` answers true the comparison
+tells upper and lower case letters apart. When it answers false two paths whose
+letters differ only in case are equal, and the order of the others is that of
+the paths with their letters from `a` to `z` written as capitals. No argument
+raises `SYNTAX 93.901`, and a second one `93.902`. The comparison operators of a
 `File` answer from `compareTo` as [those of
 `Orderable`](r:class.orderable.compare) say.
 
@@ -1182,21 +1247,20 @@ say .environment~log~toString(,' ')
 ```
 
 r[class.file.hashcode]
-`hashCode` answers a string of 8 bytes made from the absolute path, the same
-string that `hashCode` of the absolute path as a string answers, so that two
-files with the same absolute path have the same hash code, whatever the
-spelling of their paths. The hash code does not depend on `isCaseSensitive`,
-so two files that `=` finds equal when the file system ignores case can have
-different hash codes. It sends the receiver none of `absolutePath`,
-`makeString`, `path` and `string`, and it takes no argument; one raises
-`SYNTAX 93.902`. A `File` is found in a collection that looks for its index by
-`==` and `hashCode`.
+`hashCode` answers the same string that [`hashCode`](r:class.string.hashcode) of
+the absolute path answers, so that two files with the same absolute path have
+the same hash code, whatever the spelling of their paths. The hash code does not
+depend on `isCaseSensitive`, so two files that `=` finds equal when the file
+system ignores case can have different hash codes. It sends the receiver none of
+`absolutePath`, `makeString`, `path` and `string`, and it takes no argument; one
+raises `SYNTAX 93.902`. A `File` is found in a collection that looks for its
+index by `==` and `hashCode`.
 
 ```rexx
 a = .file~new('/t/a')
 b = .file~new('/t//a/')
 c = .file~new('/t/A')
-say a~hashCode~length (a~hashCode == b~hashCode) (a~hashCode == c~hashCode)
+say (a~hashCode == b~hashCode)
 say (a~hashCode == a~absolutePath~hashCode)
 x = .ci~new('/t/a')
 y = .ci~new('/t/A')
@@ -1232,7 +1296,7 @@ say '['.environment~log~toString(,' ')']'
 ```
 
 ```output
-8 1 0
+1
 1
 1 0
 2
@@ -1244,11 +1308,9 @@ found The NIL object
 r[class.file.operators]
 The eighteen comparison methods `=`, `==`, `<`, `<=`, `<<`, `<<=`, `<>`, `>`,
 `>=`, `><`, `>>`, `>>=`, `\=`, `\==`, `\<`, `\<<`, `\>` and `\>>` are those of
-[`Orderable`](r:class.orderable.compare): each sends `compareTo` to the
-receiver and answers from its answer, so for a `File` they compare absolute
-paths as [the compare rule](r:class.file.compareto) says, and a strict
-operator is not strict. A string that is compared with a `File` is not
-compared as its path, and what such an operator answers is not specified.
+[`Orderable`](r:class.orderable.compare): each sends `compareTo` to the receiver
+and answers from its answer, so for a `File` they compare absolute paths as [the
+compare rule](r:class.file.compareto) says, and a strict operator is not strict.
 
 ```rexx
 a = .file~new('/t/a')
@@ -1325,9 +1387,8 @@ Array 1 / 1
 r[class.file.temporarypath]
 `temporaryPath` answers a new `File`, made by `new` sent to the receiver, for
 the directory in which temporary files are to be put: the value of the
-environment variable `TMPDIR` when that is set, and `/tmp` when it is not.
-What the value is where `TMPDIR` is set but empty is not specified. It takes
-no argument; one raises `SYNTAX 93.902`. The example sets `TMPDIR` between
+environment variable `TMPDIR` when that is set, and `/tmp` when it is not. It
+takes no argument; one raises `SYNTAX 93.902`. The example sets `TMPDIR` between
 [SETLOCAL](../builtins/setlocal.md) and ENDLOCAL, which put it back.
 
 ```rexx
@@ -1339,6 +1400,8 @@ say t~class~id t~path,
 call value 'TMPDIR', '/spec-file/tmp//', 'ENVIRONMENT'
 say .file~temporaryPath~path
 say .sub~temporaryPath~class~id
+call value 'TMPDIR', .nil, 'ENVIRONMENT'
+say .file~temporaryPath~path
 call endlocal
 signal on syntax name bad
 say .file~temporaryPath(1)
@@ -1350,28 +1413,33 @@ bad: say condition('o')~code
 File spec-file-tmpdir.tmp 1
 /spec-file/tmp
 SUB
+/tmp
 93.902
 ```
 
 r[class.file.searchpath]
 `searchPath` takes a file `name` and an optional `path`, and answers a new
-`File`, or `.nil` when nothing is found. The `path` lists directories. A
-string `path` is cut at every `pathSeparator` of the class, which is `:` on a
-Unix-like system, and the empty pieces are dropped. Any other `path` is sent
+`File`, or `.nil` when nothing is found. The `path` lists directories. A string
+`path` is cut at every `:`, the class is sent `pathSeparator`, whose answer
+plays no part, and the empty pieces are dropped. Any other `path` is sent
 `request` with the argument `ARRAY`, and the items of the array it answers are
-the directories; an answer that is not an array raises `SYNTAX 98.913`. An
-omitted `path` stands for the directories of the environment variable `PATH`.
-The directories are tried in order, and the answer is the first one that holds
-a file of that name, as `new` of `File` with `name` as `path` and the
-directory as `dir` would make it: the class of the answer is `File`, whatever
-the class that received `searchPath`. The `name` may name a file below the
-directory, as `sub/c.txt`. A directory that holds a directory of that name
+the directories, each read as [a string argument](r:class.index.string), so a
+`.nil` item raises `SYNTAX 88.909`; an answer that is not an array raises
+`SYNTAX 98.913`. An omitted `path` stands for the directories of the environment
+variable `PATH`. The directories are tried in order, and the answer is the first
+one that holds a file of that name, as `new` of `File` with `name` as `path` and
+the directory as `dir` would make it: the class of the answer is `File`,
+whatever the class that received `searchPath`. The `name` may name a file below
+the directory, as `sub/c.txt`. A directory that holds a directory of that name
 does not count, and a `name` that has a wildcard character `*` or `?` finds
 nothing, nor does an empty `name`. No argument raises `SYNTAX 93.901` and a
-third one `93.902`. What the method answers for a relative directory, for a
-`name` that is absolute, that begins with `./` or has `..` in it, that ends in
-a slash, or that has no string value is not specified. The example gives
-absolute directories only.
+third one `93.902`. The `name` is read as [a string
+argument](r:class.index.string), so an object whose `makeString` answers a name
+is searched for by that name and `.nil` raises `SYNTAX 88.909`. A `name` that
+begins with a slash is the absolute path of the file: the answer is a `File` for
+it when the file exists, whatever the directories. A relative directory is
+relative to the current directory, and the answer holds the absolute path of the
+file it finds, as [the next rule](r:class.file.searchpath.relative) shows.
 
 ```rexx
 here = directory()
@@ -1400,6 +1468,7 @@ call show 'a.txt', ''
 call show 'a.txt', .array~new
 call show 'a.txt', 5
 call show 'a.txt', .nil
+call show 'a.txt', .array~of(.nil)
 call show 'a.txt', .object~new
 call setlocal
 call value 'PATH', d2':'d1, 'ENVIRONMENT'
@@ -1453,11 +1522,53 @@ bad2: say arg(1) '=>' condition('o')~code
 [a.txt] nil
 [a.txt] nil
 [a.txt] 98.913
+[a.txt] 88.909
 [a.txt] 98.913
 File 1
 File 1
 .file~searchPath => 93.901
 .file~searchPath("a", "b", "c") => 93.902
+```
+
+r[class.file.searchpath.relative]
+A directory of `path` that is relative is the current directory, a slash and
+the directory, and the path of the answer is then absolute. An absolute
+`name` is found whatever the directories, and a `name` that is an object is
+read by its `makeString`.
+
+```rexx
+here = directory()
+d = 'spec-file-search-rel.tmp'
+junk = .file~new(d'/sub')~makeDirs
+call lineout d'/a.txt', 'x'
+call lineout d'/a.txt'
+call show .file~searchPath('a.txt', d)
+call show .file~searchPath(here'/'d'/a.txt', here'/'d'/sub')
+call show .file~searchPath(.named~new, here'/'d)
+signal on syntax name bad
+r = .file~searchPath(.nil, here'/'d)
+say 'no error'
+signal cleanup
+bad: say condition('o')~code
+cleanup:
+junk = .file~new(d'/a.txt')~delete
+junk = .file~new(d'/sub')~delete
+junk = .file~new(d)~delete
+exit
+show:
+  if arg(1) == .nil then say 'nil'
+  else say (arg(1)~path == here'/'d'/a.txt')
+  return
+::class named
+::method makeString
+  return 'a.txt'
+```
+
+```output defect=#178
+1
+1
+1
+88.909
 ```
 
 r[class.file.readchars]
@@ -1650,7 +1761,8 @@ sent `isA` with `.OrderedCollection`; one that answers false raises
 `Table`, a `Stem` and a `MutableBuffer`. The checks are made in this order:
 the collection, the `mode`, the name, with the error of
 [`readChars`](r:class.file.readchars) for the name. The collection is then
-sent `request` with the argument `ARRAY`, and the items of the array that
+sent `request` with the argument `ARRAY`, a `List` subclass among them
+([Deviation 118](r:class.file.deviation.118)), and the items of the array that
 answers are written in order, each as its string value ([the string
 rule](r:class.index.string)); a position with no item is left out, and an
 answer that is not an array raises `SYNTAX 98.913`. An `Array`, a `List` and a
@@ -1756,9 +1868,10 @@ isA OrderedCollection
 r[class.file.deviation.34]
 In a path that holds `..`, interrexx removes the component before each one, as
 [the absolute rule](r:class.file.absolute) says, however that component was
-written. ooRexx removes two components after one that starts with a period, so
-the absolute path, the name and the parent it answers can name another place
-than the path says ([Deviation 34](r:bif.qualify.deviation.34)).
+written. ooRexx removes no component after a doubled slash and two after one
+that starts with a period, so the absolute path, the name and the parent it
+answers can name another place than the path says ([Deviation
+34](r:bif.qualify.deviation.34)).
 
 ```rexx
 say .file~new('/a/.b/../c')~absolutePath .file~new('/a/.b/../c')~name
@@ -1772,10 +1885,12 @@ say .file~new('/a/.b/../c')~parent .file~new('/a//../b')~absolutePath
 
 r[class.file.deviation.109]
 An instance of a subclass of `String` that is given as a path, a directory, a
-mode or any other string argument of `File` is read by its own characters, and
-`request`, `makeString` and `string` are not sent to it ([Deviation
-109](r:class.string.deviation.109)). ooRexx sends such an instance `request`
-with `STRING`, so an override can change what is read.
+mode or any other string argument of `File` is read by its own characters (a
+`mode` is first sent `strip`, as [the writeChars rule](r:class.file.writechars)
+says, and its answer is read so), and `request`, `makeString` and `string` are
+not sent to it ([Deviation 109](r:class.string.deviation.109)). ooRexx sends
+such an instance `request` with `STRING`, so an override can change what is
+read.
 
 ```rexx
 .environment~sent = 0
@@ -1798,4 +1913,26 @@ say 'sends' .environment~sent
 p/q p/q/a
 abc
 sends 0
+```
+
+r[class.file.deviation.118]
+An instance of a subclass of `List` that is given to `writeLines` is sent
+`request` with `ARRAY`, as [the writeLines rule](r:class.file.writelines) says
+of any collection, so an override of `makeArray` or `request` decides what is
+written ([Deviation 118](../deviations.md)). ooRexx sends such an instance
+neither message and writes the items it holds, so the example prints `one two`
+there.
+
+```rexx
+f = 'spec-file-dev118.tmp'
+.file~writeLines(f, .mine~of('one', 'two'), 'Replace')
+say .file~readLines(f)~toString(,' ')
+junk = .file~new(f)~delete
+::class mine subclass list
+::method makeArray
+  return .array~of('three')
+```
+
+```output
+three
 ```
