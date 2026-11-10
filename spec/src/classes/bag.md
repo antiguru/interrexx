@@ -540,11 +540,11 @@ for a bag it is the same question as `hasIndex`. `index(item)` looks the item up
 as an index, as [the lookup rule](r:class.bag.members.sends) says, and answers
 the stored object it finds, and `.nil` when there is none. `index` takes exactly
 one argument and `hasItem` one or two: for each, none, or an omitted first one,
-raises `SYNTAX 93.903`, and a surplus argument raises `SYNTAX 93.902`. The
-second argument of `hasItem` is an index, which may be given only as another
-name for the item; an index equal to the item gives the answer of
-`hasItem(item)`, and an unequal one answers 0 ([the deviation
-rule](r:class.bag.deviation.45)).
+raises `SYNTAX 93.903`, and a surplus argument raises `SYNTAX 93.902`; the count
+is checked first, so `index(, 1)` raises `SYNTAX 93.902`. The second argument of
+`hasItem` is an index, which may be given only as another name for the item; an
+index equal to the item gives the answer of `hasItem(item)`, and an unequal one
+answers 0 ([the deviation rule](r:class.bag.deviation.45)).
 
 ```rexx
 b = .bag~of('x', .nil, 'x')
@@ -555,6 +555,7 @@ call try 'b~index'
 call try 'b~hasItem(, 1)'
 call try 'b~hasItem(1, 1, 1)'
 call try 'b~index(1, 2)'
+call try 'b~index(, 1)'
 exit
 try:
   signal on syntax name bad
@@ -573,6 +574,7 @@ b~index => 93.903
 b~hasItem(, 1) => 93.903
 b~hasItem(1, 1, 1) => 93.902
 b~index(1, 2) => 93.902
+b~index(, 1) => 93.902
 ```
 
 r[class.bag.hasitem.sends]
@@ -1605,9 +1607,9 @@ The NIL object 1
 r[class.bag.deviation.84]
 When the `==` that `remove`, `removeItem`, `removeAll` or `allAt` sends to a
 member empties the bag, the search ends and `items` answers 0 afterwards;
-`remove` and `removeItem` answer `.nil`. ooRexx answers -1 for `remove` and
-`removeItem`, and its `removeAll` and `allAt` go on comparing with an object
-that is no stored member. See [Deviation 84](../deviations.md).
+`remove` and `removeItem` answer `.nil`. ooRexx's `items` answers -1 after
+`remove` and `removeItem`, and its `removeAll` and `allAt` go on comparing with
+an object that is no stored member. See [Deviation 84](../deviations.md).
 
 ```rexx
 b = .bag~new

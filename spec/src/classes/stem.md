@@ -622,16 +622,19 @@ or to the name of the stem when there is no default, and what that answers is
 the answer. So a stem stands for its default in an expression: `s~length`,
 `s + 1` and `s = 'abc'` are the messages `length`, `+` and `=` sent to the
 default ([the extended assignment rule](r:instr.assignment.extended.stem) shows
-the operators), and a default that does not understand the message raises
-`SYNTAX 97.1`, as does `.nil`. The message `unknown(name, arguments)` does the
-same for the message `name` and the arguments that `arguments` holds:
-`arguments` is sent `request` with `ARRAY`, and an answer that is not a
-one-dimensional array, `.nil` among them, raises `SYNTAX 98.913`; a position
-that holds nothing is an omitted argument. `name` must have a string value
-(`.nil` raises `SYNTAX 88.909`), and the message name is used as written: a name
-that is not in upper case names no method of the default, and `SYNTAX 97.1` is
-raised. An instance of a subclass of `List` given as `arguments` is sent
-`request` as any other object is ([Deviation 118](r:class.stem.deviation.118)).
+the operators); a default that does not understand the message is sent
+`unknown` by [the method search](r:class.methods.unknown), and one with no
+`unknown` method raises `SYNTAX 97.1`, as does `.nil`. The message
+`unknown(name, arguments)` does the same for the message `name` and the
+arguments that `arguments` holds: `arguments` is sent `request` with `ARRAY`,
+and an answer that is an instance of `Array`, or of a subclass of it, with one
+dimension is the array of arguments, while `.nil` and an object that is no
+collection raise `SYNTAX 98.913`; a position that holds nothing is an omitted
+argument. `name` must have a string value (`.nil` raises `SYNTAX 88.909`), and
+the message name is used as written: a name that is not in upper case names no
+method of the default, which handles it as a message it does not understand.
+An instance of a subclass of `List` given as `arguments` is sent `request` as
+any other object is ([Deviation 118](r:class.stem.deviation.118)).
 It takes exactly two arguments: fewer raises `SYNTAX 93.903` and more
 `SYNTAX 93.902`.
 
@@ -688,6 +691,25 @@ s~unknown(.nil, .array~new) => 88.909
 s~unknown("LENGTH", .nil) => 98.913
 s~unknown("LENGTH", .array~new(2, 2)) => 98.913
 u~length => 97.1
+```
+
+```rexx
+s = .stem~new('N.')
+s[] = 'abc'
+signal on syntax name bad
+say s~unknown('SUBSTR', .ans~new)
+say s~unknown('SUBSTR', .object~new)
+exit
+bad: say condition('o')~code
+::class mya subclass array
+::class ans
+::method request
+  return .mya~of(2, 1)
+```
+
+```output defect=#173
+b
+98.913
 ```
 
 ```rexx
@@ -913,10 +935,10 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 
 r[class.stem.hasitem.sends]
 `hasItem(item)`, `index(item)` and `removeItem(item)` send `==` to the argument
-with a stored item as the argument, item by item, until one answers true, and
-send nothing else, `hashCode` included. The order in which the items are
-compared is not specified ([the order rule](r:class.stem.deviation.1)), so when
-none matches every item is compared once. The search with the very object that
+with a stored item as the argument, once for each item, until one answers true,
+and send nothing else, `hashCode` included; when none matches, every item is
+compared. The order in which the items are compared is not specified ([the
+order rule](r:class.stem.deviation.1)). The search with the very object that
 is stored is no exception: its `==` is sent as for any other item ([the
 deviation rule](r:class.stem.deviation.78)). The messages sent to an index are
 those of [the tails rule](r:class.stem.tails).
@@ -973,32 +995,6 @@ say s~items s~makeArray~items
 a,b,c
 1,2,3
 3 3
-```
-
-r[class.stem.deviation.118]
-An instance of a subclass of `List` that is given to `unknown` as the array of
-arguments is sent `request` with `ARRAY`, as [the unknown
-rule](r:class.stem.unknown) says of any other object, so that an override is
-used. See [Deviation 118](../deviations.md). ooRexx sends the instance no
-`request` and uses the items it holds, so the example answers `c` on ooRexx. The
-`request` of the class `ll` answers two items.
-
-```rexx
-l = .ll~new
-l~append(3)
-l~append(1)
-s = .stem~new
-s[] = 'abc'
-say s~unknown('SUBSTR', l)
-::class ll subclass list
-::method request
-  say 'request' arg(1)
-  return .array~of(2, 1)
-```
-
-```output
-request ARRAY
-b
 ```
 
 r[class.stem.deviation.68]
@@ -1070,4 +1066,30 @@ say s~allIndexes[1] s['i'] s['other']
 ```output defect=#140
 N.
 i 5 N.other
+```
+
+r[class.stem.deviation.118]
+An instance of a subclass of `List` that is given to `unknown` as the array of
+arguments is sent `request` with `ARRAY`, as [the unknown
+rule](r:class.stem.unknown) says of any other object, so that an override is
+used. See [Deviation 118](../deviations.md). ooRexx sends the instance no
+`request` and uses the items it holds, so the example answers `c` on ooRexx. The
+`request` of the class `ll` answers two items.
+
+```rexx
+l = .ll~new
+l~append(3)
+l~append(1)
+s = .stem~new
+s[] = 'abc'
+say s~unknown('SUBSTR', l)
+::class ll subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of(2, 1)
+```
+
+```output
+request ARRAY
+b
 ```
