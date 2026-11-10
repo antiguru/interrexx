@@ -916,8 +916,10 @@ fn exempt_from_the_oracle(page: &interrexx_spec::Page, example: &interrexx_spec:
 /// `::requires "rxregexp.cls"` finds the library the way a real program does.
 fn path_with_oracle_bin(oracle: &Oracle) -> std::ffi::OsString {
     let mut dirs = vec![oracle.bin_dir().to_path_buf()];
-    if let Some(path) = std::env::var_os("PATH") {
-        dirs.extend(std::env::split_paths(&path));
+    match std::env::var_os("PATH") {
+        Some(path) => dirs.extend(std::env::split_paths(&path)),
+        // No PATH: keep the search the shell would have had without one.
+        None => dirs.extend(["/usr/bin", "/bin"].map(PathBuf::from)),
     }
     std::env::join_paths(dirs).expect("joining PATH")
 }

@@ -455,7 +455,8 @@ false the walk ends. What `index` and `item` answer becomes the elements of
 the two arrays, whatever an override answers, and those arrays are the ones
 that every later call answers. An error raised by one of these messages ends
 the method with that error: an `available` that never answers 0 makes `next`
-raise `93.937`, one that answers neither 0 nor 1 raises `34.3`, and an `item`
+raise `93.937`, one that answers anything other than the string `0` or `1`,
+even `' 1'` or `'1.0'`, raises `34.3`, and an `available`, `index` or `item`
 that answers no value raises `91.999`. The two methods send nothing to the
 arrays and nothing to the answers. A call that finds the arrays collected
 already sends the private message only, and the same messages are sent
@@ -525,6 +526,7 @@ b,c 0
 ```rexx
 call try '.stuck~new(.array~of(1), .array~of(2))~allItems'
 call try '.odd~new(.array~of(1), .array~of(2))~allItems'
+call try '.odd2~new(.array~of(1), .array~of(2))~allItems'
 call try '.noitem~new(.array~of(1), .array~of(2))~allItems'
 call try '.noitem~new(.array~of(1), .array~of(2))~allIndexes'
 exit
@@ -541,6 +543,9 @@ bad: say arg(1) '=>' condition('o')~code
 ::class odd subclass supplier
 ::method available
   return 'x'
+::class odd2 subclass supplier
+::method available
+  return ' 1'
 ::class noitem subclass supplier
 ::method item
   return
@@ -549,6 +554,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```output defect=#201
 .stuck~new(.array~of(1), .array~of(2))~allItems => 93.937
 .odd~new(.array~of(1), .array~of(2))~allItems => 34.3
+.odd2~new(.array~of(1), .array~of(2))~allItems => 34.3
 .noitem~new(.array~of(1), .array~of(2))~allItems => 91.999
 .noitem~new(.array~of(1), .array~of(2))~allIndexes => 91.999
 ```

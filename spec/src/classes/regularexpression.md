@@ -13,8 +13,10 @@ characters, a single-character wildcard, repetition, alternatives, groups and
 sets of characters. The class is not preloaded. A program makes it available
 with `::requires "rxregexp.cls"`, and the package that file names is part of
 every installation; every example on this page does so. A traceback that runs
-through that file names interrexx's own line numbers, not ooRexx's, and
-nothing else differs ([Deviation 89](r:class.regularexpression.deviation.89)).
+through that file shows interrexx's own lines of it, their numbers and their
+text, not ooRexx's, and an error the package raises may be reported from
+another clause of it or from the caller ([Deviation
+89](r:class.regularexpression.deviation.89)).
 
 The page first states the class and how a pattern is read, then the grammar
 and what it matches, and last the matching calls. Characters are bytes: the
@@ -135,11 +137,13 @@ string `88.909`. Then the number of arguments is checked, one too many raising
 the mode is checked, `93.0`, and only then the pattern, so that a bad pattern
 given to `new` raises `38.0` last. An argument that is not a string is
 converted by sending it `request` with `STRING` ([the request
-rule](r:class.object.request)), which answers what its `makeString` answers,
-or the object itself when it has no such method; when that answer is not a
-string the argument raises `SYNTAX 88.909`, and its `string` method is not
-used, unlike [the builtins](r:conv.string.object). A number is its digits, and
-an `Array` is read as its `makeString` answer.
+rule](r:class.object.request)); the `request` of `Object` answers what the
+object's `makeString` answers, and `.nil` when it has none. A string answer is
+used. An `Array` answer is read as its `makeString` answer, its items joined
+by line feeds. Any other answer, `.nil` included, raises `SYNTAX 88.909`, and
+the argument's `string` method is not used, unlike [the
+builtins](r:conv.string.object). So a number is its digits, and an `Array`
+argument is its items joined by line feeds.
 
 ```rexx
 re = .RegularExpression~new('xy')
@@ -152,6 +156,8 @@ call try "re~match(.str~new)"
 call try "re~match(.object~new)"
 call try "re~match(.mk~new)"
 say .RegularExpression~new(.array~of('a', 'b'))~match('a'||'0a'x||'b')
+say .RegularExpression~new(.mka~new)~match('a'||'0a'x||'b')
+call try "re~match(.mko~new)"
 exit
 try:
   signal on syntax name bad
@@ -166,6 +172,12 @@ bad: say arg(1) '=>' condition('o')~code
 ::class mk
 ::method makeString
   return 'xy'
+::class mka
+::method makeString
+  return .array~of('a', 'b')
+::class mko
+::method makeString
+  return .object~new
 ::requires "rxregexp.cls"
 ```
 
@@ -179,6 +191,8 @@ re~match(.str~new) => 88.909
 re~match(.object~new) => 88.909
 re~match(.mk~new) => 1
 1
+1
+re~match(.mko~new) => 88.909
 ```
 
 ```rexx
@@ -324,7 +338,8 @@ something has to follow (`(a`, `a|`, `a\`, `[`, `[a`, `[a-c`). Two kinds of
 error count differently. An error in a set other than a missing `]`, which is
 codes 3 and 6 and a `\` that ends the pattern inside a set, counts the
 characters up to and including the `[` (`[]` 1, `xy[a-]` 3, `[a\` 1,
-`xy[:foo:]` 3). An error in a count, codes 4 and 5, counts those before its
+`xy[:foo:]` 3), and so does a set that the pattern ends before its first
+member (`q[^` 2). An error in a count, codes 4 and 5, counts those before its
 `{` (`a{` 1, `xyz{3` 3, `xyz{x}` 3). The example shows it for a pattern of
 each kind.
 
@@ -334,7 +349,7 @@ patterns = .array~of('', '*', ')', '()', 'a|', '(a|)', '(a', '[', '[a', '[]')
 patterns~appendAll(.array~of('[a-]', 'a\', 'a{', 'a{3', 'a{}', 'a{1}'))
 patterns~append('a{x}')
 patterns~appendAll(.array~of('[:foo:]', '[:alpha]', 'a|*', '[a-c', 'xy[a-]'))
-patterns~appendAll(.array~of('[a\', 'xyz{3', 'xyz{x}', 'xy[:foo:]'))
+patterns~appendAll(.array~of('[a\', 'xyz{3', 'xyz{x}', 'xy[:foo:]', 'q[^'))
 do p over patterns
   say p~left(9) re~parse(p) re~position
 end
@@ -369,6 +384,7 @@ xy[a-]    3 3
 xyz{3     4 3
 xyz{x}    5 3
 xy[:foo:] 6 3
+q[^       3 2
 ```
 
 ## The pattern language
@@ -441,15 +457,15 @@ nul 1 0
 r[class.regularexpression.grammar.repeat]
 `*` after an element matches it any number of times, none included, `+` one or
 more times and `{n}` exactly `n` times. The count is read as a whole number
-from the text between the braces: blanks before it and a sign are allowed, it
-ends at the first character that is not a digit, and the text after it up to
-the `}` is ignored, so `a{2,3}` is `a{2}`. A count with no digit, or one below
-2, is error 5, and so is one too large for the pattern to be built; how large
-that is is not specified. The element may be a character, `?`, a set or a
-group, so `?*` matches any string, the empty one included, and `(ab){2}`
-matches `abab`. A group that can match the empty string, as in `(a*)`, may
-itself be repeated; [Deviation 87](r:class.regularexpression.deviation.87)
-gives examples.
+from the text between the braces: blanks and the characters `'09'x` to `'0d'x`
+before it, and a sign, are allowed, it ends at the first character that is not
+a digit, and the text after it up to the `}` is ignored, so `a{2,3}` is
+`a{2}`. A count with no digit, or one below 2, is error 5, and so is one too
+large for the pattern to be built; how large that is is not specified. The
+element may be a character, `?`, a set or a group, so `?*` matches any string,
+the empty one included, and `(ab){2}` matches `abab`. A group that can match
+the empty string, as in `(a*)`, may itself be repeated; [Deviation
+87](r:class.regularexpression.deviation.87) gives examples.
 
 ```rexx
 re = .RegularExpression~new
@@ -723,7 +739,8 @@ r[class.regularexpression.position]
 `position` answers the position that the last `parse`, `match` or `pos` left
 behind, as those rules say, and the string `!POS` before any of them ran. It
 takes no argument: any argument raises `SYNTAX 93.902`. Sending it does not
-change the position; each of the three methods replaces it.
+change the position; each of the three methods replaces it. `uninit` does not
+change what `position` answers.
 
 ```rexx
 re = .RegularExpression~new('ab')
@@ -732,6 +749,9 @@ say re~parse('abc') re~position
 say re~match('abd') re~position
 say re~pos('xabcd') re~position re~position
 call try 're~position(5)'
+gone = .RegularExpression~new('ab')
+gone~uninit
+say gone~position
 exit
 try:
   signal on syntax name bad
@@ -749,24 +769,28 @@ bad: say arg(1) '=>' condition('o')~code
 0 2
 2 4 4
 re~position(5) => 93.902
+!POS
 ```
 
 ## Deviations
 
 r[class.regularexpression.deviation.87]
-The pattern language is the one this page gives, and every call ends. ooRexx
-differs in many patterns; among them, it answers wrongly when a `+` is
-followed by a repeated element, as `c+a*`, which it does not match against
-`cca`, and when an alternative that begins with a repeated element is followed
-by another one, at the top or in a group: `b*c|a` is `b*c` or `a`, but ooRexx
-reads the second alternative as following the repeated element, so it finds
-`ba`. It does not end for a pattern that repeats a group that can match the
-empty string, such as `(a*)*`, for one that begins with a group whose first
-alternative can match the empty string and is followed by `|`, such as
-`(c*|b)|d`, and for a set with a range that ends at `'7f'x`, and it crashes on
-others, such as `(c*|b)c|d`. And for a count it cannot build, as in
-`a{99999999999}`, it uses memory until it is stopped, where interrexx answers
-code 5 from `parse`. None of the examples is run on ooRexx.
+The pattern language is the one this
+page gives, and every call ends. ooRexx differs in many patterns; among them,
+it answers wrongly when a `+` is followed by a repeated element, as `c+a*`,
+which it does not match against `cca`, and when an alternative that begins
+with a repeated element is followed by another one, at the top or in a group:
+`b*c|a` is `b*c` or `a`, but ooRexx reads the second alternative as following
+the repeated element, so it finds `ba`. It does not end for a pattern that
+repeats a group that can match the empty string, such as `(a*)*`, for one that
+begins with a group whose first alternative can match the empty string and is
+followed by `|`, such as `(c*|b)|d`, and for a set with a range whose highest
+character, in the order of [the set
+rule](r:class.regularexpression.grammar.set), is `'7f'x`, as in `[a-'7f'x]`
+and `['7f'x-'81'x]`, and it crashes on others, such as `(c*|b)c|d`. And for a
+count it cannot build, as in `a{99999999999}`, it uses memory until it is
+stopped, where interrexx answers code 5 from `parse`. None of the examples is
+run on ooRexx.
 
 ```rexx
 re = .RegularExpression~new('b*c|a')
@@ -796,10 +820,10 @@ exit
 ```
 
 r[class.regularexpression.deviation.88]
-`match` or `pos` on an expression that has never been given a pattern raises
-`SYNTAX 93.900`, and so do `match`, `pos` and `parse` sent to an expression
-after `uninit` has been sent to it; `position` then still answers `!POS`, and
-a second `uninit` answers no value. ooRexx crashes on a call of the class
+`match` or `pos` on an expression that
+has never been given a pattern raises `SYNTAX 93.900`, and so do `match`,
+`pos` and `parse` sent to an expression after `uninit` has been sent to it; a
+second `uninit` answers no value. ooRexx crashes on `match`, `pos` and `parse`
 after `uninit`. The example is not run on ooRexx.
 
 ```rexx
@@ -811,7 +835,6 @@ gone~uninit
 call try "gone~match('ab')"
 call try "gone~pos('ab')"
 call try "gone~parse('ab')"
-call try "gone~position"
 call try "gone~uninit"
 exit
 try:
@@ -830,15 +853,17 @@ re~pos('abc') => 93.900
 gone~match('ab') => 93.900
 gone~pos('ab') => 93.900
 gone~parse('ab') => 93.900
-gone~position => !POS
 gone~uninit => 91.999
 ```
 
 r[class.regularexpression.deviation.89]
-`rxregexp.cls` is written for interrexx, so a traceback that runs through it
-names interrexx's line numbers: the `position` method raises its error from a
-line that interrexx numbers 20 and ooRexx numbers 56. The example is not run
-on ooRexx.
+`rxregexp.cls` is written for
+interrexx, so a traceback that runs through it names interrexx's line numbers
+and shows interrexx's text of those lines: the `position` method raises its
+error from a line that interrexx numbers 20 and ooRexx numbers 56. An error
+that the package raises may be reported from another clause of it or from the
+caller, so that the program and position of the condition differ; its code and
+every result match ooRexx. The example is not run on ooRexx.
 
 ```rexx
 re = .RegularExpression~new('xy')
@@ -846,9 +871,14 @@ signal on syntax name bad
 re~position(1)
 bad:
 say condition('o')~traceback~firstItem~word(1)
+signal on syntax name bad2
+.RegularExpression~new('[')
+bad2:
+say condition('o')~code
 ::requires "rxregexp.cls"
 ```
 
 ```output
 20
+38.0
 ```

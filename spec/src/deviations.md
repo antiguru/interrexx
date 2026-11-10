@@ -581,16 +581,18 @@ wrongly, never terminates on some and crashes on others.
 
 ## 88. Extension calls that crash ooRexx
 
-RegularExpression `match` or `pos` with no pattern, any RegularExpression
-call after `uninit`, SysGetgrnam or SysGetgrgid of a missing group, SockSelect
-with a non-numeric entry and SysWordexp of a word list it rejects raise a
-condition. ooRexx crashes.
+RegularExpression `match` or `pos` with no pattern, and `match`, `pos` or
+`parse` after `uninit`, SysGetgrnam or SysGetgrgid of a missing group,
+SockSelect with a non-numeric entry and SysWordexp of a word list it rejects
+raise a condition. ooRexx crashes.
 
 ## 89. Line numbers of rewritten extension packages
 
 `rxregexp.cls`, `socket.cls`, `streamsocket.cls`, `mime.cls` and `smtp.cls`
 are written for interrexx, so a traceback through them names interrexx's
-line numbers. Messages, codes and results match ooRexx.
+lines of them, their numbers and text, and an error the package raises may be
+reported from another clause of it or from the caller. Codes and results match
+ooRexx.
 
 ## 90. SysWordexp is refused
 
