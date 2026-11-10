@@ -843,14 +843,28 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 r[class.stringtable.deviation.29]
 An assignment to a name that gives no value, `t~"A="()`, or the same through
 `sendWith`, is refused: interrexx ends the program with exit code 120. ooRexx
-stores an unrelated leftover object at the entry. The assignment with a value
-is [the unknown rule](r:class.stringtable.unknown). See [Deviation
-29](../deviations.md).
+stores an unrelated leftover object at the entry. A direct call of
+[`unknown`](r:class.stringtable.unknown) with a name that ends in `=` and an
+argument array that holds no item, `t~unknown('A=', .array~new(3))`, is
+refused the same way; ooRexx removes the entry, as `setEntry` with the item
+omitted does. The assignment with a value is [the unknown
+rule](r:class.stringtable.unknown). See [Deviation 29](../deviations.md).
 
 ```rexx
 say 'before'
 t = .stringtable~new
 t~"A="()
+say 'after'
+```
+
+```output rc=120
+before
+```
+
+```rexx
+say 'before'
+t = .stringtable~new
+t~unknown('A=', .array~new(3))
 say 'after'
 ```
 

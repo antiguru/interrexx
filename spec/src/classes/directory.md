@@ -631,7 +631,8 @@ when the name is read ([the read rule](r:class.directory.at)).
 have no entry; it replaces an item of that name and is not an entry of the
 directory. `setMethod` gives the directory no method of its own, unlike [the
 `setMethod` of `Object`](r:class.object.setmethod): `hasMethod` of the name
-answers 0, and a message of that name reaches
+answers what it answered before, and a message of that name runs the method of
+the directory that has the name when there is one, and otherwise reaches
 [`unknown`](r:class.directory.unknown), which runs the method with no arguments,
 whatever the message carried.
 
@@ -653,6 +654,8 @@ d~setMethod('g', .list~of('return 7'))
 say d~at('E') d~at('F') d~at('G') d~items
 d~setMethod('m', 'return "m" arg()')
 say d~hasMethod('M') d~m(1, 2) d~at('M')
+d~setMethod('items', 'return 99')
+say d~hasMethod('ITEMS') d~items d~at('ITEMS')
 call try 'd~setMethod'
 call try 'd~setMethod("x", .nil)'
 call try 'd~setMethod("x", .object~new)'
@@ -686,6 +689,7 @@ method 4
   rq request STRING
 5 req 7 5
 0 m 0 m 0
+1 7 99
 d~setMethod => 88.901
 d~setMethod("x", .nil) => 93.974
 d~setMethod("x", .object~new) => 93.974

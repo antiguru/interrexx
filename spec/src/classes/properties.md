@@ -267,7 +267,7 @@ do v over .array~of('TRUE', 'False', 'yes', '2', '-1', '00', '', ' 1')
   call try 'p~getLogical("k")', '['v']'
 end
 p~setEntry('k', .text~new('true'))
-call try 'p~getLogical("k")', 'object'
+call try 'p~getLogical("K")', 'object'
 call try 'p~getLogical("zz")', 'missing'
 call try 'p~getLogical("zz", "junk")', 'default junk'
 call try 'p~getLogical("zz", .nil)', 'default nil'
@@ -986,10 +986,11 @@ x = a~name => unknown 2:NAME
 ## Deviations
 
 r[class.properties.deviation.29]
-An assignment through `unknown` that gives no value is refused as it is for a
-directory ([the Directory rule](r:class.directory.deviation.29)): interrexx
-ends the program with exit code 120, and ooRexx stores an unrelated leftover
-object. See [Deviation 29](../deviations.md).
+An assignment through `unknown` that gives no value, by message or by a direct
+call, is refused as it is for a directory ([the Directory
+rule](r:class.directory.deviation.29)): interrexx ends the program with exit
+code 120, and ooRexx stores an unrelated leftover object for the message and
+removes the entry for the direct call. See [Deviation 29](../deviations.md).
 
 ```rexx
 say 'before'
@@ -1036,25 +1037,26 @@ one=1|three=3|two=2
 
 r[class.properties.deviation.109]
 A value that is an instance of a subclass of `String` is read by its own
-characters by `put`, `[]=`, `setProperty` and `setWhole`, and `REQUEST` and
-`MAKESTRING` are not sent to it ([Deviation
+characters by `put`, `[]=`, `setProperty`, `setLogical` and `setWhole`, and
+`REQUEST` and `MAKESTRING` are not sent to it ([Deviation
 109](r:class.string.deviation.109)); a name is read as [a directory reads
 it](r:class.directory.deviation.109). ooRexx sends such a value `request`
 with `STRING` or `MAKESTRING`, so an override of either changes the text that
-is stored, and `setWhole` raises `SYNTAX 93.905` when that text is not a
-whole number. In the example `MAKESTRING` answers another text.
+is stored, and can make `setLogical` raise `SYNTAX 34.1` and `setWhole` raise
+`SYNTAX 93.905`. In the example `MAKESTRING` answers another text.
 
 ```rexx
 p = .properties~new
 p~put(.sub~new('abc'), 'k')
 p~setProperty('k2', .sub~new('def'))
 p~setWhole('w', .sub~new('12'))
-say p['k'] p['k2'] p['w']
+p~setLogical('l', .sub~new('1'))
+say p['k'] p['k2'] p['w'] p['l']
 ::class sub subclass string
 ::method makestring
   return 'other'
 ```
 
 ```output defect=#140
-abc def 12
+abc def 12 true
 ```
