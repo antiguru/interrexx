@@ -62,13 +62,14 @@ List 8 1 0
 
 r[class.list.new]
 `new` makes an empty list. Its optional argument is a hint for how large the
-list will grow and changes nothing the program can see; it is read as [the
-index rule](r:class.list.indexes) reads an index and must be a whole number
-that is not negative, or `SYNTAX 93.923` is raised. A second argument
-raises `SYNTAX 93.902`, and omitted arguments at the end count for nothing.
-`new` sends `init` to the new object with the arguments it received, so a
-subclass's `init` sees the hint, unlike the `init` of an array ([the new
-rule](r:class.index.new)).
+list will grow and changes nothing the program can see; it is read from its
+string value as a whole-number argument of a builtin is ([the conversion
+rule](r:conv.string.object), [the form rule](r:conv.whole.form), [the digits
+rule](r:conv.whole.digits)), and a value that those rules refuse, or a negative
+one, raises `SYNTAX 93.923`. A second argument raises `SYNTAX 93.902`, and
+omitted arguments at the end count for nothing. `new` sends `init` to the new
+object with the arguments it received, so a subclass's `init` sees the hint,
+unlike the `init` of an array ([the new rule](r:class.index.new)).
 
 ```rexx
 l = .list~new
@@ -167,36 +168,32 @@ An index of a list is a handle: the list hands one out when it creates an entry
 (`append`, `insert`) and answers it again as it walks the entries (`first`,
 `last`, `next`, `previous`, `index`, `allIndexes`, `supplier`). The handle names
 that entry for as long as the entry is in the list, whatever is inserted or
-removed around it. The page does not say which values a list hands out, in which
-order, or whether it hands out again the handle of an entry that was removed,
-and it says nothing of the handles of a list after `empty`, or of a `copy`. A
-program uses the handles that the list it asks has answered, and two handles are
-told apart by `==`. A method that takes an index reads it from its string value
-([the conversion rule](r:conv.string.object)) as a whole-number argument of a
-builtin is ([the form rule](r:conv.whole.form),
-[the digits rule](r:conv.whole.digits)): the handle with blanks around it or
-with `.0` after it names the same entry, NUMERIC DIGITS plays no part, and
-anything that is not a whole number of 0 or more, `.nil` included, or that those
-rules refuse, raises `SYNTAX 93.918`. A handle whose entry is not in the list,
-for instance one that was just removed, is not an error for the methods that
-look entries up: `at`, `next`, `previous`, `delete` and `remove` answer `.nil`
-and `hasIndex` answers 0; the methods that must have an entry, `put`, `insert`
-and `section`, raise `SYNTAX 93.918`.
+removed around it. The page does not say what a handle is made of, which values
+a list hands out, in which order, or whether it hands out again the handle of an
+entry that was removed, and it says nothing of the handles of a list after
+`empty`, or of a `copy`. A program uses the handles that the list it asks has
+answered, and two handles are told apart by `==`. A handle whose entry is not in
+the list, for instance one that was just removed, is not an error for the
+methods that look entries up: `at`, `next`, `previous`, `delete` and `remove`
+answer `.nil` and `hasIndex` answers 0. The methods that must have an entry,
+`put`, `insert` and `section`, raise `SYNTAX 93.918` for any value that is not
+the handle of an entry of the list. Given to a method that looks entries up, a
+value that the list did not hand out either raises an error or is taken as a
+handle whose entry is not in the list; the page does not say which. `.nil` and
+the string `x` are no handle at all: every method that takes an index raises
+`SYNTAX 93.918` for them, except that `insert` takes `.nil` to mean the front of
+the list ([the insert rule](r:class.list.insert)).
 
 ```rexx
 l = .list~new
 a = l~append('a'); b = l~append('b'); c = l~append('c')
 say l~at(a) l~at(b) l~at(c) (a \== b) (b \== c) (a \== c)
-say l~at(' ' || b || ' ') l~at(b || '.0')
 m = .list~of('p', 'q')
 gone = m~first
 m~remove(gone)
 say (m~at(gone) == .nil) m~hasIndex(gone) m~hasIndex(m~first)
-call try 'm~at(-1)'
 call try 'm~at("x")'
-call try 'm~at(1.5)'
 call try 'm~at(.nil)'
-call try 'm~at(1000000000000000000)'
 call try 'm~put("t", gone)'
 call try 'm~insert("t", gone)'
 call try 'm~section(gone)'
@@ -212,13 +209,9 @@ bad: say arg(1) '=>' condition('o')~code
 
 ```output
 a b c 1 1 1
-b b
 1 0 1
-m~at(-1) => 93.918
 m~at("x") => 93.918
-m~at(1.5) => 93.918
 m~at(.nil) => 93.918
-m~at(1000000000000000000) => 93.918
 m~put("t", gone) => 93.918
 m~insert("t", gone) => 93.918
 m~section(gone) => 93.918
@@ -271,21 +264,22 @@ at override bracket override
 ```
 
 r[class.list.put]
-`put(item, index)` replaces the item of the entry with that index and answers
-no value; the order of the list and the indexes do not change. `l[i] = v` is
-the message `[]=` and the same as `put`. The index must name an entry, or
-`SYNTAX 93.918` is raised, as for any index that is not a whole number of 0 or
-more ([the index rule](r:class.list.indexes)). The method takes two arguments:
-fewer, or an omitted index, raise `SYNTAX 93.903`, and a third raises
-`SYNTAX 93.902`. A `put` of a subclass is not asked for `[]=`, nor the other
-way round.
+`put(item, index)` replaces the item of the entry with that index and answers no
+value; the order of the list and the indexes do not change. `l[i] = v` is the
+message `[]=` and the same as `put`. The index must be the handle of an entry of
+the list, or `SYNTAX 93.918` is raised ([the index rule](r:class.list.indexes)).
+The method takes two arguments: fewer, or an omitted index, raise `SYNTAX
+93.903`, and a third raises `SYNTAX 93.902`. A `put` of a subclass is not asked
+for `[]=`, nor the other way round.
 
 ```rexx
 l = .list~of('a', 'b', 'c')
 h = l~allIndexes
 l~put('B', h[2])
 l[h[3]] = 'C'
-say l~allItems~makeString('L', ',') (l~allIndexes~makeString('L', ',') == h~makeString('L', ','))
+g = l~allIndexes
+say l~allItems~makeString('L', ',') (g[1] == h[1]) (g[2] == h[2]),
+  (g[3] == h[3])
 gone = h[1]
 l~remove(gone)
 call try 'l~put("x", gone)'
@@ -304,7 +298,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-a,B,C 1
+a,B,C 1 1 1
 l~put("x", gone) => 93.918
 l~put("x", .nil) => 93.918
 l~put("x") => 93.903
@@ -396,8 +390,9 @@ with that index out of the list and answer its item, and answer `.nil` and
 change nothing when no entry has the index. The index of the removed entry names
 no entry afterwards ([the index rule](r:class.list.indexes)), and the indexes of
 the other entries do not change. The methods take exactly one argument: none
-raises `SYNTAX 93.903` and a second raises `SYNTAX 93.902`. An index that is not
-a whole number of 0 or more raises `SYNTAX 93.918`.
+raises `SYNTAX 93.903` and a second raises `SYNTAX 93.902`. A value that is not
+a handle is treated as [the index rule](r:class.list.indexes) says: `.nil` and
+`x` raise `SYNTAX 93.918`.
 
 ```rexx
 l = .list~of('a', 'b', 'c')
@@ -409,7 +404,6 @@ call try 'l~delete'
 call try 'l~remove(h[3], 2)'
 call try 'l~delete(.nil)'
 call try 'l~remove("x")'
-call try 'l~remove(-1)'
 exit
 try:
   signal on syntax name bad
@@ -428,7 +422,6 @@ l~delete => 93.903
 l~remove(h[3], 2) => 93.902
 l~delete(.nil) => 93.918
 l~remove("x") => 93.918
-l~remove(-1) => 93.918
 ```
 
 r[class.list.removeitem]
@@ -500,19 +493,19 @@ q 2
 
 r[class.list.hasindex]
 `hasIndex(index)` answers 1 when an entry has that index and 0 when none has,
-including a valid index that no entry has. The method takes exactly one
-argument: none raises `SYNTAX 93.903` and a second raises `SYNTAX 93.902`. An
-index that is not a whole number of 0 or more raises `SYNTAX 93.918` ([the
-index rule](r:class.list.indexes)).
+including a handle whose entry is not in the list. The method takes exactly one
+argument: none raises `SYNTAX 93.903` and a second raises `SYNTAX 93.902`. A
+value that is not a handle is treated as [the index rule](r:class.list.indexes)
+says: `.nil` and `x` raise `SYNTAX 93.918`.
 
 ```rexx
 l = .list~of('a', 'b')
 h = l~allIndexes
 l~remove(h[1])
-say l~hasIndex(h[1]) l~hasIndex(h[2]) l~hasIndex(' ' || h[2] || ' ')
+say l~hasIndex(h[1]) l~hasIndex(h[2])
 call try 'l~hasIndex'
 call try 'l~hasIndex(h[2], 1)'
-call try 'l~hasIndex(-1)'
+call try 'l~hasIndex("x")'
 call try 'l~hasIndex(.nil)'
 exit
 try:
@@ -525,10 +518,10 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-0 1 1
+0 1
 l~hasIndex => 93.903
 l~hasIndex(h[2], 1) => 93.902
-l~hasIndex(-1) => 93.918
+l~hasIndex("x") => 93.918
 l~hasIndex(.nil) => 93.918
 ```
 
@@ -630,10 +623,10 @@ l~lastItem(1) => 93.902
 r[class.list.next]
 `next(index)` answers the index of the entry after the one with that index, in
 list order, and `previous(index)` the one before it; both answer `.nil` at the
-end or beginning of the list, and for a valid index that no entry has. The
-methods take exactly one argument: none raises `SYNTAX 93.903` and a second
-raises `SYNTAX 93.902`. An index that is not a whole number of 0 or more
-raises `SYNTAX 93.918`.
+end or beginning of the list, and for a handle whose entry is not in the list.
+The methods take exactly one argument: none raises `SYNTAX 93.903` and a second
+raises `SYNTAX 93.902`. A value that is not a handle is treated as [the index
+rule](r:class.list.indexes) says: `.nil` and `x` raise `SYNTAX 93.918`.
 
 ```rexx
 l = .list~of('a', 'b', 'c')
@@ -645,7 +638,7 @@ l~remove(h[2])
 say (l~next(h[2]) == .nil) (l~previous(h[2]) == .nil)
 call try 'l~next'
 call try 'l~previous(h[1], 1)'
-call try 'l~next(-1)'
+call try 'l~next("x")'
 call try 'l~previous(.nil)'
 exit
 try:
@@ -663,7 +656,7 @@ c b x 1
 1 1
 l~next => 93.903
 l~previous(h[1], 1) => 93.902
-l~next(-1) => 93.918
+l~next("x") => 93.918
 l~previous(.nil) => 93.918
 ```
 
@@ -708,19 +701,18 @@ l~empty(1) => 93.902
 ## Taking part of a list
 
 r[class.list.section]
-`section(start, count)` answers a new `List` that holds the entries from the
-one with index `start` on, in list order: `count` of them, or all of them up
-to the end when `count` is omitted or runs past the end. A `count` of 0 gives
-an empty list. The new list has entries and handles of its own ([the index
-rule](r:class.list.indexes)), the items are the receiver's own objects, and
-the receiver is not changed. The `start` must name an entry,
-or `SYNTAX 93.918` is raised, as for any index that is not a whole number of 0
-or more; the `count`, read as [the index rule](r:class.list.indexes) reads an
-index,
-must be a whole number that is not negative, or `SYNTAX 93.923`. No `start`, or
-an omitted one, raises `SYNTAX 93.903`, and a
-third argument `SYNTAX 93.902`. The answer is an instance of `List`, whatever
-the class of the receiver is, and no `new` or `init` is sent for it.
+`section(start, count)` answers a new `List` that holds the entries from the one
+with index `start` on, in list order: `count` of them, or all of them up to the
+end when `count` is omitted or runs past the end. A `count` of 0 gives an empty
+list. The new list has entries and handles of its own ([the index
+rule](r:class.list.indexes)), the items are the receiver's own objects, and the
+receiver is not changed. The `start` must be the handle of an entry of the list,
+or `SYNTAX 93.918` is raised; the `count` is read as the hint of [the new
+rule](r:class.list.new) is, and a value that those rules refuse, or a negative
+one, raises `SYNTAX 93.923`. No `start`, or an omitted one, raises `SYNTAX
+93.903`, and a third argument `SYNTAX 93.902`. The answer is an instance of
+`List`, whatever the class of the receiver is, and no `new` or `init` is sent
+for it.
 
 ```rexx
 l = .list~of('a', 'b', 'c', 'd')
@@ -938,7 +930,7 @@ l = .list~of('c', 'a', 'b')
 first = l~first
 h = l~allIndexes
 say (l~sort == l) l~allItems~makeString('L', ',')
-say (l~allIndexes~makeString('L', ',') == h~makeString('L', ','))
+g = l~allIndexes; say (g[1] == h[1]) (g[2] == h[2]) (g[3] == h[3])
 say l~at(first) l~sortWith(.desc~new)~allItems~makeString('L', ',')
 say .list~new~sort~items .list~of('z')~sortWith('x')~items
 call try 'l~sort(1)'
@@ -962,7 +954,7 @@ bad: say arg(1) '=>' condition('o')~code
 
 ```output
 1 a,b,c
-1
+1 1 1
 a c,b,a
 0 1
 l~sort(1) => 93.902

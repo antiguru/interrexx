@@ -1403,8 +1403,8 @@ r[class.set.deviation.125]
 An answer of `allItems` or `makeArray` that is a `List` gives its items in list
 order, as [the list rule](r:class.set.operand.list) says, for `putAll`,
 `union`, `intersection`, `xor` and `subset`. ooRexx reads it by the positions 1
-up to its number of items, so the item at the list's first index is missed and
-`.nil` is a member.
+up to its number of items, so in the example an item is missed and `.nil` is a
+member.
 
 ```rexx
 s = .set~new

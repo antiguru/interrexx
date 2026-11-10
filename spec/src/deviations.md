@@ -874,17 +874,15 @@ answers 2,2.
 
 `put` of a `Queue` or a `CircularQueue` with an index above the number of
 items raises `SYNTAX 93.966` however far above it the index is, and the queue
-keeps its items. ooRexx raises `93.966` or `93.918` according to the storage the queue
-holds beyond its items, which its earlier history decides.
+keeps its items. ooRexx raises `93.966` or `93.918` according to the storage
+the queue holds beyond its items, which its earlier history decides.
 
 ## 122. A right operand that is not a string is read once
 
 A comparison operator, and the method of the same name, converts a right
-operand that is not a string once, and `Properties~getWhole` sends `request`
-once to a stored value or a default that is not a string. ooRexx converts the
-right operand twice for the normal comparisons `=`, `\=`, `<>`, `><`, `<`,
-`>`, `<=`, `>=`, `\<` and `\>` when the two operands are not both numbers, and
-sends `request` twice in `getWhole`.
+operand that is not a string once. ooRexx converts the right operand twice for
+the normal comparisons `=`, `\=`, `<>`, `><`, `<`, `>`, `<=`, `>=`, `\<` and
+`\>` when the two operands are not both numbers.
 
 ## 123. isEmpty of a directory that holds only methods
 
@@ -912,7 +910,7 @@ crashes for a `List`, a `Bag`, a `Table` or a `Directory`.
 A `List` that `allItems` or `makeArray` answers for the argument of `putAll`,
 `union`, `intersection`, `xor` or `subset` of a `Set`, or of those and
 `difference` of a `Bag`, gives every item of the list, in the order of the
-list. ooRexx reads it as it reads an `Array`, by `items` and then `[]` with the
-positions 1 up to that number, which the list takes as its own indexes: the
-item at its first index is lost, and `.nil` becomes a member when no entry has
-the last position.
+list. ooRexx reads it as it reads an `Array`, by `items` and then `[]` with
+each position from 1 up to that number, so the members are what `[]` answers
+for those values rather than the items of the list: an item can be missed and
+`.nil` can become a member.

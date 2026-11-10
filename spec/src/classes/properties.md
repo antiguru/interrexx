@@ -2,7 +2,7 @@
 element: "Properties"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Properties Class; Builtin Classes > Collection Classes > Properties Class > load (Class method); Builtin Classes > Collection Classes > Properties Class > new (Class method); Builtin Classes > Collection Classes > Properties Class > []=; Builtin Classes > Collection Classes > Properties Class > getLogical; Builtin Classes > Collection Classes > Properties Class > getProperty; Builtin Classes > Collection Classes > Properties Class > getWhole; Builtin Classes > Collection Classes > Properties Class > load; Builtin Classes > Collection Classes > Properties Class > put; Builtin Classes > Collection Classes > Properties Class > save; Builtin Classes > Collection Classes > Properties Class > setLogical; Builtin Classes > Collection Classes > Properties Class > setProperty; Builtin Classes > Collection Classes > Properties Class > setWhole"
-deviations: [29, 33, 78, 109, 122, 123, 124]
+deviations: [29, 33, 78, 109, 123, 124]
 ---
 
 # Properties
@@ -325,9 +325,8 @@ followed by zeros are allowed, and a value that needs more than nine digits is
 not. The default is used when the name has no value and is checked in the same
 way, and is not looked at when the name has a value. A missing name with no
 default raises `SYNTAX 26.901` too. A value that is not a string is read
-through [the string-value rule](r:conv.string.object), by one send of `request`
-([Deviation 122](r:class.properties.deviation.122)); that holds for a default
-as for a stored value.
+through [the string-value rule](r:conv.string.object), by one send of `request`,
+for a default as for a stored value, and the value is answered as it is stored.
 
 ```rexx
 p = .properties~new
@@ -404,6 +403,26 @@ say p~getWhole('B')
 
 ```output defect=#164
 12
+```
+
+```rexx
+.local~n = 0
+p = .properties~new
+p~setEntry('b', .text~new('12'))
+say p~getWhole('B') .local~n
+::class text
+::method init
+  expose v
+  use arg v
+::method request
+  expose v
+  .local~n += 1
+  if arg(1) = 'STRING' then return v
+  return .nil
+```
+
+```output defect=#164
+12 1
 ```
 
 ## Setting logical and whole values
@@ -1107,31 +1126,6 @@ say p['k'] p['k2'] p['w'] p['l']
 
 ```output defect=#140
 abc def 12 true
-```
-
-r[class.properties.deviation.122]
-`getWhole` sends `request` with `STRING` once to a stored value or a default
-that is not a string, as [the getWhole rule](r:class.properties.getwhole) says.
-ooRexx sends it twice to either.
-
-```rexx
-.local~n = 0
-p = .properties~new
-p~setEntry('b', .text~new('12'))
-say p~getWhole('B') .local~n
-::class text
-::method init
-  expose v
-  use arg v
-::method request
-  expose v
-  .local~n += 1
-  if arg(1) = 'STRING' then return v
-  return .nil
-```
-
-```output defect=#164
-12 1
 ```
 
 r[class.properties.deviation.123]
