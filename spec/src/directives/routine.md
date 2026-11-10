@@ -282,14 +282,16 @@ local pub local both
 ## The table of routines
 
 r[dir.routine.table]
-The environment symbol `.ROUTINES` holds a table of the routines that the
-package declares, public and private, whose indexes are the routine names in
-upper case and whose items are routine objects. It does not hold the routines
-that the package found through its ::REQUIRES. The symbol exists only in a
-package that declares a routine; for any other package it is the symbol's own
-text. Each package has its own table. The example runs a routine through the
-table with the [CALL method](r:class.routine.call) of the routine object,
-which the classes chapter owns.
+Unless an entry or a class of the same name is found first ([the
+order](r:env.objects.search.symbols)), the environment symbol `.ROUTINES`
+holds a table of the routines that the package declares, public and private,
+whose indexes are the routine names in upper case and whose items are routine
+objects. It does not hold the routines that the package found through its
+::REQUIRES. The symbol exists only in a package that declares a routine; for
+any other package it is the symbol's own text. Each package has its own table.
+The example runs a routine through the table with the [CALL
+method](r:class.routine.call) of the routine object, which the classes chapter
+owns.
 
 ```rexx
 say .routines~items

@@ -182,16 +182,17 @@ D 5 4
 ```
 
 r[instr.command.status]
-The environment symbol `.RS` holds the status of the last command: `0` when
-the command raised neither [ERROR](r:cond.error.raise) nor
-[FAILURE](r:cond.error.failure), `1` when it raised ERROR and `-1` when it
-raised FAILURE. It holds a value only after a command has run, and before that
-it is an [environment symbol](r:lex.symbols.environment) that finds no object,
-so its value is its own characters. Which return codes and which environments
-raise the two conditions is part of [the conditions
-chapter](../conditions/index.md) and of the environment chapter. For the
-environment `system`, `exit 3` is an error and a command that is not sent to
-an existing environment is a failure.
+The environment symbol `.RS` holds the status of the last command, unless an
+entry or a class of the same name is found first ([the
+order](r:env.objects.search.symbols)): `0` when the command raised neither
+[ERROR](r:cond.error.raise) nor [FAILURE](r:cond.error.failure), `1` when it
+raised ERROR and `-1` when it raised FAILURE. It holds a value only after a
+command has run, and before that it is an [environment
+symbol](r:lex.symbols.environment) that finds no object, so its value is its
+own characters. Which return codes and which environments raise the two
+conditions is part of [the conditions chapter](../conditions/index.md) and of
+the environment chapter. For the environment `system`, `exit 3` is an error
+and a command that is not sent to an existing environment is a failure.
 
 ```rexx
 say .rs

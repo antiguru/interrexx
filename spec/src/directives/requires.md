@@ -23,7 +23,9 @@ r[dir.requires.create]
 The operand of ::REQUIRES is a symbol or a string that names the package, and
 [the names rule](r:dir.index.names) gives the spelling of each. Which of the
 two finds a file is a property of the file system, so that a name that has
-lower-case letters is best written as a string. The interpreter installs the
+lower-case letters is best written as a string. Which directories are
+searched for the file is specified with the environment chapter's rules on
+files (not yet written). The interpreter installs the
 required package as [installation](r:dir.index.install) describes, which
 includes running its prolog, before the requiring package creates a class or
 runs its own prolog. An `exit` or `return` in the required prolog ends only

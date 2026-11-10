@@ -142,8 +142,7 @@ and when it finds none, the value is the symbol's own characters in upper
 case, period included. A clause that assigns to a symbol that starts with a
 period raises `SYNTAX 31.3`, the constant symbols `.`, `.5` and `.5e1`
 included. The places the lookup searches, and their order, are [the rule of
-the environment chapter](r:env.objects.search). This page does not specify
-the directories in which files are searched for.
+the environment chapter](r:env.objects.search).
 
 ```rexx
 .environment['WIDGET'] = 'found'

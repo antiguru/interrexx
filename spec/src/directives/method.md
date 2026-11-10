@@ -649,14 +649,15 @@ target hello 1 TARGET
 
 r[dir.method.floating]
 A ::METHOD that comes before every ::CLASS belongs to no class, and the
-package keeps it as a method object of its own. The environment symbol
-`.METHODS` holds a table of the package's floating methods, whose indexes are
-the method names in upper case, and a lookup in it is by exact index, so
-`.methods['greet']` is the `.nil` object. The symbol exists only in a package
-that has a floating method; for any other package it is the symbol's own text.
-Each package has its own table. A floating method may not use CLASS, which
-raises `SYNTAX 99.905`, and a name declared twice raises `99.902`, as the
-methods of a class do.
+package keeps it as a method object of its own. Unless an entry or a class of
+the same name is found first ([the order](r:env.objects.search.symbols)), the
+environment symbol `.METHODS` holds a table of the package's floating methods,
+whose indexes are the method names in upper case, and a lookup in it is by
+exact index, so `.methods['greet']` is the `.nil` object. The symbol exists
+only in a package that has a floating method; for any other package it is the
+symbol's own text. Each package has its own table. A floating method may not
+use CLASS, which raises `SYNTAX 99.905`, and a name declared twice raises
+`99.902`, as the methods of a class do.
 
 ```rexx
 say .methods~items

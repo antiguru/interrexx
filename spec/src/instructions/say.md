@@ -124,7 +124,8 @@ current line is followed by the SAY text on that same line, and a SAY is
 followed by CHAROUT text on the next line. The text a program writes this
 way appears in the order the program wrote it. The standard output is also
 what `.OUTPUT` denotes by default, and what SAY does when a program has
-redirected `.OUTPUT` is not specified here.
+redirected `.OUTPUT` is specified with [the environment
+objects](r:env.objects.output).
 
 ```rexx
 call charout , 'p'

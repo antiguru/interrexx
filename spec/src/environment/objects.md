@@ -60,13 +60,14 @@ to a package that a program [requires](../classes/regularexpression.md); the
 class `RexxInfo` is not, because its name is the index of the one `RexxInfo`
 object; and `ArgUtil` is ([the rule on it](r:class.index.argutil)). The
 entries that are not classes are `NIL`, `TRUE`, `FALSE`, `ENDOFLINE`,
-`REXXINFO`, `LOCAL` and `ENVIRONMENT`, and there are no others. `.true` is the string `1`, `.false`
-the string `0`, and `.endofline` the string of the one character `'0A'x`, the
-line end of the platform. `.nil` is the object that stands for the absence of
-an object (`isNil` [answers 1 for it](r:class.object.isnil)). `.rexxinfo` is
-the one `RexxInfo` object ([its rule](r:class.rexxinfo.creation)). The example
-prints the class entries in rows, after checking that the upper case id of
-each is its index, and then the entries that are none.
+`REXXINFO`, `LOCAL` and `ENVIRONMENT`, and there are no others. `.true` is the
+string `1`, `.false` the string `0`, and `.endofline` the string of the one
+character `'0A'x`, the line end of the platform. `.nil` is the object that
+stands for the absence of an object (`isNil` [answers 1 for
+it](r:class.object.isnil)). `.rexxinfo` is the one `RexxInfo` object ([its
+rule](r:class.rexxinfo.creation)). The example prints the class entries in
+rows, after checking that the upper case id of each is its index, and then the
+entries that are none.
 
 ```rexx
 others = .array~new
@@ -441,9 +442,10 @@ and LINES send the message of their own name with the builtin's arguments
 after the name, as given, so a call with none sends none; LINES sends its
 option, and `NORMAL` when the call gives none. STREAM sends `STATE` for the
 option `S` or none, `DESCRIPTION` for `D`, and `COMMAND` with the command for
-`C`. The builtin answers what the object answers, except LINES: for a numeric
-answer it answers 0 when the answer is 0 and 1 for any other number, unless
-its option is `C`, and then it answers what the object answers. A message
+`C`. The builtin answers what the object answers, except LINES: for an
+answer that is a whole number of no more than nine digits it answers 0 when
+the value of the answer is 0 and 1 otherwise, unless its option is `C`, and
+then it answers what the object answers. A message
 that a program sends to `.stdout`, `.stderr` or `.stdin` itself is not
 redirected. In the example, one spy answers 3 to every message, and the log
 shows the name of each message with the number of its arguments and the
@@ -511,24 +513,28 @@ s = .spy~new
 a = lines()
 b = lines(, 'N')
 c = lines(, 'C')
+s~answer = '0.0'
+d = lines()
 .input~destination
 say s~log~makeString('l', ' ')
-say a b c
+say a b c d
 ::class spy
 ::method init
-  expose log
+  expose log answer
   log = .array~new
+  answer = 7
 ::attribute log get
+::attribute answer
 ::method unknown
-  expose log
+  expose log answer
   use arg name, args
   log~append(name'('args~makeString('l', ',')')')
-  return 7
+  return answer
 ```
 
 ```output defect=#213
-LINES(NORMAL) LINES(N) LINES(C)
-1 1 7
+LINES(NORMAL) LINES(N) LINES(C) LINES(NORMAL)
+1 1 7 0
 ```
 
 r[env.objects.output]
@@ -572,9 +578,9 @@ SAY | CHAROUT | LINEOUT | LINEOUT | CHAROUT 7
 ```
 
 r[env.objects.error]
-The builtins CHAROUT and LINEOUT, when their stream name is `STDERR` or
-`STDERR:` in any case, send `CHAROUT` and `LINEOUT` to the `ERROR` entry of
-`.local`. The lines of a trace go to `.traceoutput` ([the trace
+The stream builtins that name `STDERR` send their messages to the `ERROR`
+entry of `.local` ([the rule on stream builtins](r:env.objects.streams)). The
+lines of a trace go to `.traceoutput` ([the trace
 rule](r:instr.trace.destination)), whose monitor passes them on to `.error`,
 so a destination that a program sets on `.error` receives them as `LINEOUT`
 messages whose argument is a `TraceObject`. A message sent to `.stderr`
@@ -642,9 +648,9 @@ spy LINEOUT 1 TraceObject
 ```
 
 r[env.objects.input]
-The builtins LINEIN, CHARIN, LINES and CHARS, when their stream name is null,
-omitted or one of `STDIN` and `STDIN:` in any case, send `LINEIN`, `CHARIN`,
-`LINES` and `CHARS` to the `INPUT` entry of `.local`. LINEIN and CHARIN
+The stream builtins that name the standard input send their messages to the
+`INPUT` entry of `.local` ([the rule on stream
+builtins](r:env.objects.streams)). LINEIN and CHARIN
 answer what the object answers. PARSE LINEIN does the same as LINEIN with no
 name, and a message that a program sends to `.stdin` itself is not redirected.
 The example is run with an empty standard input, which the last read, of
@@ -732,19 +738,19 @@ ZQA1R 1 0
 ```
 
 r[env.objects.replace]
-The language does not read these objects through the lookup of this page.
-Each time SAY, PARSE LINEIN, PULL, PUSH, QUEUE, a stream builtin or a trace
-line needs one, it takes the entry `OUTPUT`, `ERROR`, `INPUT`, `TRACEOUTPUT`
-or `STDQUE` of `.local`, so a program that stores another object there makes
-that object the one that the rules above send their messages to, from then
-on, for every package and activity. A class of the same name and an entry of a
-package's `local` directory change what the symbol finds, and not where the
-language writes or reads; an entry of `.environment` under the same name is
-not used while `.local` holds one. In the example, the object that replaces
-`.output` is sent `SAY`, `LINEOUT` and `CHAROUT`, the one that replaces
-`.input` is sent `LINEIN`, the one that replaces `.error` is sent `LINEOUT`,
-the one that replaces `.traceoutput` is sent the trace lines, and the one that
-replaces `.stdque` is sent `PUSH`.
+The language does not read these objects through the lookup of this page. Each
+time SAY, PARSE LINEIN, PULL, PUSH, QUEUE, QUEUED, RXQUEUE, a stream builtin,
+a trace line or the report of an error needs one, it takes the entry `OUTPUT`,
+`ERROR`, `INPUT`, `TRACEOUTPUT` or `STDQUE` of `.local`, so a program that
+stores another object there makes that object the one that the rules above
+send their messages to, from then on, for every package and activity. A class
+of the same name and an entry of a package's `local` directory change what the
+symbol finds, and not where the language writes or reads; an entry of
+`.environment` under the same name is not used while `.local` holds one. In
+the example, the object that replaces `.output` is sent `SAY`, `LINEOUT` and
+`CHAROUT`, the one that replaces `.input` is sent `LINEIN`, the one that
+replaces `.error` is sent `LINEOUT`, the one that replaces `.traceoutput` is
+sent the trace lines, and the one that replaces `.stdque` is sent `PUSH`.
 
 ```rexx
 old = .local~output
@@ -814,12 +820,14 @@ que push six
 ```
 
 r[env.objects.replace.answer]
-When the object that replaces `.output` answers nothing to the message that
-LINEOUT or CHAROUT sends it, the builtin has no answer: a CALL leaves
-`RESULT` dropped, and the function form raises `SYNTAX 44.1`.
+When the object that a CHAROUT or LINEOUT reaches, whether an object stored
+in `.local` or the destination of a monitor, answers nothing to the message
+the builtin sends it, the builtin has no answer: a CALL drops `RESULT`, and
+the function form raises `SYNTAX 44.1`.
 
 ```rexx
 old = .local~output
+result = 'set'
 .local~output = .quiet~new
 call lineout , 'x'
 r1 = symbol('RESULT')
