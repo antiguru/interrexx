@@ -740,7 +740,8 @@ one.
 
 An instance of a subclass of `String` is read by its own characters wherever a
 string, a number, a logical value or a whole number is needed, as receiver and
-as argument; `MAKESTRING` and `STRING` are not sent to it for that. ooRexx
+as argument, and as the operand of SAY; `REQUEST`, `MAKESTRING` and `STRING`
+are not sent to it for that. ooRexx
 sends such an instance `request` with `STRING` or `MAKESTRING` in many of these
 places, as an argument of a method, an operator or a builtin
 function, as the receiver of the numeric and logical methods and operators,
