@@ -18,7 +18,7 @@ of other systems are not specified. Nor are the choices of the file system and
 the host: whether names that differ in case are different names, the home
 directory, the temporary directory, the size of a directory, how precisely a
 file keeps its times, and what the user may do with a file that the examples
-did not set up. The examples make files and directories under names of their
+did not make. The examples make files and directories under names of their
 own, derive every expected value from what they made, and remove what they
 made. The class inherits `Comparable` and `Orderable`, and orders its
 instances by their absolute paths; the comparison operators of an instance are
@@ -96,15 +96,16 @@ slashes, but a lone slash keeps its slash: `a//b///` is `a//b`, `///` is `/`,
 and the empty string stays empty; slashes anywhere else are kept. Then, when
 `dir` is omitted or `.nil`, the path is the `path` that is left. Otherwise it
 is `dir`, a slash and `path`, where the slash is left out when `dir` ends in
-one or `path` begins with one, and where both supply one a single slash stands.
-A `dir` that is the empty string counts as a `dir`, so `a` with an empty `dir`
-is `/a`. A `dir` that is a `File` is read as its absolute path, and any other
-`dir` as a [string argument](r:class.index.string), with the error that a
-`path` has. The text of the path is kept as it was written, apart from these
-steps: `path` ([the path rule](r:class.file.path)) answers it, and a `File`
-made with a relative `path` or `dir` is relative to the current directory
-when it is made ([the absolute rule](r:class.file.absolute)). `init` sent to
-an instance again changes that instance as `new` made it, and answers nothing.
+one or `path` begins with one, and where both supply one a single slash
+stands. A `dir` that is the empty string counts as a `dir`, so `a` with an
+empty `dir` is `/a`. A `dir` that is a `File` is read as its absolute path,
+and any other `dir` as a [string argument](r:class.index.string), with the
+error that a `path` has. The text of the path is kept as it was written, apart
+from these steps: `path` ([the path rule](r:class.file.path)) answers it, and
+a `File` made with a relative `path` or `dir` is relative to the current
+directory when it is made ([the absolute rule](r:class.file.absolute)). `init`
+sent to an instance again changes that instance as `new` made it, and answers
+nothing.
 
 ```rexx
 say .file~new('a//b///')~path .file~new('///')~path '['.file~new('')~path']'
@@ -133,6 +134,9 @@ b5: say condition('o')~code
 f = .file~new('first')
 f~init('second', 'dir')
 say f~path
+signal on syntax name b6
+x = f~init('third')
+b6: say condition('o')~code
 ```
 
 ```output
@@ -149,6 +153,7 @@ a a /a
 88.909
 88.909
 dir/second
+91.999
 ```
 
 r[class.file.new.sends]
@@ -238,9 +243,15 @@ say (('['f']') == '['directory() || '/p/q]') (f 'x' == f~makeString 'x')
 say f~objectName '|' f~defaultName
 f~objectName = 'nm'
 say f~objectName f~string f~path
-signal on syntax name bad
+signal on syntax name b1
 say f~path(1)
-bad: say condition('o')~code
+b1: say condition('o')~code
+signal on syntax name b2
+say f~string(1)
+b2: say condition('o')~code
+signal on syntax name b3
+say f~makeString(1)
+b3: say condition('o')~code
 ```
 
 ```output
@@ -249,6 +260,8 @@ p/q p/q 1
 1 1
 a File | a File
 nm p/q p/q
+93.902
+93.902
 93.902
 ```
 
@@ -402,8 +415,8 @@ as `.cfg`; a name such as `.b.c` has the extension `c`. A period in a
 directory of the path plays no part. Both take no argument; one raises
 `SYNTAX 93.902`. As they work on the absolute path, the name of `a/..` is
 the name of the directory that holds `a`, and the name of `.` is the name of
-the current directory. `name` sends the receiver `separator`, and
-`extension` sends it `separator` and then `name`.
+the current directory. The messages that they send are those of [the next
+rule](r:class.file.name.sends).
 
 ```rexx
 f = .file~new('/usr/lib/x.tar.gz')
@@ -433,14 +446,52 @@ rel 1
 93.902
 ```
 
+r[class.file.name.sends]
+`name` sends the receiver `separator`, and `extension` sends it `separator`
+and then `name`, which sends `separator` once more. The answer of `separator`
+is the string that is looked for in the absolute path, so that a receiver
+whose `separator` answers `#` has as its name what follows the last `#` of its
+absolute path.
+
+```rexx
+.environment~log = .array~new
+f = .logfile~new('/p/q.txt')
+.environment~log~empty
+x = f~name
+call show 'name'
+x = f~extension
+call show 'extension'
+say .sharp~new('a#b#')~name .sharp~new('a#b.c')~extension
+exit
+show:
+  say arg(1)':' .environment~log~toString(,' ')
+  .environment~log~empty
+  return
+::class logfile subclass file
+::method separator
+  .environment~log~append('separator')
+  forward class (super)
+::method name
+  .environment~log~append('name')
+  forward class (super)
+::class sharp subclass file
+::method separator
+  return '#'
+```
+
+```output
+name: name separator
+extension: separator name separator
+b c
+```
+
 r[class.file.parent]
 `parent` answers the absolute path without its last component, a string,
 and `.nil` when the absolute path is the root or is empty; the parent of `/a`
 is `/`. `parentFile` answers a new `File` with that string as its path, made
 by `new` sent to the class of the receiver, and `.nil` when `parent` answers
-`.nil`. Both take no argument; one raises `SYNTAX 93.902`. `parent` sends the
-receiver `separator`; `parentFile` sends it `parent` and then `new` to its
-class, whose `init` sends `separator`.
+`.nil`. Both take no argument; one raises `SYNTAX 93.902`. The messages that
+they send are those of [the rule after the next](r:class.file.parent.sends).
 
 ```rexx
 here = directory()
@@ -472,6 +523,40 @@ File /a/b
 SUB
 93.902
 93.902
+```
+
+r[class.file.parent.sends]
+`parent` sends the receiver `separator`, and `parentFile` sends it `parent`
+and then `new` to its class, whose `init` sends `separator` as [the new
+rule](r:class.file.new.sends) says.
+
+```rexx
+.environment~log = .array~new
+f = .logfile~new('/p/q.txt')
+.environment~log~empty
+x = f~parent
+say .environment~log~toString(,' ')
+.environment~log~empty
+x = f~parentFile
+line = ''
+last = ''
+do w over .environment~log
+  if w \== last then line = line w
+  last = w
+end
+say line~strip
+::class logfile subclass file
+::method separator
+  .environment~log~append('separator')
+  forward class (super)
+::method parent
+  .environment~log~append('parent')
+  forward class (super)
+```
+
+```output
+parent separator
+parent separator
 ```
 
 ## Asking about a file
@@ -696,6 +781,9 @@ call try 'a~renameTo("text")'
 call try 'a~renameTo(.nil)'
 call try 'a~renameTo'
 call try 'a~renameTo(b, b)'
+.environment~log = .array~new
+call try 'a~renameTo(.spy~new)'
+say .environment~log~toString(,' ')
 junk = .file~new(d'/out/x')~delete
 junk = .file~new(d'/out/moved.txt')~delete
 junk = .file~new(d'/out')~delete
@@ -709,6 +797,10 @@ try:
   return
 bad: say arg(1) '=>' condition('o')~code
   return
+::class spy
+::method isA
+  .environment~log~append('isA' arg(1)~id)
+  return 0
 ```
 
 ```output
@@ -722,6 +814,8 @@ a~renameTo("text") => 88.914
 a~renameTo(.nil) => 88.914
 a~renameTo => 93.901
 a~renameTo(b, b) => 93.902
+a~renameTo(.spy~new) => 88.914
+isA File
 ```
 
 r[class.file.permissions]
@@ -819,8 +913,8 @@ directory at the absolute path was last changed to the date and the time of
 day of its fields, as read in the host's time zone: the offset of the argument
 plays no part. It does nothing where nothing is, and makes no file. The
 argument is sent `isA` with `.DateTime`; one that answers false raises
-`SYNTAX 88.914`, and so does a string, a number, `.nil` or a `TimeSpan`. The
-assignment form takes one argument; the message takes it too, so none raises
+`SYNTAX 88.914`, and so does a string, a number, `.nil` or a `TimeSpan`. Sent
+as a message, `lastModified=` takes exactly one argument: none raises
 `SYNTAX 93.901` and a second one `93.902`.
 
 ```rexx
@@ -838,8 +932,12 @@ n~lastModified = d
 say n~exists
 call try 'f~"LASTMODIFIED="("text")'
 call try 'f~"LASTMODIFIED="(.nil)'
+call try 'f~"LASTMODIFIED="(5)'
 call try 'f~"LASTMODIFIED="(.timespan~new(1))'
 call try 'f~"LASTMODIFIED="'
+.environment~log = .array~new
+call try 'f~"LASTMODIFIED="(.spy~new)'
+say .environment~log~toString(,' ')
 call try 'f~"LASTMODIFIED="(d, d)'
 say f~lastModified~isoDate
 junk = f~delete
@@ -851,6 +949,10 @@ try:
   return
 bad: say arg(1) '=>' condition('o')~code
   return
+::class spy
+::method isA
+  .environment~log~append('isA' arg(1)~id)
+  return 0
 ```
 
 ```output
@@ -859,8 +961,11 @@ bad: say arg(1) '=>' condition('o')~code
 0
 f~"LASTMODIFIED="("text") => 88.914
 f~"LASTMODIFIED="(.nil) => 88.914
+f~"LASTMODIFIED="(5) => 88.914
 f~"LASTMODIFIED="(.timespan~new(1)) => 88.914
 f~"LASTMODIFIED=" => 93.901
+f~"LASTMODIFIED="(.spy~new) => 88.914
+isA DateTime
 f~"LASTMODIFIED="(d, d) => 93.902
 2004-02-16T07:08:09.000000
 ```
@@ -959,7 +1064,13 @@ do e over f
 end
 q = d~absolutePath
 say (p~sort~toString(,' ') == q'/.hid' q'/a.txt' q'/b.txt' q'/sub')
-say (d~list~items == d~listFiles~items)
+l2 = d~list
+f2 = d~listFiles
+same = 1
+do i = 1 to l2~items
+  if f2[i]~name \== l2[i] then same = 0
+end
+say same
 say (.file~new('spec-file-list.tmp/a.txt')~list == .nil),
     (.file~new('spec-file-list.tmp/none')~list == .nil)
 say (.file~new('spec-file-list.tmp/none')~listFiles == .nil)
@@ -1003,18 +1114,19 @@ list 4 LOGFILE
 ## Comparing files
 
 r[class.file.compareto]
-`compareTo` takes one argument, which is sent `isA` with `.File`, and answers
--1, 0 or 1 as the absolute path of the receiver is less than, equal to or
-greater than the absolute path of the argument. The paths are compared
-character by character, so that a path is less than a longer path that it is
-the start of, and the receiver is sent `isCaseSensitive` first. When that
-answers true the comparison tells upper and lower case letters apart. When it
-answers false two paths whose letters differ only in case are equal, and the
-order of the others is that of the paths with their letters from `a` to `z`
-written as capitals. The receiver is sent `absolutePath`, then the argument
-is. What the method answers for an argument that is not a `File` is not
-specified. No argument raises `SYNTAX 93.901`, and a second one `93.902`. The
-comparison operators of a `File` answer from `compareTo` as [those of
+`compareTo` takes one argument and answers -1, 0 or 1 as the absolute path of
+the receiver is less than, equal to or greater than the absolute path of the
+argument. The paths are compared character by character, so that a path is
+less than a longer path that it is the start of. The argument is sent `isA`
+with `.File` first, then the receiver is sent `isCaseSensitive`, and then
+`absolutePath` is sent to the receiver and to the argument, in that order.
+When `isCaseSensitive` answers true the comparison tells upper and lower case
+letters apart. When it answers false two paths whose letters differ only in
+case are equal, and the order of the others is that of the paths with their
+letters from `a` to `z` written as capitals. What the method answers for an
+argument that is not a `File` is not specified. No argument raises
+`SYNTAX 93.901`, and a second one `93.902`. The comparison operators of a
+`File` answer from `compareTo` as [those of
 `Orderable`](r:class.orderable.compare) say.
 
 ```rexx
@@ -1072,12 +1184,13 @@ say .environment~log~toString(,' ')
 r[class.file.hashcode]
 `hashCode` answers a string of 8 bytes made from the absolute path, the same
 string that `hashCode` of the absolute path as a string answers, so that two
-files with the same absolute path have the same hash code, whatever
-the spelling of their paths. The hash code does not depend on
-`isCaseSensitive`, so two files that `=` finds equal when the file system
-ignores case can have different hash codes. It sends the receiver no message,
-and it takes no argument; one raises `SYNTAX 93.902`. A `File` is found in a
-collection that looks for its index by `==` and `hashCode`.
+files with the same absolute path have the same hash code, whatever the
+spelling of their paths. The hash code does not depend on `isCaseSensitive`,
+so two files that `=` finds equal when the file system ignores case can have
+different hash codes. It sends the receiver none of `absolutePath`,
+`makeString`, `path` and `string`, and it takes no argument; one raises
+`SYNTAX 93.902`. A `File` is found in a collection that looks for its index by
+`==` and `hashCode`.
 
 ```rexx
 a = .file~new('/t/a')
@@ -1097,9 +1210,25 @@ say t[b] t[c]
 signal on syntax name bad
 say a~hashCode(1)
 bad: say condition('o')~code
+.environment~log = .array~new
+x = .logfile~new('/t/a')~hashCode
+say '['.environment~log~toString(,' ')']'
 ::class ci subclass file
 ::method isCaseSensitive
   return 0
+::class logfile subclass file
+::method absolutePath
+  .environment~log~append('absolutePath')
+  forward class (super)
+::method makeString
+  .environment~log~append('makeString')
+  forward class (super)
+::method path
+  .environment~log~append('path')
+  forward class (super)
+::method string
+  .environment~log~append('string')
+  forward class (super)
 ```
 
 ```output
@@ -1109,6 +1238,7 @@ bad: say condition('o')~code
 2
 found The NIL object
 93.902
+[]
 ```
 
 r[class.file.operators]
@@ -1353,6 +1483,9 @@ call try '.file~readChars'
 call try '.file~readChars(f, 1)'
 call try '.file~readChars(.nil)'
 call try '.file~readChars(.object~new)'
+.environment~log = .array~new
+say (.file~readChars(.logfile~new(f)) == x)
+say .environment~log~toString(,' ')
 junk = .file~new(f)~delete
 exit
 try:
@@ -1362,6 +1495,13 @@ try:
   return
 bad: say arg(1) '=>' condition('o')~code
   return
+::class logfile subclass file
+::method isA
+  .environment~log~append('isA' arg(1)~id)
+  forward class (super)
+::method absolutePath
+  .environment~log~append('absolutePath')
+  forward class (super)
 ```
 
 ```output
@@ -1373,6 +1513,8 @@ String 10 61620D0A63640A1A6566
 .file~readChars(f, 1) => 93.902
 .file~readChars(.nil) => 93.938
 .file~readChars(.object~new) => 93.938
+1
+isA File absolutePath
 ```
 
 r[class.file.readlines]
@@ -1433,10 +1575,10 @@ that does not understand `strip`, `.nil` for one, raises `SYNTAX 97.1`. The
 name is read as [`readChars`](r:class.file.readchars) reads it, with the same
 error, after the `mode` has been checked. The string is read as the string
 value of an argument ([the string rule](r:class.index.string)), so `.nil` is
-written as its string value; a string that has no string value is not an error
-either. A file that cannot be opened is not written, and nothing is reported.
-No argument raises `SYNTAX 93.901`, a call with only the name `93.901` as
-well, and a fourth argument `93.902`.
+written as `The NIL object` and no object is refused. A file that cannot be
+opened is not written, and nothing is reported. No argument raises
+`SYNTAX 93.901`, a call with only the name `93.901` as well, and a fourth
+argument `93.902`.
 
 ```rexx
 f = 'spec-file-writechars.tmp'
@@ -1553,6 +1695,9 @@ call try '.file~writeLines(f, .bad~new)'
 call try '.file~writeLines'
 call try '.file~writeLines(f)'
 call try '.file~writeLines(f, .array~of("a"), "A", 1)'
+.environment~log = .array~new
+call try '.file~writeLines(f, .spy~new)'
+say .environment~log~toString(,' ')
 junk = .file~new(f)~delete
 exit
 try:
@@ -1568,6 +1713,10 @@ bad: say arg(1) '=>' condition('o')~code
 ::class bad inherit orderedcollection
 ::method makeArray
   return 'not an array'
+::class spy
+::method isA
+  .environment~log~append('isA' arg(1)~id)
+  return 0
 ```
 
 ```output
@@ -1598,6 +1747,8 @@ an Object
 .file~writeLines => 93.901
 .file~writeLines(f) => 93.901
 .file~writeLines(f, .array~of("a"), "A", 1) => 93.902
+.file~writeLines(f, .spy~new) => 88.914
+isA OrderedCollection
 ```
 
 ## Deviations
