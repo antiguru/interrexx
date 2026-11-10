@@ -630,8 +630,8 @@ equal, so a comparator of 3 digits finds 1000 and 1001 equal and 1000 and 1010
 not. A difference that is no number raises `SYNTAX 93.943`; a string that is no
 number raises `SYNTAX 41.1`; a first argument that has no `-` method raises
 `SYNTAX 97.1`. Argument errors are those of
-[`Comparator`](r:class.comparators.comparator.compare). The answer is read as a
-number as [the argument rule](r:class.index.string) reads one, so an object
+[`Comparator`](r:class.comparators.comparator.compare). The difference is read
+as a number as [the argument rule](r:class.index.string) reads one, so an object
 whose `makeString` or `string` answers a number is accepted, and the sign is
 that number's.
 
@@ -752,9 +752,10 @@ Rowan elder Birch birch hawk's eye
 ## Messages that a program can override
 
 r[class.comparators.sends]
-Each `compare` sends the messages below, in this order, and no other: nothing is
-sent to the second argument or to the comparators themselves, nothing is sent to
-the first argument but what is listed, and no argument is asked `isA`.
+Each `compare` sends the messages below, in this order, and no other but those
+that `NumericComparator` sends in reading the difference: nothing is sent to the
+second argument or to the comparators themselves, nothing is sent to the first
+argument but what is listed, and no argument is asked `isA`.
 `Comparator` sends `compareTo` to the first argument with one argument, the
 second. `CaselessComparator` sends `caselessCompareTo` the same way.
 `ColumnComparator` sends `compareTo`, and `CaselessColumnComparator`
