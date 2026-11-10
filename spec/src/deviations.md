@@ -1041,3 +1041,17 @@ is set to the null string, as it does when it is not set. ooRexx answers a
 `allItems` or `allIndexes` collected, so the next call of either collects the
 entries of the new arrays. ooRexx answers the arrays collected before the
 `init`.
+
+## 139. The size of a stream that another stream wrote to
+
+A `Stream` answers `query('size')` and `chars` for the file as it is when it is
+asked, also after data that another stream on the same file wrote and flushed.
+ooRexx answers the size that the stream found when it first read or was first
+asked, so that the data written since is not counted.
+
+## 140. A supplier of a stream read part of the way into a line
+
+The `supplier` of a `Stream` that was read part of the way into a line is at
+that line, with the number of the line as its index and the rest of the line,
+as a plain `lineIn` answers it there, as its first item. ooRexx answers the
+whole of the line when the read position is in the first line.

@@ -2,7 +2,7 @@
 element: "Stream"
 kind: class
 rexxref: "Builtin Classes > Stream Classes > Stream Class; Builtin Classes > Stream Classes > Stream Class > new (Inherited Class Method); Builtin Classes > Stream Classes > Stream Class > arrayIn; Builtin Classes > Stream Classes > Stream Class > arrayOut; Builtin Classes > Stream Classes > Stream Class > charIn; Builtin Classes > Stream Classes > Stream Class > charOut; Builtin Classes > Stream Classes > Stream Class > chars; Builtin Classes > Stream Classes > Stream Class > close; Builtin Classes > Stream Classes > Stream Class > command; Builtin Classes > Stream Classes > Stream Class > description; Builtin Classes > Stream Classes > Stream Class > flush; Builtin Classes > Stream Classes > Stream Class > init; Builtin Classes > Stream Classes > Stream Class > lineIn; Builtin Classes > Stream Classes > Stream Class > lineOut; Builtin Classes > Stream Classes > Stream Class > lines; Builtin Classes > Stream Classes > Stream Class > makeArray; Builtin Classes > Stream Classes > Stream Class > open; Builtin Classes > Stream Classes > Stream Class > position; Builtin Classes > Stream Classes > Stream Class > qualify; Builtin Classes > Stream Classes > Stream Class > query; Builtin Classes > Stream Classes > Stream Class > say; Builtin Classes > Stream Classes > Stream Class > seek; Builtin Classes > Stream Classes > Stream Class > state; Builtin Classes > Stream Classes > Stream Class > string; Builtin Classes > Stream Classes > Stream Class > supplier; Builtin Classes > Stream Classes > Stream Class > uninit"
-deviations: [34, 55, 58, 59, 62, 109, 135]
+deviations: [34, 55, 58, 59, 62, 109, 135, 139, 140]
 ---
 
 # Stream
@@ -353,7 +353,9 @@ Every instance is a stream of its own, with its own state and its own read and
 write positions, also when two instances, or an instance and a function, name
 the same file. They do not share what is read: each reads the file from its
 own position. What an instance has written is in the file at the latest when
-it is closed or flushed, or sent `uninit`.
+it is closed or flushed, or sent `uninit`. Another instance on the file
+answers its size, and the number of characters left, with that data in
+them ([Deviation 139](r:class.stream.deviation.139)).
 
 ```rexx
 f = 'spec-stream-separate-zq.tmp'
@@ -1996,12 +1998,15 @@ r[class.stream.supplier]
 the lines of the receiver that are left, as [the rule of that
 class](r:class.streamsupplier.entry) says: it is at the line that the stream
 reads next, and making it reads that line. A stream that was read part of the
-way into a line gives a supplier at that line, which answers the whole of it,
-and the next `lineIn` answers the line after it. It takes no argument: one
-raises `SYNTAX 93.902`. A stream that has no line left, or cannot be read,
-gives a supplier that is not available; a last line that has no line end and
-was read already is no line left. The messages that the stream is sent are
-those of [the next rule](r:class.stream.supplier.sends).
+way into a line gives a supplier whose first item is the rest of that line, as
+a plain `lineIn` would answer it there, and whose index is the number of the
+line that the read position is in ([Deviation
+140](r:class.stream.deviation.140)); the items after it are the following
+lines, and the next `lineIn` answers the line after the first item. It takes
+no argument: one raises `SYNTAX 93.902`. A stream that has no line left, or
+cannot be read, gives a supplier that is not available; a last line that has
+no line end and was read already is no line left. The messages that the stream
+is sent are those of [the next rule](r:class.stream.supplier.sends).
 
 ```rexx
 f = 'spec-stream-supplier-zq.tmp'
@@ -2023,9 +2028,6 @@ s~close
 n = .stream~new('spec-stream-supplier-none-zq.tmp')
 say n~supplier~available n~state
 s = .stream~new(f)
-x = s~charin(, 2)
-r = s~supplier
-say r~index r~item '[' || s~linein || ']'
 signal on syntax name bad
 x = s~supplier(1)
 bad: say condition('o')~code
@@ -2040,8 +2042,28 @@ two
 0
 2 two 1
 0 UNKNOWN
-1 one [two]
 93.902
+```
+
+```rexx
+f = 'spec-stream-supplier-mid-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f, 'three'
+call lineout f
+s = .stream~new(f)
+x = s~charin(, 5)
+p = s~supplier
+say p~index p~item
+p~next
+say p~index p~item
+s~close
+call sysfiledelete f
+```
+
+```output defect=#208
+2 wo
+3 three
 ```
 
 ```rexx
@@ -2416,4 +2438,63 @@ o~lineout('x') => 98.901
 o~arrayin => 98.901
 o~supplier => 98.901
 o~close => 98.901
+```
+
+r[class.stream.deviation.139]
+A stream answers `query('size')` and `chars` for the file as it is when it is
+asked, so they include data that another stream on the same file has written
+and flushed since this stream was first read or asked. ooRexx keeps the size
+that the stream found when it first read or was first asked, so that its
+`query('size')` is out of date from then on and its `chars` is counted from
+that size; the example is not run against it.
+
+```rexx
+f = 'spec-stream-dev139-zq.tmp'
+call lineout f, 'one'
+call lineout f
+a = .stream~new(f)
+b = .stream~new(f)
+say b~linein
+say b~query('size') b~chars
+x = a~lineout('two')
+a~flush
+say b~query('size') b~chars
+a~close
+b~close
+call sysfiledelete f
+```
+
+```output
+one
+4 0
+8 4
+```
+
+r[class.stream.deviation.140]
+A supplier starts at the read position of the stream: its first item is what a
+plain `lineIn` would answer there, which is the rest of the line when the
+stream was read part of the way into it, and its index is the number of the
+line that the read position is in. The items after it are the lines that
+follow. ooRexx answers the whole of the line when the read position is inside
+the first line, as the example shows, and answers as this rule says from the
+second line on; the example is not run against it.
+
+```rexx
+f = 'spec-stream-dev140-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f
+s = .stream~new(f)
+x = s~charin(, 2)
+p = s~supplier
+say p~index p~item '[' || s~linein || ']'
+p~next
+say p~index p~item
+s~close
+call sysfiledelete f
+```
+
+```output defect=#208
+1 e [two]
+2 two
 ```

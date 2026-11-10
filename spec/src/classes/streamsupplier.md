@@ -75,10 +75,12 @@ MINE first
 ## Walking the lines
 
 r[class.streamsupplier.entry]
-A new supplier is at the line that the stream is to read next: line 1 for a
-stream that was not read from yet, and the line after the last one read for
-one that was. `index` answers the number of the line, `item` its text, and
-`available` answers 1. Making the supplier reads that line, so the stream's
+A new supplier is at the read position of the stream: line 1 for a stream
+that was not read from yet, and the line after the last one read for one that
+was. A stream that was read part of the way into a line gives a supplier that
+is at that line, whose first item is the rest of it, as a plain `lineIn` would
+answer ([Deviation 140](r:class.stream.deviation.140)). `index` answers the
+number of the line, `item` its text, and `available` answers 1. Making the supplier reads that line, so the stream's
 read position is after it. A stream that has no line left, such as an empty
 file, and one that cannot be read, such as a file that does not exist, gives a
 supplier that is not available, and no error. An empty line is an item that is
