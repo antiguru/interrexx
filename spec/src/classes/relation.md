@@ -1,8 +1,8 @@
 ---
 element: "Relation"
 kind: class
-rexxref: "Builtin Classes > Collection Classes > Relation Class; Builtin Classes > Collection Classes > Relation Class > new (Class Method); Builtin Classes > Collection Classes > Relation Class > []; Builtin Classes > Collection Classes > Relation Class > []=; Builtin Classes > Collection Classes > Relation Class > allAt; Builtin Classes > Collection Classes > Relation Class > allIndex; Builtin Classes > Collection Classes > Relation Class > allIndexes; Builtin Classes > Collection Classes > Relation Class > allItems; Builtin Classes > Collection Classes > Relation Class > at; Builtin Classes > Collection Classes > Relation Class > empty; Builtin Classes > Collection Classes > Relation Class > hasIndex; Builtin Classes > Collection Classes > Relation Class > hasItem; Builtin Classes > Collection Classes > Relation Class > index; Builtin Classes > Collection Classes > Relation Class > isEmpty; Builtin Classes > Collection Classes > Relation Class > items; Builtin Classes > Collection Classes > Relation Class > makeArray; Builtin Classes > Collection Classes > Relation Class > put; Builtin Classes > Collection Classes > Relation Class > remove; Builtin Classes > Collection Classes > Relation Class > removeAll; Builtin Classes > Collection Classes > Relation Class > removeItem; Builtin Classes > Collection Classes > Relation Class > supplier; Builtin Classes > Collection Classes > Relation Class > uniqueIndexes"
-deviations: [33, 78, 109]
+rexxref: "Builtin Classes > Collection Classes > Relation Class; Builtin Classes > Collection Classes > Relation Class > new (Class Method); Builtin Classes > Collection Classes > Relation Class > []; Builtin Classes > Collection Classes > Relation Class > []=; Builtin Classes > Collection Classes > Relation Class > allAt; Builtin Classes > Collection Classes > Relation Class > allIndex; Builtin Classes > Collection Classes > Relation Class > allIndexes; Builtin Classes > Collection Classes > Relation Class > allItems; Builtin Classes > Collection Classes > Relation Class > at; Builtin Classes > Collection Classes > Relation Class > difference; Builtin Classes > Collection Classes > Relation Class > empty; Builtin Classes > Collection Classes > Relation Class > hasIndex; Builtin Classes > Collection Classes > Relation Class > hasItem; Builtin Classes > Collection Classes > Relation Class > index; Builtin Classes > Collection Classes > Relation Class > intersection; Builtin Classes > Collection Classes > Relation Class > isEmpty; Builtin Classes > Collection Classes > Relation Class > items; Builtin Classes > Collection Classes > Relation Class > makeArray; Builtin Classes > Collection Classes > Relation Class > put; Builtin Classes > Collection Classes > Relation Class > remove; Builtin Classes > Collection Classes > Relation Class > removeAll; Builtin Classes > Collection Classes > Relation Class > removeItem; Builtin Classes > Collection Classes > Relation Class > subset; Builtin Classes > Collection Classes > Relation Class > supplier; Builtin Classes > Collection Classes > Relation Class > union; Builtin Classes > Collection Classes > Relation Class > uniqueIndexes; Builtin Classes > Collection Classes > Relation Class > xor"
+deviations: [33, 78, 84, 109, 118]
 ---
 
 # Relation
@@ -29,22 +29,21 @@ sort the answers ([the hash order rule](r:class.relation.deviation.33)).
 
 r[class.relation.creation]
 `Relation` declares the instance methods `[]`, `[]=`, `allAt`, `allIndex`,
-`allIndexes`, `allItems`, `at`, `empty`, `hasIndex`, `hasItem`, `index`,
-`isEmpty`, `items`, `makeArray`, `put`, `remove`, `removeAll`, `removeItem`,
-`supplier` and `uniqueIndexes`, the `init` that `new` runs ([the new
-rule](r:class.relation.new)) and the class method `new`; the `copy` of
-`Object` copies a relation as [the copy rule](r:class.relation.copy) says. The
-class method `of` and the instance methods `putAll`, `union`, `difference`,
-`intersection`, `xor`, `subset`, `disjoint` and `equivalent` are those of the
-mixins ([one rule](r:class.relation.inherited) lists them). A relation has no
-`makeString`, so it is not a string ([the string
-rule](r:class.relation.string)).
+`allIndexes`, `allItems`, `at`, `difference`, `empty`, `hasIndex`, `hasItem`,
+`index`, `intersection`, `isEmpty`, `items`, `makeArray`, `put`, `remove`,
+`removeAll`, `removeItem`, `subset`, `supplier`, `union`, `uniqueIndexes` and
+`xor`, the `init` that `new` runs ([the new rule](r:class.relation.new)) and
+the class method `new`; the `copy` of `Object` copies a relation as [the copy
+rule](r:class.relation.copy) says. The class method `of` and the instance
+methods `putAll`, `disjoint` and `equivalent` are those of the mixins ([one
+rule](r:class.relation.inherited) lists them). A relation has no `makeString`,
+so it is not a string ([the string rule](r:class.relation.string)).
 
 ```rexx
 r = .relation~new
-own = '[] []= ALLAT ALLINDEX ALLINDEXES ALLITEMS AT EMPTY HASINDEX HASITEM',
-  'INDEX ISEMPTY ITEMS MAKEARRAY PUT REMOVE REMOVEALL REMOVEITEM SUPPLIER',
-  'UNIQUEINDEXES'
+own = '[] []= ALLAT ALLINDEX ALLINDEXES ALLITEMS AT DIFFERENCE EMPTY HASINDEX',
+  'HASITEM INDEX INTERSECTION ISEMPTY ITEMS MAKEARRAY PUT REMOVE REMOVEALL',
+  'REMOVEITEM SUBSET SUPPLIER UNION UNIQUEINDEXES XOR'
 n = 0
 do m over own~makearray(' ')
   if r~hasMethod(m) then n += 1
@@ -55,7 +54,7 @@ say r~hasMethod('MAKESTRING') r~hasMethod('UNKNOWN') r~hasMethod('ENTRY')
 ```
 
 ```output
-Relation 20 1 0
+Relation 25 1 0
 1 1 0
 0 0 0
 ```
@@ -122,7 +121,7 @@ string is the index of its characters, strictly compared, and an object that
 declares neither method is its own index only. A relation does not merge equal
 indexes: each entry keeps the index object that was put with it, so two
 entries can hold two distinct objects that are equal as indexes, and a method
-that takes an index answers for all of the entries whose index is equal to the
+that takes an index considers every entry whose index is equal to the
 argument.
 
 ```rexx
@@ -176,13 +175,14 @@ arr 1 1
 r[class.relation.indexes.sends]
 `at`, `[]`, `hasIndex`, `remove` and `items` with an index look the index up
 by sending `hashCode` to the index argument, once, and then `==` to the index
-argument with a stored index as the argument, for each stored index that has
-the same hash code, until one answers true. Further stored indexes may be sent
-`==` as well, which ones is not specified ([the hash order
+argument with a stored index as the argument, for stored indexes that have the
+same hash code, until one answers true; each of those is compared before the
+lookup gives up. Which further stored indexes are sent `==` or `hashCode`, and
+how often each is sent, is not specified ([the hash order
 rule](r:class.relation.deviation.33)); when the relation is empty, the only
-message is `hashCode`. `put` and `[]=` send
-`hashCode` to the index and nothing else: no `==` is sent, as an entry is
-added whether or not an equal index is there. The very object that is stored
+message is `hashCode`. `put` and `[]=` send `hashCode` to the index and nothing
+else: no `==` is sent, as an entry is added whether or not an equal index is
+there. The very object that is stored
 is no exception to the `==` ([the deviation
 rule](r:class.relation.deviation.78)). In the example every index hashes to
 the same string, so each stored index is compared.
@@ -276,10 +276,10 @@ r~put("x", "y", "z") => 93.902
 r[class.relation.at]
 `at(index)` and `[index]` answer an item of an entry whose index is equal to
 the argument, and `.nil` when there is none. When several entries qualify,
-which item is answered is not specified. The methods take exactly one
-argument: none, or an omitted one, raises `SYNTAX 88.901`, and a second raises
-`SYNTAX 93.902`; the number of arguments is checked before the index is looked
-up.
+which item is answered is not specified ([the hash order
+rule](r:class.relation.deviation.33)). The methods take exactly one argument:
+none, or an omitted one, raises `SYNTAX 88.901`, and a second raises `SYNTAX
+93.902`; the number of arguments is checked before the index is looked up.
 
 ```rexx
 r = .relation~new
@@ -315,8 +315,9 @@ r[class.relation.allat]
 `allAt(index)` answers a new `Array` of the items of all the entries whose
 index is equal to the argument, one for each entry, in an order that is not
 specified, and an empty `Array` when there is none. It sends `hashCode` to the
-index first, as [the lookup rule](r:class.relation.indexes.sends) says, and
-then `==` to the index with stored indexes as the argument. The answer is an
+index once, and `==` to the index with every stored index of the same hash code
+as the argument; further sends, and how often each is sent, are not specified
+([the hash order rule](r:class.relation.deviation.33)). The answer is an
 instance of `Array` for a subclass receiver too, and does not follow later
 changes. It takes exactly one argument: none, or an omitted one, raises
 `SYNTAX 93.903`, and a second raises `SYNTAX 93.902`.
@@ -485,20 +486,24 @@ r~hasItem("x", "k1", 3) => 93.902
 ```
 
 r[class.relation.hasitem.sends]
-`hasItem(item)`, `index`, `allIndex` and `removeItem(item)` send `==` to the
-item argument, once for each entry that is searched, with the stored item as
-the argument, until one answers true, and send nothing else, `hashCode`
-included. The entries are visited in an order that is not specified, so the
-number of messages is specified only when no item matches, as then every entry
-is visited. `hasItem(item, index)` and `removeItem(item, index)` first look
-the index up as [the lookup rule](r:class.relation.indexes.sends) says, and
-then send `==` to the item argument with the item of each entry whose index
-matches, and no message when no index matches. The search with the very object
+`hasItem(item)`, `index` and `removeItem(item)` send `==` to the item argument
+with the item of an entry as the argument, entry by entry, until one answers
+true, and send nothing else, `hashCode` included. `allIndex` sends `==` to the
+item argument with the item of every entry as the argument. The entries are
+visited in an order that is not specified, and how often `==` is sent with the
+same stored item is not specified ([the hash order
+rule](r:class.relation.deviation.33)); every entry is compared at least once
+when none matches, and for `allIndex` always. `hasItem(item, index)` and
+`removeItem(item, index)` first look the index up as [the lookup
+rule](r:class.relation.indexes.sends) says, and then send `==` to the item
+argument with the item of each entry whose index matches, at least once for
+each, and no message when no index matches. The search with the very object
 that is stored is no exception: its `==` is sent as for any other item ([the
 deviation rule](r:class.relation.deviation.78)).
 
 ```rexx
 .local~n = 0
+.local~h = 0
 r = .relation~new
 r~put('s', 'k1')
 r~put('t', 'k2')
@@ -510,28 +515,30 @@ calls = 'r~hasItem(q)|r~index(q)|r~allIndex(q)|r~removeItem(q)',
 do c over calls~makeArray('|')
   .local~n = 0
   interpret 'x =' c
-  say c '=>' .local~n
+  if c~pos('none') > 0 then say c '=>' .local~n
+  else if c~pos('k1') > 0 then say c '=>' (.local~n >= 1)
+  else say c '=>' (.local~n >= 3)
 end
-say r~items
+say r~items .local~h
 ::class thing
 ::method '=='
   .local~n += 1
   return 0
 ::method hashCode
-  .local~n += 100
+  .local~h += 1
   return 1
 ```
 
 ```output
-r~hasItem(q) => 3
-r~index(q) => 3
-r~allIndex(q) => 3
-r~removeItem(q)  => 3
+r~hasItem(q) => 1
+r~index(q) => 1
+r~allIndex(q) => 1
+r~removeItem(q)  => 1
 r~hasItem(q, "none")  => 0
 r~hasItem(q, "k1") => 1
 r~removeItem(q, "none") => 0
 r~removeItem(q, "k1") => 1
-3
+3 0
 ```
 
 r[class.relation.index]
@@ -624,10 +631,12 @@ r[class.relation.removeall]
 `removeAll(index)` removes every entry whose index is equal to the argument
 and answers a new `Array` of their items, one for each entry, in an order that
 is not specified; the answer is an empty `Array` when there is none. It sends
-`hashCode` to the index first, then `==` as [the lookup
-rule](r:class.relation.indexes.sends) says. The answer is an instance of
-`Array` for a subclass receiver too. It takes exactly one argument: none, or
-an omitted one, raises `SYNTAX 93.903`, and a second raises `SYNTAX 93.902`.
+`hashCode` to the index once, and `==` to the index with every stored index of
+the same hash code as the argument; further sends, and how often each is sent,
+are not specified ([the hash order rule](r:class.relation.deviation.33)). The
+answer is an instance of `Array` for a subclass receiver too. It takes exactly
+one argument: none, or an omitted one, raises `SYNTAX 93.903`, and a second
+raises `SYNTAX 93.902`.
 
 ```rexx
 .local~log = .array~new
@@ -643,10 +652,15 @@ say e~items e~class~id r~items
 call try 'r~removeAll'
 call try 'r~removeAll("a", "b")'
 r2 = .relation~new
-r2~put('v', .k~new('s1'))
+r2~put('v', .k~new('p'))
+r2~put('w', .k~new('p'))
 .local~log~empty
 x = r2~removeAll(.k~new('p'))
-say .local~log[1] (.local~log~items >= 2)
+n = 0
+do e over .local~log
+  if e~left(4) == 'hash' then n += 1
+end
+say .local~log[1] (.local~log~items >= 2) n
 exit
 try:
   signal on syntax name bad
@@ -674,12 +688,12 @@ bad: say arg(1) '=>' condition('o')~code
   return 'same'
 ```
 
-```output
+```output defect=#168
 a,a,b Array 1 0
 0 Array 1
 r~removeAll => 93.903
 r~removeAll("a", "b") => 93.902
-hash p 1
+hash p 1 1
 ```
 
 r[class.relation.removeitem]
@@ -688,7 +702,8 @@ the search of [the search rule](r:class.relation.hasitem.sends), and answers
 the item that was stored, or `.nil` when no entry matches; when several
 entries qualify, which one is removed is not specified. `removeItem(item,
 index)` removes one entry that has both an item equal to the first argument
-and an index equal to the second, and answers `.nil` when there is none. An
+and an index equal to the second, and answers the item that was stored, or
+`.nil` when there is none. An
 omitted second argument is no argument. The index stays in the relation while
 an entry has it, and it is gone when the entry was the last one. The methods
 take one or two arguments: a missing or omitted item raises `SYNTAX 93.903`,
@@ -810,11 +825,19 @@ r~makeArray(1) => 93.902
 
 r[class.relation.uniqueindexes]
 `uniqueIndexes` answers a new `Array` with one index for each group of equal
-indexes in the relation, so an index that is in several entries appears once.
-Which of several equal index objects is answered is not specified, and so is
-the order. The answer is an instance of `Array` for a subclass receiver too,
-and does not follow later changes. `uniqueIndexes` takes no argument: one
-raises `SYNTAX 93.902`.
+indexes in the relation, equal as [the index rule](r:class.relation.indexes)
+says, so an index that is in several entries appears once, and two index
+objects with different hash codes are two indexes even when `==` answers true
+for them. Which of several equal index objects is answered is not specified,
+and so is the order ([the hash order rule](r:class.relation.deviation.33)).
+An index object that is stored in more than one entry is compared as any other
+([the deviation rule](r:class.relation.deviation.78)). `uniqueIndexes`
+compares the stored indexes with each other as a lookup does, sending `==` to a
+stored index with another stored index as the argument; which stored indexes it
+sends `==` and `hashCode` to, and how often, is not specified ([the hash order
+rule](r:class.relation.deviation.33)). The answer is an instance of `Array` for
+a subclass receiver too, and does not follow later changes. `uniqueIndexes`
+takes no argument: one raises `SYNTAX 93.902`.
 
 ```rexx
 r = .many~new
@@ -826,6 +849,16 @@ x = r~uniqueIndexes
 r~put('e', 'zz')
 say x~items x~class~id r~allIndexes~items r~uniqueIndexes~items
 say x~sort~makeString('L', ',') .relation~new~uniqueIndexes~items
+s = .relation~new
+s~put('v1', .k~new('a', 'h1'))
+s~put('v2', .k~new('a', 'h2'))
+say s~uniqueIndexes~items
+.local~log = .array~new
+s = .relation~new
+s~put('v1', .k~new('a', 'h'))
+s~put('v2', .k~new('b', 'h'))
+x = s~uniqueIndexes
+say x~items (.local~log~items > 0)
 call try 'r~uniqueIndexes(1)'
 exit
 try:
@@ -836,11 +869,28 @@ try:
 bad: say arg(1) '=>' condition('o')~code
   return
 ::class many subclass relation
+::class k
+::method init
+  expose tag h
+  use arg tag, h
+::method '=='
+  expose tag
+  use arg o
+  .local~log~append('==' tag)
+  return tag == o~tag
+::method tag
+  expose tag
+  return tag
+::method hashCode
+  expose h
+  return h
 ```
 
-```output
+```output defect=#167
 3 Array 5 4
 j,k,m 0
+2
+2 1
 r~uniqueIndexes(1) => 93.902
 ```
 
@@ -852,8 +902,9 @@ that of `allIndexes` ([the order rule](r:class.relation.makearray)). A
 relation with no entry, or none at the index, gives a supplier that is not
 available. It takes at most one argument, and an omitted argument is no
 argument: a second raises `SYNTAX 93.902`. With an index it sends `hashCode`
-to it and then `==` to it with stored indexes as the argument, as [the lookup
-rule](r:class.relation.indexes.sends) says.
+to it once, and `==` to it with every stored index of the same hash code as the
+argument; further sends, and how often each is sent, are not specified ([the
+hash order rule](r:class.relation.deviation.33)).
 
 ```rexx
 .local~log = .array~new
@@ -916,6 +967,340 @@ bad: say arg(1) '=>' condition('o')~code
 Supplier Supplier
 r~supplier("a", "b") => 93.902
 hash p 1
+```
+
+## Combining relations
+
+r[class.relation.operand]
+`union`, `difference`, `intersection`, `xor` and `subset` take exactly one
+argument, the other collection: none, or an omitted one, raises `SYNTAX 93.901`
+and a second raises `SYNTAX 93.902`. The argument is read as a list of entries
+as [the operand rule](r:class.collection.operand) says: what its `isA` answers
+decides whether it is sent `allItems`, `supplier` or `makeArray`, and an answer
+that is neither 0 nor 1 raises `SYNTAX 34.1`. All five send `supplier` to a
+map, `difference` and `subset` included, and none of them sends `items` to the
+argument; in both the five differ from the operations of
+[`Collection`](collection.md). An element of a list is an index and an item at
+once, and an entry of a map is its own index with its own item. The answers of
+`allItems` and `makeArray` are read as [the list
+rule](r:class.collection.operand.list) says, an instance of a subclass of
+`List` included ([Deviation 118](r:class.relation.deviation.118)); one with no
+`makeArray` method raises `SYNTAX 98.913`. A supplier is sent `available`, and
+while that answers true `index` and `item`, then `next`; `union` sends `item`
+before `index`, the other four `index` before `item`. An argument that `isA`
+does not report as ordered or as a map and that has no `makeArray` method,
+`.nil` included, raises `SYNTAX 93.948`, and so does a supplier that is `.nil`.
+The answers of `union`, `difference`, `intersection` and `xor` are instances of
+the class of the receiver. The entries are compared as pairs: an index is
+equal by [the index rule](r:class.relation.indexes) and an item by `==`. In the
+example each kind of argument records the message it is sent.
+
+```rexx
+.local~log = .array~new
+do op over 'union difference intersection xor subset'~makeArray(' ')
+  line = op':'
+  do k over .array~of(.ordered~new, .mapped~new, .plain~new, .both~new)
+    .local~log~empty
+    r = .relation~new~send(op, k)
+    line = line .local~log~makeString('L', '+')
+  end
+  say line
+end
+say .relation~new~union(.array~of('x', 'y'))~items
+m = .many~new
+say m~union(.array~new)~class~id m~difference(.array~new)~class~id,
+  m~intersection(.array~new)~class~id m~xor(.array~new)~class~id
+calls = 'r~union|r~union(,)|r~union(a, a)|r~union(.nil)|r~xor(.object~new)',
+  '|r~subset(.liar~new)|r~difference(.mp~new(.nil))',
+  '|r~intersection(.pk~new(.object~new))|r~union(.pk~new(.object~new))',
+  '|r~xor(.ord~new)'
+do c over calls~makeArray('|')
+  call try c
+end
+exit
+try:
+  signal on syntax name bad
+  r = .relation~new
+  interpret 'x =' arg(1)
+  say arg(1) '=> ok'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class many subclass relation
+::class ord inherit orderedcollection
+::method allitems
+  return .object~new
+::class ordered inherit orderedcollection
+::method allitems
+  .local~log~append('allItems')
+  return .array~new
+::method makearray
+  .local~log~append('makeArray')
+  return .array~new
+::class mapped inherit mapcollection
+::method supplier
+  .local~log~append('supplier')
+  return .supplier~new(.array~new, .array~new)
+::method allindexes
+  .local~log~append('allIndexes')
+  return .array~new
+::method makearray
+  .local~log~append('makeArray')
+  return .array~new
+::class plain inherit collection
+::method makearray
+  .local~log~append('makeArray')
+  return .array~new
+::class both inherit mapcollection orderedcollection
+::method allitems
+  .local~log~append('allItems')
+  return .array~new
+::method supplier
+  .local~log~append('supplier')
+  return .supplier~new(.array~new, .array~new)
+::class liar
+::method isa
+  return 2
+::class mp inherit mapcollection
+::method init
+  expose answer
+  use arg answer
+::method supplier
+  expose answer
+  return answer
+::class pk inherit collection
+::method init
+  expose answer
+  use arg answer
+::method makearray
+  expose answer
+  return answer
+```
+
+```output
+union: allItems supplier makeArray allItems
+difference: allItems supplier makeArray allItems
+intersection: allItems supplier makeArray allItems
+xor: allItems supplier makeArray allItems
+subset: allItems supplier makeArray allItems
+2
+MANY MANY MANY MANY
+r~union => 93.901
+r~union(,) => 93.901
+r~union(a, a) => 93.902
+r~union(.nil) => 93.948
+r~xor(.object~new)  => 93.948
+r~subset(.liar~new) => 34.1
+r~difference(.mp~new(.nil))  => 93.948
+r~intersection(.pk~new(.object~new)) => 98.913
+r~union(.pk~new(.object~new))  => 98.913
+r~xor(.ord~new) => 98.913
+```
+
+r[class.relation.union]
+`union(other)` answers the object that `copy` of the receiver answers, after
+`put(item, index)` has been sent to it for every entry of the argument, in the
+order the argument yields them ([the operand rule](r:class.relation.operand)).
+An entry is added even when the copy holds the same pair, so the answer has as
+many entries as the receiver and the argument have together. The receiver and
+the argument are not changed.
+
+```rexx
+a = .relation~new
+a~put("A1", "a"); a~put("B1", "b"); a~put("B1", "b"); a~put("X", "x")
+b = .relation~new
+b~put("B1", "b"); b~put("B2", "b"); b~put("C2", "c"); b~put("X", "x")
+t = .table~new
+t["b"] = "B1"; t["c"] = "C"
+u = a~union(b)
+say u~items listed(u)
+say a~items b~items (u \== a) u~class~id
+say listed(a~union(t))
+say listed(a~union(.array~of("b", "q")))
+say listed(.relation~new~union(a)) (listed(.relation~new~union(a)) == listed(a))
+exit
+listed: procedure
+  use arg r
+  l = .array~new
+  s = r~supplier
+  do while s~available
+    l~append(s~index"="s~item)
+    s~next
+  end
+  return l~sort~makeString("L", " ")
+```
+
+```output
+8 a=A1 b=B1 b=B1 b=B1 b=B2 c=C2 x=X x=X
+4 4 1 Relation
+a=A1 b=B1 b=B1 b=B1 c=C x=X
+a=A1 b=B1 b=B1 b=b q=q x=X
+a=A1 b=B1 b=B1 x=X 1
+```
+
+r[class.relation.difference]
+`difference(other)` answers the object that `copy` of the receiver answers,
+after `removeItem(item, index)` has been sent to it for every entry of the
+argument, in the order the argument yields them ([the operand
+rule](r:class.relation.operand)). Each of those removes one entry with an equal
+index and an equal item, so a pair that the receiver holds twice and the
+argument once stays once, and a pair that the copy does not hold removes
+nothing, an equal index with another item included.
+
+```rexx
+a = .relation~new
+a~put("A1", "a"); a~put("B1", "b"); a~put("B1", "b"); a~put("X", "x")
+b = .relation~new
+b~put("B1", "b"); b~put("B2", "b"); b~put("C2", "c"); b~put("X", "x")
+t = .table~new
+t["b"] = "B1"; t["c"] = "C"
+d = a~difference(b)
+say d~items listed(d)
+say listed(a~difference(t))
+say listed(a~difference(.array~of("b", "q", "B1")))
+say listed(a~difference(a~copy)) "|" a~items
+exit
+listed: procedure
+  use arg r
+  l = .array~new
+  s = r~supplier
+  do while s~available
+    l~append(s~index"="s~item)
+    s~next
+  end
+  return l~sort~makeString("L", " ")
+```
+
+```output
+2 a=A1 b=B1
+a=A1 b=B1 x=X
+a=A1 b=B1 b=B1 x=X
+ | 4
+```
+
+r[class.relation.intersection]
+`intersection(other)` answers a new relation of the class of the receiver, made
+by `new` without arguments, that holds a pair as often as the receiver and the
+argument both hold it. For every entry of the argument, in the order it yields
+them ([the operand rule](r:class.relation.operand)), it asks the copy of the
+receiver `hasItem(item, index)`; when that answers true, the new relation is
+sent `put(item, index)` and the copy `removeItem(item, index)`. The receiver
+and the argument are not changed, and the answer is not the copy.
+
+```rexx
+a = .relation~new
+a~put("A1", "a"); a~put("B1", "b"); a~put("B1", "b"); a~put("X", "x")
+b = .relation~new
+b~put("B1", "b"); b~put("B2", "b"); b~put("C2", "c"); b~put("X", "x")
+t = .table~new
+t["b"] = "B1"; t["c"] = "C"
+i = a~intersection(b)
+say i~items listed(i) (i \== a)
+say listed(a~intersection(t))
+say listed(b~intersection(a))
+say listed(a~intersection(.array~of("b", "q")))
+say listed(a~intersection(a)) a~items
+exit
+listed: procedure
+  use arg r
+  l = .array~new
+  s = r~supplier
+  do while s~available
+    l~append(s~index"="s~item)
+    s~next
+  end
+  return l~sort~makeString("L", " ")
+```
+
+```output
+2 b=B1 x=X 1
+b=B1
+b=B1 x=X
+
+a=A1 b=B1 b=B1 x=X 4
+```
+
+r[class.relation.xor]
+`xor(other)` answers the object that `copy` of the receiver answers, holding
+each pair as many times as the receiver and the argument differ in how often
+they hold it. For every entry of the argument, in the order it yields them
+([the operand rule](r:class.relation.operand)), it asks the copy
+`hasItem(item, index)`; when that answers true, the copy is sent
+`removeItem(item, index)`, and otherwise a new relation of the class of the
+receiver, made by `new` without arguments, is sent `put(item, index)`. Last,
+every entry of the new relation is `put` into the copy. A pair that the
+argument holds more often than the receiver is therefore in the answer for the
+surplus, and one that the receiver holds more often for its surplus.
+
+```rexx
+a = .relation~new
+a~put("A1", "a"); a~put("B1", "b"); a~put("B1", "b"); a~put("X", "x")
+b = .relation~new
+b~put("B1", "b"); b~put("B2", "b"); b~put("C2", "c"); b~put("X", "x")
+t = .table~new
+t["b"] = "B1"; t["c"] = "C"
+x = a~xor(b)
+say x~items listed(x)
+say listed(a~xor(t))
+say listed(a~xor(.array~of("b", "q")))
+say listed(a~xor(a)) "|" listed(a~xor(.relation~new))
+exit
+listed: procedure
+  use arg r
+  l = .array~new
+  s = r~supplier
+  do while s~available
+    l~append(s~index"="s~item)
+    s~next
+  end
+  return l~sort~makeString("L", " ")
+```
+
+```output
+4 a=A1 b=B1 b=B2 c=C2
+a=A1 b=B1 c=C x=X
+a=A1 b=B1 b=B1 b=b q=q x=X
+ | a=A1 b=B1 b=B1 x=X
+```
+
+r[class.relation.subset]
+`subset(other)` answers 1 when every pair of the receiver is held by the
+argument at least as often, and 0 otherwise, so an empty relation is a subset
+of every collection. It sends `removeItem(item, index)` to the copy of the
+receiver for every entry of the argument, in the order the argument yields them
+([the operand rule](r:class.relation.operand)), and answers what `isEmpty` of
+the copy answers. The receiver and the argument are not changed.
+
+```rexx
+a = .relation~new
+a~put("A1", "a"); a~put("B1", "b"); a~put("B1", "b"); a~put("X", "x")
+b = .relation~new
+b~put("B1", "b"); b~put("B2", "b"); b~put("C2", "c"); b~put("X", "x")
+t = .table~new
+t["b"] = "B1"; t["c"] = "C"
+say a~subset(b) b~subset(a) a~subset(a~copy) .relation~new~subset(a)
+s = .relation~new
+s~put("B1", "b"); s~put("B1", "b")
+say s~subset(b) s~subset(a) s~subset(s~copy)
+say .relation~new~subset(.array~new) a~subset(.array~new)
+say a~items b~items
+exit
+listed: procedure
+  use arg r
+  l = .array~new
+  s = r~supplier
+  do while s~available
+    l~append(s~index"="s~item)
+    s~next
+  end
+  return l~sort~makeString("L", " ")
+```
+
+```output
+0 0 1 1
+0 1 1
+1 0
+4 4
 ```
 
 ## Copies and the string value
@@ -982,25 +1367,26 @@ a Relation | a Relation | a Relation x 0
 ## The methods of the mixins
 
 r[class.relation.inherited]
-The class method `of` and the instance methods `putAll`, `union`,
-`difference`, `intersection`, `xor`, `subset`, `disjoint` and `equivalent` are
-not declared by `Relation`. `of` and `putAll` are those of
-[`MapCollection`](mapcollection.md), and the others those of
+The class method `of` and the instance methods `putAll`, `disjoint` and
+`equivalent` are not declared by `Relation`. `of` and `putAll` are those of
+[`MapCollection`](mapcollection.md), and `disjoint` and `equivalent` those of
 [`Collection`](collection.md); a relation is one of the collections they take
-as an argument, and the answers of the first four are instances of the class
-of the receiver. `putAll` stores with the `put` of the receiver, so an index
-that the receiver and the argument share is in two entries afterwards. In the
-example the arguments are relations of pairs of an index and an item.
+as an argument. `putAll` stores with the `put` of the receiver, so an index
+that the receiver and the argument share is in two entries afterwards.
+`disjoint` sends `intersection` to the receiver and answers what `isEmpty` of
+that answer says ([the disjoint rule](r:class.collection.disjoint)), so what a
+relation and its argument have in common is what [the intersection
+rule](r:class.relation.intersection) selects; `equivalent` sends `items` to the
+receiver and to the argument, then `subset` to the receiver ([the equivalent
+rule](r:class.collection.equivalent)), so it compares relations by [the subset
+rule](r:class.relation.subset). In the example the arguments are relations of
+pairs of an index and an item.
 
 ```rexx
 a = .many~of(.array~of('a', 'A1'), .array~of('b', 'B1'))
 c3 = .array~of('c', 'C3')
 b = .relation~of(.array~of('b', 'B2'), .array~of('c', 'C2'), c3)
-do op over 'union difference intersection xor'~makeArray(' ')
-  r = a~send(op, b)
-  say op r~class~id r~items listed(r)
-end
-say a~subset(b) a~disjoint(b) a~equivalent(b) a~subset(a~copy)
+say a~disjoint(b) a~equivalent(b) a~equivalent(a~copy) a~disjoint(a~copy)
 c = .many~of(.array~of('b', 'B1'))
 c~putAll(b)
 say c~items c~items('b') listed(c)
@@ -1018,33 +1404,32 @@ listed: procedure
 ```
 
 ```output
-union MANY 5 a=A1 b=B1 b=B2 c=C2 c=C3
-difference MANY 2 a=A1 b=B1
-intersection MANY 0 
-xor MANY 5 a=A1 b=B1 b=B2 c=C2 c=C3
-0 1 0 1
+1 0 1 0
 4 2 b=B1 b=B2 c=C2 c=C3
 ```
 
 ## Messages the methods send
 
 r[class.relation.sends]
-No method that `Relation` declares sends a message to its receiver: an
-override of `at`, `put` or any other of the methods is never asked by another
-method, and `[]` and `[]=` do not use `at` and `put`. The messages the methods
-do send go to other objects and have a rule each: `init` to the new object by
-`new` ([the new rule](r:class.relation.new)); `hashCode`, and `==` where the
-rule says so, to the index argument by `at`, `[]`, `put`, `[]=`, `hasIndex`,
-`items`, `remove`, `allAt`, `removeAll`, `supplier`, `hasItem` and
-`removeItem` with an index ([the lookup
-rule](r:class.relation.indexes.sends)); `==` to the item argument by
+No method that `Relation` declares sends a message to its receiver, except
+`union`, `difference`, `intersection`, `xor` and `subset`, which send `copy` to
+it ([their rule](r:class.relation.setops.sends)): an override of `at`, `put` or
+any other of the methods is never asked by another method, and `[]` and `[]=`
+do not use `at` and `put`. The messages the methods do send go to other objects
+and have a rule each: `init` to the new object by `new` ([the new
+rule](r:class.relation.new)); `hashCode`, and `==` where the rule says so, to
+the index argument by `at`, `[]`, `put`, `[]=`, `hasIndex`, `items`, `remove`,
+`allAt`, `removeAll`, `supplier`, `hasItem` and `removeItem` with an index ([the
+lookup rule](r:class.relation.indexes.sends)); `==` to the item argument by
 `hasItem`, `index`, `allIndex` and `removeItem` ([the search
-rule](r:class.relation.hasitem.sends)). `makeArray`, `allIndexes`, `allItems`,
+rule](r:class.relation.hasitem.sends)); `==` to a stored index, with another
+stored index as the argument, by `uniqueIndexes` ([its
+rule](r:class.relation.uniqueindexes)). `makeArray`, `allIndexes`, `allItems`,
 `copy`, `empty`, `isEmpty` and `items` with no index send nothing to the
-indexes and the items. The set operations send what the pages of the mixins
-say. In the first example a subclass has every method overridden to record its
-name, and each call records only its own; in the second the indexes and items
-record every message a program is likely to override.
+indexes and the items. In the first example a subclass has every method
+overridden to record its name, and each call records only its own; in the
+second the indexes and items record every message a program is likely to
+override.
 
 ```rexx
 own = '[] []= allAt allIndex allIndexes allItems at empty hasIndex hasItem',
@@ -1118,15 +1503,102 @@ say .local~log~items
 0
 ```
 
+r[class.relation.setops.sends]
+The five set operations send these messages, in this order, to the receiver, to
+the argument, to the object that `copy` of the receiver answers (the copy) and
+to the new relation that `new` without arguments, sent to the class of the
+receiver, answers. The argument is read first by sending `isA` with
+`OrderedCollection` and, when that does not answer 1, `isA` with
+`MapCollection`, and then `allItems`, `supplier` or `makeArray` as
+[the operand rule](r:class.relation.operand) says; "reading" below stands for
+these, and "for each entry" means once for each entry the argument yields.
+`union` sends `copy` to the receiver, reads, and for each entry sends
+`put(item, index)` to the copy; it answers the copy. `difference` sends `copy`
+to the receiver, reads, and for each entry sends `removeItem(item, index)` to
+the copy; it answers the copy. `intersection` sends `new` to the class, `copy`
+to the receiver, reads, and for each entry sends `hasItem(item, index)` to the
+copy and, when that answers true, `put(item, index)` to the new relation and
+`removeItem(item, index)` to the copy; it answers the new relation. `xor` sends
+`copy` to the receiver, `new` to the class, reads, and for each entry sends
+`hasItem(item, index)` to the copy and then either `removeItem(item, index)` to
+the copy, when that answered true, or `put(item, index)` to the new relation;
+then it sends `supplier` to the new relation and `put(item, index)` to the copy
+for each of its entries, and answers the copy. `subset` sends `copy` to the
+receiver, reads, sends `removeItem(item, index)` to the copy for each entry and
+then `isEmpty` to the copy; it answers what `isEmpty` answered. Nothing else is
+sent to the receiver, the argument or either relation. In the example the
+receiver is `R`, the argument `A`, the copy `C` and the new relation `W`; the
+last field is the identity of the answer, `-` for none of them.
+
+```rexx
+.local~log = .array~new
+.local~on = 0
+own = 'put hasItem removeItem supplier isA isEmpty'
+do m over own~makeArray(' ')
+  src = "if .local~on then .local~log~append(who(self)'"m"');"
+  src = src "forward class (super)"
+  .spy~define(m, src)
+end
+cp = "r = self~copy:super; .local~cp = r;"
+cp = cp "if .local~on then .local~log~append('copy'); return r"
+.spy~define('copy', cp)
+a = .spy~new
+a~put('A1', 'a'); a~put('B1', 'b'); a~put('B1', 'b')
+b = .spy~new
+b~put('B1', 'b'); b~put('C', 'c')
+.local~ra = a
+.local~rb = b
+do op over 'union difference intersection xor subset'~makeArray(' ')
+  .local~log~empty
+  .local~on = 1
+  x = a~send(op, b)
+  .local~on = 0
+  line = op'=>'
+  do msg over .local~log
+    if line~length + msg~length > 66 then do
+      say line
+      line = ' '
+    end
+    line = line msg
+  end
+  say line '|' who(x)
+end
+::routine who public
+  use arg o
+  if o == .local~ra then return 'R.'
+  if o == .local~rb then return 'A.'
+  if o == .local~cp then return 'C.'
+  if o == .local~nw then return 'W.'
+  return '-'
+::class spy subclass relation
+::method new class
+  r = self~new:super
+  .local~nw = r
+  if .local~on then .local~log~append('class.new')
+  return r
+```
+
+```output
+union=> copy A.isA A.isA A.supplier C.put C.put | C.
+difference=> copy A.isA A.isA A.supplier C.removeItem C.removeItem | C.
+intersection=> class.new copy A.isA A.isA A.supplier C.hasItem
+  W.put C.removeItem C.hasItem | W.
+xor=> copy class.new A.isA A.isA A.supplier C.hasItem C.removeItem
+  C.hasItem W.put W.supplier C.put | C.
+subset=> copy A.isA A.isA A.supplier C.removeItem C.removeItem
+  C.isEmpty | -
+```
+
 ## Deviations
 
 r[class.relation.deviation.33]
 The order of the answers of `allIndexes`, `allItems`, `makeArray`,
 `uniqueIndexes`, `allAt`, `allIndex`, `removeAll` and `supplier`, the entry
-that `at`, `index`, `remove` and `removeItem` choose among several, and the
-stored indexes other than those with the same hash code that a lookup compares
-with `==`, are not specified, and may differ from ooRexx's. Which entries are
-produced, and how often, is specified. In the example the answers are sorted.
+that `at`, `index`, `remove` and `removeItem` choose among several, and which
+stored indexes or items a lookup, a search or `uniqueIndexes` sends `==` or
+`hashCode` to beyond those it must compare, and how often it sends them, are
+not specified, and may differ from ooRexx's. Which entries are produced, and
+how often, is specified. In the example the answers are sorted.
 
 ```rexx
 r = .relation~new
@@ -1150,9 +1622,11 @@ A lookup or a `remove` with the very object that is stored as an index sends
 that object's `==` as for any other index, and a search for an item with the
 very object that is stored, by `hasItem`, `index`, `allIndex` or `removeItem`,
 sends that object's `==` as for any other item, so an object whose `==`
-answers false is not found even at its own entry. ooRexx compares identity
-first, finds it and sends nothing but `hashCode`. See [Deviation
-78](../deviations.md).
+answers false is not found even at its own entry. `uniqueIndexes` does the
+same for an index object that is stored in more than one entry, so one whose
+`==` answers false counts once for each of those entries. ooRexx compares
+identity first, finds it and sends nothing but `hashCode`, and counts such an
+index object once. See [Deviation 78](../deviations.md).
 
 ```rexx
 .local~n = 0
@@ -1165,6 +1639,10 @@ say (r~removeItem(q) == .nil) .local~n r~items
 r~put('v', q)
 .local~n = 0
 say r~at(q) .local~n
+r2 = .relation~new
+r2~put('v1', q)
+r2~put('v2', q)
+say r2~uniqueIndexes~items
 ::class thing
 ::method '=='
   .local~n += 1
@@ -1178,6 +1656,80 @@ say r~at(q) .local~n
 1 2
 1 3 1
 The NIL object 1
+2
+```
+
+r[class.relation.deviation.84]
+When the `==` that `remove` sends to an index empties the relation, `items`
+answers 0 afterwards, and so it does when the `==` that `removeAll` sends
+empties it: the search ends. ooRexx answers -1 for `remove`, and its
+`removeAll` goes on comparing with an object that is no stored index. See
+[Deviation 84](../deviations.md).
+
+```rexx
+r = .relation~new
+a = .c~new('a')
+r~put('v', a)
+.local~r = r
+say r~remove(.c~new('a'))
+say r~items
+r~put('v', a)
+r~put('w', a)
+say r~removeAll(.c~new('a'))~items
+say r~items
+::class c
+::method init
+  expose n
+  use arg n
+::method n
+  expose n
+  return n
+::method '=='
+  expose n
+  use arg o
+  .local~r~empty
+  return n == o~n
+::method hashCode
+  expose n
+  return n~hashCode
+```
+
+```output
+The NIL object
+0
+0
+0
+```
+
+r[class.relation.deviation.118]
+An instance of a subclass of `List` that `makeArray` answers to `union`,
+`difference`, `intersection`, `xor` or `subset` is sent `makeArray`, twice, so
+that the `makeArray` of the subclass is used, as [the list
+rule](r:class.collection.operand.list) says. ooRexx uses the items such an
+instance holds and sends it no `makeArray`. See [Deviation
+118](../deviations.md). In the example the subclass answers other items than it
+holds.
+
+```rexx
+r = .relation~new~union(.pk~new(.llist~of('held')))
+say r~items r~allIndexes[1]
+::class llist subclass list
+::method makearray
+  say 'makearray sent'
+  return .array~of('answered')
+::class pk inherit collection
+::method init
+  expose answer
+  use arg answer
+::method makearray
+  expose answer
+  return answer
+```
+
+```output
+makearray sent
+makearray sent
+1 answered
 ```
 
 r[class.relation.deviation.109]

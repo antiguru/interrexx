@@ -178,9 +178,10 @@ first
 r[class.table.indexes.sends]
 `at`, `[]`, `hasIndex`, `put`, `[]=` and `remove` look the index up by sending
 `hashCode` to the index argument, once, and then `==` to the index argument
-with a stored index as the argument, for each stored index that has the same
-hash code, until one answers true. Further stored indexes may be sent `==` as
-well, which ones is not specified ([the hash order
+with a stored index as the argument, for stored indexes that have the same hash
+code, until one answers true; each of those is compared before the lookup gives
+up. Which further stored indexes are sent `==` or `hashCode`, and how often
+each is sent, is not specified ([the hash order
 rule](r:class.table.deviation.33)); when the table is empty, the only message
 is `hashCode`. The very object that is stored is no exception to the `==`
 ([the deviation rule](r:class.table.deviation.78)). In the example every index
@@ -371,13 +372,14 @@ t~index(1, 2) => 93.902
 ```
 
 r[class.table.hasitem.sends]
-`hasItem`, `index` and `removeItem` send `==` to the argument, once for each
-item that is searched, with that item as the argument, until one answers true,
-and send nothing else, `hashCode` included; the items are visited in an order
-that is not specified, so the number of messages is specified only when no
-item matches, as then every item is visited. The search with the very object
-that is stored is no exception: its `==` is sent as for any other item ([the
-deviation rule](r:class.table.deviation.78)).
+`hasItem`, `index` and `removeItem` send `==` to the argument with an item as
+the argument, item by item, until one answers true, and send nothing else,
+`hashCode` included. The items are visited in an order that is not specified;
+every item is compared at least once when none matches, and how often `==` is
+sent with the same item is not specified ([the hash order
+rule](r:class.table.deviation.33)). The search with the very object that is
+stored is no exception: its `==` is sent as for any other item ([the deviation
+rule](r:class.table.deviation.78)).
 
 ```rexx
 .local~n = 0
@@ -386,24 +388,25 @@ t~put('s', 'k1')
 t~put('t', 'k2')
 t~put('u', 'k3')
 q = .thing~new
-say t~hasItem(q) .local~n
+.local~h = 0
+say t~hasItem(q) (.local~n >= 3) .local~h
 .local~n = 0
-say (t~index(q) == .nil) .local~n
+say (t~index(q) == .nil) (.local~n >= 3) .local~h
 .local~n = 0
-say (t~removeItem(q) == .nil) .local~n t~items
+say (t~removeItem(q) == .nil) (.local~n >= 3) .local~h t~items
 ::class thing
 ::method '=='
   .local~n += 1
   return 0
 ::method hashCode
-  .local~n += 100
+  .local~h += 1
   return 1
 ```
 
 ```output
-0 3
-1 3
-1 3 3
+0 1 0
+1 1 0
+1 1 0 3
 ```
 
 r[class.table.items]
@@ -808,10 +811,11 @@ say .local~log~items
 
 r[class.table.deviation.33]
 The order of the answers of `allIndexes`, `allItems`, `makeArray` and
-`supplier`, of the search of `hasItem`, `index` and `removeItem`, and the
-stored indexes other than those with the same hash code that a lookup compares
-with `==`, are not specified, and may differ from ooRexx's. Which entries are
-produced, and how often, is specified. In the example the answers are sorted.
+`supplier`, of the search of `hasItem`, `index` and `removeItem`, and which
+stored indexes or items a lookup or a search sends `==` or `hashCode` to
+beyond those it must compare, and how often it sends them, are not specified,
+and may differ from ooRexx's. Which entries are produced, and how often, is
+specified. In the example the answers are sorted.
 
 ```rexx
 t = .table~new
