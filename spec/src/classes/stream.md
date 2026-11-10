@@ -354,8 +354,8 @@ write positions, also when two instances, or an instance and a function, name
 the same file. They do not share what is read: each reads the file from its
 own position. What an instance has written is in the file at the latest when
 it is closed or flushed, or sent `uninit`. Another instance on the file
-answers its size, and the number of characters left, with that data in
-them ([Deviation 139](r:class.stream.deviation.139)).
+answers its size, the number of characters left and the number of lines
+left with that data in them ([Deviation 139](r:class.stream.deviation.139)).
 
 ```rexx
 f = 'spec-stream-separate-zq.tmp'
@@ -2441,12 +2441,12 @@ o~close => 98.901
 ```
 
 r[class.stream.deviation.139]
-A stream answers `query('size')` and `chars` for the file as it is when it is
-asked, so they include data that another stream on the same file has written
-and flushed since this stream was first read or asked. ooRexx keeps the size
-that the stream found when it first read or was first asked, so that its
-`query('size')` is out of date from then on and its `chars` is counted from
-that size; the example is not run against it.
+A stream answers `query('size')`, `chars` and `lines` for the file as it is
+when it is asked, so they include data that another stream on the same file
+has written and flushed since this stream was first read or asked. ooRexx
+keeps the size that the stream found when it first read or was first asked,
+so that its `query('size')` is out of date from then on and its `chars` and
+`lines` are counted from that size; the example is not run against it.
 
 ```rexx
 f = 'spec-stream-dev139-zq.tmp'
@@ -2455,19 +2455,23 @@ call lineout f
 a = .stream~new(f)
 b = .stream~new(f)
 say b~linein
-say b~query('size') b~chars
+say b~query('size') b~chars b~lines('C')
 x = a~lineout('two')
 a~flush
-say b~query('size') b~chars
+say b~query('size') b~chars b~lines('C')
+x = a~lineout('three')
+a~flush
+say b~query('size') b~chars b~lines('C')
 a~close
 b~close
 call sysfiledelete f
 ```
 
-```output
+```output defect=#209
 one
-4 0
-8 4
+4 0 0
+8 4 1
+14 10 2
 ```
 
 r[class.stream.deviation.140]
