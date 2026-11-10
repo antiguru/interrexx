@@ -1632,11 +1632,18 @@ characters.
 a = .digits~new('5')
 b = .digits~new('01:02:03')
 c = .digits~new('2')
-say .timespan~fromDays(a) .timespan~new(a)
-say .timespan~fromNormalTime(b) .timespan~new(c, c, c)
-say .timespan~fromHours(c) * a .timespan~new(1, 2, 3)~addDays(c)
-say .timespan~fromStringFormat(.digits~new('1.02:03:04.000005'))
+call show '.timespan~fromDays(a) .timespan~new(a)'
+call show '.timespan~fromNormalTime(b) .timespan~new(c, c, c)'
+call show '.timespan~fromHours(c) * a .timespan~new(1, 2, 3)~addDays(c)'
+call show ".timespan~fromStringFormat(.digits~new('1.02:03:04.000005'))"
 say 'sends' .local~sent
+exit
+show:
+  signal on syntax name failed
+  interpret 'say' arg(1)
+  return
+failed: say '=>' condition('o')~code
+  return
 ::class digits subclass string
 ::method makestring
   .local~sent = .local~sent + 1
@@ -1774,9 +1781,10 @@ a number that is not whole, in place of `SYNTAX 40.12`: `1.0000000001` and
 `5.00000000000000001` are refused, and `2017.00000000000000000001` is 2017. The
 places are the count of microseconds of the one-argument `new`, and its days,
 hours, minutes, seconds and microseconds. ooRexx raises `SYNTAX 40.19` for a
-fraction as small as 1E-10 in the days, the hours, the minutes or the seconds,
-and accepts one in the microseconds and one past the 18th significant digit of a
-count.
+fraction in the days, the hours, the minutes or the seconds that leaves a
+fraction of a microsecond, such as `1.0000000001` days. It accepts a smaller
+one, such as `4.00000000000001` seconds, and any fraction in the microseconds.
+It reads the count as this rule does.
 
 ```rexx
 say .timespan~new(1.0, 2E0, 3, 4.00, ' 5 ')
@@ -1787,6 +1795,7 @@ numeric digits 9
 call try '.timespan~new(1.0000000001, 2, 3, 4, 5)'
 call try '.timespan~new(1, 2.0000000001, 3, 4, 5)'
 call try '.timespan~new(1, 2, 3, 4, 5.0000000001)'
+call try '.timespan~new(1, 2, 3, 4.00000000000001, 5)'
 call try '.timespan~new(5.0000000001)'
 call try '.timespan~new(2017.00000000000000000001)'
 call try '.timespan~new(5.00000000000000001)'
@@ -1808,6 +1817,7 @@ bad: say arg(1) '=>' condition('o')~code
 .timespan~new(1.0000000001, 2, 3, 4, 5) => 88.904
 .timespan~new(1, 2.0000000001, 3, 4, 5) => 88.907
 .timespan~new(1, 2, 3, 4, 5.0000000001) => 88.907
+.timespan~new(1, 2, 3, 4.00000000000001, 5) => 88.907
 .timespan~new(5.0000000001) => 88.903
 .timespan~new(2017.00000000000000000001) => 00:00:00.002017
 .timespan~new(5.00000000000000001) => 88.903
@@ -1825,11 +1835,17 @@ or with text that is no value.
 t = .st~new
 z = .timespan~new(0)
 h = .timespan~fromHours(1)
-say t t~totalMicroseconds t~sign t~string t~days t~hours t~duration
-say (t = z) (t == z) (t~compareTo(z)) (t~hashCode == z~hashCode)
-say (t + h) (t - h) (-t) (t * 3) (t / 3) (t // 3)
-say (t + .datetime~minDate) t~addDays(1) t~copy t~copy~class~id
+call show 't t~totalMicroseconds t~sign t~string t~days t~hours t~duration'
+call show '(t = z) (t == z) (t~compareTo(z)) (t~hashCode == z~hashCode)'
+call show '(t + h) (t - h) (-t) (t * 3) (t / 3) (t // 3)'
+call show '(t + .datetime~minDate) t~addDays(1) t~copy t~copy~class~id'
 exit
+show:
+  signal on syntax name failed
+  interpret 'say' arg(1)
+  return
+failed: say '=>' condition('o')~code
+  return
 ::class st subclass timespan
 ::method init
   nop

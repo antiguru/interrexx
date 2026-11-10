@@ -1198,8 +1198,9 @@ changed, and the offset is kept. `addYears` takes a whole number of years, read
 as [the form rule](r:conv.whole.form) and [the digits rule](r:conv.whole.digits)
 say ([Deviation 130](r:class.datetime.deviation.130)), and keeps month, day and
 time of day, except that 29 February moves to 28 February when the year it lands
-in is no leap year; a year past the range raises `SYNTAX 88.907`, and a value
-such as 1.5 or `x` raises `SYNTAX 88.903`. The other six take a number, a
+in is no leap year; a year past the range raises `SYNTAX 88.907`, and a number
+of years of 1000000000 or more in magnitude, or a value such as 1.5 or `x`,
+raises `SYNTAX 88.903`. The other six take a number, a
 negative one moves back, and a fraction is allowed: `addDays(1.5)` is a day and
 twelve hours. The new moment is the receiver's count of microseconds plus the
 amount in microseconds, rounded to 18 significant digits; a part of a
@@ -2127,11 +2128,18 @@ stands for its own characters.
 a = .digits~new('5')
 b = .digits~new('05/01/17')
 c = .digits~new('2017')
-say .datetime~fromBaseDate(a) .datetime~fromEuropeanDate(b)
-say .datetime~new(c, 6, 3)
-say .datetime~fromTicks(a),
-    .datetime~fromEuropeanDate('05-01-17', .digits~new('-'))
+call show '.datetime~fromBaseDate(a) .datetime~fromEuropeanDate(b)'
+call show '.datetime~new(c, 6, 3)'
+call show '.datetime~fromTicks(a)',
+  ".datetime~fromEuropeanDate('05-01-17', .digits~new('-'))"
 say 'sends' .local~sent
+exit
+show:
+  signal on syntax name failed
+  interpret 'say' arg(1)
+  return
+failed: say '=>' condition('o')~code
+  return
 ::class digits subclass string
 ::method makestring
   .local~sent = .local~sent + 1
@@ -2353,16 +2361,16 @@ as month 1 and `1.0000000001` as an hour of 1, and reads the days of
 `fromBaseDate` rounded to nine digits.
 
 ```rexx
-say .datetime~new(2017.0, 6, 30)~isoDate
-say .datetime~new(2.017E3, 6.0, 30, 1.0, 0, 0, 0, 6E1)~isoDate
-say .datetime~new('2017 ', ' 6', '+3')~isoDate
-say .datetime~new(' 90.0 ')~isoDate
-say .datetime~new(5, 6E1)~utcIsoDate
-say .datetime~fromBaseDate(5.0, 60.0)~utcIsoDate
-say .datetime~fromTicks('5 ', 6E1)~utcIsoDate
-say .datetime~new(2017, 6, 30)~toTimezone(6E1)~offset
+call show '.datetime~new(2017.0, 6, 30)~isoDate'
+call show '.datetime~new(2.017E3, 6.0, 30, 1.0, 0, 0, 0, 6E1)~isoDate'
+call show ".datetime~new('2017 ', ' 6', '+3')~isoDate"
+call show ".datetime~new(' 90.0 ')~isoDate"
+call show '.datetime~new(5, 6E1)~utcIsoDate'
+call show '.datetime~fromBaseDate(5.0, 60.0)~utcIsoDate'
+call show ".datetime~fromTicks('5 ', 6E1)~utcIsoDate"
+call show '.datetime~new(2017, 6, 30)~toTimezone(6E1)~offset'
 numeric digits 3
-say .datetime~new(2017.0, 6, 30)~isoDate
+call show '.datetime~new(2017.0, 6, 30)~isoDate'
 numeric digits 9
 call try '.datetime~new(2017.0000000001, 6, 30)'
 call try '.datetime~new(2017.00000000000000000001, 6, 30)'
@@ -2382,7 +2390,14 @@ call try '.datetime~fromTicks(5, 60.0000000001)'
 call try '.datetime~new(2017, 6, 30)~toTimezone(60.0000000001)'
 call try '.datetime~new(2017, 6, 30)~addYears(1.0)'
 call try '.datetime~new(2017, 6, 30)~addYears(1.0000000001)'
+call try '.datetime~new(2017, 6, 30)~addYears(1000000000)'
 exit
+show:
+  signal on syntax name failed
+  interpret 'say' arg(1)
+  return
+failed: say '=>' condition('o')~code
+  return
 try:
   signal on syntax name bad
   interpret 'r =' arg(1)
@@ -2420,6 +2435,7 @@ bad: say arg(1) '=>' condition('o')~code
 .datetime~new(2017, 6, 30)~toTimezone(60.0000000001) => 88.907
 .datetime~new(2017, 6, 30)~addYears(1.0) => 2018-06-30T00:00:00.000000
 .datetime~new(2017, 6, 30)~addYears(1.0000000001) => 88.903
+.datetime~new(2017, 6, 30)~addYears(1000000000) => 88.903
 ```
 
 r[class.datetime.deviation.131]
@@ -2433,16 +2449,22 @@ with text that is no value.
 ```rexx
 d = .sd~new
 m = .datetime~minDate
-say d d~offset d~fullDate d~isoDate d~utcIsoDate
-say (d = m) (d == m) (d~compareTo(m)) (d~hashCode == m~hashCode)
-say d~year d~month d~day d~hours d~minutes d~seconds d~microseconds
-say d~dayName d~weekDay d~yearDay d~ticks d~baseDate d~timeOfDay
-say d~addDays(1) d~addYears(1) d~toTimezone(60)
-say d + .timespan~fromHours(1)
-say (d - m) (d - .timespan~new(0))
-say d~date d~toUtcTime d~copy d~makeString
-say d~addDays(1)~class~id d~copy~class~id (d~elapsed~sign)
+call show 'd d~offset d~fullDate d~isoDate d~utcIsoDate'
+call show '(d = m) (d == m) (d~compareTo(m)) (d~hashCode == m~hashCode)'
+call show 'd~year d~month d~day d~hours d~minutes d~seconds d~microseconds'
+call show 'd~dayName d~weekDay d~yearDay d~ticks d~baseDate d~timeOfDay'
+call show 'd~addDays(1) d~addYears(1) d~toTimezone(60)'
+call show 'd + .timespan~fromHours(1)'
+call show '(d - m) (d - .timespan~new(0))'
+call show 'd~date d~toUtcTime d~copy d~makeString'
+call show 'd~addDays(1)~class~id d~copy~class~id (d~elapsed~sign)'
 exit
+show:
+  signal on syntax name failed
+  interpret 'say' arg(1)
+  return
+failed: say '=>' condition('o')~code
+  return
 ::class sd subclass datetime
 ::method init
   nop
