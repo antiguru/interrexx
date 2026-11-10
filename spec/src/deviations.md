@@ -1055,4 +1055,6 @@ since, and its `lines` can miss it.
 The `supplier` of a `Stream` that was read part of the way into a line is at
 that line, with the number of the line as its index and the rest of the line,
 as a plain `lineIn` answers it there, as its first item. ooRexx answers the
-whole of the line when the read position is in the first line.
+whole of the line when the read position is in the first line. It sends
+`lineIn` with the number of the line, where this book sends it with no
+argument.

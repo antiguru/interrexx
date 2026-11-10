@@ -1115,10 +1115,10 @@ r[class.stream.flush]
 `flush` answers `READY:` and leaves the state as it was, [as FLUSH
 does](r:bif.stream.flush), also for a stream that is not open. What it forces
 out is in the file afterwards, so a stream that reads the file after the
-writing stream was flushed sees it. Unlike the stream that a function names,
-whose writes [are in the file at once](r:bif.stream.flush), an instance may
-keep what it writes until it is flushed or closed: another instance, or a
-function, may not see it before then.
+writing stream was flushed sees it. An instance may keep what it writes until
+it is flushed or closed, as the stream that a function names may: another
+stream on the same file, an instance or a function, may not see it before
+then, as the second example shows.
 
 ```rexx
 f = 'spec-stream-flush-zq.tmp'
@@ -1136,6 +1136,32 @@ READY: UNKNOWN
 0 READY: READY
 data READY
 READY: READY:
+```
+
+```rexx
+f = 'spec-stream-flush-seen-zq.tmp'
+a = .stream~new(f)
+x = a~lineout('one')
+b = .stream~new(f)
+say '[' || b~linein || ']' b~state
+x = b~close
+x = a~flush
+b = .stream~new(f)
+say '[' || b~linein || ']' b~state
+x = b~close
+x = a~close
+call lineout f, 'two'
+b = .stream~new(f)
+say b~lines
+x = b~close
+call lineout f
+call sysfiledelete f
+```
+
+```output
+[] NOTREADY
+[one] READY
+1
 ```
 
 r[class.stream.query]
@@ -1857,6 +1883,8 @@ say e~arrayout(.array~new) e~state '[' || e~query('exists') || ']'
 s~close
 say translate(charin(f, 1, 200), '~', '0a'x)
 call try 's~arrayout'
+call try 's~arrayout(, "x")'
+call try 's~arrayout(, "L")'
 call try 's~arrayout(.array~of(1), "x")'
 call try 's~arrayout(.nil, "x")'
 call try 's~arrayout(.nil)'
@@ -1898,6 +1926,8 @@ bad: say arg(1) '=>' condition('o')~code
 0 UNKNOWN []
 one~two~three~45six~eight~x~y~zset~q1~q2~
 s~arrayout => 93.901
+s~arrayout(, "x") => 93.903
+s~arrayout(, "L") => 93.903
 s~arrayout(.array~of(1), "x") => 93.0
 s~arrayout(.nil, "x") => 93.0
 s~arrayout(.nil) => 98.913
@@ -2099,11 +2129,11 @@ one argument, the number of the line to read. For each `next` it sends
 send nothing. `supplier` sends nothing else. The first answer of `state` is
 not used. When the second is `READY`, the supplier starts at the line that the
 read position is in, which it finds without sending a message, and otherwise
-at line 1; for a stream that is not open, a `state` that answers `READY`
-raises `SYNTAX 41.1`. An entry is the answer of a `lineIn` that does not raise
-NOTREADY. A `lineIn` that raises it ends the supplier, which is then not
-available, and its answer is no item. A `lineIn` that answers no value raises
-`SYNTAX 91.999`.
+at line 1; when the second answer is `READY` for a stream that is not open,
+`supplier` raises `SYNTAX 41.1` and sends no `lineIn`. An entry is the answer
+of a `lineIn` that does not raise NOTREADY. A `lineIn` that raises it ends the
+supplier, which is then not available, and what that `lineIn` answers is not
+an item. A `lineIn` that answers no value raises `SYNTAX 91.999`.
 
 ```rexx
 f = 'spec-stream-suppliersends-zq.tmp'
@@ -2150,6 +2180,91 @@ read 0 StreamSupplier 1 one 1  state state lineIn(1)
 read 1 StreamSupplier 2 two 1  state state lineIn(2)
   next 3 three  lineIn(3)
 0 UNKNOWN  state state lineIn(1)
+```
+
+```rexx
+f = 'spec-stream-supplierstate-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f
+do w over 'UNKNOWN READY', 'READY NOTREADY'
+  s = .fake~new(f)
+  x = s~linein
+  s~answers = w
+  p = s~supplier
+  say w '->' p~index p~item
+  s~close
+end
+s = .fake~new(f)
+s~answers = 'READY READY'
+signal on syntax name bad
+p = s~supplier
+bad: say condition('o')~code
+s~close
+call sysfiledelete f
+exit
+::class fake subclass stream
+::attribute answers
+::method init
+  self~answers = ''
+  forward class (super)
+::method state
+  if self~answers == '' then forward class (super)
+  w = self~answers~word(1)
+  self~answers = self~answers~subword(2)
+  return w
+```
+
+```output
+UNKNOWN READY -> 2 two
+READY NOTREADY -> 1 one
+41.1
+```
+
+```rexx
+f = 'spec-stream-supplierlinein-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f
+do m over 'FAKE', 'RAISE', 'NOVAL'
+  call walk m
+end
+call sysfiledelete f
+exit
+walk:
+  s = .ov~new(f)
+  s~mode = arg(1)
+  signal on syntax name bad
+  p = s~supplier
+  out = ''
+  do while p~available
+    out = out p~index || '=' || p~item
+    p~next
+  end
+  say arg(1) || ':' || out p~available
+  s~close
+  return
+bad:
+  say arg(1) '=>' condition('o')~code
+  s~close
+  return
+::class ov subclass stream
+::attribute mode
+::method linein
+  use arg n
+  if n < 3 then forward class (super)
+  if n > 4 then raise notready
+  select
+    when self~mode == 'FAKE' then return 'fake' || n
+    when self~mode == 'RAISE' then raise notready
+    otherwise return
+  end
+```
+
+```output
+FAKE: 1=one 2=two 3=fake3 4=fake4 0
+RAISE: 1=one 2=two 0
+NOVAL => 91.999
 ```
 
 r[class.stream.uninit]
@@ -2462,8 +2577,8 @@ when it is asked, so they include data that another stream on the same file
 has written and flushed since this stream was first read or asked. ooRexx
 keeps the size that the stream found when it first read or was first asked, so
 that its `query('size')` is out of date from then on, its `chars` is counted
-from that size, and its `lines` can miss the lines written since, as on the
-last two lines of the example; the example is not run against it.
+from that size, and its `lines` can miss the lines written since; the example
+is not run against it.
 
 ```rexx
 f = 'spec-stream-dev139-zq.tmp'
@@ -2498,7 +2613,10 @@ stream was read part of the way into it, and its index is the number of the
 line that the read position is in. The items after it are the lines that
 follow. ooRexx answers the whole of the line when the read position is inside
 the first line, as the example shows, and answers as this rule says from the
-second line on; the example is not run against it.
+second line on, though it gets that answer by sending `lineIn` with the number
+of the line, where [the rule of the sends](r:class.stream.supplier.sends)
+sends `lineIn` with no argument, as the second example shows; the examples
+are not run against it.
 
 ```rexx
 f = 'spec-stream-dev140-zq.tmp'
@@ -2518,4 +2636,40 @@ call sysfiledelete f
 ```output defect=#208
 1 e [two]
 2 two
+```
+
+```rexx
+f = 'spec-stream-dev140-sends-zq.tmp'
+call lineout f, 'one'
+call lineout f, 'two'
+call lineout f, 'three'
+call lineout f
+s = .spy~new(f)
+x = s~charin(, 5)
+s~log = ''
+p = s~supplier
+say p~index p~item s~log
+s~log = ''
+p~next
+say p~index p~item s~log
+s~close
+call sysfiledelete f
+exit
+::class spy subclass stream
+::attribute log
+::method init
+  self~log = ''
+  forward class (super)
+::method state
+  self~log = self~log 'state'
+  forward class (super)
+::method linein
+  if arg(1, 'e') then self~log = self~log 'lineIn(' || arg(1) || ')'
+  else self~log = self~log 'lineIn()'
+  forward class (super)
+```
+
+```output defect=#208
+2 wo  state state lineIn()
+3 three  lineIn(3)
 ```

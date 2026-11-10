@@ -478,7 +478,9 @@ READY: UNKNOWN
 r[bif.stream.flush]
 `FLUSH` answers `READY:`. A file can be asked about, or read back, by the
 program through the stream functions as it is, whether `FLUSH` was used or
-not, so that `FLUSH` has no other effect that a program can see.
+not, so that through the functions `FLUSH` has no other effect; a `Stream`
+instance on the same file [may not see](r:class.stream.flush) what was
+written before it.
 
 ```rexx
 f = 'spec-stream-flush.tmp'
@@ -487,6 +489,14 @@ call charout f, 'abc'
 say stream(f, 'c', 'flush') stream(f, 'c', 'query size') stream(f)
 call charout f, 'd'
 say stream(f, 'c', 'flush') stream(f, 'c', 'query size') chars(f)
+call charout f, 'e'
+s = .stream~new(f)
+say s~chars
+x = s~close
+say stream(f, 'c', 'flush')
+s = .stream~new(f)
+say s~chars
+x = s~close
 call charout f
 call sysfiledelete f
 ```
@@ -494,6 +504,9 @@ call sysfiledelete f
 ```output
 READY: 3 READY
 READY: 4 4
+4
+READY:
+5
 ```
 
 ## Positions
