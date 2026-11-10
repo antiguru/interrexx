@@ -1033,3 +1033,10 @@ that activity ended, so that no activity can acquire it.
 `temporaryPath` of `File` answers `/tmp` when the environment variable `TMPDIR`
 is set to the null string, as it does when it is not set. ooRexx answers a
 `File` for the null string.
+
+## 138. allItems after a second init of a Supplier
+
+`init` sent again to a `Supplier` also drops the arrays that an earlier
+`allItems` or `allIndexes` collected, so the next call of either collects the
+entries of the new arrays. ooRexx answers the arrays collected before the
+`init`.

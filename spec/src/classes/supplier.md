@@ -1,7 +1,7 @@
 ---
 element: "Supplier"
 kind: class
-deviations: [118, 124, 135]
+deviations: [118, 124, 135, 138]
 rexxref: "Builtin Classes > Utility Classes > Supplier Class; Builtin Classes > Utility Classes > Supplier Class > new (Class Method); Builtin Classes > Utility Classes > Supplier Class > init; Builtin Classes > Utility Classes > Supplier Class > allIndexes; Builtin Classes > Utility Classes > Supplier Class > allItems; Builtin Classes > Utility Classes > Supplier Class > available; Builtin Classes > Utility Classes > Supplier Class > index; Builtin Classes > Utility Classes > Supplier Class > item; Builtin Classes > Utility Classes > Supplier Class > next; Builtin Classes > Utility Classes > Supplier Class > supplier"
 ---
 
@@ -117,7 +117,9 @@ and so does any other kind of object, a `Queue` included ([Deviation
 as the first array has slots ([the walking
 rules](r:class.supplier.available)). `init` sent to a supplier that has been
 made already does the same again with new arrays and starts it over at its
-first entry; the arguments are checked then as they are by `new`.
+first entry; the arguments are checked then as they are by `new`, and the
+arrays that `allItems` or `allIndexes` collected before are dropped
+([Deviation 138](r:class.supplier.deviation.138)).
 
 ```rexx
 a = .array~of('p', 'q', 'r')
@@ -773,4 +775,23 @@ o~index => 98.901
 o~item => 98.901
 o~next => 98.901
 o~supplier => 98.901
+```
+
+r[class.supplier.deviation.138]
+After a second `init`, `allItems` and `allIndexes` collect the entries of the
+new arrays, not answer the arrays that a call before the `init` collected
+([Deviation 138](../deviations.md)). ooRexx answers the old arrays, so the
+example is not run against it.
+
+```rexx
+s = .supplier~new(.array~of(1, 2), .array~of('a', 'b'))
+x = s~allItems
+s~init(.array~of(9), .array~of('z'))
+say s~available s~item
+say s~allItems~makeString('L', ',') s~allIndexes~makeString('L', ',')
+```
+
+```output
+1 9
+9 z
 ```
