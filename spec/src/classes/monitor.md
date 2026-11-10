@@ -384,6 +384,46 @@ a Monitor a TARGET
 A
 ```
 
+r[class.monitor.copy]
+`copy` answers a monitor that shares the stack of destinations with the
+original, also when that stack holds only `.nil`: a `destination` sent to either
+one, with an argument or without, changes where both forward. `init` gives the
+monitor that receives it a stack of its own, and from then on the two are
+independent.
+
+```rexx
+a = .target~new('A'); b = .target~new('B'); c = .target~new('C')
+m = .monitor~new(a)
+k = m~copy
+x = k~destination(b)
+say m~current~id k~current~id
+k~init(c)
+say m~current~id k~current~id
+x = k~destination(a)
+say m~current~id k~current~id
+x = m~destination(b)
+say m~current~id k~current~id
+n = .monitor~new
+j = n~copy
+x = j~destination(a)
+say (n~current == .nil) j~current~id
+::class target
+::method init
+  expose name
+  use arg name
+::method id
+  expose name
+  return name
+```
+
+```output
+B B
+B C
+B A
+B A
+0 A
+```
+
 r[class.monitor.sends]
 The messages that a monitor sends are the one that `unknown` sends to the
 destination, which [the forwarding rule](r:class.monitor.unknown) states, and

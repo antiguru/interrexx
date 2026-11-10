@@ -78,18 +78,18 @@ Alarm SUB 0
 ## Making an alarm
 
 r[class.alarm.init]
-`new` sends `init(atime, target, attachment)`, and `init` sets the alarm up.
-It needs the first two arguments, so `new` with none or only the first raises
-`SYNTAX 93.901` and an omitted first or second argument raises
-`SYNTAX 93.903`; a fourth argument raises `SYNTAX 93.902`. The checks of the
-arguments that are present are made in this order: first the target, which
-must be an implementation of
-[`AlarmNotification`](r:class.alarmnotification.creation) or `SYNTAX 88.914`
-is raised, and then the time, which raises `SYNTAX 93.951` for every value
-that [the rules below](r:class.alarm.init.seconds) do not accept. So a target
-that is no implementation is reported even when the time is wrong too, and a
-refused alarm is not set. `attachment` can be any object, and is `.nil` when
-it is omitted. The alarm is set when `init` ends normally.
+`new` sends `init(atime, target, attachment)`, and `init` sets the alarm up. It
+needs the first two arguments, so `new` with none or only the first raises
+`SYNTAX 93.901` and an omitted first or second argument raises `SYNTAX 93.903`;
+a fourth argument raises `SYNTAX 93.902`. The checks of the arguments that are
+present are made in this order: first the target, which must be an
+implementation of [`AlarmNotification`](r:class.alarmnotification.creation) or
+`SYNTAX 88.914` is raised, and then the time, which raises `SYNTAX 93.951` for
+every value that [the rules below](r:class.alarm.init.seconds) do not accept,
+except the very large ones for which they name other errors. So a target that is
+no implementation is reported even when the time is wrong too, and a refused
+alarm is not set. `attachment` can be any object, and is `.nil` when it is
+omitted. The alarm is set when `init` ends normally.
 
 ```rexx
 n = .note~new
@@ -132,13 +132,22 @@ bad: say arg(1) '=>' condition('o')~code
 
 r[class.alarm.init.seconds]
 A time that is a string without a colon is a number of seconds from now. It is
-read as a number as [the DATATYPE `N` rule](r:bif.datatype.number) reads it,
-so blanks at either end are allowed and a decimal point or an exponent is too,
-and it has to be zero or more: a string that is no number, the empty string
-and a negative number raise `SYNTAX 93.951`. The alarm is set for the moment
-that many seconds after `init` read the clock, to the microsecond. The example
-reads the scheduled time back, with the bounds a clock cannot break, and
-prints only whether they hold.
+read as a number as [the DATATYPE `N` rule](r:bif.datatype.number) reads it, so
+blanks at either end are allowed and a decimal point or an exponent is too, and
+it has to be zero or more: a string that is no number, the empty string and a
+negative number raise `SYNTAX 93.951`. The number is cut to the microsecond
+before its sign is checked, so `-0.0000001` is a time of zero. A number with
+more than 18 significant digits is first rounded to 18, and the number is read
+in full whatever the NUMERIC DIGITS setting. A number of seconds that counts
+10**12 or more once it is rounded as said above, positive or negative, raises
+`SYNTAX 88.903` instead, and one that puts the moment after the last moment a
+`DateTime` can hold, or before the first
+([its limits](r:class.datetime.limits)), raises `SYNTAX 40.19`, which is checked
+before the sign. A `TimeSpan` that does so raises `SYNTAX 40.19` too. The alarm
+is set for the moment that many seconds after `init` read the clock, to the
+microsecond. The example reads the scheduled time back, with the bounds a clock
+cannot break, and prints only whether they hold; under NUMERIC DIGITS 3 it shows
+the alarm of a number of five digits set in full.
 
 ```rexx
 n = .note~new
@@ -149,6 +158,16 @@ call try ''
 call try '1x'
 call try '-1'
 call try '--1'
+call try '2.6e11'
+call try '-2e11'
+call try '1e12'
+call try '-1e12'
+numeric digits 3
+before = .datetime~new
+a = .alarm~new('12345', n)
+span = a~scheduledTime - before
+say 'digits 3:' span~hours span~minutes span~seconds
+a~cancel
 exit
 try:
   signal on syntax name bad
@@ -174,6 +193,11 @@ bad: say '"'arg(1)'" =>' condition('o')~code
 "1x" => 93.951
 "-1" => 93.951
 "--1" => 93.951
+"2.6e11" => 40.19
+"-2e11" => 40.19
+"1e12" => 88.903
+"-1e12" => 88.903
+digits 3: 3 25 45
 ```
 
 r[class.alarm.init.clock]
@@ -277,14 +301,14 @@ bad: say '"'arg(1)'" =>' condition('o')~code
 r[class.alarm.init.moment]
 A time that is a `DateTime` sets the alarm for that moment, and it has to be
 after the moment `init` reads the clock: a `DateTime` that is not after now
-raises `SYNTAX 93.951`. A time that is a `TimeSpan` sets the alarm for that
-long after `init` read the clock; it must not be negative, and a span of zero
-is allowed. Any other object, `.nil` and an array among them, raises
-`SYNTAX 93.951`. `scheduledTime` answers the moment that was set, as [its
-rule](r:class.alarm.scheduledtime) says. Only a string, a `DateTime` and a
+raises `SYNTAX 93.951`. A time that is a `TimeSpan` sets the alarm for that long
+after `init` read the clock; it must not be negative, and a span of zero is
+allowed. `.nil`, an array and an instance of `Object` raise `SYNTAX 93.951`.
+`scheduledTime` answers the moment that was set, as
+[its rule](r:class.alarm.scheduledtime) says. Only a string, a `DateTime` and a
 `TimeSpan` are read as a time. A time of zero, whether it is the number 0 or a
-span of zero, sets an alarm that goes off at once; the second example makes
-one of each and waits until its target has been sent `triggered` twice.
+span of zero, sets an alarm that goes off at once; the second example makes one
+of each and waits until its target has been sent `triggered` twice.
 
 ```rexx
 n = .note~new
@@ -520,10 +544,12 @@ r[class.alarm.triggered]
 `triggered` answers 1 when the alarm has gone off and 0 otherwise, so 0 for an
 alarm that is still waiting and for one that was cancelled before it went off.
 The flag is already 1 when the target is sent `triggered`, so the target's
-method sees it. It takes no argument (`SYNTAX 93.902`) and sends no message.
-The method is a reader of that flag; `AlarmNotification`'s `triggered` is
-another method, which the target has ([the notification
-rule](r:class.alarmnotification.triggered)), and an `Alarm` is sent neither.
+method sees it. It takes no argument (`SYNTAX 93.902`) and sends no message. The
+method is a reader of that flag; `AlarmNotification`'s `triggered` is another
+method, which the target has
+([the notification rule](r:class.alarmnotification.triggered)). The library
+sends `triggered` to the target only, never to the alarm, so an override of
+`triggered` in a subclass of `Alarm` does not run when it goes off.
 
 ```rexx
 n = .note~new
@@ -571,15 +597,13 @@ cancelled: 0 1
 
 r[class.alarm.cancel]
 `cancel` takes no argument (`SYNTAX 93.902`) and answers nothing, so using its
-answer as a value raises `SYNTAX 91.999`. Sent to an alarm that is still
-waiting it ends the wait: the alarm will not go off, `canceled` answers 1 from
-then on and `triggered` stays 0, and the target is sent `cancel` with the
-alarm as its argument, as [the notification
-rule](r:class.alarmnotification.cancel) says. The flag is already 1 when the
-target receives `cancel`. Sent to an alarm that has gone off it does nothing,
-`canceled` answers 0 and the target is sent nothing. A second `cancel` of an
-alarm that was cancelled sends the target nothing ([Deviation
-119](r:class.alarmnotification.deviation.119)).
+answer as a value raises `SYNTAX 91.999`. Sent to an alarm that is still waiting
+it ends the wait: the alarm will not go off, `canceled` answers 1 from then on
+and `triggered` stays 0, and the target is sent `cancel` with the alarm as its
+argument, as [the notification rule](r:class.alarmnotification.cancel) says. The
+flag is already 1 when the target receives `cancel`. A second `cancel` of an
+alarm that was cancelled sends the target nothing
+([Deviation 119](r:class.alarmnotification.deviation.119)).
 
 ```rexx
 n = .note~new
@@ -588,12 +612,6 @@ a~cancel
 n~awaitCancel
 say n~log~strip
 say a~canceled a~cancelled a~triggered
-b = .alarm~new(0.05, n, 'gone')
-n~awaitTrigger
-b~cancel
-call syssleep 0.1
-say b~triggered b~canceled b~cancelled
-say n~log~strip
 z = .alarm~new(60, n)
 y = .alarm~new(60, n)
 signal on syntax name e1
@@ -605,13 +623,11 @@ e2: say condition('o')~code
 y~cancel
 ::class note inherit AlarmNotification
 ::method init
-  expose log cdone tdone
+  expose log cdone
   log = ''
   cdone = .false
-  tdone = .false
 ::method triggered unguarded
-  expose tdone
-  tdone = .true
+  nop
 ::method cancel unguarded
   expose log cdone
   use arg src
@@ -620,9 +636,6 @@ y~cancel
 ::method awaitCancel unguarded
   expose cdone
   guard on when cdone
-::method awaitTrigger unguarded
-  expose tdone
-  guard on when tdone
 ::method log unguarded
   expose log
   return log
@@ -631,18 +644,16 @@ y~cancel
 ```output
 cancel waiting 1
 1 1 0
-1 0 0
-cancel waiting 1
 91.999
 93.902
 ```
 
 r[class.alarm.canceled]
 `canceled` and `cancelled` answer 1 when the alarm was cancelled while it was
-still waiting and 0 otherwise, so 0 for an alarm that has gone off even if it
-was sent `cancel` afterwards. The two names have one meaning and are two
-methods: neither sends the other, and a subclass that overrides one leaves the
-other as it was. Each takes no argument (`SYNTAX 93.902`).
+still waiting and 0 otherwise, so 0 for an alarm that has gone off. The two
+names have one meaning and are two methods: neither sends the other, and a
+subclass that overrides one leaves the other as it was. Each takes no argument
+(`SYNTAX 93.902`).
 
 ```rexx
 n = .note~new
@@ -769,12 +780,10 @@ a~cancel
 
 r[class.alarm.deviation.119]
 A second `cancel` of an alarm that was cancelled sends its target nothing, as
-the notification page says ([Deviation
-119](r:class.alarmnotification.deviation.119)), and a `cancel` after the alarm
-went off sends nothing either. ooRexx sends the target `cancel` once or twice
-for the second `cancel`, depending on timing, so this example is not run
-against it; the target here prints a line for each `cancel` it is sent, and
-waits long enough for a second to show.
+the notification page states ([Deviation
+119](r:class.alarmnotification.deviation.119)). ooRexx sends the target
+`cancel` once or twice for it, depending on timing, so the example is not run
+against it; the target prints a line for each `cancel` it is sent.
 
 ```rexx
 n = .n~new

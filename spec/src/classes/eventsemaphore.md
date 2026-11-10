@@ -177,25 +177,52 @@ bad2: say condition('o')~code
 93.902
 ```
 
+r[class.eventsemaphore.copy]
+`copy` answers a new semaphore in the state the original is in: posted when it
+is posted, cleared when it is cleared. From then on the two are separate: a
+`post` or `reset` of one does not change the other, and a `wait` on one is not
+ended by a `post` of the other.
+
+```rexx
+e = .eventsemaphore~new
+e~post
+k = e~copy
+say k~isPosted k~wait(0)
+e~reset
+say k~isPosted e~isPosted
+k~reset
+e~post
+say k~isPosted e~isPosted k~wait(0.05)
+c = .eventsemaphore~new~copy
+say c~isPosted c~wait(0)
+```
+
+```output defect=#182
+1 1
+1 0
+0 1 0
+0 0
+```
+
 ## Waiting
 
 r[class.eventsemaphore.wait]
 `wait(timeout)` answers 1 when the semaphore is posted, at the call or before
-the timeout ends, and 0 when the timeout ended with the semaphore still
-cleared. Without a timeout, or with a negative one, it waits until the
-semaphore is posted and so answers 1 only. With a timeout of zero it does not
-wait: it answers what `isPosted` answers. With a positive timeout it waits at
-most that many seconds. Any number of activities can wait for one semaphore,
-and `post` releases all of them; the order in which they go on is not
-specified. A call of `wait` that is released by `post` and one that finds the
-semaphore posted answer alike. The timeout is read before the semaphore is
-looked at, as [the next rule](r:class.eventsemaphore.wait.timeout) says, so an
-invalid one raises its error even for a posted semaphore. In the example a
-message that the program starts posts after a short pause, and a second starts
-two waiters, one without a timeout and one with a long one that never ends
-before the post; the program waits for the post too, and prints what each
-answered, which the post forces to be 1 for all, and what `wait(0)` and a
-short timeout answer on a cleared semaphore.
+the timeout ends, and 0 when the timeout ended with the semaphore still cleared.
+The timeout says how long the caller is prepared to wait. Omitted or below zero,
+there is no limit, so the answer can only be 1. Zero is no wait at all, and the
+answer is the state at the call, as `isPosted` gives it. Above zero it is a
+limit in seconds. One `post` ends the wait of every caller that is waiting,
+however many there are; which of them runs on first is not specified. A call of
+`wait` that is released by `post` and one that finds the semaphore posted answer
+alike. The timeout is read before the semaphore is looked at, as
+[the next rule](r:class.eventsemaphore.wait.timeout) says, so an invalid one
+raises its error even for a posted semaphore. In the example a message that the
+program starts posts after a short pause, and a second starts two waiters, one
+without a timeout and one with a long one that never ends before the post; the
+program waits for the post too, and prints what each answered, which the post
+forces to be 1 for all, and what `wait(0)` and a short timeout answer on a
+cleared semaphore.
 
 ```rexx
 e = .eventsemaphore~new
@@ -235,19 +262,22 @@ anything else is done, so an invalid one raises `SYNTAX 88.902` whatever the
 state of the semaphore. A string is a valid timeout when it is a number as
 [the DATATYPE `N` rule](r:bif.datatype.number) reads it, so blanks at either
 end, a sign, a decimal point and an exponent are allowed; the empty string, a
-string of blanks, a string that is no number, `.nil` and any object that is
-neither a string nor a `TimeSpan` raise `SYNTAX 88.902`. A `TimeSpan` is read
+string of blanks and a string that is no number raise `SYNTAX 88.902`. An object
+that is neither a string nor a `TimeSpan` is replaced by its string value, as
+[the conversion rule](r:conv.string.object) says, and that string is read in the
+same way; `.nil`, a `DateTime` and an object whose string value is no number,
+such as an instance of `Object`, raise `SYNTAX 88.902`. A `TimeSpan` is read
 through its `totalSeconds`, which is sent to it once, and a span that is
 negative means the same as a negative number. More than one argument raises
-`SYNTAX 93.902`. The first example gives each form to a cleared semaphore with
-a short timeout, and to a posted one. In the second, a `TimeSpan` that is
-negative waits as long as a negative number does, until the post, which comes
-from another activity.
+`SYNTAX 93.902`. The first example gives each form to a cleared semaphore with a
+short timeout, and to a posted one. In the second, a `TimeSpan` that is negative
+waits as long as a negative number does, until the post, which comes from
+another activity.
 
 ```rexx
 e = .eventsemaphore~new
 say e~wait(' 0.05 ') e~wait('+.05') e~wait('5e-2'),
-  e~wait(.timespan~fromMicroseconds(50000))
+  e~wait(.timespan~fromMicroseconds(50000)) e~wait(.mutablebuffer~new('0.05'))
 say e~wait(.timespan~new(0)) e~wait(0) e~wait('0')
 call try "e~wait('')"
 call try "e~wait(' ')"
@@ -255,6 +285,7 @@ call try "e~wait('abc')"
 call try "e~wait('0.05x')"
 call try "e~wait(.nil)"
 call try "e~wait(.object~new)"
+call try "e~wait(.datetime~new)"
 call try "e~wait(1, 2)"
 call try "e~wait(, 1)"
 e~post
@@ -277,7 +308,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-0 0 0 0
+0 0 0 0 0
 0 0 0
 e~wait('') => 88.902
 e~wait(' ') => 88.902
@@ -285,6 +316,7 @@ e~wait('abc') => 88.902
 e~wait('0.05x') => 88.902
 e~wait(.nil) => 88.902
 e~wait(.object~new) => 88.902
+e~wait(.datetime~new) => 88.902
 e~wait(1, 2) => 93.902
 e~wait(, 1) => 93.902
 e~wait('') => 88.902
@@ -314,11 +346,13 @@ say e~wait(.timespan~fromSeconds(-5)) p~result
 ```
 
 r[class.eventsemaphore.wait.sends]
-`wait` sends the message `totalSeconds` to a timeout that is a `TimeSpan`,
-once and before it looks at the semaphore, and no other message to the timeout
+`wait` sends the message `totalSeconds` to a timeout that is a `TimeSpan`, once
+and before it looks at the semaphore, and no other message to a `TimeSpan`; an
+object that is neither a string nor a `TimeSpan` is sent what
+[the conversion rule](r:conv.string.object) says
 ([Deviation 109](r:class.string.deviation.109) says that a string that is an
-instance of a subclass of `String` is read by its own characters). No method
-of the class sends a message to the semaphore itself: an override of `post`,
+instance of a subclass of `String` is read by its own characters). No method of
+the class sends a message to the semaphore itself: an override of `post`,
 `reset`, `isPosted` or `wait` runs when the program sends that message and not
 because another of them was. The example overrides each method and
 `totalSeconds` of a subclass of `TimeSpan` and shows what runs.
@@ -376,13 +410,11 @@ isPosted: 0 isPosted
 ## Cleaning up
 
 r[class.eventsemaphore.uninit]
-`uninit` frees what the semaphore holds. The library sends it when the
-semaphore is reclaimed, at a time that a program does not control, as
-[Deviation 6](../deviations.md) says of any finalizer. A subclass that
-declares its own `uninit` has it run at that time instead, and must send
-`uninit` to its superclass from it with `self~uninit:super`, so that the
-semaphore is freed. `uninit` takes no argument (`SYNTAX 93.902`) and answers
-nothing, so using its answer as a value raises `SYNTAX 91.999`.
+`uninit` frees what the semaphore holds. The library sends it when the semaphore
+is reclaimed, at a time that a program does not control, which is not specified.
+An `uninit` of a subclass replaces this one, so it frees the semaphore only by
+sending `self~uninit:super`. `uninit` takes no argument (`SYNTAX 93.902`) and
+answers nothing, so using its answer as a value raises `SYNTAX 91.999`.
 
 ```rexx
 .environment~log = .list~new

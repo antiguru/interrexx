@@ -95,21 +95,22 @@ LAZY 1 1 0
 r[class.mutexsemaphore.acquire]
 `acquire(timeout)` gives the activity that calls it ownership, and answers 1,
 when no activity owns the semaphore and when the activity already owns it. It
-answers 0 when another activity owns it and keeps it for the whole timeout.
-The semaphore counts how many times its owner has acquired it: a call from the
-owner does not wait, adds one to the count and answers 1, and the semaphore
-becomes free only when [`release`](r:class.mutexsemaphore.release) has taken
-the count back to zero. Without a timeout, or with a negative one, a call that
-has to wait waits until it can own the semaphore, and so answers 1 only. With
-a timeout of zero it does not wait: it answers 1 when it got the semaphore and
-0 otherwise. With a positive timeout it waits at most that many seconds. When
-the owner lets go, one of the activities that wait gets the semaphore, which
-of them is not specified. The timeout is read as [the next
-rule](r:class.mutexsemaphore.timeout) says, before the semaphore is looked at,
-so an invalid one raises its error whoever owns the semaphore. An activity
-that ends while it owns the semaphore, however often, no longer owns it. In
-the first example one activity does all the calls, and in the second a message
-that the program starts owns the semaphore while the program calls.
+answers 0 when another activity owns it and keeps it for the whole timeout. The
+semaphore counts how many times its owner has acquired it: a call from the owner
+does not wait, adds one to the count and answers 1, and the semaphore becomes
+free only when [`release`](r:class.mutexsemaphore.release) has taken the count
+back to zero. The timeout bounds the wait of a caller that does not get the
+semaphore at once. Omitted or below zero, there is no bound, so the answer can
+only be 1. Zero means no wait: the answer says whether the semaphore was free or
+the caller's already. Above zero it is a bound in seconds. When the owner lets
+go, one of the activities that wait gets the semaphore, which of them is not
+specified. The timeout is read as
+[the next rule](r:class.mutexsemaphore.timeout) says, before the semaphore is
+looked at, so an invalid one raises its error whoever owns the semaphore.
+Ownership does not outlive the activity: when an activity ends, every count it
+held is dropped and the semaphore is free for others. In the first example one
+activity does all the calls, and in the second a message that the program starts
+owns the semaphore while the program calls.
 
 ```rexx
 m = .mutexsemaphore~new
@@ -203,16 +204,41 @@ bad: say condition('o')~code
 93.902
 ```
 
+r[class.mutexsemaphore.copy]
+`copy` answers a new semaphore owned by the same activity with the same count as
+the original, or by none when the original is free. From then on the two are
+separate: releasing one does not release the other.
+
+```rexx
+m = .mutexsemaphore~new
+say m~acquire(0) m~acquire(0)
+j = m~copy
+say j~release j~release j~release
+say m~release m~release m~release
+f = .mutexsemaphore~new~copy
+say f~release f~acquire(0) f~release
+```
+
+```output defect=#182
+1 1
+1 1 0
+1 1 0
+0 1 1
+```
+
 r[class.mutexsemaphore.timeout]
 The timeout is a number of seconds or a `TimeSpan`, and it is read before
-anything else is done, so an invalid one raises `SYNTAX 88.902` whoever owns
-the semaphore. A string is a valid timeout when it is a number as [the
-DATATYPE `N` rule](r:bif.datatype.number) reads it, so blanks at either end, a
-sign, a decimal point and an exponent are allowed; the empty string, a string
-of blanks, a string that is no number, `.nil` and any object that is neither a
-string nor a `TimeSpan` raise `SYNTAX 88.902`. A `TimeSpan` is read through
-its `totalSeconds`, which is sent to it once, and a span that is negative
-means the same as a negative number. More than one argument raises
+anything else is done, so an invalid one raises `SYNTAX 88.902` whoever owns the
+semaphore. A string is a valid timeout when it is a number as
+[the DATATYPE `N` rule](r:bif.datatype.number) reads it, so blanks at either
+end, a sign, a decimal point and an exponent are allowed; the empty string, a
+string of blanks and a string that is no number raise `SYNTAX 88.902`. An object
+that is neither a string nor a `TimeSpan` is replaced by its string value, as
+[the conversion rule](r:conv.string.object) says, and that string is read in the
+same way; `.nil`, a `DateTime` and an object whose string value is no number,
+such as an instance of `Object`, raise `SYNTAX 88.902`. A `TimeSpan` is read
+through its `totalSeconds`, which is sent to it once, and a span that is
+negative means the same as a negative number. More than one argument raises
 `SYNTAX 93.902`. The example gives each form to a semaphore that nothing owns,
 and counts the acquisitions it made, to free the semaphore.
 
@@ -225,12 +251,14 @@ call try "m~acquire('5e-2')"
 call try "m~acquire(.timespan~fromMicroseconds(50000))"
 call try "m~acquire(.timespan~fromSeconds(-5))"
 call try "m~acquire(-0.5)"
+call try "m~acquire(.mutablebuffer~new('0.05'))"
 call try "m~acquire('')"
 call try "m~acquire(' ')"
 call try "m~acquire('abc')"
 call try "m~acquire('0.05x')"
 call try "m~acquire(.nil)"
 call try "m~acquire(.object~new)"
+call try "m~acquire(.datetime~new)"
 call try "m~acquire(1, 2)"
 call try "m~acquire(, 1)"
 do held
@@ -255,12 +283,14 @@ m~acquire('5e-2') => 1
 m~acquire(.timespan~fromMicroseconds(50000)) => 1
 m~acquire(.timespan~fromSeconds(-5)) => 1
 m~acquire(-0.5) => 1
+m~acquire(.mutablebuffer~new('0.05')) => 1
 m~acquire('') => 88.902
 m~acquire(' ') => 88.902
 m~acquire('abc') => 88.902
 m~acquire('0.05x') => 88.902
 m~acquire(.nil) => 88.902
 m~acquire(.object~new) => 88.902
+m~acquire(.datetime~new) => 88.902
 m~acquire(1, 2) => 93.902
 m~acquire(, 1) => 93.902
 0
@@ -268,13 +298,15 @@ m~acquire(, 1) => 93.902
 
 r[class.mutexsemaphore.sends]
 `acquire` sends the message `totalSeconds` to a timeout that is a `TimeSpan`,
-once and before it looks at the semaphore, and no other message to the timeout
+once and before it looks at the semaphore, and no other message to a `TimeSpan`;
+an object that is neither a string nor a `TimeSpan` is sent what
+[the conversion rule](r:conv.string.object) says
 ([Deviation 109](r:class.string.deviation.109) says that a string that is an
-instance of a subclass of `String` is read by its own characters). No method
-of the class sends a message to the semaphore itself: an override of `acquire`
-or `release` runs when the program sends that message and not because the
-other was. The example overrides both methods and `totalSeconds` of a subclass
-of `TimeSpan` and shows what runs.
+instance of a subclass of `String` is read by its own characters). No method of
+the class sends a message to the semaphore itself: an override of `acquire` or
+`release` runs when the program sends that message and not because the other
+was. The example overrides both methods and `totalSeconds` of a subclass of
+`TimeSpan` and shows what runs.
 
 ```rexx
 .environment~log = .list~new
@@ -315,13 +347,11 @@ release again: 1 release
 ## Cleaning up
 
 r[class.mutexsemaphore.uninit]
-`uninit` frees what the semaphore holds. The library sends it when the
-semaphore is reclaimed, at a time that a program does not control, as
-[Deviation 6](../deviations.md) says of any finalizer. A subclass that
-declares its own `uninit` has it run at that time instead, and must send
-`uninit` to its superclass from it with `self~uninit:super`, so that the
-semaphore is freed. `uninit` takes no argument (`SYNTAX 93.902`) and answers
-nothing, so using its answer as a value raises `SYNTAX 91.999`.
+`uninit` frees what the semaphore holds. The library sends it when the semaphore
+is reclaimed, at a time that a program does not control, which is not specified.
+An `uninit` of a subclass replaces this one, so it frees the semaphore only by
+sending `self~uninit:super`. `uninit` takes no argument (`SYNTAX 93.902`) and
+answers nothing, so using its answer as a value raises `SYNTAX 91.999`.
 
 ```rexx
 .environment~log = .list~new
