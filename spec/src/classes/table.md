@@ -180,12 +180,12 @@ r[class.table.indexes.sends]
 `hashCode` to the index argument, once, and then `==` to the index argument
 with a stored index as the argument, for stored indexes that have the same hash
 code, until one answers true; each of those is compared before the lookup gives
-up. Which further stored indexes are sent `==` or `hashCode`, and how often
-each is sent, is not specified ([the hash order
-rule](r:class.table.deviation.33)); when the table is empty, the only message
-is `hashCode`. The very object that is stored is no exception to the `==`
-([the deviation rule](r:class.table.deviation.78)). In the example every index
-hashes to the same string, so each stored index is compared.
+up. Which further stored indexes are compared, by `==` or `hashCode`, and how
+often, is not specified ([the hash order rule](r:class.table.deviation.33));
+when the table is empty, the only message is `hashCode`. The very object that
+is stored is no exception to the `==` ([the deviation
+rule](r:class.table.deviation.78)). In the example every index hashes to the
+same string, so each stored index is compared.
 
 ```rexx
 .local~log = .array~new
@@ -812,10 +812,10 @@ say .local~log~items
 r[class.table.deviation.33]
 The order of the answers of `allIndexes`, `allItems`, `makeArray` and
 `supplier`, of the search of `hasItem`, `index` and `removeItem`, and which
-stored indexes or items a lookup or a search sends `==` or `hashCode` to
-beyond those it must compare, and how often it sends them, are not specified,
-and may differ from ooRexx's. Which entries are produced, and how often, is
-specified. In the example the answers are sorted.
+stored indexes or items a lookup or a search compares, by `==` or `hashCode`,
+beyond those it must compare, and how often, are not specified, and may differ
+from ooRexx's. Which entries are produced, and how often, is specified. In the
+example the answers are sorted.
 
 ```rexx
 t = .table~new
