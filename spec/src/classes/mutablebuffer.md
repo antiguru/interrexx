@@ -11,11 +11,11 @@ A `MutableBuffer` holds a string of characters that a program changes in
 place. Where a `String` is a value, so that every operation answers a new
 string, a buffer is an object with an identity: `append`, `insert`, `upper`
 and the other changing methods alter the characters it holds and answer the
-buffer itself.
-Beside the characters a buffer has a size, the number of characters it can
-hold before it has to grow, which a program can read and set. A buffer is no
-`String`: it understands a part of the `String` methods, and for those it
-states only what differs, the rest being linked to the page that owns it.
+buffer itself. Beside the characters a buffer has a size, the number of
+characters it can hold before it has to grow, which a program can read and
+set. A buffer is no `String`: it understands a part of the `String` methods,
+and for those it states only what differs, the rest being linked to the page
+that owns it.
 
 ## The class
 
