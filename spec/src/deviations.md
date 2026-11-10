@@ -23,8 +23,11 @@ an enclosing construct restores it.
 
 ## 1. DO OVER order on a stem
 
-DO OVER on a stem visits its tails in an order this book does not specify.
-ooRexx visits them in an order fixed by its internal storage, which is
+DO OVER on a stem visits its tails in an order this book does not specify,
+and so do the `Stem` methods that list or search its tails: `allIndexes`,
+`allItems`, `makeArray` and `supplier`, the tail that `index` and `removeItem`
+choose, and the order in which `hasItem`, `index` and `removeItem` compare the
+items. ooRexx visits them in an order fixed by its internal storage, which is
 neither insertion nor sorted order.
 
 ## 2. Withdrawn
@@ -196,8 +199,10 @@ object with the wrong layout and answers garbage or crashes.
 
 ## 29. An entry assignment with no value
 
-`d~"A="()` on a Directory, with no argument, is refused, exit code 120.
-ooRexx stores an unrelated leftover value.
+`d~"A="()` on a Directory, a StringTable or a Properties, with no argument,
+is refused, exit code 120, and so is `d~unknown('A=', args)` sent directly
+with an argument array that holds no item. ooRexx stores an unrelated leftover
+value for the first and removes the entry for the second.
 
 ## 30. A STRING method answering a non-string
 
@@ -226,7 +231,9 @@ class in place.
 
 The order in which a hash collection yields its entries, and the order of
 anything that lists one, is not specified, and may differ from ooRexx's.
-Which entries are yielded, and how often, is specified.
+Which entries are yielded, and how often, is specified. Which stored indexes
+or items a search compares, by `==` or `hashCode`, beyond those it must
+compare, and how often, is not specified either.
 
 ## 34. `..` in a file name
 
@@ -507,10 +514,16 @@ default value's, and NOSTRING is raised, with the default's description, only
 when the default has no string value. ooRexx raises NOSTRING for every stem
 there.
 
-## 78. Hash lookup of the identical index
+## 78. Search for the identical index or item
 
-A lookup or PUT with the very index object already stored sends that
-object's `==`. ooRexx compares identity first and sends nothing.
+A lookup or PUT with the very index object already stored sends that object's
+`==`. So does a search for an item with the very item object stored: `hasItem`,
+`index`, `removeItem` and `allIndex` of the hash collections, and `hasItem`,
+`index` and `removeItem` of an `Array`, `List`, `Queue` or `CircularQueue`. So
+do a Relation's `uniqueIndexes` for an index object stored more than once, and
+the check of a Set's or Bag's `put` and `[]=` that the index equals the item
+when both are the very same object. ooRexx compares identity first and sends
+nothing.
 
 ## 79. APPEND write positions
 
@@ -543,8 +556,11 @@ that fails fails at RAISE. ooRexx converts at every `CONDITION('D')`.
 
 ## 84. Emptying a Table during REMOVE
 
-When an index's equality method empties its Table during REMOVE, ITEMS stays
-0. ooRexx answers -1.
+When an index's equality method empties its Table, Relation, Set or Bag during
+REMOVE, or the argument's empties a Table, Relation, StringTable, Set or Bag
+during REMOVEITEM, or a Relation's or Bag's REMOVEALL or a Bag's ALLAT, the
+search ends and ITEMS stays 0. ooRexx answers -1 for REMOVE and REMOVEITEM, and
+its REMOVEALL and ALLAT go on comparing with an object that is no stored index.
 
 ## 85. `.environment` per interpreter
 
@@ -664,10 +680,10 @@ DIRECTORY, FILESPEC, BEEP and the RexxUtil file functions, such as
 SysFileDelete, check their arguments in the order that every other builtin
 follows, the ANSI order: the count of arguments first, so that an argument
 past the last one raises `SYNTAX 88.922` before an omitted or wrong argument
-is reported. ooRexx reports an omitted argument, an object with no
-`MAKESTRING` method and an argument that is not a whole number before the
-count, and the count before an argument's value: an option it does not allow
-or a number out of range.
+is reported. ooRexx reports an omitted argument, an object whose `request`
+with the argument `STRING` answers no string and an argument that is not a
+whole number before the count, and the count before an argument's value: an
+option it does not allow or a number out of range.
 
 ## 102. LOSTDIGITS before the right operand's errors
 
@@ -713,20 +729,22 @@ that name as the entry spells it.
 A string that names a number is the same string to every message, however it
 was written or computed. A number literal such as `12` used as the message
 name of `send`, `sendWith`, `start`, `startWith` or `Message~new` names the
-message `12`, and
-`request('ARRAY')` sent to it answers the array that `makeArray` answers.
+message `12`, and `request('ARRAY')` sent to it answers the array that
+`makeArray` answers.
 ooRexx raises `SYNTAX 93.946` for the first and answers `.nil` for the second
 when the number is stored as a whole number, as a whole-number literal or the
 result of arithmetic is. Equal literals of a program share one stored value,
 so a quoted `'12'` behaves the same way when the literal `12` was used before
-it.
+it. The same storage shows where a string is read as text: an item of an
+`Array` whose `objectName` answers such a number is written by `makeString`
+and `toString` as the digits; ooRexx writes bytes of its stored form.
 
 ## 108. A supplier that is not a Supplier
 
 When `subclass`, `mixinclass`, `defineMethods` or `enhanced` takes the methods
-of an object through its `supplier` method, the object that `supplier` answers is
-used through the messages `available`, `index`, `item` and `next` when it is
-not a `Supplier`; an object that does not answer one of them raises
+of an object through its `supplier` method, the object that `supplier`
+answers is used through the messages `available`, `index`, `item` and `next`
+when it is not a `Supplier`; an object that does not answer one of them raises
 `SYNTAX 97.1` as for any message. A `Supplier`, an instance of a subclass
 included, is read directly, as a String subclass instance is read by its
 characters
@@ -738,15 +756,16 @@ one.
 
 An instance of a subclass of `String` is read by its own characters wherever a
 string, a number, a logical value or a whole number is needed, as receiver and
-as argument; `MAKESTRING` and `STRING` are not sent to it for that. ooRexx
-reads such an instance through its `MAKESTRING` method when it is an argument,
-of a method, an operator or a builtin function, and when it is the receiver of
-the numeric methods and operators, the logical operators, `dataType` and `?`,
-and in `new`; as the receiver of the other methods, of the strict comparisons
-and of the joining operators it reads the instance's own characters, so one
-instance can answer differently to `=` and to `==`. As the message name of
-`send`, `sendWith`, `start`, `startWith` or `Message~new`, ooRexx sends it
-`request('ARRAY')` instead and raises `SYNTAX 93.946`.
+as argument, and as the operand of SAY; `REQUEST`, `MAKESTRING` and `STRING`
+are not sent to it for that. ooRexx sends such an instance `request` with
+`STRING` or `MAKESTRING` in many of these places, as an argument of a method,
+an operator or a builtin function, as the receiver of the numeric and logical
+methods and operators, `dataType` and `?`, as the operand of SAY, and in
+`new`, so an override of either method can change what is read; elsewhere it
+reads the instance's own characters, so one instance can answer differently to
+`=` and to `==`. As the
+message name of `send`, `sendWith`, `start`, `startWith` or `Message~new`,
+ooRexx sends it `request('ARRAY')` instead and raises `SYNTAX 93.946`.
 
 ## 110. Instances follow every change to their class
 
@@ -762,3 +781,81 @@ or their mixin classes, and not `inherit` or `uninherit`. An object given a
 method by `setMethod` sees no later change to its class or to the classes
 behind it. A class object sees no change to its metaclass or to the classes
 behind it that is made after the class itself.
+
+## 111. A REQUIRES name replaced at the first offer chooses the file
+
+A security manager is sent `requires` for a `::REQUIRES` name or a
+`loadPackage` name first with the name as it was written, and then, when
+nothing was replaced, with the full name of the file found for it. A NAME
+replaced in the information of the first message chooses the file: that file
+is loaded, and the manager is not sent a second `requires` message for it, so
+it is never asked to approve its own replacement. A NAME replaced in the
+second message chooses the file as well. ooRexx uses a replacement made at the
+first message only to look for a package that is already loaded under that
+name; otherwise it sends the second message with the full name of the file
+the program asked for, and loads that file.
+
+## 112. Array items of a loadPackage source are read through request
+
+An item of the source array of `loadPackage` that is not a string is read as
+`Method~new` and `Package~new` read one, by sending it `request` with the
+argument `STRING`; an answer that is not a string raises the same error as
+there, and a hole followed by an item raises the error that the source rule of
+`new` gives for it. ooRexx reads an instance of a subclass of `String` and a
+`MutableBuffer` by their text as well. Any other item it sends `objectName`,
+not `request`, and uses the answer as the line, so an item whose `request`
+answers no string raises no error; it crashes on a hole followed by an item.
+
+## 113. A message keeps a copy of its argument array
+
+`Message~new` with the option `A` keeps a copy of the argument array, so later
+changes to the caller's array do not reach the message, and the number of
+arguments is the position of the last item present, as for `Object~sendWith`;
+the array of arguments that `Message~sendWith`, `startWith` and `replyWith`
+take is copied and counted the same way. ooRexx keeps the caller's array
+itself and passes its size as the number of arguments, trailing empty
+positions included, in all four.
+
+## 114. A metaclass NEW that answers an object that is not a class
+
+When `subclass`, `mixinclass` or a `::CLASS` directive sends `new` to a
+metaclass and the answer is not a class, `SYNTAX 98.900` is raised in the
+program that made the request, and it can be trapped. ooRexx crashes.
+
+## 115. A request('ARRAY') answer that is neither an array nor .nil
+
+When `Method~new`, `Routine~new` or `Package~new` sends its source `request`
+with the argument `ARRAY` and the answer is neither an array nor `.nil`,
+`SYNTAX 88.913` is raised. ooRexx crashes.
+
+## 116. A failing notification target is sent messageComplete once
+
+When a `messageComplete` sent to a notification target of a started message
+raises an error, that target is not sent `messageComplete` again. ooRexx sends
+it to that target three times in all.
+
+## 117. delete ends a hiding at once
+
+`define` with `.nil` puts a mark in the class's method table that hides the
+name, and `delete` of that name removes the mark: from then on the name is
+looked up in the classes behind. ooRexx keeps the name hidden after the
+`delete` until the class's table changes again.
+
+## 118. A List subclass is sent makeArray and request
+
+An instance of a subclass of `List` is read as any other collection is
+wherever an array is wanted: `DO OVER` and the collection methods that read a
+collection through `makeArray` send it `makeArray`, and the methods and
+instructions that read an argument array or a source through `request` with
+`ARRAY` (`sendWith`, `startWith`, `Message~new` with the option `A`,
+`Message~replyWith`, FORWARD with ARGUMENTS, `Method~new`, `Routine~new`,
+`Package~new`, `loadPackage` and a `Stem`'s `unknown`) send it `request`, so
+an override is used. ooRexx sends such an instance neither message and uses
+the items it holds, unlike the subclasses of the other collection classes.
+
+## 119. A second cancel of an Alarm or a Ticker sends nothing
+
+A notification target of an `Alarm` or a `Ticker` is sent `cancel` once, when
+the alarm or ticker is cancelled while it is waiting; a second `cancel` of the
+same alarm or ticker sends it nothing. ooRexx sends the target `cancel` once or
+twice for a second `cancel`, depending on timing.

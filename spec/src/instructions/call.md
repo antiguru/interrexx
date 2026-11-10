@@ -169,8 +169,7 @@ method 43.1
 r[instr.call.expr]
 `CALL (expression)` evaluates the expression first, and the arguments after
 it, and uses the string the value converts to as the name, by [the conversion
-rule](r:conv.string.object): the answer of its `MAKESTRING` method when it has
-one and of its `STRING` method otherwise. The name is compared as it is, so
+rule](r:conv.string.object). The name is compared as it is, so
 `GREET` matches a label in the example, `SUBSTR` the built-in function, and a
 lower-case value matches neither. Unlike a name written as a string, the value
 is searched among the labels first, so the order of [the search

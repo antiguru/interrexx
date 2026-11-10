@@ -1,6 +1,7 @@
 ---
 element: "AlarmNotification"
 kind: class
+deviations: [119]
 rexxref: "Builtin Classes > Utility Classes > AlarmNotification Class; Builtin Classes > Utility Classes > AlarmNotification Class > cancel; Builtin Classes > Utility Classes > AlarmNotification Class > triggered (Abstract method)"
 ---
 
@@ -117,8 +118,8 @@ c1: say condition('o')~code
 ::method triggered unguarded
   expose log count limit
   use arg src
-  count = count + 1
   log = log 'triggered' src~attachment arg()
+  count = count + 1
   if count = limit then src~cancel
 ::method cancel unguarded
   expose log cdone
@@ -153,10 +154,9 @@ declares it. The library sends it, with the `Alarm` or `Ticker` as the
 argument, when the alarm or ticker is cancelled by its `cancel` method while
 it is still waiting: an `Alarm` that has not gone off and was not cancelled
 before, or a `Ticker` that has not been cancelled before. A `cancel` of an
-`Alarm` that has already gone off, and a second `cancel` of a `Ticker`, send
-nothing more. The second example sends `cancel` twice to a `Ticker` that is
-still five seconds away, and the implementation prints a line for each message
-it receives.
+`Alarm` that has already gone off and a second `cancel` of an `Alarm` or a
+`Ticker` ([Deviation 119](r:class.alarmnotification.deviation.119)) send
+nothing more.
 
 ```rexx
 n = .note~new
@@ -183,8 +183,8 @@ c1: say 'answered nothing:' condition('o')~code
 ::method triggered unguarded
   expose log count limit
   use arg src
-  count = count + 1
   log = log 'triggered' src~attachment
+  count = count + 1
   if count = limit then src~cancel
 ::method cancel unguarded
   expose log cdone
@@ -209,6 +209,14 @@ cancel cancelled
 answered nothing: 91.999
 ```
 
+r[class.alarmnotification.deviation.119]
+A second `cancel` of an `Alarm` or a `Ticker` sends its target nothing
+([Deviation 119](../deviations.md)). ooRexx sends the target `cancel` once or
+twice for it, depending on timing, so the examples are not a test of the
+owning rule on ooRexx. The first sends `cancel` twice to a `Ticker` that is
+still five seconds away, the second to such an `Alarm`, and the implementation
+prints a line for each message it receives.
+
 ```rexx
 n = .n~new
 t = .ticker~new(5, n)
@@ -223,6 +231,24 @@ exit
 ```
 
 ```output
+cancel sent
+done
+```
+
+```rexx
+n = .n~new
+a = .alarm~new(5, n)
+a~cancel
+a~cancel
+call syssleep 0.3
+say 'done'
+exit
+::class n inherit alarmnotification
+::method cancel unguarded
+  say 'cancel sent'
+```
+
+```output defect=#150
 cancel sent
 done
 ```

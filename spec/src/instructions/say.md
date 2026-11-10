@@ -86,9 +86,8 @@ y
 
 r[instr.say.object]
 A result that is an object and not a string is turned into a string first,
-as [the conversion rule](r:conv.string.object) says: the answer of its
-`MAKESTRING` method when it has one, otherwise the answer of its `STRING`
-method. The conversion happens before anything is written.
+as [the conversion rule](r:conv.string.object) says. The conversion happens
+before anything is written.
 
 ```rexx
 say .viamake~new

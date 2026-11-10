@@ -2,7 +2,7 @@
 element: "Object"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Object Class; Builtin Classes > Fundamental Classes > Object Class > new (Class Method); Builtin Classes > Fundamental Classes > Object Class > Comparison Methods; Builtin Classes > Fundamental Classes > Object Class > Concatenation Methods; Builtin Classes > Fundamental Classes > Object Class > class; Builtin Classes > Fundamental Classes > Object Class > copy; Builtin Classes > Fundamental Classes > Object Class > defaultName; Builtin Classes > Fundamental Classes > Object Class > hashCode; Builtin Classes > Fundamental Classes > Object Class > hasMethod; Builtin Classes > Fundamental Classes > Object Class > identityHash; Builtin Classes > Fundamental Classes > Object Class > init; Builtin Classes > Fundamental Classes > Object Class > instanceMethod; Builtin Classes > Fundamental Classes > Object Class > instanceMethods; Builtin Classes > Fundamental Classes > Object Class > isA; Builtin Classes > Fundamental Classes > Object Class > isInstanceOf; Builtin Classes > Fundamental Classes > Object Class > isNil; Builtin Classes > Fundamental Classes > Object Class > objectName; Builtin Classes > Fundamental Classes > Object Class > objectName=; Builtin Classes > Fundamental Classes > Object Class > request; Builtin Classes > Fundamental Classes > Object Class > run (Private Method); Builtin Classes > Fundamental Classes > Object Class > send; Builtin Classes > Fundamental Classes > Object Class > sendWith; Builtin Classes > Fundamental Classes > Object Class > setMethod (Private Method); Builtin Classes > Fundamental Classes > Object Class > start; Builtin Classes > Fundamental Classes > Object Class > startWith; Builtin Classes > Fundamental Classes > Object Class > string; Builtin Classes > Fundamental Classes > Object Class > unsetMethod (Private Method)"
-deviations: [4, 28, 30, 32, 33, 36, 105, 107, 109, 110]
+deviations: [4, 28, 30, 32, 33, 36, 105, 107, 109, 110, 118]
 ---
 
 # Object
@@ -261,9 +261,8 @@ a~"\==" => 93.903
 r[class.object.concat]
 The methods `||`, the one blank and the null string answer a new string: the
 string value of the receiver, then (for the blank method) one blank, then the
-string value of the argument. The string value of the receiver is the answer
-of its `MAKESTRING` method when it has one, and otherwise of its `string`
-method, as [the string rule](r:class.index.string) says, and the same goes for
+string value of the argument. The string value of the receiver is found as [the
+string rule](r:class.index.string) says, and the same goes for
 the argument; `.nil` has the string value `The NIL object`. The three methods
 take one argument: none raises `SYNTAX 93.903` and two raise `93.902`. They
 are the messages that the concatenation operators send ([the operator
@@ -393,7 +392,8 @@ r[class.object.objectname]
 name rule](r:class.index.objectname) says. It takes no argument. The `string`
 method of an object sends it `objectName` ([the sends
 rule](r:class.index.sends)), so an override shows in the string value of an
-object that has no `MAKESTRING` method; `objectName` sends `defaultName` only
+object whose `request` with the argument `STRING` answers no string;
+`objectName` sends `defaultName` only
 while no name has been set.
 
 ```rexx
@@ -429,8 +429,9 @@ a~objectName(1) => 93.902
 r[class.object.objectname-set]
 `objectName=` sets the name of the receiver to the string value of its
 argument, under the checks of [the name rule](r:class.index.objectname): an
-argument that is not a string, or has no `MAKESTRING` method that answers one,
-raises `SYNTAX 88.909`, and one argument is required (`93.903`, none). Sent as
+argument that is not a string, and whose `request` with the argument `STRING`
+answers no string, raises `SYNTAX 88.909`, and one argument is required
+(`93.903`, none). Sent as
 a message it answers no value. Only the receiver gets the name, and the name
 survives `copy`. A String that is no instance of a subclass and no enhancement
 is refused, as [Deviation 36](r:class.object.deviation.36) states.
@@ -475,8 +476,11 @@ madestring
 r[class.object.string]
 `string` answers a string that shows the receiver, which is its `objectName`,
 as [the string rule](r:class.index.string) says, and takes no argument. `say`,
-the joining operators and the builtin functions use it for an object that has
-no `MAKESTRING` method. A class that declares `string` shows its instances in
+the joining operators and the builtin functions other than those that follow
+[the native call rule](r:bif.index.call.native) use it for an object whose
+`request` with the argument `STRING` answers no string, as the `request` of
+`Object` does for an object with no `MAKESTRING` method. A class that declares
+`string` shows its instances in
 another way without changing their names.
 
 ```rexx
@@ -640,7 +644,8 @@ counts; a name that is hidden counts as not found; and `UNKNOWN` plays no
 part, so an object whose `UNKNOWN` answers every message still answers 0 for a
 name that has no method. A class receiver is searched in its class-side order,
 so `hasMethod` shows [which side](r:class.index.sides) a name is on. The
-argument is a string or an object whose `MAKESTRING` method answers one; any
+argument is a string, or an object whose `request` with the argument `STRING`
+answers one; any
 other object, `.nil` included, raises `SYNTAX 88.909`, and no argument raises
 `93.903`. A second argument raises `93.902`.
 
@@ -1363,7 +1368,8 @@ r[class.object.sendwith.sends]
 `sendWith` sends its second argument the message `request` with the argument
 `ARRAY`, once, before it sends the message that the first argument names. A
 class whose `request` or `makeArray` is overridden shows it, and the answer of
-`request` is checked as the previous rule says.
+`request` is checked as the previous rule says. An instance of a subclass of
+`List` is sent it as well ([Deviation 118](r:class.object.deviation.118)).
 
 ```rexx
 o = .w~new
@@ -1499,7 +1505,9 @@ o~startWith(.nil, .array~new) => 93.972
 
 r[class.object.startwith.sends]
 `startWith` sends the message `request` with the argument `ARRAY` to its
-second argument, once, at the call, and not when the message runs.
+second argument, once, at the call, and not when the message runs. An instance
+of a subclass of `List` is sent it as well
+([Deviation 118](r:class.object.deviation.118)).
 
 ```rexx
 o = .w~new
@@ -1528,38 +1536,38 @@ count got 2
 ### The receiver's own methods
 
 r[class.object.setmethod]
-`setMethod` gives the receiver a method of its own, as
-[the object method rule](r:class.methods.object) says, and answers no value.
-It is private, with the restriction that
-[the access rule](r:class.methods.object.access) gives. The first argument is
-the name and is required (`SYNTAX 88.901`); an object that is no string and
-has no `MAKESTRING` method raises `88.909`. The second is the method: a method
-object, a string that holds the source of a method, or an array of strings,
-one for each line. These are instances of `Method`, `String` and `Array`
+`setMethod` gives the receiver a method of its own, as [the object method
+rule](r:class.methods.object) says, and answers no value. It is private, with
+the restriction that [the access rule](r:class.methods.object.access) gives. The
+first argument is the name and is required (`SYNTAX 88.901`); an object that is
+no string and whose `request` with the argument `STRING` answers no string
+raises `88.909`. The second is the method: a method object, a string that holds
+the source of a method, or an array, whose items are read as [the source
+rule](r:class.method.new.source) reads them, so an item that gives no string
+raises `SYNTAX 93.952`. These are instances of `Method`, `String` and `Array`
 themselves; an instance of a subclass of one of them, `Method` included, is
 converted as any other object is. Any other object is sent `request` with the
-argument `ARRAY`, and the array it answers is used; when it answers no array,
-it is sent `request` with the argument `STRING`, and a string answer is used
-as the source ([the sends rule](r:class.object.setmethod.sends)). `.nil`, and
-an object whose `request` with `STRING` answers `.nil`, raise `SYNTAX 93.974`,
-so a subclass of `Method` that declares neither `MAKEARRAY` nor `MAKESTRING`
-is refused. When that `request` answers an object that is not a string, the
-result is not specified, as [the string conversion](r:conv.string.object)
-leaves it. The method that the receiver gets runs the code of a method object
-that is given, with the scope that
-[the scope rule](r:class.methods.object.scope) says. It is not specified
-whether the method object that the receiver holds is the argument itself or a
-copy of it, and what scope the argument object answers afterwards is not
-specified either. The checks run in this order: the number of arguments, the
-name, the method, the scope. With no second argument the name is hidden for
-the receiver. The third argument is the scope, `FLOAT` or `OBJECT` as
-[the scope rule](r:class.methods.object.scope) says; another value raises
-`88.916`, and `.nil` raises `88.909`. A fourth argument raises `93.902`. A
-source that does not translate raises the translation error from `setMethod`.
-The code of a method made from a source runs with the scope `FLOAT`, whose
-object variables are separate from those of any class: the methods that the
-receiver got by `setMethod` with `FLOAT`, by `run` and by `enhanced` share one
-set, which is kept for the receiver.
+argument `ARRAY`, and the array it answers is used; when it answers no array, it
+is sent `request` with the argument `STRING`, and a string answer is used as the
+source ([the sends rule](r:class.object.setmethod.sends)). `.nil`, and an object
+whose `request` with `STRING` answers `.nil`, raise `SYNTAX 93.974`, so a
+subclass of `Method` that declares neither `MAKEARRAY` nor `MAKESTRING` is
+refused. When that `request` answers an object that is not a string, the result
+is not specified. The method that the receiver gets runs the code of a method
+object that is given, with the scope that [the scope
+rule](r:class.methods.object.scope) says. It is not specified whether the method
+object that the receiver holds is the argument itself or a copy of it, and what
+scope the argument object answers afterwards is not specified either. The checks
+run in this order: the number of arguments, the name, the method, the scope.
+With no second argument the name is hidden for the receiver. The third argument
+is the scope, `FLOAT` or `OBJECT` as [the scope
+rule](r:class.methods.object.scope) says; another value raises `88.916`, and
+`.nil` raises `88.909`. A fourth argument raises `93.902`. A source that does
+not translate raises the translation error from `setMethod`. The code of a
+method made from a source runs with the scope `FLOAT`, whose object variables
+are separate from those of any class: the methods that the receiver got by
+`setMethod` with `FLOAT`, by `run` and by `enhanced` share one set, which is
+kept for the receiver.
 
 ```rexx
 o = .w~new
@@ -1649,6 +1657,22 @@ o~sm("a9", .lmeth~new("", "return 1")) => 93.974
 mobj mobj
 41 42 class x
 o~setMethod("outside", "return 1") => 97.2
+```
+
+```rexx
+o = .o~new
+o~doit(.array~of(.ms~new))
+say o~m
+::class o
+::method doit
+  self~setMethod('m', arg(1))
+::class ms
+::method makestring
+  return 'return "from ms"'
+```
+
+```output defect=#142
+from ms
 ```
 
 r[class.object.setmethod.private]
@@ -2136,10 +2160,12 @@ Array Array
 r[class.object.deviation.109]
 An instance of a subclass of `String` that names a message, for `send`,
 `sendWith`, `start` and `startWith`, or a method, for `hasMethod` and
-`setMethod`, is read by its own characters, and `MAKESTRING` and `STRING` are
-not sent to it ([Deviation 109](r:class.string.deviation.109) states the
-general case). ooRexx reads it through its `MAKESTRING` method for `hasMethod`
-and `setMethod`, and as a message name it sends it `request` with the argument
+`setMethod`, is read by its own characters, and `REQUEST`, `MAKESTRING` and
+`STRING` are not sent to it
+([Deviation 109](r:class.string.deviation.109) states the general case).
+For `hasMethod` and `setMethod` ooRexx sends it `request` with `STRING` or
+`MAKESTRING`, so an override of either can change what is read, and as a
+message name it sends it `request` with the argument
 `ARRAY`, as [the sends rule](r:class.object.send.sends) says, so that the
 message name raises `SYNTAX 93.946`. In the example `MAKESTRING` answers
 another name.
@@ -2200,4 +2226,36 @@ say o~own o~later
 
 ```output defect=#141
 own later
+```
+
+r[class.object.deviation.118]
+`sendWith` and `startWith` send an instance of a subclass of `List` given as
+the array the message `request` with the argument `ARRAY`, as
+[the sends rule of `sendWith`](r:class.object.sendwith.sends) and
+[that of `startWith`](r:class.object.startwith.sends) say for any other
+object, so that an override is used
+([Deviation 118](../deviations.md)). ooRexx sends the instance
+no `request` and uses the items it holds, so the example answers 1 on ooRexx.
+The `request` of the class `ll` answers two items.
+
+```rexx
+l = .ll~new
+l~append('held')
+say .w~new~sendWith('count', l)
+say 'start'
+.w~new~startWith('count', l)
+::class ll subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('a', 'b')
+::class w
+::method count
+  return arg()
+```
+
+```output
+request ARRAY
+2
+start
+request ARRAY
 ```

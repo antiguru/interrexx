@@ -170,9 +170,11 @@ An argument past the last one on the syntax line raises `SYNTAX 88.922`, even
 when the arguments before it are omitted. As [for the other
 builtins](r:bif.index.call.count), a trailing omitted place adds nothing to
 the count. An argument that such a page calls a string and that is an object
-other than a string is replaced by the answer of its `MAKESTRING` method, as
+other than a string is replaced by the string that `request` with the argument
+`STRING` answers, as
 [for the other builtins](r:conv.string.object), but there is no fallback to
-the `STRING` method: an object with no `MAKESTRING` method raises
+the `STRING` method: an object whose `request` answers no string, such as one
+with no `MAKESTRING` method, raises
 `SYNTAX 88.909`, whatever its `STRING` method answers. As for the other
 builtins, the count comes first: a call that has an argument past the last
 one on the syntax line raises 88.922 even when an argument before it is
@@ -212,9 +214,11 @@ A builtin that follows the native call rule checks the count of its arguments
 before the arguments themselves, as [the other
 builtins](r:bif.index.call.order.count-before-values) do: a call that has an
 argument past the last one on the syntax line raises `SYNTAX 88.922` even when
-an argument before it is omitted, is an object with no `MAKESTRING` method, or
+an argument before it is omitted, is an object whose `request` answers no
+string, or
 fails a check that its page gives. ooRexx reports an omitted argument, an
-object with no `MAKESTRING` method and an argument that is not a whole number
+object whose `request` answers no string and an argument that is not a whole
+number
 before the count, and the count before an argument's value: an option it does
 not allow or a number out of range.
 

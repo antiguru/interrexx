@@ -2,7 +2,7 @@
 element: "Classes"
 kind: chapter
 rexxref: "Builtin Classes; Objects and Classes > Mixin Classes; Objects and Classes > Overview of Classes Provided by Rexx; Builtin Classes > Fundamental Classes > Object Class > defaultName; Builtin Classes > Fundamental Classes > Object Class > objectName; Builtin Classes > Fundamental Classes > Object Class > objectName=; Builtin Classes > Fundamental Classes > Object Class > string"
-deviations: [30, 32, 36, 109]
+deviations: [30, 32, 36, 109, 114]
 ---
 
 # Classes
@@ -714,8 +714,9 @@ an apple | The XYLO class | The Array class
 r[class.index.objectname]
 The `objectName` method of an object answers its name: the name set for it,
 and when none was set, the object's `defaultName`. The `objectName=` method
-sets the name. Its argument must be a string or an object with a `MAKESTRING`
-method that answers one, which is then the name; an instance of a subclass of
+sets the name. Its argument must be a string or an object whose `request` with
+the argument `STRING` answers one, which is then the name; an instance of a
+subclass of
 `String` is a string here. The name is kept from then on, even when it is the
 null string. Any other argument, `.nil` and an object that has only a `string`
 method included, raises `SYNTAX 88.909`. The object `.nil` has the name
@@ -787,21 +788,35 @@ o~"OBJECTNAME="() => 93.903
 
 r[class.index.string]
 The string value of an object that is not a string is found as
-[the conversion rule](r:conv.string.object) says: the answer of its
-`MAKESTRING` method when it has one, and otherwise the answer of its `string`
-method. `say` and the joining operators use it, as
+[the conversion rule](r:conv.string.object) says: the answer of the `request`
+message sent to it with the argument `STRING` when that is a string, and
+otherwise the answer of its `string`
+method. The `request` of `Object` sends `makeString` when the object has one, so
+an object with a `makeString` method shows its answer. `say` and the joining
+operators use the string value, as
 [the SAY rule](r:instr.say.object) and
 [the concatenation rule](r:expr.concatenation.operands) say. The `string`
 method of `Object` answers the object's `objectName`, so an object with no
-`MAKESTRING` method shows the name that was set, and otherwise its default
+`makeString` method shows the name that was set, and otherwise its default
 name. A class whose instances should show differently declares `string`. It
 declares `makeString` as well when its instances should be accepted where a
 method takes a string argument, such as the pad of `left`, the needle of `pos`
-or the argument of `objectName=`, because such a method uses `MAKESTRING`
-only. An operator method sent as a message, such as `"x"~"||"(b)`, takes the
+or the argument of `objectName=`, because such a method sends `request` with the
+argument `STRING` and takes the answer when it is a string, and has no fallback
+to `string`: an object whose `request` answers `.nil` or another object that is
+not a string, as `Object` does for an object with no `makeString` method, `.nil`
+itself among them, raises `SYNTAX 88.909`. An argument that a method reads as
+a number, a whole number or a logical value has the fallback: it is read as
+[the conversion rule](r:conv.string.object) reads such an argument of a
+builtin, so `"abc"~left(o)` uses the answer of `string` of an object that has
+only that method. A class that declares `request` itself decides both the
+string value and what a method reads from a string argument. An operator
+method sent as a message, such as
+`"x"~"||"(b)`, takes the
 string value of its argument as the operator does. An instance of a subclass
 of `String` is a string, and its string value is its own characters, whatever
-`makeString` and `string` it declares: no message is sent to it for that
+`makeString`, `request` and `string` it declares: no message is sent to it for
+that
 ([Deviation 109](r:class.string.deviation.109)). A `string` method that
 answers an object that is not a string is covered by
 [Deviation 30](r:class.index.deviation.30).
@@ -819,6 +834,8 @@ say length(b) left(b, 3)
 call try '"abc"~left(2, .shown~new)'
 call try '"abc"~left(5, .pad~new)'
 call try '"x"~"||"(.shown~new)'
+call try '"abc"~left(.count~new)'
+call try '.array~new(.count~new)~size'
 exit
 try:
   signal on syntax name bad
@@ -837,6 +854,9 @@ bad: say arg(1) '=>' condition('o')~code
 ::class pad
 ::method makestring
   return '*'
+::class count
+::method string
+  return 2
 ```
 
 ```output
@@ -848,6 +868,48 @@ M: c | M: c! | a MADE | a MADE
 "abc"~left(2, .shown~new) => 88.909
 "abc"~left(5, .pad~new) => abc**
 "x"~"||"(.shown~new) => xSHOWN: b
+"abc"~left(.count~new) => ab
+.array~new(.count~new)~size => 2
+```
+
+```rexx
+call try '"abc"~left(5, .ask~new)'
+call try '"abc"~left(5, .askstr~new)'
+call try '"abc"~left(5, .askobj~new)'
+call try '"abc"~left(5, .nil)'
+call try '"x"~"||"(.askstr~new)'
+call try 'filespec("N", .asknamed~new)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class ask
+::method request
+  return '-'
+::class askstr
+::method request
+  return .nil
+::method string
+  return '-'
+::class askobj
+::method request
+  return .object~new
+::class asknamed
+::method request
+  return 'p/q'
+```
+
+```output defect=#164
+"abc"~left(5, .ask~new) => abc--
+"abc"~left(5, .askstr~new) => 88.909
+"abc"~left(5, .askobj~new) => 88.909
+"abc"~left(5, .nil) => 88.909
+"x"~"||"(.askstr~new) => x-
+filespec("N", .asknamed~new) => q
 ```
 
 ## Messages a method sends
@@ -991,6 +1053,42 @@ String 0
 String 0
 ```
 
+r[class.index.deviation.114]
+When `subclass` or `mixinclass` sends `new` to a metaclass and the answer is not
+a class, `SYNTAX 98.900` is raised by the message, in the program that sent it,
+where it can be trapped. The object that `new` answered may be any object, a
+string and `.nil` included. ooRexx crashes. The metaclass answers a string for
+the first class of the example, `.nil` for the second and an instance of
+`Object` for the third, and makes the class `K` of the directive as `Class`
+does. The directive case is [the METACLASS rule](r:dir.class.deviation.114).
+
+```rexx
+call try '.k~subclass("S")'
+call try '.k~subclass("N")'
+call try '.k~mixinclass("O")'
+exit
+try:
+  signal on syntax name e
+  interpret 'z =' arg(1)
+  say arg(1) '=> made'
+  return
+e: say arg(1) '=>' condition('o')~code
+  return
+::class meta subclass class
+::method new class
+  if arg(1) = 'S' then return 'a string'
+  if arg(1) = 'N' then return .nil
+  if arg(1) = 'O' then return .object~new
+  forward class (super)
+::class k metaclass meta
+```
+
+```output defect=#156
+.k~subclass("S") => 98.900
+.k~subclass("N") => 98.900
+.k~mixinclass("O") => 98.900
+```
+
 r[class.index.deviation.36]
 `objectName=` sent to a String of no subclass and no enhancement, a number
 included, ends the program with exit code 120, because such a string is
@@ -1013,11 +1111,12 @@ before
 r[class.index.deviation.109]
 The string value of an instance of a subclass of `String` is its own
 characters, and the methods that read it as a string, a number or a logical
-value send it no `MAKESTRING` and no `STRING`, as
+value send it no `REQUEST`, no `MAKESTRING` and no `STRING`, as
 [the rule on the string value](r:class.index.string) says and
 [the String page rule](r:class.string.deviation.109) states in full; ooRexx
-reads the instance through its `MAKESTRING` method as an argument and as the
-receiver of some methods. In the example `MAKESTRING` answers another string.
+sends the instance `request` with `STRING` or `MAKESTRING` as an argument and
+as the receiver of some methods, so an override of either can change what is
+read. In the example `MAKESTRING` answers another string.
 
 ```rexx
 .local~sent = 0

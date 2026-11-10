@@ -80,9 +80,9 @@ characters of the instance and answers a new string of class `String`, not an
 instance of the subclass, and `copy`, which `Object` supplies, answers another
 instance of the subclass. Wherever a string, a number, a logical value or a
 whole number is read from the instance, as the receiver or as an argument, its
-own characters are read and neither `MAKESTRING` nor `STRING` is sent to it
-([Deviation 109](r:class.string.deviation.109)). The instance may have
-attributes and methods of its own, and an object name
+own characters are read and none of `REQUEST`, `MAKESTRING` and `STRING` is
+sent to it ([Deviation 109](r:class.string.deviation.109)). The instance may
+have attributes and methods of its own, and an object name
 ([Deviation 36](r:class.string.deviation.36)).
 
 ```rexx
@@ -141,11 +141,12 @@ r[class.string.new]
 `new` makes a string. Its first argument is required, and gives the
 characters: the string value of the argument, which is the argument itself for
 a string, a number and an instance of a subclass of `String` included, and its
-`MAKESTRING` answer for another object. For another object `new` uses
-`MAKESTRING` only, as the methods that take a string argument do
-([the string-value rule](r:class.index.string)). Without an argument `new`
-raises `SYNTAX 93.903`, and with an argument that has no `MAKESTRING` method,
-`.nil` and an object with only a `string` method included, `SYNTAX 88.909`.
+the string that its `request` with the argument `STRING` answers for another
+object. For another object `new` has no fallback to `string`, as the methods
+that take a string argument have none ([the string-value
+rule](r:class.index.string)). Without an argument `new`
+raises `SYNTAX 93.903`, and with an argument that gives no string, `.nil` and an
+object with only a `string` method included, `SYNTAX 88.909`.
 The object that `new` makes has the class of the receiver, and the characters
 are in place before `init` runs, so an `init` of a subclass can use them.
 `init` is sent the arguments after the first, as
@@ -191,8 +192,9 @@ abc
 ```
 
 r[class.string.new.makestring]
-An argument whose `MAKESTRING` answers an instance of a subclass of `String`
-gives that instance's characters to [`new`](r:class.string.new), as it does to
+An argument whose `request` with the argument `STRING` answers an instance of a
+subclass of `String`, such as the answer of its `MAKESTRING`, gives that
+instance's characters to [`new`](r:class.string.new), as it does to
 the other methods that take a string.
 
 ```rexx
@@ -386,9 +388,11 @@ r[class.string.append]
 `append` answers a new string, the characters of the receiver followed by the
 string value of its argument. The argument is required (`SYNTAX 93.903`) and a
 second raises `93.902`. The string value is found as the joining operators
-find it, so an object with no `MAKESTRING` method gives its `string` answer,
-and `.nil` gives `The NIL object`: no error is raised for an argument that has
-no `MAKESTRING` method. The answer has the class `String` even for an instance
+find it, so an object whose `request` answers no string gives its `string`
+answer,
+and `.nil` gives `The NIL object`: no error is raised for an argument whose
+`request` answers no string. The answer has the class `String` even for an
+instance
 of a subclass.
 
 ```rexx
@@ -513,7 +517,8 @@ receiver, and 0 otherwise. It is a strict comparison of text: case matters, a
 trailing blank matters, and numbers are not compared as numbers, so `1` and
 `1.0` are not equal. The argument is required (`SYNTAX 93.903`) and a second
 raises `93.902`. The argument's string value is found as the joining operators
-find it, so an object with no `MAKESTRING` method is compared by its `string`
+find it, so an object whose `request` answers no string is compared by its
+`string`
 text and `.nil` as the text `The NIL object`; no argument is refused.
 
 ```rexx
@@ -575,7 +580,8 @@ both strings are compared, and the third `length` is the number of characters
 compared of each, by default all that are left. A part that runs past the end
 of a string is cut there. The arguments are checked from left to right: the
 first, `other`, is required (`SYNTAX 93.903`) and has a string value as the
-conversion rule says (`88.909`, as for `.nil`; its `MAKESTRING` only is used,
+conversion rule says (`88.909`, as for `.nil`; only the answer of `request` with
+the argument `STRING` is used,
 and then only for an object that is no string); `start` must be a positive
 whole number (`93.924`) and `length` a non-negative whole number (`93.923`); a
 fourth argument raises `93.902`.
@@ -687,8 +693,9 @@ receiver, and 0 otherwise; a needle that is the null string is never found.
 The search covers the whole receiver unless `start`, a position, and `length`,
 a number of characters from it, limit it, and then the needle must lie within
 that part. A `start` or a `length` that reaches past the end is cut there. The
-needle is required (`SYNTAX 93.903`) and is a string or else uses its
-`MAKESTRING` answer (`88.909` for `.nil`), `start` must be a positive whole
+needle is required (`SYNTAX 93.903`) and is a string or else uses the string it
+[gives](r:class.index.string) (`88.909` for `.nil`), `start` must be a positive
+whole
 number (`93.924`) and `length` a non-negative whole number (`93.923`); the
 arguments are checked from left to right, and a fourth argument raises
 `93.902`. Case matters.
@@ -750,8 +757,8 @@ r[class.string.startswith]
 `startsWith` answers 1 when the receiver begins with its argument, and 0
 otherwise; the null string is never a prefix, not even of the null string. The
 argument is required, and without it `startsWith` raises `SYNTAX 88.901`; a
-second raises `93.902`. The argument is a string or else uses its `MAKESTRING`
-answer (`88.909` for `.nil`). Case matters.
+second raises `93.902`. The argument is a string or else uses the string it
+[gives](r:class.index.string) (`88.909` for `.nil`). Case matters.
 
 ```rexx
 say 'abc'~startsWith('ab') 'abc'~startsWith('AB') 'abc'~startsWith('abc')
@@ -849,7 +856,8 @@ of the receiver. A phrase with no words is never found. The search begins at
 the word `start`, 1 by default, which is a
 [word number](r:bif.index.words.number): a phrase that begins before it is not
 found. The phrase is required (`SYNTAX 93.903`) and is a string or else uses
-its `MAKESTRING` answer (`88.909`), `start` must be a positive whole number
+the string it [gives](r:class.index.string) (`88.909`), `start` must be a
+positive whole number
 (`93.924`), and a third argument raises `93.902`. Case matters.
 
 ```rexx
@@ -916,7 +924,8 @@ is empty, begins after the end of `other`, or runs past the end of either
 string is not an error: the answer is 0. The arguments are checked from left
 to right: `start` and `n` must be positive whole numbers (`SYNTAX 93.924`),
 `other` is required, as `start` is (`93.903`), and is a string or else uses
-its `MAKESTRING` answer (`88.909`), and `length` must be a non-negative whole
+the string it [gives](r:class.index.string) (`88.909`), and `length` must be a
+non-negative whole
 number (`93.923`); a fifth argument raises `93.902`. Case matters.
 
 ```rexx
@@ -983,7 +992,8 @@ one of the characters of its second argument, the set, and 0 otherwise: when
 it is not in the set, when the set is the null string, and when `n` is past
 the end of the receiver. Both arguments are required (`SYNTAX 93.903`), `n`
 must be a positive whole number (`93.924`) and is checked first, the set is a
-string or else uses its `MAKESTRING` answer (`88.909`), and a third argument
+string or else uses the string it [gives](r:class.index.string) (`88.909`), and
+a third argument
 raises `93.902`. Case matters.
 
 ```rexx
@@ -1283,7 +1293,8 @@ default `length` is the length of `newstr`, and a part that runs past the end
 of the receiver is cut there. When `position` is more than one past the end of
 the receiver, the gap is filled with the pad, a blank by default. `newstr` and
 `position` are required (`SYNTAX 93.903`), and `newstr` is a string or else
-uses its `MAKESTRING` answer (`88.909`), `position` must be a positive whole
+uses the string it [gives](r:class.index.string) (`88.909`), `position` must be
+a positive whole
 number (`93.924`), `length` a non-negative whole number (`93.923`) and the pad
 a single character (`93.922`); the arguments are checked from left to right,
 and a fifth raises `93.902`. A `length` of 0 inserts `newstr`.
@@ -1861,15 +1872,15 @@ r[class.string.deviation.109]
 An instance of a subclass of `String` is read by its own characters wherever a
 string, a number, a logical value or a whole number is needed, as the receiver
 and as an argument, in the message form, in the function form and in the
-operators; `MAKESTRING` and `STRING` are not sent to it for that
-([Deviation 109](../deviations.md)). In the example the subclass declares both
-methods and counts the sends: the instance `n` is the number 2, `b` is the
-logical value 1 and `s` is the string `ab`, and no send is made. ooRexx reads
-such an instance through its `MAKESTRING` method when it is an argument, of a
-method, an operator or a builtin function, and when it is the receiver of the
-numeric methods and operators, the logical operators, `dataType` and `?`, and
-in `new`; as the receiver of the other methods, of the strict comparisons and
-of the joining operators it reads the instance's own characters, so one
+operators; `REQUEST`, `MAKESTRING` and `STRING` are not sent to it for that
+([Deviation 109](../deviations.md)). In the example the subclass declares
+`MAKESTRING` and `STRING` and counts the sends: the instance `n` is the number
+2, `b` is the logical value 1 and `s` is the string `ab`, and no send is made.
+ooRexx sends such an instance `request` with `STRING` or `MAKESTRING` in many of
+these places, as an argument of a method, an operator or a builtin function, as
+the receiver of the numeric and logical methods and operators, `dataType` and
+`?`, as the operand of `SAY`, and in `new`, so an override of either method can
+change what is read; elsewhere it reads the instance's own characters, so one
 instance can answer differently to `=` and to `==`.
 
 ```rexx

@@ -186,10 +186,11 @@ operators, normal and strict. The equality messages that every object
 understands are those of [the default rule](r:expr.messages.default). A string
 on the left compares the string that [the conversion
 rule](r:conv.string.object) makes of the right operand, which for an instance
-of a program's own class that has no `MAKESTRING` method is the text such as
+of a program's own class that declares no `MAKESTRING`, `request` or `string`
+method is the text such as
 `an O`. This book does not specify the comparison with `.nil`, because
 `'The NIL object' = .nil` is `0` although `.nil` writes that text. How many
-times the right operand is sent `MAKESTRING` is not specified.
+times the right operand is sent `request` is not specified.
 
 ```rexx
 a = .array~new

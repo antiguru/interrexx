@@ -2,7 +2,7 @@
 element: "Routine"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Routine Class; Builtin Classes > Fundamental Classes > Routine Class > new (Class Method); Builtin Classes > Fundamental Classes > Routine Class > newFile (Class Method); Builtin Classes > Fundamental Classes > Routine Class > loadExternalRoutine (Class method); Builtin Classes > Fundamental Classes > Routine Class > []; Builtin Classes > Fundamental Classes > Routine Class > annotation; Builtin Classes > Fundamental Classes > Routine Class > annotations; Builtin Classes > Fundamental Classes > Routine Class > call; Builtin Classes > Fundamental Classes > Routine Class > callWith; Builtin Classes > Fundamental Classes > Routine Class > package; Builtin Classes > Fundamental Classes > Routine Class > setSecurityManager; Builtin Classes > Fundamental Classes > Routine Class > source; The Security Manager"
-deviations: [41, 109]
+deviations: [41, 109, 111, 115, 118]
 ---
 
 # Routine
@@ -65,7 +65,8 @@ r[class.routine.new]
 `new` makes a routine from a name, a source and a context, with the same
 arguments, the same checks, in the same order, and the same errors as
 [the `new` of `Method`](r:class.method.new): the name and the source are
-required (`SYNTAX 88.901`), a name with no `MAKESTRING` method, `.nil` among
+required (`SYNTAX 88.901`), a name that [gives no string](r:class.index.string),
+`.nil` among
 them, raises `88.909`, a context that is not `PROGRAMSCOPE`, a `Method`, a
 `Routine` or a `Package` raises `40.904`, and a source that does not translate
 raises its translation error, and the code does not run. The source is read as
@@ -142,12 +143,16 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.routine.new.sends]
-`new` sends the messages that
-[the sends rule of `Method`](r:class.method.new.sends) states, in the same
-order: `request` with `ARRAY` and then with `STRING` to a source that is not a
-string and not an array (the line is a string answer itself, and any other
-answer's `objectName`), and, when the routine has been made, `init` with the
-arguments of `new` from the fourth on.
+`new` sends the messages that [the sends rule of
+`Method`](r:class.method.new.sends) states, in the same order: `request` with
+`ARRAY` and then with `STRING` to a source that is not a string and not an array
+(the line is a string answer itself, and any other answer's `objectName`), and,
+when the routine has been made, `init` with the arguments of `new` from the
+fourth on. An answer to `request` with `ARRAY` that is neither an array nor
+`.nil` raises `SYNTAX 88.913`, and no `request` with `STRING` follows it
+([Deviation 115](r:class.routine.deviation.115)). An instance of a subclass of
+`List` is sent `request` as well ([Deviation
+118](r:class.routine.deviation.118)).
 
 ```rexx
 call try '.routine~new("n", .src~new(.array~of("return 1"), .nil))~call'
@@ -199,7 +204,8 @@ r[class.routine.newfile]
 checks, their order and the errors of
 [the `newFile` of `Method`](r:class.method.newfile): the file name and an
 optional context, no third argument (`SYNTAX 93.902`), `.nil` or an object
-with no `MAKESTRING` method as the name raises `88.909`, a context that does
+that [gives no string](r:class.index.string) as the name raises `88.909`, a
+context that does
 not fit raises `40.904` before the file is looked for, and a file that cannot
 be read raises `SYNTAX 3.1`. The routine's package is named by the file name
 as it was given. Its source is the lines of the file before the first
@@ -276,8 +282,9 @@ after the first line
 
 r[class.routine.newfile.sends]
 `newFile` sends the new object the message `init` with no argument, after the
-file has been read and translated, and a file name that is an object with a
-`MAKESTRING` method is sent that message once, before `init`; no other message
+file has been read and translated, and a file name that is an object is sent
+`request` with the argument `STRING` once, before `init`, and the `request` of
+`Object` sends `MAKESTRING` in turn; no other message
 is sent, as [the rule of `Method`](r:class.method.newfile.sends) says.
 
 ```rexx
@@ -295,15 +302,19 @@ call sysfiledelete f
 ::method init
   expose n
   use arg n
+::method request
+  say 'request' arg(1)
+  forward class (super)
 ::method makestring
   expose n
   say 'makestring'
   return n
 ```
 
-```output
+```output defect=#164
 init 0
 MINE
+request STRING
 makestring
 init 0
 MINE
@@ -319,8 +330,9 @@ descriptor, with the checks, the descriptor form and the errors of
 [`loadExternalMethod`](r:class.method.loadexternalmethod): the word `LIBRARY`
 in any case, the library, and optionally the entry in it, which is the name of
 the routine when it is left out. A third argument raises `SYNTAX 93.902`, a
-missing argument `88.901`, a `.nil` argument or one with no `MAKESTRING`
-method `88.909` and a descriptor of another form `99.917`. When the library
+missing argument `88.901`, a `.nil` argument or one that [gives no
+string](r:class.index.string) `88.909` and a descriptor of another form
+`99.917`. When the library
 cannot be loaded or has no entry of that name, the answer is `.nil`. The
 answer is an instance of `Routine` also when a subclass received the message,
 and no `init` is sent. The routine can be called, with the arguments that the
@@ -674,8 +686,9 @@ name it is given, and `.nil` when there is none, as
 [the annotation rule](r:dir.annotate.read) says: the name is taken in upper
 case, and a routine made by `new`, `newFile` or `loadExternalRoutine` has no
 annotations: the answer for one is `.nil`, and its `annotations` table is
-empty. The name is required (`SYNTAX 88.901`), an object with no `MAKESTRING`
-method, `.nil` among them, raises `88.909`, and a second argument raises
+empty. The name is required (`SYNTAX 88.901`), an object that [gives no
+string](r:class.index.string), `.nil` among them, raises `88.909`, and a second
+argument raises
 `93.902`. A number or a string that names no annotation answers `.nil`.
 
 ```rexx
@@ -1184,6 +1197,12 @@ a `loadPackage` that has a source, and a `::REQUIRES` of a package that the
 code makes from a source is not offered either. A manager that answers `0`
 lets the load go on, and so does one that answers `1` and leaves `NAME` as it
 is.
+A manager that replaces `NAME` in the information of the first message and
+answers `1` chooses the file: the file of the new name is the one that is
+loaded, and no second message is sent, so the manager is never asked to
+approve its own replacement ([Deviation 111](r:class.routine.deviation.111)).
+A `NAME` replaced in the second message chooses the file as well, as the
+second example shows.
 
 ```rexx
 f = 'class_routine_requires_zq.tmp'
@@ -1253,6 +1272,45 @@ requires, absolute name: 0
 requires, answer 1: 0
 requires, answer 1: 1
 m body
+Package
+```
+
+```rexx
+call sysfiledelete 'class_routine_req2_a_zq.tmp'
+call lineout 'class_routine_req2_a_zq.tmp', 'say "a body"'
+call lineout 'class_routine_req2_a_zq.tmp'
+call sysfiledelete 'class_routine_req2_b_zq.tmp'
+call lineout 'class_routine_req2_b_zq.tmp', 'say "b body"'
+call lineout 'class_routine_req2_b_zq.tmp'
+src = 'say .package~new("class_routine_req2_a_zq.tmp")~class~id'
+r = .routine~new('agent', src)
+r~setSecurityManager(.mgr~new)
+r~call
+call sysfiledelete 'class_routine_req2_a_zq.tmp'
+call sysfiledelete 'class_routine_req2_b_zq.tmp'
+exit
+::class mgr
+::method init
+  expose count
+  count = 0
+::method call
+  return 0
+::method requires
+  expose count
+  use arg info
+  count = count + 1
+  say 'requires' count 'absolute name:' (info~name == qualify(info~name))
+  if count = 2 then do
+    info~name = qualify('class_routine_req2_b_zq.tmp')
+    return 1
+  end
+  return 0
+```
+
+```output
+requires 1 absolute name: 0
+requires 2 absolute name: 1
+b body
 Package
 ```
 
@@ -1335,10 +1393,11 @@ bad: say condition('o')~code
 
 r[class.routine.deviation.109]
 An instance of a subclass of `String` that is the name or the source of `new`
-is read by its own characters, and `MAKESTRING` and `STRING` are not sent to
-it ([Deviation 109](r:class.string.deviation.109)). ooRexx reads the name
-through its `MAKESTRING` method; the source is read as the instance's own
-characters on both. In the example `MAKESTRING` answers another name.
+is read by its own characters, and `REQUEST`, `MAKESTRING` and `STRING` are
+not sent to it ([Deviation 109](r:class.string.deviation.109)). ooRexx sends
+the name `request` with `STRING` or `MAKESTRING`, so an override of either can
+change what is read; the source is read as the instance's own characters on
+both. In the example `MAKESTRING` answers another name.
 
 ```rexx
 r = .routine~new(.name~new('Foo'), .name~new('say "src"'))
@@ -1350,4 +1409,125 @@ say r~package~name r~source[1]
 
 ```output defect=#140
 Foo say "src"
+```
+
+r[class.routine.deviation.115]
+A `new` whose source answers `request` with `ARRAY` by an object that is neither
+an array nor `.nil` raises `SYNTAX 88.913`, as [the rule of
+`Method`](r:class.method.deviation.115) states, and no `request` with `STRING`
+is sent. ooRexx crashes.
+The examples have `request` answer a string, a list and an object that is none
+of them.
+
+```rexx
+call try '.routine~new("n", .src~new("return 1"))'
+call try '.routine~new("n", .src~new(.list~of("return 1")))'
+call try '.routine~new("n", .src~new(.object~new))'
+call try '.routine~new("n", .src~new(.array~of("return 1")))~call'
+call try '.routine~new("n", .src~new(.nil))~call'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=>' zres
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class src
+::method init
+  expose ans
+  use arg ans
+::method request
+  expose ans
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return ans
+  return 'return 2'
+```
+
+```output defect=#157
+request ARRAY
+.routine~new("n", .src~new("return 1")) => 88.913
+request ARRAY
+.routine~new("n", .src~new(.list~of("return 1"))) => 88.913
+request ARRAY
+.routine~new("n", .src~new(.object~new)) => 88.913
+request ARRAY
+.routine~new("n", .src~new(.array~of("return 1")))~call => 1
+request ARRAY
+request STRING
+.routine~new("n", .src~new(.nil))~call => 2
+```
+
+r[class.routine.deviation.118]
+A source that is an instance of a subclass of `List` is sent `request` with
+the argument `ARRAY`, as [the sends rule](r:class.routine.new.sends) states,
+and the lines are the items of the array that it answers
+([Deviation 118](../deviations.md)). ooRexx sends the instance no
+`request` and takes the items it holds as the lines, so the example writes
+`held` on ooRexx.
+
+```rexx
+l = .ll~new
+l~append('held')
+r = .routine~new('r', l)
+say r~source[1]
+::class ll subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('say "answered"')
+```
+
+```output
+request ARRAY
+say "answered"
+```
+
+r[class.routine.deviation.111]
+A name that the manager replaces in the information of the first `requires`
+message chooses the file that is loaded, and the manager is sent no second
+message for it ([Deviation 111](../deviations.md)). ooRexx uses the new name
+only to look for a package that is already loaded under it. Otherwise it
+sends the second message with the full name of the file that the load asked
+for, and loads that file: the example, whose manager replaces the name at the
+first message, is sent two messages on ooRexx and loads `a`. No replacement,
+and a replacement at the second message, give the same result on both
+([the checkpoint rule](r:class.routine.setsecuritymanager.requires)).
+
+```rexx
+call sysfiledelete 'class_routine_dev111_a_zq.tmp'
+call lineout 'class_routine_dev111_a_zq.tmp', 'say "a body"'
+call lineout 'class_routine_dev111_a_zq.tmp'
+call sysfiledelete 'class_routine_dev111_b_zq.tmp'
+call lineout 'class_routine_dev111_b_zq.tmp', 'say "b body"'
+call lineout 'class_routine_dev111_b_zq.tmp'
+src = 'p = .package~new("p", "nop"); '
+src = src || 'say p~loadPackage("class_routine_dev111_a_zq.tmp")~class~id'
+r = .routine~new('agent', src)
+r~setSecurityManager(.mgr~new)
+r~call
+call sysfiledelete 'class_routine_dev111_a_zq.tmp'
+call sysfiledelete 'class_routine_dev111_b_zq.tmp'
+exit
+::class mgr
+::method init
+  expose count
+  count = 0
+::method call
+  return 0
+::method requires
+  expose count
+  use arg info
+  count = count + 1
+  say 'requires' count 'absolute name:' (info~name == qualify(info~name))
+  if count = 1 then do
+    info~name = 'class_routine_dev111_b_zq.tmp'
+    return 1
+  end
+  return 0
+```
+
+```output defect=#162
+requires 1 absolute name: 0
+b body
+Package
 ```

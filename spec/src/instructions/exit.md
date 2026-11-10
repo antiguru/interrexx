@@ -177,8 +177,9 @@ The value of the main program, which is that of its EXIT or of a RETURN that
 ends it, becomes the exit code of the process in this way. A value that is
 not a string is first replaced by a string as [the conversion
 rule](r:conv.string.object) says; where that rule refuses the conversion, as
-for an object whose `MAKESTRING` or `STRING` method is private, the exit code
-is 0 and no error is raised. A string that has the form of a
+for an object whose `REQUEST` is private, or whose `MAKESTRING` or `STRING`
+method is private and would be sent, the exit code is 0 and no error is
+raised. A string that has the form of a
 [whole-number argument](r:conv.whole.form), and that is a whole number from
 -2147483648 to 2147483647, is handed to the host as that integer. Blanks
 around the number, an exponent, and a decimal part of zeros do not matter. An
@@ -195,6 +196,18 @@ included, is not specified.
 > result is rounded at the NUMERIC DIGITS setting, so `exit -2147483647`
 > gives 0 and `exit -1073741823` gives 4, while the strings `'-2147483647'`
 > and `'-1073741823'` give 1.
+
+```rexx
+exit .apm~new
+::class apm
+::method makestring
+  return 5
+::method string private
+  return 7
+```
+
+```output defect=#165 rc=5
+```
 
 ```rexx
 say 'done'

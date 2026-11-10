@@ -2,7 +2,7 @@
 element: "Method"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Method Class; Builtin Classes > Fundamental Classes > Method Class > new (Class Method); Builtin Classes > Fundamental Classes > Method Class > newFile (Class Method); Builtin Classes > Fundamental Classes > Method Class > loadExternalMethod (Class Method); Builtin Classes > Fundamental Classes > Method Class > annotation; Builtin Classes > Fundamental Classes > Method Class > annotations; Builtin Classes > Fundamental Classes > Method Class > isAbstract; Builtin Classes > Fundamental Classes > Method Class > isAttribute; Builtin Classes > Fundamental Classes > Method Class > isConstant; Builtin Classes > Fundamental Classes > Method Class > isGuarded; Builtin Classes > Fundamental Classes > Method Class > isPackage; Builtin Classes > Fundamental Classes > Method Class > isPrivate; Builtin Classes > Fundamental Classes > Method Class > isProtected; Builtin Classes > Fundamental Classes > Method Class > package; Builtin Classes > Fundamental Classes > Method Class > scope; Builtin Classes > Fundamental Classes > Method Class > setGuarded; Builtin Classes > Fundamental Classes > Method Class > setPrivate; Builtin Classes > Fundamental Classes > Method Class > setProtected; Builtin Classes > Fundamental Classes > Method Class > setSecurityManager; Builtin Classes > Fundamental Classes > Method Class > setUnguarded; Builtin Classes > Fundamental Classes > Method Class > source"
-deviations: [41, 109]
+deviations: [41, 109, 115, 118]
 ---
 
 # Method
@@ -69,8 +69,9 @@ hello world
 
 r[class.method.new]
 `new` makes a method object from a name, a source and a context. The name is
-required (`SYNTAX 88.901`), and is a string, or the `MAKESTRING` answer of its
-argument: an object with no `MAKESTRING` method, `.nil` among them, raises
+required (`SYNTAX 88.901`), and is a string, or the string that its
+argument [gives](r:class.index.string): an object that gives no string, `.nil`
+among them, raises
 `88.909`, and a number is a name like any other string. The name becomes the
 name of the method's package, which `package` shows. The source is required
 too (`88.901`) and is read as [the source rule](r:class.method.new.source)
@@ -154,12 +155,14 @@ code, and the method's `source` is an array of that one line; a string is not
 split at line ends, and a line end character in a line, `'0A'x`, `'0D'x` or
 `'1A'x`, makes the translation raise `SYNTAX 13.1`, while a tab is an ordinary
 character. An empty string is a source of no lines. An array holds the lines
-in the order of its indexes. Each item is converted by `MAKESTRING` and the
+in the order of its indexes. Each item is sent `request` with the argument
+`STRING` and the
 answer is the line: a string is its own line, a number is a line like any
 string, a `MutableBuffer` is the line of its text, and so is an instance of a
-subclass of `String`; an item that has no `MAKESTRING` method, `.nil` among
+subclass of `String`; an item that [gives no string](r:class.index.string),
+`.nil` among
 them, or a hole that is followed by an item, raises `SYNTAX 93.952`. The
-answer of `MAKESTRING` is a line like any other, so an item whose answer has a
+answer is a line like any other, so an item whose answer has a
 line end, such as an array (its `makeString` joins its items with line ends),
 raises `13.1`. An empty array is a source of no lines. A source that is
 neither a string nor an array is converted as
@@ -251,25 +254,29 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.method.new.sends]
-`new` sends messages to its source and to the object it makes. A source that
-is not a string and not an array, and an instance of a subclass of `String` or
-`Array`, is sent `request` with the argument `ARRAY`; when that answers an
-array its items are the lines, read as
-[the source rule](r:class.method.new.source) reads an array. When it answers
-`.nil` the source is sent `request` with the argument `STRING`: an answer that
-is a string is the one-line source, and for any other answer its `objectName`
-is the line, with no `MAKESTRING` or `string` message sent to it; `.nil` from
-both raises `SYNTAX 93.961`. A string that is an instance
-of `String` itself and an array that is an instance of `Array` itself are used
-directly, without a message. The `request` of `Object` sends `makeArray` for
-the argument `ARRAY` and `makeString` for `STRING`, as
-[its rule](r:class.object.request.sends) says, so an object that declares
-`makeArray` or `makeString` is a source. When the method is made, `new` sends
-the new object the message `init` with the arguments of `new` from the fourth
-on, so that a subclass of `Method` that declares `init` receives them; the
-`init` of `Object` accepts none, and a fourth argument raises `SYNTAX 93.902`
-after the source has been translated. The class that received `new` decides
-the class of the answer: a subclass of `Method` makes instances of itself.
+`new` sends messages to its source and to the object
+it makes. A source that is not a string and not an array, and an instance of a
+subclass of `String` or `Array`, is sent `request` with the argument `ARRAY`;
+when that answers an array its items are the lines, read as [the source
+rule](r:class.method.new.source) reads an array. When it answers an object that
+is neither an array nor `.nil`, `new` raises `SYNTAX 88.913` and sends no
+`request` with `STRING` ([Deviation 115](r:class.method.deviation.115)). An
+instance of a subclass of `List` is sent `request` as well ([Deviation
+118](r:class.method.deviation.118)). When it answers `.nil` the source is sent
+`request` with the argument `STRING`: an answer that is a string is the one-line
+source, and for any other answer its `objectName` is the line, with no
+`MAKESTRING` or `string` message sent to it; `.nil` from both raises `SYNTAX
+93.961`. A string that is an instance of `String` itself and an array that is an
+instance of `Array` itself are used directly, without a message. The `request`
+of `Object` sends `makeArray` for the argument `ARRAY` and `makeString` for
+`STRING`, as [its rule](r:class.object.request.sends) says, so an object that
+declares `makeArray` or `makeString` is a source. When the method is made, `new`
+sends the new object the message `init` with the arguments of `new` from the
+fourth on, so that a subclass of `Method` that declares `init` receives them;
+the `init` of `Object` accepts none, and a fourth argument raises `SYNTAX
+93.902` after the source has been translated. The class that received `new`
+decides the class of the answer: a subclass of `Method` makes instances of
+itself.
 
 ```rexx
 call try '.method~new("n", .src~new(.array~of("return 1"), .nil))'
@@ -406,8 +413,9 @@ m1 m2
 
 r[class.method.newfile]
 `newFile` makes a method object from the lines of a file. The file name is
-required (`SYNTAX 88.901`) and is a string, or an object with a `MAKESTRING`
-method (`.nil` and others with none raise `88.909`), and the context is the
+required (`SYNTAX 88.901`) and is a string, or an object that [gives
+one](r:class.index.string) (`.nil` and others that give none raise `88.909`),
+and the context is the
 second argument, with the same values and the same error `40.904` as for
 [`new`](r:class.method.new.context). `newFile` takes no other argument: a
 third raises `SYNTAX 93.902` before the file is looked for. The checks run in
@@ -493,8 +501,9 @@ r[class.method.newfile.sends]
 `newFile` sends the new object the message `init` with no argument, after the
 file has been read and translated, so that a subclass of `Method` that
 declares `init` runs it once for each `newFile`. A file name that is an object
-with a `MAKESTRING` method is sent that message for its string value, once,
-before `init`; no other message is sent. The arguments of `newFile` are only
+is sent `request` with the argument `STRING`, once,
+before `init`, and the `request` of `Object` sends `MAKESTRING` in turn; no
+other message is sent. The arguments of `newFile` are only
 the name and the context, so no argument reaches `init`.
 
 ```rexx
@@ -512,15 +521,19 @@ call sysfiledelete f
 ::method init
   expose n
   use arg n
+::method request
+  say 'request' arg(1)
+  forward class (super)
 ::method makestring
   expose n
   say 'makestring'
   return n
 ```
 
-```output
+```output defect=#164
 init 0
 MINE
+request STRING
 makestring
 init 0
 MINE
@@ -533,8 +546,9 @@ r[class.method.loadexternalmethod]
 library, the same kind of method that
 [`::METHOD EXTERNAL`](r:dir.method.external) declares. It takes a name and a
 descriptor and no other argument (a third raises `SYNTAX 93.902`). Both are
-required (`88.901`), and each is a string or an object with a `MAKESTRING`
-method (`88.909` for `.nil` and for an object with none). The descriptor has
+required (`88.901`), and each is a string or an object that [gives
+one](r:class.index.string) (`88.909` for `.nil` and for an object that gives
+none). The descriptor has
 the form that the directive's operand has: the word `LIBRARY` in any case, the
 name of the library, and optionally the name of the entry in it, which is the
 method name when it is left out; a descriptor of another form raises
@@ -777,8 +791,9 @@ name it is given, and `.nil` when there is none, as
 [the annotation rule](r:dir.annotate.read) says: the name is taken in upper
 case, and a method made by `new`, `newFile` or `loadExternalMethod` has no
 annotations: the answer for one is `.nil`, and its `annotations` table is
-empty. The name is required (`SYNTAX 88.901`), an object with no `MAKESTRING`
-method, `.nil` among them, raises `88.909`, and a second argument raises
+empty. The name is required (`SYNTAX 88.901`), an object that [gives no
+string](r:class.index.string), `.nil` among them, raises `88.909`, and a second
+argument raises
 `93.902`. A name that is a number or a string that names no annotation answers
 `.nil`.
 
@@ -1308,10 +1323,11 @@ bad: say condition('o')~code
 
 r[class.method.deviation.109]
 An instance of a subclass of `String` that is the name or the source of `new`
-is read by its own characters, and `MAKESTRING` and `STRING` are not sent to
-it ([Deviation 109](r:class.string.deviation.109)). ooRexx reads the name
-through its `MAKESTRING` method; the source is read as the instance's own
-characters on both. In the example `MAKESTRING` answers another name.
+is read by its own characters, and `REQUEST`, `MAKESTRING` and `STRING` are
+not sent to it ([Deviation 109](r:class.string.deviation.109)). ooRexx sends
+the name `request` with `STRING` or `MAKESTRING`, so an override of either can
+change what is read; the source is read as the instance's own characters on
+both. In the example `MAKESTRING` answers another name.
 
 ```rexx
 m = .method~new(.name~new('Foo'), .name~new('say "src"'))
@@ -1323,4 +1339,73 @@ say m~package~name m~source[1]
 
 ```output defect=#140
 Foo say "src"
+```
+
+r[class.method.deviation.115]
+A source that answers `request` with `ARRAY` by an object that is neither an
+array nor `.nil` makes `new` raise `SYNTAX 88.913`, whatever the object is: a
+string, a list or any other object, and no `request` with `STRING` is sent after
+it. ooRexx crashes. [The
+Routine page rule](r:class.routine.deviation.115) has the examples for
+`Routine~new`; the examples here have `request` answer a string and a directory.
+
+```rexx
+call try '.method~new("n", .src~new("return 1"))'
+call try '.method~new("n", .src~new(.directory~new))'
+call try '.method~new("n", .src~new(.array~of("return 1")))~source[1]'
+call try '.method~new("n", .src~new(.nil))~source[1]'
+exit
+try:
+  signal on syntax name bad
+  interpret 'zres =' arg(1)
+  say arg(1) '=>' zres
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class src
+::method init
+  expose ans
+  use arg ans
+::method request
+  expose ans
+  say 'request' arg(1)
+  if arg(1) == 'ARRAY' then return ans
+  return 'return 2'
+```
+
+```output defect=#157
+request ARRAY
+.method~new("n", .src~new("return 1")) => 88.913
+request ARRAY
+.method~new("n", .src~new(.directory~new)) => 88.913
+request ARRAY
+.method~new("n", .src~new(.array~of("return 1")))~source[1] => return 1
+request ARRAY
+request STRING
+.method~new("n", .src~new(.nil))~source[1] => return 2
+```
+
+r[class.method.deviation.118]
+A source that is an instance of a subclass of `List` is sent `request` with
+the argument `ARRAY`, as [the sends rule](r:class.method.new.sends) states for
+any other object that is not a string and not an array, and the lines are the
+items of the array that it answers
+([Deviation 118](../deviations.md)). ooRexx sends the instance no `request` and
+takes the items it holds as the lines, so the example writes `held` on
+ooRexx.
+
+```rexx
+l = .ll~new
+l~append('held')
+m = .method~new('m', l)
+say m~source[1]
+::class ll subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('say "answered"')
+```
+
+```output
+request ARRAY
+say "answered"
 ```
