@@ -2,7 +2,7 @@
 element: "TraceObject"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > TraceObject Class; Builtin Classes > Utility Classes > TraceObject Class > activate (Class Method); Builtin Classes > Utility Classes > TraceObject Class > collector (Class Method); Builtin Classes > Utility Classes > TraceObject Class > collector= (Class Method); Builtin Classes > Utility Classes > TraceObject Class > counter (Class Method); Builtin Classes > Utility Classes > TraceObject Class > makeStringImpl (Class Method); Builtin Classes > Utility Classes > TraceObject Class > new (Class Method); Builtin Classes > Utility Classes > TraceObject Class > notify (Class Method); Builtin Classes > Utility Classes > TraceObject Class > notify= (Class Method); Builtin Classes > Utility Classes > TraceObject Class > option (Class Method); Builtin Classes > Utility Classes > TraceObject Class > option= (Class Method); Builtin Classes > Utility Classes > TraceObject Class > setMakeString (Class Method); Builtin Classes > Utility Classes > TraceObject Class > unsetMakeString (Class Method); Builtin Classes > Utility Classes > TraceObject Class > compareTo; Builtin Classes > Utility Classes > TraceObject Class > makeString"
-deviations: [109]
+deviations: [7, 50, 109]
 ---
 
 # TraceObject
@@ -731,7 +731,9 @@ two columns (`S`) or three (`F`), and a blank; then `*` when `HASSCOPELOCK` is
 `1` and a blank otherwise, and a blank. One blank follows the `]`. A missing
 `ISGUARDED` shows `?` as the first field, and a missing `SCOPELOCKCOUNT` `?` as
 its value; a missing `HASSCOPELOCK` shows `?` in the place of the `*` and of the
-blank after it.
+blank after it. An `ISGUARDED` or `HASSCOPELOCK` entry that is neither `0` nor
+`1` raises `SYNTAX 34.901`; the other two values are written as they are,
+whatever they hold.
 
 ```rexx
 t = .traceobject
@@ -766,6 +768,36 @@ option F
 [[R1   T2   I6    Gu A12   L0     ]      9 *-* v = 1]
 [[R1   T2   I6    U  A5    L0     ]      9 *-* v = 1]
 [[R1   T2   I6    Ug A1234 L2   * ]      9 *-* v = 1]
+```
+
+```rexx
+t = .traceobject
+t~option = 'S'
+call one 'ISGUARDED', 'yes'
+call one 'HASSCOPELOCK', ''
+call one 'SCOPELOCKCOUNT', 'abc'
+call one 'ATTRIBUTEPOOL', 'abcdef'
+t~option = 'N'
+exit
+one: procedure expose t
+  n = .stringtable~new
+  n~traceline = 'x'
+  n~thread = 2; n~invocation = 6
+  n~isGuarded = 1; n~hasScopeLock = 0; n~scopeLockCount = 0
+  n~attributePool = 1
+  n[arg(1)] = arg(2)
+  signal on syntax name bad
+  say arg(1) '['arg(2)']' '['t~makeStringImpl(n)']'
+  return
+bad: say arg(1) '['arg(2)'] =>' condition('o')~code
+  return
+```
+
+```output
+ISGUARDED [yes] => 34.901
+HASSCOPELOCK [] => 34.901
+SCOPELOCKCOUNT [abc] [[T2  I6  Gu A1  Labc   ] x]
+ATTRIBUTEPOOL [abcdef] [[T2  I6  Gu Aabcdef L0    ] x]
 ```
 
 r[class.traceobject.makestringimpl.sends]
@@ -1078,6 +1110,80 @@ a~compareTo(.nil) => 97.1
 ```
 
 ## Deviations
+
+r[class.traceobject.deviation.7]
+When two activities trace at once, the order in which the `TraceObject` objects
+of their lines are made is not specified, and with it the `NUMBER` each one gets
+and the order in which a `collector` or `notify` receives them; [Deviation
+7](r:instr.trace.deviation.7) states this for the lines that reach the
+destination. ooRexx's order varies from run to run. The count of the objects
+does not depend on the order: in the example each activity traces two clauses
+and the started method's entry, and the collector receives seven objects.
+
+```rexx
+c = .array~new
+.traceobject~collector = c
+m = .worker~new~start('run')
+trace r
+a1 = 1
+trace n
+m~result
+.traceobject~collector = .nil
+n = 0
+do o over c
+  if pos('*-*', o~traceline) > 0 then n = n + 1
+end
+say n 'clause lines' c~items 'objects' .traceobject~counter
+::class worker
+::method run
+  trace r
+  b1 = 1
+  trace n
+  return 1
+```
+
+```output
+4 clause lines 7 objects 7
+```
+
+r[class.traceobject.deviation.50]
+A line that the destination refuses is a `TraceObject` like any other: it is
+made and given to the `collector` before the destination receives it, as [the
+lines rule](r:class.traceobject.lines) says. When the destination refuses it by
+raising a condition, the clause may have done its own work before the line is
+written, as [Deviation 50](r:instr.trace.deviation.50) states; ooRexx raises
+the condition before the clause does anything. In the example the destination
+refuses the second line, the value line of `say 'a'`: interrexx has written `a`
+by then and ooRexx has not, and on both the collector holds that line.
+
+```rexx
+c = .array~new
+.traceobject~collector = c
+.traceoutput~destination(.sink~new)
+signal on syntax name e
+trace o
+trace r
+say 'a'
+exit
+e: trace o
+.traceoutput~destination(.output)
+.traceobject~collector = .nil
+say 'caught' condition('o')~code '['c[2]~traceline']'
+::class sink
+::method init
+  expose n
+  n = 0
+::method lineout
+  expose n
+  n = n + 1
+  if n = 2 then raise syntax 93.900
+  return 0
+```
+
+```output
+a
+caught 93.900 [       >>>   "a"]
+```
 
 r[class.traceobject.deviation.109]
 The argument of `option=` is read by its own characters when it is an instance

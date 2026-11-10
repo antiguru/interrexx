@@ -288,15 +288,15 @@ Method 1
 r[class.rexxcontext.numbers]
 `interpreter`, `thread` and `invocation` answer whole numbers that identify the
 run: `interpreter` the interpreter instance, `thread` the activity that runs the
-code and `invocation` this call of the code. Their values are whole numbers; the
-answers of one context never change, a routine called from the code has the same
-interpreter and thread and another invocation, and a message that another
-activity runs has another thread. A number is given to an invocation when it is
-first needed, counting from `1`: by this method; by `stackFrames` and by a
-condition, each of which numbers every level of the stack that has none yet, the
-innermost first; by a trace line, for the level it traces; and by `start`, for
-the level that sends it and then for the level that runs the message. Scheduling
-is specified in the environment chapter.
+code and `invocation` this call of the code. The answers of one context never
+change, a routine called from the code has the same interpreter and thread and
+another invocation, and a message that another activity runs has another thread.
+A number is given to an invocation when it is first needed, counting from `1`:
+by this method; by `stackFrames` and by a condition, each of which numbers every
+level of the stack that has none yet, the innermost first; by a trace line, for
+the level it traces; and by `start`, for the level that sends it and then for
+the level that runs the message. Scheduling is specified in the environment
+chapter.
 
 ```rexx
 call a

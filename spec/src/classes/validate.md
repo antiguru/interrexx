@@ -288,7 +288,7 @@ exit
 t: procedure
   use arg o
   signal on syntax name bad
-  .validate~wholeNumber('N', o)
+  .validate~number('N', o)
   say o~class~id 'ok'
   return
 bad: say o~class~id condition('o')~code
