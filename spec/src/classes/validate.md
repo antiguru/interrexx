@@ -630,9 +630,9 @@ r[class.validate.deviation.109]
 A value, a `digits` or a bound that is an instance of a subclass of `String`
 is read by its own characters, and `REQUEST` and `MAKESTRING` are not sent to
 it ([Deviation 109](r:class.string.deviation.109)). ooRexx sends such an
-instance `request` with `STRING` or `MAKESTRING`, so an override of either
-can change what is checked. In the example both methods answer `x`, and the
-characters are a whole number.
+instance `request` with `STRING` or `MAKESTRING`, so an override of either can
+change what is checked. In the example both methods answer `7`, which every
+check accepts, and the characters of the last value are no number.
 
 ```rexx
 signal on syntax name bad
@@ -645,10 +645,10 @@ say 'not reached'
 bad: say condition('o')~code
 ::class num subclass string
 ::method makestring
-  return 'x'
+  return '7'
 ::method request
   use arg c
-  return 'x'
+  return '7'
 ```
 
 ```output defect=#140

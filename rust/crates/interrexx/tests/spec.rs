@@ -914,6 +914,8 @@ fn exempt_from_the_oracle(page: &interrexx_spec::Page, example: &interrexx_spec:
 
 /// `PATH` with the oracle's `bin` directory in front, so that a spec example's
 /// `::requires "rxregexp.cls"` finds the library the way a real program does.
+/// It also puts the oracle's own tools (`rexx`, `rxqueue`) first for the
+/// commands that an example sends to `system`.
 fn path_with_oracle_bin(oracle: &Oracle) -> std::ffi::OsString {
     let mut dirs = vec![oracle.bin_dir().to_path_buf()];
     match std::env::var_os("PATH") {

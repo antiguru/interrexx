@@ -19,10 +19,12 @@ r[expr.terms.kinds]
 A term is one of these: a [literal string](r:lex.literals.string), a
 [symbol](r:lex.symbols.kinds), a [function call](r:expr.terms.call), a
 [message term](r:expr.terms.message), an expression in
-[parentheses](r:expr.terms.paren) or an [array term](r:expr.terms.array).
-Each has a value, and that value is an object. This book does not specify the
-variable reference terms, which are written with a `>` or `<` before a
-symbol.
+[parentheses](r:expr.terms.paren) or an [array term](r:expr.terms.array). Each
+has a value, and that value is an object. A variable reference term is a `>`
+or a `<` written before a symbol, as [the operator
+rule](r:lex.operators.longest) reads it; its value is a `VariableReference`
+that stands for the variable the symbol names ([the reference
+rule](r:class.variablereference.arguments)).
 
 ```rexx
 v = 'var'

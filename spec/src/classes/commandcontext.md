@@ -807,39 +807,41 @@ r[class.commandcontext.raise]
 `raise(condition, rc, description, additional)` makes the command raise a
 condition. The condition is raised in the code that sent the command, when the
 handler's method `command` returns, as if the command itself had raised it: a
-`SIGNAL ON` or `CALL ON` trap for it answers it as for any condition, and the
-handler goes on running after the call. A condition that no trap answers is
-treated as [the page of that condition](../conditions/index.md) says. The method
-answers `rc`. What `command` answers is not used when a condition was raised:
-`RC` holds `rc` as it is, whatever object it is, the number or the text, `.nil`
-too, so a handler may return the answer of the call or anything else. A HALT is
-delayed like any HALT ([the HALT rule](r:cond.halt.raise)), so the clause after
-the command is run before a trap for it. `condition` is a string: `ERROR`,
-`FAILURE`, `HALT`, `LOSTDIGITS`, `NOMETHOD`, `NOSTRING`, `NOTREADY`, `NOVALUE`,
-or `USER` followed by a name of one word, in either case; `SYNTAX` is the other
-form, which [the next rule](r:class.commandcontext.raise.syntax) states. The
-string is read as words separated by [whitespace](r:conv.string.whitespace), so
-the blanks and tabs around and between the words play no part, and the name
-after `USER` may be any word; the condition is named in upper case (`USER 1X`).
-A command that raises ERROR or FAILURE has the status `.RS` of the [status
+`SIGNAL ON` or `CALL ON` trap for it answers it as for any condition, and a
+CALL ON ANY trap does not see the conditions that only SIGNAL can trap ([the
+CALL ON rule](r:instr.call.on)), and the handler goes on running after the
+call. A condition that no trap answers is treated as [the page of that
+condition](../conditions/index.md) says. The method answers `rc`. What
+`command` answers is not used when a condition was raised: `RC` holds `rc` as
+it is, whatever object it is, the number or the text, `.nil` too, so a handler
+may return the answer of the call or anything else. A HALT is delayed like any
+HALT ([the HALT rule](r:cond.halt.raise)), so the clause after the command is
+run before a trap for it. `condition` is a string: `ERROR`, `FAILURE`, `HALT`,
+`LOSTDIGITS`, `NOMETHOD`, `NOSTRING`, `NOTREADY`, `NOVALUE`, or `USER`
+followed by a name of one word, in either case; `SYNTAX` is the other form,
+which [the next rule](r:class.commandcontext.raise.syntax) states. The string
+is read as words separated by [whitespace](r:conv.string.whitespace), so the
+blanks and tabs around and between the words play no part, and the name after
+`USER` may be any word; the condition is named in upper case (`USER 1X`). A
+command that raises ERROR or FAILURE has the status `.RS` of the [status
 rule](r:instr.command.status). `description` is what `CONDITION('D')` answers
-and the `DESCRIPTION` entry of the condition object holds; when it is omitted or
-`.nil`, it is the command, and the null string is a description like another.
-Another object is replaced by its string value as [the conversion
+and the `DESCRIPTION` entry of the condition object holds; when it is omitted
+or `.nil`, it is the command, and the null string is a description like
+another. Another object is replaced by its string value as [the conversion
 rule](r:conv.string.object) finds it: `request` with `STRING` is sent to it
-first, and its `string` method when that answers no string, so that a class with
-its own `request` decides the description. The condition holds that string; an
-instance of a subclass of `String` is a string here ([the deviation
+first, and its `string` method when that answers no string, so that a class
+with its own `request` decides the description. The condition holds that
+string; an instance of a subclass of `String` is a string here ([the deviation
 rule](r:class.commandcontext.deviation.109)). `additional` is the `ADDITIONAL`
 entry of the condition object, the object as it was given, and when it is
 omitted or `.nil` the condition object has no such entry. The condition object
 has `RC`, holding the `rc` object. `condition` and `rc` are required: `SYNTAX
 93.901` when they are fewer than two, `SYNTAX 93.903` when an omitted place
 stands for one of them, and `SYNTAX 93.902` for more than four arguments. A
-`condition` that is none of the forms above, `ANY`, `NONE`, `PROPAGATE`, `USER`
-with no name or with more than one, any other text, the null string and `.nil`
-among them, raises `SYNTAX 93.900`. A call that raises an error does not use up
-the command's one condition, which [the second
+`condition` that is none of the forms above, `ANY`, `NONE`, `PROPAGATE`,
+`USER` with no name or with more than one, any other text, the null string and
+`.nil` among them, raises `SYNTAX 93.900`. A call that raises an error does
+not use up the command's one condition, which [the second
 rule](r:class.commandcontext.raise.once) says.
 
 ```rexx
@@ -1042,6 +1044,25 @@ trap:
   trap <mb> String
   rq request STRING
   trap <rqtext> String
+```
+
+```rexx
+x = .commandhandler~register('spec_cc_any', .h~new)
+call on any name trap
+address spec_cc_any 'NOVALUE'
+say 'went on' rc
+x = .commandhandler~deregister('spec_cc_any')
+exit
+trap: say 'trap' condition('c'); return
+::class h inherit CommandHandler
+::method command
+  use arg cmd, ctx
+  r = ctx~raise(cmd, 2, 'nv')
+  return 0
+```
+
+```output defect=#203
+went on 2
 ```
 
 r[class.commandcontext.raise.syntax]

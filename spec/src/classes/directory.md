@@ -2,7 +2,7 @@
 element: "Directory"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Directory Class; Builtin Classes > Collection Classes > Directory Class > new (Class Method); Builtin Classes > Collection Classes > Directory Class > []; Builtin Classes > Collection Classes > Directory Class > []=; Builtin Classes > Collection Classes > Directory Class > allIndexes; Builtin Classes > Collection Classes > Directory Class > allItems; Builtin Classes > Collection Classes > Directory Class > at; Builtin Classes > Collection Classes > Directory Class > empty; Builtin Classes > Collection Classes > Directory Class > entry; Builtin Classes > Collection Classes > Directory Class > hasEntry; Builtin Classes > Collection Classes > Directory Class > hasIndex; Builtin Classes > Collection Classes > Directory Class > hasItem; Builtin Classes > Collection Classes > Directory Class > index; Builtin Classes > Collection Classes > Directory Class > isEmpty; Builtin Classes > Collection Classes > Directory Class > items; Builtin Classes > Collection Classes > Directory Class > makeArray; Builtin Classes > Collection Classes > Directory Class > put; Builtin Classes > Collection Classes > Directory Class > remove; Builtin Classes > Collection Classes > Directory Class > removeEntry; Builtin Classes > Collection Classes > Directory Class > removeItem; Builtin Classes > Collection Classes > Directory Class > setEntry; Builtin Classes > Collection Classes > Directory Class > setMethod; Builtin Classes > Collection Classes > Directory Class > supplier; Builtin Classes > Collection Classes > Directory Class > unknown; Builtin Classes > Collection Classes > Directory Class > unsetMethod"
-deviations: [29, 33, 78, 109, 123, 124]
+deviations: [29, 33, 78, 109, 118, 123, 124]
 ---
 
 # Directory
@@ -1202,6 +1202,30 @@ say d~items d~isEmpty
 1 0
 0 1
 0 1
+```
+
+r[class.directory.deviation.118]
+An instance of a subclass of `List` that is given to `unknown` as the array of
+arguments is sent `request` with `ARRAY`, as [the unknown
+rule](r:class.directory.unknown) says of any other object, also when the
+arguments are otherwise ignored, so that an override is used. See [Deviation
+118](../deviations.md). ooRexx sends the instance no `request`, so the example
+prints only `held` on ooRexx. The `request` of the class `ml` answers one
+item.
+
+```rexx
+d = .directory~new
+d~x = 'held'
+say d~unknown('X', .ml~of('a'))
+::class ml subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('R')
+```
+
+```output
+request ARRAY
+held
 ```
 
 r[class.directory.deviation.124]

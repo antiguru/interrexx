@@ -403,8 +403,8 @@ A timeout that is an instance of a subclass of `String` is read by its own
 characters, and `request`, `makeString` and `string` are not sent to it
 ([Deviation 109](r:class.string.deviation.109)). ooRexx sends such an instance
 `request` with `STRING`, so an override can change what is read. In the
-example the overrides would make the timeout invalid; they count their sends,
-and the string is read as 0.01 seconds without one.
+example the overrides answer a timeout of 0; they count their sends, and the
+string is read as 0.01 seconds without one.
 
 ```rexx
 .environment~sent = 0
@@ -413,10 +413,10 @@ say m~acquire(.digits~new('0.01')) 'sends' .environment~sent
 ::class digits subclass string
 ::method makestring
   .environment~sent = .environment~sent + 1
-  return 'abc'
+  return '0'
 ::method request
   .environment~sent = .environment~sent + 1
-  return 'abc'
+  return '0'
 ```
 
 ```output defect=#140

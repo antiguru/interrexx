@@ -845,16 +845,18 @@ looked up in the classes behind. ooRexx keeps the name hidden after the
 
 ## 118. A List subclass is sent makeArray and request
 
-An instance of a subclass of `List` is read as any other collection is wherever
-an array is wanted: `DO OVER` and the collection methods that read a collection
-through `makeArray` send it `makeArray`, and the methods and instructions that
-read an argument array or a source through `request` with `ARRAY` (`sendWith`,
-`startWith`, `Message~new` with the option `A`, `Message~replyWith`, FORWARD
-with ARGUMENTS, `Method~new`, `Routine~new`, `Package~new`, `loadPackage` and
-the `unknown` of a `Stem` or a `VariableReference`, and `File~writeLines`) send
-it `request`, so an override is used. ooRexx sends such an instance neither
-message and uses the items it holds, unlike the subclasses of the other
-collection classes.
+An instance of a subclass of `List` is read as any other collection is
+wherever an array is wanted: `DO OVER` and the collection methods that read a
+collection through `makeArray` send it `makeArray`, and the methods and
+instructions that read an argument array or a source through `request` with
+`ARRAY` (`sendWith`, `startWith`, `Message~new` with the option `A`,
+`Message~replyWith`, FORWARD with ARGUMENTS, `Method~new`, `Routine~new`,
+`Routine~callWith`, `Package~new`, `loadPackage`, `Supplier~new` and `init`,
+the `unknown` of a `Stem`, a `VariableReference`, a `Directory`, a
+`StringTable` or a `Monitor`, `File~writeLines` and `File~searchPath` with a
+path that is no string) send it `request`, so an override is used. ooRexx
+sends such an instance neither message and uses the items it holds, unlike the
+subclasses of the other collection classes.
 
 ## 119. A second cancel of an Alarm or a Ticker sends nothing
 
@@ -899,8 +901,9 @@ An answer of `request` with `ARRAY` that is used as an array of arguments
 (`sendWith`, `startWith` and `run` with the option `A` of `Object`, `new`,
 `sendWith`, `startWith` and `replyWith` of `Message`, `callWith` of `Routine`,
 `unknown` of `Stem`, `VariableReference`, `Directory`, `StringTable` and
-`Monitor`, and the value of ARGUMENTS of FORWARD) is accepted only when it is
-an `Array` or an instance of a subclass of `Array` of one dimension; any other
+`Monitor`, and the value of ARGUMENTS of FORWARD) or as an array of items or
+indexes (`new` and `init` of `Supplier`) is accepted only when it is an
+`Array` or an instance of a subclass of `Array` of one dimension; any other
 object, a `Queue` included, raises the error that the reading method gives for
 an answer that is no array. ooRexx uses the items of a `Queue` or a
 `CircularQueue` as the arguments, except that `Message` passes as many
@@ -1006,13 +1009,15 @@ a line that is not in the source. `source` of a `Routine` does the same.
 
 ## 135. An object whose init never ran raises an error
 
-A subclass of `Alarm`, `Ticker`, `RexxQueue` or `Supplier` whose `init` does
-not send `init` to its superclass makes an object that is not set up, and every
-instance method of the class other than `init` that the object is sent raises
-`SYNTAX 98.901`. ooRexx answers `triggered` of such an alarm with the string
-`TRIGGERED` and raises `SYNTAX 34.902` from its `cancel`, and its `empty` of
-such a `RexxQueue` and its `available` of such a `Supplier` end the
-interpreter with a segmentation fault.
+A class that a program declares as a subclass of `Alarm`, `Ticker`,
+`RexxQueue`, `Supplier` or `StreamSupplier`, whose `init` does not send `init`
+to its superclass, makes an object that is not set up, and every instance
+method of the class other than `init` that the object is sent raises `SYNTAX
+98.901`. ooRexx answers `triggered` of such an alarm with the string
+`TRIGGERED` and raises `SYNTAX 34.902` from its `cancel`, answers the readers
+of such a ticker without an error and raises `SYNTAX 88.914` from its
+`cancel`, and its `empty` of such a `RexxQueue` and its `available` of such a
+`Supplier` end the interpreter with a segmentation fault.
 
 ## 136. A copy of a MutexSemaphore is free
 

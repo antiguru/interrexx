@@ -1463,10 +1463,13 @@ request STRING
 r[class.routine.deviation.118]
 A source that is an instance of a subclass of `List` is sent `request` with
 the argument `ARRAY`, as [the sends rule](r:class.routine.new.sends) states,
-and the lines are the items of the array that it answers
-([Deviation 118](../deviations.md)). ooRexx sends the instance no
-`request` and takes the items it holds as the lines, so the example writes
-`held` on ooRexx.
+and the lines are the items of the array that it answers ([Deviation
+118](../deviations.md)). ooRexx sends the instance no `request` and takes the
+items it holds as the lines, so the first example writes `held` on ooRexx. The
+same holds for the argument of `callWith`, which is sent `request` with
+`ARRAY` as [the sends rule](r:class.routine.callwith.sends) says, so the
+second example passes the one argument that the `request` of `ml` answers and
+prints `2 a` on ooRexx, which passes the items of the list.
 
 ```rexx
 l = .ll~new
@@ -1482,6 +1485,20 @@ say r~source[1]
 ```output
 request ARRAY
 say "answered"
+```
+
+```rexx
+r = .routine~new('r', 'return arg() arg(1)')
+say r~callWith(.ml~of('a', 'b'))
+::class ml subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('R')
+```
+
+```output
+request ARRAY
+1 R
 ```
 
 r[class.routine.deviation.111]

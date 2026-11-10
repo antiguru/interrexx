@@ -2,7 +2,7 @@
 element: "Monitor"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > Monitor Class; Builtin Classes > Utility Classes > Monitor Class > current; Builtin Classes > Utility Classes > Monitor Class > destination; Builtin Classes > Utility Classes > Monitor Class > init; Builtin Classes > Utility Classes > Monitor Class > unknown"
-deviations: [124]
+deviations: [118, 124]
 ---
 
 # Monitor
@@ -482,6 +482,31 @@ init: init
 A hello
 forward: unknown HELLO
 direct: destination destination current
+```
+
+r[class.monitor.deviation.118]
+An instance of a subclass of `List` that is given to `unknown` as the array of
+arguments is sent `request` with `ARRAY`, as [the unknown
+rule](r:class.monitor.unknown) says of any other object, so that an override
+is used. See [Deviation 118](../deviations.md). ooRexx sends the instance no
+`request` and passes the items it holds, so the example answers `hello 2 a` on
+ooRexx. The `request` of the class `ml` answers one item.
+
+```rexx
+m = .monitor~new(.target~new)
+say m~unknown('HELLO', .ml~of('a', 'b'))
+::class target
+::method hello
+  return 'hello' arg() arg(1)
+::class ml subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('R')
+```
+
+```output
+request ARRAY
+hello 1 R
 ```
 
 r[class.monitor.deviation.124]

@@ -399,15 +399,16 @@ r~request('A', 'B') => 93.902
 ## Passing a variable
 
 r[class.variablereference.arguments]
-A term `>name` or `<name` given as an argument of a call or a message passes a
-reference to the variable: the receiver gets a `VariableReference` as the
-argument, whichever way it reads its arguments ([the reference
-rule](r:instr.use.reference) of `USE ARG` states the `<` target that makes the
-receiver's variable the caller's). A plain target of `USE ARG`, or the
-function `ARG`, shows the object, and reads and assigns the variable of the
-caller through it. A reference to a variable of a routine or method keeps the
-variable alive after the routine or method returned, so `value` and `value=`
-go on working on the variable it had.
+A term `>name` or `<name` has as its value a reference to the variable,
+wherever it stands; given as an argument of a call or a message it passes that
+reference: the receiver gets a `VariableReference` as the argument, whichever
+way it reads its arguments ([the reference rule](r:instr.use.reference) of
+`USE ARG` states the `<` target that makes the receiver's variable the
+caller's). A plain target of `USE ARG`, or the function `ARG`, shows the
+object, and reads and assigns the variable of the caller through it. A
+reference to a variable of a routine or method keeps the variable alive after
+the routine or method returned, so `value` and `value=` go on working on the
+variable it had.
 
 ```rexx
 v = 'orig'

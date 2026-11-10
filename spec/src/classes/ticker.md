@@ -608,8 +608,9 @@ r[class.ticker.deviation.135]
 A subclass of `Ticker` whose `init` does not send `init` to its superclass, by
 `self~init:super` or `FORWARD`, makes a ticker that is not set, and every
 instance method of the class other than `init` sent to it raises `SYNTAX
-98.901`: `attachment`, `cancel`, `canceled`, `cancelled` and `interval`. The
-example is not run against ooRexx.
+98.901`: `attachment`, `cancel`, `canceled`, `cancelled` and `interval`.
+ooRexx answers `attachment`, `canceled`, `cancelled` and `interval` of such a
+ticker without an error and raises `SYNTAX 88.914` from its `cancel`.
 
 ```rexx
 o = .lazy~new

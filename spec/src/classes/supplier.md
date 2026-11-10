@@ -1,7 +1,7 @@
 ---
 element: "Supplier"
 kind: class
-deviations: [135]
+deviations: [118, 124, 135]
 rexxref: "Builtin Classes > Utility Classes > Supplier Class; Builtin Classes > Utility Classes > Supplier Class > new (Class Method); Builtin Classes > Utility Classes > Supplier Class > init; Builtin Classes > Utility Classes > Supplier Class > allIndexes; Builtin Classes > Utility Classes > Supplier Class > allItems; Builtin Classes > Utility Classes > Supplier Class > available; Builtin Classes > Utility Classes > Supplier Class > index; Builtin Classes > Utility Classes > Supplier Class > item; Builtin Classes > Utility Classes > Supplier Class > next; Builtin Classes > Utility Classes > Supplier Class > supplier"
 ---
 
@@ -112,8 +112,9 @@ converted the same way. So a call with one argument that cannot be converted
 raises `98.913`, and one with an argument that can raises `93.903`. Each
 answer must be an `Array` of one dimension, whatever its items; an answer that
 is `.nil`, a string or an array of more than one dimension raises `98.913`,
-and what another kind of object does is not specified; the supplier then has
-as many entries as the first array has slots ([the walking
+and so does any other kind of object, a `Queue` included ([Deviation
+124](r:class.supplier.deviation.124)); the supplier then has as many entries
+as the first array has slots ([the walking
 rules](r:class.supplier.available)). `init` sent to a supplier that has been
 made already does the same again with new arrays and starts it over at its
 first entry; the arguments are checked then as they are by `new`.
@@ -166,12 +167,13 @@ Each argument is converted by sending it `request` with the argument `ARRAY`
 second; nothing else is sent to either. An `Array` of one dimension answers
 itself, so the supplier holds that array and not a copy. An instance of a
 subclass of `Array`, a `List` and a `String` answer through their `makeArray`
-method ([the `makeArray` rule](r:class.array.makearray)) when they have one,
-so the supplier holds the array that method answers; a string gives an array
-of its lines. What the supplier holds is read by the walking methods directly,
-and nothing is sent to the arrays after `init` has returned. A `request` that
-answers an instance of a subclass of `Array` is accepted, and the supplier
-holds that instance.
+method ([of `Array`](r:class.array.makearray), [of
+`List`](r:class.list.makearray), [of `String`](r:class.string.makearray)) when
+they have one, so the supplier holds the array that method answers; a string
+gives an array of its lines. What the supplier holds is read by the walking
+methods directly, and nothing is sent to the arrays after `init` has returned.
+A `request` that answers an instance of a subclass of `Array` is accepted, and
+the supplier holds that instance.
 
 ```rexx
 .local~log = .array~new
@@ -379,14 +381,16 @@ to the last, in order, and `allIndexes` an `Array` of their indexes; an empty
 slot or a missing index is `.nil`, and the array has as many items as there
 are entries left. The answers are new arrays of the class `Array`, never the
 arrays the supplier holds. Both methods move the supplier to its end, so
-`available` answers 0 afterwards and `index`, `item` and `next` raise
-`SYNTAX 93.937`. Whichever of the two is sent first collects both arrays, at
-the entry where the supplier was then; every later call of either answers the
-very same `Array` objects as the first (they compare equal under `==`), and a
-later change to the arrays that the supplier holds does not change them. A
-copy of the supplier made after the first call answers them too. A supplier
-that has walked to its end with `next` and has had neither method sent answers
-empty arrays. Any argument raises `93.902`.
+`available` answers 0 afterwards and `index`, `item` and `next` raise `SYNTAX
+93.937`; for an instance of a subclass, the walk of [the next
+rule](r:class.supplier.allitems.sends) leaves the supplier at the entry where
+`available` answered false. Whichever of the two is sent first collects both
+arrays, at the entry where the supplier was then; every later call of either
+answers the very same `Array` objects as the first (they compare equal under
+`==`), and a later change to the arrays that the supplier holds does not
+change them. A copy of the supplier made after the first call answers them
+too. A supplier that has walked to its end with `next` and has had neither
+method sent answers empty arrays. Any argument raises `93.902`.
 
 ```rexx
 items = .array~of(10, 20, 30)
@@ -483,6 +487,9 @@ u = .loud~new(.array~of(1, 2), .array~of('a', 'b'))
 say u~allItems~makeString('L', ',') u~allIndexes~makeString('L', ',')
 v = .short~new(.array~of(1, 2, 3, 4), .array~of('a', 'b', 'c', 'd'))
 say v~allItems~makeString('L', ',') v~allIndexes~makeString('L', ',')
+say v~sa v~si
+v~next
+say v~sa v~si
 ::class spy subclass supplier
 ::method available
   if .on then .log~append('available')
@@ -513,6 +520,10 @@ say v~allItems~makeString('L', ',') v~allIndexes~makeString('L', ',')
   expose steps
   steps = steps + 1
   self~next:super
+::method sa
+  return self~available:super
+::method si
+  return self~item:super
 ```
 
 ```output defect=#201
@@ -521,6 +532,8 @@ say v~allItems~makeString('L', ',') v~allIndexes~makeString('L', ',')
 b,c 0
 11,22 A,B
 1,2 a,b
+1 3
+1 4
 ```
 
 ```rexx
@@ -633,13 +646,70 @@ changed changed
 
 ## Deviations
 
+r[class.supplier.deviation.118]
+An instance of a subclass of `List` that is given to `new` or `init` as the
+items or the indexes is sent `request` with `ARRAY`, as [the conversion
+rule](r:class.supplier.init.convert) says of any other object, so that an
+override is used and nothing else is sent. See
+[Deviation 118](../deviations.md). ooRexx sends the instance no `request` and
+uses the items it holds, so the example answers `a` on ooRexx. The `request`
+of the class `ml` answers one item.
+
+```rexx
+l = .ml~of('a', 'b')
+s = .supplier~new(l, .array~of(1, 2))
+say s~item
+::class ml subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('R')
+```
+
+```output
+request ARRAY
+R
+```
+
+r[class.supplier.deviation.124]
+An answer of `request` with `ARRAY` that is not an `Array` or an instance of a
+subclass of `Array` is refused as the items or the indexes of `new` and
+`init`, which raise `SYNTAX 98.913`, whatever collection the answer is.
+ooRexx accepts a `Queue` or a `CircularQueue` as such an answer and uses its
+items. In the example the answer is a queue.
+
+```rexx
+call try ".supplier~new(.ans~new, .array~of(1))"
+call try ".supplier~new(.array~of(1), .ans~new)"
+s = .supplier~new(.array~of(1), .array~of(1))
+call try "s~init(.ans~new, .array~of(1))"
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class ans
+::method request
+  return .queue~of('x')
+```
+
+```output
+.supplier~new(.ans~new, .array~of(1)) => 98.913
+.supplier~new(.array~of(1), .ans~new) => 98.913
+s~init(.ans~new, .array~of(1)) => 98.913
+```
+
 r[class.supplier.deviation.135]
-A subclass of `Supplier` whose `init` does not send `init` to its superclass,
-by `self~init:super` or `FORWARD`, makes a supplier that is not set up, and
-every instance method of the class other than `init` sent to it raises
-`SYNTAX 98.901`: `allIndexes`, `allItems`, `available`, `index`, `item`,
-`next` and `supplier`. ooRexx ends the interpreter with a segmentation fault
-on `available`; the example is not run against it.
+A class that a program declares as a subclass of `Supplier` or
+`StreamSupplier`, whose `init` does not send `init` to its superclass, by
+`self~init:super` or `FORWARD`, makes a supplier that is not set up, and every
+instance method of the class other than `init` sent to it raises `SYNTAX
+98.901`: `allIndexes`, `allItems`, `available`, `index`, `item`, `next` and
+`supplier`. ooRexx ends the interpreter with a segmentation fault on
+`available` of such a `Supplier`; the example is not run against it. The
+second example makes the same of a `StreamSupplier`.
 
 ```rexx
 o = .lazy~new
@@ -659,6 +729,38 @@ try:
 bad: say arg(1) '=>' condition('o')~code
   return
 ::class lazy subclass supplier
+::method init
+  nop
+```
+
+```output defect=#197
+o~available => 98.901
+o~allIndexes => 98.901
+o~allItems => 98.901
+o~index => 98.901
+o~item => 98.901
+o~next => 98.901
+o~supplier => 98.901
+```
+
+```rexx
+o = .lazier~new
+call try "o~available"
+call try "o~allIndexes"
+call try "o~allItems"
+call try "o~index"
+call try "o~item"
+call try "o~next"
+call try "o~supplier"
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class lazier subclass streamsupplier
 ::method init
   nop
 ```

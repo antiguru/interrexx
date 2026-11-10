@@ -1930,8 +1930,13 @@ An instance of a subclass of `List` that is given to `writeLines` is sent
 `request` with `ARRAY`, as [the writeLines rule](r:class.file.writelines) says
 of any collection, so an override of `makeArray` or `request` decides what is
 written ([Deviation 118](../deviations.md)). ooRexx sends such an instance
-neither message and writes the items it holds, so the example prints `one two`
-there.
+neither message and writes the items it holds, so the first example prints
+`one two` there. A `path` of `searchPath` that is an instance of a subclass of
+`List` is sent `request` with `ARRAY` too, as [the searchPath
+rule](r:class.file.searchpath) says of any `path` that is no string, so the
+second example finds nothing, the answer being a directory that does not
+exist, and prints `1` on ooRexx, which searches the directories held in the
+list and finds the file.
 
 ```rexx
 f = 'spec-file-dev118.tmp'
@@ -1945,6 +1950,23 @@ junk = .file~new(f)~delete
 
 ```output
 three
+```
+
+```rexx
+f = 'spec-file-s118.tmp'
+call lineout f, 'x'
+call lineout f
+say .file~searchPath(f, .ml~of(directory()))~isA(.file)
+junk = .file~new(f)~delete
+::class ml subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('/spec-no-such-dir')
+```
+
+```output
+request ARRAY
+0
 ```
 
 r[class.file.deviation.126]
