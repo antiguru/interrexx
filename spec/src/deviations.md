@@ -24,10 +24,11 @@ an enclosing construct restores it.
 ## 1. DO OVER order on a stem
 
 DO OVER on a stem visits its tails in an order this book does not specify,
-and so do the `Stem` methods that list or search its tails (`allIndexes`,
-`allItems`, `makeArray`, `supplier`, and the tail that `index` and
-`removeItem` choose). ooRexx visits them in an order fixed by its internal
-storage, which is neither insertion nor sorted order.
+and so do the `Stem` methods that list or search its tails: `allIndexes`,
+`allItems`, `makeArray` and `supplier`, the tail that `index` and `removeItem`
+choose, and the order in which `hasItem`, `index` and `removeItem` compare the
+items. ooRexx visits them in an order fixed by its internal storage, which is
+neither insertion nor sorted order.
 
 ## 2. Withdrawn
 
@@ -513,15 +514,16 @@ default value's, and NOSTRING is raised, with the default's description, only
 when the default has no string value. ooRexx raises NOSTRING for every stem
 there.
 
-## 78. Hash lookup of the identical index or item
+## 78. Search for the identical index or item
 
-A lookup or PUT with the very index object already stored sends that
-object's `==`, and so does a search for an item (`hasItem`, `index`,
-`removeItem`, `allIndex`) with the very item object stored, and so does a Relation's
-`uniqueIndexes` for an index object stored more than once, and the check of a
-Set's or Bag's `put` and `[]=` that the index equals the item when both are
-the very same object. ooRexx compares
-identity first and sends nothing.
+A lookup or PUT with the very index object already stored sends that object's
+`==`. So does a search for an item with the very item object stored: `hasItem`,
+`index`, `removeItem` and `allIndex` of the hash collections, and `hasItem`,
+`index` and `removeItem` of an `Array`, `List`, `Queue` or `CircularQueue`. So
+do a Relation's `uniqueIndexes` for an index object stored more than once, and
+the check of a Set's or Bag's `put` and `[]=` that the index equals the item
+when both are the very same object. ooRexx compares identity first and sends
+nothing.
 
 ## 79. APPEND write positions
 
@@ -554,9 +556,10 @@ that fails fails at RAISE. ooRexx converts at every `CONDITION('D')`.
 
 ## 84. Emptying a Table during REMOVE
 
-When an index's equality method empties its Table, Relation, Set or Bag
-during REMOVE or REMOVEITEM, or a Relation's or Bag's REMOVEALL or a Bag's
-ALLAT, the search ends and ITEMS stays 0. ooRexx answers -1 for REMOVE and
+When an index's equality method, or for REMOVEITEM the argument's, empties its
+Table, Relation, StringTable, Set or Bag during REMOVE or REMOVEITEM, or a
+Relation's or Bag's REMOVEALL or a Bag's ALLAT, the search ends and ITEMS stays
+0. ooRexx answers -1 for REMOVE and
 REMOVEITEM, and its REMOVEALL and ALLAT go on comparing with an object that is
 no stored index.
 
@@ -734,8 +737,8 @@ when the number is stored as a whole number, as a whole-number literal or the
 result of arithmetic is. Equal literals of a program share one stored value,
 so a quoted `'12'` behaves the same way when the literal `12` was used before
 it. The same storage shows where a string is read as text: an item of an
-`Array` whose `objectName` answers such a number is written by `makeString` as
-the digits; ooRexx writes bytes of its stored form.
+`Array` whose `objectName` answers such a number is written by `makeString`
+and `toString` as the digits; ooRexx writes bytes of its stored form.
 
 ## 108. A supplier that is not a Supplier
 
