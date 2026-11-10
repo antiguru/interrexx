@@ -111,7 +111,7 @@ jobs:
           tool: nextest@0.9.150
       - name: Cargo nextest
         run: >
-          cargo nextest run --archive-file "$ARCHIVE" --workspace-remap .
+          cargo nextest run --archive-file "$ARCHIVE" --extract-to . --extract-overwrite --workspace-remap .
           --partition hash:${{ matrix.shard }}/4 --profile ci
 
   # The specification's examples on the oracle, from the same archive.
@@ -153,7 +153,7 @@ jobs:
         env:
           REXX_SPEC_ORACLE: "1"
         run: >
-          cargo nextest run --archive-file "$ARCHIVE" --workspace-remap .
+          cargo nextest run --archive-file "$ARCHIVE" --extract-to . --extract-overwrite --workspace-remap .
           -E 'package(interrexx) & binary(spec)' --profile ci
 
   doctest:
