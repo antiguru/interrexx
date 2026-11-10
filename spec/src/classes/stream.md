@@ -472,9 +472,10 @@ the one raised. First comes the form of the arguments that a method reads
 before it counts them: a start, a line number or a count of `charIn`,
 `lineIn`, `charOut` and `lineOut` that is no whole number in the range that
 [the arguments](r:class.stream.args.numbers) give raises `SYNTAX 88.907`, and
-a string to write that has no string value raises `SYNTAX 88.909`; the option
-of `open`, `lines`, `seek` and `position` is read as a string, and one that
-has no string value raises `SYNTAX 88.909` too ([the objects
+a string to write that has no `makeString` method raises `SYNTAX 88.909`
+([the strings rule](r:class.stream.args.strings)); the option of `open`,
+`lines`, `seek` and `position` is read through `makeString` too, and one
+without it raises `SYNTAX 88.909` ([the objects
 rule](r:class.stream.args.objects)). Then comes the count of arguments, as
 [the count rule](r:class.index.args.count) says, and before the stream is
 opened: a message with more arguments than the method takes raises `SYNTAX
@@ -705,7 +706,10 @@ number, such as a plain `Object`, raise `SYNTAX 88.907`. The option that
 through `makeString` alone: an object that has no such method, `.nil` and an
 object that has only `string` among them, raises `SYNTAX 88.909`, and it does
 so before the count of arguments is checked, so that `open(.nil, 1)` raises
-`SYNTAX 88.909` and not 88.922.
+`SYNTAX 88.909` and not 88.922. The argument of `query` and of `command` is
+read through its string value with the fallback to `string`: an object that
+has only `string` is read by that answer, and `.nil` is read as `The NIL
+object`, which no word or command starts with.
 
 ```rexx
 f = 'spec-stream-objects-zq.tmp'
@@ -739,6 +743,10 @@ call try 't~open(.nil, 1)'
 call try 't~lines(.nil, 1)'
 call try 't~seek(.nil, 1)'
 call try 't~position(.os~new("=1"), 1)'
+call try 't~query(.os~new("size"))'
+call try 't~query(.nil)'
+call try 't~command(.os~new("query size"))'
+call try 't~command(.nil)'
 t~close
 call sysfiledelete f
 call sysfiledelete g
@@ -789,6 +797,10 @@ t~open(.nil, 1) => 88.909
 t~lines(.nil, 1) => 88.909
 t~seek(.nil, 1) => 88.909
 t~position(.os~new("=1"), 1) => 88.909
+t~query(.os~new("size")) => [4]
+t~query(.nil) => 93.0
+t~command(.os~new("query size")) => [4]
+t~command(.nil) => 93.914
 ```
 
 r[class.stream.args.strings]
@@ -797,12 +809,13 @@ value](r:class.index.string) that a method takes from an argument: the
 `makeString` method of an object that is not a string is sent to it and its
 answer is written. An argument that has no `makeString` method, `.nil` and an
 object that has only `string` among them, raises `SYNTAX 88.909`; it is
-checked before the stream is opened, and a count or number argument before it
-is read. An argument that is a `String`, a number or a `MutableBuffer`, or an
-object with a `makeString` method, is written as that string. The items that
-`arrayOut` writes are read in the same way, one at a time, by the `lineOut` or
-`charOut` that `arrayOut` sends; the items before a failing one are written
-([the `arrayOut` rule](r:class.stream.arrayout) has the details).
+checked before the stream is opened, and before the start or line number that
+follows it, [from left to right](r:class.stream.args). An argument that is a
+`String`, a number or a `MutableBuffer`, or an object with a `makeString`
+method, is written as that string. The items that `arrayOut` writes are read
+in the same way, one at a time, by the `lineOut` or `charOut` that `arrayOut`
+sends; the items before a failing one are written ([the `arrayOut`
+rule](r:class.stream.arrayout) has the details).
 
 ```rexx
 f = 'spec-stream-strings-zq.tmp'
@@ -1896,9 +1909,10 @@ turn, with the item itself as the one argument. It sends no other message to
 the receiver, the array or an item; what the sends answer is not looked at,
 except that a NOTREADY that a send raises ends the writing, as [the rule of
 `arrayOut`](r:class.stream.arrayout) says. That condition reaches `arrayOut`
-when the method that answers the send hands the message on with `FORWARD` and
-no `CONTINUE`, as the `lineOut` of `Stream` raises it, and when that method
-raises it itself with `RAISE`: the writing ends after that item. It does not
+in two cases: the method that answers the send hands the message on with
+`FORWARD` and no `CONTINUE`, and the `lineOut` of `Stream` raises it; or that
+method raises it itself with `RAISE`. The writing then ends at that item, as
+[the rule of `arrayOut`](r:class.stream.arrayout) says. It does not
 reach `arrayOut` when the method sends the message on and answers afterwards,
 as `FORWARD CONTINUE` and a message to `SUPER` do, nor when the `RAISE` is in
 a routine that the method calls: `arrayOut` then sends `lineOut` for every
@@ -2190,8 +2204,9 @@ r[class.stream.deviation.58]
 also after a read of characters that ends inside a line, which still counts,
 as [the function](r:bif.lines.deviation.58) does. So does `lines` with no
 argument, whose option is [`C`](r:class.stream.lines). The count that ooRexx
-answers for the option `C` can be wrong after a character read or a line
-positioning: in the example it answers 1 where this answers 2.
+answers, for the option `C` and for no option, can be wrong after a character
+read or a line positioning: in the example it answers 1 where this answers 2
+on the second `say` line, and 1 for both where this answers 3 on the last.
 
 ```rexx
 f = 'spec-stream-dev58-zq.tmp'
@@ -2205,6 +2220,8 @@ x = s~charin(, 5)
 say s~lines s~lines('C') s~lines('N')
 x = s~linein
 say s~lines s~lines('C')
+x = s~charin(1, 0)
+say s~lines s~lines('C')
 s~close
 call sysfiledelete f
 ```
@@ -2213,6 +2230,7 @@ call sysfiledelete f
 3 3
 2 2 1
 1 1
+3 3
 ```
 
 r[class.stream.deviation.59]
@@ -2227,6 +2245,7 @@ f = 'spec-stream-dev59-zq.tmp'
 call lineout f, 'one'
 call lineout f, 'two'
 call lineout f
+call on notready name trap
 s = .stream~new(f)
 say s~open('read') s~state
 say s~seek('0 read') s~state
@@ -2234,13 +2253,18 @@ say s~open('read') s~state
 say s~position('=1 write') s~state
 s~close
 call sysfiledelete f
+exit
+trap: say 'NOTREADY raised'
+return
 ```
 
 ```output
 READY: READY
 0 NOTREADY
+NOTREADY raised
 READY: READY
 0 NOTREADY
+NOTREADY raised
 ```
 
 r[class.stream.deviation.62]
