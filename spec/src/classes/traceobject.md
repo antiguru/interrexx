@@ -30,12 +30,16 @@ that is read as a string.
 ## The class
 
 r[class.traceobject.creation]
-`TraceObject` is a class whose only superclass is `StringTable`; it inherits
-no mixin class of its own ([the hierarchy rule](r:class.index.hierarchy)), and
-no class of the library is its subclass. Its instance side defines
-`compareTo` and `makeString`. The class side answers `activate`, `collector`,
-`collector=`, `counter`, `makeStringImpl`, `new`, `notify`, `notify=`,
-`option`, `option=`, `setMakeString` and `unsetMakeString`.
+`TraceObject` is a class whose only superclass is `StringTable`; it inherits no
+mixin class of its own ([the hierarchy rule](r:class.index.hierarchy)), and no
+class of the library is its subclass. Its instance side defines `compareTo` and
+`makeString`. The class side answers `activate`, `collector`, `collector=`,
+`counter`, `makeStringImpl`, `new`, `notify`, `notify=`, `option`, `option=`,
+`setMakeString` and `unsetMakeString`. A subclass of `TraceObject` has class
+attributes of its own: its `new` counts with its own `counter`, from `0`, sends
+`append` to its own `collector`, and its instances' `makeString` follows its own
+`option` and `setMakeString`. The interpreter makes the objects for trace lines
+with `TraceObject` itself, so the attributes of a subclass do not affect them.
 
 ```rexx
 t = .traceobject
@@ -74,15 +78,49 @@ UNSETMAKESTRING 1
 NOSUCH 0
 ```
 
+```rexx
+t = .traceobject
+c = .array~new
+t~collector = c
+s = .sub~new
+say s~class~id s~items t~counter c~items .sub~counter .sub~option
+t~collector = .nil
+.sub~option = 'S'
+s~traceline = 'abc'; s~thread = 1; s~invocation = 2
+say '['s~makeString']' t~option
+n = .array~new
+.sub~notify = n
+.traceoutput~destination(.output)
+trace r
+x = 1
+trace off
+say .sub~counter t~counter n~items
+.sub~notify = .nil
+.sub~option = 'N'
+::class sub subclass traceobject
+```
+
+```output
+SUB 3 0 0 1 N
+[[T1  I2 ]               abc] N
+    14 *-* x = 1
+       >>>   "1"
+    15 *-* trace off
+1 3 0
+```
+
 r[class.traceobject.new]
 `new` makes a `TraceObject` with three entries: `NUMBER`, the number of the
-object, which is the `counter` after the count has gone up by one, `OPTION`,
-the `option` at that moment, and `TIMESTAMP`, a `DateTime`. The interpreter
-makes the objects for trace lines in the same way and then adds more entries,
-as [the entries rule](r:class.traceobject.entries) says. When a `collector`
-is set, `new` sends it `append` with the new object. `new` takes no
-required argument and accepts one, which it does not use; two raise
-`SYNTAX 93.902`.
+object, which is the `counter` after the count has gone up by one, `OPTION`, the
+`option` at that moment, and `TIMESTAMP`, a `DateTime`. The interpreter makes
+the objects for trace lines in the same way and then adds more entries, as [the
+entries rule](r:class.traceobject.entries) says. When a `collector` is set,
+`new` sends it `append` with the new object. `new` takes at most one argument,
+the size hint that [`new` of `StringTable`](r:class.stringtable.new) takes, with
+the same check: a value that is not a whole number of at least `0` raises
+`SYNTAX 93.923`, and two arguments raise `SYNTAX 93.902`. A `new` that raises
+makes no object: the `counter` does not go up and no collector receives
+`append`.
 
 ```rexx
 t = .traceobject
@@ -110,6 +148,34 @@ TraceObject 3 1 NUMBER OPTION TIMESTAMP
 2 2
 1 1 3
 93.902
+```
+
+```rexx
+t = .traceobject
+c = .array~new
+t~collector = c
+do a over .array~of(-1, 1.5, 'x', 4)
+  call one a
+end
+t~collector = .nil
+say c~items t~counter
+exit
+one: procedure
+  use arg a
+  signal on syntax name bad
+  x = .traceobject~new(a)
+  say '['a'] =>' x~number
+  return
+bad: say '['a'] =>' condition('o')~code
+  return
+```
+
+```output
+[-1] => 93.923
+[1.5] => 93.923
+[x] => 93.923
+[4] => 1
+1 1
 ```
 
 r[class.traceobject.lines]
@@ -373,10 +439,11 @@ t~"NOTIFY="(1, 2) => 93.902
 
 r[class.traceobject.counter]
 `counter` answers how many `TraceObject` objects have been made, those that
-`new` makes and those made for the lines of trace output, and is `0` before
-the first. It takes no argument. `activate` answers no value: it sets the
-`counter` to `0`, the `option` to `N` and the `collector` and `notify` to
-`.nil`.
+`new` makes and those made for the lines of trace output, and is `0` before the
+first. It takes no argument. `activate` answers no value: it sets the `counter`
+to `0`, the `option` to `N` and the `collector` and `notify` to `.nil`, and
+takes away a method that `setMakeString` gave, as `unsetMakeString` does. It
+accepts any arguments and does not use them.
 
 ```rexx
 t = .traceobject
@@ -414,6 +481,21 @@ bad: say arg(1) '=>' condition('o')~code
 N 0 1 1
 t~counter(1) => 93.902
 r = t~activate => 91.999
+```
+
+```rexx
+t = .traceobject
+t~setMakeString('return "custom"')
+t~activate
+n = t~new~~put('line', 'TRACELINE')
+say '['n~makeString']' t~counter
+t~activate(1, 2)
+say t~counter
+```
+
+```output
+[line] 1
+0
 ```
 
 r[class.traceobject.option]
@@ -469,19 +551,25 @@ T
 r[class.traceobject.makestringimpl]
 `makeStringImpl` answers the text of one `TraceObject`, which it takes as its
 one argument, in the format that the `option` names. With `N` it is the
-`TRACELINE` entry, or `?` when the object has none. With `T` the number of
-the thread is put inside the flag of the trace line: after the first two
-characters of `*-*`, so that it reads `*-1*`, and likewise `>>1>`. With `S`
-the line is preceded by `[T`, the thread number padded to three columns and
-at least one blank, `I` and the invocation number padded to two columns, `]`
-and fifteen blanks. With `F` the prefix is `[R`, the interpreter number
-padded to four columns and at least one blank, `T`, the thread number in the
-same way, `I`, the invocation number padded to four columns, `]` and eighteen
-blanks. A `P` object is formatted like `N`. The line of a method may carry
-more fields in the prefix, whose layout is not specified here.
-`makeStringImpl` raises `SYNTAX 93.901` with no argument, `93.902` with two
-and `93.924` for an argument that is not a collection; a `StringTable`
-without entries gives `?`.
+`TRACELINE` entry, or `?` when the object has none. With `T` the number of the
+thread is put inside the flag of the trace line: after the first two characters
+of `*-*`, so that it reads `*-1*`, and likewise `>>1>`; this describes the lines
+that the interpreter makes, and where the number goes in any other text that a
+program sets as `TRACELINE` is not specified here. With `S` the line is preceded
+by `[T`, the thread number padded to three columns and at least one blank, `I`
+and the invocation number padded to two columns, `]` and fifteen blanks. With
+`F` the prefix is `[R`, the interpreter number padded to four columns and at
+least one blank, `T`, the thread number in the same way, `I`, the invocation
+number padded to four columns, `]` and eighteen blanks. With `P` the entry
+`OPTION` of the object chooses the format: a value equal, as the `=` operator
+compares, to `N` or `P` gives that of `N`, `T` that of `T` and `S` that of `S`,
+and any other value, the lower-case letters and the null string included, that
+of `F`; an object without an `OPTION` entry is formatted like `N`. [The line of
+a method](r:class.traceobject.makestringimpl.method) carries more fields in the
+prefix. `makeStringImpl` raises `SYNTAX 93.901` with no argument, `93.902` with
+two and `93.924` for a string argument; [the next
+rule](r:class.traceobject.makestringimpl.sends) gives the reading of the
+argument. A `StringTable` without entries gives `?`.
 
 ```rexx
 t = .traceobject
@@ -630,6 +718,163 @@ end
 [     8 *-* trace off] P [     8 *-* trace off]
 ```
 
+r[class.traceobject.makestringimpl.method]
+When the object has an `ATTRIBUTEPOOL` entry, as every line traced in a method
+has, `S` and `F` write four more fields between the invocation number and the
+`]`. The invocation number is then padded to two columns (`S`) or four (`F`) and
+followed by a blank. The first field is `G` when `ISGUARDED` is `1` and `U` when
+it is `0`, then `u` when the method is guarded and `HASSCOPELOCK` is `0`, `g`
+when it is unguarded and `HASSCOPELOCK` is `1`, and a blank otherwise, then a
+blank. Next come `A` and the `ATTRIBUTEPOOL` value, padded to two columns (`S`)
+or four (`F`), and a blank; then `L` and the `SCOPELOCKCOUNT` value, padded to
+two columns (`S`) or three (`F`), and a blank; then `*` when `HASSCOPELOCK` is
+`1` and a blank otherwise, and a blank. One blank follows the `]`. A missing
+`ISGUARDED` shows `?` as the first field, and a missing `SCOPELOCKCOUNT` `?` as
+its value; a missing `HASSCOPELOCK` shows `?` in the place of the `*` and of the
+blank after it.
+
+```rexx
+t = .traceobject
+do o over 'S', 'F'
+  t~option = o
+  say 'option' o
+  call show 1, 1, 1, 3
+  call show 1, 0, 0, 12
+  call show 0, 0, 0, 5
+  call show 0, 1, 2, 1234
+end
+t~option = 'N'
+exit
+show:
+  n = t~new
+  n~traceline = '     9 *-* v = 1'
+  n~thread = 2; n~invocation = 6; n~interpreter = 1
+  n~isGuarded = arg(1); n~hasScopeLock = arg(2)
+  n~scopeLockCount = arg(3); n~attributePool = arg(4)
+  say '['t~makeStringImpl(n)']'
+  return
+```
+
+```output
+option S
+[[T2  I6  G  A3  L1  * ]      9 *-* v = 1]
+[[T2  I6  Gu A12 L0    ]      9 *-* v = 1]
+[[T2  I6  U  A5  L0    ]      9 *-* v = 1]
+[[T2  I6  Ug A1234 L2  * ]      9 *-* v = 1]
+option F
+[[R1   T2   I6    G  A3    L1   * ]      9 *-* v = 1]
+[[R1   T2   I6    Gu A12   L0     ]      9 *-* v = 1]
+[[R1   T2   I6    U  A5    L0     ]      9 *-* v = 1]
+[[R1   T2   I6    Ug A1234 L2   * ]      9 *-* v = 1]
+```
+
+r[class.traceobject.makestringimpl.sends]
+`makeStringImpl` reads the entries of its argument by sending it `[]` with the
+entry's name, in this order. For `N` it reads `TRACELINE`. For `T` it sends the
+message `TRACELINE` and then `[]` with `THREAD`. For `S` it reads `THREAD`,
+`INVOCATION` and `ATTRIBUTEPOOL`, then, when `ATTRIBUTEPOOL` has a value,
+`ISGUARDED`, `HASSCOPELOCK` and `SCOPELOCKCOUNT`, and last `TRACELINE`. For `F`
+it reads `INTERPRETER` first and then what `S` reads. For `P` it reads `OPTION`
+and then what the format that the value chooses reads. An argument that is a
+string raises `SYNTAX 93.924`; any other object that does not answer these
+messages raises their error, such as `93.907` for an `Array` and `97.1` for
+`.nil`.
+
+```rexx
+t = .traceobject
+s = .spy~new
+s['TRACELINE'] = '    11 *-* x = 1'
+s['THREAD'] = 3; s['INVOCATION'] = 4; s['INTERPRETER'] = 5
+do o over 'N', 'T', 'S', 'F'
+  t~option = o
+  say 'option' o
+  say '['t~makeStringImpl(s)']'
+end
+s['ATTRIBUTEPOOL'] = 7; s['ISGUARDED'] = 1
+s['HASSCOPELOCK'] = 0; s['SCOPELOCKCOUNT'] = 2
+t~option = 'S'
+say 'option S with the method fields'
+say '['t~makeStringImpl(s)']'
+t~option = 'N'
+call try '.array~new'
+call try '.nil'
+call try '"text"'
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr = t~makeStringImpl('arg(1)')'
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class spy subclass stringtable
+::method '[]'
+  say '  []' arg(1)
+  forward class (super)
+::method traceline
+  say '  traceline'
+  forward class (super)
+```
+
+```output
+option N
+  [] TRACELINE
+[    11 *-* x = 1]
+option T
+  traceline
+  [] THREAD
+[    11 *-3* x = 1]
+option S
+  [] THREAD
+  [] INVOCATION
+  [] ATTRIBUTEPOOL
+  [] TRACELINE
+[[T3  I4 ]                   11 *-* x = 1]
+option F
+  [] INTERPRETER
+  [] THREAD
+  [] INVOCATION
+  [] ATTRIBUTEPOOL
+  [] TRACELINE
+[[R5   T3   I4   ]                      11 *-* x = 1]
+option S with the method fields
+  [] THREAD
+  [] INVOCATION
+  [] ATTRIBUTEPOOL
+  [] ISGUARDED
+  [] HASSCOPELOCK
+  [] SCOPELOCKCOUNT
+  [] TRACELINE
+[[T3  I4  Gu A7  L2    ]     11 *-* x = 1]
+.array~new => 93.907
+.nil => 97.1
+"text" => 93.924
+```
+
+```rexx
+t = .traceobject
+t~option = 'P'
+s = .stringtable~new
+s['TRACELINE'] = '    11 *-* x = 1'
+s['THREAD'] = 3; s['INVOCATION'] = 4; s['INTERPRETER'] = 5
+say '['t~makeStringImpl(s)']'
+do o over 'N', ' T', 'S ', 'P', 'f', 'Full'
+  s['OPTION'] = o
+  say '['o']' '['t~makeStringImpl(s)']'
+end
+t~option = 'N'
+```
+
+```output
+[    11 *-* x = 1]
+[N] [    11 *-* x = 1]
+[ T] [    11 *-3* x = 1]
+[S ] [[T3  I4 ]                   11 *-* x = 1]
+[P] [    11 *-* x = 1]
+[f] [[R5   T3   I4   ]                      11 *-* x = 1]
+[Full] [[R5   T3   I4   ]                      11 *-* x = 1]
+```
+
 r[class.traceobject.makestring]
 `makeString` answers what `makeStringImpl` of the class answers for the
 object, so it follows the `option` at the time it is asked and not the option
@@ -666,14 +911,15 @@ say '['n~makeString']'
 
 r[class.traceobject.setmakestring]
 `setMakeString` replaces `makeStringImpl` with a method of the program: the
-argument is a `Method` object, a string that holds the source of a method or
-an array of strings that hold its lines. The method receives the `TraceObject`
-and answers the text. From then on it supplies `makeStringImpl`, and with it
-`makeString`, whatever the `option` is, until `unsetMakeString` takes it
-away; a second `setMakeString` replaces the first. It answers no value. A
-source that does not translate raises the error that `Method~new` raises for
-it, `.nil` raises `SYNTAX 93.961`, no argument `93.901` and a second one
-`93.902`. `unsetMakeString` takes no argument and answers no value.
+argument is a `Method` object, a string that holds the source of a method or an
+array of strings that hold its lines. The method receives the `TraceObject` and
+answers the text. From then on it supplies `makeStringImpl`, and with it
+`makeString`, whatever the `option` is, until `unsetMakeString` takes it away; a
+second `setMakeString` replaces the first. It answers no value. A source that
+does not translate raises the error that `Method~new` raises for it, an argument
+that is neither a string, a `Method` nor an array raises `SYNTAX 93.961`, `.nil`
+included, an array item that is not a string `93.952`, no argument `93.901` and
+a second one `93.902`. `unsetMakeString` takes no argument and answers no value.
 
 ```rexx
 .traceoutput~destination(.output)
@@ -700,6 +946,8 @@ say '['t~makeStringImpl(n)']'
 t~option = 'N'
 say '['t~makeStringImpl(n)']'
 call try 't~setMakeString(.nil)'
+call try 't~setMakeString(.object~new)'
+call try 't~setMakeString(.array~of("return 1", .object~new))'
 call try 't~setMakeString'
 call try 't~setMakeString("x", "y")'
 call try 't~setMakeString("not rexx )(")'
@@ -731,6 +979,8 @@ A:S A:S
 [[T?  I? ]               abc]
 [abc]
 t~setMakeString(.nil) => 93.961
+t~setMakeString(.object~new) => 93.961
+t~setMakeString(.array~of("return 1", .object~new)) => 93.952
 t~setMakeString => 93.901
 t~setMakeString("x", "y") => 93.902
 t~setMakeString("not rexx )(") => 37.2
@@ -743,13 +993,17 @@ x = t~unsetMakeString => 91.999
 ## Instance methods
 
 r[class.traceobject.compareto]
-`compareTo` compares the receiver with another `StringTable` by their
-`NUMBER` entries and answers `-1` when the receiver's is smaller, `0` when
-they are equal and `1` when it is larger. It so sorts the objects in the
-order they were made. An argument without a `NUMBER` entry counts as smaller
-than any receiver, so the answer is `1`; an entry that is not a number raises
-`SYNTAX 41.1`. A string raises `SYNTAX 93.924`, and so does a missing
-argument.
+`compareTo` compares the receiver with its argument, usually another
+`TraceObject`, by their `NUMBER` entries and answers `-1` when the receiver's is
+smaller, `0` when they are equal and `1` when it is larger. It so sorts the
+objects in the order they were made. It reads the argument's entry by sending it
+`[]` with `NUMBER`, so any collection indexed by strings will do, and it
+compares the two numbers under NUMERIC DIGITS 9, whatever the caller's setting.
+A missing entry, the receiver's or the argument's, counts as smaller than any
+number, and two missing entries are equal. An entry that is not a number raises
+`SYNTAX 41.1`. A string argument, and a missing one, raises `SYNTAX 93.924`;
+another object raises the error of `[]`, such as `93.907` for an `Array` and
+`97.1` for `.nil`.
 
 ```rexx
 t = .traceobject
@@ -783,6 +1037,44 @@ a~compareTo(.stringtable~new~~put("x", "NUMBER")) => 41.1
 a~compareTo(1) => 93.924
 a~compareTo => 93.924
 1 2
+```
+
+```rexx
+t = .traceobject
+a = t~new
+s = .spy~new~~put(5, 'NUMBER')
+say a~compareTo(s)
+say a~compareTo(.directory~new~~put(5, 'NUMBER'))
+numeric digits 20
+say a~compareTo(.stringtable~new~~put(a~number || '.0000000001', 'NUMBER'))
+numeric digits 9
+b = t~new
+b~remove('NUMBER')
+say b~compareTo(a) b~compareTo(.stringtable~new)
+call try 'a~compareTo(.array~new)'
+call try 'a~compareTo(.nil)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr =' arg(1)
+  say arg(1) '=>' rr
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class spy subclass stringtable
+::method '[]'
+  say '  []' arg(1)
+  forward class (super)
+```
+
+```output
+  [] NUMBER
+-1
+-1
+0
+-1 0
+a~compareTo(.array~new) => 93.907
+a~compareTo(.nil) => 97.1
 ```
 
 ## Deviations

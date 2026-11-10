@@ -22,19 +22,20 @@ the values of another build.
 ## The object
 
 r[class.rexxinfo.creation]
-`.REXXINFO` answers one object, the same every time, whose class `RexxInfo`
-has `Object` as its only superclass and no mixin class ([the hierarchy
-rule](r:class.index.hierarchy)). The instance side of the class defines
-`architecture`, `caseSensitiveFiles`, `copy`, `date`, `debug`, `digits`,
-`directorySeparator`, `endofline`, `executable`, `form`, `fuzz`,
-`internalDigits`, `internalMaxNumber`, `internalMinNumber`, `languageLevel`,
-`libraryPath`, `majorVersion`, `maxArraySize`, `maxExponent`,
+`.REXXINFO` answers one object, the same every time, whose class `RexxInfo` has
+`Object` as its only superclass and no mixin class ([the hierarchy
+rule](r:class.index.hierarchy)). The class method `new` raises `SYNTAX 93.967`
+whatever the arguments are, so no program makes a second `RexxInfo`. The
+instance side of the class defines `architecture`, `caseSensitiveFiles`, `copy`,
+`date`, `debug`, `digits`, `directorySeparator`, `endofline`, `executable`,
+`form`, `fuzz`, `internalDigits`, `internalMaxNumber`, `internalMinNumber`,
+`languageLevel`, `libraryPath`, `majorVersion`, `maxArraySize`, `maxExponent`,
 `maxPathLength`, `minExponent`, `modification`, `name`, `package`,
 `pathSeparator`, `platform`, `release`, `revision` and `version`, and no other
 method. No method takes an argument, and one sent with an argument raises
-`SYNTAX 93.902`, `copy` included. `copy` without an argument raises
-`SYNTAX 93.970`, and [Deviation 63](r:class.rexxinfo.deviation.63) states the
-one route on which it differs.
+`SYNTAX 93.902`, `copy` included. `copy` without an argument raises `SYNTAX
+93.970`, and [Deviation 63](r:class.rexxinfo.deviation.63) states the one route
+on which it differs.
 
 ```rexx
 r = .rexxinfo
@@ -81,6 +82,24 @@ r~copy(1) => 93.902
 r~name(1) => 93.902
 r~platform("x", "y") => 93.902
 r~version(, 2) => 93.902
+```
+
+```rexx
+call try '.rexxinfo~class~new'
+call try '.rexxinfo~class~new(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr =' arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output defect=#180
+.rexxinfo~class~new => 93.967
+.rexxinfo~class~new(1, 2) => 93.967
 ```
 
 ## Numeric settings and limits

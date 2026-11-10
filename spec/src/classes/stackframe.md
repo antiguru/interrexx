@@ -28,7 +28,8 @@ mixin class ([the hierarchy rule](r:class.index.hierarchy)). Its instance side
 defines `arguments`, `context`, `executable`, `invocation`, `line`,
 `makeString`, `name`, `string`, `target`, `traceLine` and `type`, and no other
 method. The class method `new` raises `SYNTAX 93.967` whatever the arguments
-are, so no program makes a frame.
+are, so no program makes a frame. No instance method takes an argument, and one
+sent with an argument raises `SYNTAX 93.902`, `copy` included.
 
 ```rexx
 s = .stackframe~methods(.nil)
@@ -44,6 +45,8 @@ end
 say .stackframe~superclasses~items .stackframe~superclass~id
 call try '.stackframe~new'
 call try '.stackframe~new(1)'
+call try '.context~stackFrames[1]~type(1)'
+call try '.context~stackFrames[1]~copy(1)'
 exit
 try:
   signal on syntax name bad
@@ -61,12 +64,15 @@ TARGET TRACELINE TYPE
 1 Object
 .stackframe~new => 93.967
 .stackframe~new(1) => 93.967
+.context~stackFrames[1]~type(1) => 93.902
+.context~stackFrames[1]~copy(1) => 93.902
 ```
 
 r[class.stackframe.copy]
 `copy` answers a new frame that is not the receiver and has the same `type`,
-`name` and `line`. The `arguments` of the copy and of the receiver are the
-same array.
+`name` and `line`. Every other method of the copy answers what the receiver's
+answers, the same objects included: the `arguments`, the `context` and the
+`executable` of the two are the same objects.
 
 ```rexx
 call r 'a', 'b'
@@ -75,11 +81,14 @@ r:
   f = .context~stackFrames[1]
   g = f~copy
   say g~class~id (g == f) g~type g~name g~line (g~arguments == f~arguments)
+  say (g~context == f~context) (g~executable == f~executable),
+      (g~traceLine == f~traceLine) (g~invocation == f~invocation)
   return
 ```
 
 ```output
 StackFrame 0 INTERNALCALL R 4 1
+1 1 1 1
 ```
 
 r[class.stackframe.sources]
@@ -274,13 +283,15 @@ INTERPRET 14
 ```
 
 r[class.stackframe.traceline]
-`traceLine`, `string` and `makeString` all answer the same string, which is
-the [trace line](r:instr.trace.line) of the clause that the level was running:
-the number of its line in six columns, `*-*` and the clause, indented as
-[the indentation rule](r:instr.trace.indent) says, which counts one level for
-each active internal call. [Deviation 0](r:class.stackframe.deviation.0)
-covers the indentation that a program reads back. The string of a built-in
-method's frame is not specified.
+`traceLine`, `string` and `makeString` all answer the same string, which is the
+[trace line](r:instr.trace.line) of the clause that the level was running: the
+number of its line in six columns, `*-*` and the clause, indented as [the
+indentation rule](r:instr.trace.indent) says, which counts one level for each
+active internal call. [Deviation 0](r:class.stackframe.deviation.0) covers the
+indentation that a program reads back. The string of a built-in method's frame
+is seven blanks, `*-*`, a blank and `Compiled method "NAME" with scope
+"Class".`, with the method's name in upper case and the id of the class that
+defines it.
 
 ```rexx
 call show
@@ -306,6 +317,22 @@ show:
 [     3 *-*   call show] 1 1
 [    10 *-*   call show] 1 1
 [     6 *-* call show 'multi',   'line'] 1 1
+```
+
+```rexx
+.o~new~send('m')
+.o~new~sendWith('m', .array~new)
+.message~new(.o~new, 'm')~send
+exit
+::class o
+::method m
+  say '['.context~stackFrames[2]~traceLine']'
+```
+
+```output
+[       *-* Compiled method "SEND" with scope "Object".]
+[       *-* Compiled method "SENDWITH" with scope "Object".]
+[       *-* Compiled method "SEND" with scope "Message".]
 ```
 
 r[class.stackframe.arguments]
@@ -381,7 +408,8 @@ r[class.stackframe.executable]
 `executable` answers the object that holds the code of the level: a `Method`
 for a frame of type `METHOD` and a `Routine` for `ROUTINE`, `PROGRAM` and
 `INTERNALCALL`, the last two being parts of the program's own routine. A frame
-of type `INTERPRET` has the executable of the level that holds the text.
+of type `INTERPRET` has the executable of the level that holds the text. A
+frame of type `COMPILE` has no executable and answers `.nil`.
 
 ```rexx
 call ic
@@ -414,13 +442,34 @@ PROGRAM Routine
 1 1 1
 ```
 
+```rexx
+signal on syntax name h1
+r = .routine~new('badone', 'x = = 1')
+h1: call show condition('o')~stackFrames~firstItem
+signal on syntax name h2
+interpret 'x = = 1'
+h2: call show condition('o')~stackFrames~firstItem
+exit
+show:
+  f = arg(1)
+  say f~type f~executable~isNil
+  return
+```
+
+```output
+COMPILE 1
+COMPILE 1
+```
+
 r[class.stackframe.context]
 `context` answers the [`RexxContext`](rexxcontext.md) of the level: for the
 first frame of a context's own `stackFrames` it is that context itself, and
-asking one frame again answers the same object. A built-in method's frame has
-no context and answers `.nil`. Once the level has ended, its context answers
-no message, as [the active rule](r:class.rexxcontext.active) says, while
-the frame itself goes on answering.
+asking one frame again answers the same object. A built-in method's frame and a
+frame of type `COMPILE` have no context and answer `.nil` ([the example of
+`invocation`](r:class.stackframe.invocation) shows the second). Once the level
+has ended, its context answers no message, as [the active
+rule](r:class.rexxcontext.active) says, while the frame itself goes on
+answering.
 
 ```rexx
 call outer 'p', 'q'
@@ -465,8 +514,9 @@ context of a finished level 98.981
 r[class.stackframe.invocation]
 `invocation` answers the number of the invocation of the level, which is the
 number that [the `invocation` of its context](r:class.rexxcontext.numbers)
-answers, and `.nil` for a built-in method's frame. Making the array of frames
-numbers the levels that have no number yet, the innermost first.
+answers, and `.nil` for a built-in method's frame and for a frame of type
+`COMPILE`. Making the array of frames numbers the levels that have no number
+yet, the innermost first.
 
 ```rexx
 call outer
@@ -488,6 +538,25 @@ inner: procedure
 ```output
 1 2 3 1
 1
+```
+
+```rexx
+signal on syntax name h1
+r = .routine~new('badone', 'x = = 1')
+h1: call show condition('o')~stackFrames~firstItem
+signal on syntax name h2
+interpret 'x = = 1'
+h2: call show condition('o')~stackFrames~firstItem
+exit
+show:
+  f = arg(1)
+  say f~type f~context~isNil f~invocation~isNil
+  return
+```
+
+```output defect=#181
+COMPILE 1 1
+COMPILE 1 1
 ```
 
 ## Deviations

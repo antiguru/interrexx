@@ -1,7 +1,7 @@
 ---
 element: "Singleton"
 kind: class
-rexxref: "Builtin Classes > Utility Classes > Singleton Class; Builtin Classes > Utility Classes > Singleton Class > new (Class Method)"
+rexxref: "Builtin Classes > Utility Classes > Singleton Class (Metaclass); Builtin Classes > Utility Classes > Singleton Class (Metaclass) > new (Class Method)"
 ---
 
 # Singleton
@@ -126,9 +126,12 @@ Singleton 1 0 0
 ```
 
 r[class.singleton.copy]
-The object of a class with the metaclass `Singleton` answers itself to `copy`,
-with or without arguments, also when its class defines a `copy` method of its
-own. An object of a class without the metaclass is copied as usual.
+Before it sends `init`, the first `new` of a class with the metaclass
+`Singleton` defines on that class an instance method `COPY` that answers `self`,
+in place of any `copy` method the class defines itself. So the object answers
+itself to `copy`, with or without arguments. A `copy` sent with a scope
+override, such as `copy:.object`, bypasses that method and makes a second
+instance. An object of a class without the metaclass is copied as usual.
 
 ```rexx
 a = .one~new
@@ -148,4 +151,24 @@ say (c~copy == c) c~copy~class~id
 1 1 1 1
 1 MINE
 0 PLAIN
+```
+
+```rexx
+call own .plain1
+x = .plain1~new
+call own .plain1
+say .plain1~methods(.nil)~allItems[1]~source~makeString('l', '|')
+say (x~copy == x) (x~copy:.object == x) x~copy:.object~class~id
+exit
+own: procedure
+  say arg(1)~id '['arg(1)~methods(.nil)~allIndexes~makeString('l', ' ')']'
+  return
+::class plain1 metaclass singleton
+```
+
+```output
+PLAIN1 []
+PLAIN1 [COPY]
+return self
+1 0 PLAIN1
 ```

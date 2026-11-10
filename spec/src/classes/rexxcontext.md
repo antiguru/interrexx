@@ -28,10 +28,10 @@ mixin class ([the hierarchy rule](r:class.index.hierarchy)). Its instance side
 defines `args`, `condition`, `copy`, `digits`, `executable`, `form`, `fuzz`,
 `interpreter`, `invocation`, `line`, `name`, `package`, `rs`, `stackFrames`,
 `thread` and `variables`, and no other method. The class method `new` raises
-`SYNTAX 93.967` whatever the arguments are, so no program makes an instance.
-`copy` raises `SYNTAX 93.970`; [Deviation
-63](r:class.rexxcontext.deviation.63) states the one route on which it
-differs.
+`SYNTAX 93.967` whatever the arguments are, so no program makes an instance. No
+method takes an argument, and one sent with an argument raises `SYNTAX 93.902`,
+`copy` included. `copy` without an argument raises `SYNTAX 93.970`; [Deviation
+63](r:class.rexxcontext.deviation.63) states the one route on which it differs.
 
 ```rexx
 s = .rexxcontext~methods(.nil)
@@ -48,6 +48,8 @@ say .rexxcontext~superclasses~items .rexxcontext~superclass~id
 call try '.rexxcontext~new'
 call try '.rexxcontext~new(1, 2)'
 call try '.context~copy'
+call try '.context~name(1)'
+call try '.context~copy(1)'
 exit
 try:
   signal on syntax name bad
@@ -67,15 +69,17 @@ VARIABLES
 .rexxcontext~new => 93.967
 .rexxcontext~new(1, 2) => 93.967
 .context~copy => 93.970
+.context~name(1) => 93.902
+.context~copy(1) => 93.902
 ```
 
 r[class.rexxcontext.symbol]
-The environment symbol `.CONTEXT` answers the `RexxContext` of the code that
-is running. Within one run of that code it answers the same object each time,
-and the code of a called routine, of a method and of a message that another
-activity runs has another context. An INTERPRET runs in the context of the
-code that holds it. ([The lookup of environment
-symbols](r:lex.symbols.environment) is not specified here.)
+The environment symbol `.CONTEXT` answers the `RexxContext` of the code that is
+running. Within one run of that code it answers the same object each time, and
+the code of a called routine, of a method and of a message that another activity
+runs has another context. An INTERPRET runs in the context of the code that
+holds it. ([The lookup of environment symbols](r:lex.symbols.environment) is
+specified with the symbols.)
 
 ```rexx
 c = .context
@@ -282,16 +286,17 @@ Method 1
 ```
 
 r[class.rexxcontext.numbers]
-`interpreter`, `thread` and `invocation` answer whole numbers that
-identify the run: `interpreter` the interpreter instance, `thread` the
-activity that runs the code and `invocation` this call of the code. Their
-values are not specified, but the answers of one context never change, a
-routine called from the code has the same interpreter and thread and another
-invocation, and a message that another activity runs has another thread. A
-number is given to an invocation when it is first asked for, counting from
-`1`, by this method or by `stackFrames`, which asks for every level of the
-stack, the innermost first. Which other operations ask for it is not
-specified. Scheduling is specified in the environment chapter.
+`interpreter`, `thread` and `invocation` answer whole numbers that identify the
+run: `interpreter` the interpreter instance, `thread` the activity that runs the
+code and `invocation` this call of the code. Their values are whole numbers; the
+answers of one context never change, a routine called from the code has the same
+interpreter and thread and another invocation, and a message that another
+activity runs has another thread. A number is given to an invocation when it is
+first needed, counting from `1`: by this method; by `stackFrames` and by a
+condition, each of which numbers every level of the stack that has none yet, the
+innermost first; by a trace line, for the level it traces; and by `start`, for
+the level that sends it and then for the level that runs the message. Scheduling
+is specified in the environment chapter.
 
 ```rexx
 call a
@@ -329,6 +334,46 @@ b 4
 main 3
 0 1 1
 1 1
+```
+
+```rexx
+call a
+say 'main' .context~invocation
+exit
+a:
+  call on error name e
+  address system 'exit 2'
+  call b
+  return
+e:
+  return
+b:
+  signal on novalue name n
+  y = zzz
+n:
+  m = .message~new(.o~new, 'm')
+  m~send
+  say 'b' .context~invocation
+  call c
+  return
+c:
+  x = .o~new
+  r = x~start('m')
+  r~result
+  say 'c' .context~invocation
+  return
+::class o
+::method m
+  say 'm' .context~invocation
+  return 1
+```
+
+```output
+m 4
+b 3
+m 6
+c 5
+main 2
 ```
 
 ```rexx
@@ -383,7 +428,8 @@ r[class.rexxcontext.name]
 program, and for an INTERPRET in it, it is the name of the package (see
 [`.context~package~name`](r:class.package.name)). For a routine it is the name
 as the CALL or the function call gave it: a name written as a symbol in upper
-case, the characters of a string as they are written. For a method it is the
+case, the characters of a string as they are written. For a routine run with
+`call` of a `Routine`, it is the name of that routine. For a method it is the
 name of the method that runs, in upper case, which is the message name, so
 `UNKNOWN` when the `unknown` method of an object answers a message.
 
@@ -393,6 +439,8 @@ call rt
 call 'rT'
 x = rt()
 x = 'Rt'()
+say .routine~new('anon', 'return .context~name')~call
+x = .context~package~findRoutine('RT')~call
 call inner
 x = .o~new
 x~Mixed
@@ -421,6 +469,8 @@ RT
 rT
 RT
 Rt
+anon
+RT
 INNER
 MIXED
 BAR
