@@ -743,10 +743,11 @@ string, a number, a logical value or a whole number is needed, as receiver and
 as argument, and as the operand of SAY; `REQUEST`, `MAKESTRING` and `STRING`
 are not sent to it for that. ooRexx sends such an instance `request` with
 `STRING` or `MAKESTRING` in many of these places, as an argument of a method,
-an operator or a builtin function, as the receiver of the numeric and logical methods and operators,
-`dataType`, `?` and the joining operators, and in `new`, so an override of
-either method can change what is read; elsewhere it reads the instance's own
-characters, so one instance can answer differently to `=` and to `==`. As the
+an operator or a builtin function, as the receiver of the numeric and logical
+methods and operators, `dataType`, `?` and the joining operators, and in
+`new`, so an override of either method can change what is read; elsewhere it
+reads the instance's own characters, so one instance can answer differently to
+`=` and to `==`. As the
 message name of `send`, `sendWith`, `start`, `startWith` or `Message~new`,
 ooRexx sends it `request('ARRAY')` instead and raises `SYNTAX 93.946`.
 
