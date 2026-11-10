@@ -204,7 +204,9 @@ the same argument, unchanged, and takes exactly one argument, as `hasIndex`
 does: none raises `SYNTAX 93.901` and a second raises `SYNTAX 93.902`, in
 both cases before `allItems` is sent. Whether two items count as the same is
 decided by the object `allItems` answers: for an array that is the strict
-equality of `==`, under which `1` and `1.0` are different items.
+equality of `==`, under which `1` and `1.0` are different items (for the very
+object that is stored, see [the Array deviation
+rule](r:class.array.deviation.78)).
 
 ```rexx
 b = .box~new(.array~of('1', 'Ab', 'x'))

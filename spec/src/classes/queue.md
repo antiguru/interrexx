@@ -2,7 +2,7 @@
 element: "Queue"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Queue Class; Builtin Classes > Collection Classes > Queue Class > new (Class Method); Builtin Classes > Collection Classes > Queue Class > of (Class Method); Builtin Classes > Collection Classes > Queue Class > []; Builtin Classes > Collection Classes > Queue Class > []=; Builtin Classes > Collection Classes > Queue Class > allIndexes; Builtin Classes > Collection Classes > Queue Class > allItems; Builtin Classes > Collection Classes > Queue Class > append; Builtin Classes > Collection Classes > Queue Class > at; Builtin Classes > Collection Classes > Queue Class > delete; Builtin Classes > Collection Classes > Queue Class > empty; Builtin Classes > Collection Classes > Queue Class > first; Builtin Classes > Collection Classes > Queue Class > firstItem; Builtin Classes > Collection Classes > Queue Class > hasIndex; Builtin Classes > Collection Classes > Queue Class > hasItem; Builtin Classes > Collection Classes > Queue Class > index; Builtin Classes > Collection Classes > Queue Class > insert; Builtin Classes > Collection Classes > Queue Class > isEmpty; Builtin Classes > Collection Classes > Queue Class > items; Builtin Classes > Collection Classes > Queue Class > last; Builtin Classes > Collection Classes > Queue Class > lastItem; Builtin Classes > Collection Classes > Queue Class > makeArray; Builtin Classes > Collection Classes > Queue Class > next; Builtin Classes > Collection Classes > Queue Class > peek; Builtin Classes > Collection Classes > Queue Class > previous; Builtin Classes > Collection Classes > Queue Class > pull; Builtin Classes > Collection Classes > Queue Class > push; Builtin Classes > Collection Classes > Queue Class > put; Builtin Classes > Collection Classes > Queue Class > queue; Builtin Classes > Collection Classes > Queue Class > remove; Builtin Classes > Collection Classes > Queue Class > removeItem; Builtin Classes > Collection Classes > Queue Class > section; Builtin Classes > Collection Classes > Queue Class > size; Builtin Classes > Collection Classes > Queue Class > supplier"
-deviations: [109]
+deviations: [78, 109]
 ---
 
 # Queue
@@ -559,7 +559,8 @@ q~removeItem(1, 2) => 93.902
 r[class.queue.removeitem.sends]
 `removeItem` sends `==` to the argument, once for each item from the head,
 with that item as the argument, until one answers true, and sends nothing
-else. `hasItem` and `index` make the same search.
+else. `hasItem` and `index` make the same search. For the very object that is
+stored, see [the deviation rule](r:class.queue.deviation.78).
 
 ```rexx
 q = .queue~of(.thing~new('p'), .thing~new('q'), .thing~new('r'))
@@ -1298,6 +1299,37 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 ```
 
 ## Deviations
+
+r[class.queue.deviation.78]
+A search for an item with the very object that is stored, by `hasItem`,
+`index` or `removeItem`, sends that object's `==` as for any other item, so
+an object whose `==` answers false is not found even at its own entry.
+ooRexx finds the very object without sending it `==`, and sends `==` only
+for the items before it. See [Deviation 78](../deviations.md).
+
+```rexx
+.local~n = 0
+x = .liar~new
+c = .queue~new
+c~append('a')
+c~append(x)
+c~append('b')
+say c~hasItem(x) .n
+.local~n = 0
+say (c~index(x) == .nil) .n
+.local~n = 0
+say (c~removeItem(x) == .nil) c~items .n
+::class liar
+::method '=='
+  .local~n += 1
+  return 0
+```
+
+```output
+0 3
+1 3
+1 3 3
+```
 
 r[class.queue.deviation.109]
 An index or a count that is an instance of a subclass of `String` is read by

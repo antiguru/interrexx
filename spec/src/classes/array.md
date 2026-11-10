@@ -2,7 +2,7 @@
 element: "Array"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Array Class; Builtin Classes > Collection Classes > Array Class > new (Class Method); Builtin Classes > Collection Classes > Array Class > of (Class Method); Builtin Classes > Collection Classes > Array Class > []; Builtin Classes > Collection Classes > Array Class > []=; Builtin Classes > Collection Classes > Array Class > allIndexes; Builtin Classes > Collection Classes > Array Class > allItems; Builtin Classes > Collection Classes > Array Class > append; Builtin Classes > Collection Classes > Array Class > at; Builtin Classes > Collection Classes > Array Class > delete; Builtin Classes > Collection Classes > Array Class > dimension; Builtin Classes > Collection Classes > Array Class > dimensions; Builtin Classes > Collection Classes > Array Class > empty; Builtin Classes > Collection Classes > Array Class > fill; Builtin Classes > Collection Classes > Array Class > first; Builtin Classes > Collection Classes > Array Class > firstItem; Builtin Classes > Collection Classes > Array Class > hasIndex; Builtin Classes > Collection Classes > Array Class > hasItem; Builtin Classes > Collection Classes > Array Class > index; Builtin Classes > Collection Classes > Array Class > insert; Builtin Classes > Collection Classes > Array Class > isEmpty; Builtin Classes > Collection Classes > Array Class > items; Builtin Classes > Collection Classes > Array Class > last; Builtin Classes > Collection Classes > Array Class > lastItem; Builtin Classes > Collection Classes > Array Class > makeArray; Builtin Classes > Collection Classes > Array Class > makeString; Builtin Classes > Collection Classes > Array Class > next; Builtin Classes > Collection Classes > Array Class > previous; Builtin Classes > Collection Classes > Array Class > put; Builtin Classes > Collection Classes > Array Class > remove; Builtin Classes > Collection Classes > Array Class > removeItem; Builtin Classes > Collection Classes > Array Class > section; Builtin Classes > Collection Classes > Array Class > size; Builtin Classes > Collection Classes > Array Class > sort; Builtin Classes > Collection Classes > Array Class > sortWith; Builtin Classes > Collection Classes > Array Class > stableSort; Builtin Classes > Collection Classes > Array Class > stableSortWith; Builtin Classes > Collection Classes > Array Class > supplier; Builtin Classes > Collection Classes > Array Class > toString"
-deviations: [107, 109]
+deviations: [78, 107, 109]
 ---
 
 # Array
@@ -584,7 +584,9 @@ a~removeItem(1, 2) => 93.902
 r[class.array.removeitem.sends]
 `removeItem` sends `==` to the argument, once for each item in index order,
 with that item as the argument, until one answers true, and sends nothing
-else. `hasItem` and `index` make the same search, and their rules say so.
+else. `hasItem` and `index` make the same search, and their rules say so. For
+the very object that is stored, see [the deviation
+rule](r:class.array.deviation.78).
 
 ```rexx
 a = .array~of(.thing~new('p'), .thing~new('q'), .thing~new('r'))
@@ -1608,6 +1610,37 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 37 calls, 0 sent more than one message to the receiver
 ```
 ## Deviations
+
+r[class.array.deviation.78]
+A search for an item with the very object that is stored, by `hasItem`,
+`index` or `removeItem`, sends that object's `==` as for any other item, so
+an object whose `==` answers false is not found even at its own entry.
+ooRexx finds the very object without sending it `==`, and sends `==` only
+for the items before it. See [Deviation 78](../deviations.md).
+
+```rexx
+.local~n = 0
+x = .liar~new
+c = .array~new
+c~append('a')
+c~append(x)
+c~append('b')
+say c~hasItem(x) .n
+.local~n = 0
+say (c~index(x) == .nil) .n
+.local~n = 0
+say (c~removeItem(x) == .nil) c~items .n
+::class liar
+::method '=='
+  .local~n += 1
+  return 0
+```
+
+```output
+0 3
+1 3
+1 3 3
+```
 
 r[class.array.deviation.107]
 An item whose `objectName` answers a string that names a number is written

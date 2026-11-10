@@ -869,8 +869,9 @@ The NIL object 1
 ```
 
 r[class.table.deviation.84]
-When the `==` that `remove` sends to an index empties the table, `items`
-answers 0 afterwards. ooRexx answers -1. See [Deviation
+When the `==` that `remove` sends to an index, or that `removeItem` sends to
+its argument, empties the table, `items` answers 0 afterwards and the method
+answers `.nil`. ooRexx's `items` answers -1. See [Deviation
 84](../deviations.md).
 
 ```rexx
@@ -900,6 +901,23 @@ say t~items
 ```output
 The NIL object
 0
+```
+
+```rexx
+c = .table~new
+.local~victim = c
+c~put(.em~new, 'a')
+say (c~removeItem(.em~new) == .nil) c~items
+::class em
+::method '=='
+  .victim~empty
+  return 1
+::method hashCode
+  return 'h'
+```
+
+```output
+1 0
 ```
 
 r[class.table.deviation.109]

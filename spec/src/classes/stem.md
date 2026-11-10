@@ -188,6 +188,17 @@ say s~allIndexes[1] s['REQ']
 REQ v
 ```
 
+```rexx
+s = .stem~new('N.')
+s[] = 'D'
+s[''] = 'null'
+say s[,] s~at(,)
+```
+
+```output defect=#174
+D D
+```
+
 ## Reading and writing items
 
 r[class.stem.at]

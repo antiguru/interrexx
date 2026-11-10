@@ -2,7 +2,7 @@
 element: "List"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > List Class; Builtin Classes > Collection Classes > List Class > new (Class Method); Builtin Classes > Collection Classes > List Class > of (Class Method); Builtin Classes > Collection Classes > List Class > []; Builtin Classes > Collection Classes > List Class > []=; Builtin Classes > Collection Classes > List Class > allIndexes; Builtin Classes > Collection Classes > List Class > allItems; Builtin Classes > Collection Classes > List Class > append; Builtin Classes > Collection Classes > List Class > at; Builtin Classes > Collection Classes > List Class > delete; Builtin Classes > Collection Classes > List Class > empty; Builtin Classes > Collection Classes > List Class > first; Builtin Classes > Collection Classes > List Class > firstItem; Builtin Classes > Collection Classes > List Class > hasIndex; Builtin Classes > Collection Classes > List Class > hasItem; Builtin Classes > Collection Classes > List Class > index; Builtin Classes > Collection Classes > List Class > insert; Builtin Classes > Collection Classes > List Class > isEmpty; Builtin Classes > Collection Classes > List Class > items; Builtin Classes > Collection Classes > List Class > last; Builtin Classes > Collection Classes > List Class > lastItem; Builtin Classes > Collection Classes > List Class > makeArray; Builtin Classes > Collection Classes > List Class > next; Builtin Classes > Collection Classes > List Class > previous; Builtin Classes > Collection Classes > List Class > put; Builtin Classes > Collection Classes > List Class > remove; Builtin Classes > Collection Classes > List Class > removeItem; Builtin Classes > Collection Classes > List Class > section; Builtin Classes > Collection Classes > List Class > supplier"
-deviations: [109, 118]
+deviations: [78, 109, 118]
 ---
 
 # List
@@ -460,7 +460,8 @@ l~removeItem(1, 2) => 93.902
 r[class.list.removeitem.sends]
 `removeItem` sends `==` to the argument, once for each item in list order,
 with that item as the argument, until one answers true, and sends nothing
-else. `hasItem` and `index` make the same search.
+else. `hasItem` and `index` make the same search. For the very object that is
+stored, see [the deviation rule](r:class.list.deviation.78).
 
 ```rexx
 l = .list~of(.thing~new('p'), .thing~new('q'), .thing~new('r'))
@@ -1133,6 +1134,37 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 ```
 
 ## Deviations
+
+r[class.list.deviation.78]
+A search for an item with the very object that is stored, by `hasItem`,
+`index` or `removeItem`, sends that object's `==` as for any other item, so
+an object whose `==` answers false is not found even at its own entry.
+ooRexx finds the very object without sending it `==`, and sends `==` only
+for the items before it. See [Deviation 78](../deviations.md).
+
+```rexx
+.local~n = 0
+x = .liar~new
+c = .list~new
+c~append('a')
+c~append(x)
+c~append('b')
+say c~hasItem(x) .n
+.local~n = 0
+say (c~index(x) == .nil) .n
+.local~n = 0
+say (c~removeItem(x) == .nil) c~items .n
+::class liar
+::method '=='
+  .local~n += 1
+  return 0
+```
+
+```output
+0 3
+1 3
+1 3 3
+```
 
 r[class.list.deviation.109]
 An index, a count or the size hint of `new` that is an instance of a subclass of

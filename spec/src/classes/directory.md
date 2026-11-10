@@ -618,23 +618,23 @@ d~empty(1) => 93.902
 r[class.directory.setmethod]
 `setMethod(name, method)` associates the method with the name changed to upper
 case, replacing the item or the method that was there, and answers nothing.
-`method` is read as the `setMethod` of `Object` reads it ([the
-setMethod rule](r:class.object.setmethod)): a `Method`, the source of a method
-as a string or an array of strings, or any other object, which is sent
-`request` with `ARRAY` and then with `STRING`. A source that does not
-translate raises its syntax error ([the method rule](r:class.method.new)),
-`.nil` and an object that answers neither raise `SYNTAX 93.974`, and a source
-array with an item that is not a string raises `SYNTAX 93.952`. Without a
-method, or with it omitted, the entry of that name is removed. The method runs
-when the name is read ([the read rule](r:class.directory.at)).
-`setMethod('UNKNOWN', m)` sets the method that answers the reads of names that
-have no entry; it replaces an item of that name and is not an entry of the
-directory. `setMethod` gives the directory no method of its own, unlike [the
-`setMethod` of `Object`](r:class.object.setmethod): `hasMethod` of the name
-answers what it answered before, and a message of that name runs the method of
-the directory that has the name when there is one, and otherwise reaches
-[`unknown`](r:class.directory.unknown), which runs the method with no arguments,
-whatever the message carried.
+`method` is read as the `setMethod` of `Object` reads it ([the setMethod
+rule](r:class.object.setmethod)): a `Method`, the source of a method as a string
+or an array of strings, or any other object, which is sent `request` with
+`ARRAY` and then with `STRING`. A source that does not translate raises its
+syntax error ([the method rule](r:class.method.new)), `.nil` and an object that
+answers neither raise `SYNTAX 93.974`. The items of a source array are read as
+[the source rule](r:class.method.new.source) reads them, so an item that gives
+no string raises `SYNTAX 93.952`. Without a method, or with it omitted, the
+entry of that name is removed. The method runs when the name is read ([the read
+rule](r:class.directory.at)). `setMethod('UNKNOWN', m)` sets the method that
+answers the reads of names that have no entry; it replaces an item of that name
+and is not an entry of the directory. `setMethod` gives the directory no method
+of its own, unlike [the `setMethod` of `Object`](r:class.object.setmethod):
+`hasMethod` of the name answers what it answered before, and a message of that
+name runs the method of the directory that has the name when there is one, and
+otherwise reaches [`unknown`](r:class.directory.unknown), which runs the method
+with no arguments, whatever the message carried.
 
 ```rexx
 d = .directory~new
@@ -697,6 +697,19 @@ d~setMethod("x", .array~of(1, .object~new)) => 93.952
 d~setMethod("x", "this is not ((") => 35.1
 d~setMethod("x", "y", "z") => 93.902
 d~setMethod(.nil, "return 1") => 88.909
+```
+
+```rexx
+d = .directory~new
+d~setMethod('m', .array~of(.ms~new))
+say d~m
+::class ms
+::method makestring
+  return 'return "from ms"'
+```
+
+```output defect=#142
+from ms
 ```
 
 r[class.directory.unsetmethod]

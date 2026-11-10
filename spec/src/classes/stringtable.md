@@ -2,7 +2,7 @@
 element: "StringTable"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > StringTable Class; Builtin Classes > Collection Classes > StringTable Class > new (Class Method); Builtin Classes > Collection Classes > StringTable Class > []; Builtin Classes > Collection Classes > StringTable Class > []=; Builtin Classes > Collection Classes > StringTable Class > allIndexes; Builtin Classes > Collection Classes > StringTable Class > allItems; Builtin Classes > Collection Classes > StringTable Class > at; Builtin Classes > Collection Classes > StringTable Class > empty; Builtin Classes > Collection Classes > StringTable Class > entry; Builtin Classes > Collection Classes > StringTable Class > hasEntry; Builtin Classes > Collection Classes > StringTable Class > hasIndex; Builtin Classes > Collection Classes > StringTable Class > hasItem; Builtin Classes > Collection Classes > StringTable Class > index; Builtin Classes > Collection Classes > StringTable Class > isEmpty; Builtin Classes > Collection Classes > StringTable Class > items; Builtin Classes > Collection Classes > StringTable Class > makeArray; Builtin Classes > Collection Classes > StringTable Class > put; Builtin Classes > Collection Classes > StringTable Class > remove; Builtin Classes > Collection Classes > StringTable Class > removeEntry; Builtin Classes > Collection Classes > StringTable Class > removeItem; Builtin Classes > Collection Classes > StringTable Class > setEntry; Builtin Classes > Collection Classes > StringTable Class > supplier; Builtin Classes > Collection Classes > StringTable Class > unknown"
-deviations: [29, 33, 78, 109]
+deviations: [29, 33, 78, 84, 109]
 ---
 
 # StringTable
@@ -536,7 +536,8 @@ r[class.stringtable.removeitem]
 the search of [the search rule](r:class.stringtable.hasitem.sends), and
 answers the item that was stored, or `.nil` when no item matches. It removes
 one entry only. It takes exactly one argument: none, or an omitted one, raises
-`SYNTAX 93.903`, and a second raises `SYNTAX 93.902`.
+`SYNTAX 93.903`, and a second raises `SYNTAX 93.902`. A `==` that empties the
+table is [Deviation 84](r:class.stringtable.deviation.84).
 
 ```rexx
 t = .stringtable~new
@@ -919,6 +920,28 @@ say (t~removeItem(q) == .nil) .local~n t~items
 0 1
 1 2
 1 3 1
+```
+
+r[class.stringtable.deviation.84]
+When the `==` that `removeItem` sends to its argument empties the string table,
+`items` answers 0 afterwards and the method answers `.nil`. ooRexx's `items`
+answers -1. See [Deviation 84](../deviations.md).
+
+```rexx
+c = .stringtable~new
+.local~victim = c
+c['a'] = .em~new
+say (c~removeItem(.em~new) == .nil) c~items
+::class em
+::method '=='
+  .victim~empty
+  return 1
+::method hashCode
+  return 'h'
+```
+
+```output
+1 0
 ```
 
 r[class.stringtable.deviation.109]

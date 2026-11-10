@@ -1707,11 +1707,12 @@ The NIL object 1
 ```
 
 r[class.relation.deviation.84]
-When the `==` that `remove` sends to an index empties the relation, `items`
-answers 0 afterwards, and so it does when the `==` that `removeAll` sends
-empties it: the search ends. ooRexx answers -1 for `remove`, and its
-`removeAll` goes on comparing with an object that is no stored index. See
-[Deviation 84](../deviations.md).
+When the `==` that `remove` sends to an index, or that `removeItem` sends to
+its argument, empties the relation, `items` answers 0 afterwards and the method
+answers `.nil`, and so `items` does when the `==` that `removeAll` sends empties
+it: the search ends. ooRexx's `items` answers -1 after `remove` and
+`removeItem`, and its `removeAll` goes on comparing with an object that is no
+stored index. See [Deviation 84](../deviations.md).
 
 ```rexx
 r = .relation~new
@@ -1746,6 +1747,23 @@ The NIL object
 0
 0
 0
+```
+
+```rexx
+c = .relation~new
+.local~victim = c
+c~put(.em~new, 'a')
+say (c~removeItem(.em~new) == .nil) c~items
+::class em
+::method '=='
+  .victim~empty
+  return 1
+::method hashCode
+  return 'h'
+```
+
+```output
+1 0
 ```
 
 r[class.relation.deviation.118]

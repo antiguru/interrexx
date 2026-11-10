@@ -2,7 +2,7 @@
 element: "CircularQueue"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > CircularQueue Class; Builtin Classes > Collection Classes > CircularQueue Class > of (Class Method); Builtin Classes > Collection Classes > CircularQueue Class > init; Builtin Classes > Collection Classes > CircularQueue Class > append; Builtin Classes > Collection Classes > CircularQueue Class > insert; Builtin Classes > Collection Classes > CircularQueue Class > intersection; Builtin Classes > Collection Classes > CircularQueue Class > makeArray; Builtin Classes > Collection Classes > CircularQueue Class > makeString; Builtin Classes > Collection Classes > CircularQueue Class > push; Builtin Classes > Collection Classes > CircularQueue Class > queue; Builtin Classes > Collection Classes > CircularQueue Class > resize; Builtin Classes > Collection Classes > CircularQueue Class > section; Builtin Classes > Collection Classes > CircularQueue Class > size; Builtin Classes > Collection Classes > CircularQueue Class > string; Builtin Classes > Collection Classes > CircularQueue Class > supplier; Builtin Classes > Collection Classes > CircularQueue Class > union; Builtin Classes > Collection Classes > CircularQueue Class > xor"
-deviations: [109]
+deviations: [78, 109]
 ---
 
 # CircularQueue
@@ -371,14 +371,16 @@ r[class.circularqueue.queue.sends]
 `queue` and `push` send, to the receiver, `items` and then, when the answer is
 greater than the size, `pull` for `queue` or, for `push`, `items` again and
 `remove` with the answer as the index. With the option `Unique` they send
-`hasItem` with the item first and, for as long as it answers true,
-`removeItem` with the item and `hasItem` again, and only then the `items`. The
-strict `==` of that search is the one of [the Queue search
-rule](r:class.queue.removeitem.sends): the first example shows the order. The
-option is sent `caselessMatchChar` with the arguments 1 and `u`, whose answer
-is read as a logical value: neither 0 nor 1 raises `SYNTAX 34.1`, and an
-option that does not understand the message raises `SYNTAX 97.1`, `.nil`
-included. The second example shows these.
+`hasItem` with the item first and, for as long as it answers true, `removeItem`
+with the item and `hasItem` again, and only then the `items`. The strict `==` of
+that search is the one of [the Queue search
+rule](r:class.queue.removeitem.sends): the first example shows the order. For
+the very object that is stored, see [the deviation
+rule](r:class.circularqueue.deviation.78). The option is sent
+`caselessMatchChar` with the arguments 1 and `u`, whose answer is read as a
+logical value: neither 0 nor 1 raises `SYNTAX 34.1`, and an option that does not
+understand the message raises `SYNTAX 97.1`, `.nil` included. The second example
+shows these.
 
 ```rexx
 q = .circularqueue~of(.thing~new('p'), .thing~new('q'), .thing~new('p'))
@@ -1735,6 +1737,37 @@ a~allItems
 ```
 
 ## Deviations
+
+r[class.circularqueue.deviation.78]
+A search for an item with the very object that is stored, by `hasItem`,
+`index` or `removeItem`, sends that object's `==` as for any other item, so
+an object whose `==` answers false is not found even at its own entry.
+ooRexx finds the very object without sending it `==`, and sends `==` only
+for the items before it. See [Deviation 78](../deviations.md).
+
+```rexx
+.local~n = 0
+x = .liar~new
+c = .circularqueue~new(5)
+c~append('a')
+c~append(x)
+c~append('b')
+say c~hasItem(x) .n
+.local~n = 0
+say (c~index(x) == .nil) .n
+.local~n = 0
+say (c~removeItem(x) == .nil) c~items .n
+::class liar
+::method '=='
+  .local~n += 1
+  return 0
+```
+
+```output
+0 3
+1 3
+1 3 3
+```
 
 r[class.circularqueue.deviation.109]
 An index, a count, a size given to `new` or `resize`, or a delimiter that is
