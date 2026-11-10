@@ -2,7 +2,7 @@
 element: "File"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > File Class; Builtin Classes > Utility Classes > File Class > isCaseSensitive (Class Method); Builtin Classes > Utility Classes > File Class > listRoots (Class Method); Builtin Classes > Utility Classes > File Class > pathSeparator (Class Method); Builtin Classes > Utility Classes > File Class > readChars (Class Method); Builtin Classes > Utility Classes > File Class > readLines (Class Method); Builtin Classes > Utility Classes > File Class > searchPath (Class Method); Builtin Classes > Utility Classes > File Class > separator (Class Method); Builtin Classes > Utility Classes > File Class > temporaryPath (Class Method); Builtin Classes > Utility Classes > File Class > writeChars (Class Method); Builtin Classes > Utility Classes > File Class > writeLines (Class Method); Builtin Classes > Utility Classes > File Class > absoluteFile; Builtin Classes > Utility Classes > File Class > absolutePath; Builtin Classes > Utility Classes > File Class > canRead; Builtin Classes > Utility Classes > File Class > canWrite; Builtin Classes > Utility Classes > File Class > compareTo; Builtin Classes > Utility Classes > File Class > delete; Builtin Classes > Utility Classes > File Class > exists; Builtin Classes > Utility Classes > File Class > extension; Builtin Classes > Utility Classes > File Class > hashCode; Builtin Classes > Utility Classes > File Class > init; Builtin Classes > Utility Classes > File Class > isCaseSensitive; Builtin Classes > Utility Classes > File Class > isDirectory; Builtin Classes > Utility Classes > File Class > isFile; Builtin Classes > Utility Classes > File Class > isHidden; Builtin Classes > Utility Classes > File Class > lastAccessed (Attribute); Builtin Classes > Utility Classes > File Class > lastModified (Attribute); Builtin Classes > Utility Classes > File Class > length; Builtin Classes > Utility Classes > File Class > list; Builtin Classes > Utility Classes > File Class > listFiles; Builtin Classes > Utility Classes > File Class > makeDir; Builtin Classes > Utility Classes > File Class > makeDirs; Builtin Classes > Utility Classes > File Class > makeString; Builtin Classes > Utility Classes > File Class > name; Builtin Classes > Utility Classes > File Class > parent; Builtin Classes > Utility Classes > File Class > parentFile; Builtin Classes > Utility Classes > File Class > path; Builtin Classes > Utility Classes > File Class > pathSeparator; Builtin Classes > Utility Classes > File Class > renameTo; Builtin Classes > Utility Classes > File Class > separator; Builtin Classes > Utility Classes > File Class > setReadOnly; Builtin Classes > Utility Classes > File Class > setWritable; Builtin Classes > Utility Classes > File Class > string; Builtin Classes > Utility Classes > Orderable Class > Comparison Methods"
-deviations: [34, 109, 118]
+deviations: [34, 109, 118, 126]
 ---
 
 # File
@@ -1186,9 +1186,11 @@ r[class.file.compareto]
 0 or 1 as the absolute path of the receiver is less than, equal to or greater
 than the absolute path of the argument. The paths are compared character by
 character, so that a path is less than a longer path that it is the start of.
-The argument is sent `isA` with `.File` first, then the receiver is sent
-`isCaseSensitive`, and then `absolutePath` is sent to the receiver and to the
-argument, in that order. When `isCaseSensitive` answers true the comparison
+The argument is sent `isA` with `.File` first; an argument that is no `File` (an
+instance of a subclass is one) raises `SYNTAX 88.914` then, and nothing more is
+sent ([Deviation 126](r:class.file.deviation.126)). Otherwise the receiver is
+sent `isCaseSensitive`, and then `absolutePath` is sent to the receiver and to
+the argument, in that order. When `isCaseSensitive` answers true the comparison
 tells upper and lower case letters apart. When it answers false two paths whose
 letters differ only in case are equal, and the order of the others is that of
 the paths with their letters from `a` to `z` written as capitals. No argument
@@ -1937,4 +1939,74 @@ junk = .file~new(f)~delete
 
 ```output
 three
+```
+
+r[class.file.deviation.126]
+`compareTo` of a `File` with an argument that is not a `File` (an instance of a
+subclass is one), and a comparison operator with such an argument, raise `SYNTAX
+88.914`. The error follows the `isA` that the method sends to the argument and
+precedes `isCaseSensitive`, `absolutePath` and every other message; `=`, `==`,
+`\=`, `\==`, `<>` and `><` with `.nil` answer without `compareTo`, as [the
+`.nil` rule](r:class.orderable.compare.nil) says, and `compareTo` itself raises
+for `.nil`. ooRexx reads the argument as a `File` and answers -1 or 1 from what
+it finds; the answer is not the same in two programs. In the example the last
+line is a probe that answers false to `isA` and gets nothing else.
+
+```rexx
+a = .file~new('/t/a')
+call try 'a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0))'
+call try 'a~compareTo(.timespan~fromHours(2))'
+call try 'a~compareTo("/t/a")'
+call try 'a~compareTo(5)'
+call try 'a~compareTo(.nil)'
+call try 'a < .timespan~fromHours(2)'
+call try 'a >>= "/t/a"'
+call try 'a = 5'
+call try 'a \== .object~new'
+call try 'a = .nil'
+call try 'a~compareTo(.sub~new("/t/a"))'
+call try 'a~compareTo(a~copy)'
+.local~log = ''
+call try '.spy~new("/s")~compareTo(.probe~new)'
+say 'sent:' .local~log
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class sub subclass file
+::class spy subclass file
+::method isCaseSensitive
+  .local~log = .local~log 'ISCASESENSITIVE'
+  forward class (super)
+::method absolutePath
+  .local~log = .local~log 'ABSOLUTEPATH'
+  forward class (super)
+::class probe
+::method isA
+  .local~log = .local~log 'ISA('arg(1)~id')'
+  return 0
+::method absolutePath
+  .local~log = .local~log 'ARG:ABSOLUTEPATH'
+  return '/z'
+```
+
+```output defect=#189
+a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)) => 88.914
+a~compareTo(.timespan~fromHours(2)) => 88.914
+a~compareTo("/t/a") => 88.914
+a~compareTo(5) => 88.914
+a~compareTo(.nil) => 88.914
+a < .timespan~fromHours(2) => 88.914
+a >>= "/t/a" => 88.914
+a = 5 => 88.914
+a \== .object~new => 88.914
+a = .nil => 0
+a~compareTo(.sub~new("/t/a")) => 0
+a~compareTo(a~copy) => 0
+.spy~new("/s")~compareTo(.probe~new) => 88.914
+sent:  ISA(File)
 ```

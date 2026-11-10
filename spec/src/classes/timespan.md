@@ -2,7 +2,7 @@
 element: "TimeSpan"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > TimeSpan Class; Builtin Classes > Utility Classes > TimeSpan Class > init; Builtin Classes > Utility Classes > TimeSpan Class > fromCivilTime (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromDays (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromHours (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromLongTime (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromMicroseconds (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromMinutes (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromNormalTime (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromSeconds (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > fromStringFormat (Class Method); Builtin Classes > Utility Classes > TimeSpan Class > Arithmetic Methods; Builtin Classes > Utility Classes > TimeSpan Class > addDays; Builtin Classes > Utility Classes > TimeSpan Class > addHours; Builtin Classes > Utility Classes > TimeSpan Class > addMicroseconds; Builtin Classes > Utility Classes > TimeSpan Class > addMinutes; Builtin Classes > Utility Classes > TimeSpan Class > addSeconds; Builtin Classes > Utility Classes > TimeSpan Class > addWeeks; Builtin Classes > Utility Classes > TimeSpan Class > compareTo; Builtin Classes > Utility Classes > TimeSpan Class > days; Builtin Classes > Utility Classes > TimeSpan Class > duration; Builtin Classes > Utility Classes > TimeSpan Class > hashCode; Builtin Classes > Utility Classes > TimeSpan Class > hours; Builtin Classes > Utility Classes > TimeSpan Class > makeString; Builtin Classes > Utility Classes > TimeSpan Class > microseconds; Builtin Classes > Utility Classes > TimeSpan Class > minutes; Builtin Classes > Utility Classes > TimeSpan Class > seconds; Builtin Classes > Utility Classes > TimeSpan Class > sign; Builtin Classes > Utility Classes > TimeSpan Class > string; Builtin Classes > Utility Classes > TimeSpan Class > totalDays; Builtin Classes > Utility Classes > TimeSpan Class > totalHours; Builtin Classes > Utility Classes > TimeSpan Class > totalMicroseconds; Builtin Classes > Utility Classes > TimeSpan Class > totalMinutes; Builtin Classes > Utility Classes > TimeSpan Class > totalSeconds"
-deviations: [109]
+deviations: [109, 126, 127, 130, 131, 132, 133]
 ---
 
 # TimeSpan
@@ -84,15 +84,17 @@ An instance holds a count of microseconds, a whole number from
 -315537897599999999 to 315537897599999999, which is the span from the first to
 the last microsecond of the years that `DateTime` covers; no span is outside
 this range, and a method that would make one raises `SYNTAX 40.19` unless its
-rule gives another error. The count is read as days, hours, minutes, seconds
-and microseconds by [the parts rule](r:class.timespan.parts), and a negative
-count is a negative span in all of them. The arithmetic of the class is done
-in 18 significant digits, whatever `NUMERIC DIGITS` the program that sends the
-message has set ([the total rule](r:class.timespan.total) and the rules of the
-arithmetic methods say where it shows). The string value of an instance is
-[its `string` text](r:class.timespan.string): an instance written by `say`, or
-joined to a string by `||`, is that text, as [the string-value
-rule](r:class.index.string) says.
+rule gives another error. The count is read as days, hours, minutes, seconds and
+microseconds by [the parts rule](r:class.timespan.parts), and a negative count
+is a negative span in all of them. The arithmetic of the class is done in 18
+significant digits, whatever `NUMERIC DIGITS` the program that sends the message
+has set ([the total rule](r:class.timespan.total) and the rules of the
+arithmetic methods say where it shows). The string value of an instance is [its
+`string` text](r:class.timespan.string): an instance written by `say`, or joined
+to a string by `||`, is that text, as [the string-value
+rule](r:class.index.string) says. An instance on which the `init` of `TimeSpan`
+never ran, because the `init` of a subclass does not forward to it, is the span
+of 0 ([Deviation 131](r:class.timespan.deviation.131)).
 
 ```rexx
 say .timespan~new(0)
@@ -120,17 +122,18 @@ r[class.timespan.new]
 ([the new rule](r:class.index.new)); the `init` of `TimeSpan` takes from one
 argument to five, and the number of them that are given, counted as [the count
 rule](r:class.index.args.count) says, picks the form. With one argument it is
-the number of microseconds of the span, a whole number, positive or negative.
-With two arguments they are hours and minutes, with three hours, minutes and
-seconds, with four days, hours, minutes and seconds, and with five days,
-hours, minutes, seconds and microseconds; a part that the form does not name
-is 0. The parts of the multi-part forms are never negative: a span below zero
-is made by the one-argument form or by [negating](r:class.timespan.minus) a
-span. No argument raises `SYNTAX 93.901`, and more than five `SYNTAX 93.902`.
-An omitted argument inside the list, before a given one, raises
-`SYNTAX 93.903`. `init` is an ordinary message that can be sent again ([the
-init rule](r:class.index.new.init-again)): it gives the instance the span that
-`new` with the same arguments would make, after the same checks.
+the number of microseconds of the span, a whole number ([Deviation
+130](r:class.timespan.deviation.130)), positive or negative. With two arguments
+they are hours and minutes, with three hours, minutes and seconds, with four
+days, hours, minutes and seconds, and with five days, hours, minutes, seconds
+and microseconds; a part that the form does not name is 0. The parts of the
+multi-part forms are never negative: a span below zero is made by the
+one-argument form or by [negating](r:class.timespan.minus) a span. No argument
+raises `SYNTAX 93.901`, and more than five `SYNTAX 93.902`. An omitted argument
+inside the list, before a given one, raises `SYNTAX 93.903`. `init` is an
+ordinary message that can be sent again ([the init
+rule](r:class.index.new.init-again)): it gives the instance the span that `new`
+with the same arguments would make, after the same checks.
 
 ```rexx
 say .timespan~new(1234567)
@@ -179,19 +182,20 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.timespan.new.checks]
-The values are checked in this order, and the first that fails raises its
-error. With one argument it must be a whole number: another value raises
-`SYNTAX 88.903`, and so does a count of 1000000000000000000 or more, or of
-that size below zero; a count of a smaller size that is outside the range of
-[the value rule](r:class.timespan.value) raises `SYNTAX 40.19`. In the forms
-of two to five arguments the days, when given, are checked first: they must be
-a whole number from 0 to 999999999, or `SYNTAX 88.904` is raised. Hours (0 to
-23), minutes (0 to 59), seconds (0 to 59) and microseconds (0 to 999999) are
-checked next, in the order of the arguments, each a whole number written as
-digits in its range; a value outside it, one that is no number and one with a
-fraction such as 1.5 raise `SYNTAX 88.907`. Last, a total outside the range of
-the class raises `SYNTAX 40.19`: 3652059 days with every other part in range
-is refused so, and the same days with an hour of 99 are refused for the hour.
+The values are checked in this order, and the first that fails raises its error.
+With one argument it must be a whole number ([Deviation
+130](r:class.timespan.deviation.130), here and below): another value raises
+`SYNTAX 88.903`, and so does a count of 1000000000000000000 or more, or of that
+size below zero; a count of a smaller size that is outside the range of [the
+value rule](r:class.timespan.value) raises `SYNTAX 40.19`. In the forms of two
+to five arguments the days, when given, are checked first: they must be a whole
+number from 0 to 999999999, or `SYNTAX 88.904` is raised. Hours (0 to 23),
+minutes (0 to 59), seconds (0 to 59) and microseconds (0 to 999999) are checked
+next, in the order of the arguments, each a whole number in its range; a value
+outside it, one that is no number and one that is not whole, such as 1.5, raise
+`SYNTAX 88.907`. Last, a total outside the range of the class raises `SYNTAX
+40.19`: 3652059 days with every other part in range is refused so, and the same
+days with an hour of 99 are refused for the hour.
 
 ```rexx
 call try '.timespan~new(3652058, 23, 59, 59, 999999)'
@@ -408,14 +412,16 @@ r[class.timespan.fromstringformat]
 rule](r:class.timespan.string): an optional minus sign, an optional count of
 days and a period, hours, minutes and seconds with colons between them, a
 period, and microseconds, as in `1.02:03:04.000005` or `-23:59:59.500000`. The
-text that `string` answers for a span that is not negative, and for a negative
-one of at least one hour, is read back as the same span. A string without the
-microseconds, as `01:02:03`, and one that is not of the form at all, such as
-`x` or the empty string, raise `SYNTAX 88.918`, and so does a span outside the
-range of [the value rule](r:class.timespan.value); the method sends no `new`,
-and answers a plain `TimeSpan` whatever its receiver is. A missing argument
-raises `SYNTAX 93.901` and a second one `SYNTAX 93.902`. What the method does
-with spellings that `string` never produces is not stated here.
+text that `string` answers for a span is read back as the same span, a negative
+span under an hour included ([Deviation 133](r:class.timespan.deviation.133)).
+The text is read strictly ([Deviation 132](r:class.timespan.deviation.132)):
+only a text that `string` can answer is accepted, so that a string without the
+microseconds, as `01:02:03`, one that is not of the form at all, such as `x` or
+the empty string, one with a blank, a plus sign or a value out of range, and one
+for a span outside the range of [the value rule](r:class.timespan.value) raise
+`SYNTAX 88.918`. The method sends no `new`, and answers a plain `TimeSpan`
+whatever its receiver is. A missing argument raises `SYNTAX 93.901` and a second
+one `SYNTAX 93.902`.
 
 ```rexx
 say .timespan~fromStringFormat('1.02:03:04.000005')
@@ -738,19 +744,18 @@ t~addMonths(1) => 97.1
 ```
 
 r[class.timespan.plus]
-`+` takes a `TimeSpan` or a `DateTime`. With a `TimeSpan` it answers a new
-span, of the class of the receiver, whose count is the sum of the two counts.
-With a `DateTime` it answers a new instance of the class of that argument: the
-moment that is the argument's fields moved forward by the span (back for a
-negative span), with the default offset ([the
-default](r:class.datetime.offset.default)) and not the argument's own, so that
-`span + moment` and [`moment + span`](r:class.datetime.plus) have the same
-fields and, when the argument's offset is not the default one, a different
-instant. Any other argument raises `SYNTAX 88.914`; a result outside the range
-of [the value rule](r:class.timespan.value) or of the moments of `DateTime`
-raises `SYNTAX 40.19`. The prefix `+` has no argument and answers a new span
-of the class of the receiver with the same count. A second argument raises
-`SYNTAX 93.902`; the message `+` with no argument is the prefix form.
+`+` takes a `TimeSpan` or a `DateTime`. With a `TimeSpan` it answers a new span,
+of the class of the receiver, whose count is the sum of the two counts. With a
+`DateTime` it answers a new instance of the class of that argument: the moment
+that is the argument's fields moved forward by the span (back for a negative
+span), with the offset of the argument ([Deviation
+127](r:class.timespan.deviation.127)), so that `span + moment` and [`moment +
+span`](r:class.datetime.plus) are the same instance. Any other argument raises
+`SYNTAX 88.914`; a result outside the range of [the value
+rule](r:class.timespan.value) or of the moments of `DateTime` raises `SYNTAX
+40.19`. The prefix `+` has no argument and answers a new span of the class of
+the receiver with the same count. A second argument raises `SYNTAX 93.902`; the
+message `+` with no argument is the prefix form.
 
 ```rexx
 a = .timespan~new(1, 2, 3, 4, 5)
@@ -760,8 +765,7 @@ say (a + b)~class~id (a + b = b + a) (+a) (+a)~class~id (+a == a)
 say b + .timespan~new('-90000000') .timespan~new('-5') + .timespan~new('-5')
 d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
 say a + d
-say ((a + d)~string == (d + a)~string),
-  ((a + d)~offset == .datetime~new~offset)
+say ((a + d)~string == (d + a)~string)
 say (a + d)~class~id (a + .sub~new(2016, 1, 1))~class~id
 say .timespan~fromDays(1) + .datetime~minDate
 say .timespan~new('-86400000000') + .datetime~new(2016, 1, 1)
@@ -790,7 +794,7 @@ bad: say arg(1) '=>' condition('o')~code
 TimeSpan 1 1.02:03:04.000005 TimeSpan 1
 00:00:00.000000 -00:00:00.000010
 2016-03-01T11:11:11.012350
-1 1
+1
 DateTime SUB
 0001-01-02T00:00:00.000000
 2015-12-31T00:00:00.000000
@@ -1048,19 +1052,21 @@ a~"//"(2, 3) => 93.902
 r[class.timespan.compare]
 `compareTo` takes one argument and answers -1 when the receiver is the shorter
 (the lesser) of the two spans, 0 for two spans of the same count and 1 when it
-is the longer, comparing the signed counts, so that a negative span is less
-than any that is not. The argument is sent `isA` with `TimeSpan`, and a
-`TimeSpan` is then sent `totalMicroseconds`; the receiver is sent nothing.
-What the method answers for an argument that is no `TimeSpan` is not stated
-here. The comparison operators `=`, `==`, `<`, `<=`, `>`, `>=`, `<>`, `><`,
-`\=`, `\==`, `<<`, `<<=`, `>>`, `>>=`, `\<`, `\>`, `\<<` and `\>>` are those
-of [`Orderable`](r:class.orderable.compare), which answer from `compareTo` of
-the receiver, strict and non-strict ones alike: `==` is as `=`, and two spans
-of the same count are equal however they were made. The text of the instances
-plays no part. A missing argument raises `SYNTAX 93.901` and a second one
-`SYNTAX 93.902`; a `.nil` argument is dealt with as [the `.nil`
-rule](r:class.orderable.compare.nil) of `Orderable` says. The sort methods
-order spans by this method ([the sort rule](r:class.array.sort)).
+is the longer, comparing the signed counts, so that a negative span is less than
+any that is not. The argument is sent `isA` with `TimeSpan`, and a `TimeSpan` is
+then sent `totalMicroseconds`; the receiver is sent nothing. An argument that is
+no `TimeSpan` raises `SYNTAX 88.914` as soon as `isA` has answered ([Deviation
+126](r:class.timespan.deviation.126)), and the comparison operators raise it for
+such an argument too, `.nil` excepted (see below). The comparison operators `=`,
+`==`, `<`, `<=`, `>`, `>=`, `<>`, `><`, `\=`, `\==`, `<<`, `<<=`, `>>`, `>>=`,
+`\<`, `\>`, `\<<` and `\>>` are those of
+[`Orderable`](r:class.orderable.compare), which answer from `compareTo` of the
+receiver, strict and non-strict ones alike: `==` is as `=`, and two spans of the
+same count are equal however they were made. The text of the instances plays no
+part. A missing argument raises `SYNTAX 93.901` and a second one `SYNTAX
+93.902`; a `.nil` argument is dealt with as [the `.nil`
+rule](r:class.orderable.compare.nil) of `Orderable` says. The sort methods order
+spans by this method ([the sort rule](r:class.array.sort)).
 
 ```rexx
 a = .timespan~new(1, 2, 3, 4, 5)
@@ -1396,24 +1402,25 @@ SPY String
 r[class.timespan.sends.arithmetic]
 `addDays`, `addHours`, `addMicroseconds`, `addMinutes`, `addSeconds`,
 `addWeeks`, `*`, `%`, `//`, `+` and `-` with one argument, and the prefix `+`
-and `-`, send `new` to the class of the receiver with one argument, the count
-of microseconds of the answer, and nothing else to the receiver; `/` sends `%`
-to the receiver with the argument it got and answers what that answers, so
-that a subclass that overrides `%` changes `/`. The argument of `+` and `-` is
-sent `isA` with `TimeSpan`, and a `TimeSpan` is then sent `totalMicroseconds`;
-when the answer of `isA` is false, `-` raises its error, and `+` sends `isA`
-with `DateTime` to the argument, and when that answers true sends `new` to the
-class of the argument with one argument, the count of microseconds of the
-moment, which gives it the default offset, and nothing else; when it answers
-false `+` raises its error. The number that the other methods take is read for
-its string value: once by `*`, `/`, `%` and `//`, and twice by
-`addMicroseconds`; `addDays`, `addHours`, `addMinutes`, `addSeconds` and
-`addWeeks` read it once and send it `*` with the microseconds of a day, an
-hour, a minute, a second and a week, 86400000000, 3600000000, 60000000,
-1000000 and 604800000000. The first example gives a receiver and the span that
-it is added to methods that log every message, and prints what each call
-logged: the message itself first, then what it sent; the second passes an
-object that logs the messages that it got in the place of a number.
+and `-`, send `new` to the class of the receiver with one argument, the count of
+microseconds of the answer, and nothing else to the receiver; `/` sends `%` to
+the receiver with the argument it got and answers what that answers, so that a
+subclass that overrides `%` changes `/`. The argument of `+` and `-` is sent
+`isA` with `TimeSpan`, and a `TimeSpan` is then sent `totalMicroseconds`; when
+the answer of `isA` is false, `-` raises its error, and `+` sends `isA` with
+`DateTime` to the argument, and when that answers true sends it `offset` and
+then sends `new` to the class of the argument with two arguments, the count of
+microseconds of the moment and the answer of `offset` ([Deviation
+127](r:class.timespan.deviation.127)); when it answers false `+` raises its
+error. The number that the other methods take is read for its string value: once
+by `*`, `/`, `%` and `//`, and twice by `addMicroseconds`; `addDays`,
+`addHours`, `addMinutes`, `addSeconds` and `addWeeks` read it once and send it
+`*` with the microseconds of a day, an hour, a minute, a second and a week,
+86400000000, 3600000000, 60000000, 1000000 and 604800000000. The first example
+gives a receiver and the span that it is added to methods that log every
+message, and prints what each call logged: the message itself first, then what
+it sent; the second passes an object that logs the messages that it got in the
+place of a number.
 
 ```rexx
 names = 'ADDDAYS ADDHOURS ADDMINUTES ADDSECONDS ADDMICROSECONDS ADDWEEKS',
@@ -1429,7 +1436,6 @@ d = .dt~new(2016, 2, 29, 9, 8, 7, 12345, 120)
 o = .obj~new
 call probe 'a + b', 'a + b'
 call probe 'a - b', 'a - b'
-call probe 'a + d', 'a + d'
 call probe 'a + o', 'a + o'
 call probe 'a - o', 'a - o'
 call probe 'a - d', 'a - d'
@@ -1481,7 +1487,6 @@ bad: say arg(1)':' .local~log '=>' condition('o')~code
 ```output
 a + b:  + ARG:TOTALMICROSECONDS NEW1 INIT1 => SPY
 a - b:  - ARG:TOTALMICROSECONDS NEW1 INIT1 => SPY
-a + d:  + dt:ISA(TimeSpan) dt:ISA(DateTime) dt:NEW1 => DT
 a + o:  + obj:ISA(TimeSpan) obj:ISA(DateTime) => 88.914
 a - o:  - obj:ISA(TimeSpan) => 93.948
 a - d:  - dt:ISA(TimeSpan) => 93.948
@@ -1551,8 +1556,10 @@ addMicroseconds: REQUEST:STRING MAKESTRING REQUEST:STRING MAKESTRING
 
 r[class.timespan.sends.compare]
 `compareTo` sends its argument `isA` with `TimeSpan` and, for a `TimeSpan`,
-`totalMicroseconds`; the receiver is sent nothing. A comparison operator sends
-`compareTo` to the receiver with the argument it got, as [the sends rule of
+`totalMicroseconds`; the receiver is sent nothing, and an argument that is no
+`TimeSpan` is sent nothing but `isA` ([Deviation
+126](r:class.timespan.deviation.126)). A comparison operator sends `compareTo`
+to the receiver with the argument it got, as [the sends rule of
 `Orderable`](r:class.orderable.compare.sends) says in full; `<>`, `><`, `\<`,
 `\>`, `\<<` and `\>>` send another operator first.
 
@@ -1641,4 +1648,290 @@ say 'sends' .local~sent
 10:00:00.000000 2.01:02:03.000000
 1.02:03:04.000005
 sends 0
+```
+
+r[class.timespan.deviation.126]
+`compareTo` of a `TimeSpan` with an argument that is not a `TimeSpan` (an
+instance of a subclass is one), and a comparison operator with such an argument,
+raise `SYNTAX 88.914`. The error follows the `isA` that the method sends to the
+argument and precedes `totalMicroseconds` and every other message; `=`, `==`,
+`\=`, `\==`, `<>` and `><` with `.nil` answer without `compareTo`, as [the
+`.nil` rule](r:class.orderable.compare.nil) says, and `compareTo` itself raises
+for `.nil`. ooRexx reads the argument as a `TimeSpan` and answers -1, 0 or 1
+from what it finds; the answer is not the same in two programs. In the example
+the last line is a probe that answers false to `isA` and gets nothing else.
+
+```rexx
+a = .timespan~new(1, 2, 3)
+call try 'a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0))'
+call try 'a~compareTo(.file~new("/t/a"))'
+call try 'a~compareTo("01:02:03.000000")'
+call try 'a~compareTo(5)'
+call try 'a~compareTo(.nil)'
+call try 'a < .datetime~minDate'
+call try 'a >>= "x"'
+call try 'a = 3723000000'
+call try 'a \== .object~new'
+call try 'a = .nil'
+call try 'a~compareTo(.sub~new(1, 2, 3))'
+call try 'a~compareTo(a~copy)'
+.local~log = ''
+call try 'a~compareTo(.probe~new)'
+say 'sent:' .local~log
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class sub subclass timespan
+::class probe
+::method isA
+  .local~log = .local~log 'ISA('arg(1)~id')'
+  return 0
+::method totalMicroseconds
+  .local~log = .local~log 'TOTALMICROSECONDS'
+  return 0
+```
+
+```output defect=#189
+a~compareTo(.datetime~new(2017, 6, 30, 5, 6, 7, 8, 0)) => 88.914
+a~compareTo(.file~new("/t/a")) => 88.914
+a~compareTo("01:02:03.000000") => 88.914
+a~compareTo(5) => 88.914
+a~compareTo(.nil) => 88.914
+a < .datetime~minDate => 88.914
+a >>= "x" => 88.914
+a = 3723000000 => 88.914
+a \== .object~new => 88.914
+a = .nil => 0
+a~compareTo(.sub~new(1, 2, 3)) => 0
+a~compareTo(a~copy) => 0
+a~compareTo(.probe~new) => 88.914
+sent:  ISA(TimeSpan)
+```
+
+r[class.timespan.deviation.127]
+`+` of a `TimeSpan` with a `DateTime` answers an instance of the class of the
+argument that has the offset of the argument, as [`+` of
+`DateTime`](r:class.datetime.plus) does, so that `span + moment` and `moment +
+span` are the same instance. The method sends the argument `isA` with `TimeSpan`
+and `isA` with `DateTime`, then `offset`, and then sends the class of the
+argument `new` with two arguments, the microseconds of the moment and the answer
+of `offset`. ooRexx gives the answer the offset of the host's zone and sends
+`new` with one argument; see [Deviation 127](r:class.datetime.deviation.127) for
+`-` of a `DateTime`. The example gives the offsets explicitly, so that it does
+not depend on the zone of the host.
+
+```rexx
+d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 330)
+t = .timespan~fromSeconds(90)
+x = t + d
+say x
+say x~offset (x == d + t)
+say (.timespan~fromDays(1) + d~toTimezone(-90))~utcIsoDate
+say (t + .sub~new(2016, 2, 29))~class~id
+m = .spy~new(2016, 2, 29, 9, 8, 7, 12345, 330)
+.local~log = ''
+x = t + m
+say .local~log
+exit
+::class sub subclass datetime
+::class spy subclass datetime
+::method offset
+  .local~log = .local~log 'OFFSET'
+  forward class (super)
+::method new class
+  .local~log = .local~log 'NEW'arg()
+  forward class (super)
+::method isA
+  .local~log = .local~log 'ISA('arg(1)~id')'
+  forward class (super)
+```
+
+```output defect=#190
+2016-02-29T09:09:37.012345
+05:30:00.000000 1
+2016-03-01T02:08:07.012345-01:30
+SUB
+ ISA(TimeSpan) ISA(DateTime) OFFSET NEW2
+```
+
+r[class.timespan.deviation.130]
+A number that is whole in value is accepted wherever `TimeSpan` takes a whole
+number, however it is written: with blanks around it, a sign, a point followed
+by zeros, or an exponent; any other value is refused with the error that the
+place gives for a number that is not whole, `1.0000000001` and
+`2017.00000000000000000001` included. The value is read as it is written, so
+NUMERIC DIGITS of the caller does not round a fraction away. The places are the
+count of microseconds of the one-argument `new`, and its days, hours, minutes,
+seconds and microseconds. ooRexx raises `SYNTAX 40.19` for a fraction as small
+as 1E-10 in the days, the hours, the minutes or the seconds, and accepts one in
+the microseconds and one that lies far beyond the last digit of a count.
+
+```rexx
+say .timespan~new(1.0, 2E0, 3, 4.00, ' 5 ')
+say .timespan~new(2E1) .timespan~new(' +7 ')
+numeric digits 3
+say .timespan~new(1234.0)
+numeric digits 9
+call try '.timespan~new(1.0000000001, 2, 3, 4, 5)'
+call try '.timespan~new(1, 2.0000000001, 3, 4, 5)'
+call try '.timespan~new(1, 2, 3, 4, 5.0000000001)'
+call try '.timespan~new(5.0000000001)'
+call try '.timespan~new(2017.00000000000000000001)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output defect=#193
+1.02:03:04.000005
+00:00:00.000020 00:00:00.000007
+00:00:00.001234
+.timespan~new(1.0000000001, 2, 3, 4, 5) => 88.904
+.timespan~new(1, 2.0000000001, 3, 4, 5) => 88.907
+.timespan~new(1, 2, 3, 4, 5.0000000001) => 88.907
+.timespan~new(5.0000000001) => 88.903
+.timespan~new(2017.00000000000000000001) => 88.903
+```
+
+r[class.timespan.deviation.131]
+An instance of a subclass of `TimeSpan` whose `init` does not forward to the
+`init` of `TimeSpan` is the span of 0, and every method works on it as on that
+value; the class of an answer is the class of the receiver where the method says
+so, and a copy of it is one too. ooRexx answers with errors from most methods,
+or with text that is no value.
+
+```rexx
+t = .st~new
+z = .timespan~new(0)
+h = .timespan~fromHours(1)
+say t t~totalMicroseconds t~sign t~string t~days t~hours t~duration
+say (t = z) (t == z) (t~compareTo(z)) (t~hashCode == z~hashCode)
+say (t + h) (t - h) (-t) (t * 3) (t / 3) (t // 3)
+say (t + .datetime~minDate) t~addDays(1) t~copy t~copy~class~id
+exit
+::class st subclass timespan
+::method init
+  nop
+```
+
+```output defect=#194
+00:00:00.000000 0 0 00:00:00.000000 0 0 00:00:00.000000
+1 1 0 1
+01:00:00.000000 -01:00:00.000000 00:00:00.000000 00:00:00.000000 00:00:00.000000 00:00:00.000000
+0001-01-01T00:00:00.000000 1.00:00:00.000000 00:00:00.000000 ST
+```
+
+r[class.timespan.deviation.132]
+`fromStringFormat` refuses with `SYNTAX 88.918` every string that [the string
+rule](r:class.timespan.string) cannot have written: no blank anywhere and no
+plus sign; the days only when the span has days, written without leading zeros
+and not as 0, and at most 3652058; hours (00 to 23), minutes and seconds (00 to
+59) with two digits each, exactly six digits of microseconds, and no minus sign
+before a span of 0. The first lines of the example show the accepted forms and
+the rest the refused ones. ooRexx refuses a doubled minus sign, a point with no
+digits after it, another separator between the parts and a span past the last
+one; it accepts the others, reading some in its own way: `00:61:30.000000` as
+one hour and 1 minute and 30 seconds, `24:00:00.000000` as one day, and
+`00:01:30.5` as 5 microseconds.
+
+```rexx
+good = .array~of('1.02:03:04.000005', '-1.02:03:04.000005', '23:59:59.999999',,
+  '-00:00:00.000001', '3652058.23:59:59.999999', '10.00:00:00.000000')
+do s over good
+  say s '=>' .timespan~fromStringFormat(s)~totalMicroseconds
+end
+bad = .array~of('+1.02:03:04.000005', ' 01:02:03.000005', '01:02:03.000005 ',,
+  '- 01:02:03.000005', '--01:02:03.000005', '-00:00:00.000000',,
+  '1.2:03:04.000005', '1.02:3:04.000005', '1.02:03:4.000005',,
+  '1:02:03.000005', '00:01:30.0000005', '00:01:30.5', '00:01:30.',,
+  '00:61:30.000000', '00:00:60.000000', '24:00:00.000000',,
+  '1.24:00:00.000000', '1.02:03:04.000005.', '1. 02:03:04.000005',,
+  '00001.02:03:04.000005', '0.02:03:04.000005', '-0.00:01:30.000000',,
+  '1.02-03-04.000005', '01:02:03:04.000005', '3652058.24:00:00.000000')
+do s over bad
+  call try s
+end
+exit
+try:
+  signal on syntax name bad
+  r = .timespan~fromStringFormat(arg(1))
+  say '['arg(1)'] =>' r
+  return
+bad: say '['arg(1)'] =>' condition('o')~code
+  return
+```
+
+```output defect=#195
+1.02:03:04.000005 => 93784000005
+-1.02:03:04.000005 => -93784000005
+23:59:59.999999 => 86399999999
+-00:00:00.000001 => -1
+3652058.23:59:59.999999 => 315537897599999999
+10.00:00:00.000000 => 864000000000
+[+1.02:03:04.000005] => 88.918
+[ 01:02:03.000005] => 88.918
+[01:02:03.000005 ] => 88.918
+[- 01:02:03.000005] => 88.918
+[--01:02:03.000005] => 88.918
+[-00:00:00.000000] => 88.918
+[1.2:03:04.000005] => 88.918
+[1.02:3:04.000005] => 88.918
+[1.02:03:4.000005] => 88.918
+[1:02:03.000005] => 88.918
+[00:01:30.0000005] => 88.918
+[00:01:30.5] => 88.918
+[00:01:30.] => 88.918
+[00:61:30.000000] => 88.918
+[00:00:60.000000] => 88.918
+[24:00:00.000000] => 88.918
+[1.24:00:00.000000] => 88.918
+[1.02:03:04.000005.] => 88.918
+[1. 02:03:04.000005] => 88.918
+[00001.02:03:04.000005] => 88.918
+[0.02:03:04.000005] => 88.918
+[-0.00:01:30.000000] => 88.918
+[1.02-03-04.000005] => 88.918
+[01:02:03:04.000005] => 88.918
+[3652058.24:00:00.000000] => 88.918
+```
+
+r[class.timespan.deviation.133]
+`fromStringFormat` of the text of a negative span answers a negative span
+whatever its size; one under an hour, which has no days and no hours, keeps its
+sign too, and `sign` of the answer is -1. ooRexx answers the positive span for
+such a text.
+
+```rexx
+do s over .array~of('-1', '-90000000', '-3599999999', '-3600000000',,
+    '-5400000001', '-86400000000', '-86400000001')
+  t = .timespan~new(s)
+  r = .timespan~fromStringFormat(t~string)
+  say t~string r~string r~sign (r = t)
+end
+say .timespan~fromStringFormat('-00:00:30.000000')~totalSeconds
+say .timespan~fromStringFormat('-00:59:59.999999')~seconds
+say .timespan~fromStringFormat('00:00:30.000000')~totalSeconds
+```
+
+```output defect=#196
+-00:00:00.000001 -00:00:00.000001 -1 1
+-00:01:30.000000 -00:01:30.000000 -1 1
+-00:59:59.999999 -00:59:59.999999 -1 1
+-01:00:00.000000 -01:00:00.000000 -1 1
+-01:30:00.000001 -01:30:00.000001 -1 1
+-1.00:00:00.000000 -1.00:00:00.000000 -1 1
+-1.00:00:00.000001 -1.00:00:00.000001 -1 1
+-30
+59
+30
 ```
