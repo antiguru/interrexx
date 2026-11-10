@@ -118,8 +118,8 @@ c1: say condition('o')~code
 ::method triggered unguarded
   expose log count limit
   use arg src
-  count = count + 1
   log = log 'triggered' src~attachment arg()
+  count = count + 1
   if count = limit then src~cancel
 ::method cancel unguarded
   expose log cdone
@@ -185,8 +185,8 @@ c1: say 'answered nothing:' condition('o')~code
 ::method triggered unguarded
   expose log count limit
   use arg src
-  count = count + 1
   log = log 'triggered' src~attachment
+  count = count + 1
   if count = limit then src~cancel
 ::method cancel unguarded
   expose log cdone
