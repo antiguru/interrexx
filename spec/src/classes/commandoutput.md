@@ -1,6 +1,7 @@
 ---
 element: "CommandOutput"
 kind: class
+deviations: [109]
 rexxref: "Builtin Classes > Utility Classes > CommandOutput Class"
 ---
 
@@ -13,13 +14,13 @@ output or the error output of a command that was sent with
 [`error`](r:class.commandcontext.error) of the
 [`CommandContext`](commandcontext.md) of the command. What it is given goes to
 the target of the redirection, a stem, a stream or the object of a `USING`, as
-lines, in the way that [the redirection rules](r:instr.address.with.syntax)
-say for any command. A command that is sent without a redirection has no such
-stream, and a handler that has none writes where it likes. The class inherits
-the mixin class `OutputStream`, whose other methods, `arrayOut` among them,
-are specified with the stream classes. This page states the four methods that
-the class defines, how text becomes lines, and when a line that is not
-finished is written.
+lines, in the way that [the redirection rules](r:instr.address.with.syntax) say
+for any command. A command that is sent without a redirection has no such
+stream; a handler that is to write then uses `SAY` or a stream of its own. The
+class inherits the mixin class `OutputStream`, whose other methods, `arrayOut`
+among them, are specified with the stream classes. This page states the four
+methods that the class defines, how text becomes lines, and when a line that is
+not finished is written.
 
 ## The class
 
@@ -28,12 +29,13 @@ r[class.commandoutput.creation]
 `lineOut` besides those that it inherits. Its superclass is `Object`, and it
 inherits the mixin class `OutputStream`: its `superClasses` are `Object` and
 `OutputStream` in that order ([the hierarchy rule](r:class.index.hierarchy)).
-The interpreter makes the objects for a command and hands them out, one for
-the output and one for the error output; a program does not make one. The
-`new` of a program with no arguments, or with one, raises `SYNTAX 93.901`, and
-what an object made with more arguments is good for is not specified, since it
-belongs to no command. The class may have private methods besides these; they
-are not part of this specification.
+The interpreter makes the objects for a command and hands them out, one for the
+output and one for the error output; a program does not make one. The `new` of a
+program with no arguments, or with one, raises `SYNTAX 93.901`, with more than
+two `SYNTAX 93.902`, and what an object made with two arguments is good for is
+not specified, since it belongs to no command. The class has other methods,
+`init` among them, that the interpreter uses; they are not part of this
+specification.
 
 ```rexx
 s = ''
@@ -55,6 +57,7 @@ end
 say count 'of' names~items
 call try '.commandoutput~new'
 call try '.commandoutput~new("x")'
+call try '.commandoutput~new("x", "y", "z")'
 exit
 try:
   signal on syntax name bad
@@ -70,6 +73,7 @@ CommandOutput 2 Object OutputStream
 4 of 4
 .commandoutput~new 93.901
 .commandoutput~new("x") 93.901
+.commandoutput~new("x", "y", "z") 93.902
 ```
 
 ## Writing
@@ -77,13 +81,15 @@ CommandOutput 2 Object OutputStream
 r[class.commandoutput.lineout]
 `lineOut(string)` finishes a line and answers `0`. The line is the text that
 `charOut` has written since the last line ended, followed by `string`; with no
-`string`, or with an omitted place, the line is that text alone and nothing
-more is added, so that `lineOut` alone ends a line that `charOut` began, and
-writes nothing when no line is begun. A `string` that is not a string is
-replaced by the answer of its `string` method, and not of its `makeString` or
-its `request`; `.nil` is `The NIL object`. A line end inside `string` does not
-split the line: it is written as one line, with the line end in it. `lineOut`
-takes one argument (`SYNTAX 93.902`). The example gives the lines to a stem.
+`string`, or with an omitted place, the line is that text alone and nothing more
+is added, so that `lineOut` alone ends a line that `charOut` began, and writes
+nothing when no line is begun. A `string` that is not a string is replaced by
+the answer of its `string` method, and not of its `makeString` or its `request`;
+an instance of a subclass of `String` is a string here ([the deviation
+rule](r:class.commandoutput.deviation.109)); `.nil` is `The NIL object`. A line
+end inside `string` does not split the line: it is written as one line, with the
+line end in it. `lineOut` takes one argument (`SYNTAX 93.902`). The example
+gives the lines to a stem.
 
 ```rexx
 x = .commandhandler~register('spec_co_lineout', .writer~new)
@@ -106,7 +112,8 @@ x = .commandhandler~deregister('spec_co_lineout')
   o~charout('begun and ')
   say o~lineout('finished')
   say o~lineout('two' || '0a'x || 'lines') o~lineout('crlf' || '0d0a'x)
-  say o~lineout(12.50) o~lineout(.nil) o~lineout(.both~new) o~lineout(.made~new)
+  say o~lineout(12.50) o~lineout(.nil) o~lineout(.both~new),
+    o~lineout(.made~new)
   return 0
 ::class both
 ::method makestring
@@ -162,10 +169,12 @@ x = .commandhandler~deregister('spec_co_charout')
   use arg command, caller
   o = caller~output
   say o~charout('ab') o~charout o~charout('') o~charout('cd')
-  say o~charout('0a'x) o~charout('ef' || '0a'x || 'gh' || '0a'x || '0a'x || 'ij')
+  say o~charout('0a'x),
+    o~charout('ef' || '0a'x || 'gh' || '0a'x || '0a'x || 'ij')
   say o~charout('a' || '0d0a'x || 'b' || '0d'x || 'c')
   say o~charout(12.50) o~charout(.nil)
-  do e over .array~of("o~charout('a', 1)", "o~charout(, 1)", "o~charout('a', , 3)")
+  do e over .array~of("o~charout('a', 1)", "o~charout(, 1)",,
+      "o~charout('a', , 3)")
     self~try(o, e)
   end
   return 0
@@ -211,7 +220,8 @@ address spec_co_pending 'b' with output stem b.
 address spec_co_pending 'c' with output stem c.
 address spec_co_pending 'd' with output stem d.
 x = .commandhandler~deregister('spec_co_pending')
-say a.0 '<'a.1'>' b.0 '<'b.1'>' '<'b.2'>' c.0 '<'c.1'>' '<'c.2'>' d.0 '<'d.1'>' '<'d.2'>'
+say a.0 '<'a.1'>' b.0 '<'b.1'>' '<'b.2'>' c.0 '<'c.1'>' '<'c.2'>',
+  d.0 '<'d.1'>' '<'d.2'>'
 ::class writer inherit CommandHandler
 ::method command
   use arg command, caller
@@ -338,7 +348,16 @@ r[class.commandoutput.valid]
 A `CommandOutput` belongs to the command it was made for, as its
 [context](r:class.commandcontext.valid) does. When the command is over, or on
 another activity, `lineOut` with a string raises `SYNTAX 98.900` and writes
-nothing. What the other methods do then is not specified.
+nothing. The other methods depend on the text that `charOut` has kept ([the
+pending text rule](r:class.commandoutput.pending)). `charOut` of a text without
+a line end answers `0` and keeps the text, and `flush`, `close` and `lineOut`
+without a string do nothing when no text is kept. When text is kept they raise
+`SYNTAX 98.900`, and the text stays kept. `charOut` of a text with a line end
+raises `SYNTAX 98.900` too and writes nothing; it keeps the text after its last
+line end in place of what was kept before. Text kept on another activity while
+the command runs stays kept, and the next line that the handler writes begins
+with it. The second example shows these calls after the command, and the text
+from another activity.
 
 ```rexx
 x = .commandhandler~register('spec_co_valid', .writer~new)
@@ -371,4 +390,87 @@ bad: return condition('o')~code
 other activity: 98.900
 written: 1 <from the handler>
 after the end: 98.900
+```
+
+```rexx
+x = .commandhandler~register('spec_co_late', .writer~new)
+address spec_co_late 'go' with output stem o.
+say 'written:' o.0 '<'o.1'>'
+out = .environment~output
+x = .commandhandler~deregister('spec_co_late')
+say 'nothing kept:' check('flush') check('close') check('lineOut')
+say 'kept:' check('charOut', 'abc') check('flush') check('lineOut'),
+  check('lineOut', 'text')
+say 'line end:' check('charOut', 'x' || '0a'x || 'y') check('lineOut'),
+  check('charOut', 'z' || '0a'x) check('lineOut')
+say 'stem' o.0
+exit
+check: procedure expose out
+  signal on syntax name bad
+  if arg() = 2 then out~send(arg(1), arg(2))
+  else out~send(arg(1))
+  return 'ok'
+bad: return condition('o')~code
+::class writer inherit CommandHandler
+::method command
+  use arg command, caller
+  .environment~output = caller~output
+  m = .message~new(.other~new, 'ask', 'I', caller~output)
+  m~start
+  x = m~result
+  caller~output~lineout('own')
+  return 0
+::class other
+::method ask unguarded
+  use arg out
+  return out~charout('t')
+```
+
+```output
+written: 1 <town>
+nothing kept: ok ok ok
+kept: ok 98.900 98.900 98.900
+line end: 98.900 98.900 98.900 ok
+stem 1
+```
+
+## Deviations
+
+r[class.commandoutput.deviation.109]
+A `string` of `lineOut` or `charOut` that is an instance of a subclass of
+`String` is written by its own characters, and `string`, `makeString` and
+`request` are not sent to it ([Deviation 109](r:class.string.deviation.109)).
+ooRexx sends it `string`, so an override changes what is written. In the example
+the overrides would change what is written; they count their sends, and the
+string is written as it is without one.
+
+```rexx
+x = .commandhandler~register('spec_co_dev109', .writer~new)
+.environment~sent = 0
+address spec_co_dev109 'go' with output stem o.
+say o.0 '<'o.1'>' '<'o.2'>' .environment~sent
+x = .commandhandler~deregister('spec_co_dev109')
+::class writer inherit CommandHandler
+::method command
+  use arg command, caller
+  o = caller~output
+  s = .digits~new('own')
+  x = o~lineOut(s)
+  x = o~charOut(s)
+  x = o~lineOut
+  return 0
+::class digits subclass string
+::method string
+  .environment~sent = .environment~sent + 1
+  return 'other'
+::method makestring
+  .environment~sent = .environment~sent + 1
+  return 'other'
+::method request
+  .environment~sent = .environment~sent + 1
+  return 'other'
+```
+
+```output defect=#140
+2 <own> <own> 0
 ```

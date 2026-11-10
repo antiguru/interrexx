@@ -42,10 +42,12 @@ do c over .nativecommandhandler~superclasses
   s = s c~id
 end
 say .nativecommandhandler~id .nativecommandhandler~superclasses~items s~strip
-say .nativecommandhandler~queryMixinClass .nativecommandhandler~isSubclassOf(.commandhandler)
+say .nativecommandhandler~queryMixinClass,
+  .nativecommandhandler~isSubclassOf(.commandhandler)
 h = .commandhandler~handler('system')
 say h~class~id h~isA(.commandhandler) h~isA(.nativecommandhandler)
-say (h == .commandhandler~handler('SYSTEM')) (h == .commandhandler~environments['SYSTEM'])
+say (h == .commandhandler~handler('SYSTEM')),
+  (h == .commandhandler~environments['SYSTEM'])
 say .nativecommandhandler~hasMethod('HANDLER') h~hasMethod('HANDLER')
 call try '.nativecommandhandler~new'
 call try '.nativecommandhandler~new("system")'
@@ -121,29 +123,32 @@ REDIRECTING String
 
 r[class.nativecommandhandler.command]
 `command(command, caller)` sends `command` to the native environment as if the
-code that sent the command that `caller` stands for had sent it: the
-environment runs it with the variables of that code and with the redirections
-of its `ADDRESS ... WITH`, under the name that
-[`name`](r:class.nativecommandhandler.name) answers, and the method answers
-the return code of the command. A condition that the environment raises, ERROR
-for a return code other than zero or FAILURE for a command that could not be
-run, becomes a condition of the command that `caller` stands for, which the
-code that sent it traps as it does for any command; the handler that called
-`command` does not see it. `caller` is the
-[`CommandContext`](commandcontext.md) that a handler gets for the command it
-is running. Both arguments are required (`SYNTAX 93.901`) and a third raises
-`SYNTAX 93.902`. What the method does with another object as `caller` is not
-specified. This is how a handler written in Rexx forwards a command to the
-native environment that it covers. The example covers `SYSTEM` with a handler
-that writes the command and forwards it, runs a command with its output and
-error redirected, and shows ERROR reaching the code that sent the command.
+code that sent the command that `caller` stands for had sent it: the environment
+runs it with the variables of that code and with the redirections of its
+`ADDRESS ... WITH`, under the name that
+[`name`](r:class.nativecommandhandler.name) answers, and the method answers the
+return code of the command. A condition that the environment raises, ERROR for a
+return code other than zero or FAILURE for a command that could not be run,
+becomes a condition of the command that `caller` stands for, which the code that
+sent it traps as it does for any command; the handler that called `command` does
+not see it. `caller` is the [`CommandContext`](commandcontext.md) that a handler
+gets for the command it is running. Both arguments are required
+(`SYNTAX 93.901`) and a third raises `SYNTAX 93.902`, as the command
+`echo third` of the example shows. What the method does with another object as
+`caller` is not specified. This is how a handler written in Rexx forwards a
+command to the native environment that it covers. The example covers `SYSTEM`
+with a handler that writes the command and forwards it, runs a command with its
+output and error redirected, shows the error for a third argument, and shows
+ERROR reaching the code that sent the command.
 
 ```rexx
 sys = .commandhandler~handler('system')
 x = .commandhandler~register('system', .logger~new(sys))
 address system 'echo forwarded'
 say 'rc' rc
-address system 'echo out; echo err >&2; exit 4' with output stem o. error stem e.
+address system 'echo third'
+address system 'echo out; echo err >&2; exit 4',
+  with output stem o. error stem e.
 say 'rc' rc 'o.0' o.0 o.1 'e.0' e.0 e.1
 signal on error name caught
 address system 'exit 3'
@@ -163,13 +168,21 @@ bad: say condition('o')~code
   expose below
   use arg command, caller
   say 'log:' command
+  if command == 'echo third' then do
+    signal on syntax name extra
+    return below~command(command, caller, 3)
+  end
   return below~command(command, caller)
+  extra: say 'extra' condition('o')~code
+  return 0
 ```
 
 ```output
 log: echo forwarded
 forwarded
 rc 0
+log: echo third
+extra 93.902
 log: echo out; echo err >&2; exit 4
 rc 4 o.0 1 out e.0 1 err
 log: exit 3
@@ -202,7 +215,8 @@ address spec_nch_other 'echo through another name'
 say 'rc' rc
 x = .commandhandler~deregister('spec_nch_other')
 say .commandhandler~register('system', .quiet~new)~class~id
-say .commandhandler~handlers('system')~items .commandhandler~handlers('system')[2]~name
+say .commandhandler~handlers('system')~items,
+  .commandhandler~handlers('system')[2]~name
 address system 'echo hidden'
 say 'rc' rc
 say .commandhandler~deregister('system')~class~id
@@ -239,4 +253,43 @@ FAILURE 30
 1
 restored
 rc 0 1
+```
+
+r[class.nativecommandhandler.copy]
+`copy` answers a new `NativeCommandHandler` for the same native environment: it
+is not the object that `handler` answers, but it has the same `name` and `kind`,
+and a command sent to it, directly or through a name it is registered under,
+runs in that environment as with the original. In the example the copy is
+registered under a name of its own, and a handler written in Rexx sends it a
+command with `command`.
+
+```rexx
+sys = .commandhandler~handler('system')
+k = sys~copy
+say (k == sys) k~class~id k~kind k~name
+say .commandhandler~register('spec_nch_copy', k)~isNil
+address spec_nch_copy 'echo through the name'
+say 'rc' rc
+x = .commandhandler~deregister('spec_nch_copy')
+x = .commandhandler~register('spec_nch_fwd', .forward~new(k))
+address spec_nch_fwd 'echo through command; exit 2'
+say 'rc' rc
+x = .commandhandler~deregister('spec_nch_fwd')
+::class forward inherit CommandHandler
+::method init
+  expose target
+  use arg target
+::method command
+  expose target
+  use arg command, caller
+  return target~command(command, caller)
+```
+
+```output defect=#183
+0 NativeCommandHandler REDIRECTING SYSTEM
+1
+through the name
+rc 0
+through command
+rc 2
 ```

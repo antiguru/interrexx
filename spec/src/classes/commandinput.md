@@ -23,15 +23,16 @@ chapter.
 ## The class
 
 r[class.commandinput.creation]
-`CommandInput` has the instance methods `charIn`, `chars`, `lineIn` and
-`lines` besides those that it inherits. Its superclass is `Object`, and it
-inherits the mixin class `InputStream`: its `superClasses` are `Object` and
-`InputStream` in that order ([the hierarchy rule](r:class.index.hierarchy)).
-The interpreter makes the object for a command and hands it out; a program
-does not make one. The `new` of a program with no arguments raises
-`SYNTAX 93.901`, and what an object made with other arguments is good for is
-not specified, since it belongs to no command. The class may have private
-methods besides these; they are not part of this specification.
+`CommandInput` has the instance methods `charIn`, `chars`, `lineIn` and `lines`
+besides those that it inherits. Its superclass is `Object`, and it inherits the
+mixin class `InputStream`: its `superClasses` are `Object` and `InputStream` in
+that order ([the hierarchy rule](r:class.index.hierarchy)). The interpreter
+makes the object for a command and hands it out; a program does not make one.
+The `new` of a program raises `SYNTAX 93.901` with no argument and
+`SYNTAX 93.902` with more than one, and what an object made with one is good for
+is not specified, since it belongs to no command. The class has other methods,
+`init` among them, that the interpreter uses; they are not part of this
+specification.
 
 ```rexx
 s = ''
@@ -51,15 +52,23 @@ do name over names
   if have~hasItem(name~upper) then count = count + 1
 end
 say count 'of' names~items
-signal on syntax name bad
-x = .commandinput~new
-bad: say condition('o')~code
+call try '.commandinput~new'
+call try '.commandinput~new(1, 2)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'x =' arg(1)
+  say arg(1) 'no error'
+  return
+bad: say arg(1) condition('o')~code
+  return
 ```
 
 ```output
 CommandInput 2 Object InputStream
 4 of 4
-93.901
+.commandinput~new 93.901
+.commandinput~new(1, 2) 93.902
 ```
 
 ## The text that it reads
@@ -67,14 +76,13 @@ CommandInput 2 Object InputStream
 r[class.commandinput.text]
 The input is a list of lines. A source that is a stem gives the lines `stem.1`
 to `stem.n` that `stem.0` counts, a stream gives its lines, and an object of a
-`USING` gives the lines that it supplies, an array's items for one. Each line
-is followed by a line end of one character, `'0A'x`: the characters that the
-stream reads are the characters of the lines, each followed by that line end,
-the last line too. A line that holds a line end is one line, and it is not
-split where the line end is. The stream is read from the first line to the
-last; it cannot be positioned. A call that gives the position of the reading,
-the first argument of `charIn` and `lineIn`, raises `SYNTAX 93.963`. The
-example shows one source of each kind.
+`USING` gives the lines that it supplies, an array's items for one. Each line is
+followed by a line end of one character, `'0A'x`: the characters that the stream
+reads are the characters of the lines, each followed by that line end, the last
+line too. A line that holds a line end is one line, and it is not split where
+the line end is. Reading goes from the first line to the last and never back:
+the first argument of `charIn` and `lineIn`, which would give a position, is
+refused with `SYNTAX 93.963`. The example shows one source of each kind.
 
 ```rexx
 x = .commandhandler~register('spec_ci_text', .reader~new)
@@ -85,7 +93,8 @@ call lineout f, 'file two'
 call lineout f
 address spec_ci_text 'stem' with input stem i.
 address spec_ci_text 'stream' with input stream (f)
-address spec_ci_text 'array' with input using (.array~of('array one', '', 'array three'))
+address spec_ci_text 'array',
+  with input using (.array~of('array one', '', 'array three'))
 address spec_ci_text 'list' with input using (.list~of('list one'))
 address spec_ci_text 'string' with input using ('one' || '0a'x || 'line')
 x = .file~new(f)~delete
@@ -111,22 +120,23 @@ string   <one\nline>
 ```
 
 r[class.commandinput.linein]
-`lineIn` answers the next line, without its line end, and moves the reading
-past it, so that the next call answers the line after. After some of a line
-has been read with `charIn`, it answers the rest of that line, which is the
-null string when only the line end is left. At the end of the input it answers
-the null string and raises NOTREADY, as [the NOTREADY
-rule](r:cond.notready.call) says for a stream. `lineIn` takes the arguments
-`line` and `count`: `line` is the position and must be omitted
-(`SYNTAX 93.963`), and `count` is `1`, the default, or `0`, which reads
-nothing and answers the null string; any larger `count` raises
-`SYNTAX 93.963`, and a third argument `SYNTAX 93.902`. A line that is the null
-string and the end of the input look alike in the answer, and `lines` tells
+`lineIn` answers the next line, without its line end, and moves the reading past
+it, so that the next call answers the line after. After some of a line has been
+read with `charIn`, it answers the rest of that line, which is the null string
+when only the line end is left. When all the input has been read it answers the
+null string and raises NOTREADY ([the NOTREADY rule](r:cond.notready.call)).
+`lineIn` takes the arguments `line` and `count`: `line` is the position and must
+be omitted (`SYNTAX 93.963`), and `count` is `1`, the default, or `0`, which
+reads nothing and answers the null string, and it is compared by its characters:
+any other value, `2`, `-1`, `1.0`, `01` and `x` among them, raises
+`SYNTAX 93.963`. A third argument raises `SYNTAX 93.902`. A line that is the
+null string and the end of the input look alike in the answer, and `lines` tells
 them apart.
 
 ```rexx
 x = .commandhandler~register('spec_ci_linein', .reader~new)
-address spec_ci_linein 'go' with input using (.array~of('one', 'two', 'three'))
+address spec_ci_linein 'go',
+  with input using (.array~of('one', 'two', 'three'))
 x = .commandhandler~deregister('spec_ci_linein')
 ::class reader inherit CommandHandler
 ::method command
@@ -139,7 +149,9 @@ x = .commandhandler~deregister('spec_ci_linein')
   call on notready name nr
   say 'at the end <'in~linein'>' in~lines
   call off notready
-  do e over .array~of("in~linein(1)", "in~linein(, 2)", "in~linein(1, 1)", "in~linein(, 1, 1)", "in~linein(.nil)")
+  do e over .array~of("in~linein(1)", "in~linein(, 2)", "in~linein(, 1.0)",,
+      "in~linein(, -1)", "in~linein(1, 1)", "in~linein(, 1, 1)",,
+      "in~linein(.nil)")
     self~try(in, e)
   end
   return 0
@@ -164,6 +176,8 @@ at the end <> 0
    NOTREADY NOTREADY
 in~linein(1) 93.963
 in~linein(, 2) 93.963
+in~linein(, 1.0) 93.963
+in~linein(, -1) 93.963
 in~linein(1, 1) 93.963
 in~linein(, 1, 1) 93.902
 in~linein(.nil) 93.963
@@ -190,7 +204,9 @@ x = .commandhandler~deregister('spec_ci_charin')
 ::method command
   use arg command, caller
   in = caller~input
-  do e over .array~of("in~charin(1)", "in~charin(1, 1)", "in~charin(, 'x')", "in~charin(, .nil)", "in~charin(, -1)", "in~charin(, 1.5)", "in~charin(, 1, 1)")
+  do e over .array~of("in~charin(1)", "in~charin(1, 1)", "in~charin(, 'x')",,
+      "in~charin(, .nil)", "in~charin(, -1)", "in~charin(, 1.5)",,
+      "in~charin(, 1, 1)")
     self~try(in, e)
   end
   say c2x(in~charin(,3)) '<'in~charin'>' '<'in~charin(,0)'>' in~lines
@@ -308,7 +324,8 @@ the original belongs to is the command of the copy too.
 
 ```rexx
 x = .commandhandler~register('spec_ci_copy', .reader~new)
-address spec_ci_copy 'go' with input using (.array~of('first', 'second', 'third'))
+address spec_ci_copy 'go',
+  with input using (.array~of('first', 'second', 'third'))
 x = .commandhandler~deregister('spec_ci_copy')
 ::class reader inherit CommandHandler
 ::method command

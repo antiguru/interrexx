@@ -225,11 +225,13 @@ say q~delete r~delete t~delete
   .environment~made = self~create:super
   return .environment~made
 ::method open class
-  if arg(1) == .environment~made~upper then say 'open the name that create answered'
+  if arg(1) == .environment~made~upper then
+    say 'open the name that create answered'
   else say 'open' arg(1)
   forward class (super)
 ::method 'objectName='
-  if arg(1) == .environment~made~upper then say 'objectName= the name that create answered'
+  if arg(1) == .environment~made~upper then
+    say 'objectName= the name that create answered'
   else say 'objectName=' arg(1)
   forward class (super)
 ::class shout
@@ -258,16 +260,17 @@ objectName= SPEC_RQ_SENDS_UPPER
 ## Class methods
 
 r[class.rexxqueue.create.class-side]
-`create(name)` makes a queue and answers its name. It takes at most one
-argument (`SYNTAX 88.922`). With a name that no queue has, the queue gets that
-name and the answer is the name as it was given, in the case it was given in.
-When a queue of that name exists, or with no argument, the queue is made under
-a name that the service picks, which the answer reports, so the answer is a
-name of a new queue: [the `Create` function](r:bif.rxqueue.create) states
-that. The name `SESSION` and a name that no queue can have, the null string, a
-name with a blank or a `-`, and a name of more than 250 characters among them,
-make no queue and answer the null string, without an error. The name is read
-as [the name rule](r:class.rexxqueue.name) says.
+`create(name)` makes a queue and answers its name. It takes at most one argument
+(`SYNTAX 88.922`). With a name that no queue has, the queue gets that name and
+the answer is the name as it was given, in the case it was given in. When a
+queue of that name exists, or with no argument, the queue is made under a name
+that the service picks, which the answer reports, so the answer is a name of a
+new queue: [the `Create` function](r:bif.rxqueue.create) states that. The name
+`SESSION` and a name that no queue can have ([the queue name
+rule](r:bif.rxqueue.name)), the null string, a name with a blank or a `-`, and a
+name of more than 250 characters among them, make no queue and answer the null
+string, without an error. The name is read as [the name
+rule](r:class.rexxqueue.name) says.
 
 ```rexx
 a = .rexxqueue~create('spec_rq_Create')
@@ -294,11 +297,12 @@ spec_rq_Create 1 1 1
 
 r[class.rexxqueue.open.class-side]
 `open(name)` makes sure that a queue of the name exists and answers `0`: it
-keeps an existing queue with its lines, and makes the queue when there is
-none, as [the `Open` function](r:bif.rxqueue.open) does. The queue `SESSION`
-answers `0` too. A name that no queue can have, as for `create`, makes nothing
-and answers `5`. The name is required (`SYNTAX 88.901`) and the method takes
-no other argument (`SYNTAX 88.922`).
+keeps an existing queue with its lines, and makes the queue when there is none,
+as [the `Open` function](r:bif.rxqueue.open) does. The queue `SESSION` answers
+`0` too. A name that no queue can have ([the queue name
+rule](r:bif.rxqueue.name)), as for `create`, makes nothing and answers `5`. The
+name is required (`SYNTAX 88.901`) and the method takes no other argument
+(`SYNTAX 88.922`).
 
 ```rexx
 say .rexxqueue~exists('spec_rq_open')
@@ -377,9 +381,11 @@ rule](r:class.rexxqueue.missing) says what its methods do.
 ```rexx
 q = .rexxqueue~new('spec_rq_delete_cls')
 q~queue('lost')
-say .rexxqueue~delete('spec_rq_delete_CLS') .rexxqueue~exists('spec_rq_delete_cls')
+say .rexxqueue~delete('spec_rq_delete_CLS'),
+  .rexxqueue~exists('spec_rq_delete_cls')
 say .rexxqueue~delete('spec_rq_delete_cls') .rexxqueue~delete('spec_rq_none')
-say .rexxqueue~delete('session') .rexxqueue~delete('a b') .rexxqueue~exists('session')
+say .rexxqueue~delete('session') .rexxqueue~delete('a b'),
+  .rexxqueue~exists('session')
 say q~get q~queued
 call try 'delete'
 call try 'delete("x", "y")'

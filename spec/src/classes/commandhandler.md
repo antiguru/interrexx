@@ -48,7 +48,8 @@ say .commandhandler~id .commandhandler~superclasses~items,
 h = .commandhandler~new
 say h~class~id h~hasMethod('COMMAND') h~hasMethod('REGISTER')
 say .commandhandler~hasMethod('REGISTER') .commandhandler~hasMethod('COMMAND')
-say .echo~hasMethod('REGISTER') .echo~hasMethod('HANDLERS') .echo~hasMethod('COMMAND')
+say .echo~hasMethod('REGISTER') .echo~hasMethod('HANDLERS'),
+  .echo~hasMethod('COMMAND')
 say .echo~new~hasMethod('REGISTER') .echo~new~hasMethod('COMMAND')
 say .echo~register('spec_ch_creation', .echo~new)~isNil
 say .commandhandler~handler('spec_ch_creation')~class~id,
@@ -116,23 +117,22 @@ sent 93.965
 ```
 
 r[class.commandhandler.dispatch]
-When a command is sent to an environment name for which a handler is in use,
-by [`ADDRESS name expression`](r:instr.address.command) or by a [command
+When a command is sent to an environment name for which a handler is in use, by
+[`ADDRESS name expression`](r:instr.address.command) or by a [command
 clause](r:instr.command.send) while that name is the current environment, the
 handler is sent the message `command` with two arguments: the command, as the
-string that [the command rule](r:instr.command.string) makes of the value of
-the expression, and a new `CommandContext` for this command. The message is
-sent from the activity that sends the command, and the clause that sent it
-waits for the answer. The name of the environment may be written in any case:
-the handler gets the same command either way, and the context names the
-environment as [the environment rule](r:class.commandcontext.environment)
-says. Commands that the handler sends itself, to its own environment or to
-another, are commands like any other, each with a context of its own, and the
-handler can be running several at once, one inside another. A value that is
-the null string is sent as a command, and arrives as the null string. In the
-example the handler registered under two names tells them apart by
-`caller~environment`, runs a command inside a command, and shows the arguments
-it was sent.
+string that [the command rule](r:instr.command.string) makes of the value of the
+expression, and a new `CommandContext` for this command. The message is sent
+from the activity that sends the command, and the clause that sent it waits for
+the answer. The name of the environment may be written in any case: the handler
+gets the same command either way, and the context names the environment as [the
+environment rule](r:class.commandcontext.environment) says. A command that the
+handler sends from inside `command`, whichever environment it names, is
+dispatched by this same rule: it gets a context of its own, and one handler can
+be running several commands at once, one inside another. A value that is the
+null string is sent as a command, and arrives as the null string. In the example
+the handler registered under two names tells them apart by `caller~environment`,
+runs a command inside a command, and shows the arguments it was sent.
 
 ```rexx
 h = .count~new
@@ -180,13 +180,13 @@ back in nest 2 rc 2
 r[class.commandhandler.rc]
 What `command` answers is the return code of the command: the object itself is
 the value of `RC` after the clause, a string, a number, any object or `.nil`,
-and a method that answers nothing leaves `RC` at `0`. Whatever the value is,
-and whatever its sign, raises no condition, so a return code other than `0`
-from a handler is neither ERROR nor FAILURE, and `.RS` holds `0` after the
-command ([the status rule](r:instr.command.status)); the answer is no more
-than a value. Only the methods of the context
-([`raise`](r:class.commandcontext.raise) and the rest) make a command raise
-one. How `RC` is assigned otherwise is stated in [the return code
+and a method that answers nothing leaves `RC` at `0`. No answer, a negative
+number included, makes the clause raise a condition, so a return code other than
+`0` from a handler is neither ERROR nor FAILURE, and `.RS` holds `0` after the
+command ([the status rule](r:instr.command.status)); the answer is no more than
+a value. Only the methods of the context
+([`raise`](r:class.commandcontext.raise) and the rest) make a command raise one.
+How `RC` is assigned otherwise is stated in [the return code
 rule](r:instr.command.rc).
 
 ```rexx
@@ -307,7 +307,8 @@ say .commandhandler~register('Spec_Ch_Register', b)~tag
 say .commandhandler~handler('SPEC_CH_REGISTER')~tag
 say .commandhandler~register('spec_ch_register', a)~tag
 say .commandhandler~handlers('spec_ch_register')~items
-say .commandhandler~register('a name', a)~isNil .commandhandler~register(12, a)~isNil
+say .commandhandler~register('a name', a)~isNil,
+  .commandhandler~register(12, a)~isNil
 x = .commandhandler~deregister('a name')
 x = .commandhandler~deregister('12')
 do while .commandhandler~handlers('spec_ch_register')~items > 0
@@ -361,26 +362,30 @@ b
 
 r[class.commandhandler.deregister]
 `deregister(name)` removes the handler in use for the environment `name`, and
-answers it. The handler that it covered is in use again; when there is none,
-the name is no longer the name of an environment, and a command sent to it
-fails: it raises FAILURE with the return code `30`, as [the status
-rule](r:instr.command.status) shows for a name that has no environment. A name
-that is not the name of an environment, one that was already removed included,
-raises `SYNTAX 93.900`. The name is required (`SYNTAX 93.901`) and a second
-argument raises `SYNTAX 93.902`; it is read as [the name
-rule](r:class.commandhandler.name) says, and its case plays no part.
-`deregister` always takes the handler in use; there is no way to remove one
-that is covered by another. Registering the same handler again is allowed.
+answers it. The handler that it covered is in use again; when none is left, a
+command that names the environment finds nothing to run it and raises FAILURE
+with the return code `30`, as [the status rule](r:instr.command.status) shows
+for a name that has no environment. A name that is not the name of an
+environment, one that was already removed included, raises `SYNTAX 93.900`. The
+name is required (`SYNTAX 93.901`) and a second argument raises `SYNTAX 93.902`;
+it is read as [the name rule](r:class.commandhandler.name) says, and its case
+plays no part. `deregister` always takes the handler in use; there is no way to
+remove one that is covered by another. Registering the same handler again is
+allowed. The null string raises `SYNTAX 93.900` as it does for `register`,
+although `handler('')` answers an environment
+([`environments`](r:class.commandhandler.environments)).
 
 ```rexx
 a = .echo~new('a'); b = .echo~new('b')
 x = .commandhandler~register('spec_ch_dereg', a)
 x = .commandhandler~register('spec_ch_dereg', b)
-say .commandhandler~deregister('SPEC_CH_DEREG')~tag .commandhandler~handler('spec_ch_dereg')~tag
+say .commandhandler~deregister('SPEC_CH_DEREG')~tag,
+  .commandhandler~handler('spec_ch_dereg')~tag
 address spec_ch_dereg 'still there'
 say 'rc' rc
 say .commandhandler~deregister('spec_ch_dereg')~tag
-say .commandhandler~handlers('spec_ch_dereg')~items .commandhandler~handler('spec_ch_dereg')~isNil
+say .commandhandler~handlers('spec_ch_dereg')~items,
+  .commandhandler~handler('spec_ch_dereg')~isNil
 signal on failure name gone
 address spec_ch_dereg 'unknown now'
 gone: say condition('c') rc
@@ -389,6 +394,7 @@ call try ".commandhandler~deregister('spec_ch_dereg')"
 call try ".commandhandler~deregister"
 call try ".commandhandler~deregister('x', 1)"
 call try ".commandhandler~deregister(.nil)"
+call try ".commandhandler~deregister('')"
 exit
 try:
   signal on syntax name bad
@@ -418,6 +424,7 @@ FAILURE 30
 .commandhandler~deregister 93.901
 .commandhandler~deregister('x', 1) 93.902
 .commandhandler~deregister(.nil) 93.900
+.commandhandler~deregister('') 93.900
 ```
 
 r[class.commandhandler.handler]
@@ -522,19 +529,22 @@ case, and the item of each is the handler in use for it, the object that
 environment that a program registered, and a
 [`NativeCommandHandler`](nativecommandhandler.md) for a native one. The
 environment `SYSTEM`, which runs commands in the host's shell, is among them.
-Which other native environments exist is not specified: it depends on the
-host. The table is a snapshot: a later `register` or `deregister` does not
-change it, and changing it does not change the environments. The method takes
-no argument (`SYNTAX 88.922`).
+Which other native environments exist is not specified: it depends on the host,
+but the native environments include one under the null string, which `register`
+and `deregister` refuse. The table is a snapshot: a later `register` or
+`deregister` does not change it, and changing it does not change the
+environments. The method takes no argument (`SYNTAX 88.922`).
 
 ```rexx
 before = .commandhandler~environments
 say before~class~id before~hasIndex('SYSTEM') before~hasIndex('system'),
   before~hasIndex('SPEC_CH_ENVIRONMENTS')
+say before~hasIndex('') before['']~kind
 h = .echo~new
 x = .commandhandler~register('spec_ch_environments', h)
 now = .commandhandler~environments
-say now~hasIndex('SPEC_CH_ENVIRONMENTS') before~hasIndex('SPEC_CH_ENVIRONMENTS'),
+say now~hasIndex('SPEC_CH_ENVIRONMENTS'),
+  before~hasIndex('SPEC_CH_ENVIRONMENTS'),
   (now['SPEC_CH_ENVIRONMENTS'] == h)
 say now['SYSTEM']~class~id
 now['SPEC_CH_ENVIRONMENTS'] = .nil
@@ -542,7 +552,8 @@ now['SPEC_CH_NEW'] = h
 say .commandhandler~handler('spec_ch_environments')~class~id,
   .commandhandler~handler('spec_ch_new')~isNil
 x = .commandhandler~deregister('spec_ch_environments')
-say .commandhandler~environments~hasIndex('SPEC_CH_ENVIRONMENTS') (now~items > 0)
+say .commandhandler~environments~hasIndex('SPEC_CH_ENVIRONMENTS'),
+  (now~items > 0)
 signal on syntax name bad
 x = .commandhandler~environments(1)
 bad: say condition('o')~code
@@ -553,6 +564,7 @@ bad: say condition('o')~code
 
 ```output
 StringTable 1 0 0
+1 REDIRECTING
 1 0 1
 NativeCommandHandler
 ECHO 1
@@ -563,17 +575,19 @@ ECHO 1
 ## Reading names and what is sent
 
 r[class.commandhandler.name]
-The `name` that `register`, `deregister`, `handler` and `handlers` take is
-read as a string, and the environment is the one with that name in upper case.
-A string is the name as it is. Another object is replaced by what it answers
-to the message `request`: `register` and `deregister` send it with the
-argument `String`, and `handler` and `handlers` send it with the argument
-`STRING`, and the answer, when it is a string, is the name; the `request` of
-`Object` answers what `makeString` does, so an object that has `makeString`,
-an `Array` or a `MutableBuffer` is read through it. A number is read as the
-string that it is. An object that does not answer a string is no name:
-`register` and `deregister` raise `SYNTAX 93.900` for it, and `handler` and
-`handlers` raise `SYNTAX 88.909`.
+The `name` that `register`, `deregister`, `handler` and `handlers` take is read
+as a string, and the environment is the one with that name in upper case. A
+string is the name as it is. An object that is not a string, an instance of a
+subclass of `String` apart ([the deviation
+rule](r:class.commandhandler.deviation.109)), is replaced by what it answers to
+the message `request`: `register` and `deregister` send it with the argument
+`String`, and `handler` and `handlers` send it with the argument `STRING`, and
+the answer, when it is a string, is the name; the `request` of `Object` answers
+what `makeString` does, so an object that has `makeString`, an `Array` or a
+`MutableBuffer` is read through it. A number is read as the string that it is.
+An object that does not answer a string is no name: `register` and `deregister`
+raise `SYNTAX 93.900` for it, and `handler` and `handlers` raise
+`SYNTAX 88.909`.
 
 ```rexx
 x = .commandhandler~register('spec_ch_name', .echo~new)
@@ -665,16 +679,14 @@ refused 93.900  isA CommandHandler
 ## Deviations
 
 r[class.commandhandler.deviation.109]
-A name that `handler` or `handlers` takes and that is an instance of a
-subclass of `String` is read by its own characters, and `request`,
-`makeString` and `string` are not sent to it ([Deviation
-109](r:class.string.deviation.109)). ooRexx sends such an instance `request`
-with `STRING`, so an override can change the name that is read. `register` and
-`deregister` send `request` with `String` to a name that is not a string ([the
-name rule](r:class.commandhandler.name)); an instance of a subclass of
-`String` is not an exception, and they send it in both. In the example the
-overrides would change the name; they count their sends, and `handler` reads
-the string as it is without one.
+A name that `register`, `deregister`, `handler` or `handlers` takes and that is
+an instance of a subclass of `String` is read by its own characters, and
+`request`, `makeString` and `string` are not sent to it ([Deviation
+109](r:class.string.deviation.109)). ooRexx sends such an instance `request`,
+with `String` from `register` and `deregister` and with `STRING` from `handler`
+and `handlers`, so an override can change the name that is read. In the examples
+the overrides would change the name; they count their sends, and the string is
+read as it is without one.
 
 ```rexx
 .environment~sent = 0
@@ -699,4 +711,32 @@ x = .commandhandler~deregister('spec_ch_dev109')
 ```output
 ECHO 0
 1 0
+```
+
+```rexx
+.environment~sent = 0
+h = .echo~new
+d = .digits~new('spec_ch_dev109_reg')
+say .commandhandler~register(d, h)~isNil .environment~sent
+say .commandhandler~handler('spec_ch_dev109_reg')~class~id,
+  .commandhandler~handler('other')~isNil
+say .commandhandler~deregister(d)~class~id .environment~sent
+say .commandhandler~handler('spec_ch_dev109_reg')~isNil
+::class echo inherit CommandHandler
+::method command
+  return 0
+::class digits subclass string
+::method makestring
+  .environment~sent = .environment~sent + 1
+  return 'other'
+::method request
+  .environment~sent = .environment~sent + 1
+  return 'other'
+```
+
+```output defect=#140
+1 0
+ECHO 1
+ECHO 0
+1
 ```
