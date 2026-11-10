@@ -15,9 +15,10 @@ date and the time of day, write the moment in the formats of
 forms, make the moment that lies a given span away, and convert it to another
 zone. The class inherits `Comparable` and `Orderable`, which give it the
 comparison operators on top of its own `compareTo`; the span of time between
-two moments is a `TimeSpan`. The current moment and the host's time zone are
-not specified, so the examples build their instances from fixed values and
-give them an explicit offset wherever a result depends on one.
+two moments is a [`TimeSpan`](r:class.timespan.value). The current moment and
+the host's time zone are not specified, so the examples build their instances
+from fixed values and give them an explicit offset wherever a result depends
+on one.
 
 ## The class
 
@@ -124,23 +125,24 @@ at 2016-12-31T23:59:59.999999!
 
 r[class.datetime.offset]
 The offset of an instance is the distance of its zone east of UTC, in whole
-minutes from -900 to 900. The method `offset` answers it as a `TimeSpan`, so an
-instance in a zone 5 hours and 30 minutes east of UTC answers `05:30:00.000000`
-and one in a zone 90 minutes west answers `-01:30:00.000000`. Every place that
-takes an offset takes the same two forms: a number of whole minutes in that
-range, or a `TimeSpan` that is a whole number of minutes in that range. The
-argument is sent `isA` with the class `TimeSpan`; only a `TimeSpan` is then sent
-`totalMicroseconds` and is converted to minutes, and any other value is read as
-a number ([the argument rule](r:class.index.string)) and sent the messages that
-[the sends rule](r:class.datetime.sends.new) lists. A value outside the range, a
-number with a fraction that is left when it is rounded to nine significant
-digits, such as 1.5, and a span that is not whole minutes raise `SYNTAX 88.907`
-for `new` and, with a number or a span, for `toTimezone`, and `SYNTAX 88.918`
-for `today` and for the `from` methods that read an offset, which are all but
+minutes from -900 to 900. The method `offset` answers it as a
+[`TimeSpan`](r:class.timespan.value), so an instance in a zone 5 hours and 30
+minutes east of UTC answers `05:30:00.000000` and one in a zone 90 minutes
+west answers `-01:30:00.000000`. Every place that takes an offset takes the
+same two forms: a number of whole minutes in that range, or a `TimeSpan` that
+is a whole number of minutes in that range. The argument is sent `isA` with
+the class `TimeSpan`; only a `TimeSpan` is then sent `totalMicroseconds` and
+is converted to minutes, and any other value is read as a number ([the
+argument rule](r:class.index.string)) and sent the messages that [the sends
+rule](r:class.datetime.sends.new) lists. A value outside the range, a number
+with a fraction that is left when it is rounded to nine significant digits,
+such as 1.5, and a span that is not whole minutes raise `SYNTAX 88.907` for
+`new` and, with a number or a span, for `toTimezone`, and `SYNTAX 88.918` for
+`today` and for the `from` methods that read an offset, which are all but
 `fromWeekNumberDate` (it [ignores the offset](r:class.datetime.fromweek)) and
 `fromUtcIsoDate` (it has none); a value that is no number at all gets the same
-code from `new`, `today` and those `from` methods, and what `toTimezone` raises
-for it is in [the zone rule](r:class.datetime.zone).
+code from `new`, `today` and those `from` methods, and what `toTimezone`
+raises for it is in [the zone rule](r:class.datetime.zone).
 
 ```rexx
 d = .datetime~new(2017, 6, 30, 5, 6, 7, 8, 330)
@@ -186,18 +188,18 @@ r[class.datetime.offset.default]
 An instance made without an offset gets the offset of the host's zone as it is
 when the instance is made: the number of microseconds that
 [`TIME('O')`](r:bif.time.zone) answers, as a span. It is one offset for every
-date: an instance for a date of summer and one for a date of winter get the same
-offset, the one the host has at the moment of the call. Which zone the host is
-in is not specified, so the examples compare with the offset of another instance
-or with `TIME('O')`. The class methods `new`, `today` and every `from` method
-take it, except `fromUtcIsoDate`, which takes the offset that its string gives,
-and `minDate` and `maxDate`, whose offset is 0. The methods that answer a moment
-of a new zone, `toLocalTime` and `toUtcTime`, are described with [the zone
-rule](r:class.datetime.zone). When the host's offset is not a whole number of
-minutes from -900 to 900, every method that takes the default offset fails:
-`new`, `toLocalTime` and `-` with a `TimeSpan` raise `SYNTAX 88.907`, and
-`today` and every `from` method other than `fromUtcIsoDate` raise `SYNTAX
-88.918`.
+date: an instance for a date of summer and one for a date of winter get the
+same offset, the one the host has at the moment of the call. Which zone the
+host is in is not specified, so the examples compare with the offset of
+another instance or with `TIME('O')`. The class methods `new`, `today` and
+every `from` method take it, except `fromUtcIsoDate`, which takes the offset
+that its string gives, and `minDate` and `maxDate`, whose offset is 0. The
+methods that answer a moment of a new zone, `toLocalTime` and `toUtcTime`, are
+described with [the zone rule](r:class.datetime.zone). When the host's offset
+is not a whole number of minutes from -900 to 900, every method that takes the
+default offset fails: `new`, `toLocalTime` and `-` with a
+[`TimeSpan`](r:class.timespan.value) raise `SYNTAX 88.907`, and `today` and
+every `from` method other than `fromUtcIsoDate` raise `SYNTAX 88.918`.
 
 ```rexx
 h = .datetime~new(2017, 1, 5)~offset
@@ -1290,11 +1292,12 @@ d~addMonths(1) => 97.1
 ```
 
 r[class.datetime.plus]
-`+` takes a `TimeSpan` and answers a new instance, of the class of the
-receiver, that is the receiver moved forward by the span (back for a negative
-one); the offset is kept. Any other argument raises `SYNTAX 93.948`, and a
-moment outside the range raises `SYNTAX 40.19`. The prefix `+` has no argument
-and answers a new instance with the same fields and the same offset.
+`+` takes a [`TimeSpan`](r:class.timespan.value) and answers a new instance,
+of the class of the receiver, that is the receiver moved forward by the span
+(back for a negative one); the offset is kept. Any other argument raises
+`SYNTAX 93.948`, and a moment outside the range raises `SYNTAX 40.19`. The
+prefix `+` has no argument and answers a new instance with the same fields and
+the same offset.
 
 ```rexx
 d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 330)
@@ -1333,16 +1336,16 @@ d + .nil => 93.948
 ```
 
 r[class.datetime.minus]
-`-` has three forms. With a `TimeSpan` it answers a new instance, of the class
-of the receiver, whose fields are the receiver's moved back by the span
-(forward for a negative one) and whose offset is the default offset, not the
-receiver's. With a `DateTime` it answers a `TimeSpan`, the difference of the
-two instants in UTC, negative when the receiver is the earlier; the offsets of
-the two instances matter and the fields alone do not decide it. With no
-argument, the prefix `-` raises `SYNTAX 93.901`. Any other argument raises
-`SYNTAX 88.914`. A moment outside the range of the class raises
-`SYNTAX 40.19`. The argument is sent `isA` with `TimeSpan` first and then,
-when that answers false, `isA` with `DateTime`.
+`-` has three forms. With a [`TimeSpan`](r:class.timespan.value) it answers a
+new instance, of the class of the receiver, whose fields are the receiver's
+moved back by the span (forward for a negative one) and whose offset is the
+default offset, not the receiver's. With a `DateTime` it answers a `TimeSpan`,
+the difference of the two instants in UTC, negative when the receiver is the
+earlier; the offsets of the two instances matter and the fields alone do not
+decide it. With no argument, the prefix `-` raises `SYNTAX 93.901`. Any other
+argument raises `SYNTAX 88.914`. A moment outside the range of the class
+raises `SYNTAX 40.19`. The argument is sent `isA` with `TimeSpan` first and
+then, when that answers false, `isA` with `DateTime`.
 
 ```rexx
 d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
@@ -1402,9 +1405,10 @@ offsets can be equal. The argument is sent `isA` with `DateTime`, and a
 `DateTime` is then sent `utcDate`. What the method answers for an argument
 that is no `DateTime` is not stated here. The comparison operators `=`, `==`,
 `<`, `<=`, `>`, `>=`, `<>`, `><`, `\=`, `\==`, `<<`, `<<=`, `>>`, `>>=` and
-`\<`, `\>`, `\<<`, `\>>` are those of `Orderable`, which answer from
-`compareTo` of the receiver, strict and non-strict ones alike: `==` is as `=`.
-The text of the instances plays no part.
+`\<`, `\>`, `\<<`, `\>>` are those of
+[`Orderable`](r:class.orderable.compare), which answer from `compareTo` of the
+receiver, strict and non-strict ones alike: `==` is as `=`. The text of the
+instances plays no part.
 
 ```rexx
 d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
@@ -1482,11 +1486,11 @@ rule](r:class.datetime.offset)), 0 when it has no argument. The instant does
 not change, so `utcDate` and the comparisons see the same moment. When the new
 fields fall outside the range of the class the methods raise `SYNTAX 40.19`.
 `toLocalTime` and `toUtcTime` take no argument, and `toTimezone` at most one.
-The argument of `toTimezone` that is not a `TimeSpan` is read as a number of
-minutes by multiplying it with 60000000 with `*`, so a string that is no
-number raises `SYNTAX 41.1` and `.nil`, which has no `*`, `SYNTAX 97.1`; a
-number that is not a whole number of minutes in the range raises
-`SYNTAX 88.907`.
+The argument of `toTimezone` that is not a
+[`TimeSpan`](r:class.timespan.value) is read as a number of minutes by
+multiplying it with 60000000 with `*`, so a string that is no number raises
+`SYNTAX 41.1` and `.nil`, which has no `*`, `SYNTAX 97.1`; a number that is
+not a whole number of minutes in the range raises `SYNTAX 88.907`.
 
 ```rexx
 d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
@@ -1547,12 +1551,12 @@ d~toTimezone(1, 2) => 93.902
 r[class.datetime.parts]
 `date` answers a new instance, of the class of the receiver, for the same day
 at 00:00:00.000000 with the same offset. `timeOfDay` answers the time past
-00:00:00.000000 as a `TimeSpan`, the fields of the time and not an instant in
-UTC. `elapsed` answers a `TimeSpan`, the host's current local time less the
-fields of the receiver: the offset of the receiver is not used, and the span
-is negative when the fields lie ahead of the host's clock. The current time is
-not specified, so the example uses instants that are far from it. Each takes
-no argument.
+00:00:00.000000 as a [`TimeSpan`](r:class.timespan.value), the fields of the
+time and not an instant in UTC. `elapsed` answers a `TimeSpan`, the host's
+current local time less the fields of the receiver: the offset of the receiver
+is not used, and the span is negative when the fields lie ahead of the host's
+clock. The current time is not specified, so the example uses instants that
+are far from it. Each takes no argument.
 
 ```rexx
 d = .datetime~new(2016, 2, 29, 9, 8, 7, 12345, 120)
@@ -1642,35 +1646,36 @@ nothing. `minDate` sends `new` with the four arguments 1, 1, 1 and 0, and
 `today` and every `from` method other than `fromOrdinalDate` and
 `fromWeekNumberDate` send `new` with two arguments: the number of microseconds
 from the start of 0001 to the moment, and the offset argument exactly as the
-caller gave it (a `TimeSpan` is not converted), or, without one, the default
-offset in minutes; `fromUtcIsoDate`, which has no offset argument, sends the
-offset of its string in minutes. `fromOrdinalDate` sends nothing to the receiver
-and answers a plain `DateTime`, whatever the receiver is. `fromWeekNumberDate`
-sends `new` with the three arguments year, 1 and 4, then sends that instance
-`weeksInYear` (which sends `year`), `weekDay` and `addDays`, and the answer of
-`addDays` is the result. The first example prints, for each call, the messages
-sent in order, with the number of arguments after `NEW` and `INIT`. The second
-example prints the second argument that `init` gets: a `TimeSpan` or a string
-that the caller gave arrives as it is, the offset of the string of
-`fromUtcIsoDate` as a number of minutes (150 for `+02:30`), and, without an
-offset argument, the default offset in minutes. An argument that is read as a
-number is sent more messages than the one that reads its string value ([the
-argument rule](r:class.index.string)). A year, month, day, hours, minutes,
-seconds or microseconds argument of `new` is sent `>=` and `<=` with the limits
-of its range and then `right` with the width of its field, 4 for the year, 6 for
-the microseconds and 2 for the others. An offset that is not a `TimeSpan`, the
+caller gave it (a [`TimeSpan`](r:class.timespan.value) is not converted), or,
+without one, the default offset in minutes; `fromUtcIsoDate`, which has no
+offset argument, sends the offset of its string in minutes. `fromOrdinalDate`
+sends nothing to the receiver and answers a plain `DateTime`, whatever the
+receiver is. `fromWeekNumberDate` sends `new` with the three arguments year, 1
+and 4, then sends that instance `weeksInYear` (which sends `year`), `weekDay`
+and `addDays`, and the answer of `addDays` is the result. The first example
+prints, for each call, the messages sent in order, with the number of
+arguments after `NEW` and `INIT`. The second example prints the second
+argument that `init` gets: a `TimeSpan` or a string that the caller gave
+arrives as it is, the offset of the string of `fromUtcIsoDate` as a number of
+minutes (150 for `+02:30`), and, without an offset argument, the default
+offset in minutes. An argument that is read as a number is sent more messages
+than the one that reads its string value ([the argument
+rule](r:class.index.string)). A year, month, day, hours, minutes, seconds or
+microseconds argument of `new` is sent `>=` and `<=` with the limits of its
+range and then `right` with the width of its field, 4 for the year, 6 for the
+microseconds and 2 for the others. An offset that is not a `TimeSpan`, the
 argument of `new`, `today` or a `from` method other than `fromWeekNumberDate`,
-is sent `isA`, read for its string value, and sent `>=` with -900, `<=` with 900
-and `*` with 60000000. An amount of `addDays`, `addHours`, `addMinutes`,
+is sent `isA`, read for its string value, and sent `>=` with -900, `<=` with
+900 and `*` with 60000000. An amount of `addDays`, `addHours`, `addMinutes`,
 `addSeconds` and `addWeeks` is sent `*`, and `addYears` and `addMicroseconds`
 read the string value of their amount twice. A number argument of `toTimezone`
 is sent `isA` and `*`, then read for its string value and sent `>=` and `<=`;
 the `new` that `toTimezone` sends gets the argument itself, which is then
 handled as the offset of `new` is. A count of `new` and the argument of
 `fromTicks` and `fromBaseDate` are read for their string value only. The third
-example passes an object whose `makeString` answers a number and whose `unknown`
-sends every other message to that number, and prints the messages the object
-got.
+example passes an object whose `makeString` answers a number and whose
+`unknown` sends every other message to that number, and prints the messages
+the object got.
 
 ```rexx
 names = 'WEEKSINYEAR YEAR WEEKDAY ADDDAYS OFFSET'
@@ -1824,12 +1829,12 @@ r[class.datetime.sends.add]
 `addWeeks` and `+` send `offset` to the receiver, then `new` with two
 arguments: the microseconds of the new moment and the answer of `offset`. The
 prefix `+` is the message `+` with no argument and sends the same. `-` with a
-`TimeSpan` sends the receiver only `new`, with one argument, so that the
-offset of its answer is the default one, and `-` with a `DateTime` sends it
-nothing. The argument of `+` is sent `isA` with `TimeSpan`, and a `TimeSpan`
-then `totalMicroseconds`. The argument of `-` is sent `isA` with `TimeSpan`
-and, when that is false, `isA` with `DateTime`; a `TimeSpan` is then sent
-`totalMicroseconds` and a `DateTime` `utcDate`.
+[`TimeSpan`](r:class.timespan.value) sends the receiver only `new`, with one
+argument, so that the offset of its answer is the default one, and `-` with a
+`DateTime` sends it nothing. The argument of `+` is sent `isA` with
+`TimeSpan`, and a `TimeSpan` then `totalMicroseconds`. The argument of `-` is
+sent `isA` with `TimeSpan` and, when that is false, `isA` with `DateTime`; a
+`TimeSpan` is then sent `totalMicroseconds` and a `DateTime` `utcDate`.
 
 ```rexx
 names = '+ - OFFSET ADDDAYS ADDHOURS ADDMICROSECONDS ADDMINUTES ADDSECONDS',
@@ -1888,11 +1893,12 @@ r[class.datetime.sends.zone]
 sends the new instance `+` with the answer of `timeOfDay`, and `+` sends what
 it sends. `date` sends the receiver `standardDate` and `offset`, then `new`
 with two arguments, and `timeOfDay` sends `longTime`. `toTimezone` sends `new`
-with two arguments, the microseconds and the offset: a `TimeSpan` argument
-converted to minutes, any other argument as given; `toUtcTime` and
-`toLocalTime` send the receiver `toTimezone`, with 0 and with the default
-offset in minutes, and so `new` once more. `copy` sends nothing. The second
-example prints the argument of `toTimezone` and the offset that `init` gets.
+with two arguments, the microseconds and the offset: a
+[`TimeSpan`](r:class.timespan.value) argument converted to minutes, any other
+argument as given; `toUtcTime` and `toLocalTime` send the receiver
+`toTimezone`, with 0 and with the default offset in minutes, and so `new` once
+more. `copy` sends nothing. The second example prints the argument of
+`toTimezone` and the offset that `init` gets.
 
 ```rexx
 names = 'ADDYEARS DATE STANDARDDATE OFFSET TIMEOFDAY LONGTIME YEAR MONTH DAY',
@@ -1979,11 +1985,10 @@ string:  TOTIMEZONE[ 3E1 ] NEW2 INIT2 [ 3E1 ]
 
 r[class.datetime.sends.compare]
 `compareTo` sends its argument `isA` with `DateTime` and, for a `DateTime`,
-`utcDate`; the receiver is sent nothing. A comparison operator sends
-`compareTo` to the receiver, with the argument it got; `<>`, `><`, `\<`, `\>`,
-`\<<` and `\>>` send another operator first, which then sends `compareTo`:
-`\=` for `<>` and `><`, and `>=`, `<=`, `>>=` and `<<=` for `\<`, `\>`, `\<<`
-and `\>>`.
+`utcDate`; the receiver is sent nothing. A comparison operator sends the
+messages that [the sends rule of `Orderable`](r:class.orderable.compare.sends)
+states: `compareTo` to the receiver with the argument it got, after another
+operator for some of them.
 
 ```rexx
 names = 'COMPARETO UTCDATE = == < > <= >= <> >< << >> <<= >>= \= \== \< \>',
