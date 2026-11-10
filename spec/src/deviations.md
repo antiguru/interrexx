@@ -228,7 +228,9 @@ class in place.
 
 The order in which a hash collection yields its entries, and the order of
 anything that lists one, is not specified, and may differ from ooRexx's.
-Which entries are yielded, and how often, is specified.
+Which entries are yielded, and how often, is specified. Which stored indexes
+or items a search sends `==` or `hashCode` to, beyond those the search must
+compare, and how often, is not specified either.
 
 ## 34. `..` in a file name
 
