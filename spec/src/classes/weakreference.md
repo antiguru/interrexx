@@ -10,12 +10,10 @@ deviations: [6, 36]
 A `WeakReference` refers to an object without keeping it alive. As long as
 anything else in the program refers to the object, the reference answers it;
 once nothing else does, the object may be reclaimed, and from then on the
-reference answers `.nil`. A program uses it for a cache whose entries should
-not hold objects that nobody else wants. When the reclaiming happens is the
-business of the interpreter and not of the program, so this page states what
-the reference answers while the object is held and that it answers `.nil` for
-good after the object has gone, and leaves the moment of the reclaiming
-unspecified.
+reference answers `.nil`. When the reclaiming happens is the business of the
+interpreter and not of the program, so this page states what the reference
+answers while the object is held and that it answers `.nil` for good after the
+object has gone, and leaves the moment of the reclaiming unspecified.
 
 ## The class
 

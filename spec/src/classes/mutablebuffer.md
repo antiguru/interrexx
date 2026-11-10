@@ -1,7 +1,7 @@
 ---
 element: "MutableBuffer"
 kind: class
-rexxref: "Builtin Classes > Utility Classes > MutableBuffer Class; Builtin Classes > Utility Classes > MutableBuffer Class > new (Class Method); Builtin Classes > Utility Classes > MutableBuffer Class > []; Builtin Classes > Utility Classes > MutableBuffer Class > []=; Builtin Classes > Utility Classes > MutableBuffer Class > append; Builtin Classes > Utility Classes > MutableBuffer Class > caselessChangeStr; Builtin Classes > Utility Classes > MutableBuffer Class > caselessContains; Builtin Classes > Utility Classes > MutableBuffer Class > caselessContainsWord; Builtin Classes > Utility Classes > MutableBuffer Class > caselessCountStr; Builtin Classes > Utility Classes > MutableBuffer Class > caselessEndsWith; Builtin Classes > Utility Classes > MutableBuffer Class > caselessLastPos; Builtin Classes > Utility Classes > MutableBuffer Class > caselessMatch; Builtin Classes > Utility Classes > MutableBuffer Class > caselessMatchChar; Builtin Classes > Utility Classes > MutableBuffer Class > caselessPos; Builtin Classes > Utility Classes > MutableBuffer Class > caselessStartsWith; Builtin Classes > Utility Classes > MutableBuffer Class > caselessWordPos; Builtin Classes > Utility Classes > MutableBuffer Class > changeStr; Builtin Classes > Utility Classes > MutableBuffer Class > contains; Builtin Classes > Utility Classes > MutableBuffer Class > containsWord; Builtin Classes > Utility Classes > MutableBuffer Class > countStr; Builtin Classes > Utility Classes > MutableBuffer Class > delStr; Builtin Classes > Utility Classes > MutableBuffer Class > delWord; Builtin Classes > Utility Classes > MutableBuffer Class > endsWith; Builtin Classes > Utility Classes > MutableBuffer Class > getBufferSize; Builtin Classes > Utility Classes > MutableBuffer Class > insert; Builtin Classes > Utility Classes > MutableBuffer Class > lastPos; Builtin Classes > Utility Classes > MutableBuffer Class > length; Builtin Classes > Utility Classes > MutableBuffer Class > lower; Builtin Classes > Utility Classes > MutableBuffer Class > makeArray; Builtin Classes > Utility Classes > MutableBuffer Class > makeString; Builtin Classes > Utility Classes > MutableBuffer Class > match; Builtin Classes > Utility Classes > MutableBuffer Class > matchChar; Builtin Classes > Utility Classes > MutableBuffer Class > overlay; Builtin Classes > Utility Classes > MutableBuffer Class > pos; Builtin Classes > Utility Classes > MutableBuffer Class > replaceAt; Builtin Classes > Utility Classes > MutableBuffer Class > setBufferSize; Builtin Classes > Utility Classes > MutableBuffer Class > setText; Builtin Classes > Utility Classes > MutableBuffer Class > space; Builtin Classes > Utility Classes > MutableBuffer Class > startsWith; Builtin Classes > Utility Classes > MutableBuffer Class > string; Builtin Classes > Utility Classes > MutableBuffer Class > subChar; Builtin Classes > Utility Classes > MutableBuffer Class > substr; Builtin Classes > Utility Classes > MutableBuffer Class > subWord; Builtin Classes > Utility Classes > MutableBuffer Class > subWords; Builtin Classes > Utility Classes > MutableBuffer Class > translate; Builtin Classes > Utility Classes > MutableBuffer Class > upper; Builtin Classes > Utility Classes > MutableBuffer Class > verify; Builtin Classes > Utility Classes > MutableBuffer Class > word; Builtin Classes > Utility Classes > MutableBuffer Class > wordIndex; Builtin Classes > Utility Classes > MutableBuffer Class > wordLength; Builtin Classes > Utility Classes > MutableBuffer Class > wordPos; Builtin Classes > Utility Classes > MutableBuffer Class > words"
+rexxref: "Builtin Classes > Utility Classes > MutableBuffer Class; Builtin Classes > Utility Classes > MutableBuffer Class > new (Class Method); Builtin Classes > Utility Classes > MutableBuffer Class > []; Builtin Classes > Utility Classes > MutableBuffer Class > []=; Builtin Classes > Utility Classes > MutableBuffer Class > append; Builtin Classes > Utility Classes > MutableBuffer Class > caselessChangeStr; Builtin Classes > Utility Classes > MutableBuffer Class > caselessContains; Builtin Classes > Utility Classes > MutableBuffer Class > caselessContainsWord; Builtin Classes > Utility Classes > MutableBuffer Class > caselessCountStr; Builtin Classes > Utility Classes > MutableBuffer Class > caselessEndsWith; Builtin Classes > Utility Classes > MutableBuffer Class > caselessLastPos; Builtin Classes > Utility Classes > MutableBuffer Class > caselessMatch; Builtin Classes > Utility Classes > MutableBuffer Class > caselessMatchChar; Builtin Classes > Utility Classes > MutableBuffer Class > caselessPos; Builtin Classes > Utility Classes > MutableBuffer Class > caselessStartsWith; Builtin Classes > Utility Classes > MutableBuffer Class > caselessWordPos; Builtin Classes > Utility Classes > MutableBuffer Class > changeStr; Builtin Classes > Utility Classes > MutableBuffer Class > contains; Builtin Classes > Utility Classes > MutableBuffer Class > containsWord; Builtin Classes > Utility Classes > MutableBuffer Class > countStr; Builtin Classes > Utility Classes > MutableBuffer Class > delete / delStr; Builtin Classes > Utility Classes > MutableBuffer Class > delWord; Builtin Classes > Utility Classes > MutableBuffer Class > endsWith; Builtin Classes > Utility Classes > MutableBuffer Class > getBufferSize; Builtin Classes > Utility Classes > MutableBuffer Class > insert; Builtin Classes > Utility Classes > MutableBuffer Class > lastPos; Builtin Classes > Utility Classes > MutableBuffer Class > length; Builtin Classes > Utility Classes > MutableBuffer Class > lower; Builtin Classes > Utility Classes > MutableBuffer Class > makeArray; Builtin Classes > Utility Classes > MutableBuffer Class > match; Builtin Classes > Utility Classes > MutableBuffer Class > matchChar; Builtin Classes > Utility Classes > MutableBuffer Class > overlay; Builtin Classes > Utility Classes > MutableBuffer Class > pos; Builtin Classes > Utility Classes > MutableBuffer Class > replaceAt; Builtin Classes > Utility Classes > MutableBuffer Class > setBufferSize; Builtin Classes > Utility Classes > MutableBuffer Class > setText; Builtin Classes > Utility Classes > MutableBuffer Class > space; Builtin Classes > Utility Classes > MutableBuffer Class > startsWith; Builtin Classes > Utility Classes > MutableBuffer Class > string; Builtin Classes > Utility Classes > MutableBuffer Class > subChar; Builtin Classes > Utility Classes > MutableBuffer Class > substr; Builtin Classes > Utility Classes > MutableBuffer Class > subWord; Builtin Classes > Utility Classes > MutableBuffer Class > subWords; Builtin Classes > Utility Classes > MutableBuffer Class > translate; Builtin Classes > Utility Classes > MutableBuffer Class > upper; Builtin Classes > Utility Classes > MutableBuffer Class > verify; Builtin Classes > Utility Classes > MutableBuffer Class > word; Builtin Classes > Utility Classes > MutableBuffer Class > wordIndex; Builtin Classes > Utility Classes > MutableBuffer Class > wordLength; Builtin Classes > Utility Classes > MutableBuffer Class > wordPos; Builtin Classes > Utility Classes > MutableBuffer Class > words"
 deviations: [4, 9, 109]
 ---
 
@@ -11,7 +11,7 @@ A `MutableBuffer` holds a string of characters that a program changes in
 place. Where a `String` is a value, so that every operation answers a new
 string, a buffer is an object with an identity: `append`, `insert`, `upper`
 and the other changing methods alter the characters it holds and answer the
-buffer itself, so that a program can build a long text with few allocations.
+buffer itself.
 Beside the characters a buffer has a size, the number of characters it can
 hold before it has to grow, which a program can read and set. A buffer is no
 `String`: it understands a part of the `String` methods, and for those it
@@ -68,11 +68,14 @@ rule](r:class.index.string) says, and defaults to the null string; an object
 with no string value, `.nil` included, raises `SYNTAX 88.909`. The second
 argument, the size, is read after the first and must be a non-negative whole
 number, or the call raises `SYNTAX 93.923`; it defaults to 256 when it is
-omitted. The buffer holds the text and has the size given, except that a size
-smaller than the length of the text is raised to that length. A subclass
-receiver gets an instance of itself. Both arguments are checked before `init`
-is sent, so a failing `new` runs no `init`, and the reading of the first
-argument comes before the check of the second.
+omitted. A whole-number argument of a method of this class is read as that of
+a builtin is ([the form rule](r:conv.whole.form), [the digits
+rule](r:conv.whole.digits)), so NUMERIC DIGITS plays no part, and only the
+error code differs. The buffer holds the text and has the size given, except
+that a size smaller than the length of the text is raised to that length. A
+subclass receiver gets an instance of itself. Both arguments are checked
+before `init` is sent, so a failing `new` runs no `init`, and the reading of
+the first argument comes before the check of the second.
 
 ```rexx
 call show .mutablebuffer~new
@@ -167,7 +170,7 @@ b~init(1) => 93.902
 ```
 
 r[class.mutablebuffer.string]
-`string` answers a new `String` with the characters the buffer holds at that
+`string` answers a `String` with the characters the buffer holds at that
 moment, and takes no argument: one raises `SYNTAX 93.902`. A string taken
 earlier does not follow later changes to the buffer. The string value of the
 buffer, which `say`, the joining operators and the arguments of the other
@@ -206,7 +209,7 @@ b~makeString(1) => 93.902
 ```
 
 r[class.mutablebuffer.makestring]
-`makeString` answers a new `String` with the characters of the buffer, as
+`makeString` answers a `String` with the characters of the buffer, as
 `string` does, and takes no argument (`SYNTAX 93.902`). The `request` of
 `Object` answers it for `STRING`, so a subclass that declares its own
 `makeString` decides what `say b`, `b || x` and a buffer given as an argument
@@ -321,13 +324,13 @@ b~copy(1) => 93.902
 ## Size
 
 r[class.mutablebuffer.size]
-A buffer has a length, the number of characters it holds, and a size, the
-number of characters it can hold; the size is never smaller than the length.
-Every method that makes the buffer longer than its size raises the size to the
-larger of the new length and twice the old size. No other method changes the
-size but [`setBufferSize`](r:class.mutablebuffer.setbuffersize), so deleting
-characters leaves it as it was. `copy` gives the copy the size of the
-original.
+A buffer has a length, the number of characters it holds, and a size, the number
+of characters it can hold; the size is never smaller than the length. Every
+change that makes the buffer longer than its size raises the size to the larger
+of the new length and twice the old size; `append` makes one such change for
+each argument, in turn. No other method changes the size but
+[`setBufferSize`](r:class.mutablebuffer.setbuffersize), so deleting characters
+leaves it as it was. `copy` gives the copy the size of the original.
 
 ```rexx
 b = .mutablebuffer~new('abc', 5)
@@ -354,6 +357,12 @@ b = .mutablebuffer~new('abc', 10)
 c = b~copy
 c~append(copies('z', 11))
 say b~getBufferSize c~getBufferSize
+b = .mutablebuffer~new('a', 1)
+b~append('bc', 'de')
+say b~length b~getBufferSize
+c = .mutablebuffer~new('a', 1)
+c~append('bcde')
+say c~length c~getBufferSize
 ```
 
 ```output
@@ -367,6 +376,8 @@ abcde 5 5
 abcde 5 30
 <> 0 12
 10 20
+5 6
+5 5
 ```
 
 r[class.mutablebuffer.getbuffersize]
@@ -586,7 +597,7 @@ abc
 ```
 
 r[class.mutablebuffer.brackets]
-`[]` answers a new `String` with a part of the buffer: the characters from the
+`[]` answers a `String` with a part of the buffer: the characters from the
 position given as the first argument, a positive whole number that is
 required, for as many characters as the second argument, a non-negative whole
 number that defaults to 1. It is the method [`[]` of
@@ -910,7 +921,7 @@ lists them: [`countStr`](r:bif.countstr.method),
 [`wordIndex`](r:bif.wordindex.method),
 [`wordLength`](r:bif.wordlength.method), [`wordPos`](r:bif.wordpos.method) and
 [`words`](r:bif.words.method). They leave the buffer as it was, and, when the
-function answers a string, answer a new `String`. The errors are those of the
+function answers a string, answer a `String`. The errors are those of the
 message form of the string methods, as [the message
 rule](r:class.string.builtins.errors) says.
 
@@ -988,7 +999,7 @@ r[class.mutablebuffer.stringmethods]
 [`matchChar`](r:class.string.matchchar),
 [`startsWith`](r:class.string.startswith), [`subChar`](r:class.string.subchar)
 and [`subWords`](r:class.string.subwords). They leave the buffer as it was,
-and answer a new `String`, or a new `Array` for `subWords`.
+and answer a `String`, or a new `Array` for `subWords`.
 
 ```rexx
 t = 'Alpha beta  GAMMA delta'
@@ -1105,23 +1116,25 @@ b~makeArray(.nil) => 88.909
 ## Messages that a program can override
 
 r[class.mutablebuffer.sends]
-No method of the class sends a message to the buffer it works on: not
-`length`, `string`, `makeString`, `append`, `insert`, `setText`, `substr`,
-`delStr`, `getBufferSize`, `setBufferSize` or any other, so that a subclass
-that overrides one of these changes only the calls that name it. `new` sends
-`init` as [the init rule](r:class.mutablebuffer.new.init) says and `copy`
-sends nothing. What a method sends to its arguments is the reading of their
-string values, once for each argument that is present and in the order of the
-arguments, each reading followed at once by the check of that argument: the
-first argument that fails raises its error and the arguments after it are not
-read. The reading is [the string-value rule](r:class.index.string)'s, so an
-argument that is a buffer of a subclass is sent `makeString`. `append` reads
-and appends one argument at a time. A call with too many arguments reads none.
-Nothing but that reading is sent to an argument. The first example prints, for
-each call, the messages that the subclass saw; the second passes objects that
-answer a string and log the reading, named by their first argument, and would
-log `isA`, `string` and `class` too, and prints the log in order, with the
-error that ended the call.
+No method of the class sends a message to the buffer it works on: not `length`,
+`string`, `makeString`, `append`, `insert`, `setText`, `substr`, `delStr`,
+`getBufferSize`, `setBufferSize` or any other, so that a subclass that overrides
+one of these changes only the calls that name it. `new` sends `init` as [the
+init rule](r:class.mutablebuffer.new.init) says and `copy` sends nothing. What a
+method sends to its arguments is the reading of their string values, once for
+each argument that is present and in the order of the arguments, each reading
+followed at once by the check of that argument: the first argument that fails
+raises its error and the arguments after it are not read. The reading is [the
+string-value rule](r:class.index.string)'s: the argument is sent `request` with
+`STRING`, and the `request` of `Object` sends it `makeString`, so an argument
+that is a buffer of a subclass is sent both. `append` reads and appends one
+argument at a time. A call with too many arguments reads none. Nothing but that
+reading is sent to an argument. The first example prints, for each call, the
+messages that the subclass saw; the second passes objects that answer a string
+and log the reading, named by their first argument, and would log `isA`,
+`string` and `class` too; their `request` is that of `Object`. It prints the log
+in order, with the error that ended the call. The third example shows the
+`request` that comes before each `makeString`.
 
 ```rexx
 b = .spy~new('Hello world', 40)
@@ -1335,6 +1348,29 @@ new size -1          =>  a b SYNTAX 93.923
 new                  =>  a b
 ```
 
+```rexx
+.local~log = ''
+b = .mutablebuffer~new('abc')
+b~insert(.probe~new('t', 'X'), .probe~new('n', 1))
+say b~string '|' .local~log
+::class probe
+::method init
+  expose n v
+  use arg n, v
+::method request
+  expose n
+  .local~log = .local~log n'-request:'arg(1)
+  forward class (super)
+::method makestring
+  expose n v
+  .local~log = .local~log n'-makeString'
+  return v
+```
+
+```output defect=#164
+aXbc |  t-request:STRING t-makeString n-request:STRING n-makeString
+```
+
 ## Deviations
 
 r[class.mutablebuffer.deviation.4]
@@ -1362,10 +1398,10 @@ abc abcd
 r[class.mutablebuffer.deviation.9]
 A native routine that holds the address of the characters of a buffer keeps
 reading valid storage when the buffer grows, even across a collection
-([Deviation 9](../deviations.md)). ooRexx frees the old storage when the
-buffer grows, and the routine reads garbage. A program in Rexx sees only that
-the characters survive the growth, which the example shows: the buffer grows
-several times and still holds what was appended before.
+([Deviation 9](../deviations.md)). In ooRexx a collection after the growth
+reclaims the old storage, and the routine then reads garbage. A program in Rexx
+sees only that the characters survive the growth, which the example shows: the
+buffer grows several times and still holds what was appended before.
 
 ```rexx
 b = .mutablebuffer~new('abc', 3)

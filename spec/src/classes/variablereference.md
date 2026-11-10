@@ -2,7 +2,7 @@
 element: "VariableReference"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > VariableReference Class; Builtin Classes > Utility Classes > VariableReference Class > name; Builtin Classes > Utility Classes > VariableReference Class > request; Builtin Classes > Utility Classes > VariableReference Class > unknown; Builtin Classes > Utility Classes > VariableReference Class > value (Attribute)"
-deviations: [72]
+deviations: [72, 118]
 ---
 
 # VariableReference
@@ -20,24 +20,26 @@ page states what the object does, from its creation by the term on.
 
 r[class.variablereference.creation]
 `VariableReference` is a class whose only superclass is `Object`, and it
-inherits no mixin class ([the hierarchy rule](r:class.index.hierarchy)). A
-term `>name`, where `name` is the name of a simple variable or of a stem,
+inherits no mixin class ([the hierarchy rule](r:class.index.hierarchy)). A term
+`>name` or `<name`, where `name` is the name of a simple variable or of a stem,
 makes a reference to that variable, in the routine or method where the term is
-evaluated, and the variable need not have a value. A reference to a variable
-of a method can be an object variable that the method exposes. A compound
-symbol after the `>` is refused with `SYNTAX 20.930`, when the program is
-read; the first example reaches the error through `INTERPRET`, and the second
-is a program that ends before anything of it runs. The instance side of the
-class defines `name`, `request`, `unknown`, `value` and `value=`; the
-comparison methods of `Object` are not among those that an instance
-understands, and the messages `=`, `==`, `\=`, `\==`, `<>` and `><` are
-handled as the other messages that the class does not define ([the unknown
-rule](r:class.variablereference.unknown)).
+evaluated, and the variable need not have a value. A reference to a variable of
+a method can be an object variable that the method exposes. A compound symbol, a
+constant symbol or an environment symbol after the `>` or `<` is refused with
+`SYNTAX 20.930`, when the program is read; the first example reaches the error
+through `INTERPRET`, and the second is a program that ends before anything of it
+runs. The instance side of the class defines `name`, `request`, `unknown`,
+`value` and `value=`; the comparison methods of `Object` are not among those
+that an instance understands, and the messages `=`, `==`, `\=`, `\==`, `<>` and
+`><` are handled as the other messages that the class does not define ([the
+unknown rule](r:class.variablereference.unknown)).
 
 ```rexx
 x = 'one'
 r = >x
 say r~class~id r~name r~value (r~value == x)
+z = <x
+say z~class~id z~name
 o = .box~new
 say o~ref~name o~ref~value
 do c over .variablereference~superclasses
@@ -61,6 +63,7 @@ bad: say condition('o')~code
 
 ```output
 VariableReference X one 1
+VariableReference X
 COUNT 5
 Object
 = 1 0
@@ -255,23 +258,30 @@ r~'VALUE='(1, 2) => 93.902
 ```
 
 r[class.variablereference.unknown]
-A message that the reference does not understand is sent on to the value of
-the variable, with the same arguments, and its answer is the answer of the
+A message that the reference does not understand is sent on to the value of the
+variable, with the same arguments, and its answer is the answer of the
 reference: the reference stands in for its value, so `r~length` sends `length`
-to the string that the variable holds, and `r~append(4)` appends to the array
-it holds. This holds for the messages `=`, `==`, `\=`, `\==`, `<>` and `><`
-too, which the reference, unlike other objects, does not understand itself, so
-they compare the value of the variable with the argument as given, and for the
-operators of arithmetic and comparison, which are messages. The methods that
-the reference does understand, `class`, `copy`, `hasMethod` and the others of
+to the string that the variable holds, and `r~append(4)` appends to the array it
+holds. This holds for the messages `=`, `==`, `\=`, `\==`, `<>` and `><` too,
+which the reference, unlike other objects, does not understand itself, so they
+compare the value of the variable with the argument as given, and for the
+operators of arithmetic and comparison, which are messages. The methods that the
+reference does understand, `class`, `copy`, `hasMethod` and the others of
 `Object`, `name`, `request`, `value` and `value=`, answer for the reference
-itself. `unknown` is the method that does the sending: its first argument is
-the name of the message as a string, in upper case, and its second an array of
-the arguments, both required (`SYNTAX 93.903`), and a third argument raises
-`SYNTAX 93.902`. A name that is no string raises `SYNTAX 88.909`. The value
-gets the message with the name that the first argument gives, so a value that
-does not understand it raises `SYNTAX 97.1`, as it would for any other sender,
-and a name that is the null string raises `SYNTAX 93.903`.
+itself. `unknown` is the method that does the sending: `unknown(name,
+arguments)` sends the message `name` to the value with the arguments that
+`arguments` holds. `name` must have a string value (`.nil` raises `SYNTAX
+88.909`, the null string `SYNTAX 93.903`), and the message name is used as
+written: a name that is not in upper case names no method of the value, which
+handles it as a message it does not understand. `arguments` is sent `request`
+with `ARRAY`, and an answer that is an instance of `Array`, or of a subclass of
+it, with one dimension is the array of arguments, while `.nil` and an object
+that is no collection raise `SYNTAX 98.913`; a position that holds nothing is an
+omitted argument. An instance of a subclass of `List` given as `arguments` is
+sent `request` as any other object is ([Deviation
+118](r:class.variablereference.deviation.118)). It takes exactly two arguments:
+fewer raise `SYNTAX 93.903` and more `SYNTAX 93.902`. A value that does not
+understand the message raises `SYNTAX 97.1`, as it would for any other sender.
 
 ```rexx
 text = 'hello world'
@@ -294,6 +304,7 @@ call try "r~unknown('LENGTH')"
 call try "r~unknown('LENGTH', .array~new, 1)"
 call try 'r~unknown(.nil, .array~new)'
 call try "r~unknown('', .array~new)"
+call try "r~unknown('LENGTH', .nil)"
 exit
 try:
   signal on syntax name bad
@@ -318,13 +329,29 @@ r~unknown('LENGTH') => 93.903
 r~unknown('LENGTH', .array~new, 1) => 93.902
 r~unknown(.nil, .array~new) => 88.909
 r~unknown('', .array~new) => 93.903
+r~unknown('LENGTH', .nil) => 98.913
+```
+
+```rexx
+v = 'hello'
+r = >v
+signal on syntax name bad
+say r~unknown('LENGTH', .array~new)
+say r~unknown('length', .array~new)
+exit
+bad: say condition('o')~code
+```
+
+```output defect=#171
+5
+97.1
 ```
 
 r[class.variablereference.request]
 `request` sends `request` to the value of the variable with its argument and
 answers what the value answers, so a value that declares its own `request` is
-asked, and a string answers the conversions that `request` of `String`
-answers. The reference accepts at most one argument (`SYNTAX 93.902`).
+asked, and a string answers the conversions that `request` of `String` answers.
+It is stated here with one argument; two raise `SYNTAX 93.902`.
 
 ```rexx
 o = .ask~new
@@ -459,12 +486,12 @@ r~copy(1) => 93.902
 
 r[class.variablereference.deviation.72]
 In every position that needs a string, as an argument of a string method or a
-builtin function, the string value of a reference is the value of the
-variable, and `NOSTRING` is raised only when that value has no string. ooRexx
-uses the default name of the reference in most of these positions and raises
-`SYNTAX 88.909` for an argument of a method ([Deviation
-72](../deviations.md)). The example gives references as the needle of `pos`
-and `changeStr` and joins them to strings; the variable holds `one` and
+builtin function, the string value of a reference is the value of the variable,
+and `NOSTRING` is raised only when that value has no string. ooRexx uses the
+object name of the referenced value, its default name unless one was set, in
+most of these positions and raises `SYNTAX 88.909` for an argument of a method
+([Deviation 72](../deviations.md)). The example gives references as the needle
+of `pos` and `changeStr` and joins them to strings; the variable holds `one` and
 `zero`.
 
 ```rexx
@@ -481,4 +508,25 @@ say 'xonex'~changeStr(rx, '1')
 2 2
 aoneb 5 abc
 x1x
+```
+
+r[class.variablereference.deviation.118]
+An instance of a subclass of `List` that is given to `unknown` as the array of
+arguments is sent `request` with `ARRAY`, as [the unknown
+rule](r:class.variablereference.unknown) says of any other object, so that an
+override is used. See [Deviation 118](../deviations.md). ooRexx sends the
+instance no `request` and uses the items it holds, so the example answers `b`
+on ooRexx. The `request` of the class `args` answers one item.
+
+```rexx
+x = 'abcdef'
+r = >x
+say r~unknown('SUBSTR', .args~of(2, 1))
+::class args subclass list
+::method request
+  return .array~of(4)
+```
+
+```output
+def
 ```

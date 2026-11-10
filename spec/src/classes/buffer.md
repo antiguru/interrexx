@@ -6,13 +6,10 @@ rexxref: "Builtin Classes > Utility Classes > Buffer Class; Builtin Classes > Ut
 
 # Buffer
 
-A `Buffer` is a block of storage that the interpreter manages for native code:
-a routine or a method written against the native interface asks the
-interpreter for one, fills it, and hands it back to the program. A program
-written in Rexx cannot make a buffer, so the class holds no method that such a
-program could send to an instance, and a Rexx program that meets one only
-passes it on. What a program can observe of the class is stated here: where it
-stands in the class hierarchy and that `new` is refused. The `MutableBuffer`
+A program written in Rexx cannot make a `Buffer`: `new` is refused, so no
+instance is reachable from a Rexx program. This page states what a program
+can observe of the class: where it stands in the class hierarchy, that it
+defines no instance method, and that `new` is refused. The `MutableBuffer`
 class is the buffer a Rexx program uses for text; [its page](mutablebuffer.md)
 is the one to read for that.
 
@@ -49,8 +46,8 @@ r[class.buffer.new]
 `new` raises `SYNTAX 93.967` whatever the arguments are, none or any number of
 them, and makes no object. A subclass that a program declares has the same
 `new`: a `new` that the subclass declares itself runs first, and the call of
-the inherited `new` from it raises the same error. A buffer therefore exists
-only where native code made one.
+the inherited `new` from it raises the same error. No program written in
+Rexx can therefore make a buffer.
 
 ```rexx
 call try '.buffer~new'

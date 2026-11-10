@@ -6,15 +6,11 @@ rexxref: "Builtin Classes > Utility Classes > Pointer Class; Builtin Classes > U
 
 # Pointer
 
-A `Pointer` wraps a native address, an address of memory outside the
-interpreter, so that native code can hand it to a Rexx program and receive it
-back. A program written in Rexx cannot make a pointer or look into one: it can
-keep it in a variable, pass it on, and ask it two things, whether the address
-is the null address and whether two pointers hold the same address. A routine
-or a method of an external library is what makes the pointer, so what this
-page states about the instance methods is what a program can ask of a pointer
-that such a routine returned, and the examples can show only the class and its
-methods, as a program has no way to make an instance.
+A program written in Rexx cannot make a `Pointer`: `new` is refused, so no
+instance is reachable from a Rexx program, and what the instance methods do
+cannot be observed. This page states what a program can observe of the class:
+where it stands in the class hierarchy, which instance methods it defines, and
+that `new` is refused.
 
 ## The class
 
@@ -53,8 +49,8 @@ r[class.pointer.new]
 `new` raises `SYNTAX 93.967` whatever the arguments are, none or any number of
 them, and makes no object. A subclass that a program declares has the same
 `new`: a `new` that the subclass declares itself runs first, and the call of
-the inherited `new` from it raises the same error. A pointer therefore exists
-only where native code made one.
+the inherited `new` from it raises the same error. No program written in
+Rexx can therefore make a pointer.
 
 ```rexx
 call try '.pointer~new'
@@ -89,12 +85,11 @@ new runs
 ## Methods
 
 r[class.pointer.comparison]
-`=` and `==` answer 1 when the receiver and the argument are pointers that
-hold the same address, and `\=` and `\==` answer 1 when they hold different
-addresses and 0 when they hold the same one. The four methods are defined by
-the class itself, not by `Object`, so a pointer is compared by its address and
-not by its identity. The example shows that the four methods belong to the
-class; a program has no pointer to compare, so it cannot show the answers.
+`Pointer` defines its own `=`, `==`, `\=` and `\==`, which take the place of
+those of `Object` for an instance. This book states nothing about what they
+answer, as no instance is reachable from a Rexx program ([the new
+rule](r:class.pointer.new)). The example shows that the four methods belong
+to the class.
 
 ```rexx
 do n over '= == \= \== isNull'~makeArray(' ')
@@ -112,9 +107,9 @@ isNull Method 1
 ```
 
 r[class.pointer.isnull]
-`isNull` answers 1 when the address that the pointer holds is the null
-address, which is 0, and 0 when it holds any other address. The example shows
-the method; a program has no pointer to ask.
+`Pointer` defines `isNull`. This book states nothing about what it answers,
+as no instance is reachable from a Rexx program ([the new
+rule](r:class.pointer.new)). The example shows the method.
 
 ```rexx
 say .pointer~method('ISNULL')~class~id
