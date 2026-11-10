@@ -23,9 +23,10 @@ NOSTRING is raised when a clause needs the string value of an object that is
 not a string, and `request` with the argument `STRING`, sent to the object,
 answers no string: an object with no `MAKESTRING` method does so, and so does
 one whose `MAKESTRING` or own `request` answers `.nil` or another object that is
-not a string, whatever its `STRING` method answers. An object whose `request`,
-`MAKESTRING` or
-`STRING` method is private raises no NOSTRING at the uses listed below: the
+not a string, whatever its `STRING` method answers. An object whose `request`
+is private, or whose `MAKESTRING` or
+`STRING` method is private and would be sent, raises no NOSTRING at the uses
+listed below: the
 message is refused, as [the conventions](r:conv.string.object) say for
 builtin arguments, and the clause raises `SYNTAX 97.2`. A string, a number
 and an instance of a subclass of `String` never raise it, and neither does an

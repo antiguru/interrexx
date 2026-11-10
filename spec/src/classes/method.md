@@ -521,15 +521,19 @@ call sysfiledelete f
 ::method init
   expose n
   use arg n
+::method request
+  say 'request' arg(1)
+  forward class (super)
 ::method makestring
   expose n
   say 'makestring'
   return n
 ```
 
-```output
+```output defect=#164
 init 0
 MINE
+request STRING
 makestring
 init 0
 MINE
@@ -1319,10 +1323,11 @@ bad: say condition('o')~code
 
 r[class.method.deviation.109]
 An instance of a subclass of `String` that is the name or the source of `new`
-is read by its own characters, and `MAKESTRING` and `STRING` are not sent to
-it ([Deviation 109](r:class.string.deviation.109)). ooRexx reads the name
-through its `MAKESTRING` method; the source is read as the instance's own
-characters on both. In the example `MAKESTRING` answers another name.
+is read by its own characters, and `REQUEST`, `MAKESTRING` and `STRING` are
+not sent to it ([Deviation 109](r:class.string.deviation.109)). ooRexx sends
+the name `request` with `STRING` or `MAKESTRING`, so an override of either can
+change what is read; the source is read as the instance's own characters on
+both. In the example `MAKESTRING` answers another name.
 
 ```rexx
 m = .method~new(.name~new('Foo'), .name~new('say "src"'))

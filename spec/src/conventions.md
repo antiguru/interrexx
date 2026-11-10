@@ -76,7 +76,7 @@ page links
 [the native call rule](r:bif.index.call.native) has no fallback to
 `STRING`, as that rule says, and the same holds for the string arguments of
 methods ([the method argument rule](r:class.index.string)). A `REQUEST`,
-`MAKESTRING` or `STRING` method that is private
+`MAKESTRING` or `STRING` method that is private and would be sent
 is not one the replacement can use: the call raises `SYNTAX 97.2`. This book
 does not specify how many times a comparison operator sends `REQUEST` to an
 operand, as [the comparison rule](r:expr.comparison.object) says.
@@ -544,10 +544,11 @@ before
 
 r[conv.string.deviation.109]
 A builtin that takes a string works on the own characters of an instance of a
-subclass of `String`, and sends it neither `MAKESTRING` nor `STRING`, as
-[the string rule](r:conv.string.object) says and
-[Deviation 109](r:class.string.deviation.109) states; ooRexx sends
-`MAKESTRING` to the instance when it is an argument of a builtin function. In
+subclass of `String`, and sends it none of `REQUEST`, `MAKESTRING` and
+`STRING`, as [the string rule](r:conv.string.object) says and
+[Deviation 109](r:class.string.deviation.109) states; ooRexx sends the
+instance `request` with `STRING` or `MAKESTRING` when it is an argument of a
+builtin function, so an override of either can change what is read. In
 the example the subclass answers another string from `MAKESTRING`.
 
 ```rexx

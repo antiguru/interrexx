@@ -1563,8 +1563,9 @@ r[class.orderedcollection.deviation.109]
 An instance of a subclass of `String` that `subset` compares is read by its
 own characters, and `MAKESTRING` is not sent to it ([Deviation
 109](r:class.string.deviation.109)). That reaches the answer of `items` of the
-copy, which 0 is compared with. ooRexx reads such an instance through its
-`MAKESTRING` method. In the example `MAKESTRING` answers other characters.
+copy, which 0 is compared with. ooRexx sends such an instance `request`
+with `STRING` or `MAKESTRING`, so an override of either can change what is
+read. In the example `MAKESTRING` answers other characters.
 
 ```rexx
 say .fake~new(.name~new('7'))~subset(.array~new)

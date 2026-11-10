@@ -2215,9 +2215,10 @@ say e~m1 e~m2 .k~new~hasMethod('m1')
 r[class.class.deviation.109]
 An instance of a subclass of `String` that is the id of `subclass` or
 `mixinclass`, or the name given to `define`, `method` or `delete`, is read by
-its own characters, and `MAKESTRING` and `STRING` are not sent to it
-([Deviation 109](r:class.string.deviation.109)). ooRexx reads it through its
-`MAKESTRING` method. In the example `MAKESTRING` answers another name.
+its own characters, and `REQUEST`, `MAKESTRING` and `STRING` are not sent to
+it ([Deviation 109](r:class.string.deviation.109)). ooRexx sends it `request`
+with `STRING` or `MAKESTRING`, so an override of either can change what is
+read. In the example `MAKESTRING` answers another name.
 
 ```rexx
 n = .name~new('Foo')

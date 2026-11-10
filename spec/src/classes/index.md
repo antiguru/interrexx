@@ -805,8 +805,13 @@ or the argument of `objectName=`, because such a method sends `request` with the
 argument `STRING` and takes the answer when it is a string, and has no fallback
 to `string`: an object whose `request` answers `.nil` or another object that is
 not a string, as `Object` does for an object with no `makeString` method, `.nil`
-itself among them, raises `SYNTAX 88.909`. A class that declares `request`
-itself decides the answer of both. An operator method sent as a message, such as
+itself among them, raises `SYNTAX 88.909`. An argument that a method reads as
+a number, a whole number or a logical value has the fallback: it is read as
+[the conversion rule](r:conv.string.object) reads such an argument of a
+builtin, so `"abc"~left(o)` uses the answer of `string` of an object that has
+only that method. A class that declares `request` itself decides both the
+string value and what a method reads from a string argument. An operator
+method sent as a message, such as
 `"x"~"||"(b)`, takes the
 string value of its argument as the operator does. An instance of a subclass
 of `String` is a string, and its string value is its own characters, whatever
@@ -829,6 +834,8 @@ say length(b) left(b, 3)
 call try '"abc"~left(2, .shown~new)'
 call try '"abc"~left(5, .pad~new)'
 call try '"x"~"||"(.shown~new)'
+call try '"abc"~left(.count~new)'
+call try '.array~new(.count~new)~size'
 exit
 try:
   signal on syntax name bad
@@ -847,6 +854,9 @@ bad: say arg(1) '=>' condition('o')~code
 ::class pad
 ::method makestring
   return '*'
+::class count
+::method string
+  return 2
 ```
 
 ```output
@@ -858,6 +868,8 @@ M: c | M: c! | a MADE | a MADE
 "abc"~left(2, .shown~new) => 88.909
 "abc"~left(5, .pad~new) => abc**
 "x"~"||"(.shown~new) => xSHOWN: b
+"abc"~left(.count~new) => ab
+.array~new(.count~new)~size => 2
 ```
 
 ```rexx
@@ -1099,11 +1111,12 @@ before
 r[class.index.deviation.109]
 The string value of an instance of a subclass of `String` is its own
 characters, and the methods that read it as a string, a number or a logical
-value send it no `MAKESTRING` and no `STRING`, as
+value send it no `REQUEST`, no `MAKESTRING` and no `STRING`, as
 [the rule on the string value](r:class.index.string) says and
 [the String page rule](r:class.string.deviation.109) states in full; ooRexx
-reads the instance through its `MAKESTRING` method as an argument and as the
-receiver of some methods. In the example `MAKESTRING` answers another string.
+sends the instance `request` with `STRING` or `MAKESTRING` as an argument and
+as the receiver of some methods, so an override of either can change what is
+read. In the example `MAKESTRING` answers another string.
 
 ```rexx
 .local~sent = 0

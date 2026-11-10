@@ -161,8 +161,9 @@ when the source is omitted. An answer to `request` with `ARRAY` that is
 neither an array nor `.nil` raises `SYNTAX 88.913`, and no `request` with
 `STRING` follows it ([Deviation 115](r:class.package.deviation.115)). An
 instance of a subclass of `List` is sent `request` as well ([Deviation
-118](r:class.package.deviation.118)). A name that is an object is sent `request`
-with the argument `STRING`, once, before `init`.
+118](r:class.package.deviation.118)). A name that is an object is sent
+`request` with the argument `STRING`, once, first, before the messages to the
+source and `init`.
 
 ```rexx
 f = 'class_package_sends_zq.tmp'
@@ -2762,9 +2763,10 @@ bad: say condition('o')~code
 r[class.package.deviation.109]
 An instance of a subclass of `String` that is the name of `new`, of
 `addRoutine`, `addPublicRoutine`, `addClass` or `addPublicClass` is read by
-its own characters, and `MAKESTRING` and `STRING` are not sent to it
-([Deviation 109](r:class.string.deviation.109)). ooRexx reads it through its
-`MAKESTRING` method. A source of `new` that is such an instance is read on
+its own characters, and `REQUEST`, `MAKESTRING` and `STRING` are not sent to
+it ([Deviation 109](r:class.string.deviation.109)). ooRexx sends it `request`
+with `STRING` or `MAKESTRING`, so an override of either can change what is
+read. A source of `new` that is such an instance is read on
 both as [the source rule](r:class.package.new.source) states. In the example
 `MAKESTRING` answers another name.
 

@@ -392,7 +392,8 @@ r[class.object.objectname]
 name rule](r:class.index.objectname) says. It takes no argument. The `string`
 method of an object sends it `objectName` ([the sends
 rule](r:class.index.sends)), so an override shows in the string value of an
-object that has no `MAKESTRING` method; `objectName` sends `defaultName` only
+object whose `request` with the argument `STRING` answers no string;
+`objectName` sends `defaultName` only
 while no name has been set.
 
 ```rexx
@@ -475,7 +476,8 @@ madestring
 r[class.object.string]
 `string` answers a string that shows the receiver, which is its `objectName`,
 as [the string rule](r:class.index.string) says, and takes no argument. `say`,
-the joining operators and the builtin functions use it for an object whose
+the joining operators and the builtin functions other than those that follow
+[the native call rule](r:bif.index.call.native) use it for an object whose
 `request` with the argument `STRING` answers no string, as the `request` of
 `Object` does for an object with no `MAKESTRING` method. A class that declares
 `string` shows its instances in
@@ -2143,10 +2145,12 @@ Array Array
 r[class.object.deviation.109]
 An instance of a subclass of `String` that names a message, for `send`,
 `sendWith`, `start` and `startWith`, or a method, for `hasMethod` and
-`setMethod`, is read by its own characters, and `MAKESTRING` and `STRING` are
-not sent to it ([Deviation 109](r:class.string.deviation.109) states the
-general case). ooRexx reads it through its `MAKESTRING` method for `hasMethod`
-and `setMethod`, and as a message name it sends it `request` with the argument
+`setMethod`, is read by its own characters, and `REQUEST`, `MAKESTRING` and
+`STRING` are not sent to it
+([Deviation 109](r:class.string.deviation.109) states the general case).
+For `hasMethod` and `setMethod` ooRexx sends it `request` with `STRING` or
+`MAKESTRING`, so an override of either can change what is read, and as a
+message name it sends it `request` with the argument
 `ARRAY`, as [the sends rule](r:class.object.send.sends) says, so that the
 message name raises `SYNTAX 93.946`. In the example `MAKESTRING` answers
 another name.

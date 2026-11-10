@@ -1302,8 +1302,9 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 r[class.queue.deviation.109]
 An index or a count that is an instance of a subclass of `String` is read by
 its own characters, and `MAKESTRING` is not sent to it ([Deviation
-109](r:class.string.deviation.109)). ooRexx reads such an instance as an index
-through its `MAKESTRING` method. In the example `MAKESTRING` answers another
+109](r:class.string.deviation.109)). ooRexx sends such an instance as an
+index `request` with `STRING` or `MAKESTRING`, so an override of either can
+change what is read. In the example `MAKESTRING` answers another
 index.
 
 ```rexx

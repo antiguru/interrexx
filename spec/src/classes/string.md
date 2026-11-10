@@ -80,9 +80,9 @@ characters of the instance and answers a new string of class `String`, not an
 instance of the subclass, and `copy`, which `Object` supplies, answers another
 instance of the subclass. Wherever a string, a number, a logical value or a
 whole number is read from the instance, as the receiver or as an argument, its
-own characters are read and neither `MAKESTRING` nor `STRING` is sent to it
-([Deviation 109](r:class.string.deviation.109)). The instance may have
-attributes and methods of its own, and an object name
+own characters are read and none of `REQUEST`, `MAKESTRING` and `STRING` is
+sent to it ([Deviation 109](r:class.string.deviation.109)). The instance may
+have attributes and methods of its own, and an object name
 ([Deviation 36](r:class.string.deviation.36)).
 
 ```rexx
@@ -1872,16 +1872,16 @@ r[class.string.deviation.109]
 An instance of a subclass of `String` is read by its own characters wherever a
 string, a number, a logical value or a whole number is needed, as the receiver
 and as an argument, in the message form, in the function form and in the
-operators; `MAKESTRING` and `STRING` are not sent to it for that
+operators; `REQUEST`, `MAKESTRING` and `STRING` are not sent to it for that
 ([Deviation 109](../deviations.md)). In the example the subclass declares both
 methods and counts the sends: the instance `n` is the number 2, `b` is the
-logical value 1 and `s` is the string `ab`, and no send is made. ooRexx reads
-such an instance through its `MAKESTRING` method when it is an argument, of a
-method, an operator or a builtin function, and when it is the receiver of the
-numeric methods and operators, the logical operators, `dataType` and `?`, and
-in `new`; as the receiver of the other methods, of the strict comparisons and
-of the joining operators it reads the instance's own characters, so one
-instance can answer differently to `=` and to `==`.
+logical value 1 and `s` is the string `ab`, and no send is made. ooRexx sends
+such an instance `request` with `STRING` or `MAKESTRING` in many of these
+places, as an argument of a method, an operator or a builtin function, as the
+receiver of the numeric and logical methods and operators, `dataType`, `?` and
+the joining operators, as the operand of `SAY`, and in `new`, so an override of
+either method can change what is read; elsewhere it reads the instance's own
+characters, so one instance can answer differently to `=` and to `==`.
 
 ```rexx
 .local~sent = 0
