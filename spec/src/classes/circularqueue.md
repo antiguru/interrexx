@@ -1739,7 +1739,7 @@ a~allItems
 r[class.circularqueue.deviation.109]
 An index, a count, a size given to `new` or `resize`, or a delimiter that is
 an instance of a subclass of `String` is read by its own characters, and
-`MAKESTRING` is not sent to it ([Deviation
+`REQUEST` and `MAKESTRING` are not sent to it ([Deviation
 109](r:class.string.deviation.109)). ooRexx sends such an instance
 `request` with `STRING` or `MAKESTRING`, so an override of either can change
 what is read. In the example `MAKESTRING` answers another index,

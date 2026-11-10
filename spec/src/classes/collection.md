@@ -2267,12 +2267,12 @@ count = 2
 
 r[class.collection.deviation.109]
 An instance of a subclass of `String` that is compared by `subset` or
-`equivalent` is read by its own characters, and `MAKESTRING` is not sent to it
-([Deviation 109](r:class.string.deviation.109)). That reaches the entry of the
-argument that `subset` gives to `\=` and the count of the argument that
-`equivalent` gives to `=`. ooRexx sends such an instance `request`
-with `STRING` or `MAKESTRING`, so an override of either can change what is
-read. In the example `MAKESTRING` answers other characters.
+`equivalent` is read by its own characters, and `REQUEST` and `MAKESTRING` are
+not sent to it ([Deviation 109](r:class.string.deviation.109)). That reaches the
+entry of the argument that `subset` gives to `\=` and the count of the argument
+that `equivalent` gives to `=`. ooRexx sends such an instance `request` with
+`STRING` or `MAKESTRING`, so an override of either can change what is read. In
+the example `MAKESTRING` answers other characters.
 
 ```rexx
 n = .name~new('9')

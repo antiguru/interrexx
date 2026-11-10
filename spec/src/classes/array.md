@@ -1632,9 +1632,9 @@ say .array~of(.n3~new)~toString~c2x
 
 r[class.array.deviation.109]
 An index, a size, a count, the `n` of `dimension`, a mode or a separator that
-is an instance of a subclass of `String`
-is read by its own characters, and `MAKESTRING` is not sent to it ([Deviation
-109](r:class.string.deviation.109)). ooRexx sends such an instance
+is an instance of a subclass of `String` is read by its own characters, and
+`REQUEST` and `MAKESTRING` are not sent to it
+([Deviation 109](r:class.string.deviation.109)). ooRexx sends such an instance
 `request` with `STRING` or `MAKESTRING`, so an override of either can change
 what is read. In the example `MAKESTRING` answers another number,
 separator and mode.

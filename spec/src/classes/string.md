@@ -1873,15 +1873,15 @@ An instance of a subclass of `String` is read by its own characters wherever a
 string, a number, a logical value or a whole number is needed, as the receiver
 and as an argument, in the message form, in the function form and in the
 operators; `REQUEST`, `MAKESTRING` and `STRING` are not sent to it for that
-([Deviation 109](../deviations.md)). In the example the subclass declares both
-methods and counts the sends: the instance `n` is the number 2, `b` is the
-logical value 1 and `s` is the string `ab`, and no send is made. ooRexx sends
-such an instance `request` with `STRING` or `MAKESTRING` in many of these
-places, as an argument of a method, an operator or a builtin function, as the
-receiver of the numeric and logical methods and operators, `dataType`, `?` and
-the joining operators, as the operand of `SAY`, and in `new`, so an override of
-either method can change what is read; elsewhere it reads the instance's own
-characters, so one instance can answer differently to `=` and to `==`.
+([Deviation 109](../deviations.md)). In the example the subclass declares
+`MAKESTRING` and `STRING` and counts the sends: the instance `n` is the number
+2, `b` is the logical value 1 and `s` is the string `ab`, and no send is made.
+ooRexx sends such an instance `request` with `STRING` or `MAKESTRING` in many of
+these places, as an argument of a method, an operator or a builtin function, as
+the receiver of the numeric and logical methods and operators, `dataType` and
+`?`, as the operand of `SAY`, and in `new`, so an override of either method can
+change what is read; elsewhere it reads the instance's own characters, so one
+instance can answer differently to `=` and to `==`.
 
 ```rexx
 .local~sent = 0

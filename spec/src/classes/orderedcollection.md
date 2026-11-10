@@ -1561,7 +1561,7 @@ items
 
 r[class.orderedcollection.deviation.109]
 An instance of a subclass of `String` that `subset` compares is read by its
-own characters, and `MAKESTRING` is not sent to it ([Deviation
+own characters, and `REQUEST` and `MAKESTRING` are not sent to it ([Deviation
 109](r:class.string.deviation.109)). That reaches the answer of `items` of the
 copy, which 0 is compared with. ooRexx sends such an instance `request`
 with `STRING` or `MAKESTRING`, so an override of either can change what is
