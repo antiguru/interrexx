@@ -2,7 +2,7 @@
 element: "Directory"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Directory Class; Builtin Classes > Collection Classes > Directory Class > new (Class Method); Builtin Classes > Collection Classes > Directory Class > []; Builtin Classes > Collection Classes > Directory Class > []=; Builtin Classes > Collection Classes > Directory Class > allIndexes; Builtin Classes > Collection Classes > Directory Class > allItems; Builtin Classes > Collection Classes > Directory Class > at; Builtin Classes > Collection Classes > Directory Class > empty; Builtin Classes > Collection Classes > Directory Class > entry; Builtin Classes > Collection Classes > Directory Class > hasEntry; Builtin Classes > Collection Classes > Directory Class > hasIndex; Builtin Classes > Collection Classes > Directory Class > hasItem; Builtin Classes > Collection Classes > Directory Class > index; Builtin Classes > Collection Classes > Directory Class > isEmpty; Builtin Classes > Collection Classes > Directory Class > items; Builtin Classes > Collection Classes > Directory Class > makeArray; Builtin Classes > Collection Classes > Directory Class > put; Builtin Classes > Collection Classes > Directory Class > remove; Builtin Classes > Collection Classes > Directory Class > removeEntry; Builtin Classes > Collection Classes > Directory Class > removeItem; Builtin Classes > Collection Classes > Directory Class > setEntry; Builtin Classes > Collection Classes > Directory Class > setMethod; Builtin Classes > Collection Classes > Directory Class > supplier; Builtin Classes > Collection Classes > Directory Class > unknown; Builtin Classes > Collection Classes > Directory Class > unsetMethod"
-deviations: [29, 33]
+deviations: [29, 33, 78, 109]
 ---
 
 # Directory
@@ -19,14 +19,14 @@ rule](r:class.index.hierarchy) lists what it inherits.
 [`StringTable`](stringtable.md) is a sibling that has the same entry methods
 without the methods of a directory.
 
-A directory also gives its entries a second face: a message that no method
-answers, such as `d~name`, reaches the `unknown` method of the class, which
-reads or sets the entry of that name in upper case ([the unknown
-rule](r:class.directory.unknown)). The page follows the order of the rexxref
-entry. Examples that show an error use a small routine `try`, as the builtin
-pages do. The page says nothing about the answer of `isEmpty` for a directory
-that holds only methods, and nothing about which of two items equal to the
-argument `removeItem` removes ([the hash order
+A directory also gives its entries a second face: a message for which [the
+method search](r:class.methods.unknown) finds no method, such as `d~name`,
+reaches the `unknown` method of the class, which reads or sets the entry of that
+name in upper case ([the unknown rule](r:class.directory.unknown)). The page
+follows the order of the rexxref entry. Examples that show an error use a small
+routine `try`, as the builtin pages do. The page says nothing about the answer
+of `isEmpty` for a directory that holds only methods, and nothing about which of
+two items equal to the argument `removeItem` removes ([the hash order
 rule](r:class.directory.deviation.33)).
 
 ## The class
@@ -36,14 +36,15 @@ r[class.directory.creation]
 `allItems`, `at`, `empty`, `entry`, `hasEntry`, `hasIndex`, `hasItem`,
 `index`, `isEmpty`, `items`, `makeArray`, `put`, `remove`, `removeEntry`,
 `removeItem`, `setEntry`, `setMethod`, `supplier`, `unknown` and
-`unsetMethod`, a `copy` that this page specifies ([the copy
-rule](r:class.directory.copy)), and the class method `new`. The class method
-`of` and the instance methods `putAll`, `union`, `difference`, `intersection`,
-`xor`, `subset`, `disjoint` and `equivalent` are those of the mixins ([one
-rule](r:class.directory.inherited) lists them). A directory has no
-`makeString`: the message reaches `unknown`, so it answers the entry
-`MAKESTRING`, `.nil` when there is none, and a directory is not a string ([the
-string rule](r:class.directory.string)).
+`unsetMethod`, the `init` that `new` runs ([the new
+rule](r:class.directory.new)) and the class method `new`; the `copy` of
+`Object` copies a directory as [the copy rule](r:class.directory.copy) says.
+The class method `of` and the instance methods `putAll`, `union`,
+`difference`, `intersection`, `xor`, `subset`, `disjoint` and `equivalent` are
+those of the mixins ([one rule](r:class.directory.inherited) lists them). A
+directory has no `makeString`: the message reaches `unknown`, so it answers the
+entry `MAKESTRING`, `.nil` when there is none, and a directory is not a string
+([the string rule](r:class.directory.string)).
 
 ```rexx
 d = .directory~new
@@ -130,8 +131,8 @@ indexes are the same when their characters are the same: case counts, `5` and
 `5.0` are different, and the null string is an index. A method of this page
 that takes a name reads it this way, `at`, `[]`, `put`, `[]=`, `hasIndex`,
 `remove` and the methods whose name is changed to upper case by [the entry
-rule](r:class.directory.entry). An instance of a subclass of `String` is
-converted through its `makeString` like any other object.
+rule](r:class.directory.entry). An instance of a subclass of `String` is read
+by its own characters ([the deviation rule](r:class.directory.deviation.109)).
 
 ```rexx
 d = .directory~new
@@ -142,8 +143,6 @@ d~put('v4', '')
 say d~at('Key') d~at('KEY') d~at('key') d~at(5) d~at('5') d~at(5.0)
 say d~at('made') d~at(.made~new) d~hasIndex(.made~new)
 say d~at('') d~items
-d~put('v6', .sub~new('abc'))
-say d~at('other') d~at('abc') d~at(.sub~new('xyz')) d~items
 call try 'd~at(.nil)'
 call try 'd~put("x", .plain~new)'
 call try 'd~at(.plain~new)'
@@ -159,16 +158,12 @@ bad: say arg(1) '=>' condition('o')~code
 ::method makestring
   return 'made'
 ::class plain
-::class sub subclass string
-::method makestring
-  return 'other'
 ```
 
 ```output
 v1 The NIL object The NIL object v2 v2 The NIL object
 v3 v3 1
 v4 4
-v6 The NIL object v6 5
 d~at(.nil) => 88.909
 d~put("x", .plain~new) => 88.909
 d~at(.plain~new) => 88.909
@@ -382,12 +377,14 @@ d~hasIndex("a", "b") => 93.902
 r[class.directory.hasitem]
 `hasItem(item)` answers 1 when some item is equal to the argument and 0
 otherwise, and `index(item)` answers an index of such an item and `.nil` when
-there is none. The items searched are the stored items and the answers of the
-methods, which are run for the search, once each; the `UNKNOWN` method is not
-searched. Which index `index` answers when several items qualify is not
-specified ([the hash order rule](r:class.directory.deviation.33)). Both take
-exactly one argument: none, or an omitted one, raises `SYNTAX 93.903`, and a
-second raises `SYNTAX 93.902`. `.nil` is an item like any other.
+there is none. The stored items are searched first. When none of them is
+equal, the methods are run one after the other, and the answer of each is
+compared before the next one runs, so a method runs only when nothing searched
+before it was equal, and at most once. The `UNKNOWN` method is not searched.
+Which index `index` answers when several items qualify is not specified ([the
+hash order rule](r:class.directory.deviation.33)). Both take exactly one
+argument: none, or an omitted one, raises `SYNTAX 93.903`, and a second raises
+`SYNTAX 93.902`. `.nil` is an item like any other.
 
 ```rexx
 d = .directory~new
@@ -422,9 +419,12 @@ d~index(1, 2) => 93.902
 r[class.directory.hasitem.sends]
 `hasItem`, `index` and `removeItem` send `==` to the argument, once for each
 item that is searched, with that item as the argument, until one answers true,
-and send nothing else; the items are visited in an order that is not
-specified, so the number of messages is specified only when no item matches,
-as then every item is visited.
+and send nothing else; the stored items are visited first, in an order that is
+not specified, and then the answers of the methods, in an order that is not
+specified either, so the number of messages is specified only when no item
+matches, as then every item is visited. The search with the very object that
+is stored is no exception: its `==` is sent as for any other item ([the
+deviation rule](r:class.directory.deviation.78)).
 
 ```rexx
 .local~n = 0
@@ -533,10 +533,12 @@ d~removeEntry("a", "b") => 93.902
 r[class.directory.removeitem]
 `removeItem(item)` removes one entry whose item is equal to the argument, by
 the search of [the search rule](r:class.directory.hasitem.sends), and answers
-the item that was stored, or the answer of the method when the entry is a
-method, which is removed; it answers `.nil` when no item matches. It removes
-one entry only. It takes exactly one argument: none, or an omitted one, raises
-`SYNTAX 93.903`, and a second raises `SYNTAX 93.902`.
+the item that was stored. When the equal item is the answer of a method, the
+method is removed as [`remove`](r:class.directory.remove) removes it, so it
+runs a second time, and that second answer is the answer of `removeItem`. It
+answers `.nil` when no item matches. It removes one entry only. It takes
+exactly one argument: none, or an omitted one, raises `SYNTAX 93.903`, and a
+second raises `SYNTAX 93.902`.
 
 ```rexx
 d = .directory~new
@@ -565,6 +567,22 @@ ran 1 0
 1 1
 d~removeItem => 93.903
 d~removeItem(1, 2) => 93.902
+```
+
+```rexx
+.local~c = 0
+d = .directory~new
+d~put('x', 'k')
+src = '.local~c += 1; if .local~c = 1 then return "y";',
+  'return "later"'
+d~setMethod('m', src)
+say d~hasItem('x') .local~c
+say d~removeItem('y') .local~c d~items
+```
+
+```output defect=#166
+1 0
+later 2 1
 ```
 
 r[class.directory.empty]
@@ -600,17 +618,22 @@ d~empty(1) => 93.902
 r[class.directory.setmethod]
 `setMethod(name, method)` associates the method with the name changed to upper
 case, replacing the item or the method that was there, and answers nothing.
-`method` is a `Method` object, a string, or an array of strings; a string or
-an array is the source of a method that is made from it, as `new` of `Method`
-does, and a source that does not translate raises its syntax error ([the
-method rule](r:class.method.new)). Without a method, or with it omitted, the
-entry of that name is removed. An argument that is `.nil` or an object that is
-neither a method nor a source raises `SYNTAX 93.974`, and a source array with
-an item that is not a string raises `SYNTAX 93.952`. The method runs when the
-name is read ([the read rule](r:class.directory.at)).
+`method` is read as the `setMethod` of `Object` reads it ([the
+setMethod rule](r:class.object.setmethod)): a `Method`, the source of a method
+as a string or an array of strings, or any other object, which is sent
+`request` with `ARRAY` and then with `STRING`. A source that does not
+translate raises its syntax error ([the method rule](r:class.method.new)),
+`.nil` and an object that answers neither raise `SYNTAX 93.974`, and a source
+array with an item that is not a string raises `SYNTAX 93.952`. Without a
+method, or with it omitted, the entry of that name is removed. The method runs
+when the name is read ([the read rule](r:class.directory.at)).
 `setMethod('UNKNOWN', m)` sets the method that answers the reads of names that
 have no entry; it replaces an item of that name and is not an entry of the
-directory.
+directory. `setMethod` gives the directory no method of its own, unlike [the
+`setMethod` of `Object`](r:class.object.setmethod): `hasMethod` of the name
+answers 0, and a message of that name reaches
+[`unknown`](r:class.directory.unknown), which runs the method with no arguments,
+whatever the message carried.
 
 ```rexx
 d = .directory~new
@@ -624,6 +647,12 @@ say d~at('D') d~items
 d~setMethod('d')
 d~setMethod('c', )
 say d~hasIndex('D') d~hasIndex('C') d~items
+d~setMethod('e', .mk~new)
+d~setMethod('f', .rq~new)
+d~setMethod('g', .list~of('return 7'))
+say d~at('E') d~at('F') d~at('G') d~items
+d~setMethod('m', 'return "m" arg()')
+say d~hasMethod('M') d~m(1, 2) d~at('M')
 call try 'd~setMethod'
 call try 'd~setMethod("x", .nil)'
 call try 'd~setMethod("x", .object~new)'
@@ -639,12 +668,24 @@ try:
   return
 bad: say arg(1) '=>' condition('o')~code
   return
+::class mk
+::method makestring
+  return 'return 5'
+::class rq
+::method request
+  say '  rq request' arg(1)
+  if arg(1) = 'ARRAY' then return .nil
+  return 'return "req"'
 ```
 
 ```output
 from a string | 42 | 0 | 0 3
 method 4
 0 0 2
+  rq request ARRAY
+  rq request STRING
+5 req 7 5
+0 m 0 m 0
 d~setMethod => 88.901
 d~setMethod("x", .nil) => 93.974
 d~setMethod("x", .object~new) => 93.974
@@ -692,11 +733,12 @@ d~unsetMethod("a", "b") => 93.902
 ```
 
 r[class.directory.unknown]
-`unknown(name, args)` runs when no method answers a message. When the name
+`unknown(name, args)` runs when [the method search](r:class.methods.unknown)
+finds no method for a message. When the name
 does not end in `=`, it answers what `entry` of the name answers, and the
 arguments of the message are ignored; when it ends in `=`, it stores the first
 of the arguments at the name without the `=` with what `setEntry` does and
-answers nothing, so `d~title = 'x'` and `d~name('y')` read and set the entries
+answers nothing, so `d~title = 'x'` and `d~name('y')` set and read the entries
 `TITLE` and `NAME`. The message name can be any string, so `d~'two words' = 1`
 sets the entry `TWO WORDS`. Neither `entry` nor `setEntry` is sent to the
 directory by it. Called directly, it takes exactly two arguments: a missing
@@ -861,8 +903,10 @@ d~tag = 'T'
 d~put('v1', 'k1')
 d~setMethod('m', 'return "ran"')
 d~setMethod('unknown', 'return "unk" arg(1)')
+a = .array~new
+d~put(a, 'arr')
 c = d~copy
-say c~class~id c~items c~tag c~at('M') c~at('zz') (c == d)
+say c~class~id c~items c~tag c~at('M') c~at('zz') (c == d) (c~at('arr') == a)
 c~put('v2', 'k2')
 c~unsetMethod('m')
 c~unsetMethod('unknown')
@@ -885,8 +929,8 @@ bad: say arg(1) '=>' condition('o')~code
 
 ```output
 init
-MANY 2 T ran unk zz 0
-2 2 ran unk zz 1
+MANY 3 T ran unk zz 0 1
+3 3 ran unk zz 1
 d~copy(1) => 93.902
 ```
 
@@ -965,7 +1009,10 @@ send go to other objects and have a rule each: `init` to the new object by
 `new` ([the new rule](r:class.directory.new)); `==` to the argument by
 `hasItem`, `index` and `removeItem` ([the search
 rule](r:class.directory.hasitem.sends)); `request` with `STRING` to a name
-that is not a string ([the index rule](r:class.directory.indexes)). The set
+that is neither a string nor an instance of a subclass of `String` ([the index
+rule](r:class.directory.indexes)); `request` with `ARRAY` and then `STRING` to
+a method argument of `setMethod` that is not a `Method`, a string or an array
+([the setMethod rule](r:class.directory.setmethod)). The set
 operations send what the pages of the mixins say. In the example a subclass
 has every method overridden to record its name, and each call records only its
 own.
@@ -1013,9 +1060,12 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 r[class.directory.deviation.29]
 An assignment to a name that gives no value, `d~"A="()`, or the same through
 `sendWith`, is refused: interrexx ends the program with exit code 120. ooRexx
-stores an unrelated leftover object at the entry. The assignment with a value
-is [the unknown rule](r:class.directory.unknown). See [Deviation
-29](../deviations.md).
+stores an unrelated leftover object at the entry. A direct call of
+[`unknown`](r:class.directory.unknown) with a name that ends in `=` and an
+argument array that holds no item, `d~unknown('A=', .array~new(3))`, is
+refused the same way; ooRexx removes the entry, as `setEntry` with the item
+omitted does. The assignment with a value is [the unknown
+rule](r:class.directory.unknown). See [Deviation 29](../deviations.md).
 
 ```rexx
 say 'before'
@@ -1028,12 +1078,22 @@ say 'after'
 before
 ```
 
+```rexx
+say 'before'
+d = .directory~new
+d~unknown('A=', .array~new(3))
+say 'after'
+```
+
+```output rc=120
+before
+```
+
 r[class.directory.deviation.33]
 The order of the answers of `allIndexes`, `allItems`, `makeArray` and
-`supplier`, of the search of `hasItem`, `index` and `removeItem`, and of the
-lines that [`Properties`](properties.md) writes is not specified, and may
-differ from ooRexx's. Which entries are produced, and how often, is specified.
-In the example the answers are sorted.
+`supplier`, and of the search of `hasItem`, `index` and `removeItem`, is not
+specified, and may differ from ooRexx's. Which entries are produced, and how
+often, is specified. In the example the answers are sorted.
 
 ```rexx
 d = .directory~new
@@ -1049,4 +1109,55 @@ say d~items d~makeArray~items
 one,three,two
 1,2,3
 3 3
+```
+
+r[class.directory.deviation.78]
+A search for an item with the very object that is stored, by `hasItem`,
+`index` or `removeItem`, sends that object's `==` as for any other item, so an
+object whose `==` answers false is not found even at its own entry. ooRexx
+compares identity first, finds it and sends nothing. See [Deviation
+78](../deviations.md).
+
+```rexx
+.local~n = 0
+d = .directory~new
+q = .thing~new
+d~put(q, 'k')
+say d~hasItem(q) .local~n
+say (d~index(q) == .nil) .local~n
+say (d~removeItem(q) == .nil) .local~n d~items
+::class thing
+::method '=='
+  .local~n += 1
+  return 0
+```
+
+```output
+0 1
+1 2
+1 3 1
+```
+
+r[class.directory.deviation.109]
+A name, an index or the size argument of `new` that is an instance of a
+subclass of `String` is read by its own characters, and `REQUEST` and
+`MAKESTRING` are not sent to it ([Deviation
+109](r:class.string.deviation.109)). ooRexx sends such an instance `request`
+with `STRING` or `MAKESTRING`, so an override of either changes the index
+that is stored or looked up and the size that `new` checks. In the example
+`MAKESTRING` answers another text.
+
+```rexx
+say .directory~new(.sub~new('2'))~items
+d = .directory~new
+d~put('v', .sub~new('abc'))
+say d~at('abc') (d~at('other') == .nil) d~hasIndex(.sub~new('abc'))
+::class sub subclass string
+::method makestring
+  return 'other'
+```
+
+```output defect=#140
+0
+v 1 1
 ```

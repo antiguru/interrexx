@@ -1,8 +1,8 @@
 ---
 element: "Properties"
 kind: class
-rexxref: "Builtin Classes > Collection Classes > Properties Class; Builtin Classes > Collection Classes > Properties Class > load (Class Method); Builtin Classes > Collection Classes > Properties Class > new (Class Method); Builtin Classes > Collection Classes > Properties Class > []=; Builtin Classes > Collection Classes > Properties Class > getLogical; Builtin Classes > Collection Classes > Properties Class > getProperty; Builtin Classes > Collection Classes > Properties Class > getWhole; Builtin Classes > Collection Classes > Properties Class > load; Builtin Classes > Collection Classes > Properties Class > put; Builtin Classes > Collection Classes > Properties Class > save; Builtin Classes > Collection Classes > Properties Class > setLogical; Builtin Classes > Collection Classes > Properties Class > setProperty; Builtin Classes > Collection Classes > Properties Class > setWhole"
-deviations: [29, 33]
+rexxref: "Builtin Classes > Collection Classes > Properties Class; Builtin Classes > Collection Classes > Properties Class > load (Class method); Builtin Classes > Collection Classes > Properties Class > new (Class method); Builtin Classes > Collection Classes > Properties Class > []=; Builtin Classes > Collection Classes > Properties Class > getLogical; Builtin Classes > Collection Classes > Properties Class > getProperty; Builtin Classes > Collection Classes > Properties Class > getWhole; Builtin Classes > Collection Classes > Properties Class > load; Builtin Classes > Collection Classes > Properties Class > put; Builtin Classes > Collection Classes > Properties Class > save; Builtin Classes > Collection Classes > Properties Class > setLogical; Builtin Classes > Collection Classes > Properties Class > setProperty; Builtin Classes > Collection Classes > Properties Class > setWhole"
+deviations: [29, 33, 109]
 ---
 
 # Properties
@@ -28,7 +28,8 @@ with a file that cannot be read, other than one that does not exist.
 r[class.properties.creation]
 `Properties` declares the instance methods `[]=`, `getLogical`, `getProperty`,
 `getWhole`, `load`, `put`, `save`, `setLogical`, `setProperty` and `setWhole`,
-and the class methods `load` and `new`. The class method `of` and the other
+and the class method `load`; its `new` is that of `Directory` ([the new
+rule](r:class.properties.new)). The class method `of` and the other
 instance methods are those of `Directory` and the mixins. A properties object
 answers the same `of` and set operations, `hasEntry`, `setMethod` and
 `unsetMethod` as a directory ([the inheritance
@@ -97,13 +98,16 @@ value as [the string-value rule](r:conv.string.object) says, which sends it
 `request` with `STRING`, so a number is stored as its digits, an object whose
 `makeString` answers a string is stored as that answer, and an array as the
 text that its `makeString` gives; `.nil` and an object with no `makeString`
-raise `SYNTAX 93.938`. The name is read as a string as for a directory ([the
+raise `SYNTAX 93.938`. An instance of a subclass of `String` is stored as its
+own characters ([the deviation rule](r:class.properties.deviation.109)). The
+name is read as a string as for a directory ([the
 index rule](r:class.directory.indexes)), and `.nil` as the name raises
 `SYNTAX 88.909`. The three answer nothing, and none of them sends `put`, `[]=`
 or `setProperty` to the receiver. `put` and `setProperty` take exactly two
 arguments and `[]=` is the assignment `[name] = value`: fewer raises
 `SYNTAX 93.901`, an omitted place before the last argument given raises
-`SYNTAX 93.903`, and a third argument raises `SYNTAX 93.902`.
+`SYNTAX 93.903`, and a third argument raises `SYNTAX 93.902`. The count is
+checked first, then the value, then the name.
 
 ```rexx
 p = .properties~new
@@ -124,6 +128,8 @@ call try 'p~put(, "x")'
 call try 'p~setProperty("x")'
 call try 'p~setProperty(, "x")'
 call try 'p~put("x", "y", "z")'
+call try 'p~put(.nil, .nil)'
+call try 'p~setProperty(.nil, .nil)'
 exit
 try:
   signal on syntax name bad
@@ -153,6 +159,8 @@ p~put(, "x") => 93.903
 p~setProperty("x") => 93.901
 p~setProperty(, "x") => 93.903
 p~put("x", "y", "z") => 93.902
+p~put(.nil, .nil) => 93.938
+p~setProperty(.nil, .nil) => 93.938
 ```
 
 r[class.properties.unchecked]
@@ -240,7 +248,8 @@ which it sends to the receiver, and answers 1 for the value `1` or `true` and
 is checked in the same way, so it must be one of those four strings (or a
 logical value), or the error is raised; when the name has a value, the default
 is not looked at. A missing name with no default raises `SYNTAX 34.904` too.
-The arguments are counted as for `getProperty`.
+A value that is not a string is not converted and raises `SYNTAX 34.904`. The
+arguments are counted as for `getProperty`.
 
 ```rexx
 p = .properties~new
@@ -257,6 +266,8 @@ do v over .array~of('TRUE', 'False', 'yes', '2', '-1', '00', '', ' 1')
   p~setProperty('k', v)
   call try 'p~getLogical("k")', '['v']'
 end
+p~setEntry('k', .text~new('true'))
+call try 'p~getLogical("k")', 'object'
 call try 'p~getLogical("zz")', 'missing'
 call try 'p~getLogical("zz", "junk")', 'default junk'
 call try 'p~getLogical("zz", .nil)', 'default nil'
@@ -270,6 +281,17 @@ try:
   return
 bad: say arg(2) '=>' condition('o')~code
   return
+::class text
+::method init
+  expose v
+  use arg v
+::method makestring
+  expose v
+  return v
+::method request
+  expose v
+  if arg(1) = 'STRING' then return v
+  return .nil
 ```
 
 ```output
@@ -285,6 +307,7 @@ bad: say arg(2) '=>' condition('o')~code
 [00] => 34.904
 [] => 34.904
 [ 1] => 34.904
+object => 34.904
 missing => 34.904
 default junk => 34.904
 default nil => 34.904
@@ -301,7 +324,8 @@ setting: blanks around it are allowed, a sign, an exponent and a point
 followed by zeros are allowed, and a value that needs more than nine digits is
 not. The default is used when the name has no value and is checked in the same
 way, and is not looked at when the name has a value. A missing name with no
-default raises `SYNTAX 26.901` too.
+default raises `SYNTAX 26.901` too. A value that is not a string is read
+through [the string-value rule](r:conv.string.object).
 
 ```rexx
 p = .properties~new
@@ -360,6 +384,26 @@ no name => 93.901
 three => 93.902
 ```
 
+```rexx
+p = .properties~new
+p~setEntry('b', .text~new('12'))
+say p~getWhole('B')
+::class text
+::method init
+  expose v
+  use arg v
+::method makestring
+  return 'not read'
+::method request
+  expose v
+  if arg(1) = 'STRING' then return v
+  return .nil
+```
+
+```output defect=#164
+12
+```
+
 ## Setting logical and whole values
 
 r[class.properties.setlogical]
@@ -372,8 +416,9 @@ raise `SYNTAX 34.901`. A value that has no `datatype` method, `.nil` and an
 instance of a class that does not understand the message among them, raises
 `SYNTAX 97.1`; one whose `datatype` answers 1 but that is not a logical value
 raises `SYNTAX 34.1`, and one that answers 0 raises `SYNTAX 34.901`. The
-method answers nothing and takes exactly two arguments: fewer raises
-`SYNTAX 93.901` and a third `SYNTAX 93.902`.
+method answers nothing and takes exactly two arguments, counted as for `put`:
+fewer raises `SYNTAX 93.901`, an omitted name before the value `SYNTAX 93.903`
+and a third `SYNTAX 93.902`; the value is checked before the name.
 
 ```rexx
 p = .properties~new
@@ -391,6 +436,8 @@ call try 'p~setLogical("k", .answers~new(1))', 'answers 1'
 call try 'p~setLogical("k", .answers~new(0))', 'answers 0'
 call try 'p~setLogical("k")', 'one argument'
 call try 'p~setLogical("k", 1, 2)', 'three'
+call try 'p~setLogical(, 1)', 'omitted name'
+call try 'p~setLogical(.nil, .nil)', 'both nil'
 call try 'p~setLogical(.nil, 1)', 'name nil'
 exit
 try:
@@ -427,6 +474,8 @@ answers 1 => 34.1
 answers 0 => 34.901
 one argument => 93.901
 three => 93.902
+omitted name => 93.903
+both nil => 97.1
 name nil => 88.909
 ```
 
@@ -441,7 +490,7 @@ string or a number of more than nine digits, raises `SYNTAX 93.905`. A value
 that has no `datatype` method raises `SYNTAX 97.1`; one whose `datatype`
 answers 1 but that is not a string raises `SYNTAX 93.938`, and one that
 answers 0 raises `SYNTAX 93.905`. The method answers nothing and takes exactly
-two arguments, counted as for `setLogical`.
+two arguments, counted and checked as for `setLogical`.
 
 ```rexx
 p = .properties~new
@@ -458,6 +507,8 @@ call try 'p~setWhole("k", .answers~new(1))', 'answers 1'
 call try 'p~setWhole("k", .answers~new(0))', 'answers 0'
 call try 'p~setWhole("k")', 'one argument'
 call try 'p~setWhole("k", 1, 2)', 'three'
+call try 'p~setWhole(, 1)', 'omitted name'
+call try 'p~setWhole(.nil, .nil)', 'both nil'
 call try 'p~setWhole(.nil, 1)', 'name nil'
 exit
 try:
@@ -492,6 +543,8 @@ answers 1 => 93.938
 answers 0 => 93.905
 one argument => 93.901
 three => 93.902
+omitted name => 93.903
+both nil => 97.1
 name nil => 88.909
 ```
 
@@ -547,13 +600,15 @@ call sysfiledelete f
 r[class.properties.load.class]
 The class method `load(source)` answers a new `Properties` that holds what the
 source gives, an instance of `Properties` whatever class received the message,
-and `new` is not sent. `source` is the name of a file, a `File` object, or a
-`Stream` object that is read from its read position to its end; a stream that
-was not open is opened. A file that does not exist gives an empty object and
-no error. Any other object is read by sending it `linein` until it raises the
-NOTREADY condition ([the instance rule](r:class.properties.load)). The method
-takes exactly one argument: none raises `SYNTAX 93.901`, a second raises
-`SYNTAX 93.902`.
+and `new` is not sent. `source` is the name of a file or a `File` object,
+which is read through a `Stream` made for it, or any other object, a `Stream`
+included, which is sent `linein` with no argument until it raises the NOTREADY
+condition, so a stream is read from its read position to its end, is opened by
+its first `linein` when it was not open, and is not closed ([the instance
+rule](r:class.properties.load)). A file that does not exist gives an empty
+object and no error, and an object that does not understand `linein` raises
+`SYNTAX 97.1`. The method takes exactly one argument: none raises `SYNTAX
+93.901`, a second raises `SYNTAX 93.902`.
 
 ```rexx
 f = 'spec-properties-load.tmp'
@@ -579,6 +634,12 @@ say q~class~id q~items
 say .properties~load('spec-properties-nothing-here.tmp')~items
 p = .properties~load(.lines~new)
 say p~items p['x'] p['y']
+.local~k = 0
+.local~a = 0
+s3 = .counting~new(f)
+say .properties~load(s3)~items .local~k .local~a s3~state
+s3~close
+call try '.properties~load(.nil)'
 call try '.properties~load'
 call try '.properties~load(f, 1)'
 call sysfiledelete f
@@ -604,6 +665,11 @@ bad: say arg(1) '=>' condition('o')~code
   if n = 1 then return 'x=1'
   if n = 2 then return 'y=2'
   raise notready
+::class counting subclass stream
+::method linein
+  .local~k += 1
+  .local~a += arg()
+  forward class (super)
 ```
 
 ```output
@@ -615,6 +681,8 @@ a=1
 Properties 2
 0
 2 1 2
+2 3 0 NOTREADY
+.properties~load(.nil) => 97.1
 .properties~load => 93.901
 .properties~load(f, 1) => 93.902
 ```
@@ -633,7 +701,9 @@ does.
 
 ```rexx
 f = 'spec-properties-iload.tmp'
+g = 'spec-properties-isave.tmp'
 call sysfiledelete f
+call sysfiledelete g
 call lineout f, 'n=1'
 call lineout f, 'm=2'
 call lineout f
@@ -647,8 +717,11 @@ p~load(f)
 say p~items p['k'] p['n'] p['m']
 say 'by stream'
 p~load(.stream~new(f))
+say 'save by name'
+p~save(g)
 .local~on = 0
 call sysfiledelete f
+call sysfiledelete g
 call try 'p~load'
 call try 'p~load(f, 1)'
 exit
@@ -666,6 +739,9 @@ bad: say arg(1) '=>' condition('o')~code
 ::method put
   if .local~on then say 'put' arg(1) arg(2)
   forward class (super)
+::method save
+  if .local~on then say 'save' arg(1)~class~id
+  forward class (super)
 ```
 
 ```output
@@ -679,6 +755,9 @@ by stream
 load Stream
 put 1 n
 put 2 m
+save by name
+save String
+save Stream
 p~load => 93.901
 p~load(f, 1) => 93.902
 ```
@@ -687,12 +766,13 @@ r[class.properties.save]
 `save(target)` writes one line `name=value` for each entry, each ended by a
 line feed, in an order that is not specified ([the hash order
 rule](r:class.properties.deviation.33)); the name and the value are written as
-they are, with no escaping, so a name that holds `=` or a value that holds a
-line feed does not load back as it was. `target` is the name of a file, whose
-old contents are replaced, a `File` object, treated the same, or an object
-that understands `lineout`, such as a `Stream`, which is written at its write
-position and is not closed. When the target is a name or a `File`, `save`
-first sends `save` to the receiver with a `Stream` made for it, and that
+they are, a value that is not a string through [the string-value
+rule](r:conv.string.object), with no escaping, so a name that holds `=` or a
+value that holds a line feed does not load back as it was. `target` is the name
+of a file, whose old contents are replaced, a `File` object, treated the same,
+or an object that understands `lineout`, such as a `Stream`, which is written at
+its write position and is not closed. When the target is a name or a `File`,
+`save` first sends `save` to the receiver with a `Stream` made for it, and that
 message does the writing. The writing sends `supplier` to the receiver, and
 `lineout` with the line as the only argument to the target for each entry. The
 answer is nothing, and an object that does not understand `lineout` raises
@@ -769,6 +849,39 @@ p~save(f, 1) => 93.902
 p~save(.nil) => 97.1
 ```
 
+```rexx
+p = .properties~new
+p~setEntry('o', .text~new('val'))
+t = .recorder~new
+p~save(t)
+say t~lines~makeString('L', '|')
+::class text
+::method init
+  expose v
+  use arg v
+::method makestring
+  return 'not read'
+::method request
+  expose v
+  if arg(1) = 'STRING' then return v
+  return .nil
+::class recorder
+::method init
+  expose lines
+  lines = .array~new
+::method lineout
+  expose lines
+  lines~append(arg(1))
+  return 0
+::method lines
+  expose lines
+  return lines
+```
+
+```output defect=#164
+O=val
+```
+
 ## What a properties object inherits
 
 r[class.properties.inherited]
@@ -781,7 +894,9 @@ mixins, `of`, `putAll` and the set operations, and each behaves as the page of
 `Directory` says, of a properties object and of an instance of a subclass of
 it. The copy is a `Properties`. The `unknown` that reads and sets the entries
 by message name does not check the value ([the unchecked
-rule](r:class.properties.unchecked)). Its string value is `a Properties`.
+rule](r:class.properties.unchecked)). A search for the very item stored sends
+its `==` as for any other item ([the Directory
+rule](r:class.directory.deviation.78)). Its string value is `a Properties`.
 
 ```rexx
 p = .many~new
@@ -812,9 +927,14 @@ to the source or target, are these. `getProperty` sends `at` with the name;
 `setLogical` and `setWhole` send `datatype` to the value, and `setProperty`
 with the name and the text; `setProperty`, `put` and `[]=` send nothing to the
 receiver; `load` and `save` send what [the load rule](r:class.properties.load)
-and [the save rule](r:class.properties.save) say. The methods `put`,
-`setProperty`, `[]=` and the setters read a value that is not a string with
-`request` and the argument `STRING` ([the put rule](r:class.properties.put)).
+and [the save rule](r:class.properties.save) say, `linein` with no argument to
+a source that is not a name or a `File` and `lineout` with the line to a
+target that is not a name or a `File`. The methods `put`, `setProperty`, `[]=`
+and the setters read a value that is not a string with `request` and the
+argument `STRING` ([the put rule](r:class.properties.put)), and `getWhole` and
+`save` send `request` with `STRING` to a stored value that is not a string
+([the getWhole rule](r:class.properties.getwhole) and [the save
+rule](r:class.properties.save)).
 In the example each method of a subclass records its name, the number of its
 arguments and its first argument, and each call shows the records it caused.
 
@@ -912,4 +1032,29 @@ say t~lines~sort~makeString('L', '|')
 
 ```output
 one=1|three=3|two=2
+```
+
+r[class.properties.deviation.109]
+A value that is an instance of a subclass of `String` is read by its own
+characters by `put`, `[]=`, `setProperty` and `setWhole`, and `REQUEST` and
+`MAKESTRING` are not sent to it ([Deviation
+109](r:class.string.deviation.109)); a name is read as [a directory reads
+it](r:class.directory.deviation.109). ooRexx sends such a value `request`
+with `STRING` or `MAKESTRING`, so an override of either changes the text that
+is stored, and `setWhole` raises `SYNTAX 93.905` when that text is not a
+whole number. In the example `MAKESTRING` answers another text.
+
+```rexx
+p = .properties~new
+p~put(.sub~new('abc'), 'k')
+p~setProperty('k2', .sub~new('def'))
+p~setWhole('w', .sub~new('12'))
+say p['k'] p['k2'] p['w']
+::class sub subclass string
+::method makestring
+  return 'other'
+```
+
+```output defect=#140
+abc def 12
 ```

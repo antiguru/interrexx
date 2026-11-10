@@ -2,7 +2,7 @@
 element: "StringTable"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > StringTable Class; Builtin Classes > Collection Classes > StringTable Class > new (Class Method); Builtin Classes > Collection Classes > StringTable Class > []; Builtin Classes > Collection Classes > StringTable Class > []=; Builtin Classes > Collection Classes > StringTable Class > allIndexes; Builtin Classes > Collection Classes > StringTable Class > allItems; Builtin Classes > Collection Classes > StringTable Class > at; Builtin Classes > Collection Classes > StringTable Class > empty; Builtin Classes > Collection Classes > StringTable Class > entry; Builtin Classes > Collection Classes > StringTable Class > hasEntry; Builtin Classes > Collection Classes > StringTable Class > hasIndex; Builtin Classes > Collection Classes > StringTable Class > hasItem; Builtin Classes > Collection Classes > StringTable Class > index; Builtin Classes > Collection Classes > StringTable Class > isEmpty; Builtin Classes > Collection Classes > StringTable Class > items; Builtin Classes > Collection Classes > StringTable Class > makeArray; Builtin Classes > Collection Classes > StringTable Class > put; Builtin Classes > Collection Classes > StringTable Class > remove; Builtin Classes > Collection Classes > StringTable Class > removeEntry; Builtin Classes > Collection Classes > StringTable Class > removeItem; Builtin Classes > Collection Classes > StringTable Class > setEntry; Builtin Classes > Collection Classes > StringTable Class > supplier; Builtin Classes > Collection Classes > StringTable Class > unknown"
-deviations: [29, 33]
+deviations: [29, 33, 78, 109]
 ---
 
 # StringTable
@@ -15,8 +15,9 @@ object. The class inherits [`MapCollection`](mapcollection.md), and through it
 [`Collection`](collection.md); [the hierarchy rule](r:class.index.hierarchy)
 lists what it inherits.
 
-A message that no method answers, such as `t~name`, reaches the `unknown`
-method of the class, which reads or sets the entry of that name in upper case
+A message for which [the method search](r:class.methods.unknown) finds no
+method, such as `t~name`, reaches the `unknown` method of the class, which
+reads or sets the entry of that name in upper case
 ([the unknown rule](r:class.stringtable.unknown)). The page follows the order
 of the rexxref entry. Examples that show an error use a small routine `try`,
 as the builtin pages do. The page says nothing about which of two items equal
@@ -29,14 +30,16 @@ r[class.stringtable.creation]
 `StringTable` declares the instance methods `[]`, `[]=`, `allIndexes`,
 `allItems`, `at`, `empty`, `entry`, `hasEntry`, `hasIndex`, `hasItem`,
 `index`, `isEmpty`, `items`, `makeArray`, `put`, `remove`, `removeEntry`,
-`removeItem`, `setEntry`, `supplier` and `unknown`, a `copy` that this page
-specifies ([the copy rule](r:class.stringtable.copy)), and the class method
-`new`. The class method `of` and the instance methods `putAll`, `union`,
-`difference`, `intersection`, `xor`, `subset`, `disjoint` and `equivalent` are
-those of the mixins ([one rule](r:class.stringtable.inherited) lists them). It
-has no `setMethod` and no `unsetMethod` of the kind a directory has ([the
-method rule](r:class.stringtable.setmethod)), and no `makeString`, so a string
-table is not a string ([the string rule](r:class.stringtable.string)).
+`removeItem`, `setEntry`, `supplier` and `unknown`, the `init` that `new` runs
+([the new rule](r:class.stringtable.new)) and the class method `new`; the
+`copy` of `Object` copies a string table as [the copy
+rule](r:class.stringtable.copy) says. The class method `of` and the instance
+methods `putAll`, `union`, `difference`, `intersection`, `xor`, `subset`,
+`disjoint` and `equivalent` are those of the mixins ([one
+rule](r:class.stringtable.inherited) lists them). It has no `setMethod` and no
+`unsetMethod` of the kind a directory has ([the method
+rule](r:class.stringtable.setmethod)), and no `makeString`, so a string table is
+not a string ([the string rule](r:class.stringtable.string)).
 
 ```rexx
 t = .stringtable~new
@@ -123,9 +126,10 @@ it](r:class.directory.indexes): a string is used as it is, any other object by
 answers a string is used through that answer, and an object that has neither,
 `.nil` included, gives `SYNTAX 88.909`. The index is stored as that string,
 case counts, `5` and `5.0` are different indexes, and the null string is an
-index. Every method of this page that takes a name reads it this way, those
-that change it to upper case afterwards included ([the entry
-rule](r:class.stringtable.entry)).
+index. An instance of a subclass of `String` is read by its own characters
+([the deviation rule](r:class.stringtable.deviation.109)). Every method of this
+page that takes a name reads it this way, those that change it to upper case
+afterwards included ([the entry rule](r:class.stringtable.entry)).
 
 ```rexx
 t = .stringtable~new
@@ -278,7 +282,8 @@ t~setEntry(.nil, 1) => 88.909
 ```
 
 r[class.stringtable.unknown]
-`unknown(name, args)` runs when no method answers a message. When the name
+`unknown(name, args)` runs when [the method search](r:class.methods.unknown)
+finds no method for a message. When the name
 does not end in `=`, it answers what `entry` of the name answers, and the
 arguments of the message are ignored; when it ends in `=`, it stores the first
 of the arguments at the name without the `=` with what `setEntry` does and
@@ -339,10 +344,11 @@ t~unknown("x", .nil) => 98.913
 r[class.stringtable.setmethod]
 A string table has no `setMethod` and no `unsetMethod` of its own: the methods
 of those names that `Object` has are private ([the private
-rule](r:class.object.setmethod.private)), and a message from a program does
-not reach them. The messages reach `unknown` like any other name, and answer
-the entry `SETMETHOD` or `UNSETMETHOD`, `.nil` when there is none; nothing is
-stored. An entry named `UNKNOWN` is an ordinary entry.
+rule](r:class.object.setmethod.private)), and a message from outside the
+object does not reach them ([the access
+rule](r:class.methods.search.access)). The messages reach `unknown` like any
+other name, and answer the entry `SETMETHOD` or `UNSETMETHOD`, `.nil` when there
+is none; nothing is stored. An entry named `UNKNOWN` is an ordinary entry.
 
 ```rexx
 t = .stringtable~new
@@ -431,7 +437,9 @@ r[class.stringtable.hasitem.sends]
 item that is searched, with that item as the argument, until one answers true,
 and send nothing else; the items are visited in an order that is not
 specified, so the number of messages is specified only when no item matches,
-as then every item is visited.
+as then every item is visited. The search with the very object that is stored
+is no exception: its `==` is sent as for any other item ([the deviation
+rule](r:class.stringtable.deviation.78)).
 
 ```rexx
 .local~n = 0
@@ -680,8 +688,10 @@ sent. It takes no argument: one raises `SYNTAX 93.902`.
 t = .many~new
 t~tag = 'T'
 t~put('v1', 'k1')
+a = .array~new
+t~put(a, 'arr')
 c = t~copy
-say c~class~id c~items c~tag c~at('k1') (c == t)
+say c~class~id c~items c~tag c~at('k1') (c == t) (c~at('arr') == a)
 c~put('v2', 'k2')
 c~remove('k1')
 say t~items c~items t~at('k1') (c~at('k1') == .nil)
@@ -703,8 +713,8 @@ bad: say arg(1) '=>' condition('o')~code
 
 ```output
 init
-MANY 1 T v1 0
-1 1 v1 1
+MANY 2 T v1 0 1
+2 2 v1 1
 t~copy(1) => 93.902
 ```
 
@@ -784,7 +794,8 @@ send go to other objects and have a rule each: `init` to the new object by
 `new` ([the new rule](r:class.stringtable.new)); `==` to the argument by
 `hasItem`, `index` and `removeItem` ([the search
 rule](r:class.stringtable.hasitem.sends)); `request` with `STRING` to a name
-that is not a string ([the index rule](r:class.stringtable.indexes)). The set
+that is neither a string nor an instance of a subclass of `String` ([the index
+rule](r:class.stringtable.indexes)). The set
 operations send what the pages of the mixins say. In the example a subclass
 has every method overridden to record its name, and each call records only its
 own.
@@ -867,4 +878,55 @@ say t~items t~makeArray~items
 one,three,two
 1,2,3
 3 3
+```
+
+r[class.stringtable.deviation.78]
+A search for an item with the very object that is stored, by `hasItem`,
+`index` or `removeItem`, sends that object's `==` as for any other item, so an
+object whose `==` answers false is not found even at its own entry. ooRexx
+compares identity first, finds it and sends nothing. See [Deviation
+78](../deviations.md).
+
+```rexx
+.local~n = 0
+t = .stringtable~new
+q = .thing~new
+t~put(q, 'k')
+say t~hasItem(q) .local~n
+say (t~index(q) == .nil) .local~n
+say (t~removeItem(q) == .nil) .local~n t~items
+::class thing
+::method '=='
+  .local~n += 1
+  return 0
+```
+
+```output
+0 1
+1 2
+1 3 1
+```
+
+r[class.stringtable.deviation.109]
+A name, an index or the size argument of `new` that is an instance of a
+subclass of `String` is read by its own characters, and `REQUEST` and
+`MAKESTRING` are not sent to it ([Deviation
+109](r:class.string.deviation.109)). ooRexx sends such an instance `request`
+with `STRING` or `MAKESTRING`, so an override of either changes the index
+that is stored or looked up and the size that `new` checks. In the example
+`MAKESTRING` answers another text.
+
+```rexx
+say .stringtable~new(.sub~new('2'))~items
+t = .stringtable~new
+t~put('v', .sub~new('abc'))
+say t~at('abc') (t~at('other') == .nil) t~hasIndex(.sub~new('abc'))
+::class sub subclass string
+::method makestring
+  return 'other'
+```
+
+```output defect=#140
+0
+v 1 1
 ```
