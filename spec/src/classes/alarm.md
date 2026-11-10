@@ -138,16 +138,19 @@ it has to be zero or more: a string that is no number, the empty string and a
 negative number raise `SYNTAX 93.951`. The number is cut to the microsecond
 before its sign is checked, so `-0.0000001` is a time of zero. A number with
 more than 18 significant digits is first rounded to 18, and the number is read
-in full whatever the NUMERIC DIGITS setting. A number of seconds that counts
-10**12 or more once it is rounded as said above, positive or negative, raises
-`SYNTAX 88.903` instead, and one that puts the moment after the last moment a
-`DateTime` can hold, or before the first
-([its limits](r:class.datetime.limits)), raises `SYNTAX 40.19`, which is checked
-before the sign. A `TimeSpan` that does so raises `SYNTAX 40.19` too. The alarm
-is set for the moment that many seconds after `init` read the clock, to the
-microsecond. The example reads the scheduled time back, with the bounds a clock
-cannot break, and prints only whether they hold; under NUMERIC DIGITS 3 it shows
-the alarm of a number of five digits set in full.
+in full whatever the NUMERIC DIGITS setting. A number of `10**12` or more, or of
+`-10**12` or less, once it is rounded as said above, raises `SYNTAX 88.903`
+instead, and one for which the date and time of the moment in the host's
+offset, as `scheduledTime` would answer it, would fall after 31 December 9999 at
+23:59:59.999999 or before 1 January 0001 at 00:00:00.000000
+([the limits of `DateTime`](r:class.datetime.limits)) raises `SYNTAX 40.19`,
+which is checked before the sign. The largest and smallest times accepted so
+depend on the host's offset, as they do for [`addSeconds`](r:class.datetime.add)
+of a `DateTime` of now. A `TimeSpan` that does so raises `SYNTAX 40.19` too.
+The alarm is set for the moment that many seconds after `init` read the clock,
+to the microsecond. The example reads the scheduled time back, with the bounds a
+clock cannot break, and prints only whether they hold; under NUMERIC DIGITS 3 it
+shows the alarm of a number of five digits set in full.
 
 ```rexx
 n = .note~new

@@ -205,9 +205,13 @@ bad: say condition('o')~code
 ```
 
 r[class.mutexsemaphore.copy]
-`copy` answers a new semaphore owned by the same activity with the same count as
-the original, or by none when the original is free. From then on the two are
-separate: releasing one does not release the other.
+`copy` answers a new semaphore owned by the same activity with the same count
+as the original, or by none when the original is free. From then on the two are
+separate: releasing one does not release the other. When the owning activity
+ends, only the semaphores it acquired itself are freed: a copy that it owns
+stays owned, so no activity can acquire it. The first example has one activity;
+in the second, a message that the program starts owns the semaphore when the
+program copies it, and ends owning both.
 
 ```rexx
 m = .mutexsemaphore~new
@@ -224,6 +228,33 @@ say f~release f~acquire(0) f~release
 1 1 0
 1 1 0
 0 1 1
+```
+
+```rexx
+m = .mutexsemaphore~new
+got = .eventsemaphore~new
+go = .eventsemaphore~new
+r = .holder~new~start('run', m, got, go)
+say 'held by other:' got~wait(5)
+j = m~copy
+say 'copy free here:' j~acquire(0)
+go~post
+say r~result
+say 'after its end:' m~acquire(0) m~release j~acquire(0)
+::class holder
+::method run unguarded
+  use arg m, got, go
+  a = m~acquire
+  got~post
+  go~wait(5)
+  return 'other ends owning both:' a
+```
+
+```output defect=#182
+held by other: 1
+copy free here: 0
+other ends owning both: 1
+after its end: 1 1 0
 ```
 
 r[class.mutexsemaphore.timeout]
@@ -305,8 +336,9 @@ an object that is neither a string nor a `TimeSpan` is sent what
 instance of a subclass of `String` is read by its own characters). No method of
 the class sends a message to the semaphore itself: an override of `acquire` or
 `release` runs when the program sends that message and not because the other
-was. The example overrides both methods and `totalSeconds` of a subclass of
-`TimeSpan` and shows what runs.
+was. The first example overrides both methods and `totalSeconds` of a subclass
+of `TimeSpan` and shows what runs; the second gives a timeout whose class has
+its own `request` and `makeString`, and only `request` is sent.
 
 ```rexx
 .environment~log = .list~new
@@ -342,6 +374,23 @@ acquire: 1 acquire totalSeconds
 acquire string: 1 acquire
 release: 1 release
 release again: 1 release
+```
+
+```rexx
+m = .mutexsemaphore~new
+.environment~log = 'sent:'
+say m~acquire(.timeout~new) m~release .log
+::class timeout
+::method request
+  .environment~log = .log 'request' arg(1)
+  return '0.05'
+::method makestring
+  .environment~log = .log 'makeString'
+  return '0.05'
+```
+
+```output defect=#164
+1 1 sent: request STRING
 ```
 
 ## Cleaning up

@@ -135,9 +135,9 @@ are allowed and a decimal point or an exponent is too, and it has to be zero or
 more: a string that is no number, the empty string and a negative number raise
 `SYNTAX 93.951`. An interval that is a `TimeSpan` is that length, and must not
 be negative. An interval longer than the longest `TimeSpan`, 315537897599.999999
-seconds, raises `SYNTAX 40.19`, whether it is positive or negative. A number
-that counts 10**12 seconds or more, positive or negative, once it is rounded as
-said below, raises `SYNTAX 88.903`. Nothing else is an interval, so
+seconds, raises `SYNTAX 40.19`, whether it is positive or negative. A number of
+`10**12` or more, or of `-10**12` or less, once it is rounded as said below,
+raises `SYNTAX 88.903`. Nothing else is an interval, so
 `SYNTAX 93.951` is raised for a `DateTime`, for a string with a time of day such
 as `12:00:00`, for `.nil`, for an array and for an instance of `Object`. The
 interval is kept to the microsecond: a longer fraction is cut off and not

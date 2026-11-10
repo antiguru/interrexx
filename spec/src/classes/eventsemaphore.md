@@ -354,8 +354,10 @@ object that is neither a string nor a `TimeSpan` is sent what
 instance of a subclass of `String` is read by its own characters). No method of
 the class sends a message to the semaphore itself: an override of `post`,
 `reset`, `isPosted` or `wait` runs when the program sends that message and not
-because another of them was. The example overrides each method and
-`totalSeconds` of a subclass of `TimeSpan` and shows what runs.
+because another of them was. The first example overrides each method and
+`totalSeconds` of a subclass of `TimeSpan` and shows what runs; the second gives
+a timeout whose class has its own `request` and `makeString`, and only `request`
+is sent.
 
 ```rexx
 .environment~log = .list~new
@@ -405,6 +407,24 @@ wait posted: 1 wait totalSeconds
 wait string: 1 wait
 reset: reset
 isPosted: 0 isPosted
+```
+
+```rexx
+e = .eventsemaphore~new
+e~post
+.environment~log = 'sent:'
+say e~wait(.timeout~new) .log
+::class timeout
+::method request
+  .environment~log = .log 'request' arg(1)
+  return '0.05'
+::method makestring
+  .environment~log = .log 'makeString'
+  return '0.05'
+```
+
+```output defect=#164
+1 sent: request STRING
 ```
 
 ## Cleaning up

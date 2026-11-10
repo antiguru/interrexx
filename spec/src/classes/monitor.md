@@ -397,6 +397,9 @@ m = .monitor~new(a)
 k = m~copy
 x = k~destination(b)
 say m~current~id k~current~id
+x = m~destination
+say m~current~id k~current~id
+x = k~destination(b)
 k~init(c)
 say m~current~id k~current~id
 x = k~destination(a)
@@ -418,6 +421,7 @@ say (n~current == .nil) j~current~id
 
 ```output
 B B
+A A
 B C
 B A
 B A
