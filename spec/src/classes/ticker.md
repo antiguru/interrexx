@@ -1,7 +1,7 @@
 ---
 element: "Ticker"
 kind: class
-deviations: [109]
+deviations: [109, 119]
 rexxref: "Builtin Classes > Utility Classes > Ticker Class; Builtin Classes > Utility Classes > Ticker Class > attachment; Builtin Classes > Utility Classes > Ticker Class > cancel; Builtin Classes > Utility Classes > Ticker Class > canceled/cancelled; Builtin Classes > Utility Classes > Ticker Class > init; Builtin Classes > Utility Classes > Ticker Class > interval"
 ---
 
@@ -401,8 +401,9 @@ cancelled it stops the ticker: no `triggered` is sent from then on, `canceled`
 answers 1, and the target is sent `cancel` with the ticker as its argument, as
 [the notification rule](r:class.alarmnotification.cancel) says. The flag is
 already 1 when the target receives `cancel`. A second `cancel` of a ticker
-sends the target nothing. A ticker that is cancelled from the `triggered` of
-its own target stops in the same way.
+sends the target nothing ([Deviation 119](r:class.ticker.deviation.119)). A
+ticker that is cancelled from the `triggered` of its own target stops in the
+same way.
 
 ```rexx
 n = .note~new
@@ -421,9 +422,6 @@ signal on syntax name e2
 y~cancel(1)
 e2: say condition('o')~code
 y~cancel
-a~cancel
-call syssleep 0.2
-say n~log~words
 ::class quiet inherit AlarmNotification
 ::method triggered
   nop
@@ -452,7 +450,6 @@ cancel waiting 1
 1 1
 91.999
 93.902
-3
 ```
 
 r[class.ticker.canceled]
@@ -578,4 +575,29 @@ t~cancel
 
 ```output defect=#140
 00:01:00.000000 sends 0
+```
+
+r[class.ticker.deviation.119]
+A second `cancel` of a ticker that was cancelled sends its target nothing, as
+the notification page states ([Deviation
+119](r:class.alarmnotification.deviation.119)). ooRexx sends the target
+`cancel` once or twice for it, depending on timing, so the example is not run
+against it; the target prints a line for each `cancel` it is sent.
+
+```rexx
+n = .n~new
+t = .ticker~new(60, n)
+t~cancel
+t~cancel
+call syssleep 0.3
+say 'done'
+exit
+::class n inherit alarmnotification
+::method cancel unguarded
+  say 'cancel sent'
+```
+
+```output
+cancel sent
+done
 ```
