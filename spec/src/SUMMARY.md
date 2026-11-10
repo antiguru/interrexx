@@ -122,6 +122,7 @@
   - [Pointer](classes/pointer.md)
   - [WeakReference](classes/weakreference.md)
   - [VariableReference](classes/variablereference.md)
+  - [File](classes/file.md)
 - [Built-in functions](builtins/index.md)
   - [ABBREV](builtins/abbrev.md)
   - [ABS](builtins/abs.md)
