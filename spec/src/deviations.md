@@ -994,20 +994,20 @@ positive span when the span has no days and no hours.
 ## 134. The lines of a method's source do not change when read
 
 `source` of a `Method` answers an array with the same lines every time it is
-sent, however often it was read before: the last line of a `::METHOD` section
-that is empty is left out once, when the method is made, and no read drops
-another. ooRexx drops one more trailing empty line of the section after each
-read, until the last line holds text, so the answers get shorter.
+sent, however often it was read before: an empty last line of the source, of a
+`::METHOD` section or of what `new` or `newFile` is given, is left out once,
+when the method is made, and no read drops another. ooRexx drops one more
+trailing empty line after each read, until the last line is not empty, so the
+answers get shorter. `source` of a `Routine` does the same.
 
 ## 135. An object whose init never ran raises an error
 
-A subclass of `Alarm`, `Ticker`, `RexxQueue`, `EventSemaphore` or
-`MutexSemaphore` whose `init` does not send `init` to its superclass makes an
-object that is not set up, and every method of the class that the object is sent
-(the methods that each class page lists, apart from `init`) raises `SYNTAX
-98.901`. ooRexx lets the semaphores work as a set up one does, and its
-`empty` of a `RexxQueue` of that kind ends the interpreter with a segmentation
-fault.
+A subclass of `Alarm`, `Ticker` or `RexxQueue` whose `init` does not send
+`init` to its superclass makes an object that is not set up, and every instance
+method of the class other than `init` that the object is sent raises `SYNTAX
+98.901`. ooRexx answers `triggered` of such an alarm with the string `TRIGGERED`
+and raises `SYNTAX 34.902` from its `cancel`, and its `empty` of such a
+`RexxQueue` ends the interpreter with a segmentation fault.
 
 ## 136. A copy of a MutexSemaphore is free
 

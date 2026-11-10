@@ -613,18 +613,17 @@ Method
 
 r[class.method.source]
 `source` answers a new array that holds the lines of the method's source, one
-string for each line, so changing the array changes nothing in the method. A
-method made by `new` has the lines of its source argument, one made by `newFile`
-the lines of its file before the first directive, without a first line that
-begins with `#!`, and one that a `::METHOD` directive makes has the lines of its
-section. Text that follows the `;` of the directive on its line is the first
-line of the section, blank included, and the last line of a section is left out
-when it is empty, once, when the method is made; a line of blanks is kept. Every
-read answers the same lines ([Deviation 134](r:class.method.deviation.134)). A
-method that has no Rexx code of its own, such as an attribute method, a constant
-method, an abstract method, a method of a library class and one that
-`loadExternalMethod` loaded, answers an array of no items. The method takes no
-argument (`SYNTAX 93.902`).
+string for each line, so changing the array changes nothing in the method. A method made by `new` has the lines of its source argument, one made by
+`newFile` the lines of its file before the first directive, without a first
+line that begins with `#!`, and one that a `::METHOD` directive makes has the
+lines of its section. Text that follows the `;` of the directive on its line is
+the first line of the section, blank included. In all three the last line is
+left out when it is empty, once, when the method is made; a line of blanks is
+kept. Every read answers the same lines ([Deviation
+134](r:class.method.deviation.134)). A method that has no Rexx code of its own,
+such as an attribute method, a constant method, an abstract method, a method of
+a library class and one that `loadExternalMethod` loaded, answers an array of no
+items. The method takes no argument (`SYNTAX 93.902`).
 
 ```rexx
 m = .method~new('n', .array~of('say 1', 'return 2'))
@@ -632,6 +631,7 @@ a = m~source
 say a~class~id a~items (a == m~source)
 a~put('changed', 1)
 say m~source[1]
+say .method~new('e', .array~of('say 1', ''))~source~items
 say .k~method('plain')~source~items .k~method('plain')~source[1]~strip
 say .k~method('at')~source~items .k~method('abs')~source~items
 say .k~method('cc')~source~items .array~method('append')~source~items
@@ -655,6 +655,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```output
 Array 2 0
 say 1
+1
 1 return 'plain'
 0 0
 0 0
@@ -1412,13 +1413,15 @@ say "answered"
 ```
 
 r[class.method.deviation.134]
-`source` answers the same lines on every read. The last line of a section that
-is empty is left out when the method is made, and no later read leaves out
+`source` answers the same lines on every read. The empty last line of a source,
+whether of a section, of the source argument of `new` or of the file of
+`newFile`, is left out when the method is made, and no later read leaves out
 another empty line before it. In the example the sections end in two and in
 three empty lines: one of them is left out, and the rest stays however often the
 source is read. ooRexx leaves one more trailing empty line out after each read,
-until the last line holds text, so it answers `two` with 2 lines and then with
-1, and `three` with 3, 2 and 1.
+until the last line is not empty, so it answers `two` with 2 lines and then with
+1, and `three` with 3, 2 and 1, and a method made by `new` from three lines of
+which two are empty with 2 and then 1.
 
 ```rexx
 src = .array~of('::method two', '  say "a"', '', '')
@@ -1433,9 +1436,12 @@ do n over .array~of('TWO', 'THREE')
   s = t[n]~source
   say n s~items t[n]~source~items t[n]~source~items '['s~makeString('l', '|')']'
 end
+m = .method~new('m', .array~of('say 1', '', ''))
+say 'NEW' m~source~items m~source~items m~source~items
 ```
 
 ```output
 TWO 2 2 2 [  say "a"|]
 THREE 3 3 3 [  say "b"||]
+NEW 2 2 2
 ```

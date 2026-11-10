@@ -105,11 +105,12 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 r[class.singleton.new.direct]
-`new` sent to `Singleton` itself, with a name, answers an object that has that
+`new` sent to `Singleton` itself, with a name, answers a class that has that
 name for its `id` and `Singleton` for its class, and that is not a class made by
 a `::CLASS` directive with the metaclass `Singleton`: sent `new`, with any
 arguments, it raises `SYNTAX 97.1`. `new` with no argument raises `SYNTAX
-93.901`.
+93.901`. Its metaclass is `Singleton`, and a subclass of it is a class with the
+metaclass `Singleton`, as [the inherit rule](r:class.singleton.inherit) says.
 
 ```rexx
 call try 'c = .singleton~new("x"); say c~class~id c~id; x = c~new'
@@ -130,6 +131,18 @@ Singleton x
 c = .singleton~new("x"); say c~class~id c~id; x = c~new => 97.1
 c = .singleton~new("y"); x = c~new(1, 2) => 97.1
 c = .singleton~new => 93.901
+```
+
+```rexx
+c = .singleton~new("x")
+say c~metaclass~id c~isMetaclass c~isA(.class)
+d = c~subclass('z')
+say d~class~id d~metaclass~id (d~new == d~new)
+```
+
+```output defect=#200
+Singleton 0 1
+Singleton Singleton 1
 ```
 
 r[class.singleton.inherit]

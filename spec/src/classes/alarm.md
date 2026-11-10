@@ -811,9 +811,10 @@ done
 r[class.alarm.deviation.135]
 A subclass of `Alarm` whose `init` does not send `init` to its superclass, by
 `self~init:super` or `FORWARD`, makes an alarm that is not set, and every
-instance method of the class sent to it raises `SYNTAX 98.901`: `attachment`,
-`cancel`, `canceled`, `cancelled`, `scheduledTime` and `triggered`. The example
-is not run against ooRexx.
+instance method of the class other than `init` sent to it raises `SYNTAX
+98.901`: `attachment`, `cancel`, `canceled`, `cancelled`, `scheduledTime` and
+`triggered`. ooRexx answers `triggered` with the string `TRIGGERED` and raises
+`SYNTAX 34.902` from `cancel`; the example is not run against it.
 
 ```rexx
 o = .lazy~new

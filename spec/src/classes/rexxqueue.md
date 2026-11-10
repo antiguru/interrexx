@@ -1195,12 +1195,12 @@ own text 0
 r[class.rexxqueue.deviation.135]
 A subclass of `RexxQueue` whose `init` does not send `init` to its superclass,
 by `self~init:super` or `FORWARD`, makes an object that is not connected to a
-queue, and every instance method of the class sent to it raises `SYNTAX 98.901`:
-`delete`, `empty`, `get`, `lineIn`, `lineOut`, `makeArray`, `pull`, `push`,
-`queue`, `queued`, `say` and `set`. The example gives each method the arguments
-it takes. The class methods do not depend on an object and are not affected.
-ooRexx ends the interpreter with a segmentation fault from `empty`, so the
-example is not run against it.
+queue, and every instance method of the class other than `init` sent to it
+raises `SYNTAX 98.901`: `delete`, `empty`, `get`, `lineIn`, `lineOut`,
+`makeArray`, `pull`, `push`, `queue`, `queued`, `say` and `set`. The example
+gives each method the arguments it takes. The class methods do not depend on an
+object and are not affected. ooRexx ends the interpreter with a segmentation
+fault from `empty`, so the example is not run against it.
 
 ```rexx
 o = .lazy~new

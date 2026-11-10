@@ -1,7 +1,7 @@
 ---
 element: "MutexSemaphore"
 kind: class
-deviations: [109, 135, 136]
+deviations: [109, 136]
 rexxref: "Builtin Classes > Utility Classes > MutexSemaphore Class; Builtin Classes > Utility Classes > MutexSemaphore Class > new (Class Method); Builtin Classes > Utility Classes > MutexSemaphore Class > acquire; Builtin Classes > Utility Classes > MutexSemaphore Class > release; Builtin Classes > Utility Classes > MutexSemaphore Class > uninit"
 ---
 
@@ -53,18 +53,20 @@ MutexSemaphore 1 Object 0
 
 r[class.mutexsemaphore.new]
 `new` makes a semaphore that no activity owns, and answers an instance of the
-class that received it, so a subclass makes instances of itself. It sends `init`
-the arguments of `new`, as [the new rule](r:class.index.new) says, and `new`
+class that received it, so a subclass makes instances of itself. It makes the
+semaphore itself and then sends `init` the arguments of `new`, as [the new
+rule](r:class.index.new) says, so the semaphore works whatever the `init` of a
+subclass does, even when it does not send `init` to its superclass, and `new`
 with an argument raises `SYNTAX 93.902` for the class itself, where `init` is
-that of `Object`, and not for a subclass whose `init` takes it. A subclass whose
-`init` does not send `init` to its superclass makes a semaphore that is not set
-up ([Deviation 135](r:class.mutexsemaphore.deviation.135)).
+that of `Object`, and not for a subclass whose `init` takes it.
 
 ```rexx
 m = .mutexsemaphore~new
 say m~release m~acquire(0) m~release
 s = .count~new(6)
 say s~tag s~acquire(0) s~release
+t = .lazy~new
+say t~class~id t~acquire(0) t~release t~release
 signal on syntax name bad
 x = .mutexsemaphore~new(1)
 bad: say condition('o')~code
@@ -76,11 +78,15 @@ bad: say condition('o')~code
 ::method tag
   expose tag
   return tag
+::class lazy subclass mutexsemaphore
+::method init
+  nop
 ```
 
 ```output
 0 1 1
 6 1 1
+LAZY 1 1 0
 93.902
 ```
 
@@ -415,39 +421,6 @@ say m~acquire(.digits~new('0.01')) 'sends' .environment~sent
 
 ```output defect=#140
 1 sends 0
-```
-
-r[class.mutexsemaphore.deviation.135]
-A subclass of `MutexSemaphore` whose `init` does not send `init` to its
-superclass, by `self~init:super` or `FORWARD`, makes a semaphore that is not set
-up, and every instance method of the class sent to it raises `SYNTAX 98.901`:
-`acquire`, `release` and `uninit`. ooRexx lets the semaphore work as a set up
-one does, so the example is not run against it.
-
-```rexx
-o = .lazy~new
-call try "o~acquire"
-call try "o~acquire(0.01)"
-call try "o~release"
-call try "o~uninit"
-exit
-try:
-  signal on syntax name bad
-  interpret arg(1)
-  say arg(1) '=> no error'
-  return
-bad: say arg(1) '=>' condition('o')~code
-  return
-::class lazy subclass mutexsemaphore
-::method init
-  nop
-```
-
-```output defect=#197
-o~acquire => 98.901
-o~acquire(0.01) => 98.901
-o~release => 98.901
-o~uninit => 98.901
 ```
 
 r[class.mutexsemaphore.deviation.136]

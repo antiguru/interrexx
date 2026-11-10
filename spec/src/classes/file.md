@@ -1446,9 +1446,10 @@ begins with a slash is the absolute path of the file: the answer is a `File` for
 it when the file exists, whatever the directories. A relative directory is
 relative to the current directory, and the answer holds the absolute path of the
 file it finds, as [the next rule](r:class.file.searchpath.relative) shows.
-Whether a `name` that has a `.` or a `..` as one of its parts, such as `./a.txt`
-or `x/../a.txt`, or that ends with a slash, finds a file is not specified: it
-depends on the host.
+Whether a `name` that has a `.` or a `..` as one of its parts, such as
+`./a.txt`, `x/../a.txt` or `/tmp/./a.txt`, or that ends with a slash, finds a
+file, and what `path` the answer then has, is not specified, for an absolute
+`name` as for a relative one.
 
 ```rexx
 here = directory()
@@ -2019,10 +2020,10 @@ sent:  ISA(File)
 ```
 
 r[class.file.deviation.137]
-`temporaryPath` answers the file `/tmp` when `TMPDIR` is set to the null string,
-as it does when `TMPDIR` is not set. A `TMPDIR` of any other string, one of
-blanks included, is the path. ooRexx answers a `File` for the null string, whose
-`path` is the null string.
+`temporaryPath` answers a `File` for `/tmp` when `TMPDIR` is set to the null
+string, as it does when `TMPDIR` is not set. A `TMPDIR` of any other string, one
+of blanks included, is the path. ooRexx answers a `File` for the null string,
+whose `path` is the null string.
 
 ```rexx
 call setlocal
