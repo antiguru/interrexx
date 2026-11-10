@@ -7,13 +7,13 @@ rexxref: "Builtin Classes > Utility Classes > Orderable Class; Builtin Classes >
 # Orderable
 
 `Orderable` is a mixin class that gives a class the eighteen comparison
-operators as methods, all of them answered from one method, `compareTo`. A
-class that inherits it and overrides `compareTo` with its own ordering can
-then be written on both sides of `<`, `=`, `>>=` and the rest, and sorted by
-[`sort`](r:class.array.sort). `DateTime` and `TimeSpan` are such classes; the
-[comparison rule of `DateTime`](r:class.datetime.compare) and [the one of
-`TimeSpan`](r:class.timespan.compare) say what their `compareTo` answers. The
-page of [`Comparable`](r:class.comparable.creation) describes the class that
+operators as methods, all of them answered from one method, `compareTo`. A class
+that inherits it and overrides `compareTo` with its own ordering can then be
+written on both sides of `<`, `=`, `>>=` and the rest, and sorted by
+[`sort`](r:class.array.sort). `DateTime`, `TimeSpan` and `File` are such
+classes; the [comparison rule of `DateTime`](r:class.datetime.compare) and [the
+one of `TimeSpan`](r:class.timespan.compare) say what their `compareTo` answers.
+The page of [`Comparable`](r:class.comparable.creation) describes the class that
 holds the `compareTo` alone.
 
 ## The class
@@ -58,14 +58,8 @@ Orderable 0
 
 r[class.orderable.compareto]
 `compareTo` takes one argument and answers what [`compareTo` of
-`Comparable`](r:class.comparable.compareto) answers: it sends `identityHash`
-to the receiver and then to the argument, and answers -1, 0 or 1 as the number
-that the first answered is less than, equal to or greater than the one that
-the second answered. Which of two objects is the lesser is not specified, but
-the same object is always equal to itself, and two objects whose
-`identityHash` answers are equal numbers are equal. An answer of
-`identityHash` that is no number raises `SYNTAX 41.1`. A missing argument
-raises `SYNTAX 93.901` and a second one `SYNTAX 93.902`.
+`Comparable`](r:class.comparable.compareto) answers, from the `identityHash`
+answers of the receiver and the argument, with the same errors.
 
 ```rexx
 a = .item~new(3)

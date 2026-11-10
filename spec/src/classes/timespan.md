@@ -16,8 +16,9 @@ rule](r:class.datetime.plus)), and it can stand for the offset of a time zone
 the totals of the span, write it as text, make another span from it by
 addition, multiplication and division, and compare it with another. The class
 inherits `Comparable` and `Orderable`, which give it the comparison operators
-on top of its own `compareTo`. An instance never changes: every method that
-answers another span answers a new instance. The examples build their spans
+on top of its own `compareTo`. Every method that
+answers another span answers a new instance; only `init`, sent again, changes
+one ([the `new` rule](r:class.timespan.new)). The examples build their spans
 from fixed values.
 
 ## The class
@@ -127,7 +128,9 @@ is 0. The parts of the multi-part forms are never negative: a span below zero
 is made by the one-argument form or by [negating](r:class.timespan.minus) a
 span. No argument raises `SYNTAX 93.901`, and more than five `SYNTAX 93.902`.
 An omitted argument inside the list, before a given one, raises
-`SYNTAX 93.903`.
+`SYNTAX 93.903`. `init` is an ordinary message that can be sent again ([the
+init rule](r:class.index.new.init-again)): it gives the instance the span that
+`new` with the same arguments would make, after the same checks.
 
 ```rexx
 say .timespan~new(1234567)
@@ -136,9 +139,12 @@ say .timespan~new(1, 2)
 say .timespan~new(1, 2, 3)
 say .timespan~new(1, 2, 3, 4)
 say .timespan~new(1, 2, 3, 4, 5)
-say .timespan~new(6, 4, 33, 15, 100)
+say .timespan~new(3, 7, 41, 52, 250)
 say .timespan~new(0)
 say .timespan~new(1, 2, )
+t = .timespan~new(1, 2)
+t~init(7)
+say t
 call try '.timespan~new'
 call try '.timespan~new(1, 2, 3, 4, 5, 6)'
 call try '.timespan~new(, 2)'
@@ -161,9 +167,10 @@ bad: say arg(1) '=>' condition('o')~code
 01:02:03.000000
 1.02:03:04.000000
 1.02:03:04.000005
-6.04:33:15.000100
+3.07:41:52.000250
 00:00:00.000000
 01:02:00.000000
+00:00:00.000007
 .timespan~new => 93.901
 .timespan~new(1, 2, 3, 4, 5, 6) => 93.902
 .timespan~new(, 2) => 93.903
@@ -486,8 +493,8 @@ rule](r:class.timespan.sends.parts)). Any argument raises `SYNTAX 93.902` for
 each of these methods.
 
 ```rexx
-t = .timespan~new(6, 4, 33, 15, 100)
-n = .timespan~new('-534795000100')
+t = .timespan~new(3, 7, 41, 52, 250)
+n = .timespan~new('-286912000250')
 z = .timespan~new(0)
 do s over .array~of(t, n, z)
   say s~days s~hours s~minutes s~seconds s~microseconds '|' s~sign
@@ -518,8 +525,8 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-6 4 33 15 100 | 1
-6 4 33 15 100 | -1
+3 7 41 52 250 | 1
+3 7 41 52 250 | -1
 0 0 0 0 0 | 0
 String String TimeSpan
 00:05:25.000100 1
@@ -551,8 +558,8 @@ and a short one more, and the same figure is written without an exponent and
 without trailing zeros. Any argument raises `SYNTAX 93.902`.
 
 ```rexx
-t = .timespan~new(6, 4, 33, 15, 100)
-n = .timespan~new('-534795000100')
+t = .timespan~new(3, 7, 41, 52, 250)
+n = .timespan~new('-286912000250')
 do s over .array~of(t, n, .timespan~new(0), .timespan~new(1))
   say s~totalDays s~totalHours
   say s~totalMinutes s~totalSeconds s~totalMicroseconds
@@ -581,15 +588,15 @@ bad: say arg(1) '=>' condition('o')~code
 ```
 
 ```output
-6.18975694560185185 148.554166694444444
-8913.25000166666667 534795.0001 534795000100
--6.18975694560185185 -148.554166694444444
--8913.25000166666667 -534795.0001 -534795000100
+3.32074074363425926 79.6977778472222222
+4781.86667083333333 286912.00025 286912000250
+-3.32074074363425926 -79.6977778472222222
+-4781.86667083333333 -286912.00025 -286912000250
 0 0
 0 0 0
 0.0000000000115740740740740741 0.000000000277777777777777778
 0.0000000166666666666666667 0.000001 1
-6.18975694560185185 534795.0001
+3.32074074363425926 286912.00025
 3652058.99999999999 87649415.9999999997 315537897599.999999
 1.5 1.5
 0.0166666666666666667 0.0277777777777777778
@@ -1159,28 +1166,30 @@ The class methods `fromDays`, `fromHours`, `fromMinutes`, `fromSeconds`,
 class that overrides its `new` sees them, and `new` sends `init` to the new
 instance with the arguments it got ([the new rule](r:class.index.new)); the
 `init` of `TimeSpan` sends nothing to the instance. `fromStringFormat` sends
-nothing to the receiver and answers a plain `TimeSpan`. The count is checked
-by `init` ([the checks of `new`](r:class.timespan.new.checks)), so a count
-outside the range raises its error after `new` and `init` were sent. The first
-example prints, for each call, the messages sent in order, with the number of
-arguments after `NEW` and `INIT`. The numbers that a program passes are read
-for their string value, and are sent further messages ([the argument
+nothing to the receiver and answers a plain `TimeSpan`. The count is checked by
+`init` ([the checks of `new`](r:class.timespan.new.checks)), so a count outside
+the range raises its error after `new` and `init` were sent. The first example
+prints, for each call, the messages sent in order, with the number of arguments
+after `NEW` and `INIT`. The numbers that a program passes are read for their
+string value, and are sent further messages ([the argument
 rule](r:class.index.string)). The one-argument form of `new` and
 `fromMicroseconds` read the string value of their argument three times and
 twice. In the other forms of `new` each argument is read, in the order of the
 arguments, and sent `>=` with 0 and, but for the days, `<=` with the greatest
 value of its range (23, 59, 59 and 999999), after which the days are sent `*`
-with 24, the minutes `*` with 60 and, in the form of two or three arguments,
-the hours `*` with 3600; the hours of the forms with days, the seconds and the
-microseconds are read for their string value once more. A value for the days
-that is not a whole number or has more than nine digits is refused after it is
-read and before `>=` is sent. `fromDays`, `fromHours`, `fromMinutes` and
-`fromSeconds` read their argument and send it `*` with 24, 3600, 60 and
-1000000. `fromNormalTime`, `fromCivilTime` and `fromLongTime` read the string
-once, and `fromStringFormat` once, and twice when it is refused. The second
-example passes objects whose `makeString` answers a number, and whose
-`unknown` sends every other message to that number, and prints the messages
-each object got.
+with 24, the minutes `*` with 60 and, in the form of two or three arguments, the
+hours `*` with 3600; the hours of the forms with days, the seconds and the
+microseconds are read for their string value once more. A value that is not a
+whole number, or a value for the days with more than nine digits, is refused
+after it is read and before `>=` is sent; a count of the one-argument form is
+refused after its first reading when it is no whole number or
+1000000000000000000 or more in size, and after its second when it is outside the
+range. `fromDays`, `fromHours`, `fromMinutes` and `fromSeconds` read their
+argument and send it `*` with 24, 3600, 60 and 1000000. `fromNormalTime`,
+`fromCivilTime` and `fromLongTime` read the string once, and `fromStringFormat`
+once, and twice when it is refused. The second example passes objects whose
+`makeString` answers a number, and whose `unknown` sends every other message to
+that number, and prints the messages each object got.
 
 ```rexx
 call probe 'new', '.spy~new(1, 2, 3)'

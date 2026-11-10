@@ -84,8 +84,10 @@ answers, unchanged and without examining it. So two strings are ordered by
 instances by theirs, and any other object by its own `compareTo`; a first
 argument that has no `compareTo` raises `SYNTAX 97.1`, and a second one that
 the `compareTo` of a string cannot read raises that method's error. A missing
-argument raises `SYNTAX 93.901` and a third argument `SYNTAX 93.902`. Nothing
-is sent to the second argument by `compare` itself.
+argument raises `SYNTAX 93.901`, an omitted first argument before a given
+second `SYNTAX 93.903`, and a third argument `SYNTAX 93.902`; the arguments
+are checked before anything is sent. Nothing is sent to the second argument
+by `compare` itself.
 
 ```rexx
 c = .comparator~new
@@ -95,6 +97,7 @@ say c~compare(.timespan~new(1), .timespan~new(2)),
   c~compare(.timespan~new(2), .timespan~new(1))
 say c~compare(.pad~new(5), .pad~new(2)) c~compare(.pad~new('x'), 1)
 call try 'c~compare("a")'
+call try 'c~compare(, "a")'
 call try 'c~compare'
 call try 'c~compare("a", "b", "c")'
 call try 'c~compare(.nil, "a")'
@@ -126,6 +129,7 @@ compareTo PAD
 compareTo String
 5 x
 c~compare("a") => 93.901
+c~compare(, "a") => 93.903
 c~compare => 93.901
 c~compare("a", "b", "c") => 93.902
 c~compare(.nil, "a") => 97.1
@@ -141,13 +145,13 @@ The `compare` of `CaselessComparator` takes two arguments and sends
 answers what it answers ([the string rule](r:class.string.caselesscompareto)):
 0 for two strings that differ in the case of letters alone. A first argument
 that has no `caselessCompareTo` raises `SYNTAX 97.1`; the second is read by
-that method as a string. A missing argument raises `SYNTAX 93.901` and a third
-`SYNTAX 93.902`.
+that method as a string. Argument errors are those of
+[`Comparator`](r:class.comparators.comparator.compare).
 
 ```rexx
 c = .caselessComparator~new
 say c~compare('a', 'A') c~compare('a', 'B') c~compare('B', 'a')
-say c~compare('Straw', 'strawberry') c~compare(10, 9) c~compare('', '')
+say c~compare('Rye', 'ryegrass') c~compare(10, 9) c~compare('', '')
 say c~compare('a', .pad~new)
 call try 'c~compare("a")'
 call try 'c~compare("a", "b", "c")'
@@ -236,7 +240,7 @@ answer 0. A first argument without `caselessCompareTo` raises `SYNTAX 97.1`.
 ```rexx
 c = .caselessDescendingComparator~new
 say c~compare('a', 'B') c~compare('B', 'a') c~compare('a', 'A')
-say c~compare('Straw', 'strawberry') c~compare('', '')
+say c~compare('Rye', 'ryegrass') c~compare('', '')
 call try 'c~compare("a")'
 call try 'c~compare("a", "b", "c")'
 call try 'c~compare(.pad~new, "a")'
@@ -315,20 +319,16 @@ c~init(1, 2, 3) => 93.902
 ```
 
 r[class.comparators.column.compare]
-The `compare` of `ColumnComparator` takes two arguments and sends `compareTo`
-to the first with three arguments, the second argument, `start` and `length`,
-and answers what it answers. For two strings that is [the string
-rule](r:class.string.compareto): the substrings that begin at position `start`
-and are `length` long, or that end where the string ends, are compared, and a
-string shorter than `start` has an empty substring. A `start` that is not a
-positive whole number raises `SYNTAX 93.924` and a `length` that is not a
-non-negative whole number raises `SYNTAX 93.923`, as that rule says, at the
-time of the first `compare`; a `start` or a `length` that is a string with
-blanks around a whole number is accepted. A first argument whose `compareTo`
-takes one argument only, as the default one of
-[`Comparable`](r:class.comparable.compareto) does, raises `SYNTAX 93.902`, and
-one with no `compareTo` raises `SYNTAX 97.1`. A missing second argument raises
-`SYNTAX 93.901` and a third argument `SYNTAX 93.902`.
+The `compare` of `ColumnComparator` takes two arguments and sends `compareTo` to
+the first with three arguments, the second argument, `start` and `length`, and
+answers what it answers. For two strings that is [the string
+rule](r:class.string.compareto), with `start` and `length` checked as it checks
+them when `compare` is sent; so `init` accepts values that the first `compare`
+refuses. A first argument whose `compareTo` takes one argument only, as the
+default one of [`Comparable`](r:class.comparable.compareto) does, raises
+`SYNTAX 93.902`, and one with no `compareTo` raises `SYNTAX 97.1`. Other
+argument errors are those of
+[`Comparator`](r:class.comparators.comparator.compare).
 
 ```rexx
 c = .columnComparator~new(3, 2)
@@ -513,14 +513,14 @@ the order is the reverse of the one the held comparator gives. Inverting an
 inverting comparator gives the order of the comparator inside. An answer of
 the held comparator that is no number raises the error of `-` for it,
 `SYNTAX 41.1` for a string, and a held object that has no `compare`, `.nil`
-included, raises `SYNTAX 97.1`. A missing argument raises `SYNTAX 93.901` and
-a third argument `SYNTAX 93.902`.
+included, raises `SYNTAX 97.1`. Argument errors are those of
+[`Comparator`](r:class.comparators.comparator.compare).
 
 ```rexx
-by_length = .lengthcomparator~new
-i = .invertingComparator~new(by_length)
-say by_length~compare('aaa', 'b') i~compare('aaa', 'b')
-say by_length~compare('b', 'c') i~compare('b', 'c')
+by_size = .sizecomparator~new
+i = .invertingComparator~new(by_size)
+say by_size~compare('aaa', 'b') i~compare('aaa', 'b')
+say by_size~compare('b', 'c') i~compare('b', 'c')
 j = .invertingComparator~new(i)
 say j~compare('aaa', 'b') j~compare('b', 'aaa')
 say .invertingComparator~new(.comparator~new)~compare('a', 'b'),
@@ -540,7 +540,7 @@ try:
   return
 bad: say arg(1) '=>' condition('o')~code
   return
-::class lengthcomparator subclass comparator
+::class sizecomparator subclass comparator
 ::method compare
   use arg a, b
   return (a~length - b~length)~sign
@@ -622,16 +622,18 @@ n~init(0) => 26.5
 
 r[class.comparators.numeric.compare]
 The `compare` of `NumericComparator` takes two arguments, subtracts the second
-from the first by sending `-` to the first with the second as its only
-argument, while `NUMERIC DIGITS` is the number given to `init` (the digits of
-the program that sent `compare` do not matter), and answers the sign of the
-difference: -1, 0 or 1. Two numbers whose difference is lost in the rounding
-to those digits are equal, so a comparator of 3 digits finds 1000 and 1001
-equal and 1000 and 1010 not. A difference that is no number raises
-`SYNTAX 93.943`; a string that is no number raises `SYNTAX 41.1`; a first
-argument that has no `-` method raises `SYNTAX 97.1`. A missing argument
-raises `SYNTAX 93.901` and a third `SYNTAX 93.902`. The sign is taken from the
-string value of the answer, and no message is sent to it.
+from the first by sending `-` to the first with the second as its only argument,
+while `NUMERIC DIGITS` is the number given to `init` (the digits of the program
+that sent `compare` do not matter), and answers the sign of the difference: -1,
+0 or 1. Two numbers whose difference is lost in the rounding to those digits are
+equal, so a comparator of 3 digits finds 1000 and 1001 equal and 1000 and 1010
+not. A difference that is no number raises `SYNTAX 93.943`; a string that is no
+number raises `SYNTAX 41.1`; a first argument that has no `-` method raises
+`SYNTAX 97.1`. Argument errors are those of
+[`Comparator`](r:class.comparators.comparator.compare). The answer is read as a
+number as [the argument rule](r:class.index.string) reads one, so an object
+whose `makeString` or `string` answers a number is accepted, and the sign is
+that number's.
 
 ```rexx
 n = .numericComparator~new
@@ -650,6 +652,7 @@ call try 'n~compare(1, .nil)'
 call try 'n~compare(.pad~new("x"), 1)'
 call try 'n~compare(.pad~new(.nil), 1)'
 call try 'n~compare(.pad~new(40), 1)'
+say n~compare(.pad~new(.ms~new), 1) n~compare(.pad~new(.st~new), 1)
 call try 'n~compare(1)'
 call try 'n~compare(1, 2, 3)'
 exit
@@ -667,6 +670,12 @@ bad: say arg(1) '=>' condition('o')~code
 ::method '-'
   expose v
   return v
+::class ms
+::method makeString
+  return '-7'
+::class st
+::method string
+  return '-7'
 ```
 
 ```output
@@ -682,6 +691,7 @@ n~compare(1, .nil) => 41.1
 n~compare(.pad~new("x"), 1) => 93.943
 n~compare(.pad~new(.nil), 1) => 93.943
 n~compare(.pad~new(40), 1) => 1
+-1 -1
 n~compare(1) => 93.901
 n~compare(1, 2, 3) => 93.902
 ```
@@ -700,11 +710,11 @@ items whose parts are equal keeping their order under `stableSortWith`;
 `InvertingComparator` the reverse of the comparator it holds; and
 `NumericComparator` the order of the numbers the items stand for. The example
 sorts the same items with each, by `stableSortWith`, so that items that
-compare as equal keep their places; `1e1` and `10.0` both stand for 10, and
+compare as equal keep their places; `2e1` and `20.0` both stand for 20, and
 keep their order for `NumericComparator`.
 
 ```rexx
-w = .array~of('Strawberries', 'cherries', "angel's kiss", 'Apple', 'apple')
+w = .array~of('Rowan', 'elder', "hawk's eye", 'Birch', 'birch')
 say show(w~copy~~stableSortWith(.comparator~new))
 say show(w~copy~~stableSortWith(.caselessComparator~new))
 say show(w~copy~~stableSortWith(.descendingComparator~new))
@@ -714,7 +724,7 @@ say show(w~copy~~stableSortWith(.caselessColumnComparator~new(2, 3)))
 say show(w~copy~~stableSortWith(.invertingComparator~new(.comparator~new)))
 col = .columnComparator~new(2, 3)
 say show(w~copy~~stableSortWith(.invertingComparator~new(col)))
-n = .array~of(23, 19, 5, 3, 11, '1e1', 10.0)
+n = .array~of(40, 8, 31, 6, 15, '2e1', 20.0)
 say show(n~copy~~stableSortWith(.numericComparator~new))
 say show(n~copy~~stableSortWith(.comparator~new))
 exit
@@ -727,24 +737,24 @@ show: procedure
 ```
 
 ```output
-Apple Strawberries angel's kiss apple cherries
-angel's kiss Apple apple cherries Strawberries
-cherries apple angel's kiss Strawberries Apple
-Strawberries cherries Apple apple angel's kiss
-cherries angel's kiss Apple apple Strawberries
-cherries angel's kiss Apple apple Strawberries
-cherries apple angel's kiss Strawberries Apple
-Strawberries Apple apple angel's kiss cherries
-3 5 1e1 10.0 11 19 23
-10.0 11 19 1e1 23 3 5
+Birch Rowan birch elder hawk's eye
+Birch birch elder hawk's eye Rowan
+hawk's eye elder birch Rowan Birch
+Rowan hawk's eye elder Birch birch
+hawk's eye Birch birch elder Rowan
+hawk's eye Birch birch elder Rowan
+hawk's eye elder birch Rowan Birch
+Rowan elder Birch birch hawk's eye
+6 8 15 2e1 20.0 31 40
+15 20.0 2e1 31 40 6 8
 ```
 
 ## Messages that a program can override
 
 r[class.comparators.sends]
-Each `compare` sends the messages below, in this order, and no other: nothing
-is sent to the second argument or to the comparators themselves, nothing is
-sent to the first argument but what is listed, and no argument is asked `isA`.
+Each `compare` sends the messages below, in this order, and no other: nothing is
+sent to the second argument or to the comparators themselves, nothing is sent to
+the first argument but what is listed, and no argument is asked `isA`.
 `Comparator` sends `compareTo` to the first argument with one argument, the
 second. `CaselessComparator` sends `caselessCompareTo` the same way.
 `ColumnComparator` sends `compareTo`, and `CaselessColumnComparator`
@@ -752,13 +762,14 @@ second. `CaselessComparator` sends `caselessCompareTo` the same way.
 `length`. `DescendingComparator` sends `compareTo` with one argument and then
 the prefix `-`, which is the message `-` with no argument, to the answer, and
 `CaselessDescendingComparator` does the same with `caselessCompareTo`.
-`InvertingComparator` sends `compare` with two arguments, the arguments it
-got, to the comparator it holds and then the prefix `-` to the answer.
+`InvertingComparator` sends `compare` with two arguments, the arguments it got,
+to the comparator it holds and then the prefix `-` to the answer.
 `NumericComparator` sends `-` to the first argument with one argument, the
 second. The answer of the last message of each is the answer of `compare`,
-except that `NumericComparator` takes the sign of it without sending a
-message. The example gives the objects methods that log the messages they get,
-`isA` among them, and prints what each `compare` sent.
+except that `NumericComparator` answers the sign of it, reading it as a number
+as [the argument rule](r:class.index.string) says. The example gives the objects
+methods that log the messages they get, `isA` among them, and prints what each
+`compare` sent.
 
 ```rexx
 call p 'comparator', '.comparator~new~compare(.first~new, .second~new)'
