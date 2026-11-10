@@ -77,9 +77,9 @@ page links
 `STRING`, as that rule says, and the same holds for the string arguments of
 methods ([the method argument rule](r:class.index.string)). A `REQUEST`,
 `MAKESTRING` or `STRING` method that is private and would be sent
-is not one the replacement can use: the call raises `SYNTAX 97.2`. This book
-does not specify how many times a comparison operator sends `REQUEST` to an
-operand, as [the comparison rule](r:expr.comparison.object) says.
+is not one the replacement can use: the call raises `SYNTAX 97.2`. A comparison
+operator converts its right operand once, as [the comparison
+rule](r:expr.comparison.object) says.
 
 ```rexx
 say upper(.object~new) upper(.both~new) upper(.mutablebuffer~new('mb'))

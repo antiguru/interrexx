@@ -2,7 +2,7 @@
 element: "VariableReference"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > VariableReference Class; Builtin Classes > Utility Classes > VariableReference Class > name; Builtin Classes > Utility Classes > VariableReference Class > request; Builtin Classes > Utility Classes > VariableReference Class > unknown; Builtin Classes > Utility Classes > VariableReference Class > value (Attribute)"
-deviations: [72, 118]
+deviations: [72, 118, 124]
 ---
 
 # VariableReference
@@ -541,4 +541,33 @@ say r~unknown('SUBSTR', .args~of(2, 1))
 
 ```output
 def
+```
+
+r[class.variablereference.deviation.124]
+An answer of `request` with `ARRAY` that is not an `Array` or an instance of
+a subclass of `Array` is refused as the array of arguments of `unknown`, which
+raises `SYNTAX 98.913`, whatever collection the answer is. ooRexx accepts a `Queue` or a
+`CircularQueue` as such an answer and uses its items, and crashes for a `List`,
+a `Bag`, a `Table` or a `Directory`, among others. In the
+example the answer is a queue.
+
+```rexx
+x = 'abcdef'
+ref = >x
+call try "ref~unknown('SUBSTR', .ans~new)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'v =' arg(1)
+  say arg(1) '=>' v
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class ans
+::method request
+  return .queue~of('x')
+```
+
+```output
+ref~unknown('SUBSTR', .ans~new) => 98.913
 ```

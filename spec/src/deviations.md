@@ -860,3 +860,46 @@ A notification target of an `Alarm` or a `Ticker` is sent `cancel` once, when
 the alarm or ticker is cancelled while it is waiting; a second `cancel` of the
 same alarm or ticker sends it nothing. ooRexx sends the target `cancel` once or
 twice for a second `cancel`, depending on timing.
+
+## 120. previous of an index beyond the array answers the last item
+
+`previous` of an index with a component beyond its dimension, one or all of
+the components, answers the index of the last item in the order of `allItems`
+whichever index is given, and `next` answers `.nil`. ooRexx answers an index
+that depends on the position the beyond index names: in a 2 by 2 array holding
+items at 1,1 and 2,2, `previous(4, 4)` answers 1,1 and `previous(5, 5)`
+answers 2,2.
+
+## 121. Queue put beyond the last item
+
+`put` of a queue with an index above the number of items raises
+`SYNTAX 93.966` however far above it the index is, and the queue keeps its
+items. ooRexx raises `93.966` or `93.918` according to the storage the queue
+holds beyond its items, which its earlier history decides.
+
+## 122. A right operand that is not a string is read once
+
+A comparison operator, and the method of the same name, converts a right
+operand that is not a string once, and `Properties~getWhole` sends `request`
+once to a stored value that is not a string. ooRexx converts the right operand
+twice for the normal comparisons `=`, `\=`, `<>`, `><`, `<`, `>`, `<=`, `>=`,
+`\<` and `\>`, and sends `request` twice in `getWhole`.
+
+## 123. isEmpty of a directory that holds only methods
+
+`isEmpty` of a `Directory` agrees with `items`: it answers 0 for a directory
+that holds a method of a name other than `UNKNOWN`, also when that is all it
+holds, and 1 when `items` answers 0. ooRexx answers 1 for a directory that
+holds only methods.
+
+## 124. An argument array answered by request is an Array
+
+An answer of `request` with `ARRAY` that is used as an array of arguments
+(`sendWith`, `startWith` and `run` with the option `A` of `Object`, `new`,
+`sendWith`, `startWith` and `replyWith` of `Message`, `callWith` of `Routine`,
+`unknown` of `Stem` and `VariableReference`, and the value of ARGUMENTS of
+FORWARD) is accepted only when it is an `Array` or an instance of a subclass of
+`Array` of one dimension; any other object, a `Queue` included, raises the
+error that the reading method gives for an answer that is no array. ooRexx
+uses the items of a `Queue` or a `CircularQueue` as the arguments, and crashes
+for a `List`, a `Bag`, a `Table` or a `Directory`.

@@ -2,7 +2,7 @@
 element: "Routine"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Routine Class; Builtin Classes > Fundamental Classes > Routine Class > new (Class Method); Builtin Classes > Fundamental Classes > Routine Class > newFile (Class Method); Builtin Classes > Fundamental Classes > Routine Class > loadExternalRoutine (Class method); Builtin Classes > Fundamental Classes > Routine Class > []; Builtin Classes > Fundamental Classes > Routine Class > annotation; Builtin Classes > Fundamental Classes > Routine Class > annotations; Builtin Classes > Fundamental Classes > Routine Class > call; Builtin Classes > Fundamental Classes > Routine Class > callWith; Builtin Classes > Fundamental Classes > Routine Class > package; Builtin Classes > Fundamental Classes > Routine Class > setSecurityManager; Builtin Classes > Fundamental Classes > Routine Class > source; The Security Manager"
-deviations: [41, 109, 111, 115, 118]
+deviations: [41, 109, 111, 115, 118, 124]
 ---
 
 # Routine
@@ -1530,4 +1530,32 @@ exit
 requires 1 absolute name: 0
 b body
 Package
+```
+
+r[class.routine.deviation.124]
+An answer of `request` with `ARRAY` that is not an `Array` or an instance of
+a subclass of `Array` is refused as the array of arguments of `callWith`, which
+raises `SYNTAX 98.913`, whatever collection the answer is. ooRexx accepts a `Queue` or a
+`CircularQueue` as such an answer and uses its items, and crashes for a `List`,
+a `Bag`, a `Table` or a `Directory`, among others. In the
+example the answer is a queue.
+
+```rexx
+r = .routine~new('r', 'return arg()')
+call try 'r~callWith(.ans~new)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class ans
+::method request
+  return .queue~of('x')
+```
+
+```output
+r~callWith(.ans~new) => 98.913
 ```

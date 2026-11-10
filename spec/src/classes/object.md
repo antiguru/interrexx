@@ -2,7 +2,7 @@
 element: "Object"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Object Class; Builtin Classes > Fundamental Classes > Object Class > new (Class Method); Builtin Classes > Fundamental Classes > Object Class > Comparison Methods; Builtin Classes > Fundamental Classes > Object Class > Concatenation Methods; Builtin Classes > Fundamental Classes > Object Class > class; Builtin Classes > Fundamental Classes > Object Class > copy; Builtin Classes > Fundamental Classes > Object Class > defaultName; Builtin Classes > Fundamental Classes > Object Class > hashCode; Builtin Classes > Fundamental Classes > Object Class > hasMethod; Builtin Classes > Fundamental Classes > Object Class > identityHash; Builtin Classes > Fundamental Classes > Object Class > init; Builtin Classes > Fundamental Classes > Object Class > instanceMethod; Builtin Classes > Fundamental Classes > Object Class > instanceMethods; Builtin Classes > Fundamental Classes > Object Class > isA; Builtin Classes > Fundamental Classes > Object Class > isInstanceOf; Builtin Classes > Fundamental Classes > Object Class > isNil; Builtin Classes > Fundamental Classes > Object Class > objectName; Builtin Classes > Fundamental Classes > Object Class > objectName=; Builtin Classes > Fundamental Classes > Object Class > request; Builtin Classes > Fundamental Classes > Object Class > run (Private Method); Builtin Classes > Fundamental Classes > Object Class > send; Builtin Classes > Fundamental Classes > Object Class > sendWith; Builtin Classes > Fundamental Classes > Object Class > setMethod (Private Method); Builtin Classes > Fundamental Classes > Object Class > start; Builtin Classes > Fundamental Classes > Object Class > startWith; Builtin Classes > Fundamental Classes > Object Class > string; Builtin Classes > Fundamental Classes > Object Class > unsetMethod (Private Method)"
-deviations: [4, 28, 30, 32, 33, 36, 105, 107, 109, 110, 118]
+deviations: [4, 28, 30, 32, 33, 36, 105, 107, 109, 110, 118, 124]
 ---
 
 # Object
@@ -2258,4 +2258,43 @@ request ARRAY
 2
 start
 request ARRAY
+```
+
+r[class.object.deviation.124]
+An answer of `request` with `ARRAY` that is not an `Array` or an instance of
+a subclass of `Array` is refused as an array of arguments by `sendWith`,
+`startWith` and `run` with the option `A`: `sendWith` and `run` raise
+`SYNTAX 88.913` and `startWith` `SYNTAX 98.913`, whatever collection the answer
+is. ooRexx accepts a `Queue` or a
+`CircularQueue` as such an answer and uses its items, and crashes for a `List`,
+a `Bag`, a `Table` or a `Directory`, among others. In the example the answer is a queue.
+
+```rexx
+a = .ans~new
+o = .w~new
+call try "o~sendWith('count', a)"
+call try "o~startWith('count', a)"
+call try "o~go(a)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class w
+::method count
+  return arg()
+::method go
+  return self~run('return arg()', 'A', arg(1))
+::class ans
+::method request
+  return .queue~of('x')
+```
+
+```output
+o~sendWith('count', a) => 88.913
+o~startWith('count', a) => 98.913
+o~go(a) => 88.913
 ```

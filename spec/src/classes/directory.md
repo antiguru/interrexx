@@ -2,7 +2,7 @@
 element: "Directory"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Directory Class; Builtin Classes > Collection Classes > Directory Class > new (Class Method); Builtin Classes > Collection Classes > Directory Class > []; Builtin Classes > Collection Classes > Directory Class > []=; Builtin Classes > Collection Classes > Directory Class > allIndexes; Builtin Classes > Collection Classes > Directory Class > allItems; Builtin Classes > Collection Classes > Directory Class > at; Builtin Classes > Collection Classes > Directory Class > empty; Builtin Classes > Collection Classes > Directory Class > entry; Builtin Classes > Collection Classes > Directory Class > hasEntry; Builtin Classes > Collection Classes > Directory Class > hasIndex; Builtin Classes > Collection Classes > Directory Class > hasItem; Builtin Classes > Collection Classes > Directory Class > index; Builtin Classes > Collection Classes > Directory Class > isEmpty; Builtin Classes > Collection Classes > Directory Class > items; Builtin Classes > Collection Classes > Directory Class > makeArray; Builtin Classes > Collection Classes > Directory Class > put; Builtin Classes > Collection Classes > Directory Class > remove; Builtin Classes > Collection Classes > Directory Class > removeEntry; Builtin Classes > Collection Classes > Directory Class > removeItem; Builtin Classes > Collection Classes > Directory Class > setEntry; Builtin Classes > Collection Classes > Directory Class > setMethod; Builtin Classes > Collection Classes > Directory Class > supplier; Builtin Classes > Collection Classes > Directory Class > unknown; Builtin Classes > Collection Classes > Directory Class > unsetMethod"
-deviations: [29, 33, 78, 109]
+deviations: [29, 33, 78, 109, 123]
 ---
 
 # Directory
@@ -24,8 +24,7 @@ method search](r:class.methods.unknown) finds no method, such as `d~name`,
 reaches the `unknown` method of the class, which reads or sets the entry of that
 name in upper case ([the unknown rule](r:class.directory.unknown)). The page
 follows the order of the rexxref entry. Examples that show an error use a small
-routine `try`, as the builtin pages do. The page says nothing about the answer
-of `isEmpty` for a directory that holds only methods, and nothing about which of
+routine `try`, as the builtin pages do. The page says nothing about which of
 two items equal to the argument `removeItem` removes ([the hash order
 rule](r:class.directory.deviation.33)).
 
@@ -452,10 +451,10 @@ say (d~removeItem(q) == .nil) .local~n d~items
 
 r[class.directory.items]
 `items` answers the number of entries: the items and the methods, but not the
-`UNKNOWN` method. `isEmpty` answers 1 when there is no entry of either kind
-and 0 otherwise, for a directory that holds items; the page says nothing about
-a directory that holds only methods. Neither takes an argument: one raises
-`SYNTAX 93.902`.
+`UNKNOWN` method. `isEmpty` answers 1 when `items` answers 0 and 0 otherwise, so
+that a directory that holds only methods is not empty, and one that holds only
+the `UNKNOWN` method is ([Deviation 123](r:class.directory.deviation.123)).
+Neither takes an argument: one raises `SYNTAX 93.902`.
 
 ```rexx
 d = .directory~new
@@ -1177,4 +1176,30 @@ say d~at('abc') (d~at('other') == .nil) d~hasIndex(.sub~new('abc'))
 ```output defect=#140
 0
 v 1 1
+```
+
+r[class.directory.deviation.123]
+`isEmpty` agrees with `items`: it answers 0 for a directory that holds a
+method of any name but `UNKNOWN`, also when that is all it holds, as `items`
+answers 1 or more for it. ooRexx answers 1 for a directory that holds only
+methods.
+
+```rexx
+d = .directory~new
+d~setMethod('m', 'return 1')
+say d~items d~isEmpty
+d~setMethod('unknown', 'return 2')
+say d~items d~isEmpty
+e = .directory~new
+e~setMethod('unknown', 'return 2')
+say e~items e~isEmpty
+d~unsetMethod('m')
+say d~items d~isEmpty
+```
+
+```output
+1 0
+1 0
+0 1
+0 1
 ```

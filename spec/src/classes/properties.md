@@ -2,7 +2,7 @@
 element: "Properties"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Properties Class; Builtin Classes > Collection Classes > Properties Class > load (Class method); Builtin Classes > Collection Classes > Properties Class > new (Class method); Builtin Classes > Collection Classes > Properties Class > []=; Builtin Classes > Collection Classes > Properties Class > getLogical; Builtin Classes > Collection Classes > Properties Class > getProperty; Builtin Classes > Collection Classes > Properties Class > getWhole; Builtin Classes > Collection Classes > Properties Class > load; Builtin Classes > Collection Classes > Properties Class > put; Builtin Classes > Collection Classes > Properties Class > save; Builtin Classes > Collection Classes > Properties Class > setLogical; Builtin Classes > Collection Classes > Properties Class > setProperty; Builtin Classes > Collection Classes > Properties Class > setWhole"
-deviations: [29, 33, 78, 109]
+deviations: [29, 33, 78, 109, 122]
 ---
 
 # Properties
@@ -325,7 +325,8 @@ followed by zeros are allowed, and a value that needs more than nine digits is
 not. The default is used when the name has no value and is checked in the same
 way, and is not looked at when the name has a value. A missing name with no
 default raises `SYNTAX 26.901` too. A value that is not a string is read
-through [the string-value rule](r:conv.string.object).
+through [the string-value rule](r:conv.string.object), by one send of `request`
+([Deviation 122](r:class.properties.deviation.122)).
 
 ```rexx
 p = .properties~new
@@ -932,8 +933,8 @@ a source that is not a name or a `File` and `lineout` with the line to a
 target that is not a name or a `File`. The methods `put`, `setProperty`, `[]=`
 and the setters read a value that is not a string with `request` and the
 argument `STRING` ([the put rule](r:class.properties.put)), and `getWhole` and
-`save` send `request` with `STRING` to a stored value that is not a string
-([the getWhole rule](r:class.properties.getwhole) and [the save
+`save` send `request` with `STRING` to a stored value that is not a string,
+`getWhole` once ([the getWhole rule](r:class.properties.getwhole) and [the save
 rule](r:class.properties.save)).
 In the example each method of a subclass records its name, the number of its
 arguments and its first argument, and each call shows the records it caused.
@@ -1105,4 +1106,29 @@ say p['k'] p['k2'] p['w'] p['l']
 
 ```output defect=#140
 abc def 12 true
+```
+
+r[class.properties.deviation.122]
+`getWhole` sends `request` with `STRING` once to a stored value that is not a
+string, as [the getWhole rule](r:class.properties.getwhole) says. ooRexx sends
+it twice.
+
+```rexx
+.local~n = 0
+p = .properties~new
+p~setEntry('b', .text~new('12'))
+say p~getWhole('B') .local~n
+::class text
+::method init
+  expose v
+  use arg v
+::method request
+  expose v
+  .local~n += 1
+  if arg(1) = 'STRING' then return v
+  return .nil
+```
+
+```output defect=#164
+12 1
 ```

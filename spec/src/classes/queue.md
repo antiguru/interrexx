@@ -2,7 +2,7 @@
 element: "Queue"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Queue Class; Builtin Classes > Collection Classes > Queue Class > new (Class Method); Builtin Classes > Collection Classes > Queue Class > of (Class Method); Builtin Classes > Collection Classes > Queue Class > []; Builtin Classes > Collection Classes > Queue Class > []=; Builtin Classes > Collection Classes > Queue Class > allIndexes; Builtin Classes > Collection Classes > Queue Class > allItems; Builtin Classes > Collection Classes > Queue Class > append; Builtin Classes > Collection Classes > Queue Class > at; Builtin Classes > Collection Classes > Queue Class > delete; Builtin Classes > Collection Classes > Queue Class > empty; Builtin Classes > Collection Classes > Queue Class > first; Builtin Classes > Collection Classes > Queue Class > firstItem; Builtin Classes > Collection Classes > Queue Class > hasIndex; Builtin Classes > Collection Classes > Queue Class > hasItem; Builtin Classes > Collection Classes > Queue Class > index; Builtin Classes > Collection Classes > Queue Class > insert; Builtin Classes > Collection Classes > Queue Class > isEmpty; Builtin Classes > Collection Classes > Queue Class > items; Builtin Classes > Collection Classes > Queue Class > last; Builtin Classes > Collection Classes > Queue Class > lastItem; Builtin Classes > Collection Classes > Queue Class > makeArray; Builtin Classes > Collection Classes > Queue Class > next; Builtin Classes > Collection Classes > Queue Class > peek; Builtin Classes > Collection Classes > Queue Class > previous; Builtin Classes > Collection Classes > Queue Class > pull; Builtin Classes > Collection Classes > Queue Class > push; Builtin Classes > Collection Classes > Queue Class > put; Builtin Classes > Collection Classes > Queue Class > queue; Builtin Classes > Collection Classes > Queue Class > remove; Builtin Classes > Collection Classes > Queue Class > removeItem; Builtin Classes > Collection Classes > Queue Class > section; Builtin Classes > Collection Classes > Queue Class > size; Builtin Classes > Collection Classes > Queue Class > supplier"
-deviations: [78, 109]
+deviations: [78, 109, 121]
 ---
 
 # Queue
@@ -208,21 +208,21 @@ r[class.queue.indexes]
 An index of a queue is a whole number of at least 1, the position of an item
 counted from the head. A method that takes an index reads it from its string
 value ([the conversion rule](r:conv.string.object)) as a whole-number argument
-of a builtin is ([the form rule](r:conv.whole.form), [the digits
-rule](r:conv.whole.digits)): `"2"`, `' 2 '` and `2.0` are as good as `2`,
-NUMERIC DIGITS plays no part, and an argument that those rules refuse, a
-number below 1, or `.nil` raises `SYNTAX 93.907`. An object that is not a
-string is read by its string value, so an array is read through its
-`makeString`: an array of exactly one such index gives that index, and an
-array with none or with more than one gives a string that is not an index and
-raises `SYNTAX 93.907`, as does a list, whose string value is not an index
-either. An index above the number of items is not an error for the methods
-that look an item up: `at` answers `.nil`, `hasIndex` answers 0, `delete` and
-`remove` answer `.nil`, `next` answers `.nil`, `previous` answers the last
-index and `section` an empty queue; `insert` raises a condition
-([the insert rule](r:class.queue.insert)). Where a method adds or removes an
-item in front of others, those others have other indexes afterwards, and the
-examples of the methods show it.
+of a builtin is ([the form rule](r:conv.whole.form),
+[the digits rule](r:conv.whole.digits)): `"2"`, `' 2 '` and `2.0` are as good as
+`2`, NUMERIC DIGITS plays no part, and an argument that those rules refuse, a
+number below 1, or `.nil` raises `SYNTAX 93.907`. An object that is not a string
+is read by its string value, so an array is read through its `makeString`: an
+array of exactly one such index gives that index, and an array with none or with
+more than one gives a string that is not an index and raises `SYNTAX 93.907`, as
+does a list, whose string value is not an index either. An index above the
+number of items is not an error for the methods that look an item up: `at`
+answers `.nil`, `hasIndex` answers 0, `delete` and `remove` answer `.nil`,
+`next` answers `.nil`, `previous` answers the last index and `section` an empty
+queue; `insert` and `put` raise a condition
+([the insert rule](r:class.queue.insert), [the put rule](r:class.queue.put)).
+Where a method adds or removes an item in front of others, those others have
+other indexes afterwards, and the examples of the methods show it.
 
 ```rexx
 q = .queue~of('a', 'b', 'c')
@@ -319,9 +319,12 @@ at override bracket override
 r[class.queue.put]
 `put(item, index)` replaces the item at the index and answers no value; the
 other items keep their indexes. `q[i] = v` is the message `[]=` and the same
-as `put`. The index is read as [the index rule](r:class.queue.indexes) says.
-The method takes two arguments: fewer, or an omitted item or index, raise
-`SYNTAX 93.903`, and a third raises `SYNTAX 93.902`. A `put` of a subclass is
+as `put`. The index is read as [the index rule](r:class.queue.indexes) says,
+and it must be the index of an item: a number above the number of items raises
+`SYNTAX 93.966` whatever it is ([Deviation 121](r:class.queue.deviation.121)),
+and the queue keeps its items. The method takes two arguments: fewer, or an
+omitted item or index, raise `SYNTAX 93.903`, and a third raises
+`SYNTAX 93.902`. A `put` of a subclass is
 not asked for `[]=`, nor the other way round.
 
 ```rexx
@@ -330,6 +333,7 @@ q~put('B', 2)
 q[3] = 'C'
 say q~allItems~makeString('L', ',') q~items
 call try 'q~put("x", 0)'
+call try 'q~put("x", q~items + 1)'
 call try 'q~put("x", .nil)'
 call try 'q~put("x", "x")'
 call try 'q~put("x", .array~of(1, 2))'
@@ -352,6 +356,7 @@ bad: say arg(1) '=>' condition('o')~code
 ```output
 a,B,C 3
 q~put("x", 0) => 93.907
+q~put("x", q~items + 1) => 93.966
 q~put("x", .nil) => 93.907
 q~put("x", "x") => 93.907
 q~put("x", .array~of(1, 2)) => 93.907
@@ -1349,4 +1354,36 @@ say q~at(.num~new('1'))
 
 ```output
 first
+```
+
+r[class.queue.deviation.121]
+`put` with an index above the number of items raises `SYNTAX 93.966` however
+far above it the index is, and the queue keeps its items. ooRexx raises
+`93.966` or `93.918` according to the storage the queue holds beyond its items,
+which its earlier history decides: an index just above the last item can
+answer either, and a much larger one answers `93.918`.
+
+```rexx
+q = .queue~of('a', 'b', 'c')
+do i over .array~of(4, 5, 20, 50, 1000)
+  call try 'q~put("x", 'i')'
+end
+say q~allItems~makeString('L', ',')
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output defect=#186
+q~put("x", 4) => 93.966
+q~put("x", 5) => 93.966
+q~put("x", 20) => 93.966
+q~put("x", 50) => 93.966
+q~put("x", 1000) => 93.966
+a,b,c
 ```

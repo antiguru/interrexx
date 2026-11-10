@@ -873,7 +873,10 @@ argument. The answer need not be an `Array`: an object that understands the
 two messages will do, and an answer that lacks one raises `SYNTAX 93.948`. A
 subclass of `Array` is sent the two messages too, and no other. A position
 that holds nothing reads `.nil`, which is then a member, so an `Array` with a
-hole is read for as many positions as it has items, not as its size. The
+hole is read for as many positions as it has items, not as its size. An answer
+that is a `List` is the one kind read otherwise: its members are all its items,
+in the order of the list, not the entries at the positions 1 up to its number
+of items. The
 answer of `items` is read as a number: one that is not a number raises
 `SYNTAX 41.1`, and a negative one reads no position. An error that `[]` raises
 is the error of the operation, after the members before it have been handled.

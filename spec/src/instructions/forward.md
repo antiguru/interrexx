@@ -3,7 +3,7 @@ element: FORWARD
 kind: instruction
 syntax: "FORWARD [TO expr] [MESSAGE expr] [ARGUMENTS expr | ARRAY (expr, ...)] [CLASS expr] [CONTINUE]"
 rexxref: "Keyword Instructions > FORWARD"
-deviations: [118]
+deviations: [118, 124]
 ---
 
 # FORWARD
@@ -556,4 +556,31 @@ say .w~new~relay(l)
 ```output
 request ARRAY
 2
+```
+
+r[instr.forward.deviation.124]
+A value of ARGUMENTS whose `request` with `ARRAY` answers an object that is
+not an `Array` or an instance of a subclass of `Array` raises `SYNTAX 98.946`,
+whatever collection the answer is. ooRexx accepts a `Queue` or a
+`CircularQueue` as such an answer and uses its items, and crashes for a `List`,
+a `Bag`, a `Table` or a `Directory`, among others. In the example the answer is a
+queue.
+
+```rexx
+signal on syntax name bad
+say .w~new~relay(.ans~new)
+exit
+bad: say condition('o')~code
+::class w
+::method count
+  return arg()
+::method relay
+  forward message 'count' arguments (arg(1))
+::class ans
+::method request
+  return .queue~of('x')
+```
+
+```output
+98.946
 ```
