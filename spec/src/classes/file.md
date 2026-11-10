@@ -7,9 +7,9 @@ deviations: [34, 109, 118]
 
 # File
 
-A `File` stands for a path to a file or to a directory. The path may name
-something that does not exist: a `File` holds only the path, and a method that
-asks about the file or changes it looks at the file system when it is called.
+A `File` holds a path, and its methods ask about or change the file or
+directory that the path names. The path may name something that does not
+exist: the methods look at the file system when they are called.
 The class also has methods that read and write whole files, search a list of
 directories for a file, and name the places where files live. The rules of this
 page are those of a Unix-like system, where the components of a path are
@@ -408,7 +408,7 @@ r[class.file.name]
 for the root. `extension` answers what follows the last period of that name,
 and the empty string when the name has no period, when its period is its last
 character, or when its only period is its first character, as in a name such
-as `.cfg`; a name such as `.b.c` has the extension `c`. A period in a
+as `.rc`; a name such as `.b.c` has the extension `c`. A period in a
 directory of the path plays no part. Both take no argument; one raises
 `SYNTAX 93.902`. As they work on the absolute path, the name of `a/..` is
 the name of the directory that holds `a`, and the name of `.` is the name of
@@ -416,9 +416,9 @@ the current directory. The messages that they send are those of [the next
 rule](r:class.file.name.sends).
 
 ```rexx
-f = .file~new('/usr/lib/x.tar.gz')
+f = .file~new('/p/q/x.tar.gz')
 say f~name f~extension
-say '['.file~new('/a/.cfg')~extension']' '['.file~new('/a/.b.c')~extension']'
+say '['.file~new('/a/.rc')~extension']' '['.file~new('/a/.b.c')~extension']'
 say '['.file~new('/a/z.')~extension']' '['.file~new('/a.b/z')~extension']'
 say '['.file~new('/a/z')~extension']' '['.file~new('/')~name']'
 say .file~new('/a/b/')~name .file~new('/a/b/../c')~name,
@@ -851,7 +851,8 @@ A directory takes the place of an empty directory that is at the argument's
 path: `renameTo` replaces it and answers 1. It answers 0, and moves nothing,
 when the directory at the argument's path is not empty, when a file is to take
 the place of a directory or a directory the place of a file, and when the
-argument's path lies inside the receiver's directory.
+argument's path is the receiver's own path or lies inside the receiver's
+directory.
 
 ```rexx
 d = 'spec-file-ren-dir.tmp'
@@ -865,7 +866,8 @@ say .file~new(d'/from')~renameTo(.file~new(d'/empty')),
 say .file~new(d'/empty')~renameTo(.file~new(d'/full')),
     .file~new(d'/f')~renameTo(.file~new(d'/full/x')),
     .file~new(d'/full')~renameTo(.file~new(d'/f')),
-    .file~new(d'/full')~renameTo(.file~new(d'/full/x/in'))
+    .file~new(d'/full')~renameTo(.file~new(d'/full/x/in')),
+    .file~new(d'/full/x')~renameTo(.file~new(d'/full/x'))
 junk = .file~new(d'/f')~delete
 junk = .file~new(d'/full/x')~delete
 junk = .file~new(d'/full')~delete
@@ -878,7 +880,7 @@ junk = .file~new(d)~delete
 
 ```output defect=#177
 1 0 1
-0 0 0 0
+0 0 0 0 0
 ```
 
 r[class.file.permissions]
@@ -1259,12 +1261,12 @@ index by `==` and `hashCode`.
 ```rexx
 a = .file~new('/t/a')
 b = .file~new('/t//a/')
-c = .file~new('/t/A')
+c = .file~new('/t/b')
 say (a~hashCode == b~hashCode)
 say (a~hashCode == a~absolutePath~hashCode)
 x = .ci~new('/t/a')
 y = .ci~new('/t/A')
-say (x = y) (x~hashCode == y~hashCode)
+say (x = y) (y~hashCode == y~absolutePath~hashCode)
 s = .set~new
 s~put(a); s~put(b); s~put(c)
 say s~items
@@ -1298,7 +1300,7 @@ say '['.environment~log~toString(,' ')']'
 ```output
 1
 1
-1 0
+1 1
 2
 found The NIL object
 93.902
