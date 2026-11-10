@@ -556,12 +556,11 @@ that fails fails at RAISE. ooRexx converts at every `CONDITION('D')`.
 
 ## 84. Emptying a Table during REMOVE
 
-When an index's equality method, or for REMOVEITEM the argument's, empties its
-Table, Relation, StringTable, Set or Bag during REMOVE or REMOVEITEM, or a
-Relation's or Bag's REMOVEALL or a Bag's ALLAT, the search ends and ITEMS stays
-0. ooRexx answers -1 for REMOVE and
-REMOVEITEM, and its REMOVEALL and ALLAT go on comparing with an object that is
-no stored index.
+When an index's equality method empties its Table, Relation, Set or Bag during
+REMOVE, or the argument's empties a Table, Relation, StringTable, Set or Bag
+during REMOVEITEM, or a Relation's or Bag's REMOVEALL or a Bag's ALLAT, the
+search ends and ITEMS stays 0. ooRexx answers -1 for REMOVE and REMOVEITEM, and
+its REMOVEALL and ALLAT go on comparing with an object that is no stored index.
 
 ## 85. `.environment` per interpreter
 
