@@ -481,8 +481,8 @@ ooRexx lists it under the name of the variable it aliases.
 
 In every position that requires a string, a variable reference's string
 value is the referenced value's, and NOSTRING is raised only when that value
-has none. ooRexx uses the reference's default name and raises NOSTRING for
-it in most positions.
+has none. ooRexx uses the object name of the referenced value, its default
+name unless one was set, and raises NOSTRING for it in most positions.
 
 ## 73. A standard descriptor closed at start
 
@@ -849,8 +849,8 @@ collection through `makeArray` send it `makeArray`, and the methods and
 instructions that read an argument array or a source through `request` with
 `ARRAY` (`sendWith`, `startWith`, `Message~new` with the option `A`,
 `Message~replyWith`, FORWARD with ARGUMENTS, `Method~new`, `Routine~new`,
-`Package~new`, `loadPackage` and a `Stem`'s `unknown`) send it `request`, so
-an override is used. ooRexx sends such an instance neither message and uses
+`Package~new`, `loadPackage` and the `unknown` of a `Stem` or a
+`VariableReference`) send it `request`, so an override is used. ooRexx sends such an instance neither message and uses
 the items it holds, unlike the subclasses of the other collection classes.
 
 ## 119. A second cancel of an Alarm sends nothing
