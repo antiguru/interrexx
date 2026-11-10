@@ -2,7 +2,7 @@
 element: "Stem"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Stem Class; Builtin Classes > Collection Classes > Stem Class > new (Class Method); Builtin Classes > Collection Classes > Stem Class > []; Builtin Classes > Collection Classes > Stem Class > []=; Builtin Classes > Collection Classes > Stem Class > allIndexes; Builtin Classes > Collection Classes > Stem Class > allItems; Builtin Classes > Collection Classes > Stem Class > at; Builtin Classes > Collection Classes > Stem Class > empty; Builtin Classes > Collection Classes > Stem Class > hasIndex; Builtin Classes > Collection Classes > Stem Class > hasItem; Builtin Classes > Collection Classes > Stem Class > index; Builtin Classes > Collection Classes > Stem Class > isEmpty; Builtin Classes > Collection Classes > Stem Class > items; Builtin Classes > Collection Classes > Stem Class > makeArray; Builtin Classes > Collection Classes > Stem Class > put; Builtin Classes > Collection Classes > Stem Class > remove; Builtin Classes > Collection Classes > Stem Class > removeItem; Builtin Classes > Collection Classes > Stem Class > request; Builtin Classes > Collection Classes > Stem Class > supplier; Builtin Classes > Collection Classes > Stem Class > toDirectory; Builtin Classes > Collection Classes > Stem Class > unknown"
-deviations: [33, 68, 78, 109]
+deviations: [1, 68, 78, 109, 118]
 ---
 
 # Stem
@@ -20,14 +20,13 @@ rule](r:expr.variables.default)). The class inherits
 [`Collection`](collection.md); [the hierarchy rule](r:class.index.hierarchy)
 lists what it inherits.
 
-A stem has an `unknown` method, and the page begins with what the other
-methods do; [the unknown rule](r:class.stem.unknown) says what `unknown` does
-with the messages that no method answers. The page follows the order of the
-rexxref entry. Examples that show an error use a small routine `try`, as the
-builtin pages do. The order in which the tails are listed is not specified, as
-[the DO OVER rule](r:instr.do.deviation.1) says of a loop, and the examples
-then hold one tail or sort the answers ([the order
-rule](r:class.stem.deviation.33)).
+A stem has an `unknown` method, and the page begins with what the other methods
+do; [the unknown rule](r:class.stem.unknown) says what `unknown` does with the
+messages that no method answers. Examples that show an error use a small routine
+`try`, as the builtin pages do. The order in which the tails are listed is not
+specified, as [the DO OVER rule](r:instr.do.deviation.1) says of a loop, and the
+examples then hold one tail or sort the answers ([the order
+rule](r:class.stem.deviation.1)).
 
 ## The class
 
@@ -77,17 +76,19 @@ MapCollection
 ## Making a stem
 
 r[class.stem.new]
-`new` makes an empty stem, with no default, and takes one optional argument,
-its name: the text that the stem has as its value while it has no default, and
-the start of every tail that is read from it with no item. The name defaults
-to the null string, and is not changed to end with a period. An omitted
-argument counts for nothing, and a second argument raises `SYNTAX 93.902`. The
-name must have a string value, found as [the conversion
-rule](r:conv.string.object) says for a `request` that answers a string; an
-object whose `request` with `STRING` does not answer a string, `.nil` among
-them, raises `SYNTAX 88.909`. `new` checks the name itself and sends `init` to
-the new stem with no argument, whatever the name was ([the new
-rule](r:class.index.new)), so a subclass's `init` sees none.
+`new` makes an empty stem, with no default. Its first argument is the name:
+the text that the stem has as its value while it has no default, and the
+start of every tail that is read from it with no item. The name is the null
+string when it is omitted, and is not changed to end with a period. It must
+have a string value, found as [the conversion rule](r:conv.string.object)
+says for a `request` that answers a string; an object whose `request` with
+`STRING` does not answer a string, `.nil` among them, raises `SYNTAX 88.909`
+before `init` is sent. `new` then sends `init` to the new stem with the
+arguments that follow the name ([the new rule](r:class.index.new)). A stem
+has the `init` of [`Object`](r:class.object.init), which takes no argument,
+so a second argument to `new` raises `SYNTAX 93.902` when that `init` runs:
+after the `init` of a subclass has run, and not at all when the `init` of a
+subclass does not pass its arguments on.
 
 ```rexx
 s = .stem~new('abc.')
@@ -98,6 +99,9 @@ say .tracked~new('T.')~string
 call try '.stem~new(.nil)'
 call try '.stem~new(.object~new)'
 call try '.stem~new("a", "b")'
+call try '.tracked~new(.nil)'
+call try '.tracked~new("T.", "x")'
+say .quiet~new('Q.', 'x', 'y')~string .quiet~new(, 'x')~string'|'
 exit
 try:
   signal on syntax name bad
@@ -110,6 +114,9 @@ bad: say arg(1) '=>' condition('o')~code
 ::method init
   say 'init' arg()
   forward class (super) continue
+::class quiet subclass stem
+::method init
+  return
 ```
 
 ```output
@@ -121,6 +128,10 @@ T.
 .stem~new(.nil) => 88.909
 .stem~new(.object~new) => 88.909
 .stem~new("a", "b") => 93.902
+.tracked~new(.nil) => 88.909
+init 1
+.tracked~new("T.", "x") => 93.902
+Q. |
 ```
 
 ## Tails
@@ -204,12 +215,12 @@ dflt dflt dflt dflt 0
 
 r[class.stem.put]
 `put(item, index, ...)` and `[index, ...] = item` store the item at the tail
-that the indexes make ([the tails rule](r:class.stem.tails)), replacing the
-item that was there, and answer nothing. The item may be any object, `.nil`
-included. With no index they store the item as the new default of the stem,
-and then all the entries of the stem are gone, as [an assignment to a stem
-symbol](r:instr.assignment.stem) discards them. The item is required: none, or
-an omitted one, raises `SYNTAX 93.903` for `put`.
+that the indexes make ([the tails rule](r:class.stem.tails)), replacing the item
+that was there, and answer nothing. The item may be any object, `.nil` included.
+With no index they store the item as the new default of the stem and remove
+every item from that same object, so the variable and every other reference to
+the stem see no entries. The item is required: none, or an omitted one, raises
+`SYNTAX 93.903` for `put`.
 
 ```rexx
 s = .stem~new('N.')
@@ -269,9 +280,9 @@ r[class.stem.hasitem]
 `hasItem(item)` answers 1 when an item stored at some tail is equal to the
 argument, and `index(item)` answers the tail of such an item, as a string, and
 `.nil` when there is none. The default of the stem is not an item. Both take
-exactly one argument: a second raises `SYNTAX 93.902`; the answer to none is
-not specified. Which tail `index` answers when several items qualify is not
-specified ([the order rule](r:class.stem.deviation.33)).
+exactly one argument: a second raises `SYNTAX 93.902`. Which tail `index`
+answers when several items qualify is not specified ([the order
+rule](r:class.stem.deviation.1)).
 
 ```rexx
 s = .stem~new('N.')
@@ -370,7 +381,7 @@ r[class.stem.removeitem]
 `removeItem(item)` removes one item that is equal to the argument and answers
 it, and answers `.nil` when there is none; when several tails hold an equal
 item, which one is removed is not specified ([the order
-rule](r:class.stem.deviation.33)). The default is not an item. It takes
+rule](r:class.stem.deviation.1)). The default is not an item. It takes
 exactly one argument: none raises `SYNTAX 93.903`, and a second raises
 `SYNTAX 93.902`.
 
@@ -435,7 +446,7 @@ item, as strings, and `allItems` a new `Array` of the items. The default is in
 neither. They are instances of `Array` for a subclass receiver too, never the
 receiver, and do not follow later changes. They take no argument: one raises
 `SYNTAX 93.902`. The order is not specified ([the order
-rule](r:class.stem.deviation.33)), and is the same for the three answers and
+rule](r:class.stem.deviation.1)), and is the same for the three answers and
 for the supplier of one unchanged stem, so the item at a position belongs to
 the tail at the same position. The methods send no message to the stem,
 `makeArray` excepted when it is asked through
@@ -562,10 +573,11 @@ t~toDirectory(1) => 93.902
 r[class.stem.request]
 `request(class)` with the argument `ARRAY`, in any case, answers what
 `makeArray` answers, after sending `makeArray` to the stem, so an override of
-`makeArray` in a subclass answers. Any other class name is passed on:
-`request` is sent to the default of the stem with the same argument, or to the
-name when there is no default, and its answer is the answer. It takes exactly
-one argument: none raises `SYNTAX 93.903` and a second raises `SYNTAX 93.902`.
+`makeArray` in a subclass answers. Any other class name is passed on: `request`
+is sent to the default of the stem with the same argument, or to the name when
+there is no default, and its answer is the answer. It takes exactly one
+argument: none raises `SYNTAX 93.903` and a second raises `SYNTAX 93.902`. The
+argument must have a string value: `.nil` raises `SYNTAX 88.909`.
 
 ```rexx
 s = .stem~new('N.')
@@ -581,6 +593,7 @@ t[] = .directory~new
 say t~request('DIRECTORY')~class~id
 call try 's~request'
 call try 's~request("a", "b")'
+call try 's~request(.nil)'
 exit
 try:
   signal on syntax name bad
@@ -599,23 +612,28 @@ M.
 Directory
 s~request => 93.903
 s~request("a", "b") => 93.902
+s~request(.nil) => 88.909
 ```
 
 r[class.stem.unknown]
 A message that the stem does not understand, `makeString` and the comparison
-methods among them, is sent to the default of the stem with the same
-arguments, or to the name of the stem when there is no default, and what that
-answers is the answer. So a stem stands for its default in an expression:
-`s~length`, `s + 1` and `s = 'abc'` are the messages `length`, `+` and `=`
-sent to the default ([the extended assignment
-rule](r:instr.assignment.extended.stem) shows the operators), and a default
-that does not understand the message raises `SYNTAX 97.1`, as does `.nil`. The
-message `unknown(name, arguments)` does the same for the message `name` and
-the items of `arguments`, which are read through `makeArray`: `name` must have
-a string value (`.nil` raises `SYNTAX 88.909`), `arguments` that cannot answer
-`makeArray` raises `SYNTAX 98.913`, and the message name is used as written,
-so it is given in upper case. It takes exactly two arguments: fewer raises
-`SYNTAX 93.903` and more `SYNTAX 93.902`.
+methods among them, is sent to the default of the stem with the same arguments,
+or to the name of the stem when there is no default, and what that answers is
+the answer. So a stem stands for its default in an expression: `s~length`,
+`s + 1` and `s = 'abc'` are the messages `length`, `+` and `=` sent to the
+default ([the extended assignment rule](r:instr.assignment.extended.stem) shows
+the operators), and a default that does not understand the message raises
+`SYNTAX 97.1`, as does `.nil`. The message `unknown(name, arguments)` does the
+same for the message `name` and the arguments that `arguments` holds:
+`arguments` is sent `request` with `ARRAY`, and an answer that is not a
+one-dimensional array, `.nil` among them, raises `SYNTAX 98.913`; a position
+that holds nothing is an omitted argument. `name` must have a string value
+(`.nil` raises `SYNTAX 88.909`), and the message name is used as written: a name
+that is not in upper case names no method of the default, and `SYNTAX 97.1` is
+raised. An instance of a subclass of `List` given as `arguments` is sent
+`request` as any other object is ([Deviation 118](r:class.stem.deviation.118)).
+It takes exactly two arguments: fewer raises `SYNTAX 93.903` and more
+`SYNTAX 93.902`.
 
 ```rexx
 s = .stem~new('N.')
@@ -629,12 +647,14 @@ n = .stem~new('N.')
 n[] = 5
 say n + 2 (n > 4) n~unknown('+', .array~of(1)) n~unknown('ABS', .array~new)
 say s~unknown('SUBSTR', .array~of(2, 1)) s~unknown('LENGTH', .list~new)
+say s~unknown('SUBSTR', .ask~new) s~unknown('LENGTH', .array~new(3))
 call try 's~foo'
 call try 's~unknown'
 call try 's~unknown("LENGTH")'
 call try 's~unknown("LENGTH", .array~new, 1)'
 call try 's~unknown(.nil, .array~new)'
 call try 's~unknown("LENGTH", .nil)'
+call try 's~unknown("LENGTH", .array~new(2, 2))'
 u = .stem~new
 u[] = .nil
 call try 'u~length'
@@ -646,6 +666,10 @@ try:
   return
 bad: say arg(1) '=>' condition('o')~code
   return
+::class ask
+::method request
+  say 'request' arg(1)
+  return .array~of(2, 1)
 ```
 
 ```output
@@ -654,13 +678,31 @@ bad: say arg(1) '=>' condition('o')~code
 1 1 1
 7 1 6 5
 b 3
+request ARRAY
+b 3
 s~foo => 97.1
 s~unknown => 93.903
 s~unknown("LENGTH") => 93.903
 s~unknown("LENGTH", .array~new, 1) => 93.902
 s~unknown(.nil, .array~new) => 88.909
 s~unknown("LENGTH", .nil) => 98.913
+s~unknown("LENGTH", .array~new(2, 2)) => 98.913
 u~length => 97.1
+```
+
+```rexx
+s = .stem~new('N.')
+s[] = 'abc'
+signal on syntax name bad
+say s~unknown('LENGTH', .array~new)
+say s~unknown('length', .array~new)
+exit
+bad: say condition('o')~code
+```
+
+```output defect=#171
+3
+97.1
 ```
 
 ## Copies and the string value
@@ -870,15 +912,14 @@ say n 'calls,' extra 'sent more than one message to the receiver'
 ```
 
 r[class.stem.hasitem.sends]
-`hasItem(item)`, `index(item)` and `removeItem(item)` send `==` to the
-argument with a stored item as the argument, item by item, until one answers
-true, and send nothing else, `hashCode` included. The items are visited in an
-order that is not specified; every item is compared at least once when none
-matches, and how often is not specified ([the order
-rule](r:class.stem.deviation.33)). The search with the very object that is
-stored is no exception: its `==` is sent as for any other item ([the deviation
-rule](r:class.stem.deviation.78)). The messages sent to an index are those of
-[the tails rule](r:class.stem.tails).
+`hasItem(item)`, `index(item)` and `removeItem(item)` send `==` to the argument
+with a stored item as the argument, item by item, until one answers true, and
+send nothing else, `hashCode` included. The order in which the items are
+compared is not specified ([the order rule](r:class.stem.deviation.1)), so when
+none matches every item is compared once. The search with the very object that
+is stored is no exception: its `==` is sent as for any other item ([the
+deviation rule](r:class.stem.deviation.78)). The messages sent to an index are
+those of [the tails rule](r:class.stem.tails).
 
 ```rexx
 .local~n = 0
@@ -887,11 +928,11 @@ s['a'] = 's'
 s['b'] = 't'
 s['c'] = 'u'
 q = .thing~new
-say s~hasItem(q) (.local~n >= 3)
+say s~hasItem(q) .local~n
 .local~n = 0
-say (s~index(q) == .nil) (.local~n >= 3)
+say (s~index(q) == .nil) .local~n
 .local~n = 0
-say (s~removeItem(q) == .nil) (.local~n >= 3) s~items
+say (s~removeItem(q) == .nil) .local~n s~items
 ::class thing
 ::method '=='
   .local~n += 1
@@ -902,21 +943,21 @@ say (s~removeItem(q) == .nil) (.local~n >= 3) s~items
 ```
 
 ```output
-0 1
-1 1
-1 1 3
+0 3
+1 3
+1 3 3
 ```
 
 ## Deviations
 
-r[class.stem.deviation.33]
+r[class.stem.deviation.1]
 The order of the answers of `allIndexes`, `allItems`, `makeArray` and
-`supplier`, the order of the search of `hasItem`, `index` and `removeItem`,
-and which item `index` and `removeItem` choose among equal ones, are not
-specified, and may differ from ooRexx's. Which tails are produced, and how
-often, is specified. The order of the tails of a stem is the same question as
-the order of a hash collection, and [the DO OVER rule](r:instr.do.deviation.1)
-states it for a loop. In the example the answers are sorted.
+`supplier`, the order in which `hasItem`, `index` and `removeItem` compare
+the items, and so which tail `index` and `removeItem` choose among equal
+items, are not specified, and may differ from ooRexx's, which follows its
+storage. Which tails are produced, and how often, is specified. [The DO OVER
+rule](r:instr.do.deviation.1) says the same of a loop. See [Deviation
+1](../deviations.md). In the example the answers are sorted.
 
 ```rexx
 s = .stem~new
@@ -932,6 +973,32 @@ say s~items s~makeArray~items
 a,b,c
 1,2,3
 3 3
+```
+
+r[class.stem.deviation.118]
+An instance of a subclass of `List` that is given to `unknown` as the array of
+arguments is sent `request` with `ARRAY`, as [the unknown
+rule](r:class.stem.unknown) says of any other object, so that an override is
+used. See [Deviation 118](../deviations.md). ooRexx sends the instance no
+`request` and uses the items it holds, so the example answers `c` on ooRexx. The
+`request` of the class `ll` answers two items.
+
+```rexx
+l = .ll~new
+l~append(3)
+l~append(1)
+s = .stem~new
+s[] = 'abc'
+say s~unknown('SUBSTR', l)
+::class ll subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of(2, 1)
+```
+
+```output
+request ARRAY
+b
 ```
 
 r[class.stem.deviation.68]

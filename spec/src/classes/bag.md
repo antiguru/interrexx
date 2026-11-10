@@ -2,7 +2,7 @@
 element: "Bag"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Bag Class; Builtin Classes > Collection Classes > Bag Class > new (Class Method); Builtin Classes > Collection Classes > Bag Class > of (Class Method); Builtin Classes > Collection Classes > Bag Class > []; Builtin Classes > Collection Classes > Bag Class > []=; Builtin Classes > Collection Classes > Bag Class > allAt; Builtin Classes > Collection Classes > Bag Class > allIndex; Builtin Classes > Collection Classes > Bag Class > allIndexes; Builtin Classes > Collection Classes > Bag Class > allItems; Builtin Classes > Collection Classes > Bag Class > at; Builtin Classes > Collection Classes > Bag Class > difference; Builtin Classes > Collection Classes > Bag Class > empty; Builtin Classes > Collection Classes > Bag Class > hasIndex; Builtin Classes > Collection Classes > Bag Class > hasItem; Builtin Classes > Collection Classes > Bag Class > index; Builtin Classes > Collection Classes > Bag Class > intersection; Builtin Classes > Collection Classes > Bag Class > isEmpty; Builtin Classes > Collection Classes > Bag Class > items; Builtin Classes > Collection Classes > Bag Class > makeArray; Builtin Classes > Collection Classes > Bag Class > put; Builtin Classes > Collection Classes > Bag Class > putAll; Builtin Classes > Collection Classes > Bag Class > remove; Builtin Classes > Collection Classes > Bag Class > removeAll; Builtin Classes > Collection Classes > Bag Class > removeItem; Builtin Classes > Collection Classes > Bag Class > subset; Builtin Classes > Collection Classes > Bag Class > supplier; Builtin Classes > Collection Classes > Bag Class > union; Builtin Classes > Collection Classes > Bag Class > uniqueIndexes; Builtin Classes > Collection Classes > Bag Class > xor"
-deviations: [33, 78, 84, 109]
+deviations: [33, 45, 78, 84, 109]
 ---
 
 # Bag
@@ -22,11 +22,11 @@ of entries, and which count how often a member occurs.
 A bag has no `unknown` method: a message that [the method
 search](r:class.methods.unknown) does not resolve raises
 [NOMETHOD](r:cond.nomethod.raise), as the error rule of [the
-chapter](r:class.index.errors) says. The page follows the order of the rexxref
-entry. Examples that show an error use a small routine `try`, as the builtin
-pages do. Where several members qualify for a method that answers one, which
-one it answers is not specified, and the examples then hold one member or sort
-the answers ([the hash order rule](r:class.bag.deviation.33)).
+chapter](r:class.index.errors) says. Examples that show an error use a small
+routine `try`, as the builtin pages do. Where several members qualify for a
+method that answers one, which one it answers is not specified, and the examples
+then hold one member or sort the answers ([the hash order
+rule](r:class.bag.deviation.33)).
 
 ## The class
 
@@ -231,21 +231,23 @@ first second
 
 r[class.bag.members.sends]
 `at`, `[]`, `hasIndex`, `hasItem`, `index`, `remove`, `removeItem` and `items`
-with an index look a member up by sending `hashCode` to the argument, once,
-and then `==` to the argument with a stored object as the argument, for stored
+with an index look a member up by sending `hashCode` to the argument, once, and
+then `==` to the argument with a stored object as the argument, for stored
 objects that have the same hash code, until one answers true; each of those is
-compared before the lookup gives up. Which further stored objects are
-compared, by `==` or `hashCode`, and how often, is not specified ([the hash
-order rule](r:class.bag.deviation.33)); when the bag is empty, the only
-message is `hashCode`. `allAt`, `removeAll` and `supplier` with an index send
-`hashCode` once and `==` to every stored object of the same hash code, and may
-send it more than once to one object. `put` and `[]=` send `hashCode` to the
-item and nothing else: no `==` is sent, as a member is added whether or not an
-equal one is there; with an index they send `==` to the item first ([the put
-rule](r:class.bag.put)). The very object that is stored is no exception to the
-`==` ([the deviation rule](r:class.bag.deviation.78)). In the example every
-member hashes to the same string, so each stored member is compared; `index`
-and `uniqueIndexes` are left out, because their messages are not specified.
+compared before the lookup gives up. Which further stored objects are compared,
+by `==` or `hashCode`, and how often, is not specified ([the hash order
+rule](r:class.bag.deviation.33)); when the bag is empty, the only message is
+`hashCode`. `allAt`, `removeAll` and `supplier` with an index send `hashCode`
+once and `==` to the stored objects of the same hash code, how often to each
+being left open by [the hash order rule](r:class.bag.deviation.33). `put` and
+`[]=` send `hashCode` to the item and nothing else: no `==` is sent, as a member
+is added whether or not an equal one is there; with an index they send `==` to
+the item first ([the put rule](r:class.bag.put)). The very object that is stored
+is no exception to the `==` ([the deviation rule](r:class.bag.deviation.78)). In
+the example every member hashes to the same string, so each stored member is
+compared; `index` is shown by [the item rule](r:class.bag.hasitem.sends), and
+the messages of `uniqueIndexes` are left open by [the hash order
+rule](r:class.bag.deviation.33).
 
 ```rexx
 .local~log = .array~new
@@ -295,6 +297,39 @@ b[.k~new("p")] = .k~new("p") => == p p | hash p
 b~remove(.k~new("s1")) => hash s1 | == s1 s1
 b~put(.k~new("s1")) => hash s1
 b~allAt(.k~new("p"))~items => hash p | == p s1
+```
+
+```rexx
+.local~log = .array~new
+do c over 'removeAll allAt supplier'~makeArray(' ')
+  b = .bag~new
+  b~put(.k~new('s1'))
+  b~put(.k~new('s1'))
+  .local~log~empty
+  x = b~send(c, .k~new('s1'))
+  say c b~items .local~log~makeString('L', ' | ')
+end
+::class k
+::method init
+  expose tag
+  use arg tag
+::method '=='
+  expose tag
+  use arg o
+  return tag == o~tag
+::method tag
+  expose tag
+  return tag
+::method hashCode
+  expose tag
+  .local~log~append('hash' tag)
+  return 'same'
+```
+
+```output defect=#168
+removeAll 0 hash s1
+allAt 2 hash s1
+supplier 2 hash s1
 ```
 
 ## Adding and reading members
@@ -391,17 +426,18 @@ b~at(.hostile~new) => 93.900
 ```
 
 r[class.bag.allat]
-`allAt(index)` answers a new `Array` of the stored objects that are equal to
-the argument, one for each member, in an order that is not specified, and an
-empty `Array` when there is none. `allIndex(item)` is the same question asked
-with the item: it answers a new `Array` of the stored objects equal to it, and
-for a bag the two answers are alike. Both are instances of `Array` for a
-subclass receiver too, and do not follow later changes. Each takes exactly one
-argument: none, or an omitted one, raises `SYNTAX 93.903`, and a second raises
-`SYNTAX 93.902`. `allAt` looks the argument up as [the lookup
-rule](r:class.bag.members.sends) says; `allIndex` sends `==` to the argument
-with every stored object as the argument, and no `hashCode`, how often to the
-same object not being specified.
+`allAt(index)` answers a new `Array` of the stored objects that are equal to the
+argument, one for each member, in an order that is not specified ([the hash
+order rule](r:class.bag.deviation.33)), and an empty `Array` when there is none.
+`allIndex(item)` is the same question asked with the item: it answers a new
+`Array` of the stored objects equal to it, and for a bag the two answers are
+alike. Both are instances of `Array` for a subclass receiver too, and do not
+follow later changes. Each takes exactly one argument: none, or an omitted one,
+raises `SYNTAX 93.903`, and a second raises `SYNTAX 93.902`. `allAt` looks the
+argument up as [the lookup rule](r:class.bag.members.sends) says; `allIndex`
+sends `==` to the argument with the stored objects as the argument, and no
+`hashCode`; how often is left open by [the hash order
+rule](r:class.bag.deviation.33).
 
 ```rexx
 b = .many~of('a', 'b', 'a', 'a')
@@ -500,13 +536,15 @@ b~isEmpty(1) => 93.902
 
 r[class.bag.hasitem]
 `hasItem(item)` answers 1 when a member is equal to the item and 0 otherwise;
-for a bag it is the same question as `hasIndex`. `index(item)` answers an
-object equal to the item, and `.nil` when there is none. `hasItem` and `index`
-take exactly one argument: for each, none, or an omitted one, raises
-`SYNTAX 93.903`. `index` raises `SYNTAX 93.902` for a second argument.
-`hasItem` accepts a second argument, the index, which may be given only as
-another name for the item; a third raises `SYNTAX 93.902`, and an index equal
-to the item gives the answer of `hasItem(item)`.
+for a bag it is the same question as `hasIndex`. `index(item)` looks the item up
+as an index, as [the lookup rule](r:class.bag.members.sends) says, and answers
+the stored object it finds, and `.nil` when there is none. `index` takes exactly
+one argument and `hasItem` one or two: for each, none, or an omitted first one,
+raises `SYNTAX 93.903`, and a surplus argument raises `SYNTAX 93.902`. The
+second argument of `hasItem` is an index, which may be given only as another
+name for the item; an index equal to the item gives the answer of
+`hasItem(item)`, and an unequal one answers 0 ([the deviation
+rule](r:class.bag.deviation.45)).
 
 ```rexx
 b = .bag~of('x', .nil, 'x')
@@ -539,12 +577,12 @@ b~index(1, 2) => 93.902
 
 r[class.bag.hasitem.sends]
 `hasItem(item)` and `removeItem(item)` look the item up as [the lookup
-rule](r:class.bag.members.sends) says, with `hashCode` and `==` to the
-argument, and `hasItem(item, index)` and `removeItem(item, index)` send `==`
-to the item with the index as argument first. A search with the very object
-that is stored is no exception: its `==` is sent as for any other item ([the
-deviation rule](r:class.bag.deviation.78)). The messages that `index` and
-`uniqueIndexes` send are not specified.
+rule](r:class.bag.members.sends) says, with `hashCode` and `==` to the argument,
+and `hasItem(item, index)` and `removeItem(item, index)` send `==` to the item
+with the index as argument first. A search with the very object that is stored
+is no exception: its `==` is sent as for any other item ([the deviation
+rule](r:class.bag.deviation.78)). `index(item)` sends what `hasItem(item)`
+sends.
 
 ```rexx
 .local~log = .array~new
@@ -579,6 +617,70 @@ end
 b~hasItem(.k~new("p")) => hash p | == p s1
 b~hasItem(.k~new("A"), .k~new("A")) => == A A | hash A | == A s1
 b~removeItem(.k~new("p")) => hash p | == p s1
+```
+
+```rexx
+.local~log = .array~new
+b = .bag~new
+b~put(.k~new('s1'))
+.local~log~empty
+say b~index(.k~new('s1'))~tag '|' .local~log~makeString('L', ' | ')
+.local~log~empty
+say (.nil == b~index(.k~new('p'))) '|' .local~log~makeString('L', ' | ')
+::class k
+::method init
+  expose tag
+  use arg tag
+::method tag
+  expose tag
+  return tag
+::method '=='
+  expose tag
+  use arg o
+  .local~log~append('==' tag o~tag)
+  return tag == o~tag
+::method hashCode
+  expose tag
+  .local~log~append('hash' tag)
+  return 'same'
+```
+
+```output defect=#169
+s1 | hash s1 | == s1 s1
+1 | hash p | == p s1
+```
+
+```rexx
+.local~log = .array~new
+b = .bag~new
+b~put(.k~new('s1'))
+.local~log~empty
+say (.nil == b~removeItem(.k~new('A'), .k~new('B'))) '|',
+  .local~log~makeString('L', ' | ')
+.local~log~empty
+say b~removeItem(.k~new('s1'), .k~new('s1'))~tag '|',
+  .local~log~makeString('L', ' | ')
+::class k
+::method init
+  expose tag
+  use arg tag
+::method tag
+  expose tag
+  return tag
+::method '=='
+  expose tag
+  use arg o
+  .local~log~append('==' tag o~tag)
+  return tag == o~tag
+::method hashCode
+  expose tag
+  .local~log~append('hash' tag)
+  return 'same'
+```
+
+```output defect=#170
+1 | == A B
+s1 | == s1 s1 | hash s1 | == s1 s1
 ```
 
 ## Removing members
@@ -616,10 +718,10 @@ b~remove("a", "b") => 93.902
 r[class.bag.removeall]
 `removeAll(index)` removes every member that is equal to the argument and
 answers them in a new `Array`, one object for each, in an order that is not
-specified; it answers an empty `Array` when there is none, and the answer is
-an instance of `Array` for a subclass receiver too. It takes exactly one
-argument: none, or an omitted one, raises `SYNTAX 93.903`, and a second raises
-`SYNTAX 93.902`.
+specified ([the hash order rule](r:class.bag.deviation.33)); it answers an empty
+`Array` when there is none, and the answer is an instance of `Array` for a
+subclass receiver too. It takes exactly one argument: none, or an omitted one,
+raises `SYNTAX 93.903`, and a second raises `SYNTAX 93.902`.
 
 ```rexx
 b = .many~of('a', 'b', 'a', 'a')
@@ -715,13 +817,14 @@ r[class.bag.makearray]
 often as it occurs, and `allItems` does the same: for a bag index and item are
 the same object, so the three answers are alike. `uniqueIndexes` answers a new
 `Array` that holds one object for each group of equal members, and so as many
-objects as there are different members. All four are instances of `Array` for
-a subclass receiver too, never the receiver, and do not follow later changes.
-They take no argument: one raises `SYNTAX 93.902`. The order is not specified
-([the hash order rule](r:class.bag.deviation.33)), and is the same for
-`allIndexes`, `makeArray`, `allItems` and the supplier of one unchanged bag.
-`allIndexes`, `allItems` and `makeArray` send no message to the bag or to the
-members; the messages that `uniqueIndexes` sends are not specified.
+objects as there are different members. All four are instances of `Array` for a
+subclass receiver too, never the receiver, and do not follow later changes. They
+take no argument: one raises `SYNTAX 93.902`. The order is not specified ([the
+hash order rule](r:class.bag.deviation.33)), and is the same for `allIndexes`,
+`makeArray`, `allItems` and the supplier of one unchanged bag. `allIndexes`,
+`allItems` and `makeArray` send no message to the bag or to the members; the
+messages that `uniqueIndexes` sends to the members are left open by [the hash
+order rule](r:class.bag.deviation.33).
 
 ```rexx
 t = .many~new
@@ -1246,21 +1349,20 @@ say a~equivalent(.bag~of('a', 'b', 'b')),
 
 r[class.bag.sends]
 `put` and `[]=` send `==` to the item with the index as argument when an index
-is given, `hashCode` to the item and nothing to the receiver. The other
-methods that look a member up, `at`, `[]`, `hasIndex`, `hasItem`, `remove`,
+is given, `hashCode` to the item and nothing to the receiver. The other methods
+that look a member up, `at`, `[]`, `hasIndex`, `hasItem`, `index`, `remove`,
 `removeItem`, `allAt`, `removeAll`, `items` and `supplier` with an index, send
 `hashCode` and `==` to the argument and nothing to the receiver ([the lookup
 rule](r:class.bag.members.sends)); `allIndex` sends `==` to the argument ([the
 allAt rule](r:class.bag.allat)). `putAll` sends `put` to the receiver for each
-member it reads ([the putAll rule](r:class.bag.putall)). The set operations
-send to the receiver, the argument, the copy and the new bag the messages that
-[their rule](r:class.bag.setops.sends) lists. `allIndexes`, `allItems`,
-`makeArray`, `supplier`, `copy`, `items`, `isEmpty` and `empty` send nothing
-to the members. No other method asks an override of `at`, `put` or any of the
-methods, and `[]` and `[]=` do not use `at` and `put`. In the first example a
-subclass has every method overridden to record its name, and each call records
-only its own; in the second the members record every message a program is
-likely to override.
+member it reads ([the putAll rule](r:class.bag.putall)). The set operations send
+to the receiver, the argument, the copy and the new bag the messages that [their
+rule](r:class.bag.setops.sends) lists. `allIndexes`, `allItems`, `makeArray`,
+`supplier`, `copy`, `items`, `isEmpty` and `empty` send nothing to the members.
+No other method asks an override of `at`, `put` or any of the methods, and `[]`
+and `[]=` do not use `at` and `put`. In the first example a subclass has every
+method overridden to record its name, and each call records only its own; in the
+second the members record every message a program is likely to override.
 
 ```rexx
 own = '[] []= allAt allIndex allIndexes allItems at empty hasIndex hasItem',
@@ -1424,12 +1526,12 @@ subset=> copy A.isA A.allItems C.remove C.remove C.isEmpty | -
 
 r[class.bag.deviation.33]
 The order of the answers of `allIndexes`, `allItems`, `makeArray`, `allAt`,
-`allIndex`, `removeAll`, `uniqueIndexes` and `supplier`, which of several
-equal members `at`, `index`, `remove` and `removeItem` choose, and which
-stored objects a lookup or a search compares, by `==` or `hashCode`, beyond
-those it must compare, and how often, are not specified, and may differ from
-ooRexx's. Which members are produced, and how often, is specified. In the
-example the answers are sorted.
+`allIndex`, `removeAll`, `uniqueIndexes` and `supplier`, which of several equal
+members `at`, `index`, `remove` and `removeItem` choose, and which stored
+objects a lookup or a search compares, by `==` or `hashCode`, beyond those it
+must compare, and how often, and which members `uniqueIndexes` sends `hashCode`
+or `==`, are not specified, and may differ from ooRexx's. Which members are
+produced, and how often, is specified. In the example the answers are sorted.
 
 ```rexx
 b = .bag~of(1, 2, 2, 3)
@@ -1444,6 +1546,18 @@ say b~items b~makeArray~items
 1,2,2,3
 1,2,3
 4 4
+```
+
+r[class.bag.deviation.45]
+`hasItem(item, index)` with an index that is not equal to the item answers 0.
+ooRexx answers `.nil`. See [Deviation 45](../deviations.md).
+
+```rexx
+say .bag~of(1, 1, 1)~hasItem(1, 2) .bag~of('a')~hasItem('a', 'A')
+```
+
+```output defect=#172
+0 0
 ```
 
 r[class.bag.deviation.78]
@@ -1489,10 +1603,11 @@ The NIL object 1
 ```
 
 r[class.bag.deviation.84]
-When the `==` that `remove`, `removeItem` or `removeAll` sends to a member
-empties the bag, `items` answers 0 afterwards. ooRexx answers -1 for `remove`
-and `removeItem`, and its `removeAll` goes on comparing with an object that is
-no stored member. See [Deviation 84](../deviations.md).
+When the `==` that `remove`, `removeItem`, `removeAll` or `allAt` sends to a
+member empties the bag, the search ends and `items` answers 0 afterwards;
+`remove` and `removeItem` answer `.nil`. ooRexx answers -1 for `remove` and
+`removeItem`, and its `removeAll` and `allAt` go on comparing with an object
+that is no stored member. See [Deviation 84](../deviations.md).
 
 ```rexx
 b = .bag~new

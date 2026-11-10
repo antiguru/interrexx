@@ -20,11 +20,11 @@ members and not as a list of entries.
 A set has no `unknown` method: a message that [the method
 search](r:class.methods.unknown) does not resolve raises
 [NOMETHOD](r:cond.nomethod.raise), as the error rule of [the
-chapter](r:class.index.errors) says. The page follows the order of the rexxref
-entry. Examples that show an error use a small routine `try`, as the builtin
-pages do. Where several members qualify for a method that answers one, which
-one it answers is not specified, and the examples then hold one member or sort
-the answers ([the hash order rule](r:class.set.deviation.33)).
+chapter](r:class.index.errors) says. Examples that show an error use a small
+routine `try`, as the builtin pages do. Where several members qualify for a
+method that answers one, which one it answers is not specified, and the examples
+then hold one member or sort the answers ([the hash order
+rule](r:class.set.deviation.33)).
 
 ## The class
 
@@ -234,18 +234,18 @@ item second
 ```
 
 r[class.set.members.sends]
-`at`, `[]`, `hasIndex`, `hasItem`, `put`, `[]=`, `remove` and `removeItem`
-look a member up by sending `hashCode` to the argument, once, and then `==` to
-the argument with a stored object as the argument, for stored objects that
-have the same hash code, until one answers true; each of those is compared
-before the lookup gives up. Which further stored objects are compared, by `==`
-or `hashCode`, and how often, is not specified ([the hash order
+`at`, `[]`, `hasIndex`, `hasItem`, `index`, `put`, `[]=`, `remove` and
+`removeItem` look a member up by sending `hashCode` to the argument, once, and
+then `==` to the argument with a stored object as the argument, for stored
+objects that have the same hash code, until one answers true; each of those is
+compared before the lookup gives up. Which further stored objects are compared,
+by `==` or `hashCode`, and how often, is not specified ([the hash order
 rule](r:class.set.deviation.33)); when the set is empty, the only message is
 `hashCode`. The very object that is stored is no exception to the `==` ([the
-deviation rule](r:class.set.deviation.78)). `put` and `[]=` with an index
-first send `==` to the item with the index as argument ([the put
-rule](r:class.set.put)). In the example every member hashes to the same
-string, so each stored member is compared.
+deviation rule](r:class.set.deviation.78)). `put` and `[]=` with an index first
+send `==` to the item with the index as argument ([the put
+rule](r:class.set.put)). In the example every member hashes to the same string,
+so each stored member is compared.
 
 ```rexx
 .local~log = .array~new
@@ -414,11 +414,13 @@ s~hasIndex("a", "b") => 93.902
 
 r[class.set.hasitem]
 `hasItem(item)` answers 1 when a member is equal to the item and 0 otherwise;
-for a set it is the same question as `hasIndex`. `index(item)` answers an
-object equal to the item, and `.nil` when there is none. Both take exactly one
-argument: for `hasItem` none, or an omitted one, raises `SYNTAX 88.901`; for
-`index` it raises `SYNTAX 93.903`; a second argument raises `SYNTAX 93.902`
-for both, and an argument omitted at the end counts for nothing.
+for a set it is the same question as `hasIndex`. `index(item)` looks the item up
+as an index, as [the lookup rule](r:class.set.members.sends) says, and answers
+the item of the entry it finds, which is the object put last for that member
+([the members rule](r:class.set.members)), and `.nil` when there is none. Both
+take exactly one argument: for `hasItem` none, or an omitted one, raises
+`SYNTAX 88.901`; for `index` it raises `SYNTAX 93.903`; a second argument raises
+`SYNTAX 93.902` for both, and an argument omitted at the end counts for nothing.
 
 ```rexx
 s = .set~of('x', .nil)
@@ -445,6 +447,42 @@ s~hasItem => 88.901
 s~index => 93.903
 s~hasItem(, 1) => 93.902
 s~index(1, 2) => 93.902
+```
+
+```rexx
+.local~log = .array~new
+s = .set~new
+s~put(.k~new('first'))
+s~put(.k~new('second'))
+.local~log~empty
+say s~index(.k~new('probe'))~tag '|' .local~log~makeString('L', ' | ')
+.local~log~empty
+say (s~index(.k~new('miss', 'other')) == .nil) '|',
+  .local~log~makeString('L', ' | ')
+::class k
+::method init
+  expose tag key
+  use arg tag, key = 'same'
+::method tag
+  expose tag
+  return tag
+::method key
+  expose key
+  return key
+::method '=='
+  expose tag key
+  use arg o
+  .local~log~append('==' tag o~tag)
+  return key == o~key
+::method hashCode
+  expose tag key
+  .local~log~append('hash' tag)
+  return key
+```
+
+```output defect=#169
+second | hash probe | == probe first
+1 | hash miss
 ```
 
 r[class.set.items]
@@ -1080,18 +1118,17 @@ r[class.set.sends]
 `put` and `[]=` send `==` to the item with the index as argument when an index
 is given, `hashCode` and `==` to the member that they look up, and nothing to
 the receiver. The other methods that look a member up, `at`, `[]`, `hasIndex`,
-`hasItem`, `remove` and `removeItem`, send `hashCode` and `==` to the argument
-and nothing to the receiver ([the lookup rule](r:class.set.members.sends)).
-`putAll` sends `put` to the receiver for each member it reads ([the putAll
-rule](r:class.set.putall)). The set operations send to the receiver, the
-argument, the copy and the new set the messages that [their
+`hasItem`, `index`, `remove` and `removeItem`, send `hashCode` and `==` to the
+argument and nothing to the receiver ([the lookup
+rule](r:class.set.members.sends)). `putAll` sends `put` to the receiver for each
+member it reads ([the putAll rule](r:class.set.putall)). The set operations send
+to the receiver, the argument, the copy and the new set the messages that [their
 rule](r:class.set.setops.sends) lists. `makeArray`, `allIndexes`, `allItems`,
-`supplier`, `copy`, `items`, `isEmpty` and `empty` send nothing to the
-members. No other method asks an override of `at`, `put` or any of the
-methods, and `[]` and `[]=` do not use `at` and `put`. In the first example a
-subclass has every method overridden to record its name, and each call records
-only its own; in the second the members record every message a program is
-likely to override.
+`supplier`, `copy`, `items`, `isEmpty` and `empty` send nothing to the members.
+No other method asks an override of `at`, `put` or any of the methods, and `[]`
+and `[]=` do not use `at` and `put`. In the first example a subclass has every
+method overridden to record its name, and each call records only its own; in the
+second the members record every message a program is likely to override.
 
 ```rexx
 own = '[] []= allIndexes allItems at empty hasIndex hasItem index isEmpty',
@@ -1308,8 +1345,8 @@ The NIL object 1
 
 r[class.set.deviation.84]
 When the `==` that `remove` or `removeItem` sends to a member empties the set,
-`items` answers 0 afterwards. ooRexx answers -1. See [Deviation
-84](../deviations.md).
+the search ends: the method answers `.nil` and `items` answers 0 afterwards.
+ooRexx answers -1 for `items`. See [Deviation 84](../deviations.md).
 
 ```rexx
 s = .set~new
