@@ -3,6 +3,7 @@ element: "Comparison operators"
 kind: concept
 ansi: "7.4.7"
 rexxref: "General Concepts > Terms, Expressions, and Operators > Operators > Comparison"
+deviations: [122]
 ---
 
 # Comparison operators
@@ -189,8 +190,9 @@ rule](r:conv.string.object) makes of the right operand, which for an instance
 of a program's own class that declares no `MAKESTRING`, `request` or `string`
 method is the text such as
 `an O`. This book does not specify the comparison with `.nil`, because
-`'The NIL object' = .nil` is `0` although `.nil` writes that text. How many
-times the right operand is sent `request` is not specified.
+`'The NIL object' = .nil` is `0` although `.nil` writes that text. The right
+operand that is not a string is read once, by the normal comparisons as by the
+strict ones ([Deviation 122](r:expr.comparison.deviation.122)).
 
 ```rexx
 a = .array~new
@@ -217,4 +219,39 @@ a < b => 97.1
 a >> b => 97.1
 "an O" = .o~new => 1
 "an O" < .o~new => 0
+```
+
+r[expr.comparison.deviation.122]
+A right operand that is not a string is converted once by every comparison
+operator, [the conversion rule](r:conv.string.object) applying to that one
+conversion, so that an object counting the conversions is asked once by `=`,
+by `<` and by `==` alike. ooRexx converts it twice for the normal comparisons
+`=`, `\=`, `<>`, `><`, `<`, `>`, `<=`, `>=`, `\<` and `\>` when the two
+operands are not both numbers, and once when they are and for the strict ones.
+
+```rexx
+o = .counted~new
+.local~n = 0
+r = 'a' = o
+say .local~n
+.local~n = 0
+r = 'a' < o
+say .local~n
+.local~n = 0
+r = 'a' == o
+say .local~n
+.local~n = 0
+r = 'a'~">="(o)
+say .local~n
+::class counted
+::method makeString
+  .local~n += 1
+  return 'x'
+```
+
+```output
+1
+1
+1
+1
 ```

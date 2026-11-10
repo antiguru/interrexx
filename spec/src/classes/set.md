@@ -2,7 +2,7 @@
 element: "Set"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Set Class; Builtin Classes > Collection Classes > Set Class > new (Class Method); Builtin Classes > Collection Classes > Set Class > of (Class Method); Builtin Classes > Collection Classes > Set Class > []; Builtin Classes > Collection Classes > Set Class > []=; Builtin Classes > Collection Classes > Set Class > allIndexes; Builtin Classes > Collection Classes > Set Class > allItems; Builtin Classes > Collection Classes > Set Class > at; Builtin Classes > Collection Classes > Set Class > empty; Builtin Classes > Collection Classes > Set Class > hasIndex; Builtin Classes > Collection Classes > Set Class > hasItem; Builtin Classes > Collection Classes > Set Class > index; Builtin Classes > Collection Classes > Set Class > intersection; Builtin Classes > Collection Classes > Set Class > isEmpty; Builtin Classes > Collection Classes > Set Class > items; Builtin Classes > Collection Classes > Set Class > makeArray; Builtin Classes > Collection Classes > Set Class > put; Builtin Classes > Collection Classes > Set Class > putAll; Builtin Classes > Collection Classes > Set Class > remove; Builtin Classes > Collection Classes > Set Class > removeItem; Builtin Classes > Collection Classes > Set Class > subset; Builtin Classes > Collection Classes > Set Class > supplier; Builtin Classes > Collection Classes > Set Class > union; Builtin Classes > Collection Classes > Set Class > xor"
-deviations: [33, 78, 84, 109]
+deviations: [33, 78, 84, 109, 125]
 ---
 
 # Set
@@ -867,16 +867,19 @@ subset: allItems allItems allItems 93.948
 
 r[class.set.operand.list]
 The answer of `allItems` or `makeArray` is read by sending it `items`, with no
-argument, and then `[]` with each position from 1 up to the number that
-`items` answered, in that order; each answer of `[]` is a member of the
-argument. The answer need not be an `Array`: an object that understands the
-two messages will do, and an answer that lacks one raises `SYNTAX 93.948`. A
-subclass of `Array` is sent the two messages too, and no other. A position
-that holds nothing reads `.nil`, which is then a member, so an `Array` with a
-hole is read for as many positions as it has items, not as its size. The
-answer of `items` is read as a number: one that is not a number raises
-`SYNTAX 41.1`, and a negative one reads no position. An error that `[]` raises
-is the error of the operation, after the members before it have been handled.
+argument, and then `[]` with each position from 1 up to the number that `items`
+answered, in that order; each answer of `[]` is a member of the argument. The
+answer need not be an `Array`: an object that understands the two messages will
+do, and an answer that lacks one raises `SYNTAX 93.948`. A subclass of `Array`
+is sent the two messages too, and no other. A position that holds nothing reads
+`.nil`, which is then a member, so an `Array` with a hole is read for as many
+positions as it has items, not as its size. An answer that is a `List`, or an
+instance of a subclass of `List`, is the one kind read otherwise: its members
+are all its items, in the order of the list, not the entries at the positions 1
+up to its number of items ([Deviation 125](r:class.set.deviation.125)). The
+answer of `items` is read as a number: one that is not a number raises `SYNTAX
+41.1`, and a negative one reads no position. An error that `[]` raises is the
+error of the operation, after the members before it have been handled.
 
 ```rexx
 a = .array~new(5)
@@ -1394,4 +1397,30 @@ say .set~new(.sub~new('2'))~items
 
 ```output
 0
+```
+
+r[class.set.deviation.125]
+An answer of `allItems` or `makeArray` that is a `List` gives its items in list
+order, as [the list rule](r:class.set.operand.list) says, for `putAll`,
+`union`, `intersection`, `xor` and `subset`. ooRexx reads it by the positions 1
+up to its number of items, so in the example an item is missed and `.nil` is a
+member.
+
+```rexx
+s = .set~new
+s~putAll(.pk~new(.list~of('p', 'q', 'r')))
+say s~items s~hasItem('p') s~hasItem('q') s~hasItem('r') s~hasItem(.nil)
+say .set~of('q', 'r')~subset(.pk~new(.list~of('q', 'r')))
+::class pk inherit collection
+::method init
+  expose answer
+  use arg answer
+::method allitems
+  expose answer
+  return answer
+```
+
+```output defect=#187
+3 1 1 1 0
+1
 ```

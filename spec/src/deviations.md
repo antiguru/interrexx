@@ -481,8 +481,8 @@ ooRexx lists it under the name of the variable it aliases.
 
 In every position that requires a string, a variable reference's string
 value is the referenced value's, and NOSTRING is raised only when that value
-has none. ooRexx uses the reference's default name and raises NOSTRING for
-it in most positions.
+has none. ooRexx uses the object name of the referenced value, its default
+name unless one was set, and raises NOSTRING for it in most positions.
 
 ## 73. A standard descriptor closed at start
 
@@ -577,20 +577,22 @@ own messages. ooRexx starts it with every interpreter.
 
 rxregexp matches the documented pattern language and always terminates; a
 pattern too large to compile is compile error 5. ooRexx answers some patterns
-wrongly and never terminates on others.
+wrongly, never terminates on some and crashes on others.
 
 ## 88. Extension calls that crash ooRexx
 
-RegularExpression `match` or `pos` with no pattern, any RegularExpression
-call after `uninit`, SysGetgrnam or SysGetgrgid of a missing group, SockSelect
-with a non-numeric entry and SysWordexp of a word list it rejects raise a
-condition. ooRexx crashes.
+RegularExpression `match` or `pos` with no pattern, and `match`, `pos` or
+`parse` after `uninit`, SysGetgrnam or SysGetgrgid of a missing group,
+SockSelect with a non-numeric entry and SysWordexp of a word list it rejects
+raise a condition. ooRexx crashes.
 
 ## 89. Line numbers of rewritten extension packages
 
 `rxregexp.cls`, `socket.cls`, `streamsocket.cls`, `mime.cls` and `smtp.cls`
 are written for interrexx, so a traceback through them names interrexx's
-line numbers. Messages, codes and results match ooRexx.
+lines of them, their numbers and text, and an error the package raises may be
+reported from another clause of it or from the caller. Codes and results match
+ooRexx.
 
 ## 90. SysWordexp is refused
 
@@ -849,9 +851,12 @@ collection through `makeArray` send it `makeArray`, and the methods and
 instructions that read an argument array or a source through `request` with
 `ARRAY` (`sendWith`, `startWith`, `Message~new` with the option `A`,
 `Message~replyWith`, FORWARD with ARGUMENTS, `Method~new`, `Routine~new`,
-`Package~new`, `loadPackage` and a `Stem`'s `unknown`) send it `request`, so
-an override is used. ooRexx sends such an instance neither message and uses
-the items it holds, unlike the subclasses of the other collection classes.
+`Routine~callWith`, `Package~new`, `loadPackage`, `Supplier~new` and `init`,
+the `unknown` of a `Stem`, a `VariableReference`, a `Directory`, a
+`StringTable` or a `Monitor`, `File~writeLines` and `File~searchPath` with a
+path that is no string) send it `request`, so an override is used. ooRexx
+sends such an instance neither message and uses the items it holds, unlike the
+subclasses of the other collection classes.
 
 ## 119. A second cancel of an Alarm or a Ticker sends nothing
 
@@ -859,3 +864,179 @@ A notification target of an `Alarm` or a `Ticker` is sent `cancel` once, when
 the alarm or ticker is cancelled while it is waiting; a second `cancel` of the
 same alarm or ticker sends it nothing. ooRexx sends the target `cancel` once or
 twice for a second `cancel`, depending on timing.
+
+## 120. previous of an index beyond the array answers the last item
+
+`previous` of an index with a component beyond its dimension, one or all of
+the components, answers the index of the last item in the order of `allItems`
+whichever index is given, and `next` answers `.nil`. ooRexx answers an index
+that depends on the position the beyond index names: in a 2 by 2 array holding
+items at 1,1 and 2,2, `previous(4, 4)` answers 1,1 and `previous(5, 5)`
+answers 2,2.
+
+## 121. Queue put beyond the last item
+
+`put` of a `Queue` or a `CircularQueue` with an index above the number of
+items raises `SYNTAX 93.966` however far above it the index is, and the queue
+keeps its items. ooRexx raises `93.966` or `93.918` according to the storage
+the queue holds beyond its items, which its earlier history decides.
+
+## 122. A right operand that is not a string is read once
+
+A comparison operator, and the method of the same name, converts a right
+operand that is not a string once. ooRexx converts the right operand twice for
+the normal comparisons `=`, `\=`, `<>`, `><`, `<`, `>`, `<=`, `>=`, `\<` and
+`\>` when the two operands are not both numbers.
+
+## 123. isEmpty of a directory that holds only methods
+
+`isEmpty` of a `Directory` agrees with `items`: it answers 0 for a directory
+that holds a method of a name other than `UNKNOWN`, also when that is all it
+holds, and 1 when `items` answers 0. ooRexx answers 1 for a directory that
+holds only methods.
+
+## 124. An argument array answered by request is an Array
+
+An answer of `request` with `ARRAY` that is used as an array of arguments
+(`sendWith`, `startWith` and `run` with the option `A` of `Object`, `new`,
+`sendWith`, `startWith` and `replyWith` of `Message`, `callWith` of `Routine`,
+`unknown` of `Stem`, `VariableReference`, `Directory`, `StringTable` and
+`Monitor`, and the value of ARGUMENTS of FORWARD) or as an array of items or
+indexes (`new` and `init` of `Supplier`) is accepted only when it is an
+`Array` or an instance of a subclass of `Array` of one dimension; any other
+object, a `Queue` included, raises the error that the reading method gives for
+an answer that is no array. ooRexx uses the items of a `Queue` or a
+`CircularQueue` as the arguments, or as the items or indexes of a `Supplier`,
+except that `Message` passes as many arguments as the queue has storage, the
+items followed by omitted ones, and for the arguments it crashes for a `List`,
+a `Bag`, a `Table` or a `Directory`.
+
+## 125. A List operand is read in its own order
+
+A `List` that `allItems` or `makeArray` answers for the argument of `putAll`,
+`union`, `intersection`, `xor` or `subset` of a `Set`, or of those and
+`difference` of a `Bag`, gives every item of the list, in the order of the
+list. ooRexx reads it as it reads an `Array`, by `items` and then `[]` with
+each position from 1 up to that number, so the members are what `[]` answers
+for those values rather than the items of the list: an item can be missed and
+`.nil` can become a member.
+
+## 126. compareTo with an argument of another class
+
+`compareTo` of a `DateTime`, a `TimeSpan` or a `File`, and every comparison
+operator that sends it, raises `SYNTAX 88.914` when the argument is not an
+instance of `DateTime`, `TimeSpan` or `File` respectively (an instance of a
+subclass is one). The error follows the `isA` that is sent to the argument and
+precedes every other message. ooRexx answers 1 or -1 for an argument of another
+class, whatever the receiver is.
+
+## 127. Adding a span to a DateTime keeps the offset of the DateTime
+
+`DateTime + TimeSpan`, `DateTime - TimeSpan` and `TimeSpan + DateTime` answer
+an instance that has the offset of the `DateTime` operand. ooRexx gives the
+answer of `-` with a span, and of a span plus a `DateTime`, the offset of the
+host's zone, so that the same arithmetic on one instant answers another
+instant on a host in another zone.
+
+## 128. A DateTime hash code follows the instant
+
+`hashCode` of a `DateTime` is computed from the instant, so two instances that
+`=` finds equal have equal hash codes whatever their offsets, and an instance
+equal to another is found in a `Set` or `Table` that holds the other. ooRexx
+computes it from the fields, so equal instants at different offsets have
+different hash codes.
+
+## 129. elapsed lies between two instants
+
+`elapsed` of a `DateTime` answers the span from the instant the receiver
+stands for to the current instant, so the offset of the receiver does not
+change it: two instances of one instant answer the same span, within the time
+between the two calls. ooRexx subtracts the fields of the receiver from the
+host's current local time, so the answer moves by the difference between the
+offset of the receiver and the host's.
+
+## 130. Whole-number arguments of DateTime and TimeSpan are read as a builtin's are
+
+A method of `DateTime` or `TimeSpan` that reads a whole number (the fields and
+the offset of `new`, the offset of `today`, of the `from` methods and of
+`toTimezone`, the years of `addYears`, the days of `fromBaseDate`, the seconds
+of `fromTicks`, and the count and the parts of `TimeSpan` `new`) reads it as a
+whole-number argument of a builtin is read ([the form rule](r:conv.whole.form),
+[the digits rule](r:conv.whole.digits)), with the method's own error for a value
+those rules refuse: `2017.0`, `2.017E3` and `'2017 '` are 2017,
+`2017.0000000001` is refused, and `2017.00000000000000000001` is 2017. ooRexx
+reads some of these forms as an error, `2017.0` for a year among them, reads
+`2017.0000000001` as year 1, accepts `1.0000000001` for an hour, and rounds the
+days of `fromBaseDate` to nine digits.
+
+## 131. An instance whose init never ran is zero
+
+An instance of a subclass of `DateTime` or `TimeSpan` whose `init` did not
+forward to the superclass, and so never gave it a value, is the first moment
+of the class with the offset 0, or the span of no time, and every method of
+the class works on it as it works on that value. ooRexx raises errors from
+most of its methods, or answers text that is no value.
+
+## 132. The ISO reader and the span reader are strict
+
+`fromUtcIsoDate` and `fromStringFormat` of `TimeSpan` refuse with `SYNTAX
+88.918` every string that is not exactly one the writing methods can produce
+(for `fromUtcIsoDate`, the forms that `utcIsoDate` gives, and in addition a
+fraction of one to six digits or none and the offsets `+00:00` and `-00:00`). A
+blank anywhere, an offset whose minutes are above 59 or whose hour or minutes
+have one digit, a fraction of seven digits, a point with no digits after it, and
+a `Z` or an offset followed by anything are refused; so are, for a span, an
+hour, minute or second that is out of range or written with one digit, days with
+a leading zero or the days `0.`, a plus sign, and a minus sign before a span of
+0. ooRexx accepts most of these spellings and reads them in its own way,
+`+02:60` as `+03:00` and `24:00:00.000000` as one day.
+
+## 133. A negative span under an hour keeps its sign
+
+`fromStringFormat` of `TimeSpan` answers a negative span for the text of a
+negative span of any size, `-00:01:30.000000` included. ooRexx answers the
+positive span when the span has no days and no hours.
+
+## 134. The lines of a method's source do not change when read
+
+`source` of a `Method` answers an array with the same lines every time it is
+sent, however often it was read before: an empty last line of the source, of a
+`::METHOD` section or of what `new` or `newFile` is given, is left out once,
+when the method is made, and no read drops another. ooRexx drops one more
+trailing empty line after each read, until the last line is not empty, so the
+answers get shorter; when every line of the source is empty, the number of lines
+it answers changes from read to read, up as well as down, and a read can answer
+a line that is not in the source. `source` of a `Routine` does the same.
+
+## 135. An object whose init never ran raises an error
+
+A class that a program declares as a subclass of `Alarm`, `Ticker`,
+`RexxQueue`, `Supplier` or `StreamSupplier`, whose `init` does not send `init`
+to its superclass, makes an object that is not set up, and every instance
+method of the class other than `init` that the object is sent raises `SYNTAX
+98.901`. ooRexx answers `triggered` of such an alarm with the string
+`TRIGGERED` and raises `SYNTAX 34.902` from its `cancel`, answers the readers
+of such a ticker without an error and raises `SYNTAX 88.914` from its
+`cancel`, and its `empty` of such a `RexxQueue` and its `available` of such a
+`Supplier` end the interpreter with a segmentation fault.
+
+## 136. A copy of a MutexSemaphore is free
+
+`copy` of a `MutexSemaphore` answers a new semaphore that no activity owns,
+whether the original is free or owned, and by which activity and how many times.
+The two are separate from then on. ooRexx gives the copy the owner and the
+count of the original, and a copy that another activity owns stays owned after
+that activity ended, so that no activity can acquire it.
+
+## 137. An empty TMPDIR is as an unset one
+
+`temporaryPath` of `File` answers `/tmp` when the environment variable `TMPDIR`
+is set to the null string, as it does when it is not set. ooRexx answers a
+`File` for the null string.
+
+## 138. allItems after a second init of a Supplier
+
+`init` sent again to a `Supplier` also drops the arrays that an earlier
+`allItems` or `allIndexes` collected, so the next call of either collects the
+entries of the new arrays. ooRexx answers the arrays collected before the
+`init`.

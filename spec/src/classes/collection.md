@@ -426,9 +426,10 @@ Supplier
 r[class.collection.supplier.sends]
 `supplier` sends `allItems` to the receiver, then `allIndexes`, both with no
 argument, in that order, and makes the supplier from the two answers. The
-supplier is made by `new` of the `Supplier` class, which sends `makeArray`
-once to the answer of `allItems` and then once to the answer of `allIndexes`.
-Nothing else is sent.
+supplier is made by `new` of the `Supplier` class, which sends `request` with
+`ARRAY` once to the answer of `allItems` and then once to the answer of
+`allIndexes` ([the conversion rule](r:class.supplier.init.convert)); the
+`request` of `Object` sends `makeArray`. Nothing else is sent.
 
 ```rexx
 c = .spy~new

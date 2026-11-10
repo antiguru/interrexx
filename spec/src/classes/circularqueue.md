@@ -2,7 +2,7 @@
 element: "CircularQueue"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > CircularQueue Class; Builtin Classes > Collection Classes > CircularQueue Class > of (Class Method); Builtin Classes > Collection Classes > CircularQueue Class > init; Builtin Classes > Collection Classes > CircularQueue Class > append; Builtin Classes > Collection Classes > CircularQueue Class > insert; Builtin Classes > Collection Classes > CircularQueue Class > intersection; Builtin Classes > Collection Classes > CircularQueue Class > makeArray; Builtin Classes > Collection Classes > CircularQueue Class > makeString; Builtin Classes > Collection Classes > CircularQueue Class > push; Builtin Classes > Collection Classes > CircularQueue Class > queue; Builtin Classes > Collection Classes > CircularQueue Class > resize; Builtin Classes > Collection Classes > CircularQueue Class > section; Builtin Classes > Collection Classes > CircularQueue Class > size; Builtin Classes > Collection Classes > CircularQueue Class > string; Builtin Classes > Collection Classes > CircularQueue Class > supplier; Builtin Classes > Collection Classes > CircularQueue Class > union; Builtin Classes > Collection Classes > CircularQueue Class > xor"
-deviations: [78, 109]
+deviations: [78, 109, 121]
 ---
 
 # CircularQueue
@@ -1455,8 +1455,9 @@ for the items that are there: `at` and `[]` ([the at rule](r:class.queue.at)),
 `previous`, `items`, `isEmpty`, `empty`, `allItems`, `allIndexes` and the
 sorts, and the methods of the mixins that this page does not list. The
 differences are these. The size of the queue does not widen the indexes that
-`put` and `insert` accept: `insert` with an index above the number of items
-raises `SYNTAX 93.966`, whatever the size is. `empty` keeps the size. Each of
+`put` and `insert` accept: either raises `SYNTAX 93.966` with an index above
+the number of items, whatever the size is ([Deviation
+121](r:class.circularqueue.deviation.121)). `empty` keeps the size. Each of
 the methods sends only the messages that [the Queue rule](r:class.queue.sends)
 lists. The example shows these.
 
@@ -1802,4 +1803,36 @@ first
 1
 1
 first-second-third
+```
+
+r[class.circularqueue.deviation.121]
+`put` with an index above the number of items raises `SYNTAX 93.966` however
+far above it the index is and whatever the size of the queue is, and the queue
+keeps its items. ooRexx raises `93.966` or `93.918` according to the storage
+the queue holds beyond its items, which its earlier history decides: an index
+just above the last item can answer either, and a much larger one answers
+`93.918`.
+
+```rexx
+q = .circularqueue~new(30)
+q~queue('a'); q~queue('b'); q~queue('c')
+do i over .array~of(4, 20, 1000)
+  call try 'q~put("x", 'i')'
+end
+say q~allItems~makeString('L', ',')
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output defect=#186
+q~put("x", 4) => 93.966
+q~put("x", 20) => 93.966
+q~put("x", 1000) => 93.966
+a,b,c
 ```

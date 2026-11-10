@@ -2,7 +2,7 @@
 element: "Properties"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Properties Class; Builtin Classes > Collection Classes > Properties Class > load (Class method); Builtin Classes > Collection Classes > Properties Class > new (Class method); Builtin Classes > Collection Classes > Properties Class > []=; Builtin Classes > Collection Classes > Properties Class > getLogical; Builtin Classes > Collection Classes > Properties Class > getProperty; Builtin Classes > Collection Classes > Properties Class > getWhole; Builtin Classes > Collection Classes > Properties Class > load; Builtin Classes > Collection Classes > Properties Class > put; Builtin Classes > Collection Classes > Properties Class > save; Builtin Classes > Collection Classes > Properties Class > setLogical; Builtin Classes > Collection Classes > Properties Class > setProperty; Builtin Classes > Collection Classes > Properties Class > setWhole"
-deviations: [29, 33, 78, 109]
+deviations: [29, 33, 78, 109, 123, 124]
 ---
 
 # Properties
@@ -325,7 +325,8 @@ followed by zeros are allowed, and a value that needs more than nine digits is
 not. The default is used when the name has no value and is checked in the same
 way, and is not looked at when the name has a value. A missing name with no
 default raises `SYNTAX 26.901` too. A value that is not a string is read
-through [the string-value rule](r:conv.string.object).
+through [the string-value rule](r:conv.string.object), by one send of `request`,
+for a default as for a stored value, and the value is answered as it is stored.
 
 ```rexx
 p = .properties~new
@@ -402,6 +403,26 @@ say p~getWhole('B')
 
 ```output defect=#164
 12
+```
+
+```rexx
+.local~n = 0
+p = .properties~new
+p~setEntry('b', .text~new('12'))
+say p~getWhole('B') .local~n
+::class text
+::method init
+  expose v
+  use arg v
+::method request
+  expose v
+  .local~n += 1
+  if arg(1) = 'STRING' then return v
+  return .nil
+```
+
+```output defect=#164
+12 1
 ```
 
 ## Setting logical and whole values
@@ -931,9 +952,9 @@ and [the save rule](r:class.properties.save) say, `linein` with no argument to
 a source that is not a name or a `File` and `lineout` with the line to a
 target that is not a name or a `File`. The methods `put`, `setProperty`, `[]=`
 and the setters read a value that is not a string with `request` and the
-argument `STRING` ([the put rule](r:class.properties.put)), and `getWhole` and
-`save` send `request` with `STRING` to a stored value that is not a string
-([the getWhole rule](r:class.properties.getwhole) and [the save
+argument `STRING` ([the put rule](r:class.properties.put)), and `save` sends
+`request` with `STRING` to a stored value that is not a string, and `getWhole`
+sends it once ([the getWhole rule](r:class.properties.getwhole) and [the save
 rule](r:class.properties.save)).
 In the example each method of a subclass records its name, the number of its
 arguments and its first argument, and each call shows the records it caused.
@@ -1105,4 +1126,54 @@ say p['k'] p['k2'] p['w'] p['l']
 
 ```output defect=#140
 abc def 12 true
+```
+
+r[class.properties.deviation.123]
+`isEmpty` agrees with `items`, as [the directory
+rule](r:class.directory.deviation.123) says: it answers 0 for a properties
+object that holds a method of any name but `UNKNOWN`, also when that is all it
+holds. ooRexx answers 1 for one that holds only methods.
+
+```rexx
+p = .properties~new
+p~setMethod('m', 'return 1')
+say p~items p~isEmpty
+p~setMethod('unknown', 'return 2')
+say p~items p~isEmpty
+```
+
+```output
+1 0
+1 0
+```
+
+r[class.properties.deviation.124]
+An answer of `request` with `ARRAY` that is not an `Array` or an instance of a
+subclass of `Array` is refused as the array of arguments of `unknown`, which
+raises `SYNTAX 98.913`, whatever collection the answer is, also when the
+message name ends in `=` or the arguments are otherwise ignored. ooRexx
+accepts a `Queue` or a `CircularQueue` as such an answer and uses its items,
+and crashes for a `List`, a `Bag`, a `Table` or a `Directory`, among others. In
+the example the answer is a queue.
+
+```rexx
+p = .properties~new
+call try "p~unknown('Q=', .ans~new)"
+call try "p~unknown('Q', .ans~new)"
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class ans
+::method request
+  return .queue~of('x')
+```
+
+```output
+p~unknown('Q=', .ans~new) => 98.913
+p~unknown('Q', .ans~new) => 98.913
 ```

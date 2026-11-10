@@ -2,7 +2,7 @@
 element: "Array"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Array Class; Builtin Classes > Collection Classes > Array Class > new (Class Method); Builtin Classes > Collection Classes > Array Class > of (Class Method); Builtin Classes > Collection Classes > Array Class > []; Builtin Classes > Collection Classes > Array Class > []=; Builtin Classes > Collection Classes > Array Class > allIndexes; Builtin Classes > Collection Classes > Array Class > allItems; Builtin Classes > Collection Classes > Array Class > append; Builtin Classes > Collection Classes > Array Class > at; Builtin Classes > Collection Classes > Array Class > delete; Builtin Classes > Collection Classes > Array Class > dimension; Builtin Classes > Collection Classes > Array Class > dimensions; Builtin Classes > Collection Classes > Array Class > empty; Builtin Classes > Collection Classes > Array Class > fill; Builtin Classes > Collection Classes > Array Class > first; Builtin Classes > Collection Classes > Array Class > firstItem; Builtin Classes > Collection Classes > Array Class > hasIndex; Builtin Classes > Collection Classes > Array Class > hasItem; Builtin Classes > Collection Classes > Array Class > index; Builtin Classes > Collection Classes > Array Class > insert; Builtin Classes > Collection Classes > Array Class > isEmpty; Builtin Classes > Collection Classes > Array Class > items; Builtin Classes > Collection Classes > Array Class > last; Builtin Classes > Collection Classes > Array Class > lastItem; Builtin Classes > Collection Classes > Array Class > makeArray; Builtin Classes > Collection Classes > Array Class > makeString; Builtin Classes > Collection Classes > Array Class > next; Builtin Classes > Collection Classes > Array Class > previous; Builtin Classes > Collection Classes > Array Class > put; Builtin Classes > Collection Classes > Array Class > remove; Builtin Classes > Collection Classes > Array Class > removeItem; Builtin Classes > Collection Classes > Array Class > section; Builtin Classes > Collection Classes > Array Class > size; Builtin Classes > Collection Classes > Array Class > sort; Builtin Classes > Collection Classes > Array Class > sortWith; Builtin Classes > Collection Classes > Array Class > stableSort; Builtin Classes > Collection Classes > Array Class > stableSortWith; Builtin Classes > Collection Classes > Array Class > supplier; Builtin Classes > Collection Classes > Array Class > toString"
-deviations: [78, 107, 109]
+deviations: [78, 107, 109, 120]
 ---
 
 # Array
@@ -834,32 +834,32 @@ a~next(1, 2) => 93.926
 ```
 
 r[class.array.next.beyond]
-`previous` of an index that has a component beyond its dimension answers the
-index of the last item that lies before a position, or `.nil` when there is
-none. In an array of one dimension the position is the index, so an index
-beyond the array answers the last item. In an array of more than one
-dimension the slots are numbered with the first dimension running fastest: the
-slot at `i, j` is number `i + (j - 1) * n`, where `n` is the size of the first
-dimension, and likewise for more dimensions. The position is the value of the
-first component, in the order of the dimensions, that is beyond its dimension;
-the other components do not matter.
+`previous` of an index with a component beyond its dimension, whether one
+component or all of them, answers the index of the last item in the order of
+`allItems`, or `.nil` when the array holds no item; so for an array of one
+dimension an index beyond the array answers the last item's index, and for a
+multi-dimensional array the components within their dimensions do not
+matter once one is beyond. `next` of such an index answers `.nil`. The
+answer is the same for every index beyond the array
+([Deviation 120](r:class.array.deviation.120)).
 
 ```rexx
-a = .array~new(3, 3)
-do i = 1 to 3; do j = 1 to 3; a[i, j] = i||j; end; end
-say a~previous(4, 1)~makeString('L', ',') a~previous(4, 7)~makeString('L', ',')
-say a~previous(1, 5)~makeString('L', ',') a~previous(10, 1)~makeString('L', ',')
+a = .array~of('x', , 'z')
+say a~previous(9) a~previous(3) (a~next(9) == .nil) (a~next(3) == .nil)
 b = .array~new(2, 2)
-b[2, 2] = 'x'
-say (b~previous(3, 1) == .nil) b~previous(5, 1)~makeString('L', ',')
-say .array~of('x', 'y')~previous(9)
+say (b~previous(3, 1) == .nil) (b~previous(1, 3) == .nil)
+say (b~next(3, 1) == .nil) (b~next(5, 5) == .nil)
+b[2, 1] = 'p'
+say (b~next(3, 1) == .nil) (b~next(1, 3) == .nil)
+say (b~next(.array~of(3, 1)) == .nil) (b~next(.array~of(5, 5)) == .nil)
 ```
 
-```output defect=#160
-3,1 3,1
-1,2 3,3
-1 2,2
-2
+```output defect=#188
+3 1 1 1
+1 1
+1 1
+1 1
+1 1
 ```
 
 ## Size, dimensions and filling
@@ -1692,4 +1692,29 @@ say a~makeString(.mode~new('C'))
 second
 first-second
 firstsecond
+```
+
+r[class.array.deviation.120]
+`previous` of an index with a component beyond its dimension answers the index
+of the last item in the order of `allItems` whichever index is given and however
+many of its components lie beyond, and [the rule](r:class.array.next.beyond)
+gives the answer when there is none. ooRexx answers an index that depends on the
+position that the beyond index happens to name: in a 2 by 2 array holding items
+at 1,1 and 2,2, `previous(4, 4)` answers 1,1 and `previous(5, 5)` answers 2,2.
+
+```rexx
+a = .array~new(2, 2)
+a[1, 1] = 'p'
+a[2, 2] = 's'
+say a~previous(4, 4)~makeString('L', ',') a~previous(5, 5)~makeString('L', ',')
+say a~previous(3, 1)~makeString('L', ',') a~previous(1, 3)~makeString('L', ',')
+b = .array~new(3, 3)
+do i = 1 to 3; do j = 1 to 3; b[i, j] = i||j; end; end
+say b~previous(4, 1)~makeString('L', ',') b~previous(1, 5)~makeString('L', ',')
+```
+
+```output defect=#160
+2,2 2,2
+2,2 2,2
+3,3 3,3
 ```

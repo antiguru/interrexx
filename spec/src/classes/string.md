@@ -2,7 +2,7 @@
 element: "String"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > String Class; Builtin Classes > Fundamental Classes > String Class > new (Class Method); Builtin Classes > Fundamental Classes > String Class > alnum (Class Method); Builtin Classes > Fundamental Classes > String Class > alpha (Class Method); Builtin Classes > Fundamental Classes > String Class > blank (Class Method); Builtin Classes > Fundamental Classes > String Class > cntrl (Class Method); Builtin Classes > Fundamental Classes > String Class > cr (Class Method); Builtin Classes > Fundamental Classes > String Class > digit (Class Method); Builtin Classes > Fundamental Classes > String Class > graph (Class Method); Builtin Classes > Fundamental Classes > String Class > lower (Class Method); Builtin Classes > Fundamental Classes > String Class > nl (Class Method); Builtin Classes > Fundamental Classes > String Class > null (Class Method); Builtin Classes > Fundamental Classes > String Class > print (Class Method); Builtin Classes > Fundamental Classes > String Class > punct (Class Method); Builtin Classes > Fundamental Classes > String Class > space (Class Method); Builtin Classes > Fundamental Classes > String Class > tab (Class Method); Builtin Classes > Fundamental Classes > String Class > upper (Class Method); Builtin Classes > Fundamental Classes > String Class > xdigit (Class Method); Builtin Classes > Fundamental Classes > String Class > Arithmetic Methods; Builtin Classes > Fundamental Classes > String Class > Comparison Methods; Builtin Classes > Fundamental Classes > String Class > Concatenation Methods; Builtin Classes > Fundamental Classes > String Class > Logical Methods; Builtin Classes > Fundamental Classes > String Class > []; Builtin Classes > Fundamental Classes > String Class > ? (inline if); Builtin Classes > Fundamental Classes > String Class > abbrev; Builtin Classes > Fundamental Classes > String Class > abs; Builtin Classes > Fundamental Classes > String Class > append; Builtin Classes > Fundamental Classes > String Class > b2x; Builtin Classes > Fundamental Classes > String Class > bitAnd; Builtin Classes > Fundamental Classes > String Class > bitOr; Builtin Classes > Fundamental Classes > String Class > bitXor; Builtin Classes > Fundamental Classes > String Class > c2d; Builtin Classes > Fundamental Classes > String Class > c2x; Builtin Classes > Fundamental Classes > String Class > caselessAbbrev; Builtin Classes > Fundamental Classes > String Class > caselessChangeStr; Builtin Classes > Fundamental Classes > String Class > caselessCompare; Builtin Classes > Fundamental Classes > String Class > caselessCompareTo; Builtin Classes > Fundamental Classes > String Class > caselessContains; Builtin Classes > Fundamental Classes > String Class > caselessContainsWord; Builtin Classes > Fundamental Classes > String Class > caselessCountStr; Builtin Classes > Fundamental Classes > String Class > caselessEndsWith; Builtin Classes > Fundamental Classes > String Class > caselessEquals; Builtin Classes > Fundamental Classes > String Class > caselessLastPos; Builtin Classes > Fundamental Classes > String Class > caselessMatch; Builtin Classes > Fundamental Classes > String Class > caselessMatchChar; Builtin Classes > Fundamental Classes > String Class > caselessPos; Builtin Classes > Fundamental Classes > String Class > caselessStartsWith; Builtin Classes > Fundamental Classes > String Class > caselessWordPos; Builtin Classes > Fundamental Classes > String Class > ceiling; Builtin Classes > Fundamental Classes > String Class > center/centre; Builtin Classes > Fundamental Classes > String Class > changeStr; Builtin Classes > Fundamental Classes > String Class > compare; Builtin Classes > Fundamental Classes > String Class > compareTo; Builtin Classes > Fundamental Classes > String Class > contains; Builtin Classes > Fundamental Classes > String Class > containsWord; Builtin Classes > Fundamental Classes > String Class > copies; Builtin Classes > Fundamental Classes > String Class > countStr; Builtin Classes > Fundamental Classes > String Class > d2c; Builtin Classes > Fundamental Classes > String Class > d2x; Builtin Classes > Fundamental Classes > String Class > dataType; Builtin Classes > Fundamental Classes > String Class > decodeBase64; Builtin Classes > Fundamental Classes > String Class > delStr; Builtin Classes > Fundamental Classes > String Class > delWord; Builtin Classes > Fundamental Classes > String Class > encodeBase64; Builtin Classes > Fundamental Classes > String Class > endsWith; Builtin Classes > Fundamental Classes > String Class > equals; Builtin Classes > Fundamental Classes > String Class > floor; Builtin Classes > Fundamental Classes > String Class > format; Builtin Classes > Fundamental Classes > String Class > hashCode; Builtin Classes > Fundamental Classes > String Class > insert; Builtin Classes > Fundamental Classes > String Class > lastPos; Builtin Classes > Fundamental Classes > String Class > left; Builtin Classes > Fundamental Classes > String Class > length; Builtin Classes > Fundamental Classes > String Class > lower; Builtin Classes > Fundamental Classes > String Class > makeArray; Builtin Classes > Fundamental Classes > String Class > makeString; Builtin Classes > Fundamental Classes > String Class > match; Builtin Classes > Fundamental Classes > String Class > matchChar; Builtin Classes > Fundamental Classes > String Class > max; Builtin Classes > Fundamental Classes > String Class > min; Builtin Classes > Fundamental Classes > String Class > modulo; Builtin Classes > Fundamental Classes > String Class > overlay; Builtin Classes > Fundamental Classes > String Class > pos; Builtin Classes > Fundamental Classes > String Class > replaceAt; Builtin Classes > Fundamental Classes > String Class > reverse; Builtin Classes > Fundamental Classes > String Class > right; Builtin Classes > Fundamental Classes > String Class > round; Builtin Classes > Fundamental Classes > String Class > sign; Builtin Classes > Fundamental Classes > String Class > space; Builtin Classes > Fundamental Classes > String Class > startsWith; Builtin Classes > Fundamental Classes > String Class > strip; Builtin Classes > Fundamental Classes > String Class > subChar; Builtin Classes > Fundamental Classes > String Class > substr; Builtin Classes > Fundamental Classes > String Class > subWord; Builtin Classes > Fundamental Classes > String Class > subWords; Builtin Classes > Fundamental Classes > String Class > translate; Builtin Classes > Fundamental Classes > String Class > trunc; Builtin Classes > Fundamental Classes > String Class > upper; Builtin Classes > Fundamental Classes > String Class > verify; Builtin Classes > Fundamental Classes > String Class > word; Builtin Classes > Fundamental Classes > String Class > wordIndex; Builtin Classes > Fundamental Classes > String Class > wordLength; Builtin Classes > Fundamental Classes > String Class > wordPos; Builtin Classes > Fundamental Classes > String Class > words; Builtin Classes > Fundamental Classes > String Class > x2b; Builtin Classes > Fundamental Classes > String Class > x2c; Builtin Classes > Fundamental Classes > String Class > x2d"
-deviations: [4, 36, 109]
+deviations: [4, 36, 109, 122]
 ---
 
 # String
@@ -1753,7 +1753,8 @@ blank and the null string, which is the abuttal ([the concatenation
 rules](r:expr.concatenation.operator)). How many arguments each takes when it
 is sent as a message, and the errors for too few or too many, are [the message
 rule](r:expr.messages.string). An argument that is not a string is converted
-as [the conversion rule](r:conv.string.object) says.
+as [the conversion rule](r:conv.string.object) says, and by a comparison once
+([Deviation 122](r:class.string.deviation.122)).
 
 ```rexx
 say '3'~"+"(4) '3'~"-" '3'~"*"(4) '3'~"/"(4)
@@ -1910,4 +1911,33 @@ xab 2 2 0 1
 1 1 0 y NUM NUM
 ab String ab
 sends 0
+```
+
+r[class.string.deviation.122]
+An argument that is not a string is converted once by each of the comparison
+methods, the normal ones among them, as [the comparison
+rule](r:expr.comparison.deviation.122) says of the operators. ooRexx converts
+it twice for the normal comparison methods unless both strings are numbers.
+
+```rexx
+o = .counted~new
+.local~n = 0
+r = 'a'~"="(o)
+say .local~n
+.local~n = 0
+r = 'a'~"<>"(o)
+say .local~n
+.local~n = 0
+r = 'a'~"=="(o)
+say .local~n
+::class counted
+::method makeString
+  .local~n += 1
+  return 'x'
+```
+
+```output
+1
+1
+1
 ```

@@ -2,7 +2,7 @@
 element: "Message"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Message Class; Builtin Classes > Fundamental Classes > Message Class > new (Class Method); Builtin Classes > Fundamental Classes > Message Class > arguments; Builtin Classes > Fundamental Classes > Message Class > completed; Builtin Classes > Fundamental Classes > Message Class > errorCondition; Builtin Classes > Fundamental Classes > Message Class > halt; Builtin Classes > Fundamental Classes > Message Class > hasError; Builtin Classes > Fundamental Classes > Message Class > hasResult; Builtin Classes > Fundamental Classes > Message Class > messageComplete; Builtin Classes > Fundamental Classes > Message Class > messageName; Builtin Classes > Fundamental Classes > Message Class > notify; Builtin Classes > Fundamental Classes > Message Class > reply; Builtin Classes > Fundamental Classes > Message Class > replyWith; Builtin Classes > Fundamental Classes > Message Class > result; Builtin Classes > Fundamental Classes > Message Class > send; Builtin Classes > Fundamental Classes > Message Class > sendWith; Builtin Classes > Fundamental Classes > Message Class > start; Builtin Classes > Fundamental Classes > Message Class > startWith; Builtin Classes > Fundamental Classes > Message Class > target; Builtin Classes > Fundamental Classes > Message Class > triggered; Builtin Classes > Fundamental Classes > Message Class > wait; Builtin Classes > Utility Classes > AlarmNotification Class > cancel"
-deviations: [105, 107, 109, 113, 116, 118]
+deviations: [105, 107, 109, 113, 116, 118, 124]
 ---
 
 # Message
@@ -2127,4 +2127,44 @@ request ARRAY
 2
 request ARRAY
 2
+```
+
+r[class.message.deviation.124]
+An answer of `request` with `ARRAY` that is not an `Array` or an instance of a
+subclass of `Array` is refused as the array of arguments by `new` with the
+option `A`, `sendWith`, `startWith` and `replyWith`, which raise `SYNTAX
+88.913`, whatever collection the answer is. ooRexx accepts a `Queue` or a
+`CircularQueue` as such an answer, but passes arguments by the storage the queue
+holds rather than by its items: a new queue of two items gives the two items
+followed by fourteen omitted arguments. It crashes for a `List`, a `Bag`, a
+`Table` or a `Directory`, among others. In the example the answer is a queue.
+
+```rexx
+a = .ans~new
+t = .w~new
+call try ".message~new(t, 'count', 'A', a)"
+call try ".message~new(t, 'count')~sendWith(t, a)"
+call try ".message~new(t, 'count')~startWith(t, a)"
+call try ".message~new(t, 'count')~replyWith(t, a)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class w
+::method count
+  return arg()
+::class ans
+::method request
+  return .queue~of('x')
+```
+
+```output
+.message~new(t, 'count', 'A', a) => 88.913
+.message~new(t, 'count')~sendWith(t, a) => 88.913
+.message~new(t, 'count')~startWith(t, a) => 88.913
+.message~new(t, 'count')~replyWith(t, a) => 88.913
 ```

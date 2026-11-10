@@ -1,0 +1,82 @@
+---
+element: "Buffer"
+kind: class
+rexxref: "Builtin Classes > Utility Classes > Buffer Class; Builtin Classes > Utility Classes > Buffer Class > new (Class Method)"
+---
+
+# Buffer
+
+A program written in Rexx cannot make a `Buffer`: `new` is refused, so no
+instance is reachable from a Rexx program. This page states what a program
+can observe of the class: where it stands in the class hierarchy, that it
+defines no instance method, and that `new` is refused. The `MutableBuffer`
+class is the buffer a Rexx program uses for text; [its page](mutablebuffer.md)
+is the one to read for that.
+
+## The class
+
+r[class.buffer.creation]
+`Buffer` is a class whose only superclass is `Object`, which inherits no mixin
+class ([the hierarchy rule](r:class.index.hierarchy)). It defines no instance
+method of its own, so an instance understands the methods of `Object` and no
+others, and its class side has the methods that every class has. It is not a
+subclass of `String` or of `MutableBuffer`, and has no subclass among the
+classes of the library.
+
+```rexx
+say .buffer~id .buffer~class~id
+do c over .buffer~superclasses
+  say c~id
+end
+say .buffer~superclasses~items .buffer~subclasses~items
+s = .buffer~methods(.nil)
+say s~available
+say .buffer~isSubclassOf(.string) .buffer~isSubclassOf(.mutablebuffer)
+```
+
+```output
+Buffer Class
+Object
+1 0
+0
+0 0
+```
+
+r[class.buffer.new]
+`new` raises `SYNTAX 93.967` whatever the arguments are, none or any number of
+them, and makes no object. A subclass that a program declares has the same
+`new`: a `new` that the subclass declares itself runs first, and the call of
+the inherited `new` from it raises the same error. No program written in
+Rexx can therefore make a buffer.
+
+```rexx
+call try '.buffer~new'
+call try '.buffer~new(1)'
+call try '.buffer~new(1, 2)'
+call try '.kept~new'
+call try '.loud~new'
+say .buffer~hasMethod('NEW')
+exit
+try:
+  signal on syntax name bad
+  interpret 'rr =' arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class kept subclass buffer
+::class loud subclass buffer
+::method new class
+  say 'new runs'
+  return self~new:super
+```
+
+```output
+.buffer~new => 93.967
+.buffer~new(1) => 93.967
+.buffer~new(1, 2) => 93.967
+.kept~new => 93.967
+new runs
+.loud~new => 93.967
+1
+```

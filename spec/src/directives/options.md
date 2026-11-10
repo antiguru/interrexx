@@ -441,20 +441,21 @@ trace  => 19.919
 
 r[dir.options.condition]
 ERROR, FAILURE, LOSTDIGITS, NOSTRING, NOTREADY and NOVALUE each take the value
-SYNTAX or CONDITION. CONDITION is the default and leaves the condition as the
-conditions chapter specifies it. SYNTAX makes the condition that no trap
-answers raise a SYNTAX condition instead, with these codes: `98.970` for
-ERROR, `98.971` for FAILURE, `98.972` for LOSTDIGITS, `98.973` for NOSTRING,
-`98.974` for NOTREADY and `98.986` for NOVALUE. The clause that raised it ends
-there as [the SYNTAX rule](r:cond.syntax.raise) says, and `RC` is 98 in the
-trap that catches it. Without a trap the program ends as
-[the rule for an untrapped SYNTAX](r:cond.index.syntax) says, with exit status
-158. A FAILURE raised as SYNTAX is not passed on to the ERROR trap, as the
-second example shows. A FAILURE that no trap answers, which
-[the untrapped rule](r:cond.index.untrapped) would ignore, is answered as
-ERROR here, so with ERROR SYNTAX it raises `98.970` when FAILURE is left at
-CONDITION, as the third example shows. A missing value or a string raises
-`SYNTAX 20.929` and any other symbol `25.927`, both when the program is read.
+SYNTAX or CONDITION; NOVALUE takes ERROR as well, with the meaning of SYNTAX.
+CONDITION is the default and leaves the condition as the conditions chapter
+specifies it. SYNTAX makes the condition that no trap answers raise a SYNTAX
+condition instead, with these codes: `98.970` for ERROR, `98.971` for FAILURE,
+`98.972` for LOSTDIGITS, `98.973` for NOSTRING, `98.974` for NOTREADY and
+`98.986` for NOVALUE. The clause that raised it ends there as [the SYNTAX
+rule](r:cond.syntax.raise) says, and `RC` is 98 in the trap that catches it.
+Without a trap the program ends as [the rule for an untrapped
+SYNTAX](r:cond.index.syntax) says, with exit status 158. A FAILURE raised as
+SYNTAX is not passed on to the ERROR trap, as the second example shows. A
+FAILURE that no trap answers, which [the untrapped rule](r:cond.index.untrapped)
+would ignore, is answered as ERROR here, so with ERROR SYNTAX it raises `98.970`
+when FAILURE is left at CONDITION, as the third example shows. A missing value
+or a string raises `SYNTAX 20.929` and any other symbol `25.927`, ERROR for an
+option other than NOVALUE among them, both when the program is read.
 
 ```rexx
 call try 'error'
@@ -539,6 +540,9 @@ call try '::options error "syntax"'
 call try '::options error bogus'
 call try '::options novalue 5'
 call try '::options notready condition'
+call try '::options novalue error'
+call try '::options notready error'
+call try '::options error halt'
 exit
 try:
   signal on syntax name e
@@ -557,6 +561,23 @@ e: say arg(1) '=>' condition('o')~code
 ::options novalue 5 => 25.927
 ok
 ::options notready condition => ok
+ok
+::options novalue error => ok
+::options notready error => 25.927
+::options error halt => 25.927
+```
+
+```rexx
+signal on syntax name e
+say undefinedvar
+say 'went on'
+exit
+e: say condition('o')~code rc
+::options novalue error
+```
+
+```output
+98.986 98
 ```
 
 r[dir.options.condition.trap]

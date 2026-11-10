@@ -2,7 +2,7 @@
 element: "StringTable"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > StringTable Class; Builtin Classes > Collection Classes > StringTable Class > new (Class Method); Builtin Classes > Collection Classes > StringTable Class > []; Builtin Classes > Collection Classes > StringTable Class > []=; Builtin Classes > Collection Classes > StringTable Class > allIndexes; Builtin Classes > Collection Classes > StringTable Class > allItems; Builtin Classes > Collection Classes > StringTable Class > at; Builtin Classes > Collection Classes > StringTable Class > empty; Builtin Classes > Collection Classes > StringTable Class > entry; Builtin Classes > Collection Classes > StringTable Class > hasEntry; Builtin Classes > Collection Classes > StringTable Class > hasIndex; Builtin Classes > Collection Classes > StringTable Class > hasItem; Builtin Classes > Collection Classes > StringTable Class > index; Builtin Classes > Collection Classes > StringTable Class > isEmpty; Builtin Classes > Collection Classes > StringTable Class > items; Builtin Classes > Collection Classes > StringTable Class > makeArray; Builtin Classes > Collection Classes > StringTable Class > put; Builtin Classes > Collection Classes > StringTable Class > remove; Builtin Classes > Collection Classes > StringTable Class > removeEntry; Builtin Classes > Collection Classes > StringTable Class > removeItem; Builtin Classes > Collection Classes > StringTable Class > setEntry; Builtin Classes > Collection Classes > StringTable Class > supplier; Builtin Classes > Collection Classes > StringTable Class > unknown"
-deviations: [29, 33, 78, 84, 109]
+deviations: [29, 33, 78, 84, 109, 118, 124]
 ---
 
 # StringTable
@@ -966,4 +966,59 @@ say t~at('abc') (t~at('other') == .nil) t~hasIndex(.sub~new('abc'))
 ```output defect=#140
 0
 v 1 1
+```
+
+r[class.stringtable.deviation.118]
+An instance of a subclass of `List` that is given to `unknown` as the array of
+arguments is sent `request` with `ARRAY`, as [the unknown
+rule](r:class.stringtable.unknown) says of any other object, also when the
+arguments are otherwise ignored, so that an override is used. See [Deviation
+118](../deviations.md). ooRexx sends the instance no `request`, so the example
+prints only `held` on ooRexx. The `request` of the class `ml` answers one
+item.
+
+```rexx
+t = .stringtable~new
+t~x = 'held'
+say t~unknown('X', .ml~of('a'))
+::class ml subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('R')
+```
+
+```output
+request ARRAY
+held
+```
+
+r[class.stringtable.deviation.124]
+An answer of `request` with `ARRAY` that is not an `Array` or an instance of a
+subclass of `Array` is refused as the array of arguments of `unknown`, which
+raises `SYNTAX 98.913`, whatever collection the answer is, also when the
+message name ends in `=` or the arguments are otherwise ignored. ooRexx
+accepts a `Queue` or a `CircularQueue` as such an answer and uses its items,
+and crashes for a `List`, a `Bag`, a `Table` or a `Directory`, among others. In
+the example the answer is a queue.
+
+```rexx
+t = .stringtable~new
+call try "t~unknown('Q=', .ans~new)"
+call try "t~unknown('Q', .ans~new)"
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class ans
+::method request
+  return .queue~of('x')
+```
+
+```output
+t~unknown('Q=', .ans~new) => 98.913
+t~unknown('Q', .ans~new) => 98.913
 ```

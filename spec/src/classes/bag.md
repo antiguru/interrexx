@@ -2,7 +2,7 @@
 element: "Bag"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Bag Class; Builtin Classes > Collection Classes > Bag Class > new (Class Method); Builtin Classes > Collection Classes > Bag Class > of (Class Method); Builtin Classes > Collection Classes > Bag Class > []; Builtin Classes > Collection Classes > Bag Class > []=; Builtin Classes > Collection Classes > Bag Class > allAt; Builtin Classes > Collection Classes > Bag Class > allIndex; Builtin Classes > Collection Classes > Bag Class > allIndexes; Builtin Classes > Collection Classes > Bag Class > allItems; Builtin Classes > Collection Classes > Bag Class > at; Builtin Classes > Collection Classes > Bag Class > difference; Builtin Classes > Collection Classes > Bag Class > empty; Builtin Classes > Collection Classes > Bag Class > hasIndex; Builtin Classes > Collection Classes > Bag Class > hasItem; Builtin Classes > Collection Classes > Bag Class > index; Builtin Classes > Collection Classes > Bag Class > intersection; Builtin Classes > Collection Classes > Bag Class > isEmpty; Builtin Classes > Collection Classes > Bag Class > items; Builtin Classes > Collection Classes > Bag Class > makeArray; Builtin Classes > Collection Classes > Bag Class > put; Builtin Classes > Collection Classes > Bag Class > putAll; Builtin Classes > Collection Classes > Bag Class > remove; Builtin Classes > Collection Classes > Bag Class > removeAll; Builtin Classes > Collection Classes > Bag Class > removeItem; Builtin Classes > Collection Classes > Bag Class > subset; Builtin Classes > Collection Classes > Bag Class > supplier; Builtin Classes > Collection Classes > Bag Class > union; Builtin Classes > Collection Classes > Bag Class > uniqueIndexes; Builtin Classes > Collection Classes > Bag Class > xor"
-deviations: [33, 45, 78, 84, 109]
+deviations: [33, 45, 78, 84, 109, 125]
 ---
 
 # Bag
@@ -1092,16 +1092,19 @@ subset: isA+allItems isA+makeArray 34.1 93.948
 
 r[class.bag.operand.list]
 The answer of `allItems` or `makeArray` is read by sending it `items`, with no
-argument, and then `[]` with each position from 1 up to the number that
-`items` answered, in that order; each answer of `[]` is a member of the
-argument. The answer need not be an `Array`: an object that understands the
-two messages will do, and an answer that lacks one raises `SYNTAX 93.948`. A
-subclass of `Array` is sent the two messages too, and no other. A position
-that holds nothing reads `.nil`, which is then a member, so an `Array` with a
-hole is read for as many positions as it has items, not as its size. The
-answer of `items` is read as a number: one that is not a number raises
-`SYNTAX 41.1`, and a negative one reads no position. An error that `[]` raises
-is the error of the operation, after the members before it have been handled.
+argument, and then `[]` with each position from 1 up to the number that `items`
+answered, in that order; each answer of `[]` is a member of the argument. The
+answer need not be an `Array`: an object that understands the two messages will
+do, and an answer that lacks one raises `SYNTAX 93.948`. A subclass of `Array`
+is sent the two messages too, and no other. A position that holds nothing reads
+`.nil`, which is then a member, so an `Array` with a hole is read for as many
+positions as it has items, not as its size. An answer that is a `List`, or an
+instance of a subclass of `List`, is the one kind read otherwise: its members
+are all its items, in the order of the list, not the entries at the positions 1
+up to its number of items ([Deviation 125](r:class.bag.deviation.125)). The
+answer of `items` is read as a number: one that is not a number raises `SYNTAX
+41.1`, and a negative one reads no position. An error that `[]` raises is the
+error of the operation, after the members before it have been handled.
 
 ```rexx
 a = .array~new(5)
@@ -1657,4 +1660,33 @@ say .bag~new(.sub~new('2'))~items
 
 ```output
 0
+```
+
+r[class.bag.deviation.125]
+An answer of `allItems` or `makeArray` that is a `List` gives its items in list
+order, as [the list rule](r:class.bag.operand.list) says, for `putAll`,
+`union`, `intersection`, `xor`, `subset` and `difference`. ooRexx reads it by
+the positions 1 up to its number of items, so in the example an item is missed
+and `.nil` is a member.
+
+```rexx
+b = .bag~new
+b~putAll(.pk~new(.list~of('p', 'q', 'r')))
+say b~items b~hasItem('p') b~hasItem('q') b~hasItem('r') b~hasItem(.nil)
+say .bag~of('q', 'r')~subset(.pk~new(.list~of('q', 'r')))
+d = .bag~of('p', 'q', 'r', 'z')~difference(.pk~new(.list~of('p', 'q', 'r')))
+say d~items
+::class pk inherit collection
+::method init
+  expose answer
+  use arg answer
+::method allitems
+  expose answer
+  return answer
+```
+
+```output defect=#187
+3 1 1 1 0
+1
+1
 ```

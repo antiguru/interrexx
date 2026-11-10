@@ -7,30 +7,36 @@ rexxref: "Conditions and Condition Traps; Conditions and Condition Traps > Condi
 
 # ERROR and FAILURE
 
-ERROR and FAILURE are the two conditions of a command. After an environment
-has run a command, or has failed to, the interpreter looks at the return code
-and raises one of them. ERROR means that the command ran and answered with a
-return code that is not zero, and FAILURE means that the command could not be
-run at all. A program that wants to react to a failing command traps one or
-both. This page specifies when each is raised, what the condition records, and
-the way a FAILURE that nothing answers reaches an ERROR trap. How a command is
-sent, and how it sets `RC`, is on [the command
-page](../instructions/command.md).
+ERROR and FAILURE are the two conditions of a command. After an environment of
+the host has run a command, or has failed to, the interpreter looks at the
+return code and raises one of them; a command that a handler written in Rexx
+runs raises them only as [the ERROR rule](r:cond.error.raise) says. ERROR
+means that the command ran and answered with a return code that is not zero,
+and FAILURE means that the command could not be run at all. A program that
+wants to react to a failing command traps one or both. This page specifies
+when each is raised, what the condition records, and the way a FAILURE that
+nothing answers reaches an ERROR trap. How a command is sent, and how it sets
+`RC`, is on [the command page](../instructions/command.md).
 
 ## ERROR
 
 r[cond.error.raise]
-A command that the environment has run, and whose return code is not zero,
-raises ERROR at the end of the clause that sent it, so that the command has
-run and `RC` holds its return code before the trap answers. A return code of
-zero raises nothing. The record of the condition has the command string as its
-description, and the `RC` entry of the condition object holds the return code,
-which is also the value of `RC` in the code of the trap. The `POSITION` entry
-and `SIGL` are the line of the command clause. A SIGNAL trap goes to its label
-after the command has run, and a CALL trap calls its routine and then goes on
-with the clause after the command. The status `.RS` of the command is `1`
-for a command that raised ERROR, as [the status rule](r:instr.command.status)
-says.
+A command that an environment of the host has run, and whose return code is
+not zero, raises ERROR at the end of the clause that sent it, so that the
+command has run and `RC` holds its return code before the trap answers. A
+return code of zero raises nothing. The record of the condition has the
+command string as its description, and the `RC` entry of the condition object
+holds the return code, which is also the value of `RC` in the code of the
+trap. The `POSITION` entry and `SIGL` are the line of the command clause. A
+SIGNAL trap goes to its label after the command has run, and a CALL trap calls
+its routine and then goes on with the clause after the command. The status
+`.RS` of the command is `1` for a command that raised ERROR, as [the status
+rule](r:instr.command.status) says. A command that a
+[`CommandHandler`](r:class.commandhandler.rc) written in Rexx runs raises
+ERROR or FAILURE only when the handler asks its context for it ([the raise
+rule](r:class.commandcontext.raise)), or when it forwards the command to a
+native environment that raises one ([the forwarding
+rule](r:class.nativecommandhandler.command)), whatever its return code.
 
 ```rexx
 address system
@@ -112,18 +118,18 @@ and again 7
 
 r[cond.error.failure]
 A command raises FAILURE, and not ERROR, when it could not be run. That is the
-case when the current environment does not exist, as
-[the status rule](r:instr.command.status) says, whatever the command is. On a
-POSIX host it is also the case when the return code is `127`, in the command
-environments `system`, `command`, `sh`, `bash` and `path`, whether the command
-was not found or exited with that code. Whether other environments of a host
-do the same is not specified. No other return code is a failure: `126` raises
-ERROR, and so does a negative one, which is not the failure of classic Rexx
-here. FAILURE, like ERROR, waits for the clause to end, and its record has the
-return code in `RC`, the command string as its description, and `.RS` is `-1`.
-A trap for ERROR does not answer a FAILURE as such, so it needs the fallback
-of [the next rule](r:cond.error.fallback), and a trap for FAILURE does not
-answer an ERROR.
+case when the current environment does not exist, as [the status
+rule](r:instr.command.status) says, whatever the command is. On a POSIX host
+it is also the case when the return code is `127`, in the command environments
+`system`, `command`, `sh`, `bash` and `path`, whether the command was not
+found or exited with that code. Whether other environments of a host do the
+same is not specified. No other return code of such an environment is a
+failure: `126` raises ERROR, and so does a negative one, which is not the
+failure of classic Rexx here. FAILURE, like ERROR, waits for the clause to
+end, and its record has the return code in `RC`, the command string as its
+description, and `.RS` is `-1`. A trap for ERROR does not answer a FAILURE as
+such, so it needs the fallback of [the next rule](r:cond.error.fallback), and
+a trap for FAILURE does not answer an ERROR.
 
 ```rexx
 address system

@@ -2,7 +2,7 @@
 element: "Routine"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Routine Class; Builtin Classes > Fundamental Classes > Routine Class > new (Class Method); Builtin Classes > Fundamental Classes > Routine Class > newFile (Class Method); Builtin Classes > Fundamental Classes > Routine Class > loadExternalRoutine (Class method); Builtin Classes > Fundamental Classes > Routine Class > []; Builtin Classes > Fundamental Classes > Routine Class > annotation; Builtin Classes > Fundamental Classes > Routine Class > annotations; Builtin Classes > Fundamental Classes > Routine Class > call; Builtin Classes > Fundamental Classes > Routine Class > callWith; Builtin Classes > Fundamental Classes > Routine Class > package; Builtin Classes > Fundamental Classes > Routine Class > setSecurityManager; Builtin Classes > Fundamental Classes > Routine Class > source; The Security Manager"
-deviations: [41, 109, 111, 115, 118]
+deviations: [41, 109, 111, 115, 118, 124, 134]
 ---
 
 # Routine
@@ -592,16 +592,18 @@ makearray
 r[class.routine.source]
 `source` answers a new array that holds the lines of the routine's source, one
 string for each line, so changing the array changes nothing in the routine. A
-routine made by `new` has the lines of its source argument (an empty string
-and an empty array are a source of no lines), one made by `newFile` the lines
-of its file before the first directive, without a first line that begins with
-`#!`, and one that a `::ROUTINE` directive makes has the lines of its section,
-which [the rule of `Method`](r:class.method.source) reads as it does for a
-method: the text after the `;` of the directive is the first line, and an
-empty last line is left out, so a directive with nothing after its `;` and
-no lines has an empty source. A routine that `loadExternalRoutine` loaded, and
-an external routine, answer an array of no items. The method takes no argument
-(`SYNTAX 93.902`).
+routine made by `new` has the lines of its source argument (an empty string and
+an empty array are a source of no lines), one made by `newFile` the lines of its
+file before the first directive, without a first line that begins with `#!`, and
+one that a `::ROUTINE` directive makes has the lines of its section, which [the
+rule of `Method`](r:class.method.source) reads as it does for a method: the text
+after the `;` of the directive is the first line, and an empty last line is left
+out, so a directive with nothing after its `;` and no lines has an empty source.
+The last line of the source argument of `new` and of the file of `newFile` is
+left out when it is empty, too, and every read answers the same lines
+([Deviation 134](r:class.routine.deviation.134)). A routine that
+`loadExternalRoutine` loaded, and an external routine, answer an array of no
+items. The method takes no argument (`SYNTAX 93.902`).
 
 ```rexx
 r = .routine~new('n', .array~of('say 1', 'return 2'))
@@ -1461,10 +1463,13 @@ request STRING
 r[class.routine.deviation.118]
 A source that is an instance of a subclass of `List` is sent `request` with
 the argument `ARRAY`, as [the sends rule](r:class.routine.new.sends) states,
-and the lines are the items of the array that it answers
-([Deviation 118](../deviations.md)). ooRexx sends the instance no
-`request` and takes the items it holds as the lines, so the example writes
-`held` on ooRexx.
+and the lines are the items of the array that it answers ([Deviation
+118](../deviations.md)). ooRexx sends the instance no `request` and takes the
+items it holds as the lines, so the first example writes `held` on ooRexx. The
+same holds for the argument of `callWith`, which is sent `request` with
+`ARRAY` as [the sends rule](r:class.routine.callwith.sends) says, so the
+second example passes the one argument that the `request` of `ml` answers and
+prints `2 a` on ooRexx, which passes the items of the list.
 
 ```rexx
 l = .ll~new
@@ -1480,6 +1485,20 @@ say r~source[1]
 ```output
 request ARRAY
 say "answered"
+```
+
+```rexx
+r = .routine~new('r', 'return arg() arg(1)')
+say r~callWith(.ml~of('a', 'b'))
+::class ml subclass list
+::method request
+  say 'request' arg(1)
+  return .array~of('R')
+```
+
+```output
+request ARRAY
+1 R
 ```
 
 r[class.routine.deviation.111]
@@ -1530,4 +1549,50 @@ exit
 requires 1 absolute name: 0
 b body
 Package
+```
+
+r[class.routine.deviation.124]
+An answer of `request` with `ARRAY` that is not an `Array` or an instance of a
+subclass of `Array` is refused as the array of arguments of `callWith`, which
+raises `SYNTAX 98.913`, whatever collection the answer is. ooRexx accepts a
+`Queue` or a `CircularQueue` as such an answer and uses its items, and crashes
+for a `List`, a `Bag`, a `Table` or a `Directory`, among others. In the example
+the answer is a queue.
+
+```rexx
+r = .routine~new('r', 'return arg()')
+call try 'r~callWith(.ans~new)'
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class ans
+::method request
+  return .queue~of('x')
+```
+
+```output
+r~callWith(.ans~new) => 98.913
+```
+
+r[class.routine.deviation.134]
+`source` answers the same lines on every read, as [the rule of
+`Method`](r:class.method.deviation.134) says. ooRexx leaves one more trailing
+empty line out after each read, until the last line is not empty, so it answers
+the routine of the example with 2 lines and then with 1.
+
+```rexx
+r = .routine~new('r', .array~of('say 1', '', ''))
+say r~source~items r~source~items r~source~items
+p = .package~new('n2', .array~of('nop', '::routine q', 'say 1', '', ''))
+say p~findRoutine('Q')~source~items p~findRoutine('Q')~source~items
+```
+
+```output
+2 2 2
+2 2
 ```

@@ -173,15 +173,16 @@ w1 v2 keep
 
 r[instr.use.reference]
 A target written with a `<` before its name is an alias of a variable of the
-caller. The caller passes the variable as a reference, with a `<` before it
-in the call, and the target is then the same variable: a value read through
-it is the caller's, and an assignment changes the caller's variable. The
-target needs a reference as its argument, and a plain value raises `SYNTAX
-88.928`. The argument must not be omitted, which raises `SYNTAX 88.931`. The
-alias name must not be a variable of the routine that has a value, or the
-clause raises `SYNTAX 98.995`. A default after a reference target raises
-`SYNTAX 99.950` when the program is read. This book does not specify a
-reference term anywhere else, nor the form with `>`.
+caller. The caller passes the variable as a reference, a `<` or a `>` before its
+name in the call ([the reference rule](r:class.variablereference.arguments)),
+and the target is then the same variable: a value read through it is the
+caller's, and an assignment changes the caller's variable. The target needs a
+reference as its argument, and a plain value raises `SYNTAX 88.928`. The
+argument must not be omitted, which raises `SYNTAX 88.931`. The alias name must
+not be a variable of the routine that has a value, or the clause raises `SYNTAX
+98.995`. A default after a reference target raises `SYNTAX 99.950` when the
+program is read. The reference that such an argument passes is a
+`VariableReference` ([its page](r:class.variablereference.creation)).
 
 ```rexx
 v = 'orig'

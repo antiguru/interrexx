@@ -2,7 +2,7 @@
 element: "Stem"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Stem Class; Builtin Classes > Collection Classes > Stem Class > new (Class Method); Builtin Classes > Collection Classes > Stem Class > []; Builtin Classes > Collection Classes > Stem Class > []=; Builtin Classes > Collection Classes > Stem Class > allIndexes; Builtin Classes > Collection Classes > Stem Class > allItems; Builtin Classes > Collection Classes > Stem Class > at; Builtin Classes > Collection Classes > Stem Class > empty; Builtin Classes > Collection Classes > Stem Class > hasIndex; Builtin Classes > Collection Classes > Stem Class > hasItem; Builtin Classes > Collection Classes > Stem Class > index; Builtin Classes > Collection Classes > Stem Class > isEmpty; Builtin Classes > Collection Classes > Stem Class > items; Builtin Classes > Collection Classes > Stem Class > makeArray; Builtin Classes > Collection Classes > Stem Class > put; Builtin Classes > Collection Classes > Stem Class > remove; Builtin Classes > Collection Classes > Stem Class > removeItem; Builtin Classes > Collection Classes > Stem Class > request; Builtin Classes > Collection Classes > Stem Class > supplier; Builtin Classes > Collection Classes > Stem Class > toDirectory; Builtin Classes > Collection Classes > Stem Class > unknown"
-deviations: [1, 68, 78, 109, 118]
+deviations: [1, 68, 78, 109, 118, 124]
 ---
 
 # Stem
@@ -1103,4 +1103,33 @@ say s~unknown('SUBSTR', l)
 ```output
 request ARRAY
 b
+```
+
+r[class.stem.deviation.124]
+An answer of `request` with `ARRAY` that is not an `Array` or an instance of a
+subclass of `Array` is refused as the array of arguments of `unknown`, which
+raises `SYNTAX 98.913`, whatever collection the answer is. ooRexx accepts a
+`Queue` or a `CircularQueue` as such an answer and uses its items, and crashes
+for a `List`, a `Bag`, a `Table` or a `Directory`, among others. In the example
+the answer is a queue.
+
+```rexx
+s = .stem~new
+s[] = 'abc'
+call try "s~unknown('SUBSTR', .ans~new)"
+exit
+try:
+  signal on syntax name bad
+  interpret 'r =' arg(1)
+  say arg(1) '=>' r
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class ans
+::method request
+  return .queue~of('x')
+```
+
+```output
+s~unknown('SUBSTR', .ans~new) => 98.913
 ```
