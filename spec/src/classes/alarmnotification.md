@@ -154,11 +154,9 @@ declares it. The library sends it, with the `Alarm` or `Ticker` as the
 argument, when the alarm or ticker is cancelled by its `cancel` method while
 it is still waiting: an `Alarm` that has not gone off and was not cancelled
 before, or a `Ticker` that has not been cancelled before. A `cancel` of an
-`Alarm` that has already gone off, a second `cancel` of an `Alarm`
-([Deviation 119](r:class.alarmnotification.deviation.119)) and a second
-`cancel` of a `Ticker`, send nothing more. The second example sends `cancel`
-twice to a `Ticker` that is still five seconds away, and the implementation
-prints a line for each message it receives.
+`Alarm` that has already gone off and a second `cancel` of an `Alarm` or a
+`Ticker` ([Deviation 119](r:class.alarmnotification.deviation.119)) send
+nothing more.
 
 ```rexx
 n = .note~new
@@ -211,6 +209,14 @@ cancel cancelled
 answered nothing: 91.999
 ```
 
+r[class.alarmnotification.deviation.119]
+A second `cancel` of an `Alarm` or a `Ticker` sends its target nothing
+([Deviation 119](../deviations.md)). ooRexx sends the target `cancel` once or
+twice for it, depending on timing, so the examples are not a test of the
+owning rule on ooRexx. The first sends `cancel` twice to a `Ticker` that is
+still five seconds away, the second to such an `Alarm`, and the implementation
+prints a line for each message it receives.
+
 ```rexx
 n = .n~new
 t = .ticker~new(5, n)
@@ -228,12 +234,6 @@ exit
 cancel sent
 done
 ```
-
-r[class.alarmnotification.deviation.119]
-A second `cancel` of an `Alarm` sends its target nothing, as for a `Ticker`
-([Deviation 119](../deviations.md)). ooRexx sends the target `cancel` once or
-twice for it, depending on timing, so the example is not a test of the
-owning rule on ooRexx.
 
 ```rexx
 n = .n~new
