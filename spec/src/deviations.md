@@ -196,8 +196,10 @@ object with the wrong layout and answers garbage or crashes.
 
 ## 29. An entry assignment with no value
 
-`d~"A="()` on a Directory, with no argument, is refused, exit code 120.
-ooRexx stores an unrelated leftover value.
+`d~"A="()` on a Directory, with no argument, is refused, exit code 120, and
+so is `d~unknown('A=', args)` sent directly with an argument array that holds
+no item. ooRexx stores an unrelated leftover value for the first and removes
+the entry for the second.
 
 ## 30. A STRING method answering a non-string
 
