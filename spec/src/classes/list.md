@@ -633,7 +633,8 @@ l = .list~of('a', 'b', 'c')
 h = l~allIndexes
 x = l~insert('x', h[1])
 say l~at(l~first) l~at(l~next(l~first)) l~at(l~next(x)) (l~next(h[3]) == .nil)
-say l~at(l~last) l~at(l~previous(l~last)) l~at(l~previous(h[2])) (l~previous(h[1]) == .nil)
+say l~at(l~last) l~at(l~previous(l~last)),
+  l~at(l~previous(h[2])) (l~previous(h[1]) == .nil)
 l~remove(h[2])
 say (l~next(h[2]) == .nil) (l~previous(h[2]) == .nil)
 call try 'l~next'
