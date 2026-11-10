@@ -2,7 +2,7 @@
 element: "File"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > File Class; Builtin Classes > Utility Classes > File Class > isCaseSensitive (Class Method); Builtin Classes > Utility Classes > File Class > listRoots (Class Method); Builtin Classes > Utility Classes > File Class > pathSeparator (Class Method); Builtin Classes > Utility Classes > File Class > readChars (Class Method); Builtin Classes > Utility Classes > File Class > readLines (Class Method); Builtin Classes > Utility Classes > File Class > searchPath (Class Method); Builtin Classes > Utility Classes > File Class > separator (Class Method); Builtin Classes > Utility Classes > File Class > temporaryPath (Class Method); Builtin Classes > Utility Classes > File Class > writeChars (Class Method); Builtin Classes > Utility Classes > File Class > writeLines (Class Method); Builtin Classes > Utility Classes > File Class > absoluteFile; Builtin Classes > Utility Classes > File Class > absolutePath; Builtin Classes > Utility Classes > File Class > canRead; Builtin Classes > Utility Classes > File Class > canWrite; Builtin Classes > Utility Classes > File Class > compareTo; Builtin Classes > Utility Classes > File Class > delete; Builtin Classes > Utility Classes > File Class > exists; Builtin Classes > Utility Classes > File Class > extension; Builtin Classes > Utility Classes > File Class > hashCode; Builtin Classes > Utility Classes > File Class > init; Builtin Classes > Utility Classes > File Class > isCaseSensitive; Builtin Classes > Utility Classes > File Class > isDirectory; Builtin Classes > Utility Classes > File Class > isFile; Builtin Classes > Utility Classes > File Class > isHidden; Builtin Classes > Utility Classes > File Class > lastAccessed (Attribute); Builtin Classes > Utility Classes > File Class > lastModified (Attribute); Builtin Classes > Utility Classes > File Class > length; Builtin Classes > Utility Classes > File Class > list; Builtin Classes > Utility Classes > File Class > listFiles; Builtin Classes > Utility Classes > File Class > makeDir; Builtin Classes > Utility Classes > File Class > makeDirs; Builtin Classes > Utility Classes > File Class > makeString; Builtin Classes > Utility Classes > File Class > name; Builtin Classes > Utility Classes > File Class > parent; Builtin Classes > Utility Classes > File Class > parentFile; Builtin Classes > Utility Classes > File Class > path; Builtin Classes > Utility Classes > File Class > pathSeparator; Builtin Classes > Utility Classes > File Class > renameTo; Builtin Classes > Utility Classes > File Class > separator; Builtin Classes > Utility Classes > File Class > setReadOnly; Builtin Classes > Utility Classes > File Class > setWritable; Builtin Classes > Utility Classes > File Class > string; Builtin Classes > Utility Classes > Orderable Class > Comparison Methods"
-deviations: [34, 109, 118, 126]
+deviations: [34, 109, 118, 126, 137]
 ---
 
 # File
@@ -1391,9 +1391,11 @@ Array 1 / 1
 r[class.file.temporarypath]
 `temporaryPath` answers a new `File`, made by `new` sent to the receiver, for
 the directory in which temporary files are to be put: the value of the
-environment variable `TMPDIR` when that is set, and `/tmp` when it is not. It
-takes no argument; one raises `SYNTAX 93.902`. The example sets `TMPDIR` between
-[SETLOCAL](../builtins/setlocal.md) and ENDLOCAL, which put it back.
+environment variable `TMPDIR` when that is set to something, and `/tmp` when it
+is not set or is set to the null string ([Deviation
+137](r:class.file.deviation.137)). It takes no argument; one raises `SYNTAX
+93.902`. The example sets `TMPDIR` between [SETLOCAL](../builtins/setlocal.md)
+and ENDLOCAL, which put it back.
 
 ```rexx
 call setlocal
@@ -1444,6 +1446,9 @@ begins with a slash is the absolute path of the file: the answer is a `File` for
 it when the file exists, whatever the directories. A relative directory is
 relative to the current directory, and the answer holds the absolute path of the
 file it finds, as [the next rule](r:class.file.searchpath.relative) shows.
+Whether a `name` that has a `.` or a `..` as one of its parts, such as `./a.txt`
+or `x/../a.txt`, or that ends with a slash, finds a file is not specified: it
+depends on the host.
 
 ```rexx
 here = directory()
@@ -2011,4 +2016,30 @@ a~compareTo(.sub~new("/t/a")) => 0
 a~compareTo(a~copy) => 0
 .spy~new("/s")~compareTo(.probe~new) => 88.914
 sent:  ISA(File)
+```
+
+r[class.file.deviation.137]
+`temporaryPath` answers the file `/tmp` when `TMPDIR` is set to the null string,
+as it does when `TMPDIR` is not set. A `TMPDIR` of any other string, one of
+blanks included, is the path. ooRexx answers a `File` for the null string, whose
+`path` is the null string.
+
+```rexx
+call setlocal
+call value 'TMPDIR', '', 'ENVIRONMENT'
+say '<'value('TMPDIR', , 'ENVIRONMENT')'>'
+t = .file~temporaryPath
+say t~class~id '<'t~path'>'
+call value 'TMPDIR', ' ', 'ENVIRONMENT'
+say '<'.file~temporaryPath~path'>'
+call value 'TMPDIR', '/spec-file/tmp', 'ENVIRONMENT'
+say '<'.file~temporaryPath~path'>'
+call endlocal
+```
+
+```output
+<>
+File </tmp>
+< >
+</spec-file/tmp>
 ```

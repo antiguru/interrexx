@@ -1,7 +1,7 @@
 ---
 element: "EventSemaphore"
 kind: class
-deviations: [109]
+deviations: [109, 135]
 rexxref: "Builtin Classes > Utility Classes > EventSemaphore Class; Builtin Classes > Utility Classes > EventSemaphore Class > new (Class Method); Builtin Classes > Utility Classes > EventSemaphore Class > isPosted; Builtin Classes > Utility Classes > EventSemaphore Class > post; Builtin Classes > Utility Classes > EventSemaphore Class > reset; Builtin Classes > Utility Classes > EventSemaphore Class > uninit; Builtin Classes > Utility Classes > EventSemaphore Class > wait"
 ---
 
@@ -51,12 +51,12 @@ EventSemaphore 1 Object 0
 
 r[class.eventsemaphore.new]
 `new` makes a semaphore that is cleared, and answers an instance of the class
-that received it, so a subclass makes instances of itself. It makes the
-semaphore itself and then sends `init` the arguments of `new`, as [the new
-rule](r:class.index.new) says, so the semaphore works whatever the `init` of a
-subclass does, even when it does not send `init` to its superclass, and `new`
-with an argument raises `SYNTAX 93.902` for the class itself, where `init` is
-that of `Object`, and not for a subclass whose `init` takes it.
+that received it, so a subclass makes instances of itself. It sends `init` the
+arguments of `new`, as [the new rule](r:class.index.new) says, and `new` with an
+argument raises `SYNTAX 93.902` for the class itself, where `init` is that of
+`Object`, and not for a subclass whose `init` takes it. A subclass whose `init`
+does not send `init` to its superclass makes a semaphore that is not set up
+([Deviation 135](r:class.eventsemaphore.deviation.135)).
 
 ```rexx
 say .eventsemaphore~new~isPosted
@@ -64,10 +64,6 @@ s = .count~new(5)
 say s~tag s~isPosted s~wait(0)
 s~post
 say s~isPosted s~wait(0)
-t = .lazy~new
-say t~class~id t~isPosted t~wait(0)
-t~post
-say t~isPosted t~wait(0)
 signal on syntax name bad
 x = .eventsemaphore~new(1)
 bad: say condition('o')~code
@@ -79,16 +75,11 @@ bad: say condition('o')~code
 ::method tag
   expose tag
   return tag
-::class lazy subclass eventsemaphore
-::method init
-  nop
 ```
 
 ```output
 0
 5 0 0
-1 1
-LAZY 0 0
 1 1
 93.902
 ```
@@ -434,7 +425,9 @@ r[class.eventsemaphore.uninit]
 is reclaimed, at a time that a program does not control, which is not specified.
 An `uninit` of a subclass replaces this one, so it frees the semaphore only by
 sending `self~uninit:super`. `uninit` takes no argument (`SYNTAX 93.902`) and
-answers nothing, so using its answer as a value raises `SYNTAX 91.999`.
+answers nothing, so using its answer as a value raises `SYNTAX 91.999`. What a
+semaphore does for a message that a program sends it after a direct `uninit`, a
+second `uninit` included, is not specified.
 
 ```rexx
 .environment~log = .list~new
@@ -486,4 +479,40 @@ say e~wait(.digits~new('0.01')) 'sends' .environment~sent
 
 ```output defect=#140
 0 sends 0
+```
+
+r[class.eventsemaphore.deviation.135]
+A subclass of `EventSemaphore` whose `init` does not send `init` to its
+superclass, by `self~init:super` or `FORWARD`, makes a semaphore that is not set
+up, and every instance method of the class sent to it raises `SYNTAX 98.901`:
+`isPosted`, `post`, `reset`, `uninit` and `wait`. The example gives `wait` a
+timeout, so that nothing waits. ooRexx lets the semaphore work as a set up one
+does, so the example is not run against it.
+
+```rexx
+o = .lazy~new
+call try "o~isPosted"
+call try "o~post"
+call try "o~reset"
+call try "o~wait(0.01)"
+call try "o~uninit"
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class lazy subclass eventsemaphore
+::method init
+  nop
+```
+
+```output defect=#197
+o~isPosted => 98.901
+o~post => 98.901
+o~reset => 98.901
+o~wait(0.01) => 98.901
+o~uninit => 98.901
 ```

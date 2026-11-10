@@ -990,3 +990,35 @@ a leading zero or the days `0.`, a plus sign, and a minus sign before a span of
 `fromStringFormat` of `TimeSpan` answers a negative span for the text of a
 negative span of any size, `-00:01:30.000000` included. ooRexx answers the
 positive span when the span has no days and no hours.
+
+## 134. The lines of a method's source do not change when read
+
+`source` of a `Method` answers an array with the same lines every time it is
+sent, however often it was read before: the last line of a `::METHOD` section
+that is empty is left out once, when the method is made, and no read drops
+another. ooRexx drops one more trailing empty line of the section after each
+read, until the last line holds text, so the answers get shorter.
+
+## 135. An object whose init never ran raises an error
+
+A subclass of `Alarm`, `Ticker`, `RexxQueue`, `EventSemaphore` or
+`MutexSemaphore` whose `init` does not send `init` to its superclass makes an
+object that is not set up, and every method of the class that the object is sent
+(the methods that each class page lists, apart from `init`) raises `SYNTAX
+98.901`. ooRexx lets the semaphores work as a set up one does, and its
+`empty` of a `RexxQueue` of that kind ends the interpreter with a segmentation
+fault.
+
+## 136. A copy of a MutexSemaphore is free
+
+`copy` of a `MutexSemaphore` answers a new semaphore that no activity owns,
+whether the original is free or owned, and by which activity and how many times.
+The two are separate from then on. ooRexx gives the copy the owner and the
+count of the original, and a copy that another activity owns stays owned after
+that activity ended, so that no activity can acquire it.
+
+## 137. An empty TMPDIR is as an unset one
+
+`temporaryPath` of `File` answers `/tmp` when the environment variable `TMPDIR`
+is set to the null string, as it does when it is not set. ooRexx answers a
+`File` for the null string.

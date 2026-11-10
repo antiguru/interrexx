@@ -1,7 +1,7 @@
 ---
 element: "MutexSemaphore"
 kind: class
-deviations: [109]
+deviations: [109, 135, 136]
 rexxref: "Builtin Classes > Utility Classes > MutexSemaphore Class; Builtin Classes > Utility Classes > MutexSemaphore Class > new (Class Method); Builtin Classes > Utility Classes > MutexSemaphore Class > acquire; Builtin Classes > Utility Classes > MutexSemaphore Class > release; Builtin Classes > Utility Classes > MutexSemaphore Class > uninit"
 ---
 
@@ -53,20 +53,18 @@ MutexSemaphore 1 Object 0
 
 r[class.mutexsemaphore.new]
 `new` makes a semaphore that no activity owns, and answers an instance of the
-class that received it, so a subclass makes instances of itself. It makes the
-semaphore itself and then sends `init` the arguments of `new`, as [the new
-rule](r:class.index.new) says, so the semaphore works whatever the `init` of a
-subclass does, even when it does not send `init` to its superclass, and `new`
+class that received it, so a subclass makes instances of itself. It sends `init`
+the arguments of `new`, as [the new rule](r:class.index.new) says, and `new`
 with an argument raises `SYNTAX 93.902` for the class itself, where `init` is
-that of `Object`, and not for a subclass whose `init` takes it.
+that of `Object`, and not for a subclass whose `init` takes it. A subclass whose
+`init` does not send `init` to its superclass makes a semaphore that is not set
+up ([Deviation 135](r:class.mutexsemaphore.deviation.135)).
 
 ```rexx
 m = .mutexsemaphore~new
 say m~release m~acquire(0) m~release
 s = .count~new(6)
 say s~tag s~acquire(0) s~release
-t = .lazy~new
-say t~class~id t~acquire(0) t~release t~release
 signal on syntax name bad
 x = .mutexsemaphore~new(1)
 bad: say condition('o')~code
@@ -78,15 +76,11 @@ bad: say condition('o')~code
 ::method tag
   expose tag
   return tag
-::class lazy subclass mutexsemaphore
-::method init
-  nop
 ```
 
 ```output
 0 1 1
 6 1 1
-LAZY 1 1 0
 93.902
 ```
 
@@ -205,56 +199,23 @@ bad: say condition('o')~code
 ```
 
 r[class.mutexsemaphore.copy]
-`copy` answers a new semaphore owned by the same activity with the same count
-as the original, or by none when the original is free. From then on the two are
-separate: releasing one does not release the other. When the owning activity
-ends, only the semaphores it acquired itself are freed: a copy that it owns
-stays owned, so no activity can acquire it. The first example has one activity;
-in the second, a message that the program starts owns the semaphore when the
-program copies it, and ends owning both.
+`copy` answers a new semaphore that no activity owns, whatever the state of the
+original: the copy of a free semaphore is free, and so is the copy of one that
+an activity owns, any number of times. The original keeps its owner and its
+count ([Deviation 136](r:class.mutexsemaphore.deviation.136)). From then on the
+two are separate: acquiring or releasing one does not change the other. The
+example copies a free semaphore.
 
 ```rexx
-m = .mutexsemaphore~new
-say m~acquire(0) m~acquire(0)
-j = m~copy
-say j~release j~release j~release
-say m~release m~release m~release
-f = .mutexsemaphore~new~copy
-say f~release f~acquire(0) f~release
+f = .mutexsemaphore~new
+j = f~copy
+say j~release j~acquire(0) j~release
+say f~acquire(0) f~release f~release
 ```
 
-```output defect=#182
-1 1
-1 1 0
-1 1 0
+```output
 0 1 1
-```
-
-```rexx
-m = .mutexsemaphore~new
-got = .eventsemaphore~new
-go = .eventsemaphore~new
-r = .holder~new~start('run', m, got, go)
-say 'held by other:' got~wait(5)
-j = m~copy
-say 'copy free here:' j~acquire(0)
-go~post
-say r~result
-say 'after its end:' m~acquire(0) m~release j~acquire(0)
-::class holder
-::method run unguarded
-  use arg m, got, go
-  a = m~acquire
-  got~post
-  go~wait(5)
-  return 'other ends owning both:' a
-```
-
-```output defect=#182
-held by other: 1
-copy free here: 0
-other ends owning both: 1
-after its end: 1 1 0
+1 1 0
 ```
 
 r[class.mutexsemaphore.timeout]
@@ -400,7 +361,9 @@ r[class.mutexsemaphore.uninit]
 is reclaimed, at a time that a program does not control, which is not specified.
 An `uninit` of a subclass replaces this one, so it frees the semaphore only by
 sending `self~uninit:super`. `uninit` takes no argument (`SYNTAX 93.902`) and
-answers nothing, so using its answer as a value raises `SYNTAX 91.999`.
+answers nothing, so using its answer as a value raises `SYNTAX 91.999`. What a
+semaphore does for a message that a program sends it after a direct `uninit`, a
+second `uninit` included, is not specified.
 
 ```rexx
 .environment~log = .list~new
@@ -452,4 +415,89 @@ say m~acquire(.digits~new('0.01')) 'sends' .environment~sent
 
 ```output defect=#140
 1 sends 0
+```
+
+r[class.mutexsemaphore.deviation.135]
+A subclass of `MutexSemaphore` whose `init` does not send `init` to its
+superclass, by `self~init:super` or `FORWARD`, makes a semaphore that is not set
+up, and every instance method of the class sent to it raises `SYNTAX 98.901`:
+`acquire`, `release` and `uninit`. ooRexx lets the semaphore work as a set up
+one does, so the example is not run against it.
+
+```rexx
+o = .lazy~new
+call try "o~acquire"
+call try "o~acquire(0.01)"
+call try "o~release"
+call try "o~uninit"
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class lazy subclass mutexsemaphore
+::method init
+  nop
+```
+
+```output defect=#197
+o~acquire => 98.901
+o~acquire(0.01) => 98.901
+o~release => 98.901
+o~uninit => 98.901
+```
+
+r[class.mutexsemaphore.deviation.136]
+A copy of a semaphore is free whoever owns the original and however often. In
+the first example an activity owns the semaphore twice and the copy is free: its
+`release` answers 0, and releasing the original twice leaves it free. In the
+second a message that the program starts owns the semaphore when the program
+copies it: the program acquires the copy at once, and when the other activity
+ends, the original is free. ooRexx gives the copy the owner and the count of the
+original, so the first copy of the example releases twice, and the copy of the
+second stays owned by the activity that ended, and nothing can acquire it; the
+example is not run against it.
+
+```rexx
+m = .mutexsemaphore~new
+say m~acquire(0) m~acquire(0)
+j = m~copy
+say j~release j~release j~release
+say m~release m~release m~release
+```
+
+```output
+1 1
+0 0 0
+1 1 0
+```
+
+```rexx
+m = .mutexsemaphore~new
+got = .eventsemaphore~new
+go = .eventsemaphore~new
+r = .holder~new~start('run', m, got, go)
+say 'held by other:' got~wait(5)
+j = m~copy
+say 'copy free here:' j~acquire(0)
+go~post
+say r~result
+say 'after its end:' m~acquire(0) m~release j~acquire(0)
+::class holder
+::method run unguarded
+  use arg m, got, go
+  a = m~acquire
+  got~post
+  go~wait(5)
+  return 'other ends:' a
+```
+
+```output
+held by other: 1
+copy free here: 1
+other ends: 1
+after its end: 1 1 1
 ```

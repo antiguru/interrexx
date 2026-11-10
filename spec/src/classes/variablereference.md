@@ -363,12 +363,15 @@ r[class.variablereference.request]
 `request` sends `request` to the value of the variable with its argument and
 answers what the value answers, so a value that declares its own `request` is
 asked, and a string answers the conversions that `request` of `String` answers.
-It is stated here with one argument; two raise `SYNTAX 93.902`.
+Sent with no argument, or with an omitted one, it sends the value one omitted
+argument: the `request` of the value sees `ARG()` as 1 and `ARG(1, 'E')` as 0.
+Two arguments raise `SYNTAX 93.902`.
 
 ```rexx
 o = .ask~new
 r = >o
 say r~request('FOO') r~request('STRING')
+say r~request r~request()
 t = 'a b'
 rt = >t
 say rt~request('STRING') rt~request('ARRAY')~items rt~request('FOO')
@@ -383,11 +386,12 @@ bad: say arg(1) '=>' condition('o')~code
   return
 ::class ask
 ::method request
-  return 'asked' arg() || ':' || arg(1)
+  return 'asked' arg() || ':' || arg(1) || ':' || arg(1, 'E')
 ```
 
-```output
-asked 1:FOO asked 1:STRING
+```output defect=#199
+asked 1:FOO:1 asked 1:STRING:1
+asked 1::0 asked 1::0
 a b 1 The NIL object
 r~request('A', 'B') => 93.902
 ```

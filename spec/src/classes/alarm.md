@@ -1,7 +1,7 @@
 ---
 element: "Alarm"
 kind: class
-deviations: [109, 119]
+deviations: [109, 119, 135]
 rexxref: "Builtin Classes > Utility Classes > Alarm Class; Builtin Classes > Utility Classes > Alarm Class > attachment; Builtin Classes > Utility Classes > Alarm Class > cancel; Builtin Classes > Utility Classes > Alarm Class > canceled/cancelled; Builtin Classes > Utility Classes > Alarm Class > init; Builtin Classes > Utility Classes > Alarm Class > scheduledTime; Builtin Classes > Utility Classes > Alarm Class > triggered"
 ---
 
@@ -89,7 +89,9 @@ every value that [the rules below](r:class.alarm.init.seconds) do not accept,
 except the very large ones for which they name other errors. So a target that is
 no implementation is reported even when the time is wrong too, and a refused
 alarm is not set. `attachment` can be any object, and is `.nil` when it is
-omitted. The alarm is set when `init` ends normally.
+omitted. The alarm is set when `init` ends normally. A subclass whose `init`
+does not send `init` to its superclass makes an alarm that is not set
+([Deviation 135](r:class.alarm.deviation.135)).
 
 ```rexx
 n = .note~new
@@ -804,4 +806,41 @@ exit
 ```output defect=#150
 cancel sent
 done
+```
+
+r[class.alarm.deviation.135]
+A subclass of `Alarm` whose `init` does not send `init` to its superclass, by
+`self~init:super` or `FORWARD`, makes an alarm that is not set, and every
+instance method of the class sent to it raises `SYNTAX 98.901`: `attachment`,
+`cancel`, `canceled`, `cancelled`, `scheduledTime` and `triggered`. The example
+is not run against ooRexx.
+
+```rexx
+o = .lazy~new
+call try "o~attachment"
+call try "o~cancel"
+call try "o~canceled"
+call try "o~cancelled"
+call try "o~scheduledTime"
+call try "o~triggered"
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class lazy subclass alarm
+::method init
+  nop
+```
+
+```output defect=#197
+o~attachment => 98.901
+o~cancel => 98.901
+o~canceled => 98.901
+o~cancelled => 98.901
+o~scheduledTime => 98.901
+o~triggered => 98.901
 ```

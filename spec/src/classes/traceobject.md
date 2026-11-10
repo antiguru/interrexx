@@ -236,21 +236,23 @@ say gives [shown] [a TraceObject]
 
 r[class.traceobject.entries]
 A traced line has the entries `INTERPRETER`, `INVOCATION` and `THREAD`, the
-numbers of the interpreter, the invocation and the activity of the traced
-code as [`RexxContext`](r:class.rexxcontext.numbers) gives them, `NUMBER`,
-`OPTION` and `TIMESTAMP` as [`new`](r:class.traceobject.new) makes them,
-`TRACELINE`, the text of the line in the `N` format, and `STACKFRAME`, a
-`StringTable` that describes the level that produced the line with the
-entries `ARGUMENTS`, `EXECUTABLE`, `INVOCATION`, `LINE`, `NAME`, `TARGET`,
-`TRACELINE` and `TYPE`, which answer what the [`StackFrame`](stackframe.md)
-methods of the same names answer. A line traced in a method adds
-`ATTRIBUTEPOOL`, `HASSCOPELOCK`, `ISGUARDED`, `RECEIVER` and
-`SCOPELOCKCOUNT`, and the line that announces the method, flagged `>I>`, adds
-`CALLERSTACKFRAME`, the frame of the code that called it. A line that shows a
-variable being read or assigned adds `VARIABLE`, a `StringTable` with the
-entries `NAME`, `VALUE` and `ASSIGNMENT`, which is `1` for an assignment and
-`0` for a read. The example shows each set of entries once, with the first
-word of the line that has it.
+numbers of the interpreter, the invocation and the activity of the traced code
+as [`RexxContext`](r:class.rexxcontext.numbers) gives them, `NUMBER`, `OPTION`
+and `TIMESTAMP` as [`new`](r:class.traceobject.new) makes them, `TRACELINE`, the
+text of the line in the `N` format, and `STACKFRAME`, a `StringTable` that
+describes the level that produced the line with the entries `ARGUMENTS`,
+`EXECUTABLE`, `INVOCATION`, `LINE`, `NAME`, `TARGET`, `TRACELINE` and `TYPE`,
+which answer what the [`StackFrame`](stackframe.md) methods of the same names
+answer. A line traced in a method adds `ATTRIBUTEPOOL`, `HASSCOPELOCK`,
+`ISGUARDED`, `RECEIVER` and `SCOPELOCKCOUNT`, and the line that announces the
+method, flagged `>I>`, adds `CALLERSTACKFRAME`, the frame of the code that
+called it. A line that shows a variable being read or assigned adds `VARIABLE`,
+a `StringTable` with the entries `NAME`, `VALUE` and `ASSIGNMENT`, which is `1`
+for an assignment and `0` for a read. Which clause the `STACKFRAME` of the `>I>`
+line shows, in its `LINE` and its `TRACELINE`, and the values of `HASSCOPELOCK`
+and `SCOPELOCKCOUNT` of the lines that follow an `EXPOSE` in a method, are not
+specified. The example shows each set of entries once, with the first word of
+the line that has it.
 
 ```rexx
 .traceoutput~destination(.sink~new)

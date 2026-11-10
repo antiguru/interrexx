@@ -2,7 +2,7 @@
 element: "Method"
 kind: class
 rexxref: "Builtin Classes > Fundamental Classes > Method Class; Builtin Classes > Fundamental Classes > Method Class > new (Class Method); Builtin Classes > Fundamental Classes > Method Class > newFile (Class Method); Builtin Classes > Fundamental Classes > Method Class > loadExternalMethod (Class Method); Builtin Classes > Fundamental Classes > Method Class > annotation; Builtin Classes > Fundamental Classes > Method Class > annotations; Builtin Classes > Fundamental Classes > Method Class > isAbstract; Builtin Classes > Fundamental Classes > Method Class > isAttribute; Builtin Classes > Fundamental Classes > Method Class > isConstant; Builtin Classes > Fundamental Classes > Method Class > isGuarded; Builtin Classes > Fundamental Classes > Method Class > isPackage; Builtin Classes > Fundamental Classes > Method Class > isPrivate; Builtin Classes > Fundamental Classes > Method Class > isProtected; Builtin Classes > Fundamental Classes > Method Class > package; Builtin Classes > Fundamental Classes > Method Class > scope; Builtin Classes > Fundamental Classes > Method Class > setGuarded; Builtin Classes > Fundamental Classes > Method Class > setPrivate; Builtin Classes > Fundamental Classes > Method Class > setProtected; Builtin Classes > Fundamental Classes > Method Class > setSecurityManager; Builtin Classes > Fundamental Classes > Method Class > setUnguarded; Builtin Classes > Fundamental Classes > Method Class > source"
-deviations: [41, 109, 115, 118]
+deviations: [41, 109, 115, 118, 134]
 ---
 
 # Method
@@ -614,14 +614,15 @@ Method
 r[class.method.source]
 `source` answers a new array that holds the lines of the method's source, one
 string for each line, so changing the array changes nothing in the method. A
-method made by `new` has the lines of its source argument, one made by
-`newFile` the lines of its file before the first directive, without a first
-line that begins with `#!`, and one that a `::METHOD` directive makes has the
-lines of its section. Text that follows the `;` of the directive on its line
-is the first line of the section, blank included, and the last line of a
-section is left out when it is empty; a line of blanks is kept. A method that
-has no Rexx code of its own, such as an attribute method, a constant method,
-an abstract method, a method of a library class and one that
+method made by `new` has the lines of its source argument, one made by `newFile`
+the lines of its file before the first directive, without a first line that
+begins with `#!`, and one that a `::METHOD` directive makes has the lines of its
+section. Text that follows the `;` of the directive on its line is the first
+line of the section, blank included, and the last line of a section is left out
+when it is empty, once, when the method is made; a line of blanks is kept. Every
+read answers the same lines ([Deviation 134](r:class.method.deviation.134)). A
+method that has no Rexx code of its own, such as an attribute method, a constant
+method, an abstract method, a method of a library class and one that
 `loadExternalMethod` loaded, answers an array of no items. The method takes no
 argument (`SYNTAX 93.902`).
 
@@ -1408,4 +1409,33 @@ say m~source[1]
 ```output
 request ARRAY
 say "answered"
+```
+
+r[class.method.deviation.134]
+`source` answers the same lines on every read. The last line of a section that
+is empty is left out when the method is made, and no later read leaves out
+another empty line before it. In the example the sections end in two and in
+three empty lines: one of them is left out, and the rest stays however often the
+source is read. ooRexx leaves one more trailing empty line out after each read,
+until the last line holds text, so it answers `two` with 2 lines and then with
+1, and `three` with 3, 2 and 1.
+
+```rexx
+src = .array~of('::method two', '  say "a"', '', '')
+src~append('::method three')
+src~append('  say "b"')
+src~append('')
+src~append('')
+src~append('')
+p = .package~new('n', src)
+t = p~definedMethods
+do n over .array~of('TWO', 'THREE')
+  s = t[n]~source
+  say n s~items t[n]~source~items t[n]~source~items '['s~makeString('l', '|')']'
+end
+```
+
+```output
+TWO 2 2 2 [  say "a"|]
+THREE 3 3 3 [  say "b"||]
 ```

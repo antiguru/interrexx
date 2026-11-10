@@ -1,7 +1,7 @@
 ---
 element: "RexxQueue"
 kind: class
-deviations: [109]
+deviations: [109, 135]
 rexxref: "Builtin Classes > Utility Classes > RexxQueue Class; Builtin Classes > Utility Classes > RexxQueue Class > new (Inherited Class Method); Builtin Classes > Utility Classes > RexxQueue Class > create (Class Method); Builtin Classes > Utility Classes > RexxQueue Class > delete (Class Method); Builtin Classes > Utility Classes > RexxQueue Class > exists (Class Method); Builtin Classes > Utility Classes > RexxQueue Class > open (Class Method); Builtin Classes > Utility Classes > RexxQueue Class > delete; Builtin Classes > Utility Classes > RexxQueue Class > empty; Builtin Classes > Utility Classes > RexxQueue Class > get; Builtin Classes > Utility Classes > RexxQueue Class > init; Builtin Classes > Utility Classes > RexxQueue Class > lineIn; Builtin Classes > Utility Classes > RexxQueue Class > lineOut; Builtin Classes > Utility Classes > RexxQueue Class > makeArray; Builtin Classes > Utility Classes > RexxQueue Class > pull; Builtin Classes > Utility Classes > RexxQueue Class > push; Builtin Classes > Utility Classes > RexxQueue Class > queue; Builtin Classes > Utility Classes > RexxQueue Class > queued; Builtin Classes > Utility Classes > RexxQueue Class > say; Builtin Classes > Utility Classes > RexxQueue Class > set"
 ---
 
@@ -103,14 +103,14 @@ SPEC_RQ_STRING_OTHER SPEC_RQ_MIXED_CASE
 ## Making a queue object
 
 r[class.rexxqueue.new]
-`new` is the `new` that `Class` supplies ([the new rule](r:class.index.new)):
-it makes an object of the class that received the message, so a subclass makes
-instances of itself, and sends it `init` with the arguments of `new`, in
-order. The queue that the object works with is therefore the business of
-`init`, and `new` with more than one argument raises `SYNTAX 93.902`, because
-`init` takes at most one. A subclass whose `init` does not reach the `init` of
-`RexxQueue`, by `forward` or by `self~init:super`, makes an object that is not
-connected to a queue; what its methods do is not specified.
+`new` is the `new` that `Class` supplies ([the new rule](r:class.index.new)): it
+makes an object of the class that received the message, so a subclass makes
+instances of itself, and sends it `init` with the arguments of `new`, in order.
+The queue that the object works with is therefore the business of `init`, and
+`new` with more than one argument raises `SYNTAX 93.902`, because `init` takes
+at most one. A subclass whose `init` does not reach the `init` of `RexxQueue`,
+by `forward` or by `self~init:super`, makes an object that is not connected to a
+queue ([Deviation 135](r:class.rexxqueue.deviation.135)).
 
 ```rexx
 q = .rexxqueue~new('spec_rq_new')
@@ -1190,4 +1190,56 @@ say q~delete
 own text 0
 1 0
 0
+```
+
+r[class.rexxqueue.deviation.135]
+A subclass of `RexxQueue` whose `init` does not send `init` to its superclass,
+by `self~init:super` or `FORWARD`, makes an object that is not connected to a
+queue, and every instance method of the class sent to it raises `SYNTAX 98.901`:
+`delete`, `empty`, `get`, `lineIn`, `lineOut`, `makeArray`, `pull`, `push`,
+`queue`, `queued`, `say` and `set`. The example gives each method the arguments
+it takes. The class methods do not depend on an object and are not affected.
+ooRexx ends the interpreter with a segmentation fault from `empty`, so the
+example is not run against it.
+
+```rexx
+o = .lazy~new
+call try "o~delete"
+call try "o~empty"
+call try "o~get"
+call try "o~lineIn"
+call try "o~lineOut('x')"
+call try "o~makeArray"
+call try "o~pull"
+call try "o~push('x')"
+call try "o~queue('x')"
+call try "o~queued"
+call try "o~say('x')"
+call try "o~set('x')"
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class lazy subclass rexxqueue
+::method init
+  nop
+```
+
+```output defect=#197
+o~delete => 98.901
+o~empty => 98.901
+o~get => 98.901
+o~lineIn => 98.901
+o~lineOut('x') => 98.901
+o~makeArray => 98.901
+o~pull => 98.901
+o~push('x') => 98.901
+o~queue('x') => 98.901
+o~queued => 98.901
+o~say('x') => 98.901
+o~set('x') => 98.901
 ```

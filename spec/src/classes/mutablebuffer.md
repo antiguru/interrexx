@@ -845,14 +845,14 @@ of that name of `String` does ([`changeStr`](r:bif.changestr.method),
 [`delStr`](r:bif.delstr.method), [`delWord`](r:bif.delword.method),
 [`insert`](r:bif.insert.method), [`lower`](r:bif.lower.method),
 [`overlay`](r:bif.overlay.method), [`space`](r:bif.space.method),
-[`translate`](r:bif.translate.method), [`upper`](r:bif.upper.method)), with
-the same arguments, defaults, checks and errors, in the same order. The
-difference is the answer: the buffer takes the characters that the string
-method would answer for its characters as its new text, and the method answers
-the buffer itself, not a new string. A call that raises an error leaves the
-buffer as it was. The size grows as [the size
-rule](r:class.mutablebuffer.size) says. A `tablei` of `translate` that is the
-null string is not covered by this rule.
+[`translate`](r:bif.translate.method), [`upper`](r:bif.upper.method)), with the
+same arguments, defaults, checks and errors, in the same order. The difference
+is the answer: the buffer takes the characters that the string method would
+answer for its characters as its new text, and the method answers the buffer
+itself, not a new string. A call that raises an error leaves the buffer as it
+was. The size grows as [the size rule](r:class.mutablebuffer.size) says. A
+`tablei` of `translate` that is the null string is the exception: [the next
+rule](r:class.mutablebuffer.translate.null) says what the buffer does with it.
 
 ```rexx
 t = 'Alpha beta  GAMMA delta'
@@ -905,6 +905,53 @@ space(1, '**') => 93.922 <Alpha beta  GAMMA delta> 1
 changeStr('a') => 93.903 <Alpha beta  GAMMA delta> 1
 upper(1, 2, 3) => 93.902 <Alpha beta  GAMMA delta> 1
 lower('x') => 93.924 <Alpha beta  GAMMA delta> 1
+```
+
+r[class.mutablebuffer.translate.null]
+`translate` with a `tablei` that is the null string reads it as if `tablei` were
+omitted, so that every character of the buffer is looked up in [the default
+table](r:bif.translate.tablei.default): a character is replaced by the character
+of `tableo` at the position of its byte value plus one, or by the pad when
+`tableo` has no character there. This holds however the null string was made,
+and `pad`, `start` and `length` work as they do for any other table. The
+`translate` of `String` leaves its string as it was for the same arguments ([the
+empty table rule](r:bif.translate.tablei.empty)), so the two answer differently;
+the last line of the example shows it. The buffer is changed and answered as
+[the changing rule](r:class.mutablebuffer.changing) says.
+
+```rexx
+call chg "translate('xy', '')"
+call chg "translate('xy', '', '*')"
+call chg "translate('xy', left('abc', 0), '*')"
+call chg "translate(xrange(), '')"
+call chg "translate(xrange('00'x, '40'x) || 'Z' || xrange('42'x, 'ff'x), '')"
+call chg "translate(, '', '*', 3)"
+call chg "translate('xy', '', '*', 3, 4)"
+call chg "translate('xy', '', '*', 30)"
+call chg "translate('xy', '', 'ab')"
+say '<' || 'Alpha beta'~translate('xy', '', '*') || '>'
+exit
+chg:
+  b = .mutablebuffer~new('Alpha beta')
+  signal on syntax name bad
+  interpret 'r = b~' || arg(1)
+  say arg(1) '=> <' || b~string || '>' (r~identityHash == b~identityHash)
+  return
+bad: say arg(1) '=>' condition('o')~code '<' || b~string || '>'
+  return
+```
+
+```output
+translate('xy', '') => <          > 1
+translate('xy', '', '*') => <**********> 1
+translate('xy', left('abc', 0), '*') => <**********> 1
+translate(xrange(), '') => <Alpha beta> 1
+translate(xrange('00'x, '40'x) || 'Z' || xrange('42'x, 'ff'x), '') => <Zlpha beta> 1
+translate(, '', '*', 3) => <Al********> 1
+translate('xy', '', '*', 3, 4) => <Al****beta> 1
+translate('xy', '', '*', 30) => <Alpha beta> 1
+translate('xy', '', 'ab') => 93.922 <Alpha beta>
+<Alpha beta>
 ```
 
 ## Reading the text

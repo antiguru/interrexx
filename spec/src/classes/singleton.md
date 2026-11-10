@@ -104,6 +104,34 @@ bad: say arg(1) '=>' condition('o')~code
 1 2 3
 ```
 
+r[class.singleton.new.direct]
+`new` sent to `Singleton` itself, with a name, answers an object that has that
+name for its `id` and `Singleton` for its class, and that is not a class made by
+a `::CLASS` directive with the metaclass `Singleton`: sent `new`, with any
+arguments, it raises `SYNTAX 97.1`. `new` with no argument raises `SYNTAX
+93.901`.
+
+```rexx
+call try 'c = .singleton~new("x"); say c~class~id c~id; x = c~new'
+call try 'c = .singleton~new("y"); x = c~new(1, 2)'
+call try 'c = .singleton~new'
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+```
+
+```output
+Singleton x
+c = .singleton~new("x"); say c~class~id c~id; x = c~new => 97.1
+c = .singleton~new("y"); x = c~new(1, 2) => 97.1
+c = .singleton~new => 93.901
+```
+
 r[class.singleton.inherit]
 A subclass of a class with the metaclass `Singleton`, whether a `::CLASS`
 directive or `subclass` makes it, has the metaclass too and so has its own

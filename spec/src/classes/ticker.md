@@ -1,7 +1,7 @@
 ---
 element: "Ticker"
 kind: class
-deviations: [109, 119]
+deviations: [109, 119, 135]
 rexxref: "Builtin Classes > Utility Classes > Ticker Class; Builtin Classes > Utility Classes > Ticker Class > attachment; Builtin Classes > Utility Classes > Ticker Class > cancel; Builtin Classes > Utility Classes > Ticker Class > canceled/cancelled; Builtin Classes > Utility Classes > Ticker Class > init; Builtin Classes > Utility Classes > Ticker Class > interval"
 ---
 
@@ -87,7 +87,9 @@ for every value that [the rule below](r:class.ticker.init.interval) does not
 accept, except the very large ones for which it names other errors. So a target
 that is no implementation is reported even when the interval is wrong too, and a
 refused ticker is not set. `attachment` can be any object, and is `.nil` when it
-is omitted. The ticker is set when `init` ends normally.
+is omitted. The ticker is set when `init` ends normally. A subclass whose `init`
+does not send `init` to its superclass makes a ticker that is not set
+([Deviation 135](r:class.ticker.deviation.135)).
 
 ```rexx
 n = .note~new
@@ -600,4 +602,39 @@ exit
 ```output
 cancel sent
 done
+```
+
+r[class.ticker.deviation.135]
+A subclass of `Ticker` whose `init` does not send `init` to its superclass, by
+`self~init:super` or `FORWARD`, makes a ticker that is not set, and every
+instance method of the class sent to it raises `SYNTAX 98.901`: `attachment`,
+`cancel`, `canceled`, `cancelled` and `interval`. The example is not run against
+ooRexx.
+
+```rexx
+o = .lazy~new
+call try "o~attachment"
+call try "o~cancel"
+call try "o~canceled"
+call try "o~cancelled"
+call try "o~interval"
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class lazy subclass ticker
+::method init
+  nop
+```
+
+```output defect=#197
+o~attachment => 98.901
+o~cancel => 98.901
+o~canceled => 98.901
+o~cancelled => 98.901
+o~interval => 98.901
 ```
