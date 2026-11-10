@@ -23,9 +23,11 @@ an enclosing construct restores it.
 
 ## 1. DO OVER order on a stem
 
-DO OVER on a stem visits its tails in an order this book does not specify.
-ooRexx visits them in an order fixed by its internal storage, which is
-neither insertion nor sorted order.
+DO OVER on a stem visits its tails in an order this book does not specify,
+and so do the `Stem` methods that list or search its tails (`allIndexes`,
+`allItems`, `makeArray`, `supplier`, and the tail that `index` and
+`removeItem` choose). ooRexx visits them in an order fixed by its internal
+storage, which is neither insertion nor sorted order.
 
 ## 2. Withdrawn
 
@@ -516,7 +518,9 @@ there.
 A lookup or PUT with the very index object already stored sends that
 object's `==`, and so does a search for an item (`hasItem`, `index`,
 `removeItem`) with the very item object stored, and so does a Relation's
-`uniqueIndexes` for an index object stored more than once. ooRexx compares
+`uniqueIndexes` for an index object stored more than once, and the check of a
+Set's or Bag's `put` and `[]=` that the index equals the item when both are
+the very same object. ooRexx compares
 identity first and sends nothing.
 
 ## 79. APPEND write positions
@@ -550,10 +554,11 @@ that fails fails at RAISE. ooRexx converts at every `CONDITION('D')`.
 
 ## 84. Emptying a Table during REMOVE
 
-When an index's equality method empties its Table or Relation during REMOVE
-or a Relation's REMOVEALL, the search ends and ITEMS stays 0. ooRexx answers
--1 for REMOVE, and its REMOVEALL goes on comparing with an object that is no
-stored index.
+When an index's equality method empties its Table, Relation, Set or Bag
+during REMOVE or REMOVEITEM, or a Relation's or Bag's REMOVEALL or a Bag's
+ALLAT, the search ends and ITEMS stays 0. ooRexx answers -1 for REMOVE and
+REMOVEITEM, and its REMOVEALL and ALLAT go on comparing with an object that is
+no stored index.
 
 ## 85. `.environment` per interpreter
 
