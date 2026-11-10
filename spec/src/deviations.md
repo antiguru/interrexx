@@ -906,9 +906,10 @@ indexes (`new` and `init` of `Supplier`) is accepted only when it is an
 `Array` or an instance of a subclass of `Array` of one dimension; any other
 object, a `Queue` included, raises the error that the reading method gives for
 an answer that is no array. ooRexx uses the items of a `Queue` or a
-`CircularQueue` as the arguments, except that `Message` passes as many
-arguments as the queue has storage, the items followed by omitted ones, and it
-crashes for a `List`, a `Bag`, a `Table` or a `Directory`.
+`CircularQueue` as the arguments, or as the items or indexes of a `Supplier`,
+except that `Message` passes as many arguments as the queue has storage, the
+items followed by omitted ones, and for the arguments it crashes for a `List`,
+a `Bag`, a `Table` or a `Directory`.
 
 ## 125. A List operand is read in its own order
 

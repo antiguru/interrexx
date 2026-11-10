@@ -807,10 +807,10 @@ r[class.commandcontext.raise]
 `raise(condition, rc, description, additional)` makes the command raise a
 condition. The condition is raised in the code that sent the command, when the
 handler's method `command` returns, as if the command itself had raised it: a
-`SIGNAL ON` or `CALL ON` trap for it answers it as for any condition, and a
+`SIGNAL ON` or `CALL ON` trap for it answers it as for any condition, though a
 CALL ON ANY trap does not see the conditions that only SIGNAL can trap ([the
-CALL ON rule](r:instr.call.on)), and the handler goes on running after the
-call. A condition that no trap answers is treated as [the page of that
+CALL ON rule](r:instr.call.on)); the handler goes on running after the call. A
+condition that no trap answers is treated as [the page of that
 condition](../conditions/index.md) says. The method answers `rc`. What
 `command` answers is not used when a condition was raised: `RC` holds `rc` as
 it is, whatever object it is, the number or the text, `.nil` too, so a handler

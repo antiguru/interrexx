@@ -7,15 +7,16 @@ rexxref: "Conditions and Condition Traps; Conditions and Condition Traps > Condi
 
 # ERROR and FAILURE
 
-ERROR and FAILURE are the two conditions of a command. After an environment
-has run a command, or has failed to, the interpreter looks at the return code
-and raises one of them. ERROR means that the command ran and answered with a
-return code that is not zero, and FAILURE means that the command could not be
-run at all. A program that wants to react to a failing command traps one or
-both. This page specifies when each is raised, what the condition records, and
-the way a FAILURE that nothing answers reaches an ERROR trap. How a command is
-sent, and how it sets `RC`, is on [the command
-page](../instructions/command.md).
+ERROR and FAILURE are the two conditions of a command. After an environment of
+the host has run a command, or has failed to, the interpreter looks at the
+return code and raises one of them; a command that a handler written in Rexx
+runs raises them only as [the ERROR rule](r:cond.error.raise) says. ERROR
+means that the command ran and answered with a return code that is not zero,
+and FAILURE means that the command could not be run at all. A program that
+wants to react to a failing command traps one or both. This page specifies
+when each is raised, what the condition records, and the way a FAILURE that
+nothing answers reaches an ERROR trap. How a command is sent, and how it sets
+`RC`, is on [the command page](../instructions/command.md).
 
 ## ERROR
 
@@ -31,9 +32,11 @@ SIGNAL trap goes to its label after the command has run, and a CALL trap calls
 its routine and then goes on with the clause after the command. The status
 `.RS` of the command is `1` for a command that raised ERROR, as [the status
 rule](r:instr.command.status) says. A command that a
-[`CommandHandler`](r:class.commandhandler.rc) runs raises ERROR or FAILURE
-only when the handler asks its context for it ([the raise
-rule](r:class.commandcontext.raise)), whatever its return code.
+[`CommandHandler`](r:class.commandhandler.rc) written in Rexx runs raises
+ERROR or FAILURE only when the handler asks its context for it ([the raise
+rule](r:class.commandcontext.raise)), or when it forwards the command to a
+native environment that raises one ([the forwarding
+rule](r:class.nativecommandhandler.command)), whatever its return code.
 
 ```rexx
 address system

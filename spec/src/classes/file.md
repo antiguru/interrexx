@@ -1934,9 +1934,9 @@ neither message and writes the items it holds, so the first example prints
 `one two` there. A `path` of `searchPath` that is an instance of a subclass of
 `List` is sent `request` with `ARRAY` too, as [the searchPath
 rule](r:class.file.searchpath) says of any `path` that is no string, so the
-second example finds nothing, the answer being a directory that does not
-exist, and prints `1` on ooRexx, which searches the directories held in the
-list and finds the file.
+second example finds nothing, because the array that the `request` of `ml`
+answers holds a directory that does not exist, and prints `1` on ooRexx, which
+searches the directories held in the list and finds the file.
 
 ```rexx
 f = 'spec-file-dev118.tmp'

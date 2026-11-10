@@ -708,7 +708,7 @@ A class that a program declares as a subclass of `Supplier` or
 instance method of the class other than `init` sent to it raises `SYNTAX
 98.901`: `allIndexes`, `allItems`, `available`, `index`, `item`, `next` and
 `supplier`. ooRexx ends the interpreter with a segmentation fault on
-`available` of such a `Supplier`; the example is not run against it. The
+`available` of such a `Supplier`; the examples are not run against it. The
 second example makes the same of a `StreamSupplier`.
 
 ```rexx
