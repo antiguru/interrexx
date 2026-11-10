@@ -2,6 +2,7 @@
 element: "Monitor"
 kind: class
 rexxref: "Builtin Classes > Utility Classes > Monitor Class; Builtin Classes > Utility Classes > Monitor Class > current; Builtin Classes > Utility Classes > Monitor Class > destination; Builtin Classes > Utility Classes > Monitor Class > init; Builtin Classes > Utility Classes > Monitor Class > unknown"
+deviations: [124]
 ---
 
 # Monitor
@@ -481,4 +482,30 @@ init: init
 A hello
 forward: unknown HELLO
 direct: destination destination current
+```
+
+r[class.monitor.deviation.124]
+An answer of `request` with `ARRAY` that is not an `Array` or an instance of a
+subclass of `Array` is refused as the array of arguments of `unknown`, which
+raises `SYNTAX 98.946`, whatever collection the answer is. ooRexx accepts a
+`Queue` or a `CircularQueue` as such an answer and uses its items, and crashes
+for a `List`, a `Bag`, a `Table` or a `Directory`, among others. In the example
+the answer is a queue.
+
+```rexx
+m = .monitor~new(.target~new)
+signal on syntax name bad
+say m~unknown('HELLO', .ans~new)
+exit
+bad: say condition('o')~code
+::class target
+::method hello
+  return 'hello' arg()
+::class ans
+::method request
+  return .queue~of('x')
+```
+
+```output
+98.946
 ```

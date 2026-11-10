@@ -2130,13 +2130,14 @@ request ARRAY
 ```
 
 r[class.message.deviation.124]
-An answer of `request` with `ARRAY` that is not an `Array` or an instance of
-a subclass of `Array` is refused as the array of arguments by `new` with the
-option `A`, `sendWith`, `startWith` and `replyWith`, which raise
-`SYNTAX 88.913`, whatever collection the answer is. ooRexx accepts a `Queue` or a
-`CircularQueue` as such an answer and uses its items, and crashes for a `List`,
-a `Bag`, a `Table` or a `Directory`, among others. In the example the
-answer is a queue.
+An answer of `request` with `ARRAY` that is not an `Array` or an instance of a
+subclass of `Array` is refused as the array of arguments by `new` with the
+option `A`, `sendWith`, `startWith` and `replyWith`, which raise `SYNTAX
+88.913`, whatever collection the answer is. ooRexx accepts a `Queue` or a
+`CircularQueue` as such an answer, but passes arguments by the storage the queue
+holds rather than by its items: a new queue of two items gives the two items
+followed by fourteen omitted arguments. It crashes for a `List`, a `Bag`, a
+`Table` or a `Directory`, among others. In the example the answer is a queue.
 
 ```rexx
 a = .ans~new

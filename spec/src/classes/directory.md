@@ -2,7 +2,7 @@
 element: "Directory"
 kind: class
 rexxref: "Builtin Classes > Collection Classes > Directory Class; Builtin Classes > Collection Classes > Directory Class > new (Class Method); Builtin Classes > Collection Classes > Directory Class > []; Builtin Classes > Collection Classes > Directory Class > []=; Builtin Classes > Collection Classes > Directory Class > allIndexes; Builtin Classes > Collection Classes > Directory Class > allItems; Builtin Classes > Collection Classes > Directory Class > at; Builtin Classes > Collection Classes > Directory Class > empty; Builtin Classes > Collection Classes > Directory Class > entry; Builtin Classes > Collection Classes > Directory Class > hasEntry; Builtin Classes > Collection Classes > Directory Class > hasIndex; Builtin Classes > Collection Classes > Directory Class > hasItem; Builtin Classes > Collection Classes > Directory Class > index; Builtin Classes > Collection Classes > Directory Class > isEmpty; Builtin Classes > Collection Classes > Directory Class > items; Builtin Classes > Collection Classes > Directory Class > makeArray; Builtin Classes > Collection Classes > Directory Class > put; Builtin Classes > Collection Classes > Directory Class > remove; Builtin Classes > Collection Classes > Directory Class > removeEntry; Builtin Classes > Collection Classes > Directory Class > removeItem; Builtin Classes > Collection Classes > Directory Class > setEntry; Builtin Classes > Collection Classes > Directory Class > setMethod; Builtin Classes > Collection Classes > Directory Class > supplier; Builtin Classes > Collection Classes > Directory Class > unknown; Builtin Classes > Collection Classes > Directory Class > unsetMethod"
-deviations: [29, 33, 78, 109, 123]
+deviations: [29, 33, 78, 109, 123, 124]
 ---
 
 # Directory
@@ -1202,4 +1202,35 @@ say d~items d~isEmpty
 1 0
 0 1
 0 1
+```
+
+r[class.directory.deviation.124]
+An answer of `request` with `ARRAY` that is not an `Array` or an instance of a
+subclass of `Array` is refused as the array of arguments of `unknown`, which
+raises `SYNTAX 98.913`, whatever collection the answer is, also when the
+message name ends in `=` or the arguments are otherwise ignored. ooRexx
+accepts a `Queue` or a `CircularQueue` as such an answer and uses its items,
+and crashes for a `List`, a `Bag`, a `Table` or a `Directory`, among others. In
+the example the answer is a queue.
+
+```rexx
+d = .directory~new
+call try "d~unknown('Q=', .ans~new)"
+call try "d~unknown('Q', .ans~new)"
+exit
+try:
+  signal on syntax name bad
+  interpret arg(1)
+  say arg(1) '=> no error'
+  return
+bad: say arg(1) '=>' condition('o')~code
+  return
+::class ans
+::method request
+  return .queue~of('x')
+```
+
+```output
+d~unknown('Q=', .ans~new) => 98.913
+d~unknown('Q', .ans~new) => 98.913
 ```

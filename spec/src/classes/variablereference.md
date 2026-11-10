@@ -544,12 +544,12 @@ def
 ```
 
 r[class.variablereference.deviation.124]
-An answer of `request` with `ARRAY` that is not an `Array` or an instance of
-a subclass of `Array` is refused as the array of arguments of `unknown`, which
-raises `SYNTAX 98.913`, whatever collection the answer is. ooRexx accepts a `Queue` or a
-`CircularQueue` as such an answer and uses its items, and crashes for a `List`,
-a `Bag`, a `Table` or a `Directory`, among others. In the
-example the answer is a queue.
+An answer of `request` with `ARRAY` that is not an `Array` or an instance of a
+subclass of `Array` is refused as the array of arguments of `unknown`, which
+raises `SYNTAX 98.913`, whatever collection the answer is. ooRexx accepts a
+`Queue` or a `CircularQueue` as such an answer and uses its items, and crashes
+for a `List`, a `Bag`, a `Table` or a `Directory`, among others. In the example
+the answer is a queue.
 
 ```rexx
 x = 'abcdef'

@@ -559,12 +559,11 @@ request ARRAY
 ```
 
 r[instr.forward.deviation.124]
-A value of ARGUMENTS whose `request` with `ARRAY` answers an object that is
-not an `Array` or an instance of a subclass of `Array` raises `SYNTAX 98.946`,
-whatever collection the answer is. ooRexx accepts a `Queue` or a
-`CircularQueue` as such an answer and uses its items, and crashes for a `List`,
-a `Bag`, a `Table` or a `Directory`, among others. In the example the answer is a
-queue.
+A value of ARGUMENTS whose `request` with `ARRAY` answers an object that is not
+an `Array` or an instance of a subclass of `Array` raises `SYNTAX 98.946`,
+whatever collection the answer is. ooRexx accepts a `Queue` or a `CircularQueue`
+as such an answer and uses its items, and crashes for a `List`, a `Bag`, a
+`Table` or a `Directory`, among others. In the example the answer is a queue.
 
 ```rexx
 signal on syntax name bad

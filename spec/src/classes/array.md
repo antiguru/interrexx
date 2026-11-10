@@ -851,10 +851,12 @@ say (b~previous(3, 1) == .nil) (b~previous(1, 3) == .nil)
 say (b~next(3, 1) == .nil) (b~next(5, 5) == .nil)
 b[2, 1] = 'p'
 say (b~next(3, 1) == .nil) (b~next(1, 3) == .nil)
+say (b~next(.array~of(3, 1)) == .nil) (b~next(.array~of(5, 5)) == .nil)
 ```
 
-```output
+```output defect=#188
 3 1 1 1
+1 1
 1 1
 1 1
 1 1

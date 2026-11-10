@@ -1917,7 +1917,7 @@ r[class.string.deviation.122]
 An argument that is not a string is converted once by each of the comparison
 methods, the normal ones among them, as [the comparison
 rule](r:expr.comparison.deviation.122) says of the operators. ooRexx converts
-it twice for the normal comparison methods.
+it twice for the normal comparison methods unless both strings are numbers.
 
 ```rexx
 o = .counted~new

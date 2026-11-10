@@ -226,8 +226,8 @@ A right operand that is not a string is converted once by every comparison
 operator, [the conversion rule](r:conv.string.object) applying to that one
 conversion, so that an object counting the conversions is asked once by `=`,
 by `<` and by `==` alike. ooRexx converts it twice for the normal comparisons
-`=`, `\=`, `<>`, `><`, `<`, `>`, `<=`, `>=`, `\<` and `\>`, and once for the
-strict ones.
+`=`, `\=`, `<>`, `><`, `<`, `>`, `<=`, `>=`, `\<` and `\>` when the two
+operands are not both numbers, and once when they are and for the strict ones.
 
 ```rexx
 o = .counted~new

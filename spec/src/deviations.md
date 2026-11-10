@@ -872,18 +872,19 @@ answers 2,2.
 
 ## 121. Queue put beyond the last item
 
-`put` of a queue with an index above the number of items raises
-`SYNTAX 93.966` however far above it the index is, and the queue keeps its
-items. ooRexx raises `93.966` or `93.918` according to the storage the queue
+`put` of a `Queue` or a `CircularQueue` with an index above the number of
+items raises `SYNTAX 93.966` however far above it the index is, and the queue
+keeps its items. ooRexx raises `93.966` or `93.918` according to the storage the queue
 holds beyond its items, which its earlier history decides.
 
 ## 122. A right operand that is not a string is read once
 
 A comparison operator, and the method of the same name, converts a right
 operand that is not a string once, and `Properties~getWhole` sends `request`
-once to a stored value that is not a string. ooRexx converts the right operand
-twice for the normal comparisons `=`, `\=`, `<>`, `><`, `<`, `>`, `<=`, `>=`,
-`\<` and `\>`, and sends `request` twice in `getWhole`.
+once to a stored value or a default that is not a string. ooRexx converts the
+right operand twice for the normal comparisons `=`, `\=`, `<>`, `><`, `<`,
+`>`, `<=`, `>=`, `\<` and `\>` when the two operands are not both numbers, and
+sends `request` twice in `getWhole`.
 
 ## 123. isEmpty of a directory that holds only methods
 
@@ -897,9 +898,21 @@ holds only methods.
 An answer of `request` with `ARRAY` that is used as an array of arguments
 (`sendWith`, `startWith` and `run` with the option `A` of `Object`, `new`,
 `sendWith`, `startWith` and `replyWith` of `Message`, `callWith` of `Routine`,
-`unknown` of `Stem` and `VariableReference`, and the value of ARGUMENTS of
-FORWARD) is accepted only when it is an `Array` or an instance of a subclass of
-`Array` of one dimension; any other object, a `Queue` included, raises the
-error that the reading method gives for an answer that is no array. ooRexx
-uses the items of a `Queue` or a `CircularQueue` as the arguments, and crashes
-for a `List`, a `Bag`, a `Table` or a `Directory`.
+`unknown` of `Stem`, `VariableReference`, `Directory`, `StringTable` and
+`Monitor`, and the value of ARGUMENTS of FORWARD) is accepted only when it is
+an `Array` or an instance of a subclass of `Array` of one dimension; any other
+object, a `Queue` included, raises the error that the reading method gives for
+an answer that is no array. ooRexx uses the items of a `Queue` or a
+`CircularQueue` as the arguments, except that `Message` passes as many
+arguments as the queue has storage, the items followed by omitted ones, and it
+crashes for a `List`, a `Bag`, a `Table` or a `Directory`.
+
+## 125. A List operand is read in its own order
+
+A `List` that `allItems` or `makeArray` answers for the argument of `putAll`,
+`union`, `intersection`, `xor` or `subset` of a `Set`, or of those and
+`difference` of a `Bag`, gives every item of the list, in the order of the
+list. ooRexx reads it as it reads an `Array`, by `items` and then `[]` with the
+positions 1 up to that number, which the list takes as its own indexes: the
+item at its first index is lost, and `.nil` becomes a member when no entry has
+the last position.
