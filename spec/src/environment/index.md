@@ -22,8 +22,9 @@ The pages of this chapter so far are:
   sees at its start, and what is sent to its objects when it ends.
 
 Pages on how external routines and programs are found, commands and their
-environments, the security manager and interactive debugging follow. Until they exist, the rules of the other
-chapters that mention those subjects in plain text are the rules there are.
+environments, the security manager and interactive debugging follow. Until
+they exist, the rules of the other chapters that mention those subjects in
+plain text are the rules there are.
 
 An example in this chapter changes the objects that its own program reads, as
 a program does. Each example restores what it changed when a later line of the

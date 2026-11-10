@@ -69,6 +69,7 @@ fn lay_fixture(dir: &Path) {
         b"lib.rex",
         "::routine libr public\nsay 'lib digits='digits()\n",
     );
+    file(b"calllib.rex", "call libr\n");
     file(b"err42.rex", "say 1/0\n");
     file(b"err35.rex", "say 'x' +\n");
     for (name, body) in [
@@ -86,6 +87,8 @@ fn lay_fixture(dir: &Path) {
         ("sp", "return ' 4 '"),
         ("e1", "return 1e1"),
         ("obj", "return .array~new"),
+        ("33000", "exit 33000"),
+        ("70000", "exit 70000"),
     ] {
         file(format!("ret_{name}.rex").as_bytes(), &format!("{body}\n"));
     }
@@ -276,12 +279,13 @@ fn remove(dir: &Path) {
 }
 
 // The cases cover the rules of the invocation page, each by the group of
-// cases under its heading in `rexx_command/cases`.
+// cases whose heading comment in `rexx_command/cases` names its rule.
 // spec: env.invocation.forms, env.invocation.words, env.invocation.version
 // spec: env.invocation.expression, env.invocation.optstring
 // spec: env.invocation.program, env.invocation.notfound
 // spec: env.invocation.arguments, env.invocation.syscargs
 // spec: env.invocation.status
+// spec: env.invocation.deviation.96
 #[test]
 fn the_command_line_answers_as_the_oracles_does() {
     let oracle = Path::new(ORACLE_ROOT).join("bin/rexx");

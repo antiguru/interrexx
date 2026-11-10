@@ -1,4 +1,4 @@
-# no arguments: the usage text
+# no arguments: the usage text (env.invocation.forms)
 run
 ----
 rc> 255
@@ -7,7 +7,7 @@ err> Syntax is "rexx [-o[d] "options"] filename [arguments]"
 err> or        "rexx -e program_string [arguments]"
 err> or        "rexx -v".
 
-# -v and -V print the banner
+# -v and -V print the banner (env.invocation.version)
 run
 -v
 ----
@@ -27,6 +27,7 @@ out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
 
 # -v is honoured before and after other options, and after -o's string
+# (env.invocation.version)
 run
 -v
 -?
@@ -67,7 +68,7 @@ out> Build date: <date>
 out> Addressing mode: 64
 out> Licensed under MIT OR Apache-2.0.
 
-# -v after the program name is the program's argument
+# -v after the program name is the program's argument (env.invocation.version)
 run
 t.rex
 -v
@@ -83,7 +84,7 @@ say 1
 rc> 0
 out> 1
 
-# -e runs its text as INSTORE
+# -e runs its text as INSTORE (env.invocation.expression)
 run
 -e
 say 1
@@ -114,6 +115,7 @@ rc> 0
 out> 4
 
 # -e with no text is the usage text, an empty text an empty program
+# (env.invocation.expression)
 run
 -e
 ----
@@ -129,7 +131,7 @@ run
 ----
 rc> 0
 
-# -e with arguments: the text is not one of them
+# -e with arguments: the text is not one of them (env.invocation.expression)
 run
 -e
 say arg() '['arg(1)']'
@@ -156,7 +158,7 @@ say 2
 rc> 0
 out> 1
 
-# -e: errors name INSTORE
+# -e: errors name INSTORE (env.invocation.expression)
 run
 -e
 say (
@@ -182,7 +184,7 @@ parse source s; say s
 rc> 0
 out> LINUX COMMAND INSTORE
 
-# -e: .local has no SYSCARGS
+# -e: .local has no SYSCARGS (env.invocation.expression)
 run
 -e
 say .syscargs; say .local~syscargs; say .local~items
@@ -225,7 +227,7 @@ rc> 0
 out> 10
 out> DEBUGINPUT, ERROR, INPUT, OUTPUT, STDERR, STDIN, STDOUT, STDQUE, SYSCARGS, TRACEOUTPUT
 
-# -e: the status is RexxStart's short return code
+# -e: the status is RexxStart's short return code (env.invocation.status)
 run
 -e
 exit 7
@@ -280,7 +282,7 @@ return 1e1
 ----
 rc> 10
 
-# -e ignores -o, before or after it
+# -e ignores -o, before or after it (env.invocation.expression)
 run
 -e
 say digits()
@@ -299,7 +301,7 @@ say digits()
 rc> 0
 out> 9
 
-# -o and -od, any case
+# -o and -od, any case (env.invocation.optstring)
 run
 -o
 digits 12
@@ -359,6 +361,7 @@ out> digits=9 form=ENGINEERING
 out> trace=N
 
 # -o's string is a directive when the byte after its first non-blank is a colon
+# (env.invocation.optstring)
 run
 -o
 ::options digits 12
@@ -407,7 +410,7 @@ rc> 0
 out> digits=12 form=SCIENTIFIC
 out> trace=N
 
-# that byte can be the next word's
+# that byte can be the next word's (env.invocation.optstring)
 run
 -o
 <empty>
@@ -436,7 +439,7 @@ rc> 253
 err> Error 3:  Failure during initialization.
 err> Error 3.901:  Failure during initialization: Program ":x" was not found.
 
-# -o's directive is cut to 511 bytes
+# -o's directive is cut to 511 bytes (env.invocation.optstring)
 run
 -o
 digits 12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        form engineering
@@ -447,6 +450,7 @@ out> digits=12 form=SCIENTIFIC
 out> trace=N
 
 # a malformed -o string fails before the program is looked for
+# (env.invocation.optstring)
 run
 -o
 bogus 9
@@ -481,6 +485,7 @@ err> Error 25 running PackageSettingsFromOptionsDirectiveString line 1:  Invalid
 err> Error 25.924:  Unknown keyword on ::OPTIONS directive; found "BOGUS".
 
 # -o yields to the program's own ::OPTIONS, and only -od reaches a ::REQUIRES
+# (env.invocation.optstring)
 run
 -o
 digits 12
@@ -542,7 +547,7 @@ rc> 0
 out> main digits=12
 out> lib digits=12
 
-# -o with no string is the usage text
+# -o with no string is the usage text (env.invocation.forms)
 run
 -o
 ----
@@ -573,6 +578,7 @@ err> or        "rexx -e program_string [arguments]"
 err> or        "rexx -v".
 
 # arguments, and .SYSCARGS from argc_base - 1
+# (env.invocation.arguments, env.invocation.syscargs)
 run
 showargs.rex
 a
@@ -727,6 +733,7 @@ out> 3=[Ho]
 out> [Ho, Ho]
 
 # an ignored option or a bare - with no program is the usage text
+# (env.invocation.forms)
 run
 -x
 ----
@@ -813,6 +820,7 @@ err> Error 3:  Failure during initialization.
 err> Error 3.901:  Failure during initialization: Program "viarp" was not found.
 
 # a program in a directory that is not ASCII finds its neighbours
+# (env.invocation.program)
 run
 d\xc3\xa9/req.rex
 ----
@@ -878,6 +886,7 @@ err> Error 42 running DIR/rp\xFF/farcall.rex line 3:  Arithmetic overflow/underf
 err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
 
 # a program reached through a link is reported by the path that reached it
+# (env.invocation.program)
 run
 link.rex
 ----
@@ -905,7 +914,7 @@ err>      2 *-* say 1/0
 err> Error 42 running DIR/lsub/ps.rex line 2:  Arithmetic overflow/underflow.
 err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
 
-# not found: 3.901 with no position
+# not found: 3.901 with no position (env.invocation.notfound)
 run
 nonexist
 ----
@@ -927,7 +936,7 @@ rc> 253
 err> Error 3:  Failure during initialization.
 err> Error 3.901:  Failure during initialization: Program "sub/nonexist" was not found.
 
-# unreadable: 3.1 naming the file found
+# unreadable: 3.1 naming the file found (env.invocation.notfound)
 run
 locked.rex
 ----
@@ -943,6 +952,7 @@ err> Error 3:  Failure during initialization.
 err> Error 3.1:  Failure during initialization: File "DIR/locked.rex" is unreadable.
 
 # PARSE SOURCE and error reports name the absolute normalised path
+# (env.invocation.program)
 run
 src.rex
 ----
@@ -971,7 +981,7 @@ err>      1 *-* say 'x' +
 err> Error 35 running DIR/err35.rex line 1:  Invalid expression.
 err> Error 35.1:  Incorrect expression detected at "+".
 
-# the exit status
+# the exit status (env.invocation.status)
 run
 ret_abc.rex
 ----
@@ -1042,7 +1052,7 @@ ret_obj.rex
 ----
 rc> 0
 
-# names that are not plain ASCII
+# names that are not plain ASCII (env.invocation.program)
 run
 my prog.rex
 ----
@@ -1088,7 +1098,7 @@ err>      2 *-* say 1/0
 err> Error 42 running DIR/q\xFF line 2:  Arithmetic overflow/underflow.
 err> Error 42.3:  Arithmetic overflow; divisor must not be zero.
 
-# arguments are bytes
+# arguments are bytes (env.invocation.arguments)
 run
 bytes.rex
 a\xffb
@@ -1098,7 +1108,7 @@ out> 61FF62
 out> 61FF62
 
 # empty words: leading ones add nothing to the string, later ones keep
-# their blank
+# their blank (env.invocation.arguments)
 run
 showargs.rex
 <empty>
@@ -1162,3 +1172,126 @@ out> items=2 size=2 last=2
 out> 1=[]
 out> 2=[ x]
 out> [,  x]
+
+# the status of a program that ends with a number outside 16 bits
+# (env.invocation.status)
+run
+ret_33000.rex
+----
+rc> 232
+
+run
+ret_70000.rex
+----
+rc> 112
+
+run
+-e
+exit 33000
+----
+rc> 0
+
+# a refused -o string ends with the status of the error it raises
+# (env.invocation.optstring)
+run
+-o
+trace x
+opts.rex
+----
+rc> 232
+err>      1 *-* ::OPTIONS trace x
+err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
+err> Error 24 running PackageSettingsFromOptionsDirectiveString line 1:  Invalid TRACE request.
+err> Error 24.1:  TRACE request letter must be one of "ACEFILNOR"; found "X".
+
+run
+-o
+::requires 'lib.rex'
+calllib.rex
+----
+rc> 213
+err>      1 *-* call libr
+err> Error 43 running DIR/calllib.rex line 1:  Routine not found.
+err> Error 43.1:  Could not find routine "LIBR".
+
+# an empty -o string with a following word (env.invocation.optstring)
+run
+-o
+<empty>
+::x
+----
+rc> 163
+err>        *-* Compiled method "DEFAULTOPTIONS" with scope "Package".
+err> Error 93:  Incorrect call to method.
+err> Error 93.900:  argument 2 must not be empty.
+
+run
+-o
+<empty>
+x:
+----
+rc> 253
+err> Error 3:  Failure during initialization.
+err> Error 3.901:  Failure during initialization: Program "x:" was not found.
+
+run
+-o
+digits 12
+-o
+form engineering
+opts.rex
+----
+rc> 0
+out> digits=9 form=ENGINEERING
+out> trace=N
+
+# option words that the cases above do not reach (env.invocation.words,
+# env.invocation.version, env.invocation.forms, env.invocation.expression)
+run
+-v
+nonexist
+----
+rc> 0
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
+out> Build date: <date>
+out> Addressing mode: 64
+out> Licensed under MIT OR Apache-2.0.
+
+run
+-vo
+----
+rc> 0
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
+out> Build date: <date>
+out> Addressing mode: 64
+out> Licensed under MIT OR Apache-2.0.
+
+run
+-v
+-e
+say 1
+----
+rc> 0
+out> interrexx <version> (Open Object Rexx 5.3.0 compatible)
+out> Build date: <date>
+out> Addressing mode: 64
+out> Licensed under MIT OR Apache-2.0.
+
+run
+-e
+-v
+----
+rc> 215
+err>      1 *-* -v
+err> Error 41 running INSTORE line 1:  Bad arithmetic conversion.
+err> Error 41.1:  Nonnumeric value ("V") used in arithmetic operation.
+
+run
+-o
+digits 12
+----
+rc> 255
+err> 
+err> Syntax is "rexx [-o[d] "options"] filename [arguments]"
+err> or        "rexx -e program_string [arguments]"
+err> or        "rexx -v".
